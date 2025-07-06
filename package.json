@@ -1,0 +1,23 @@
+{
+  "name": "chunky-dad-website",
+  "version": "1.0.0",
+  "description": "A modern static website for Chunky Dad",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "static",
+    "website",
+    "html",
+    "css",
+    "javascript",
+    "responsive"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}
