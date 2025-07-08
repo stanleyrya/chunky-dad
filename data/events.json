@@ -1,0 +1,113 @@
+{
+  "cities": {
+    "new-york": {
+      "name": "New York",
+      "emoji": "🗽",
+      "tagline": "What's the bear 411?",
+      "weeklyEvents": [
+        {
+          "name": "Bear Happy Hour",
+          "bar": "Rotating",
+          "day": "Thursday",
+          "time": "5PM - 9PM",
+          "cover": "N/A",
+          "tea": "Popular happy hour that changes location every week in Manhattan.",
+          "links": [
+            {
+              "type": "instagram",
+              "url": "https://www.instagram.com/bearhappyhournyc?igsh=cnpzaTN6cmhuZ25t",
+              "label": "📷 Instagram"
+            }
+          ]
+        },
+        {
+          "name": "Bears Are Animals",
+          "bar": "Animal",
+          "day": "Thursday",
+          "time": "7PM - 10PM",
+          "cover": "N/A",
+          "links": [
+            {
+              "type": "website",
+              "url": "https://animal.nyc",
+              "label": "🌐 Website"
+            },
+            {
+              "type": "instagram",
+              "url": "https://www.instagram.com/animal.nyc?igsh=amY0cDJuZzY4eTly",
+              "label": "📷 Instagram"
+            }
+          ]
+        },
+        {
+          "name": "Beer Blast",
+          "bar": "Eagle NYC",
+          "day": "Sunday",
+          "time": "5PM - 4AM",
+          "cover": "No cover till 9PM, $20 cover at 9PM",
+          "links": [
+            {
+              "type": "website",
+              "url": "https://eagle-ny.com",
+              "label": "🌐 Website"
+            }
+          ]
+        }
+      ],
+      "routineEvents": [
+        {
+          "name": "Goldiloxx",
+          "bar": "Red Eye NY",
+          "day": "Saturday",
+          "time": "9PM - 4AM",
+          "cover": "Varies, ~$25 tickets",
+          "links": [
+            {
+              "type": "instagram",
+              "url": "https://www.instagram.com/goldiloxx__?igsh=MW1yd3hyNGxtcDE4ag==",
+              "label": "📷 Instagram"
+            }
+          ]
+        }
+      ]
+    },
+    "san-francisco": {
+      "name": "San Francisco", 
+      "emoji": "🌉",
+      "tagline": "Bear city by the bay",
+      "weeklyEvents": [
+        {
+          "name": "Bear Happy Hour SF",
+          "bar": "Lone Star Saloon",
+          "day": "Friday", 
+          "time": "6PM - 9PM",
+          "cover": "N/A",
+          "links": [
+            {
+              "type": "website",
+              "url": "https://lonestarsf.com",
+              "label": "🌐 Website"
+            }
+          ]
+        }
+      ],
+      "routineEvents": [
+        {
+          "name": "Underwear Party",
+          "bar": "Eagle SF",
+          "day": "Saturday",
+          "time": "10PM - 2AM", 
+          "cover": "$15",
+          "tea": "Monthly underwear party with hot guys and good vibes",
+          "links": [
+            {
+              "type": "instagram", 
+              "url": "https://instagram.com/eaglesf",
+              "label": "📷 Instagram"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
