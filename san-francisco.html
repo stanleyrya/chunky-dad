@@ -7,6 +7,10 @@
     <meta name="description" content="Complete gay bear guide to City Name - events, bars, and the hottest bear scene">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
 </head>
 <body>
     <header>
@@ -68,6 +72,14 @@
             </div>
         </section>
 
+        <section class="events-map-section">
+            <div class="container">
+                <h2>📍 Event Locations</h2>
+                <p>Click on any location pin to see event details, or click the 📍 links in events above.</p>
+                <div id="events-map"></div>
+            </div>
+        </section>
+
         <section class="city-cta">
             <div class="container">
                 <div class="cta-content">
@@ -90,7 +102,11 @@
         </div>
     </footer>
 
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
     <script src="script.js"></script>
-    <script src="js/city-events.js"></script>
+    <script src="js/calendar-loader.js"></script>
 </body>
 </html>
