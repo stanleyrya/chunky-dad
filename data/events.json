@@ -12,6 +12,10 @@
           "time": "5PM - 9PM",
           "cover": "N/A",
           "tea": "Popular happy hour that changes location every week in Manhattan.",
+          "coordinates": {
+            "lat": 40.7505,
+            "lng": -73.9934
+          },
           "links": [
             {
               "type": "instagram",
@@ -26,6 +30,10 @@
           "day": "Thursday",
           "time": "7PM - 10PM",
           "cover": "N/A",
+          "coordinates": {
+            "lat": 40.7282,
+            "lng": -73.9942
+          },
           "links": [
             {
               "type": "website",
@@ -45,6 +53,10 @@
           "day": "Sunday",
           "time": "5PM - 4AM",
           "cover": "No cover till 9PM, $20 cover at 9PM",
+          "coordinates": {
+            "lat": 40.7420,
+            "lng": -73.9570
+          },
           "links": [
             {
               "type": "website",
@@ -61,6 +73,10 @@
           "day": "Saturday",
           "time": "9PM - 4AM",
           "cover": "Varies, ~$25 tickets",
+          "coordinates": {
+            "lat": 40.7505,
+            "lng": -73.9934
+          },
           "links": [
             {
               "type": "instagram",
