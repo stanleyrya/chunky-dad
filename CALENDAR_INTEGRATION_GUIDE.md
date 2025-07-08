@@ -18,8 +18,9 @@ Your website now dynamically loads events from a Google Calendar and displays th
 
 ### Event Format in Google Calendar
 
-When creating events in Google Calendar, include this JSON structure in the **Description** field:
+Your calendar system now supports **multiple formats** for event descriptions! You can use any of these formats in your Google Calendar event descriptions:
 
+#### 1. JSON Format (Advanced)
 ```json
 {
   "name": "Bear Happy Hour",
@@ -42,6 +43,27 @@ When creating events in Google Calendar, include this JSON structure in the **De
   ]
 }
 ```
+
+#### 2. Key-Value Format (User-Friendly)
+```
+Name: Bear Happy Hour
+Bar: Rotating
+Day: Thursday
+Time: 5PM - 9PM
+Cover: N/A
+Tea: Popular happy hour that changes location every week in Manhattan.
+Type: weekly
+Instagram: https://www.instagram.com/bearhappyhournyc
+```
+
+#### 3. Structured Text (Natural)
+```
+Bear Happy Hour at Rotating on Thursday from 5PM - 9PM
+Cover: N/A
+Popular happy hour that changes location every week in Manhattan.
+```
+
+📚 **For complete format documentation, see: [EVENT_FORMATS_GUIDE.md](EVENT_FORMATS_GUIDE.md)**
 
 ### Event Properties Explained
 
@@ -169,6 +191,16 @@ To add locations to the map:
   - User-friendly error messages
 - **Access**: Open browser console to see `[CalendarLoader]` messages
 
+**3. Multiple Format Support** (December 2024)
+- **Added**: Support for JSON, key-value, and structured text formats
+- **Features**: 
+  - Robust JSON parsing with balanced brace detection
+  - Key-value format for non-technical users
+  - Natural language structured text parsing
+  - Automatic fallback between formats
+  - Enhanced validation and error reporting
+- **Benefits**: Makes event creation accessible to all users
+
 ### Debug Mode
 The calendar loader now includes detailed console logging:
 
@@ -180,6 +212,10 @@ this.debugMode = true; // Set to false to reduce console output
 **Log Categories:**
 - `[CalendarLoader]` - Info messages
 - `[CalendarLoader ERROR]` - Error messages
+- `🔍 Parsing description for: [Event Name]` - Format detection
+- `✅ JSON/Key-value/Structured text parsing successful` - Success messages
+- `⚠️ Validation failed - missing required fields` - Validation errors
+- `❌ All parsing methods failed` - Complete parsing failures
 - Track: Loading, parsing, rendering, map initialization
 
 ### Common Issues & Solutions
@@ -191,10 +227,11 @@ this.debugMode = true; // Set to false to reduce console output
 - **Privacy**: Ensure Google Calendar is public
 
 **2. No Events Showing**
-- **JSON Validation**: Check event descriptions have valid JSON
-- **Required Fields**: Verify all required fields present
-- **Event Type**: Confirm `eventType` is "weekly" or "routine"
-- **Day Format**: Use full day names (e.g., "Thursday")
+- **Format Issues**: Check event descriptions use supported formats (JSON, key-value, or structured text)
+- **Required Fields**: Verify all required fields present (name, bar, day, time, cover)
+- **Event Type**: Confirm `eventType` is "weekly" or "routine" (or omit for default "weekly")
+- **Day Format**: Use full day names (e.g., "Thursday", not "Thu")
+- **Parsing Logs**: Check console for specific parsing failure messages
 
 **3. Map Issues**
 - **Leaflet Loading**: Check if Leaflet CSS/JS loaded properly
@@ -227,7 +264,9 @@ this.debugMode = true; // Set to false to reduce console output
 3. Look for `[CalendarLoader]` messages
 4. Check which data source loaded (Google vs local)
 5. Verify event count in logs
-6. Check for JSON parsing errors
+6. Look for parsing method messages (JSON, key-value, structured text)
+7. Check for validation errors (missing required fields)
+8. Verify format-specific issues (JSON syntax, key-value structure, etc.)
 
 **When Events Load But Don't Display:**
 1. Check console for DOM element messages

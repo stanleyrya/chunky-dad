@@ -36,24 +36,23 @@ class CalendarEventsLoader {
                 eventCount++;
             } else if (line === 'END:VEVENT' && currentEvent) {
                 if (currentEvent.title && currentEvent.description) {
-                    try {
-                        // Extract JSON from description
-                        const jsonMatch = currentEvent.description.match(/\{[\s\S]*\}/);
-                        if (jsonMatch) {
-                            const eventData = JSON.parse(jsonMatch[0]);
-                            eventData.calendarTitle = currentEvent.title;
-                            eventData.calendarStart = currentEvent.start;
-                            eventData.calendarLocation = currentEvent.location;
-                            events.push(eventData);
-                            this.log(`Successfully parsed event: ${eventData.name}`);
-                        } else {
-                            this.log(`No JSON found in event description for: ${currentEvent.title}`);
-                        }
-                    } catch (e) {
-                        this.error('Could not parse JSON for event:', currentEvent.title, e);
+                    this.log(`Processing event: ${currentEvent.title}`, `Description length: ${currentEvent.description.length}`);
+                    
+                    // Try to parse event data using multiple methods
+                    const eventData = this.parseEventDescription(currentEvent.description, currentEvent.title);
+                    
+                    if (eventData) {
+                        // Add calendar metadata
+                        eventData.calendarTitle = currentEvent.title;
+                        eventData.calendarStart = currentEvent.start;
+                        eventData.calendarLocation = currentEvent.location;
+                        events.push(eventData);
+                        this.log(`✅ Successfully parsed event: ${eventData.name}`);
+                    } else {
+                        this.log(`❌ Failed to parse event data for: ${currentEvent.title}`);
                     }
                 } else {
-                    this.log(`Skipping event missing title/description: ${currentEvent.title || 'Untitled'}`);
+                    this.log(`⚠️ Skipping event missing title/description: ${currentEvent.title || 'Untitled'}`);
                 }
                 currentEvent = null;
                 inEvent = false;
@@ -73,8 +72,239 @@ class CalendarEventsLoader {
             }
         }
         
-        this.log(`Finished parsing iCal. Found ${eventCount} total events, ${events.length} with valid JSON`);
+        this.log(`📊 Finished parsing iCal. Found ${eventCount} total events, ${events.length} with valid data`);
         return events;
+    }
+
+    // Enhanced event description parsing with multiple format support
+    parseEventDescription(description, eventTitle) {
+        this.log(`🔍 Parsing description for: ${eventTitle}`);
+        
+        // Method 1: Try to parse as JSON
+        const jsonData = this.parseJSONFromDescription(description);
+        if (jsonData) {
+            this.log(`✅ JSON parsing successful for: ${eventTitle}`);
+            return jsonData;
+        }
+        
+        // Method 2: Try to parse as key-value pairs (user-friendly format)
+        const kvData = this.parseKeyValueFromDescription(description);
+        if (kvData) {
+            this.log(`✅ Key-value parsing successful for: ${eventTitle}`);
+            return kvData;
+        }
+        
+        // Method 3: Try to extract from structured text
+        const structuredData = this.parseStructuredTextFromDescription(description);
+        if (structuredData) {
+            this.log(`✅ Structured text parsing successful for: ${eventTitle}`);
+            return structuredData;
+        }
+        
+        this.error(`❌ All parsing methods failed for: ${eventTitle}`, {
+            description: description.substring(0, 200) + '...'
+        });
+        return null;
+    }
+
+    // Improved JSON parsing with better error handling
+    parseJSONFromDescription(description) {
+        try {
+            // More robust JSON detection - look for properly balanced braces
+            const jsonMatches = this.extractBalancedJSON(description);
+            
+            for (const jsonText of jsonMatches) {
+                try {
+                    const parsed = JSON.parse(jsonText);
+                    if (this.validateEventData(parsed)) {
+                        this.log(`✅ Valid JSON found and parsed successfully`);
+                        return parsed;
+                    } else {
+                        this.log(`⚠️ JSON parsed but validation failed`, parsed);
+                    }
+                } catch (parseError) {
+                    this.log(`⚠️ JSON candidate failed to parse:`, {
+                        text: jsonText.substring(0, 100) + '...',
+                        error: parseError.message
+                    });
+                    continue;
+                }
+            }
+        } catch (error) {
+            this.log(`⚠️ JSON extraction failed:`, error.message);
+        }
+        return null;
+    }
+
+    // Extract balanced JSON objects from text
+    extractBalancedJSON(text) {
+        const candidates = [];
+        let braceCount = 0;
+        let start = -1;
+        
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            
+            if (char === '{') {
+                if (braceCount === 0) {
+                    start = i;
+                }
+                braceCount++;
+            } else if (char === '}') {
+                braceCount--;
+                if (braceCount === 0 && start !== -1) {
+                    candidates.push(text.substring(start, i + 1));
+                    start = -1;
+                }
+            }
+        }
+        
+        return candidates;
+    }
+
+    // Parse user-friendly key-value format
+    parseKeyValueFromDescription(description) {
+        try {
+            this.log(`🔍 Attempting key-value parsing`);
+            
+            // Look for key-value pairs in various formats
+            const kvPatterns = [
+                /^([A-Za-z\s]+?):\s*(.+)$/gm,  // "Key: Value" format
+                /^([A-Za-z\s]+?)=\s*(.+)$/gm,  // "Key=Value" format
+                /^([A-Za-z\s]+?)\s*-\s*(.+)$/gm  // "Key - Value" format
+            ];
+            
+            const data = {};
+            let foundAnyData = false;
+            
+            for (const pattern of kvPatterns) {
+                let match;
+                while ((match = pattern.exec(description)) !== null) {
+                    const key = match[1].trim().toLowerCase();
+                    const value = match[2].trim();
+                    
+                    // Map common key variations to standard fields
+                    const keyMap = {
+                        'name': 'name',
+                        'event': 'name',
+                        'title': 'name',
+                        'bar': 'bar',
+                        'venue': 'bar',
+                        'location': 'bar',
+                        'day': 'day',
+                        'time': 'time',
+                        'cover': 'cover',
+                        'cost': 'cover',
+                        'price': 'cover',
+                        'tea': 'tea',
+                        'info': 'tea',
+                        'description': 'tea',
+                        'type': 'eventType',
+                        'website': 'website',
+                        'instagram': 'instagram',
+                        'facebook': 'facebook'
+                    };
+                    
+                    const standardKey = keyMap[key];
+                    if (standardKey) {
+                        data[standardKey] = value;
+                        foundAnyData = true;
+                    }
+                }
+            }
+            
+            if (foundAnyData && this.validateEventData(data)) {
+                // Convert simple links to link objects
+                const links = [];
+                ['website', 'instagram', 'facebook'].forEach(linkType => {
+                    if (data[linkType]) {
+                        links.push({
+                            type: linkType,
+                            url: data[linkType],
+                            label: `${linkType === 'website' ? '🌐' : '📷'} ${linkType.charAt(0).toUpperCase() + linkType.slice(1)}`
+                        });
+                        delete data[linkType];
+                    }
+                });
+                
+                if (links.length > 0) {
+                    data.links = links;
+                }
+                
+                // Set default event type if not specified
+                if (!data.eventType) {
+                    data.eventType = 'weekly';
+                }
+                
+                this.log(`✅ Key-value parsing successful`, data);
+                return data;
+            }
+        } catch (error) {
+            this.log(`⚠️ Key-value parsing failed:`, error.message);
+        }
+        return null;
+    }
+
+    // Parse structured text format
+    parseStructuredTextFromDescription(description) {
+        try {
+            this.log(`🔍 Attempting structured text parsing`);
+            
+            // Look for structured information in free-form text
+            const data = {};
+            
+            // Try to extract day of week
+            const dayMatch = description.match(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i);
+            if (dayMatch) {
+                data.day = dayMatch[1];
+            }
+            
+            // Try to extract time patterns
+            const timeMatch = description.match(/\b(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*(?:-|to)\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))\b/i);
+            if (timeMatch) {
+                data.time = timeMatch[1];
+            }
+            
+            // Try to extract venue/bar name
+            const venueMatch = description.match(/(?:at|@)\s+([A-Za-z\s]+?)(?:\s|$|,|\.)/);
+            if (venueMatch) {
+                data.bar = venueMatch[1].trim();
+            }
+            
+            // Try to extract cover charge
+            const coverMatch = description.match(/(?:cover|cost|price)[:=\s]*\$?([^\n\r]+)/i);
+            if (coverMatch) {
+                data.cover = coverMatch[1].trim();
+            }
+            
+            // Use event title as name if no name found
+            if (!data.name) {
+                data.name = description.split('\n')[0].trim();
+            }
+            
+            if (this.validateEventData(data)) {
+                data.eventType = 'weekly';
+                this.log(`✅ Structured text parsing successful`, data);
+                return data;
+            }
+        } catch (error) {
+            this.log(`⚠️ Structured text parsing failed:`, error.message);
+        }
+        return null;
+    }
+
+    // Validate event data has required fields
+    validateEventData(data) {
+        const requiredFields = ['name', 'bar', 'day', 'time', 'cover'];
+        const hasRequired = requiredFields.every(field => data[field]);
+        
+        if (!hasRequired) {
+            const missingFields = requiredFields.filter(field => !data[field]);
+            this.log(`⚠️ Validation failed - missing required fields:`, missingFields);
+            return false;
+        }
+        
+        return true;
     }
 
     parseICalDate(icalDate) {
