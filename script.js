@@ -40,37 +40,42 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Contact Form Handling
+// Contact Form Handling - Only if form exists
 const contactForm = document.querySelector('.contact-form');
-contactForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Get form data
-    const formData = new FormData(this);
-    const name = this.querySelector('input[type="text"]').value;
-    const email = this.querySelector('input[type="email"]').value;
-    const message = this.querySelector('textarea').value;
-    
-    // Basic validation
-    if (!name || !email || !message) {
-        alert('Please fill in all fields');
-        return;
-    }
-    
-    // Simulate form submission
-    const submitButton = this.querySelector('button');
-    const originalText = submitButton.textContent;
-    
-    submitButton.textContent = 'Sending...';
-    submitButton.disabled = true;
-    
-    setTimeout(() => {
-        alert('Thank you for your message! We\'ll get back to you soon.');
-        this.reset();
-        submitButton.textContent = originalText;
-        submitButton.disabled = false;
-    }, 2000);
-});
+if (contactForm) {
+    console.log('Contact form found, adding event listener');
+    contactForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const formData = new FormData(this);
+        const name = this.querySelector('input[type="text"]').value;
+        const email = this.querySelector('input[type="email"]').value;
+        const message = this.querySelector('textarea').value;
+        
+        // Basic validation
+        if (!name || !email || !message) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        // Simulate form submission
+        const submitButton = this.querySelector('button');
+        const originalText = submitButton.textContent;
+        
+        submitButton.textContent = 'Sending...';
+        submitButton.disabled = true;
+        
+        setTimeout(() => {
+            alert('Thank you for your message! We\'ll get back to you soon.');
+            this.reset();
+            submitButton.textContent = originalText;
+            submitButton.disabled = false;
+        }, 2000);
+    });
+} else {
+    console.log('No contact form found on this page - skipping contact form setup');
+}
 
 // Header scroll effect
 window.addEventListener('scroll', () => {

@@ -151,25 +151,103 @@ To add locations to the map:
 - ✅ **Fallback System**: Graceful degradation
 - ✅ **Extensible**: Easy to add new cities/features
 
-## 🛠️ Troubleshooting
+## 🛠️ Troubleshooting & Debugging
 
-### Calendar Not Loading
-1. **Check Calendar Privacy**: Ensure calendar is public
-2. **Verify JSON**: Validate JSON syntax in event descriptions
-3. **CORS Proxy**: If proxy fails, falls back to local JSON
-4. **Browser Console**: Check for error messages
+### Recent Fixes Applied
+**1. Contact Form Error Fixed** (December 2024)
+- **Issue**: `TypeError: null is not an object (evaluating 'contactForm.addEventListener')`
+- **Cause**: `script.js` loaded on all pages but contact form only exists on homepage
+- **Solution**: Added null check before adding event listener
+- **Code**: Now checks `if (contactForm)` before accessing
 
-### Map Issues
-1. **GPS Coordinates**: Verify lat/lng format (decimal degrees)
-2. **Internet Connection**: Maps require internet access
-3. **JavaScript Enabled**: Ensure JS is enabled in browser
-4. **Mobile Viewport**: Check on different screen sizes
+**2. Enhanced Calendar Logging** (December 2024)
+- **Added**: Comprehensive debug logging throughout calendar loader
+- **Features**: 
+  - Load status tracking
+  - Event parsing details
+  - Error categorization
+  - User-friendly error messages
+- **Access**: Open browser console to see `[CalendarLoader]` messages
 
-### Event Not Appearing
-1. **JSON Format**: Ensure valid JSON in description
-2. **Required Fields**: Check all required fields are present
-3. **Event Type**: Verify eventType is "weekly" or "routine"
-4. **Day Format**: Use full day names (e.g., "Thursday")
+### Debug Mode
+The calendar loader now includes detailed console logging:
+
+```javascript
+// Enable/disable in calendar-loader.js
+this.debugMode = true; // Set to false to reduce console output
+```
+
+**Log Categories:**
+- `[CalendarLoader]` - Info messages
+- `[CalendarLoader ERROR]` - Error messages
+- Track: Loading, parsing, rendering, map initialization
+
+### Common Issues & Solutions
+
+**1. Calendar Not Loading**
+- **Check Console**: Look for `[CalendarLoader]` messages
+- **CORS Issues**: If proxy fails, should fallback to local data
+- **Network**: Verify internet connection
+- **Privacy**: Ensure Google Calendar is public
+
+**2. No Events Showing**
+- **JSON Validation**: Check event descriptions have valid JSON
+- **Required Fields**: Verify all required fields present
+- **Event Type**: Confirm `eventType` is "weekly" or "routine"
+- **Day Format**: Use full day names (e.g., "Thursday")
+
+**3. Map Issues**
+- **Leaflet Loading**: Check if Leaflet CSS/JS loaded properly
+- **Coordinates**: Verify lat/lng format (decimal degrees)
+- **Container**: Ensure `#events-map` element exists
+- **JavaScript**: Check browser console for map errors
+
+**4. Contact Form Errors**
+- **Fixed**: Now includes null checks for missing form elements
+- **Safe**: Won't crash on pages without contact forms
+- **Logging**: Console shows if contact form found or skipped
+
+### Error Messages Explained
+
+**Calendar Temporarily Unavailable**
+- Shown when both Google Calendar and local fallback fail
+- Includes user-friendly explanation and suggestions
+- Automatically retries on page refresh
+
+**Map Temporarily Unavailable**
+- Shown when Leaflet fails to initialize
+- Usually indicates script loading issues
+- Check network connection and CDN availability
+
+### Debugging Checklist
+
+**When Calendar Shows No Events:**
+1. Open browser console (F12)
+2. Refresh page
+3. Look for `[CalendarLoader]` messages
+4. Check which data source loaded (Google vs local)
+5. Verify event count in logs
+6. Check for JSON parsing errors
+
+**When Events Load But Don't Display:**
+1. Check console for DOM element messages
+2. Verify HTML structure matches expected selectors:
+   - `.calendar-grid`
+   - `.weekly-events .events-list`
+   - `.routine-events .events-list`
+3. Check CSS display properties
+
+**When Map Doesn't Work:**
+1. Verify Leaflet script loaded: `typeof L !== 'undefined'`
+2. Check for coordinate data in events
+3. Look for map initialization messages
+4. Verify `#events-map` element exists
+
+### Performance Notes
+- **Cache**: Browser caches calendar data briefly
+- **Proxy**: CORS proxy may have occasional delays
+- **Fallback**: Local JSON loads faster than calendar
+- **Mobile**: Touch interactions work on mobile devices
 
 ## 🔮 Future Enhancements
 
@@ -185,5 +263,11 @@ To add locations to the map:
 - **Event Images**: Upload photos to calendar events
 - **Attendee Tracking**: Who's going functionality
 - **Reminders**: Calendar notifications for events
+
+### Recent Improvements (December 2024):
+- ✅ **Fixed contact form errors** on city pages
+- ✅ **Added comprehensive logging** for debugging
+- ✅ **Enhanced error handling** with user-friendly messages
+- ✅ **Improved robustness** with null checks and fallbacks
 
 This integration makes your website dynamic, collaborative, and visually appealing while maintaining the simplicity of GitHub Pages hosting!
