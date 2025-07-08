@@ -1,0 +1,124 @@
+[
+  {
+    "description": "This is what you would paste into the Google Calendar event description for Bear Happy Hour",
+    "json": {
+      "name": "Bear Happy Hour",
+      "bar": "Rotating",
+      "day": "Thursday",
+      "time": "5PM - 9PM",
+      "cover": "N/A",
+      "tea": "Popular happy hour that changes location every week in Manhattan.",
+      "eventType": "weekly",
+      "coordinates": {
+        "lat": 40.7505,
+        "lng": -73.9934
+      },
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhournyc?igsh=cnpzaTN6cmhuZ25t",
+          "label": "📷 Instagram"
+        }
+      ]
+    }
+  },
+  {
+    "description": "Copy this JSON into Google Calendar for Bears Are Animals event",
+    "json": {
+      "name": "Bears Are Animals",
+      "bar": "Animal",
+      "day": "Thursday",
+      "time": "7PM - 10PM",
+      "cover": "N/A",
+      "eventType": "weekly",
+      "coordinates": {
+        "lat": 40.7282,
+        "lng": -73.9942
+      },
+      "links": [
+        {
+          "type": "website",
+          "url": "https://animal.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/animal.nyc?igsh=amY0cDJuZzY4eTly",
+          "label": "📷 Instagram"
+        }
+      ]
+    }
+  },
+  {
+    "description": "Copy this JSON into Google Calendar for Beer Blast event",
+    "json": {
+      "name": "Beer Blast",
+      "bar": "Eagle NYC",
+      "day": "Sunday",
+      "time": "5PM - 4AM",
+      "cover": "No cover till 9PM, $20 cover at 9PM",
+      "eventType": "weekly",
+      "coordinates": {
+        "lat": 40.7420,
+        "lng": -73.9570
+      },
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eagle-ny.com",
+          "label": "🌐 Website"
+        }
+      ]
+    }
+  },
+  {
+    "description": "Copy this JSON into Google Calendar for Goldiloxx event",
+    "json": {
+      "name": "Goldiloxx",
+      "bar": "Red Eye NY",
+      "day": "Saturday",
+      "time": "9PM - 4AM",
+      "cover": "Varies, ~$25 tickets",
+      "eventType": "routine",
+      "coordinates": {
+        "lat": 40.7505,
+        "lng": -73.9934
+      },
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/goldiloxx__?igsh=MW1yd3hyNGxtcDE4ag==",
+          "label": "📷 Instagram"
+        }
+      ]
+    }
+  },
+  {
+    "description": "Template for new events - copy and modify as needed",
+    "json": {
+      "name": "Event Name",
+      "bar": "Venue Name",
+      "day": "Friday",
+      "time": "8PM - 2AM",
+      "cover": "$15",
+      "tea": "Optional description or gossip about the event",
+      "eventType": "weekly",
+      "coordinates": {
+        "lat": 40.7500,
+        "lng": -74.0000
+      },
+      "links": [
+        {
+          "type": "website",
+          "url": "https://example.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/example",
+          "label": "📷 Instagram"
+        }
+      ]
+    }
+  }
+]
