@@ -141,7 +141,6 @@ class CalendarEventsLoader {
     // Parse key/value pairs from description
     parseKeyValueDescription(description) {
         const data = {};
-        const isHypertext = description.includes("<br>");
         // Map common variations to standard keys
         const keyMap = {
             'bar': 'bar',
@@ -164,7 +163,8 @@ class CalendarEventsLoader {
         };
 
         let textBlock = description;
-        if (isHypertext) {
+        if (textBlock.includes("<br>")) {
+            this.log("is Hypertext before processing:", textBlock)
             // First extract any hrefs from anchor tags before processing
             const anchorRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
             const matches = [];
@@ -175,19 +175,23 @@ class CalendarEventsLoader {
             
             // Replace <br> tags with newlines
             textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
+            this.log("is Hypertext after processing 1:", textBlock)
             
             // Convert to plain text but preserve URLs
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = textBlock;
             textBlock = tempDiv.textContent || tempDiv.innerText || '';
+            this.log("is Hypertext after processing 2:", textBlock)
             
             // Add back URLs in a parseable format
             matches.forEach(linkMatch => {
                 const urlPattern = new RegExp(linkMatch.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
                 textBlock = textBlock.replace(urlPattern, linkMatch.url);
             });
+            this.log("is Hypertext after processing 3:", textBlock)
         }
         const lines = textBlock.split("\n");
+        this.log("is after processing 4:", textBlock)
         
         for (let line of lines) {
             line = line.trim();
