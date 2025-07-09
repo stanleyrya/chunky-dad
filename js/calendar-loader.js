@@ -6,6 +6,7 @@ class CalendarEventsLoader {
         this.icalUrl = `https://calendar.google.com/calendar/ical/${this.calendarId}/public/basic.ics`;
         this.debugMode = true;
         this.locationCache = new Map(); // Cache for location geocoding
+        this.cityKey = window.location.pathname.split('/').pop().replace('.html', '');
         this.log('Enhanced CalendarEventsLoader initialized');
     }
 
@@ -343,26 +344,6 @@ class CalendarEventsLoader {
         });
     }
 
-    // Get city from URL with enhanced routing support
-    getCityFromUrl() {
-        const path = window.location.pathname;
-        const filename = path.split('/').pop().replace('.html', '');
-        
-        // Support various URL formats
-        const cityMap = {
-            'new-york': 'new-york',
-            'nyc': 'new-york',
-            'newyork': 'new-york',
-            'san-francisco': 'san-francisco',
-            'sf': 'san-francisco',
-            'sanfrancisco': 'san-francisco'
-        };
-        
-        const cityKey = cityMap[filename] || filename;
-        this.log('Detected city from URL:', cityKey);
-        return cityKey === 'index' ? null : cityKey;
-    }
-
     // Enhanced event card generation
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => 
@@ -467,19 +448,19 @@ class CalendarEventsLoader {
     }
 
     // Enhanced city page rendering
-    async renderCityPage(cityKey) {
-        this.log(`Starting enhanced city page render for: ${cityKey}`);
+    async renderCityPage() {
+        this.log(`Starting enhanced city page render for: ${this.cityKey}`);
         
         if (!this.eventsData) {
             await this.loadCalendarData();
         }
 
-        if (!this.eventsData?.cities[cityKey]) {
-            this.error(`City data not found for: ${cityKey}`);
+        if (!this.eventsData?.cities[this.cityKey]) {
+            this.error(`City data not found for: ${this.cityKey}`);
             return;
         }
 
-        const cityData = this.eventsData.cities[cityKey];
+        const cityData = this.eventsData.cities[this.cityKey];
         this.log(`Rendering enhanced city data for ${cityData.name}`);
 
         // Update city header
@@ -579,10 +560,7 @@ class CalendarEventsLoader {
     // Initialize the enhanced system
     async init() {
         this.log('Initializing enhanced CalendarEventsLoader...');
-        const cityKey = this.getCityFromUrl();
-        if (cityKey) {
-            await this.renderCityPage(cityKey);
-        }
+        await this.renderCityPage();
     }
 }
 
