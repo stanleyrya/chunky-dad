@@ -246,10 +246,12 @@ header {
 }
 
 /* Events Section */
-.events {
+.events-section {
+    padding: 80px 0;
+    background: white;
 }
 
-.events h2 {
+.events-section h2 {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 1rem;
