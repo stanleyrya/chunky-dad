@@ -81,8 +81,7 @@ class CalendarEventsLoader {
 
     // Enhanced event parsing using calendar fields as primary source
     parseEventData(calendarEvent) {
-        this.log("calendar event");
-        this.log(calendarEvent);
+        this.log("calendar event", calendarEvent);
         try {
             // Start with Google Calendar native fields as primary source
             const eventData = {
