@@ -75,8 +75,8 @@ class CalendarEventsLoader {
                     currentEvent.recurrence = line.substring(6);
                 }
             } else {
-                for (let i = 0; i < myString.length; i++) {
-                    this.log(myString[i]);
+                for (let i = 0; i < line.length; i++) {
+                    this.log(line[i]);
                 }
             }
         }
