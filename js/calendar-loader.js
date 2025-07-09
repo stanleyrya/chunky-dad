@@ -1,11 +1,12 @@
-// Google Calendar iCal Loader
+// Enhanced Google Calendar Loader - Now uses native calendar fields + key/value parsing
 class CalendarEventsLoader {
     constructor() {
         this.eventsData = null;
         this.calendarId = 'a5c9d5609f72549a8c66be0bade4255f0cdd619fa35d009c7de2c1f38ac775e9@group.calendar.google.com';
         this.icalUrl = `https://calendar.google.com/calendar/ical/${this.calendarId}/public/basic.ics`;
-        this.debugMode = true; // Enable detailed logging
-        this.log('CalendarEventsLoader initialized');
+        this.debugMode = true;
+        this.locationCache = new Map(); // Cache for location geocoding
+        this.log('Enhanced CalendarEventsLoader initialized');
     }
 
     log(message, data = null) {
@@ -18,9 +19,9 @@ class CalendarEventsLoader {
         console.error(`[CalendarLoader ERROR] ${message}`, data || '');
     }
 
-    // Parse iCal format
+    // Enhanced iCal parsing with full calendar field support
     parseICalData(icalText) {
-        this.log('Starting to parse iCal data', `Text length: ${icalText.length}`);
+        this.log('Starting enhanced iCal parsing', `Text length: ${icalText.length}`);
         const events = [];
         const lines = icalText.split('\n');
         let currentEvent = null;
@@ -38,7 +39,6 @@ class CalendarEventsLoader {
                 if (currentEvent.title) {
                     this.log(`Processing event: ${currentEvent.title}`);
                     
-                    // Create event data using calendar event fields
                     const eventData = this.parseEventData(currentEvent);
                     
                     if (eventData) {
@@ -47,8 +47,6 @@ class CalendarEventsLoader {
                     } else {
                         this.log(`❌ Failed to parse event data for: ${currentEvent.title}`);
                     }
-                } else {
-                    this.log(`⚠️ Skipping event missing title: ${currentEvent.title || 'Untitled'}`);
                 }
                 currentEvent = null;
                 inEvent = false;
@@ -64,44 +62,63 @@ class CalendarEventsLoader {
                     if (dateMatch) {
                         currentEvent.start = this.parseICalDate(dateMatch[1]);
                     }
+                } else if (line.startsWith('DTEND')) {
+                    const dateMatch = line.match(/DTEND[^:]*:(.+)/);
+                    if (dateMatch) {
+                        currentEvent.end = this.parseICalDate(dateMatch[1]);
+                    }
+                } else if (line.startsWith('RRULE:')) {
+                    currentEvent.recurrence = line.substring(6);
                 }
             }
         }
         
-        this.log(`📊 Finished parsing iCal. Found ${eventCount} total events, ${events.length} with valid data`);
+        this.log(`📊 Enhanced parsing complete. Found ${eventCount} total events, ${events.length} with valid data`);
         return events;
     }
 
-    // Simplified event parsing using calendar event fields
+    // Enhanced event parsing using calendar fields as primary source
     parseEventData(calendarEvent) {
         try {
-            // Start with calendar event data
+            // Start with Google Calendar native fields as primary source
             const eventData = {
                 name: calendarEvent.title,
                 bar: calendarEvent.location || 'TBD',
                 day: this.getDayFromDate(calendarEvent.start),
-                time: this.getTimeFromDate(calendarEvent.start),
+                time: this.getTimeRange(calendarEvent.start, calendarEvent.end),
                 cover: 'Check event details',
-                eventType: 'weekly'
+                eventType: this.getEventType(calendarEvent.recurrence),
+                recurring: !!calendarEvent.recurrence,
+                location: calendarEvent.location || '',
+                originalDate: calendarEvent.start,
+                coordinates: null // Will be resolved later if needed
             };
 
-            // Parse additional details from description JSON if available
+            // Parse key/value pairs from description
             if (calendarEvent.description) {
-                const additionalData = this.parseJSONFromDescription(calendarEvent.description);
+                const additionalData = this.parseKeyValueDescription(calendarEvent.description);
+                
+                // Merge additional data, but keep calendar fields as primary
                 if (additionalData) {
-                    // Override with JSON data where available, but keep calendar fields as fallback
                     eventData.cover = additionalData.cover || eventData.cover;
-                    eventData.tea = additionalData.tea;
-                    eventData.links = additionalData.links;
-                    eventData.eventType = additionalData.eventType || eventData.eventType;
-                    // Only use coordinates if no location is provided in calendar
-                    if (!calendarEvent.location && additionalData.coordinates) {
-                        eventData.coordinates = additionalData.coordinates;
+                    eventData.tea = additionalData.tea || additionalData.description;
+                    eventData.links = this.parseLinks(additionalData);
+                    eventData.website = additionalData.website;
+                    eventData.instagram = additionalData.instagram;
+                    eventData.facebook = additionalData.facebook;
+                    
+                    // Override eventType if specified in description
+                    if (additionalData.type || additionalData.eventType) {
+                        eventData.eventType = additionalData.type || additionalData.eventType;
                     }
                 }
             }
 
-            this.log(`✅ Event data parsed successfully`, eventData);
+            // Add routing support
+            eventData.slug = this.generateSlug(eventData.name);
+            eventData.citySlug = this.getCityFromUrl();
+
+            this.log(`✅ Enhanced event data parsed successfully`, eventData);
             return eventData;
         } catch (error) {
             this.error(`❌ Failed to parse event data:`, error.message);
@@ -109,42 +126,130 @@ class CalendarEventsLoader {
         }
     }
 
-    // Simple JSON parsing from description
-    parseJSONFromDescription(description) {
-        try {
-            // Look for JSON object in description
-            const jsonMatch = description.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                const jsonData = JSON.parse(jsonMatch[0]);
-                this.log(`✅ JSON parsed from description successfully`);
-                return jsonData;
+    // Parse key/value pairs from description (as shown in user's examples)
+    parseKeyValueDescription(description) {
+        const data = {};
+        const lines = description.split('\n');
+        
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            
+            // Support multiple key-value formats: Key: Value, Key = Value, Key - Value
+            const keyValueMatch = line.match(/^([^:=\-]+)[:=\-]\s*(.+)$/);
+            if (keyValueMatch) {
+                const key = keyValueMatch[1].trim().toLowerCase();
+                const value = keyValueMatch[2].trim();
+                
+                // Map common variations to standard keys
+                const keyMap = {
+                    'cover': 'cover',
+                    'cost': 'cover',
+                    'price': 'cover',
+                    'tea': 'tea',
+                    'info': 'tea',
+                    'description': 'tea',
+                    'website': 'website',
+                    'instagram': 'instagram',
+                    'facebook': 'facebook',
+                    'type': 'type',
+                    'eventtype': 'type',
+                    'recurring': 'recurring'
+                };
+                
+                const mappedKey = keyMap[key] || key;
+                data[mappedKey] = value;
+                
+                this.log(`📝 Parsed key-value: ${key} -> ${mappedKey}: ${value}`);
             }
-        } catch (error) {
-            this.log(`⚠️ No valid JSON found in description:`, error.message);
         }
-        return null;
+        
+        return Object.keys(data).length > 0 ? data : null;
     }
 
-    // Get day of week from date
+    // Parse social links from key/value data
+    parseLinks(data) {
+        const links = [];
+        
+        if (data.website) {
+            links.push({
+                type: 'website',
+                url: data.website,
+                label: '🌐 Website'
+            });
+        }
+        
+        if (data.instagram) {
+            links.push({
+                type: 'instagram',
+                url: data.instagram,
+                label: '📷 Instagram'
+            });
+        }
+        
+        if (data.facebook) {
+            links.push({
+                type: 'facebook',
+                url: data.facebook,
+                label: '📘 Facebook'
+            });
+        }
+        
+        return links.length > 0 ? links : null;
+    }
+
+    // Generate URL-friendly slug
+    generateSlug(name) {
+        return name.toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim();
+    }
+
+    // Enhanced day parsing
     getDayFromDate(date) {
         if (!date) return 'TBD';
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         return days[date.getDay()];
     }
 
-    // Get formatted time from date
-    getTimeFromDate(date) {
-        if (!date) return 'TBD';
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        const displayHours = hours % 12 || 12;
-        const displayMinutes = minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : '';
-        return `${displayHours}${displayMinutes}${ampm}`;
+    // Enhanced time range formatting
+    getTimeRange(startDate, endDate) {
+        if (!startDate) return 'TBD';
+        
+        const formatTime = (date) => {
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : '';
+            return `${displayHours}${displayMinutes}${ampm}`;
+        };
+        
+        const startTime = formatTime(startDate);
+        
+        if (endDate) {
+            const endTime = formatTime(endDate);
+            return `${startTime} - ${endTime}`;
+        }
+        
+        return startTime;
     }
 
+    // Determine event type from recurrence
+    getEventType(recurrence) {
+        if (!recurrence) return 'routine';
+        
+        if (recurrence.includes('WEEKLY')) return 'weekly';
+        if (recurrence.includes('MONTHLY')) return 'monthly';
+        if (recurrence.includes('DAILY')) return 'daily';
+        
+        return 'recurring';
+    }
+
+    // Enhanced date parsing
     parseICalDate(icalDate) {
-        // Handle both timezone and non-timezone formats
         if (icalDate.includes('T')) {
             const dateStr = icalDate.replace(/[TZ]/g, ' ').trim();
             return new Date(dateStr.substring(0, 4) + '-' + 
@@ -157,17 +262,47 @@ class CalendarEventsLoader {
         return new Date();
     }
 
-    // Fetch calendar data using CORS proxy
-    async loadCalendarData() {
-        this.log('Starting to load calendar data from Google Calendar');
+    // Geocode location using OpenStreetMap Nominatim
+    async geocodeLocation(location) {
+        if (!location || location === 'TBD') return null;
+        
+        // Check cache first
+        if (this.locationCache.has(location)) {
+            return this.locationCache.get(location);
+        }
+        
         try {
-            // Use a CORS proxy to fetch the iCal data
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location + ' New York')}&limit=1`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const result = {
+                    lat: parseFloat(data[0].lat),
+                    lng: parseFloat(data[0].lon),
+                    display_name: data[0].display_name
+                };
+                
+                // Cache the result
+                this.locationCache.set(location, result);
+                this.log(`🗺️ Geocoded location: ${location} -> ${result.lat}, ${result.lng}`);
+                return result;
+            }
+        } catch (error) {
+            this.error(`Failed to geocode location: ${location}`, error);
+        }
+        
+        return null;
+    }
+
+    // Enhanced calendar data loading
+    async loadCalendarData() {
+        this.log('Starting enhanced calendar data loading');
+        try {
             const corsProxy = 'https://api.allorigins.win/raw?url=';
             const fullUrl = corsProxy + encodeURIComponent(this.icalUrl);
-            this.log('Fetching from URL:', fullUrl);
             
             const response = await fetch(fullUrl);
-            
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -177,79 +312,105 @@ class CalendarEventsLoader {
             
             const events = this.parseICalData(icalText);
             
-            // Group events by city (you could extend this logic)
+            // Geocode locations for events that don't have coordinates
+            for (let event of events) {
+                if (event.location && !event.coordinates) {
+                    const coords = await this.geocodeLocation(event.location);
+                    if (coords) {
+                        event.coordinates = { lat: coords.lat, lng: coords.lng };
+                        event.locationDisplayName = coords.display_name;
+                    }
+                }
+            }
+            
+            // Group events by city with enhanced structure
             this.eventsData = {
                 cities: {
                     'new-york': {
                         name: 'New York',
                         emoji: '🗽',
                         tagline: 'What\'s the bear 411?',
-                        weeklyEvents: events.filter(e => e.eventType === 'weekly' || !e.eventType),
-                        routineEvents: events.filter(e => e.eventType === 'routine')
+                        weeklyEvents: events.filter(e => e.eventType === 'weekly'),
+                        routineEvents: events.filter(e => e.eventType === 'routine'),
+                        monthlyEvents: events.filter(e => e.eventType === 'monthly'),
+                        allEvents: events
                     }
                 }
             };
             
-            this.log('Successfully processed calendar data', {
-                weeklyEvents: this.eventsData.cities['new-york'].weeklyEvents.length,
-                routineEvents: this.eventsData.cities['new-york'].routineEvents.length
+            this.log('Successfully processed enhanced calendar data', {
+                total: events.length,
+                weekly: this.eventsData.cities['new-york'].weeklyEvents.length,
+                routine: this.eventsData.cities['new-york'].routineEvents.length,
+                monthly: this.eventsData.cities['new-york'].monthlyEvents.length
             });
             
             return this.eventsData;
         } catch (error) {
             this.error('Error loading calendar data:', error);
-            
-            // Fallback to local JSON file
-            this.log('Attempting fallback to local JSON file');
-            try {
-                const response = await fetch('data/events.json');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                this.eventsData = await response.json();
-                this.log('Successfully loaded fallback data', this.eventsData);
-                return this.eventsData;
-            } catch (fallbackError) {
-                this.error('Fallback to local JSON also failed:', fallbackError);
-                
-                // Show user-friendly error message
-                this.showCalendarError();
-                return null;
-            }
+            return await this.loadFallbackData();
         }
     }
 
+    // Load fallback data
+    async loadFallbackData() {
+        this.log('Attempting fallback to local JSON file');
+        try {
+            const response = await fetch('data/events.json');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            this.eventsData = await response.json();
+            this.log('Successfully loaded fallback data');
+            return this.eventsData;
+        } catch (fallbackError) {
+            this.error('Fallback to local JSON also failed:', fallbackError);
+            this.showCalendarError();
+            return null;
+        }
+    }
+
+    // Enhanced error display
     showCalendarError() {
-        const calendarGrid = document.querySelector('.calendar-grid');
-        const weeklyEventsList = document.querySelector('.weekly-events .events-list');
-        const routineEventsList = document.querySelector('.routine-events .events-list');
-        
         const errorMessage = `
-            <div class="error-message" style="padding: 20px; background: #ffe6e6; border: 1px solid #ff9999; border-radius: 8px; margin: 10px 0;">
+            <div class="error-message">
                 <h3>📅 Calendar Temporarily Unavailable</h3>
-                <p>We're having trouble loading the latest events from our calendar. This might be due to:</p>
+                <p>We're having trouble loading the latest events. This might be due to:</p>
                 <ul>
                     <li>Temporary network issues</li>
                     <li>Calendar service maintenance</li>
                     <li>CORS proxy limitations</li>
                 </ul>
-                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our <a href="https://www.instagram.com/bearhappyhournyc" target="_blank">Instagram</a> for the latest updates.</p>
+                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
             </div>
         `;
         
-        if (calendarGrid) calendarGrid.innerHTML = errorMessage;
-        if (weeklyEventsList) weeklyEventsList.innerHTML = errorMessage;
-        if (routineEventsList) routineEventsList.innerHTML = '<p>No routine events available at the moment.</p>';
+        document.querySelectorAll('.calendar-grid, .events-list').forEach(el => {
+            if (el) el.innerHTML = errorMessage;
+        });
     }
 
+    // Get city from URL with enhanced routing support
     getCityFromUrl() {
         const path = window.location.pathname;
         const filename = path.split('/').pop().replace('.html', '');
-        const cityKey = filename === 'index' ? null : filename;
+        
+        // Support various URL formats
+        const cityMap = {
+            'new-york': 'new-york',
+            'nyc': 'new-york',
+            'newyork': 'new-york',
+            'san-francisco': 'san-francisco',
+            'sf': 'san-francisco',
+            'sanfrancisco': 'san-francisco'
+        };
+        
+        const cityKey = cityMap[filename] || filename;
         this.log('Detected city from URL:', cityKey);
-        return cityKey;
+        return cityKey === 'index' ? null : cityKey;
     }
 
+    // Enhanced event card generation
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => 
             `<a href="${link.url}" target="_blank" rel="noopener">${link.label}</a>`
@@ -276,11 +437,17 @@ class CalendarEventsLoader {
                 <span class="value">${event.bar}</span>
             </div>`;
 
+        const recurringBadge = event.recurring ? 
+            `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
+
         return `
-            <div class="event-card detailed" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
+            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
                     <h3>${event.name}</h3>
-                    <div class="event-day">${event.day} ${event.time}</div>
+                    <div class="event-meta">
+                        <div class="event-day">${event.day} ${event.time}</div>
+                        ${recurringBadge}
+                    </div>
                 </div>
                 <div class="event-details">
                     ${locationHtml}
@@ -297,9 +464,12 @@ class CalendarEventsLoader {
         `;
     }
 
+    // Enhanced calendar generation
     generateCalendarEvents(events) {
         const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const eventsByDay = {};
+        const today = new Date();
+        const todayDayName = daysOfWeek[today.getDay()];
 
         // Initialize all days
         daysOfWeek.forEach(day => {
@@ -307,23 +477,34 @@ class CalendarEventsLoader {
         });
 
         // Group events by day
-        [...events.weeklyEvents, ...events.routineEvents].forEach(event => {
+        [...events.weeklyEvents, ...events.routineEvents, ...(events.monthlyEvents || [])].forEach(event => {
             if (eventsByDay[event.day]) {
-                eventsByDay[event.day].push(event.name);
+                eventsByDay[event.day].push(event);
             }
         });
 
         return daysOfWeek.map(day => {
-            const eventsHtml = eventsByDay[day].length > 0 
-                ? eventsByDay[day].map(eventName => `<div class="event-item">${eventName}</div>`).join('')
-                : '<!-- No events -->';
+            const dayEvents = eventsByDay[day];
+            const eventsHtml = dayEvents.length > 0 
+                ? dayEvents.map(event => `
+                    <div class="event-item" data-event-slug="${event.slug}">
+                        <div class="event-name">${event.name}</div>
+                        <div class="event-time">${event.time}</div>
+                        <div class="event-venue">${event.bar}</div>
+                    </div>
+                `).join('')
+                : '<div class="no-events">No events</div>';
 
-            const isToday = new Date().getDay() === daysOfWeek.indexOf(day);
+            const isToday = day === todayDayName;
             const currentClass = isToday ? ' current' : '';
+            const dayNumber = today.getDate();
 
             return `
-                <div class="calendar-day${currentClass}">
-                    <h3>${day}</h3>
+                <div class="calendar-day${currentClass}" data-day="${day}">
+                    <div class="day-header">
+                        <h3>${day}</h3>
+                        ${isToday ? `<span class="day-indicator">Today</span>` : ''}
+                    </div>
                     <div class="events">
                         ${eventsHtml}
                     </div>
@@ -332,127 +513,117 @@ class CalendarEventsLoader {
         }).join('');
     }
 
+    // Enhanced city page rendering
     async renderCityPage(cityKey) {
-        this.log(`Starting to render city page for: ${cityKey}`);
+        this.log(`Starting enhanced city page render for: ${cityKey}`);
         
         if (!this.eventsData) {
-            this.log('No events data loaded, attempting to load...');
             await this.loadCalendarData();
         }
 
-        if (!this.eventsData) {
-            this.error('Failed to load any events data');
-            return;
-        }
-
-        if (!this.eventsData.cities[cityKey]) {
-            this.error(`City data not found for: ${cityKey}`, Object.keys(this.eventsData.cities));
+        if (!this.eventsData?.cities[cityKey]) {
+            this.error(`City data not found for: ${cityKey}`);
             return;
         }
 
         const cityData = this.eventsData.cities[cityKey];
-        this.log(`Rendering city data for ${cityData.name}`, {
-            weeklyEvents: cityData.weeklyEvents?.length || 0,
-            routineEvents: cityData.routineEvents?.length || 0
-        });
+        this.log(`Rendering enhanced city data for ${cityData.name}`);
 
         // Update city header
         const cityHeader = document.querySelector('.city-header h1');
         const cityTagline = document.querySelector('.city-tagline');
         
-        if (cityHeader) {
-            cityHeader.textContent = `${cityData.emoji} ${cityData.name}`;
-            this.log('Updated city header');
-        } else {
-            this.log('City header element not found');
-        }
-        
-        if (cityTagline) {
-            cityTagline.textContent = cityData.tagline;
-            this.log('Updated city tagline');
-        } else {
-            this.log('City tagline element not found');
-        }
+        if (cityHeader) cityHeader.textContent = `${cityData.emoji} ${cityData.name}`;
+        if (cityTagline) cityTagline.textContent = cityData.tagline;
 
-        // Update calendar
+        // Update enhanced calendar
         const calendarGrid = document.querySelector('.calendar-grid');
         if (calendarGrid) {
             calendarGrid.innerHTML = this.generateCalendarEvents(cityData);
-            this.log('Updated calendar grid');
-        } else {
-            this.log('Calendar grid element not found');
+            this.attachCalendarInteractions();
         }
 
-        // Update weekly events
-        const weeklyEventsList = document.querySelector('.weekly-events .events-list');
-        if (weeklyEventsList && cityData.weeklyEvents) {
-            weeklyEventsList.innerHTML = cityData.weeklyEvents.map(event => 
-                this.generateEventCard(event)
-            ).join('');
-            this.log(`Updated weekly events list with ${cityData.weeklyEvents.length} events`);
-        } else {
-            this.log('Weekly events list element not found or no weekly events');
-        }
-
-        // Update routine events
-        const routineEventsList = document.querySelector('.routine-events .events-list');
-        if (routineEventsList && cityData.routineEvents) {
-            routineEventsList.innerHTML = cityData.routineEvents.map(event => 
-                this.generateEventCard(event)
-            ).join('');
-            this.log(`Updated routine events list with ${cityData.routineEvents.length} events`);
-        } else {
-            this.log('Routine events list element not found or no routine events');
-        }
-
-        // Initialize map with all events
-        this.initializeMap(cityData);
-
-        // Update page title
-        document.title = `${cityData.name} - Chunky Dad Bear Guide`;
+        // Update event sections
+        this.updateEventSection('.weekly-events .events-list', cityData.weeklyEvents);
+        this.updateEventSection('.routine-events .events-list', cityData.routineEvents);
         
-        // Update meta description
-        const metaDescription = document.querySelector('meta[name="description"]');
-        if (metaDescription) {
-            metaDescription.setAttribute('content', 
-                `Complete gay bear guide to ${cityData.name} - events, bars, and the hottest bear scene`
-            );
+        // Add monthly events section if exists
+        if (cityData.monthlyEvents?.length > 0) {
+            this.addMonthlyEventsSection(cityData.monthlyEvents);
         }
+
+        // Initialize enhanced map
+        this.initializeEnhancedMap(cityData);
+
+        // Update page metadata
+        this.updatePageMetadata(cityData);
         
-        this.log('City page rendering completed successfully');
+        this.log('Enhanced city page rendering completed');
     }
 
-    initializeMap(cityData) {
-        const mapContainer = document.querySelector('#events-map');
-        if (!mapContainer) {
-            this.log('Map container not found - skipping map initialization');
-            return;
+    // Update event section helper
+    updateEventSection(selector, events) {
+        const section = document.querySelector(selector);
+        if (section && events?.length > 0) {
+            section.innerHTML = events.map(event => this.generateEventCard(event)).join('');
         }
+    }
 
-        this.log('Initializing map...');
-        
+    // Add monthly events section if needed
+    addMonthlyEventsSection(monthlyEvents) {
+        const routineSection = document.querySelector('.routine-events');
+        if (routineSection && monthlyEvents.length > 0) {
+            const monthlySection = document.createElement('section');
+            monthlySection.className = 'monthly-events';
+            monthlySection.innerHTML = `
+                <div class="container">
+                    <h2>Monthly Events</h2>
+                    <div class="events-list">
+                        ${monthlyEvents.map(event => this.generateEventCard(event)).join('')}
+                    </div>
+                </div>
+            `;
+            routineSection.parentNode.insertBefore(monthlySection, routineSection.nextSibling);
+        }
+    }
+
+    // Add calendar interactions
+    attachCalendarInteractions() {
+        document.querySelectorAll('.event-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const eventSlug = item.dataset.eventSlug;
+                const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
+                if (eventCard) {
+                    eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    eventCard.classList.add('highlight');
+                    setTimeout(() => eventCard.classList.remove('highlight'), 2000);
+                }
+            });
+        });
+    }
+
+    // Enhanced map initialization
+    initializeEnhancedMap(cityData) {
+        const mapContainer = document.querySelector('#events-map');
+        if (!mapContainer || typeof L === 'undefined') return;
+
         try {
-            // Check if Leaflet is available
-            if (typeof L === 'undefined') {
-                this.error('Leaflet library not loaded - cannot initialize map');
-                mapContainer.innerHTML = '<p>Map temporarily unavailable. Please refresh the page.</p>';
-                return;
-            }
+            const map = L.map('events-map').setView([40.7831, -73.9712], 12);
 
-            // Initialize Leaflet map
-            const map = L.map('events-map').setView([40.7831, -73.9712], 12); // NYC center
-
-            // Add OpenStreetMap tiles
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
 
-            // Add markers for events with coordinates
-            const allEvents = [...(cityData.weeklyEvents || []), ...(cityData.routineEvents || [])];
+            const allEvents = [
+                ...(cityData.weeklyEvents || []), 
+                ...(cityData.routineEvents || []),
+                ...(cityData.monthlyEvents || [])
+            ];
+            
             let markersAdded = 0;
             
             allEvents.forEach(event => {
-                if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                if (event.coordinates?.lat && event.coordinates?.lng) {
                     const marker = L.marker([event.coordinates.lat, event.coordinates.lng])
                         .addTo(map)
                         .bindPopup(`
@@ -461,39 +632,46 @@ class CalendarEventsLoader {
                                 <p><strong>${event.bar}</strong></p>
                                 <p>${event.day} ${event.time}</p>
                                 <p>Cover: ${event.cover}</p>
+                                ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
                             </div>
                         `);
                     markersAdded++;
                 }
             });
 
-            this.log(`Map initialized successfully with ${markersAdded} markers`);
-
-            // Store map reference globally for showOnMap function
+            this.log(`Enhanced map initialized with ${markersAdded} markers`);
             window.eventsMap = map;
         } catch (error) {
-            this.error('Failed to initialize map:', error);
-            mapContainer.innerHTML = '<p>Map temporarily unavailable. Please refresh the page.</p>';
+            this.error('Failed to initialize enhanced map:', error);
         }
     }
 
+    // Update page metadata
+    updatePageMetadata(cityData) {
+        document.title = `${cityData.name} - Chunky Dad Bear Guide`;
+        
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.setAttribute('content', 
+                `Complete gay bear guide to ${cityData.name} - events, bars, and the hottest bear scene`
+            );
+        }
+    }
+
+    // Initialize the enhanced system
     async init() {
-        this.log('Initializing CalendarEventsLoader...');
+        this.log('Initializing enhanced CalendarEventsLoader...');
         const cityKey = this.getCityFromUrl();
         if (cityKey) {
-            this.log(`City detected: ${cityKey} - starting page render`);
             await this.renderCityPage(cityKey);
-        } else {
-            this.log('No city detected from URL - likely on homepage');
         }
     }
 }
 
-// Global function to show location on map
+// Enhanced map interaction function
 function showOnMap(lat, lng, eventName, barName) {
     if (window.eventsMap) {
         window.eventsMap.setView([lat, lng], 16);
-        // Find and open the popup for this location
         window.eventsMap.eachLayer(layer => {
             if (layer instanceof L.Marker) {
                 const latLng = layer.getLatLng();
@@ -505,11 +683,10 @@ function showOnMap(lat, lng, eventName, barName) {
     }
 }
 
-// Initialize when DOM is loaded
+// Initialize enhanced system
 document.addEventListener('DOMContentLoaded', () => {
     const calendarLoader = new CalendarEventsLoader();
     calendarLoader.init();
 });
 
-// Export for potential use in other scripts
 window.CalendarEventsLoader = CalendarEventsLoader;
