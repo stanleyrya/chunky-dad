@@ -1,0 +1,97 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:chunky-dad-nyc
+X-WR-TIMEZONE:America/New_York
+BEGIN:VTIMEZONE
+TZID:America/New_York
+X-LIC-LOCATION:America/New_York
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250710T190000
+DTEND;TZID=America/New_York:20250710T220000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20250709T030310Z
+UID:v12lqkpglh2iupk54ttds6pcmg@google.com
+CREATED:20250708T205306Z
+DESCRIPTION:Website: <a href="https://animal.nyc" target="_blank">https://a
+ nimal.nyc</a><br>Instagram: <a href="https://www.instagram.com/animal.nyc" 
+ target="_blank">https://www.instagram.com/animal.nyc</a><br>Google Maps: <a
+  href="https://maps.app.goo.gl/XvrwkXqQApYfaj6h9">https://maps.app.goo.gl/X
+ vrwkXqQApYfaj6h9</a>
+LAST-MODIFIED:20250709T023757Z
+LOCATION:40.71739735291992\, -73.94930680925715
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Bears Are Animals
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250710T170000
+DTEND;TZID=America/New_York:20250710T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20250709T030310Z
+UID:6ebau4scmn3rj1dq4ubgmlcq0s@google.com
+CREATED:20250708T204917Z
+DESCRIPTION:Tea: Popular happy hour that changes location every week in Man
+ hattan.\nInstagram: https://www.instagram.com/bearhappyhourny
+LAST-MODIFIED:20250709T023848Z
+LOCATION:Rotating
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250726T210000
+DTEND;TZID=America/New_York:20250727T040000
+RRULE:FREQ=MONTHLY;BYMONTHDAY=26
+DTSTAMP:20250709T030310Z
+UID:kakvb4r8ae8ippru69p8uo1o88@google.com
+CREATED:20250708T205659Z
+DESCRIPTION:Cover: Varies\, ~$25 tickets<br>Instagram: <a href="https://www
+ .instagram.com/goldiloxx__" target="_blank">https://www.instagram.com/goldi
+ loxx__</a><br>Google Maps: <a href="https://maps.app.goo.gl/EWAtZea7ZZukum1
+ K9">https://maps.app.goo.gl/EWAtZea7ZZukum1K9</a>
+LAST-MODIFIED:20250709T023929Z
+LOCATION:40.75775322645565\, -73.99257438113817
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Goldiloxx
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250706T170000
+DTEND;TZID=America/New_York:20250707T040000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20250709T030310Z
+UID:96d0b400rgfpagk14sc2bd1aks@google.com
+CREATED:20250708T205446Z
+DESCRIPTION:Name: Beer Blast<br>Bar: Eagle NYC<br>Cover: No cover till 9PM\
+ , $20 cover at 9PM<br>Website: <a href="https://eagle-ny.com" target="_blan
+ k">https://eagle-ny.com</a><br>Google Maps: <a href="https://maps.app.goo.g
+ l/8N8zpGGAYwXJjgsGA">https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA</a>
+LAST-MODIFIED:20250709T024004Z
+LOCATION:40.75168692425323\, -74.00431317114098
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Blast
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR
