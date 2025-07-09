@@ -121,7 +121,7 @@ class CalendarEventsLoader {
 
             // Add routing support
             eventData.slug = this.generateSlug(eventData.name);
-            eventData.citySlug = this.getCityFromUrl();
+            eventData.citySlug =this.cityKey;
 
             this.log(`✅ Enhanced event data parsed successfully`, eventData);
             return eventData;
