@@ -31,8 +31,6 @@ class CalendarEventsLoader {
         let eventCount = 0;
         
         for (let line of lines) {
-            line = line.trim();
-            
             if (line === 'BEGIN:VEVENT') {
                 inEvent = true;
                 currentEvent = {};
