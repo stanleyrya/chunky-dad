@@ -57,6 +57,9 @@ class CalendarEventsLoader {
                     currentEvent.title = line.substring(8).replace(/\\,/g, ',').replace(/\\;/g, ';');
                 } else if (line.startsWith('DESCRIPTION:')) {
                     currentEvent.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';');
+                } else if (line.startsWith(' ') && currentEvent.description) {
+                    // Handle continuation lines for description (and other fields)
+                    currentEvent.description += line.substring(1);
                 } else if (line.startsWith('LOCATION:')) {
                     currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';');
                 } else if (line.startsWith('DTSTART')) {
@@ -106,6 +109,10 @@ class CalendarEventsLoader {
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;
                     eventData.facebook = additionalData.facebook;
+                    eventData.gmaps = additionalData.gmaps;
+                    
+                    // Parse links from the additional data
+                    eventData.links = this.parseLinks(additionalData);
                     
                     // Override eventType if specified in description
                     if (additionalData.type || additionalData.eventType) {
@@ -152,16 +159,33 @@ class CalendarEventsLoader {
             'type': 'type',
             'eventtype': 'type',
             'recurring': 'recurring',
-            'gmaps' : 'gmaps',
-            'gmaps' : 'google maps'
+            'gmaps': 'gmaps',
+            'google maps': 'gmaps'
         };
 
         let textBlock = description;
         if (isHypertext) {
+            // First extract any hrefs from anchor tags before processing
+            const anchorRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
+            const matches = [];
+            let match;
+            while ((match = anchorRegex.exec(textBlock)) !== null) {
+                matches.push({ url: match[1], text: match[2] });
+            }
+            
+            // Replace <br> tags with newlines
+            textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
+            
+            // Convert to plain text but preserve URLs
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = textBlock;
             textBlock = tempDiv.textContent || tempDiv.innerText || '';
-            textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
+            
+            // Add back URLs in a parseable format
+            matches.forEach(linkMatch => {
+                const urlPattern = new RegExp(linkMatch.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                textBlock = textBlock.replace(urlPattern, linkMatch.url);
+            });
         }
         const lines = textBlock.split("\n");
         
@@ -211,6 +235,14 @@ class CalendarEventsLoader {
                 type: 'facebook',
                 url: data.facebook,
                 label: '📘 Facebook'
+            });
+        }
+        
+        if (data.gmaps) {
+            links.push({
+                type: 'gmaps',
+                url: data.gmaps,
+                label: '🗺️ Google Maps'
             });
         }
         
