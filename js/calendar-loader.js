@@ -159,7 +159,7 @@ class CalendarEventsLoader {
         let textBlock = description;
         if (isHypertext) {
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlString;
+            tempDiv.innerHTML = textBlock;
             textBlock = tempDiv.textContent || tempDiv.innerText || '';
         }
         const lines = description.split("\n");
