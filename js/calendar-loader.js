@@ -116,7 +116,7 @@ class CalendarEventsLoader {
             
             if (calendarEvent.location) {
                 const latlong = calendarEvent.location.split(",");
-                eventData.coordinates = { lat: latlong[0].trim(), lng: latlong[1].trim() };
+                eventData.coordinates = { lat: latlong[0]?.trim(), lng: latlong[1]?.trim() };
             }
 
             // Add routing support
