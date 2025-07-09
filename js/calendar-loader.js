@@ -134,7 +134,35 @@ class CalendarEventsLoader {
     // Parse key/value pairs from description
     parseKeyValueDescription(description) {
         const data = {};
-        const lines = description.split(/<br\s*\/?>/i);
+        const isHypertext = description.includes("<br>");
+        // Map common variations to standard keys
+        const keyMap = {
+            'bar': 'bar',
+            'location': 'bar',
+            'host': 'bar',
+            'cover': 'cover',
+            'cost': 'cover',
+            'price': 'cover',
+            'tea': 'tea',
+            'info': 'tea',
+            'description': 'tea',
+            'website': 'website',
+            'instagram': 'instagram',
+            'facebook': 'facebook',
+            'type': 'type',
+            'eventtype': 'type',
+            'recurring': 'recurring',
+            'gmaps' : 'gmaps',
+            'gmaps' : 'google maps'
+        };
+
+        let textBlock = description;
+        if (isHypertext) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlString;
+            textBlock = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        const lines = description.split("\n");
         
         for (let line of lines) {
             line = line.trim();
@@ -148,26 +176,7 @@ class CalendarEventsLoader {
                 const key = keyValueMatch[1].trim().toLowerCase();
                 const value = keyValueMatch[2].trim();
                 
-                // Map common variations to standard keys
-                const keyMap = {
-                    'bar': 'bar',
-                    'location': 'bar',
-                    'host': 'bar',
-                    'cover': 'cover',
-                    'cost': 'cover',
-                    'price': 'cover',
-                    'tea': 'tea',
-                    'info': 'tea',
-                    'description': 'tea',
-                    'website': 'website',
-                    'instagram': 'instagram',
-                    'facebook': 'facebook',
-                    'type': 'type',
-                    'eventtype': 'type',
-                    'recurring': 'recurring',
-                    'gmaps' : 'gmaps',
-                    'gmaps' : 'google maps'
-                };
+                
                 
                 const mappedKey = keyMap[key] || key;
                 data[mappedKey] = value;
