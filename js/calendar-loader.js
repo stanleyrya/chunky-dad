@@ -139,10 +139,12 @@ class CalendarEventsLoader {
         for (let line of lines) {
             line = line.trim();
             if (!line) continue;
+            this.log(line);
             
             // Support multiple key-value formats: Key: Value, Key = Value, Key - Value
             const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
             if (keyValueMatch) {
+                this.log(keyValueMatch);
                 const key = keyValueMatch[1].trim().toLowerCase();
                 const value = keyValueMatch[2].trim();
                 
