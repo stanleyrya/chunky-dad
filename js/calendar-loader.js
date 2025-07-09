@@ -162,16 +162,9 @@ class CalendarEventsLoader {
             'google maps': 'gmaps'
         };
 
+        this.log("is Hypertext before processing:", textBlock)
         let textBlock = description;
         if (textBlock.includes("<br>")) {
-            this.log("is Hypertext before processing:", textBlock)
-            // First extract any hrefs from anchor tags before processing
-            const anchorRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
-            const matches = [];
-            let match;
-            while ((match = anchorRegex.exec(textBlock)) !== null) {
-                matches.push({ url: match[1], text: match[2] });
-            }
             
             // Replace <br> tags with newlines
             textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
@@ -182,16 +175,9 @@ class CalendarEventsLoader {
             tempDiv.innerHTML = textBlock;
             textBlock = tempDiv.textContent || tempDiv.innerText || '';
             this.log("is Hypertext after processing 2:", textBlock)
-            
-            // Add back URLs in a parseable format
-            matches.forEach(linkMatch => {
-                const urlPattern = new RegExp(linkMatch.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-                textBlock = textBlock.replace(urlPattern, linkMatch.url);
-            });
-            this.log("is Hypertext after processing 3:", textBlock)
         }
         const lines = textBlock.split("\n");
-        this.log("is after processing 4:", textBlock)
+        this.log("is after processing 3:", textBlock)
         
         for (let line of lines) {
             line = line.trim();
@@ -201,7 +187,6 @@ class CalendarEventsLoader {
             // Support multiple key-value formats: Key: Value, Key = Value, Key - Value
             const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
             if (keyValueMatch) {
-                this.log(keyValueMatch);
                 const key = keyValueMatch[1].trim().toLowerCase();
                 const value = keyValueMatch[2].trim();
                 const mappedKey = keyMap[key] || key;
