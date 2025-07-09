@@ -134,7 +134,7 @@ class CalendarEventsLoader {
     // Parse key/value pairs from description
     parseKeyValueDescription(description) {
         const data = {};
-        const lines = description.split(/\r\n|\n|\r/);
+        const lines = description.split(/<br\s*\/?>/i);
         
         for (let line of lines) {
             line = line.trim();
