@@ -304,23 +304,6 @@ class CalendarEventsLoader {
             return this.eventsData;
         } catch (error) {
             this.error('Error loading calendar data:', error);
-            return await this.loadFallbackData();
-        }
-    }
-
-    // Load fallback data
-    async loadFallbackData() {
-        this.log('Attempting fallback to local JSON file');
-        try {
-            const response = await fetch('data/events.json');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            this.eventsData = await response.json();
-            this.log('Successfully loaded fallback data');
-            return this.eventsData;
-        } catch (fallbackError) {
-            this.error('Fallback to local JSON also failed:', fallbackError);
             this.showCalendarError();
             return null;
         }
@@ -413,7 +396,7 @@ class CalendarEventsLoader {
         });
 
         // Group events by day
-        events.forEach(event => {
+        (events || []).forEach(event => {
             if (eventsByDay[event.day]) {
                 eventsByDay[event.day].push(event);
             }
