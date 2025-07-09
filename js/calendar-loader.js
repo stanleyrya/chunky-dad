@@ -458,7 +458,7 @@ class CalendarEventsLoader {
         // Update enhanced calendar
         const calendarGrid = document.querySelector('.calendar-grid');
         if (calendarGrid) {
-            calendarGrid.innerHTML = this.generateCalendarEvents(cityData);
+            calendarGrid.innerHTML = this.generateCalendarEvents(cityData.events);
             this.attachCalendarInteractions();
         }
 
