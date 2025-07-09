@@ -176,6 +176,7 @@ class CalendarEventsLoader {
             textBlock = tempDiv.textContent || tempDiv.innerText || '';
             this.log("is Hypertext after processing 2:", textBlock)
         }
+        const textBlock = textBlock.replace("\\n", "\n");
         const lines = textBlock.split("\n");
         this.log("is after processing 3:", textBlock)
         
