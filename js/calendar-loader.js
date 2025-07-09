@@ -31,7 +31,8 @@ class CalendarEventsLoader {
         let eventCount = 0;
         
         for (let line of lines) {
-            this.log("line:", line);
+            // The last character is always a space
+            line = line.slice(0, -1);
             if (line === 'BEGIN:VEVENT') {
                 inEvent = true;
                 currentEvent = {};
@@ -73,10 +74,6 @@ class CalendarEventsLoader {
                     }
                 } else if (line.startsWith('RRULE:')) {
                     currentEvent.recurrence = line.substring(6);
-                }
-            } else {
-                for (let i = 0; i < line.length; i++) {
-                    this.log(line[i]);
                 }
             }
         }
