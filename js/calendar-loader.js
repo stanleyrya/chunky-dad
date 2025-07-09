@@ -134,7 +134,7 @@ class CalendarEventsLoader {
     // Parse key/value pairs from description
     parseKeyValueDescription(description) {
         const data = {};
-        const lines = description.split('\n');
+        const lines = description.split(/\r\n|\n|\r/);
         
         for (let line of lines) {
             line = line.trim();
@@ -162,7 +162,9 @@ class CalendarEventsLoader {
                     'facebook': 'facebook',
                     'type': 'type',
                     'eventtype': 'type',
-                    'recurring': 'recurring'
+                    'recurring': 'recurring',
+                    'gmaps' : 'gmaps',
+                    'gmaps' : 'google maps'
                 };
                 
                 const mappedKey = keyMap[key] || key;
