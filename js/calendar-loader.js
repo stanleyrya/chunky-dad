@@ -74,6 +74,10 @@ class CalendarEventsLoader {
                 } else if (line.startsWith('RRULE:')) {
                     currentEvent.recurrence = line.substring(6);
                 }
+            } else {
+                for (let i = 0; i < myString.length; i++) {
+                    this.log(myString[i]);
+                }
             }
         }
         
