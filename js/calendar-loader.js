@@ -162,8 +162,8 @@ class CalendarEventsLoader {
             'google maps': 'gmaps'
         };
 
-        this.log("is Hypertext before processing:", textBlock)
         let textBlock = description;
+        this.log("is Hypertext before processing:", textBlock)
         if (textBlock.includes("<br>")) {
             
             // Replace <br> tags with newlines
