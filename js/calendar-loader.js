@@ -22,6 +22,7 @@ class CalendarEventsLoader {
     // Enhanced iCal parsing with full calendar field support
     parseICalData(icalText) {
         this.log('Starting enhanced iCal parsing', `Text length: ${icalText.length}`);
+        this.log(icalText);
         const events = [];
         const lines = icalText.split('\n');
         let currentEvent = null;
@@ -79,6 +80,8 @@ class CalendarEventsLoader {
 
     // Enhanced event parsing using calendar fields as primary source
     parseEventData(calendarEvent) {
+        this.log("calendar event");
+        this.log(calendarEvent):
         try {
             // Start with Google Calendar native fields as primary source
             const eventData = {
@@ -89,9 +92,7 @@ class CalendarEventsLoader {
                 cover: 'Check event details',
                 eventType: this.getEventType(calendarEvent.recurrence),
                 recurring: !!calendarEvent.recurrence,
-                location: calendarEvent.location || '',
-                originalDate: calendarEvent.start,
-                coordinates: null // Will be resolved later if needed
+                coordinates: calendarEvent.location
             };
 
             // Parse key/value pairs from description
@@ -102,7 +103,6 @@ class CalendarEventsLoader {
                 if (additionalData) {
                     eventData.cover = additionalData.cover || eventData.cover;
                     eventData.tea = additionalData.tea || additionalData.description;
-                    eventData.links = this.parseLinks(additionalData);
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;
                     eventData.facebook = additionalData.facebook;
@@ -112,6 +112,11 @@ class CalendarEventsLoader {
                         eventData.eventType = additionalData.type || additionalData.eventType;
                     }
                 }
+            }
+            
+            if (event.location) {
+                const latlong = event.location.split(", ");
+                event.coordinates = { lat: latlong[0], lng: latlong[1] };
             }
 
             // Add routing support
@@ -126,7 +131,7 @@ class CalendarEventsLoader {
         }
     }
 
-    // Parse key/value pairs from description (as shown in user's examples)
+    // Parse key/value pairs from description
     parseKeyValueDescription(description) {
         const data = {};
         const lines = description.split('\n');
@@ -136,7 +141,7 @@ class CalendarEventsLoader {
             if (!line) continue;
             
             // Support multiple key-value formats: Key: Value, Key = Value, Key - Value
-            const keyValueMatch = line.match(/^([^:=\-]+)[:=\-]\s*(.+)$/);
+            const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
             if (keyValueMatch) {
                 const key = keyValueMatch[1].trim().toLowerCase();
                 const value = keyValueMatch[2].trim();
@@ -262,39 +267,6 @@ class CalendarEventsLoader {
         return new Date();
     }
 
-    // Geocode location using OpenStreetMap Nominatim
-    async geocodeLocation(location) {
-        if (!location || location === 'TBD') return null;
-        
-        // Check cache first
-        if (this.locationCache.has(location)) {
-            return this.locationCache.get(location);
-        }
-        
-        try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location + ' New York')}&limit=1`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data && data.length > 0) {
-                const result = {
-                    lat: parseFloat(data[0].lat),
-                    lng: parseFloat(data[0].lon),
-                    display_name: data[0].display_name
-                };
-                
-                // Cache the result
-                this.locationCache.set(location, result);
-                this.log(`🗺️ Geocoded location: ${location} -> ${result.lat}, ${result.lng}`);
-                return result;
-            }
-        } catch (error) {
-            this.error(`Failed to geocode location: ${location}`, error);
-        }
-        
-        return null;
-    }
-
     // Enhanced calendar data loading
     async loadCalendarData() {
         this.log('Starting enhanced calendar data loading');
@@ -312,17 +284,6 @@ class CalendarEventsLoader {
             
             const events = this.parseICalData(icalText);
             
-            // Geocode locations for events that don't have coordinates
-            for (let event of events) {
-                if (event.location && !event.coordinates) {
-                    const coords = await this.geocodeLocation(event.location);
-                    if (coords) {
-                        event.coordinates = { lat: coords.lat, lng: coords.lng };
-                        event.locationDisplayName = coords.display_name;
-                    }
-                }
-            }
-            
             // Group events by city with enhanced structure
             this.eventsData = {
                 cities: {
@@ -330,20 +291,12 @@ class CalendarEventsLoader {
                         name: 'New York',
                         emoji: '🗽',
                         tagline: 'What\'s the bear 411?',
-                        weeklyEvents: events.filter(e => e.eventType === 'weekly'),
-                        routineEvents: events.filter(e => e.eventType === 'routine'),
-                        monthlyEvents: events.filter(e => e.eventType === 'monthly'),
-                        allEvents: events
+                        events: events
                     }
                 }
             };
             
-            this.log('Successfully processed enhanced calendar data', {
-                total: events.length,
-                weekly: this.eventsData.cities['new-york'].weeklyEvents.length,
-                routine: this.eventsData.cities['new-york'].routineEvents.length,
-                monthly: this.eventsData.cities['new-york'].monthlyEvents.length
-            });
+            this.log('Successfully processed enhanced calendar data', events);
             
             return this.eventsData;
         } catch (error) {
@@ -477,7 +430,7 @@ class CalendarEventsLoader {
         });
 
         // Group events by day
-        [...events.weeklyEvents, ...events.routineEvents, ...(events.monthlyEvents || [])].forEach(event => {
+        events.forEach(event => {
             if (eventsByDay[event.day]) {
                 eventsByDay[event.day].push(event);
             }
@@ -543,19 +496,8 @@ class CalendarEventsLoader {
             this.attachCalendarInteractions();
         }
 
-        // Update event sections
-        this.updateEventSection('.weekly-events .events-list', cityData.weeklyEvents);
-        this.updateEventSection('.routine-events .events-list', cityData.routineEvents);
-        
-        // Add monthly events section if exists
-        if (cityData.monthlyEvents?.length > 0) {
-            this.addMonthlyEventsSection(cityData.monthlyEvents);
-        }
-
-        // Initialize enhanced map
+        this.updateEventSection('.events .events-list', cityData.events);
         this.initializeEnhancedMap(cityData);
-
-        // Update page metadata
         this.updatePageMetadata(cityData);
         
         this.log('Enhanced city page rendering completed');
@@ -566,24 +508,6 @@ class CalendarEventsLoader {
         const section = document.querySelector(selector);
         if (section && events?.length > 0) {
             section.innerHTML = events.map(event => this.generateEventCard(event)).join('');
-        }
-    }
-
-    // Add monthly events section if needed
-    addMonthlyEventsSection(monthlyEvents) {
-        const routineSection = document.querySelector('.routine-events');
-        if (routineSection && monthlyEvents.length > 0) {
-            const monthlySection = document.createElement('section');
-            monthlySection.className = 'monthly-events';
-            monthlySection.innerHTML = `
-                <div class="container">
-                    <h2>Monthly Events</h2>
-                    <div class="events-list">
-                        ${monthlyEvents.map(event => this.generateEventCard(event)).join('')}
-                    </div>
-                </div>
-            `;
-            routineSection.parentNode.insertBefore(monthlySection, routineSection.nextSibling);
         }
     }
 
@@ -613,16 +537,10 @@ class CalendarEventsLoader {
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
-
-            const allEvents = [
-                ...(cityData.weeklyEvents || []), 
-                ...(cityData.routineEvents || []),
-                ...(cityData.monthlyEvents || [])
-            ];
             
             let markersAdded = 0;
             
-            allEvents.forEach(event => {
+            cityData.events.forEach(event => {
                 if (event.coordinates?.lat && event.coordinates?.lng) {
                     const marker = L.marker([event.coordinates.lat, event.coordinates.lng])
                         .addTo(map)
