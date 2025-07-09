@@ -161,8 +161,9 @@ class CalendarEventsLoader {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = textBlock;
             textBlock = tempDiv.textContent || tempDiv.innerText || '';
+            textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
         }
-        const lines = description.split("\n");
+        const lines = textBlock.split("\n");
         
         for (let line of lines) {
             line = line.trim();
@@ -175,9 +176,6 @@ class CalendarEventsLoader {
                 this.log(keyValueMatch);
                 const key = keyValueMatch[1].trim().toLowerCase();
                 const value = keyValueMatch[2].trim();
-                
-                
-                
                 const mappedKey = keyMap[key] || key;
                 data[mappedKey] = value;
                 
