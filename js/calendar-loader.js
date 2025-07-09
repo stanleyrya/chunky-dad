@@ -86,7 +86,6 @@ class CalendarEventsLoader {
             // Start with Google Calendar native fields as primary source
             const eventData = {
                 name: calendarEvent.title,
-                bar: calendarEvent.location || 'TBD',
                 day: this.getDayFromDate(calendarEvent.start),
                 time: this.getTimeRange(calendarEvent.start, calendarEvent.end),
                 cover: 'Check event details',
@@ -101,7 +100,8 @@ class CalendarEventsLoader {
                 
                 // Merge additional data, but keep calendar fields as primary
                 if (additionalData) {
-                    eventData.cover = additionalData.cover || eventData.cover;
+                    eventData.bar = additionalData.bar || 'TBD';
+                    eventData.cover = additionalData.cover;
                     eventData.tea = additionalData.tea || additionalData.description;
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;
@@ -114,9 +114,9 @@ class CalendarEventsLoader {
                 }
             }
             
-            if (event.location) {
-                const latlong = event.location.split(", ");
-                event.coordinates = { lat: latlong[0], lng: latlong[1] };
+            if (calendarEvent.location) {
+                const latlong = calendarEvent.location.split(", ");
+                calendarEvent.coordinates = { lat: latlong[0], lng: latlong[1] };
             }
 
             // Add routing support
@@ -148,6 +148,9 @@ class CalendarEventsLoader {
                 
                 // Map common variations to standard keys
                 const keyMap = {
+                    'bar': 'bar',
+                    'location': 'bar',
+                    'host': 'bar',
                     'cover': 'cover',
                     'cost': 'cover',
                     'price': 'cover',
