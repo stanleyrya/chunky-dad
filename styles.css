@@ -1136,15 +1136,13 @@ header {
 .marker-pin::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: 5px;
     left: 50%;
-    transform: translateX(-50%);
-    width: 30px;
-    height: 30px;
+    transform: translateX(-50%) rotate(-45deg);
+    width: 28px;
+    height: 28px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg) translateX(-50%);
-    transform-origin: 0 0;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     border: 3px solid white;
 }
@@ -1152,32 +1150,37 @@ header {
 .marker-pin::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 12px solid #5a67d8;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 10px solid #5a67d8;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 .marker-icon {
-    position: relative;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 10;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: white;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    transform: rotate(45deg);
     line-height: 1;
-    margin-top: -8px;
-    margin-left: -2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
 }
 
 .marker-pin:hover::before {
     background: linear-gradient(135deg, #5a67d8 0%, #6d28d9 100%);
-    transform: rotate(-45deg) translateX(-50%) scale(1.1);
+    transform: translateX(-50%) rotate(-45deg) scale(1.1);
 }
 
 .map-link {
@@ -1695,20 +1698,23 @@ footer {
     }
 
     .marker-pin::before {
+        top: 3px;
         width: 20px;
         height: 20px;
     }
 
     .marker-pin::after {
-        border-left-width: 6px;
-        border-right-width: 6px;
-        border-top-width: 10px;
+        bottom: 6px;
+        border-left-width: 5px;
+        border-right-width: 5px;
+        border-top-width: 8px;
     }
 
     .marker-icon {
-        font-size: 0.9rem;
-        margin-top: -5px;
-        margin-left: -1px;
+        top: 5px;
+        font-size: 0.85rem;
+        width: 16px;
+        height: 16px;
     }
 
     .map-interaction-notice {
