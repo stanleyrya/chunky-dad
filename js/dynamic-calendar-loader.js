@@ -766,8 +766,6 @@ class DynamicCalendarLoader {
         }).join('');
     }
 
-
-
     generateMonthView(events, start, end, today) {
         // Add day headers first
         const dayHeaders = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -820,18 +818,15 @@ class DynamicCalendarLoader {
             const otherMonthClass = isCurrentMonth ? '' : ' other-month';
             const hasEventsClass = dayEvents.length > 0 ? ' has-events' : '';
 
-            // Show up to 3 events with more info, and indicate if there are more
-            const eventsToShow = dayEvents.slice(0, 3);
-            const additionalEventsCount = Math.max(0, dayEvents.length - 3);
+            // Simplified month view: focus on event titles only for better readability
+            // Show up to 4 events with just titles, then show count for remaining
+            const eventsToShow = dayEvents.slice(0, 4);
+            const additionalEventsCount = Math.max(0, dayEvents.length - 4);
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => `
                     <div class="event-item month-event" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time} - ${event.cover}">
-                        <div class="event-name">${event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name}</div>
-                        <div class="event-details">
-                            <span class="event-time">${event.time}</span>
-                            <span class="event-venue">${event.bar && event.bar.length > 15 ? event.bar.substring(0, 12) + '...' : event.bar || 'TBD'}</span>
-                        </div>
+                        <div class="event-name">${event.name}</div>
                     </div>
                 `).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount} more</div>` : '')
                 : '';
