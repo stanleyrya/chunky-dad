@@ -707,7 +707,7 @@ class DynamicCalendarLoader {
     }
 
     generateWeekView(events, start, end, today) {
-        const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = [];
         
         for (let i = 0; i < 7; i++) {
@@ -753,8 +753,6 @@ class DynamicCalendarLoader {
                         <h3>${dayName}</h3>
                         <div class="day-meta">
                             <div class="day-date">${day.getDate()}</div>
-                            ${eventCount > 0 ? `<div class="event-count">${eventCount} event${eventCount > 1 ? 's' : ''}</div>` : ''}
-                            ${isToday ? `<span class="day-indicator">Today</span>` : ''}
                         </div>
                     </div>
                     <div class="daily-events">
@@ -767,7 +765,7 @@ class DynamicCalendarLoader {
 
     generateMonthView(events, start, end, today) {
         // Add day headers first
-        const dayHeaders = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const headerHtml = dayHeaders.map(day => `
             <div class="calendar-day-header">
                 <h4>${day}</h4>
