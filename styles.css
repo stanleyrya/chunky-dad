@@ -378,7 +378,7 @@ header {
 
 /* City Page Styles */
 .city-page {
-    padding-top: 80px;
+    padding-top: 0px;
 }
 
 .city-hero {
@@ -438,51 +438,110 @@ header {
 /* Weekly Calendar */
 .weekly-calendar {
     padding: 60px 0;
-    background: white;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    position: relative;
+}
+
+.weekly-calendar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23667eea' fill-opacity='0.02'%3E%3Cpath d='M20 20c0-6.627-5.373-12-12-12s-12 5.373-12 12 5.373 12 12 12 12-5.373 12-12zm12 0c0-6.627-5.373-12-12-12s-12 5.373-12 12 5.373 12 12 12 12-5.373 12-12z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+    pointer-events: none;
 }
 
 .weekly-calendar h2 {
     text-align: center;
-    font-size: 2rem;
-    margin-bottom: 2rem;
+    font-size: 2.5rem;
+    margin-bottom: 3rem;
     color: #333;
+    position: relative;
+    z-index: 2;
+}
+
+.weekly-calendar h2::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    margin: 1rem auto 0;
+    border-radius: 2px;
 }
 
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 1rem;
+    gap: 1.2rem;
     margin-bottom: 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.calendar-grid.fade-in {
+    animation: calendarSlideIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes calendarSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .calendar-day {
-    background: white;
-    border-radius: 15px;
-    padding: 1.5rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    padding: 1.8rem;
     text-align: left;
-    min-height: 180px;
-    box-shadow: 0 3px 15px rgba(0,0,0,0.08);
-    border: 2px solid #f0f0f0;
+    min-height: 200px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    border: 2px solid #e8f2ff;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     will-change: transform;
+    overflow: hidden;
+}
+
+.calendar-day::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 20px 20px 0 0;
 }
 
 .calendar-day:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
     border-color: #667eea;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
 }
 
 .calendar-day.current {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-color: #667eea;
+    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.25);
+}
+
+.calendar-day.current::before {
+    background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1));
 }
 
 .calendar-day.current:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 18px 40px rgba(102, 126, 234, 0.35);
 }
 
 .day-header {
@@ -521,20 +580,39 @@ header {
 }
 
 .event-item {
-    background: rgba(255, 255, 255, 0.95);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 255, 0.95) 100%);
     color: #333;
-    padding: 0.8rem;
-    border-radius: 8px;
+    padding: 1rem;
+    border-radius: 12px;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border-left: 3px solid #667eea;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 4px solid #667eea;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.event-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.event-item:hover::before {
+    left: 100%;
 }
 
 .event-item:hover {
-    background: rgba(255, 255, 255, 1);
-    transform: translateX(3px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(240, 244, 255, 1) 100%);
+    transform: translateX(4px) translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+    border-left-color: #5a67d8;
 }
 
 .calendar-day.current .event-item {
@@ -548,20 +626,26 @@ header {
 }
 
 .event-name {
-    font-weight: 600;
-    margin-bottom: 0.2rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+    line-height: 1.3;
 }
 
 .event-time {
-    font-size: 0.75rem;
-    opacity: 0.8;
+    font-size: 0.8rem;
+    opacity: 0.9;
     margin-bottom: 0.2rem;
+    font-weight: 500;
+    color: #667eea;
 }
 
 .event-venue {
-    font-size: 0.75rem;
-    opacity: 0.7;
+    font-size: 0.8rem;
+    opacity: 0.85;
     font-style: italic;
+    color: #6b7280;
+    font-weight: 400;
 }
 
 .no-events {
@@ -833,6 +917,18 @@ header {
 .events-map-section {
     padding: 4rem 0;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    position: relative;
+}
+
+.events-map-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23667eea' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+    pointer-events: none;
 }
 
 .events-map-section h2 {
@@ -855,18 +951,21 @@ header {
 
 .map-container {
     position: relative;
-    border-radius: 20px;
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    border: 3px solid white;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+    border: 4px solid white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 4px;
 }
 
 #events-map {
     height: 500px;
     width: 100%;
-    border-radius: 17px;
+    border-radius: 20px;
     position: relative;
     z-index: 1;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .map-popup {
@@ -889,6 +988,68 @@ header {
 
 .map-popup p:last-child {
     margin-bottom: 0;
+}
+
+/* Custom Map Marker Styling */
+.custom-marker {
+    background: none;
+    border: none;
+}
+
+.marker-pin {
+    position: relative;
+    width: 40px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marker-pin::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg) translateX(-50%);
+    transform-origin: 0 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    border: 3px solid white;
+}
+
+.marker-pin::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 12px solid #5a67d8;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.marker-icon {
+    position: relative;
+    z-index: 10;
+    font-size: 1.2rem;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    transform: rotate(45deg);
+    line-height: 1;
+    margin-top: -8px;
+    margin-left: -2px;
+}
+
+.marker-pin:hover::before {
+    background: linear-gradient(135deg, #5a67d8 0%, #6d28d9 100%);
+    transform: rotate(-45deg) translateX(-50%) scale(1.1);
 }
 
 .map-link {
@@ -1177,11 +1338,39 @@ footer {
 
     #events-map {
         height: 300px;
-        border-radius: 12px;
+        border-radius: 15px;
     }
 
     .map-container {
-        border-radius: 12px;
+        border-radius: 15px;
+        border-width: 2px;
+        padding: 2px;
+    }
+
+    .marker-pin {
+        width: 25px;
+        height: 35px;
+    }
+
+    .marker-pin::before {
+        width: 20px;
+        height: 20px;
+    }
+
+    .marker-pin::after {
+        border-left-width: 6px;
+        border-right-width: 6px;
+        border-top-width: 10px;
+    }
+
+    .marker-icon {
+        font-size: 0.9rem;
+        margin-top: -5px;
+        margin-left: -1px;
+    }
+
+    .map-interaction-notice {
+        display: none !important;
     }
 
     .events-map-section h2 {

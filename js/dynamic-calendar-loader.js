@@ -504,28 +504,84 @@ class DynamicCalendarLoader {
         if (!mapContainer || typeof L === 'undefined') return;
 
         try {
-            const map = L.map('events-map').setView([
+            const map = L.map('events-map', {
+                scrollWheelZoom: false,
+                doubleClickZoom: true,
+                touchZoom: true,
+                dragging: true,
+                zoomControl: true
+            }).setView([
                 cityConfig.coordinates.lat, 
                 cityConfig.coordinates.lng
             ], cityConfig.mapZoom);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
+            // Use more attractive tile layer with better styling
+            L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors, Tiles courtesy of OpenStreetMap France',
+                maxZoom: 18
             }).addTo(map);
+
+            // Add map interaction notice
+            const notice = L.control({position: 'bottomleft'});
+            notice.onAdd = function() {
+                const div = L.DomUtil.create('div', 'map-interaction-notice');
+                div.innerHTML = '🖱️ Use Ctrl+Scroll to zoom';
+                div.style.cssText = `
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-family: 'Poppins', sans-serif;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    border: 1px solid rgba(255,255,255,0.2);
+                `;
+                return div;
+            };
+            notice.addTo(map);
+
+            // Enable scroll wheel zoom only when Ctrl is pressed
+            map.on('wheel', function(e) {
+                if (e.originalEvent.ctrlKey) {
+                    map.scrollWheelZoom.enable();
+                } else {
+                    map.scrollWheelZoom.disable();
+                }
+            });
+
+            // Disable scroll wheel zoom when mouse leaves map
+            map.on('mouseout', function() {
+                map.scrollWheelZoom.disable();
+            });
             
             let markersAdded = 0;
             
+            // Create custom marker icon
+            const customIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `
+                    <div class="marker-pin">
+                        <div class="marker-icon">🐻</div>
+                    </div>
+                `,
+                iconSize: [40, 50],
+                iconAnchor: [20, 50],
+                popupAnchor: [0, -50]
+            });
+
             events.forEach(event => {
                 if (event.coordinates?.lat && event.coordinates?.lng && 
                     !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
-                    const marker = L.marker([event.coordinates.lat, event.coordinates.lng])
+                    const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
+                        icon: customIcon
+                    })
                         .addTo(map)
                         .bindPopup(`
                             <div class="map-popup">
                                 <h4>${event.name}</h4>
-                                <p><strong>${event.bar}</strong></p>
-                                <p>${event.day} ${event.time}</p>
-                                <p>Cover: ${event.cover}</p>
+                                <p><strong>📍 ${event.bar}</strong></p>
+                                <p>📅 ${event.day} ${event.time}</p>
+                                <p>💰 ${event.cover}</p>
                                 ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
                             </div>
                         `);
@@ -566,6 +622,11 @@ class DynamicCalendarLoader {
             calendarGrid.innerHTML = this.generateCalendarEvents(events);
             this.attachCalendarInteractions();
             calendarSection?.classList.remove('content-hidden');
+            
+            // Add fade-in animation
+            setTimeout(() => {
+                calendarGrid.classList.add('fade-in');
+            }, 100);
         }
 
         // Update events list immediately
