@@ -384,13 +384,18 @@ header {
 .city-hero {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 60px 0;
+    padding: 80px 0 60px;
     text-align: center;
 }
 
 .city-header h1 {
     font-size: 3rem;
     margin-bottom: 0.5rem;
+    padding: 0 1rem;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1.1;
 }
 
 .city-tagline {
@@ -2459,5 +2464,272 @@ footer {
     .event-dot {
         width: 5px;
         height: 5px;
+    }
+}
+
+/* Month View Improvements */
+.calendar-day-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    padding: 12px 8px;
+    font-weight: 600;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid rgba(255,255,255,0.2);
+}
+
+.calendar-day-header h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.calendar-day.month-day {
+    background: white;
+    border: 1px solid #e8f2ff;
+    border-radius: 0 0 8px 8px;
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-day.month-day:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    border-color: #667eea;
+}
+
+.calendar-day.month-day.current {
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+    border-color: #667eea;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+}
+
+.calendar-day.month-day.other-month {
+    opacity: 0.4;
+    background: #f8f9fa;
+}
+
+.calendar-day.month-day.other-month:hover {
+    opacity: 0.6;
+}
+
+.calendar-day.month-day .day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8f9ff;
+    border-bottom: 1px solid #e8f2ff;
+    flex-shrink: 0;
+}
+
+.calendar-day.month-day.current .day-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.calendar-day.month-day .day-number {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.calendar-day.month-day.current .day-number {
+    color: white;
+}
+
+.calendar-day.month-day .day-indicator {
+    background: #ff6b6b;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.calendar-day.month-day.current .day-indicator {
+    background: rgba(255,255,255,0.3);
+    color: white;
+}
+
+.calendar-day.month-day .day-events {
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.event-item.month-event {
+    background: linear-gradient(135deg, #e8f2ff 0%, #f0f4ff 100%);
+    border: 1px solid #d0e1ff;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin: 0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.event-item.month-event:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.event-item.month-event .event-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+    line-height: 1.2;
+}
+
+.event-item.month-event .event-details {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.event-item.month-event .event-time,
+.event-item.month-event .event-venue {
+    font-size: 0.65rem;
+    opacity: 0.8;
+    flex: 1;
+}
+
+.event-item.month-event .event-time {
+    font-weight: 500;
+}
+
+.event-item.month-event .event-venue {
+    text-align: right;
+    font-style: italic;
+}
+
+.more-events {
+    font-size: 0.7rem;
+    color: #667eea;
+    font-weight: 600;
+    text-align: center;
+    padding: 4px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 4px;
+    margin-top: 2px;
+}
+
+/* Smooth animations for all sections */
+.city-hero,
+.weekly-calendar,
+.events,
+.events-map-section,
+.city-cta {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Consistent slide-in animations */
+.city-selector {
+    animation: slideInSmooth 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.weekly-calendar {
+    animation: slideInSmooth 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+.events {
+    animation: slideInSmooth 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
+}
+
+.events-map-section {
+    animation: slideInSmooth 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
+}
+
+.city-cta {
+    animation: slideInSmooth 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1.0s both;
+}
+
+@keyframes slideInSmooth {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* City title space holding to prevent layout shift */
+.city-header {
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.city-header h1,
+.city-header .city-tagline {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile responsive improvements for month view */
+@media (max-width: 768px) {
+    .calendar-day-header h4 {
+        font-size: 0.8rem;
+    }
+    
+    .calendar-day.month-day {
+        min-height: 100px;
+    }
+    
+    .calendar-day.month-day .day-header {
+        padding: 6px 8px;
+    }
+    
+    .calendar-day.month-day .day-number {
+        font-size: 1rem;
+    }
+    
+    .event-item.month-event {
+        padding: 4px 6px;
+    }
+    
+    .event-item.month-event .event-name {
+        font-size: 0.7rem;
+    }
+    
+    .event-item.month-event .event-time,
+    .event-item.month-event .event-venue {
+        font-size: 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-day.month-day {
+        min-height: 90px;
+    }
+    
+    .calendar-day.month-day .day-events {
+        padding: 4px;
+        gap: 2px;
+    }
+    
+    .event-item.month-event .event-details {
+        flex-direction: column;
+        gap: 1px;
+    }
+    
+    .event-item.month-event .event-venue {
+        text-align: left;
     }
 }
