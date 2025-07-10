@@ -702,69 +702,7 @@ class DynamicCalendarLoader {
         }).join('');
     }
 
-    generateCalendarOverview(events, start, end, today) {
-        // Calendar overview shows a clean month grid with event indicators
-        const firstDay = new Date(start);
-        const lastDay = new Date(end);
-        
-        // Get the first day of the calendar grid
-        const calendarStart = new Date(firstDay);
-        calendarStart.setDate(firstDay.getDate() - firstDay.getDay());
-        
-        // Get the last day of the calendar grid
-        const calendarEnd = new Date(lastDay);
-        const daysToAdd = 6 - lastDay.getDay();
-        calendarEnd.setDate(lastDay.getDate() + daysToAdd);
-        
-        const days = [];
-        const current = new Date(calendarStart);
-        
-        while (current <= calendarEnd) {
-            days.push(new Date(current));
-            current.setDate(current.getDate() + 1);
-        }
 
-        return days.map(day => {
-            const dayEvents = events.filter(event => {
-                if (!event.startDate) return false;
-                
-                if (event.recurring) {
-                    return event.startDate.getDay() === day.getDay();
-                }
-                
-                const eventDate = new Date(event.startDate);
-                eventDate.setHours(0, 0, 0, 0);
-                const dayDate = new Date(day);
-                dayDate.setHours(0, 0, 0, 0);
-                
-                return eventDate.getTime() === dayDate.getTime();
-            });
-
-            const isToday = day.getTime() === today.getTime();
-            const isCurrentMonth = day.getMonth() === start.getMonth();
-            const currentClass = isToday ? ' current' : '';
-            const otherMonthClass = isCurrentMonth ? '' : ' other-month';
-            const hasEventsClass = dayEvents.length > 0 ? ' has-events' : '';
-
-            return `
-                <div class="calendar-day calendar-overview${currentClass}${otherMonthClass}${hasEventsClass}" 
-                     data-date="${day.toISOString().split('T')[0]}" 
-                     data-events-count="${dayEvents.length}"
-                     onclick="window.calendarLoader.showDayEvents('${day.toISOString().split('T')[0]}', ${JSON.stringify(dayEvents).replace(/"/g, '&quot;')})">
-                    <div class="day-number">${day.getDate()}</div>
-                    ${dayEvents.length > 0 ? `
-                        <div class="event-indicators">
-                            ${dayEvents.slice(0, 3).map(event => 
-                                `<div class="event-dot" title="${event.name}"></div>`
-                            ).join('')}
-                            ${dayEvents.length > 3 ? `<div class="event-more">+${dayEvents.length - 3}</div>` : ''}
-                        </div>
-                    ` : ''}
-                    ${isToday ? `<span class="today-marker">Today</span>` : ''}
-                </div>
-            `;
-        }).join('');
-    }
 
     generateMonthView(events, start, end, today) {
         // Add day headers first
@@ -1027,8 +965,9 @@ class DynamicCalendarLoader {
                 calendarGrid.style.gridTemplateRows = 'auto repeat(6, minmax(120px, auto))';
             } else {
                 calendarGrid.className = 'calendar-grid week-view-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
                 calendarGrid.style.gridTemplateRows = 'auto';
+                calendarGrid.style.minHeight = 'auto';
             }
         }
         
