@@ -7,8 +7,8 @@ class DynamicCalendarLoader {
         this.debugMode = true;
         this.locationCache = new Map();
         
-        // View state management
-        this.currentView = 'week'; // 'week' or 'month'
+        // View state management - enhanced with new calendar overview
+        this.currentView = 'week'; // 'week', 'month', or 'calendar'
         this.currentDate = new Date();
         this.allEvents = []; // Store all parsed events with dates
         
@@ -383,6 +383,72 @@ class DynamicCalendarLoader {
             : this.getMonthBounds(this.currentDate);
     }
 
+    // Show events for a specific day (used by calendar overview)
+    showDayEvents(dateString, events) {
+        const date = new Date(dateString);
+        
+        // Create modal or popup to show events
+        const modal = document.createElement('div');
+        modal.className = 'day-events-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Events for ${date.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    })}</h3>
+                    <button class="modal-close" onclick="this.closest('.day-events-modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    ${events.length > 0 
+                        ? events.map(event => `
+                            <div class="modal-event-item" data-event-slug="${event.slug}">
+                                <div class="event-name">${event.name}</div>
+                                <div class="event-details">
+                                    <span class="event-time">${event.time}</span>
+                                    <span class="event-venue">${event.bar}</span>
+                                    <span class="event-cover">${event.cover}</span>
+                                </div>
+                            </div>
+                        `).join('')
+                        : '<p class="no-modal-events">No events scheduled for this day.</p>'
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="switch-to-week" onclick="window.calendarLoader.switchToWeekView('${dateString}')">
+                        View Week
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.appendChild(modal);
+        
+        // Add click handler to close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // Switch to week view for a specific date
+    switchToWeekView(dateString) {
+        this.currentDate = new Date(dateString);
+        this.currentView = 'week';
+        
+        // Update active button
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.view-btn[data-view="week"]').classList.add('active');
+        
+        // Remove modal
+        document.querySelector('.day-events-modal')?.remove();
+        
+        this.updateCalendarDisplay();
+    }
+
     navigatePeriod(direction) {
         const delta = direction === 'next' ? 1 : -1;
         
@@ -563,7 +629,7 @@ class DynamicCalendarLoader {
         return false;
     }
 
-    // Generate calendar events (enhanced for week/month view)
+    // Generate calendar events (enhanced for week/month/calendar view)
     generateCalendarEvents(events) {
         const { start, end } = this.getCurrentPeriodBounds();
         const today = new Date();
@@ -571,6 +637,8 @@ class DynamicCalendarLoader {
 
         if (this.currentView === 'week') {
             return this.generateWeekView(events, start, end, today);
+        } else if (this.currentView === 'calendar') {
+            return this.generateCalendarOverview(events, start, end, today);
         } else {
             return this.generateMonthView(events, start, end, today);
         }
@@ -604,10 +672,11 @@ class DynamicCalendarLoader {
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => `
-                    <div class="event-item" data-event-slug="${event.slug}">
+                    <div class="event-item enhanced" data-event-slug="${event.slug}">
                         <div class="event-name">${event.name}</div>
                         <div class="event-time">${event.time}</div>
                         <div class="event-venue">${event.bar}</div>
+                        <div class="event-cover">${event.cover}</div>
                     </div>
                 `).join('')
                 : '<div class="no-events">No events</div>';
@@ -615,17 +684,85 @@ class DynamicCalendarLoader {
             const isToday = day.getTime() === today.getTime();
             const currentClass = isToday ? ' current' : '';
             const dayName = daysOfWeek[day.getDay()];
+            const eventCount = dayEvents.length;
 
             return `
-                <div class="calendar-day${currentClass}" data-day="${dayName}" data-date="${day.toISOString().split('T')[0]}">
+                <div class="calendar-day week-view${currentClass}" data-day="${dayName}" data-date="${day.toISOString().split('T')[0]}">
                     <div class="day-header">
                         <h3>${dayName}</h3>
-                        <div class="day-date">${day.getDate()}</div>
-                        ${isToday ? `<span class="day-indicator">Today</span>` : ''}
+                        <div class="day-meta">
+                            <div class="day-date">${day.getDate()}</div>
+                            ${eventCount > 0 ? `<div class="event-count">${eventCount} event${eventCount > 1 ? 's' : ''}</div>` : ''}
+                            ${isToday ? `<span class="day-indicator">Today</span>` : ''}
+                        </div>
                     </div>
                     <div class="daily-events">
                         ${eventsHtml}
                     </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    generateCalendarOverview(events, start, end, today) {
+        // Calendar overview shows a clean month grid with event indicators
+        const firstDay = new Date(start);
+        const lastDay = new Date(end);
+        
+        // Get the first day of the calendar grid
+        const calendarStart = new Date(firstDay);
+        calendarStart.setDate(firstDay.getDate() - firstDay.getDay());
+        
+        // Get the last day of the calendar grid
+        const calendarEnd = new Date(lastDay);
+        const daysToAdd = 6 - lastDay.getDay();
+        calendarEnd.setDate(lastDay.getDate() + daysToAdd);
+        
+        const days = [];
+        const current = new Date(calendarStart);
+        
+        while (current <= calendarEnd) {
+            days.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+
+        return days.map(day => {
+            const dayEvents = events.filter(event => {
+                if (!event.startDate) return false;
+                
+                if (event.recurring) {
+                    return event.startDate.getDay() === day.getDay();
+                }
+                
+                const eventDate = new Date(event.startDate);
+                eventDate.setHours(0, 0, 0, 0);
+                const dayDate = new Date(day);
+                dayDate.setHours(0, 0, 0, 0);
+                
+                return eventDate.getTime() === dayDate.getTime();
+            });
+
+            const isToday = day.getTime() === today.getTime();
+            const isCurrentMonth = day.getMonth() === start.getMonth();
+            const currentClass = isToday ? ' current' : '';
+            const otherMonthClass = isCurrentMonth ? '' : ' other-month';
+            const hasEventsClass = dayEvents.length > 0 ? ' has-events' : '';
+
+            return `
+                <div class="calendar-day calendar-overview${currentClass}${otherMonthClass}${hasEventsClass}" 
+                     data-date="${day.toISOString().split('T')[0]}" 
+                     data-events-count="${dayEvents.length}"
+                     onclick="window.calendarLoader.showDayEvents('${day.toISOString().split('T')[0]}', ${JSON.stringify(dayEvents).replace(/"/g, '&quot;')})">
+                    <div class="day-number">${day.getDate()}</div>
+                    ${dayEvents.length > 0 ? `
+                        <div class="event-indicators">
+                            ${dayEvents.slice(0, 3).map(event => 
+                                `<div class="event-dot" title="${event.name}"></div>`
+                            ).join('')}
+                            ${dayEvents.length > 3 ? `<div class="event-more">+${dayEvents.length - 3}</div>` : ''}
+                        </div>
+                    ` : ''}
+                    ${isToday ? `<span class="today-marker">Today</span>` : ''}
                 </div>
             `;
         }).join('');
@@ -802,9 +939,12 @@ class DynamicCalendarLoader {
         // Update calendar title
         const calendarTitle = document.getElementById('calendar-title');
         if (calendarTitle) {
-            calendarTitle.textContent = this.currentView === 'week' 
+            const titleText = this.currentView === 'week' 
                 ? "This Week's Schedule" 
+                : this.currentView === 'calendar'
+                ? "Calendar Overview"
                 : "This Month's Schedule";
+            calendarTitle.textContent = titleText;
         }
         
         // Update date range
@@ -820,36 +960,56 @@ class DynamicCalendarLoader {
             calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents);
             this.attachCalendarInteractions();
             
-            // Update grid layout for month view
-            if (this.currentView === 'month') {
+            // Update grid layout based on view
+            if (this.currentView === 'calendar') {
+                calendarGrid.className = 'calendar-grid calendar-overview-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                calendarGrid.style.gridTemplateRows = 'repeat(6, minmax(80px, auto))';
+            } else if (this.currentView === 'month') {
+                calendarGrid.className = 'calendar-grid month-view-grid';
                 calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
                 calendarGrid.style.gridTemplateRows = 'repeat(6, 1fr)';
             } else {
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                calendarGrid.className = 'calendar-grid week-view-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
                 calendarGrid.style.gridTemplateRows = 'auto';
             }
         }
         
-        // Update events list
+        // Update events list (only show for week and month views)
         const eventsList = document.querySelector('.events-list');
-        if (eventsList) {
-            if (filteredEvents?.length > 0) {
-                eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
+        const eventsSection = document.querySelector('.events');
+        if (eventsList && eventsSection) {
+            if (this.currentView === 'calendar') {
+                eventsSection.style.display = 'none';
             } else {
-                const { start, end } = this.getCurrentPeriodBounds();
-                const periodText = this.currentView === 'week' ? 'this week' : 'this month';
-                eventsList.innerHTML = `
-                    <div class="no-events-message">
-                        <h3>📅 No Events ${this.currentView === 'week' ? 'This Week' : 'This Month'}</h3>
-                        <p>No events scheduled for ${periodText}.</p>
-                        <p>Check other weeks/months or help us by submitting events you know about!</p>
-                    </div>
-                `;
+                eventsSection.style.display = 'block';
+                if (filteredEvents?.length > 0) {
+                    eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
+                } else {
+                    const { start, end } = this.getCurrentPeriodBounds();
+                    const periodText = this.currentView === 'week' ? 'this week' : 'this month';
+                    eventsList.innerHTML = `
+                        <div class="no-events-message">
+                            <h3>📅 No Events ${this.currentView === 'week' ? 'This Week' : 'This Month'}</h3>
+                            <p>No events scheduled for ${periodText}.</p>
+                            <p>Check other weeks/months or help us by submitting events you know about!</p>
+                        </div>
+                    `;
+                }
             }
         }
         
-        // Update map
-        this.initializeMap(this.currentCityConfig, filteredEvents);
+        // Update map (only show for week and month views)
+        const mapSection = document.querySelector('.events-map-section');
+        if (mapSection) {
+            if (this.currentView === 'calendar') {
+                mapSection.style.display = 'none';
+            } else {
+                mapSection.style.display = 'block';
+                this.initializeMap(this.currentCityConfig, filteredEvents);
+            }
+        }
     }
 
     // Set up calendar controls
@@ -1008,6 +1168,7 @@ function showOnMap(lat, lng, eventName, barName) {
 // Initialize system
 document.addEventListener('DOMContentLoaded', () => {
     const calendarLoader = new DynamicCalendarLoader();
+    window.calendarLoader = calendarLoader; // Make it globally accessible
     calendarLoader.init();
 });
 
