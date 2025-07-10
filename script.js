@@ -77,17 +77,20 @@ if (contactForm) {
     console.log('No contact form found on this page - skipping contact form setup');
 }
 
-// Header scroll effect
-window.addEventListener('scroll', () => {
-    const header = document.querySelector('header');
-    if (window.scrollY > 100) {
-        header.style.background = 'rgba(102, 126, 234, 0.95)';
-        header.style.backdropFilter = 'blur(10px)';
-    } else {
-        header.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        header.style.backdropFilter = 'none';
-    }
-});
+// Header scroll effect - simplified for city page with dynamic scroll interactions
+const isMainPageHeader = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
+if (isMainPageHeader) {
+    window.addEventListener('scroll', () => {
+        const header = document.querySelector('header');
+        if (window.scrollY > 100) {
+            header.style.background = 'rgba(102, 126, 234, 0.95)';
+            header.style.backdropFilter = 'blur(10px)';
+        } else {
+            header.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            header.style.backdropFilter = 'none';
+        }
+    });
+}
 
 // Add intersection observer for animations
 const observerOptions = {
