@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Guide - Chunky Dad Bear Guide</title>
+    <meta name="description" content="Complete gay bear guide to your city - events, bars, and the hottest bear scene">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="index.html">🐻 Chunky Dad</a></h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#cities">Cities</a></li>
+                    <li><a href="index.html#events">Events</a></li>
+                    <li><a href="index.html#businesses">Businesses</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- City not found section (hidden by default) -->
+    <main class="city-not-found" style="display: none;">
+        <section class="error-section">
+            <div class="container">
+                <div class="error-content">
+                    <h1>🏙️ City Not Found</h1>
+                    <p>Oops! We couldn't find information for that city.</p>
+                    <div class="available-cities">
+                        <h3>Available Cities:</h3>
+                        <div class="city-links" id="available-cities-list">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <a href="index.html" class="cta-button">🏠 Back to Home</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Main city content -->
+    <main class="city-page">
+        <section class="city-hero">
+            <div class="container">
+                <div class="city-header">
+                    <h1 id="city-title">🏙️ Loading City...</h1>
+                    <p class="city-tagline" id="city-tagline">Please wait...</p>
+                </div>
+                <!-- City selector for easy switching -->
+                <div class="city-selector">
+                    <label for="city-select">Switch City:</label>
+                    <select id="city-select">
+                        <option value="">Select a city...</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="weekly-calendar">
+            <div class="container">
+                <h2>This Week's Schedule</h2>
+                <div class="calendar-grid">
+                    <div class="loading-message">📅 Loading events...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="events">
+            <div class="container">
+                <h2>Events</h2>
+                <div class="events-list">
+                    <div class="loading-message">🎉 Loading events...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="events-map-section">
+            <div class="container">
+                <h2>📍 Event Locations</h2>
+                <p>Click on any location pin to see event details, or click the 📍 links in events above.</p>
+                <div class="map-container">
+                    <div id="events-map"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="city-cta">
+            <div class="container">
+                <div class="cta-content">
+                    <h2>Missing something?</h2>
+                    <p id="city-cta-text">Know about other bear events or venues? Help us keep this guide current!</p>
+                    <a href="index.html#contact" class="cta-button">Submit Info</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Chunky Dad. Made with 🐻 for the bear community.</p>
+            <div class="social-links">
+                <a href="#" title="Instagram">📷</a>
+                <a href="#" title="Twitter">🐦</a>
+                <a href="#" title="Facebook">📘</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/city-config.js"></script>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    <script src="script.js"></script>
+    <script src="js/dynamic-calendar-loader.js"></script>
+</body>
+</html>
