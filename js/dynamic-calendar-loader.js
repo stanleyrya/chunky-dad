@@ -1034,8 +1034,106 @@ class DynamicCalendarLoader {
             todayBtn.addEventListener('click', () => this.goToToday());
         }
         
+        // Set up creative scroll-based header interactions
+        this.setupScrollInteractions();
+        
         // Initialize date range display
         this.updateCalendarDisplay();
+    }
+
+    // Creative scroll-based header interactions
+    setupScrollInteractions() {
+        const header = document.querySelector('header');
+        const headerCityTitle = document.getElementById('header-city-title');
+        const headerCitySelector = document.getElementById('header-city-selector');
+        const headerCityButtons = document.getElementById('header-city-buttons');
+        const cityHero = document.querySelector('.city-hero');
+        let isHeaderExpanded = false;
+        let lastScrollY = window.scrollY;
+        
+        // Populate header city buttons
+        if (headerCityButtons) {
+            headerCityButtons.innerHTML = getAvailableCities().map(city => {
+                const isActive = city.key === this.currentCity;
+                const hasCalendar = hasCityCalendar(city.key);
+                const href = hasCalendar ? `city.html?city=${city.key}` : '#';
+                const extraClass = hasCalendar ? '' : ' coming-soon';
+                const activeClass = isActive ? ' active' : '';
+                
+                return `
+                    <a href="${href}" class="header-city-button${activeClass}${extraClass}" data-city="${city.key}">
+                        <span class="header-city-emoji">${city.emoji}</span>
+                        <span class="header-city-name">${city.name}</span>
+                    </a>
+                `;
+            }).join('');
+        }
+        
+        // Set header city title text
+        if (headerCityTitle && this.currentCityConfig) {
+            headerCityTitle.textContent = `${this.currentCityConfig.emoji} ${this.currentCityConfig.name}`;
+        }
+        
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+            const cityHeroRect = cityHero ? cityHero.getBoundingClientRect() : null;
+            const heroVisible = cityHeroRect ? cityHeroRect.bottom > 0 : false;
+            
+            // Enhanced header background on scroll
+            if (currentScrollY > 100) {
+                header.classList.add('scrolled-header');
+            } else {
+                header.classList.remove('scrolled-header');
+            }
+            
+            // Show city title in header when hero is not visible
+            if (!heroVisible && headerCityTitle) {
+                headerCityTitle.classList.add('visible');
+                headerCityTitle.classList.remove('hidden');
+            } else if (headerCityTitle) {
+                headerCityTitle.classList.remove('visible');
+                headerCityTitle.classList.add('hidden');
+            }
+            
+            // Show city selector on deeper scroll or when scrolling up with hero not visible
+            const shouldShowSelector = (currentScrollY > 300) || (scrollDirection === 'up' && !heroVisible && currentScrollY > 150);
+            
+            if (shouldShowSelector && !isHeaderExpanded) {
+                isHeaderExpanded = true;
+                header.classList.add('header-expanded');
+                if (headerCitySelector) {
+                    headerCitySelector.classList.add('visible');
+                }
+            } else if (!shouldShowSelector && isHeaderExpanded) {
+                isHeaderExpanded = false;
+                header.classList.remove('header-expanded');
+                if (headerCitySelector) {
+                    headerCitySelector.classList.remove('visible');
+                }
+            }
+            
+            lastScrollY = currentScrollY;
+        };
+        
+        // Throttled scroll handler for better performance
+        let scrollTimeout;
+        const throttledScroll = () => {
+            if (scrollTimeout) return;
+            scrollTimeout = setTimeout(() => {
+                handleScroll();
+                scrollTimeout = null;
+            }, 16); // ~60fps
+        };
+        
+        // Add scroll listener
+        window.addEventListener('scroll', throttledScroll, { passive: true });
+        
+        // Initial call to set correct state
+        handleScroll();
+        
+        // Store scroll handler for cleanup if needed
+        this.scrollHandler = throttledScroll;
     }
 
     // Update page content for city
@@ -1043,18 +1141,27 @@ class DynamicCalendarLoader {
         // Store city config for later use
         this.currentCityConfig = cityConfig;
         
-        // Update title and tagline immediately without typing animation
+        // Update title and tagline with smooth animations
         const cityTitle = document.getElementById('city-title');
         const cityTagline = document.getElementById('city-tagline');
         const cityCTAText = document.getElementById('city-cta-text');
         
         if (cityTitle) {
-            cityTitle.classList.remove('city-title-hidden');
-            cityTitle.textContent = `${cityConfig.emoji} ${cityConfig.name}`;
+            // Add smooth entrance animation for city title
+            cityTitle.classList.add('city-title-loading');
+            setTimeout(() => {
+                cityTitle.textContent = `${cityConfig.emoji} ${cityConfig.name}`;
+                cityTitle.classList.remove('city-title-loading');
+                cityTitle.classList.add('city-title-loaded');
+            }, 100);
         }
         if (cityTagline) {
-            cityTagline.classList.remove('city-tagline-hidden');
-            cityTagline.textContent = cityConfig.tagline;
+            cityTagline.classList.add('city-tagline-loading');
+            setTimeout(() => {
+                cityTagline.textContent = cityConfig.tagline;
+                cityTagline.classList.remove('city-tagline-loading');
+                cityTagline.classList.add('city-tagline-loaded');
+            }, 300);
         }
         if (cityCTAText) {
             cityCTAText.textContent = `Know about other bear events or venues in ${cityConfig.name}? Help us keep this guide current!`;
