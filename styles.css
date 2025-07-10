@@ -196,8 +196,9 @@ header {
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    will-change: transform;
 }
 
 .city-card:hover {
@@ -269,7 +270,8 @@ header {
     border-radius: 15px;
     padding: 2rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
 }
 
 .event-card:hover {
@@ -340,8 +342,9 @@ header {
     border-radius: 15px;
     text-align: center;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    will-change: transform;
 }
 
 .category-card:hover {
@@ -395,7 +398,7 @@ header {
     opacity: 0.9;
 }
 
-/* Smooth loading states for city title and tagline - now visible by default */
+/* Smooth loading states for city title and tagline */
 .city-title-hidden,
 .city-tagline-hidden {
     opacity: 1;
@@ -403,7 +406,7 @@ header {
     overflow: visible;
     margin: inherit;
     padding: inherit;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .city-title-hidden {
@@ -414,11 +417,17 @@ header {
     font-size: 1.3rem;
 }
 
-/* Smooth content reveal for sections - now visible by default */
+/* Smooth content reveal for sections */
 .content-hidden {
     opacity: 1;
     transform: translateY(0);
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* City pages have all content visible immediately */
+.city-page .content-hidden {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .content-hidden:not(.content-hidden) {
@@ -454,8 +463,9 @@ header {
     min-height: 180px;
     box-shadow: 0 3px 15px rgba(0,0,0,0.08);
     border: 2px solid #f0f0f0;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    will-change: transform;
 }
 
 .calendar-day:hover {
@@ -594,8 +604,9 @@ header {
     border-radius: 15px;
     padding: 2rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    will-change: transform;
 }
 
 .event-card.detailed:hover {
