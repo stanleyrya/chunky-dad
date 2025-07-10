@@ -853,6 +853,12 @@ class DynamicCalendarLoader {
         if (!mapContainer || typeof L === 'undefined') return;
 
         try {
+            // Remove existing map if it exists
+            if (window.eventsMap) {
+                window.eventsMap.remove();
+                window.eventsMap = null;
+            }
+
             // Calculate dynamic center and zoom based on event coordinates
             const eventsWithCoords = events.filter(event => 
                 event.coordinates?.lat && event.coordinates?.lng && 
