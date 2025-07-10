@@ -395,14 +395,14 @@ header {
     opacity: 0.9;
 }
 
-/* Smooth loading states for city title and tagline */
+/* Smooth loading states for city title and tagline - now visible by default */
 .city-title-hidden,
 .city-tagline-hidden {
-    opacity: 0;
-    height: 0;
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
+    opacity: 1;
+    height: auto;
+    overflow: visible;
+    margin: inherit;
+    padding: inherit;
     transition: all 0.3s ease;
 }
 
@@ -414,11 +414,11 @@ header {
     font-size: 1.3rem;
 }
 
-/* Smooth content reveal for sections */
+/* Smooth content reveal for sections - now visible by default */
 .content-hidden {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.6s ease;
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.3s ease;
 }
 
 .content-hidden:not(.content-hidden) {

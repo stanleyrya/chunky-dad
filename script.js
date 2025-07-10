@@ -143,59 +143,28 @@ document.querySelectorAll('.cta-button').forEach(button => {
     });
 });
 
-// Add typing effect for hero title
-function typeWriter(element, text, speed = 100) {
-    let i = 0;
-    element.innerHTML = '';
-    
-    function type() {
-        if (i < text.length) {
-            element.innerHTML += text.charAt(i);
-            i++;
-            setTimeout(type, speed);
-        }
-    }
-    
-    type();
-}
-
-// Initialize typing effect when page loads
+// Initialize content immediately - no delays
 document.addEventListener('DOMContentLoaded', () => {
+    // Show hero title immediately without typing effect
     const heroTitle = document.querySelector('.hero-content h2');
     if (heroTitle) {
-        const originalText = heroTitle.textContent;
-        setTimeout(() => {
-            typeWriter(heroTitle, originalText, 80);
-        }, 500);
+        // Content already visible - no need to modify
     }
+    
+    // Make all sections visible immediately
+    const sections = document.querySelectorAll('section');
+    sections.forEach(section => {
+        section.classList.add('fade-in');
+    });
 });
 
-// Add smooth fade-in effect for sections
-function fadeInOnScroll() {
-    const sections = document.querySelectorAll('section');
-    
-    sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.offsetHeight;
-        const windowHeight = window.innerHeight;
-        const scrollPosition = window.scrollY;
-        
-        if (scrollPosition + windowHeight > sectionTop + 100) {
-            section.classList.add('fade-in');
-        }
-    });
-}
-
-window.addEventListener('scroll', fadeInOnScroll);
-fadeInOnScroll(); // Initial call
-
-// Add CSS for fade-in effect
+// Add CSS for immediate visibility with smooth transitions
 const style = document.createElement('style');
 style.textContent = `
     section {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.6s ease, transform 0.6s ease;
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 0.3s ease, transform 0.3s ease;
     }
     
     section.fade-in {
