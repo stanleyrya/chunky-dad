@@ -36,8 +36,40 @@ class DynamicCalendarLoader {
     // Set up city selector and populate with available cities
     setupCitySelector() {
         const citySelect = document.getElementById('city-select');
+        const cityButtons = document.getElementById('city-buttons');
         const availableCitiesList = document.getElementById('available-cities-list');
         
+        // Setup city buttons (for larger screens)
+        if (cityButtons) {
+            cityButtons.innerHTML = getAvailableCities().map(city => {
+                const isActive = city.key === this.currentCity;
+                const hasCalendar = hasCityCalendar(city.key);
+                const href = hasCalendar ? `city.html?city=${city.key}` : '#';
+                const extraClass = hasCalendar ? '' : ' coming-soon';
+                const activeClass = isActive ? ' active' : '';
+                
+                return `
+                    <a href="${href}" class="city-button${activeClass}${extraClass}" data-city="${city.key}">
+                        <div class="city-emoji">${city.emoji}</div>
+                        <div class="city-name">${city.name}</div>
+                        ${!hasCalendar ? '<div style="font-size: 0.7rem; margin-top: 4px; opacity: 0.8;">Coming Soon</div>' : ''}
+                    </a>
+                `;
+            }).join('');
+
+            // Add click handlers for city buttons
+            cityButtons.addEventListener('click', (e) => {
+                const cityButton = e.target.closest('.city-button');
+                if (cityButton && !cityButton.classList.contains('coming-soon')) {
+                    const cityKey = cityButton.dataset.city;
+                    if (cityKey && cityKey !== this.currentCity) {
+                        window.location.href = `city.html?city=${cityKey}`;
+                    }
+                }
+            });
+        }
+        
+        // Setup dropdown (for smaller screens)
         if (citySelect) {
             // Clear existing options except the first one
             citySelect.innerHTML = '<option value="">Select a city...</option>';
@@ -46,9 +78,13 @@ class DynamicCalendarLoader {
             getAvailableCities().forEach(city => {
                 const option = document.createElement('option');
                 option.value = city.key;
-                option.textContent = `${city.emoji} ${city.name}`;
+                const hasCalendar = hasCityCalendar(city.key);
+                option.textContent = `${city.emoji} ${city.name}${!hasCalendar ? ' (Coming Soon)' : ''}`;
                 if (city.key === this.currentCity) {
                     option.selected = true;
+                }
+                if (!hasCalendar) {
+                    option.disabled = true;
                 }
                 citySelect.appendChild(option);
             });
