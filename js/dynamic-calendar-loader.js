@@ -8,7 +8,7 @@ class DynamicCalendarLoader {
         this.locationCache = new Map();
         
         // View state management - enhanced with new calendar overview
-        this.currentView = 'week'; // 'week', 'month', or 'calendar'
+        this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
         this.allEvents = []; // Store all parsed events with dates
         
@@ -637,8 +637,6 @@ class DynamicCalendarLoader {
 
         if (this.currentView === 'week') {
             return this.generateWeekView(events, start, end, today);
-        } else if (this.currentView === 'calendar') {
-            return this.generateCalendarOverview(events, start, end, today);
         } else {
             return this.generateMonthView(events, start, end, today);
         }
@@ -769,6 +767,14 @@ class DynamicCalendarLoader {
     }
 
     generateMonthView(events, start, end, today) {
+        // Add day headers first
+        const dayHeaders = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const headerHtml = dayHeaders.map(day => `
+            <div class="calendar-day-header">
+                <h4>${day}</h4>
+            </div>
+        `).join('');
+        
         // For month view, create a grid including days from previous/next month to fill the calendar
         const firstDay = new Date(start);
         const lastDay = new Date(end);
@@ -790,7 +796,7 @@ class DynamicCalendarLoader {
             current.setDate(current.getDate() + 1);
         }
 
-        return days.map(day => {
+        const daysHtml = days.map(day => {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
@@ -806,32 +812,42 @@ class DynamicCalendarLoader {
                 return eventDate.getTime() === dayDate.getTime();
             });
 
-            const eventsHtml = dayEvents.length > 0 
-                ? dayEvents.map(event => `
-                    <div class="event-item" data-event-slug="${event.slug}">
-                        <div class="event-name">${event.name}</div>
-                        <div class="event-time">${event.time}</div>
-                    </div>
-                `).join('')
-                : '<div class="no-events">No events</div>';
-
             const isToday = day.getTime() === today.getTime();
             const isCurrentMonth = day.getMonth() === start.getMonth();
             const currentClass = isToday ? ' current' : '';
             const otherMonthClass = isCurrentMonth ? '' : ' other-month';
+            const hasEventsClass = dayEvents.length > 0 ? ' has-events' : '';
+
+            // Show up to 3 events with more info, and indicate if there are more
+            const eventsToShow = dayEvents.slice(0, 3);
+            const additionalEventsCount = Math.max(0, dayEvents.length - 3);
+            
+            const eventsHtml = eventsToShow.length > 0 
+                ? eventsToShow.map(event => `
+                    <div class="event-item month-event" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time} - ${event.cover}">
+                        <div class="event-name">${event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name}</div>
+                        <div class="event-details">
+                            <span class="event-time">${event.time}</span>
+                            <span class="event-venue">${event.bar && event.bar.length > 15 ? event.bar.substring(0, 12) + '...' : event.bar || 'TBD'}</span>
+                        </div>
+                    </div>
+                `).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount} more</div>` : '')
+                : '';
 
             return `
-                <div class="calendar-day${currentClass}${otherMonthClass}" data-date="${day.toISOString().split('T')[0]}">
+                <div class="calendar-day month-day${currentClass}${otherMonthClass}${hasEventsClass}" data-date="${day.toISOString().split('T')[0]}">
                     <div class="day-header">
-                        <h3>${day.getDate()}</h3>
+                        <span class="day-number">${day.getDate()}</span>
                         ${isToday ? `<span class="day-indicator">Today</span>` : ''}
                     </div>
-                    <div class="daily-events">
+                    <div class="day-events">
                         ${eventsHtml}
                     </div>
                 </div>
             `;
         }).join('');
+
+        return headerHtml + daysHtml;
     }
 
     // Initialize map
@@ -853,9 +869,9 @@ class DynamicCalendarLoader {
                 mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
                 mapZoom = cityConfig.mapZoom;
             } else if (eventsWithCoords.length === 1) {
-                // Single event - center on it with moderate zoom
+                // Single event - center on it with moderate zoom (reduced from 14 to 12)
                 mapCenter = [eventsWithCoords[0].coordinates.lat, eventsWithCoords[0].coordinates.lng];
-                mapZoom = 14;
+                mapZoom = 12;
             } else {
                 // Multiple events - calculate bounding box
                 const lats = eventsWithCoords.map(e => e.coordinates.lat);
@@ -880,13 +896,13 @@ class DynamicCalendarLoader {
                 // Add padding factor to ensure events aren't at map edges
                 const paddedDiff = maxDiff * 1.3;
                 
-                // Determine zoom level based on coordinate spread
-                if (paddedDiff > 0.5) mapZoom = 10;
-                else if (paddedDiff > 0.2) mapZoom = 11;
-                else if (paddedDiff > 0.1) mapZoom = 12;
-                else if (paddedDiff > 0.05) mapZoom = 13;
-                else if (paddedDiff > 0.02) mapZoom = 14;
-                else mapZoom = 15;
+                // Determine zoom level based on coordinate spread (reduced by 2-3 levels for better overview)
+                if (paddedDiff > 0.5) mapZoom = 8;
+                else if (paddedDiff > 0.2) mapZoom = 9;
+                else if (paddedDiff > 0.1) mapZoom = 10;
+                else if (paddedDiff > 0.05) mapZoom = 11;
+                else if (paddedDiff > 0.02) mapZoom = 12;
+                else mapZoom = 13;
             }
 
             const map = L.map('events-map', {
@@ -987,8 +1003,6 @@ class DynamicCalendarLoader {
         if (calendarTitle) {
             const titleText = this.currentView === 'week' 
                 ? "This Week's Schedule" 
-                : this.currentView === 'calendar'
-                ? "Calendar Overview"
                 : "This Month's Schedule";
             calendarTitle.textContent = titleText;
         }
@@ -1007,14 +1021,10 @@ class DynamicCalendarLoader {
             this.attachCalendarInteractions();
             
             // Update grid layout based on view
-            if (this.currentView === 'calendar') {
-                calendarGrid.className = 'calendar-grid calendar-overview-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                calendarGrid.style.gridTemplateRows = 'repeat(6, minmax(80px, auto))';
-            } else if (this.currentView === 'month') {
+            if (this.currentView === 'month') {
                 calendarGrid.className = 'calendar-grid month-view-grid';
                 calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                calendarGrid.style.gridTemplateRows = 'repeat(6, 1fr)';
+                calendarGrid.style.gridTemplateRows = 'auto repeat(6, minmax(120px, auto))';
             } else {
                 calendarGrid.className = 'calendar-grid week-view-grid';
                 calendarGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
@@ -1022,39 +1032,31 @@ class DynamicCalendarLoader {
             }
         }
         
-        // Update events list (only show for week and month views)
+        // Update events list (show for both week and month views)
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
         if (eventsList && eventsSection) {
-            if (this.currentView === 'calendar') {
-                eventsSection.style.display = 'none';
+            eventsSection.style.display = 'block';
+            if (filteredEvents?.length > 0) {
+                eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
             } else {
-                eventsSection.style.display = 'block';
-                if (filteredEvents?.length > 0) {
-                    eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
-                } else {
-                    const { start, end } = this.getCurrentPeriodBounds();
-                    const periodText = this.currentView === 'week' ? 'this week' : 'this month';
-                    eventsList.innerHTML = `
-                        <div class="no-events-message">
-                            <h3>📅 No Events ${this.currentView === 'week' ? 'This Week' : 'This Month'}</h3>
-                            <p>No events scheduled for ${periodText}.</p>
-                            <p>Check other weeks/months or help us by submitting events you know about!</p>
-                        </div>
-                    `;
-                }
+                const { start, end } = this.getCurrentPeriodBounds();
+                const periodText = this.currentView === 'week' ? 'this week' : 'this month';
+                eventsList.innerHTML = `
+                    <div class="no-events-message">
+                        <h3>📅 No Events ${this.currentView === 'week' ? 'This Week' : 'This Month'}</h3>
+                        <p>No events scheduled for ${periodText}.</p>
+                        <p>Check other weeks/months or help us by submitting events you know about!</p>
+                    </div>
+                `;
             }
         }
         
-        // Update map (only show for week and month views)
+        // Update map (show for both week and month views)
         const mapSection = document.querySelector('.events-map-section');
         if (mapSection) {
-            if (this.currentView === 'calendar') {
-                mapSection.style.display = 'none';
-            } else {
-                mapSection.style.display = 'block';
-                this.initializeMap(this.currentCityConfig, filteredEvents);
-            }
+            mapSection.style.display = 'block';
+            this.initializeMap(this.currentCityConfig, filteredEvents);
         }
     }
 
