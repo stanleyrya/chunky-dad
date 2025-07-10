@@ -10,6 +10,9 @@ body {
     line-height: 1.6;
     color: #333;
     scroll-behavior: smooth;
+    margin: 0;
+    padding: 0;
+    padding-top: 80px; /* Account for fixed header */
 }
 
 .container {
@@ -27,6 +30,8 @@ header {
     left: 0;
     right: 0;
     z-index: 1000;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
 }
 
 .nav-container {
@@ -36,6 +41,7 @@ header {
     padding: 1rem 2rem;
     max-width: 1200px;
     margin: 0 auto;
+    position: relative;
 }
 
 .logo h1 {
@@ -2682,87 +2688,210 @@ footer {
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Mobile responsive improvements for month view */
-@media (max-width: 768px) {
-    .calendar-day-header h4 {
-        font-size: 0.8rem;
+/* Smooth city title loading animations */
+.city-title-loading {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.city-title-loaded {
+    opacity: 1 !important;
+    transform: translateY(0) scale(1) !important;
+    animation: cityTitleEntrance 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.city-tagline-loading {
+    opacity: 0;
+    transform: translateY(15px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.city-tagline-loaded {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    animation: cityTaglineEntrance 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+}
+
+@keyframes cityTitleEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+        filter: blur(2px);
     }
-    
-    .calendar-day.month-day {
-        min-height: 100px;
+    60% {
+        opacity: 0.8;
+        transform: translateY(-5px) scale(1.02);
+        filter: blur(0px);
     }
-    
-    .calendar-day.month-day .day-header {
-        padding: 6px 8px;
-    }
-    
-    .calendar-day.month-day .day-number {
-        font-size: 1rem;
-    }
-    
-    .event-item.month-event {
-        padding: 4px 6px;
-    }
-    
-    .event-item.month-event .event-name {
-        font-size: 0.7rem;
-    }
-    
-    .event-item.month-event .event-time,
-    .event-item.month-event .event-venue {
-        font-size: 0.6rem;
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0px);
     }
 }
 
-@media (max-width: 480px) {
-    .calendar-day.month-day {
-        min-height: 90px;
+@keyframes cityTaglineEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+        filter: blur(1px);
     }
-    
-    .calendar-day.month-day .day-events {
-        padding: 4px;
-        gap: 2px;
-    }
-    
-    .event-item.month-event .event-details {
-        flex-direction: column;
-        gap: 1px;
-    }
-    
-    .event-item.month-event .event-venue {
-        text-align: left;
+    100% {
+        opacity: 0.9;
+        transform: translateY(0);
+        filter: blur(0px);
     }
 }
 
-/* Calendar Week View Specific Styles */
-.calendar-grid.week-view-grid {
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.8rem;
-    margin-bottom: 1rem;
+/* Creative title bar interactions */
+.header-expanded {
+    height: auto;
+    padding-bottom: 1rem;
 }
 
-.calendar-day.week-view {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 12px;
-    padding: 1rem;
-    text-align: left;
-    min-height: 140px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-    border: 2px solid #e8f2ff;
+/* Scrolling city title in header */
+.header-city-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.header-city-title.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.header-city-title.hidden {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+}
+
+/* Scrollable city selector in header */
+.header-city-selector {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 1rem 2rem;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.header-city-selector.visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.header-city-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.header-city-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 20px;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
+    white-space: nowrap;
 }
 
-.calendar-day.week-view:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-    border-color: #667eea;
+.header-city-button:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
-.calendar-day.week-view.current {
+.header-city-button.active {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-color: #667eea;
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.header-city-button.coming-soon {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.header-city-button.coming-soon:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.header-city-emoji {
+    font-size: 1rem;
+}
+
+.header-city-name {
+    font-size: 0.85rem;
+}
+
+/* Enhanced scroll effects */
+.scrolled-header {
+    background: rgba(102, 126, 234, 0.95);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile responsive adjustments for header interactions */
+@media (max-width: 768px) {
+    .nav-container {
+        padding: 1rem;
+    }
+    
+    .header-city-title {
+        font-size: 1rem;
+    }
+    
+    .header-city-selector {
+        padding: 0.8rem 1rem;
+    }
+    
+    .header-city-buttons {
+        gap: 0.3rem;
+        max-width: none;
+    }
+    
+    .header-city-button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    
+    .header-city-emoji {
+        font-size: 0.9rem;
+    }
+    
+    .header-city-name {
+        font-size: 0.75rem;
+    }
 }
