@@ -3,103 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New York - Chunky Dad Bear Guide</title>
+    <title>Redirecting to New York - Chunky Dad Bear Guide</title>
     <meta name="description" content="Complete gay bear guide to New York City - events, bars, and the hottest bear scene in NYC">
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
-          crossorigin=""/>
+    <script>
+        // Redirect to new URL structure
+        window.location.replace('city.html?city=new-york');
+    </script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        .redirect-message {
+            max-width: 400px;
+            padding: 2rem;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <div class="nav-container">
-                <div class="logo">
-                    <h1><a href="index.html">🐻 Chunky Dad</a></h1>
-                </div>
-                <ul class="nav-menu">
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="index.html#cities">Cities</a></li>
-                    <li><a href="index.html#events">Events</a></li>
-                    <li><a href="index.html#businesses">Businesses</a></li>
-                    <li><a href="index.html#contact">Contact</a></li>
-                </ul>
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </div>
-        </nav>
-    </header>
-
-    <main class="city-page">
-        <section class="city-hero">
-            <div class="container">
-                <div class="city-header">
-                    <h1>🗽 New York</h1>
-                    <p class="city-tagline">What's the bear 411?</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="weekly-calendar">
-            <div class="container">
-                <h2>This Week's Schedule</h2>
-                <div class="calendar-grid">
-                    <!-- Calendar will be populated dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <section class="events">
-            <div class="container">
-                <h2>Events</h2>
-                <div class="events-list">
-                    <!-- Events will be populated dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <section class="events-map-section">
-            <div class="container">
-                <h2>📍 Event Locations</h2>
-                <p>Click on any location pin to see event details, or click the 📍 links in events above.</p>
-                <div class="map-container">
-                    <div id="events-map"></div>
-                </div>
-            </div>
-        </section>
-
-        <section class="city-cta">
-            <div class="container">
-                <div class="cta-content">
-                    <h2>Missing something?</h2>
-                    <p>Know about other bear events or venues in NYC? Help us keep this guide current!</p>
-                    <a href="index.html#contact" class="cta-button">Submit Info</a>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 Chunky Dad. Made with 🐻 for the bear community.</p>
-            <div class="social-links">
-                <a href="#" title="Instagram">📷</a>
-                <a href="#" title="Twitter">🐦</a>
-                <a href="#" title="Facebook">📘</a>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Leaflet JavaScript -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
-            crossorigin=""></script>
-    <script src="script.js"></script>
-    <script src="js/calendar-loader.js"></script>
+    <div class="redirect-message">
+        <h1>🐻 Redirecting...</h1>
+        <div class="spinner"></div>
+        <p>You're being redirected to our new dynamic city page.</p>
+        <p>If you're not redirected automatically, <a href="city.html?city=new-york" style="color: white;">click here</a>.</p>
+    </div>
 </body>
 </html>
