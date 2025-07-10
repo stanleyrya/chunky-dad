@@ -840,20 +840,66 @@ class DynamicCalendarLoader {
         if (!mapContainer || typeof L === 'undefined') return;
 
         try {
+            // Calculate dynamic center and zoom based on event coordinates
+            const eventsWithCoords = events.filter(event => 
+                event.coordinates?.lat && event.coordinates?.lng && 
+                !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
+            );
+
+            let mapCenter, mapZoom;
+            
+            if (eventsWithCoords.length === 0) {
+                // Fallback to city config if no events have coordinates
+                mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
+                mapZoom = cityConfig.mapZoom;
+            } else if (eventsWithCoords.length === 1) {
+                // Single event - center on it with moderate zoom
+                mapCenter = [eventsWithCoords[0].coordinates.lat, eventsWithCoords[0].coordinates.lng];
+                mapZoom = 14;
+            } else {
+                // Multiple events - calculate bounding box
+                const lats = eventsWithCoords.map(e => e.coordinates.lat);
+                const lngs = eventsWithCoords.map(e => e.coordinates.lng);
+                
+                const minLat = Math.min(...lats);
+                const maxLat = Math.max(...lats);
+                const minLng = Math.min(...lngs);
+                const maxLng = Math.max(...lngs);
+                
+                // Calculate center point
+                mapCenter = [
+                    (minLat + maxLat) / 2,
+                    (minLng + maxLng) / 2
+                ];
+                
+                // Calculate zoom level based on bounding box size with padding
+                const latDiff = maxLat - minLat;
+                const lngDiff = maxLng - minLng;
+                const maxDiff = Math.max(latDiff, lngDiff);
+                
+                // Add padding factor to ensure events aren't at map edges
+                const paddedDiff = maxDiff * 1.3;
+                
+                // Determine zoom level based on coordinate spread
+                if (paddedDiff > 0.5) mapZoom = 10;
+                else if (paddedDiff > 0.2) mapZoom = 11;
+                else if (paddedDiff > 0.1) mapZoom = 12;
+                else if (paddedDiff > 0.05) mapZoom = 13;
+                else if (paddedDiff > 0.02) mapZoom = 14;
+                else mapZoom = 15;
+            }
+
             const map = L.map('events-map', {
                 scrollWheelZoom: false,
                 doubleClickZoom: true,
                 touchZoom: true,
                 dragging: true,
                 zoomControl: true
-            }).setView([
-                cityConfig.coordinates.lat, 
-                cityConfig.coordinates.lng
-            ], cityConfig.mapZoom);
+            }).setView(mapCenter, mapZoom);
 
-            // Use more attractive tile layer with better styling
-            L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors, Tiles courtesy of OpenStreetMap France',
+            // Use clean US-based OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
                 maxZoom: 18
             }).addTo(map);
 
