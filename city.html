@@ -84,7 +84,21 @@
 
         <section class="weekly-calendar">
             <div class="container">
-                <h2>This Week's Schedule</h2>
+                <div class="calendar-header">
+                    <h2 id="calendar-title">This Week's Schedule</h2>
+                    <div class="calendar-controls">
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="week">📅 Week</button>
+                            <button class="view-btn" data-view="month">🗓️ Month</button>
+                        </div>
+                        <div class="date-navigation">
+                            <button class="nav-btn" id="prev-period">←</button>
+                            <span class="date-range" id="date-range"></span>
+                            <button class="nav-btn" id="next-period">→</button>
+                        </div>
+                        <button class="today-btn" id="today-btn">Today</button>
+                    </div>
+                </div>
                 <div class="calendar-grid">
                     <div class="loading-message">📅 Getting latest events...</div>
                 </div>
