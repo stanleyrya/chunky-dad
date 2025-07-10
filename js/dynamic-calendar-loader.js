@@ -195,6 +195,7 @@ class DynamicCalendarLoader {
                 cover: 'Check event details',
                 eventType: this.getEventType(calendarEvent.recurrence),
                 recurring: !!calendarEvent.recurrence,
+                recurrence: calendarEvent.recurrence, // Store the RRULE string
                 coordinates: calendarEvent.location,
                 startDate: calendarEvent.start, // Store actual date
                 endDate: calendarEvent.end
@@ -615,18 +616,57 @@ class DynamicCalendarLoader {
     isRecurringEventInPeriod(event, start, end) {
         if (!event.startDate) return false;
         
-        const eventDay = event.startDate.getDay();
         const current = new Date(start);
         
         // Check each day in the period
         while (current <= end) {
-            if (current.getDay() === eventDay) {
+            if (this.isEventOccurringOnDate(event, current)) {
                 return true;
             }
             current.setDate(current.getDate() + 1);
         }
         
         return false;
+    }
+
+    // Helper function to determine if a recurring event occurs on a specific date
+    isEventOccurringOnDate(event, date) {
+        if (!event.recurring || !event.startDate) return false;
+        
+        const eventDate = new Date(event.startDate);
+        const checkDate = new Date(date);
+        
+        // Make sure we're not checking before the event started
+        if (checkDate < eventDate) return false;
+        
+        // Parse the recurrence rule to determine the pattern
+        const recurrence = event.recurrence || '';
+        
+        if (recurrence.includes('FREQ=WEEKLY')) {
+            // Weekly events: occur on the same day of the week
+            return eventDate.getDay() === checkDate.getDay();
+        } else if (recurrence.includes('FREQ=MONTHLY')) {
+            // Monthly events: check for BYMONTHDAY pattern
+            if (recurrence.includes('BYMONTHDAY=')) {
+                const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
+                if (dayMatch) {
+                    const targetDay = parseInt(dayMatch[1]);
+                    return checkDate.getDate() === targetDay;
+                }
+            }
+            // Fallback: same day of month as original event
+            return eventDate.getDate() === checkDate.getDate();
+        } else if (recurrence.includes('FREQ=DAILY')) {
+            // Daily events: occur every day
+            return true;
+        } else if (recurrence.includes('FREQ=YEARLY')) {
+            // Yearly events: same month and day
+            return eventDate.getMonth() === checkDate.getMonth() && 
+                   eventDate.getDate() === checkDate.getDate();
+        }
+        
+        // Default fallback for other recurring patterns - use day of week
+        return eventDate.getDay() === checkDate.getDay();
     }
 
     // Generate calendar events (enhanced for week/month/calendar view)
@@ -657,7 +697,7 @@ class DynamicCalendarLoader {
                 if (!event.startDate) return false;
                 
                 if (event.recurring) {
-                    return event.startDate.getDay() === day.getDay();
+                    return this.isEventOccurringOnDate(event, day);
                 }
                 
                 const eventDate = new Date(event.startDate);
@@ -739,7 +779,7 @@ class DynamicCalendarLoader {
                 if (!event.startDate) return false;
                 
                 if (event.recurring) {
-                    return event.startDate.getDay() === day.getDay();
+                    return this.isEventOccurringOnDate(event, day);
                 }
                 
                 const eventDate = new Date(event.startDate);
