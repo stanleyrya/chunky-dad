@@ -456,7 +456,7 @@ class CalendarEventsLoader {
                         <h3>${day}</h3>
                         ${isToday ? `<span class="day-indicator">Today</span>` : ''}
                     </div>
-                    <div class="events">
+                    <div class="daily-events">
                         ${eventsHtml}
                     </div>
                 </div>
