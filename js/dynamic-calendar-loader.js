@@ -738,7 +738,6 @@ class DynamicCalendarLoader {
                         <div class="event-name">${event.name}</div>
                         <div class="event-time">${event.time}</div>
                         <div class="event-venue">${event.bar}</div>
-                        <div class="event-cover">${event.cover}</div>
                     </div>
                 `).join('')
                 : '<div class="no-events">No events</div>';
@@ -818,17 +817,20 @@ class DynamicCalendarLoader {
             const otherMonthClass = isCurrentMonth ? '' : ' other-month';
             const hasEventsClass = dayEvents.length > 0 ? ' has-events' : '';
 
-            // Simplified month view: focus on event titles only for better readability
-            // Show up to 4 events with just titles, then show count for remaining
-            const eventsToShow = dayEvents.slice(0, 4);
-            const additionalEventsCount = Math.max(0, dayEvents.length - 4);
+            // Ultra-simplified month view: show only 2 events with shortened names for better mobile viewing
+            const eventsToShow = dayEvents.slice(0, 2);
+            const additionalEventsCount = Math.max(0, dayEvents.length - 2);
             
             const eventsHtml = eventsToShow.length > 0 
-                ? eventsToShow.map(event => `
-                    <div class="event-item month-event" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time} - ${event.cover}">
-                        <div class="event-name">${event.name}</div>
-                    </div>
-                `).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount} more</div>` : '')
+                ? eventsToShow.map(event => {
+                    // Show only first word of event name to save space
+                    const shortName = event.name.split(' ')[0];
+                    return `
+                        <div class="event-item month-event" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time} - ${event.cover}">
+                            <div class="event-name">${shortName}</div>
+                        </div>
+                    `;
+                }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
                 : '';
 
             return `
@@ -1027,7 +1029,7 @@ class DynamicCalendarLoader {
             if (this.currentView === 'month') {
                 calendarGrid.className = 'calendar-grid month-view-grid';
                 calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                calendarGrid.style.gridTemplateRows = 'auto repeat(6, minmax(120px, auto))';
+                calendarGrid.style.gridTemplateRows = 'auto repeat(6, minmax(90px, auto))';
             } else {
                 calendarGrid.className = 'calendar-grid week-view-grid';
                 calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
@@ -1099,107 +1101,11 @@ class DynamicCalendarLoader {
             todayBtn.addEventListener('click', () => this.goToToday());
         }
         
-        // Set up creative scroll-based header interactions
-        this.setupScrollInteractions();
-        
         // Initialize date range display
         this.updateCalendarDisplay();
     }
 
-    // Creative scroll-based header interactions
-    setupScrollInteractions() {
-        const header = document.querySelector('header');
-        const headerCityTitle = document.getElementById('header-city-title');
-        const headerCitySelector = document.getElementById('header-city-selector');
-        const headerCityButtons = document.getElementById('header-city-buttons');
-        const cityHero = document.querySelector('.city-hero');
-        let isHeaderExpanded = false;
-        let lastScrollY = window.scrollY;
-        
-        // Populate header city buttons
-        if (headerCityButtons) {
-            headerCityButtons.innerHTML = getAvailableCities().map(city => {
-                const isActive = city.key === this.currentCity;
-                const hasCalendar = hasCityCalendar(city.key);
-                const href = hasCalendar ? `city.html?city=${city.key}` : '#';
-                const extraClass = hasCalendar ? '' : ' coming-soon';
-                const activeClass = isActive ? ' active' : '';
-                
-                return `
-                    <a href="${href}" class="header-city-button${activeClass}${extraClass}" data-city="${city.key}">
-                        <span class="header-city-emoji">${city.emoji}</span>
-                        <span class="header-city-name">${city.name}</span>
-                    </a>
-                `;
-            }).join('');
-        }
-        
-        // Set header city title text
-        if (headerCityTitle && this.currentCityConfig) {
-            headerCityTitle.textContent = `${this.currentCityConfig.emoji} ${this.currentCityConfig.name}`;
-        }
-        
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
-            const cityHeroRect = cityHero ? cityHero.getBoundingClientRect() : null;
-            const heroVisible = cityHeroRect ? cityHeroRect.bottom > 0 : false;
-            
-            // Enhanced header background on scroll
-            if (currentScrollY > 100) {
-                header.classList.add('scrolled-header');
-            } else {
-                header.classList.remove('scrolled-header');
-            }
-            
-            // Show city title in header when hero is not visible
-            if (!heroVisible && headerCityTitle) {
-                headerCityTitle.classList.add('visible');
-                headerCityTitle.classList.remove('hidden');
-            } else if (headerCityTitle) {
-                headerCityTitle.classList.remove('visible');
-                headerCityTitle.classList.add('hidden');
-            }
-            
-            // Show city selector on deeper scroll or when scrolling up with hero not visible
-            const shouldShowSelector = (currentScrollY > 300) || (scrollDirection === 'up' && !heroVisible && currentScrollY > 150);
-            
-            if (shouldShowSelector && !isHeaderExpanded) {
-                isHeaderExpanded = true;
-                header.classList.add('header-expanded');
-                if (headerCitySelector) {
-                    headerCitySelector.classList.add('visible');
-                }
-            } else if (!shouldShowSelector && isHeaderExpanded) {
-                isHeaderExpanded = false;
-                header.classList.remove('header-expanded');
-                if (headerCitySelector) {
-                    headerCitySelector.classList.remove('visible');
-                }
-            }
-            
-            lastScrollY = currentScrollY;
-        };
-        
-        // Throttled scroll handler for better performance
-        let scrollTimeout;
-        const throttledScroll = () => {
-            if (scrollTimeout) return;
-            scrollTimeout = setTimeout(() => {
-                handleScroll();
-                scrollTimeout = null;
-            }, 16); // ~60fps
-        };
-        
-        // Add scroll listener
-        window.addEventListener('scroll', throttledScroll, { passive: true });
-        
-        // Initial call to set correct state
-        handleScroll();
-        
-        // Store scroll handler for cleanup if needed
-        this.scrollHandler = throttledScroll;
-    }
+
 
     // Update page content for city
     updatePageContent(cityConfig, events) {
