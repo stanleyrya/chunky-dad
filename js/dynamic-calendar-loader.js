@@ -506,63 +506,54 @@ class DynamicCalendarLoader {
 
     // Update page content for city
     updatePageContent(cityConfig, events) {
-        // Update title and tagline with typing animation
+        // Update title and tagline immediately without typing animation
         const cityTitle = document.getElementById('city-title');
         const cityTagline = document.getElementById('city-tagline');
         const cityCTAText = document.getElementById('city-cta-text');
         
         if (cityTitle) {
             cityTitle.classList.remove('city-title-hidden');
-            this.typeWriter(cityTitle, `${cityConfig.emoji} ${cityConfig.name}`, 60);
+            cityTitle.textContent = `${cityConfig.emoji} ${cityConfig.name}`;
         }
         if (cityTagline) {
             cityTagline.classList.remove('city-tagline-hidden');
-            // Delay the tagline typing to start after the title
-            setTimeout(() => {
-                this.typeWriter(cityTagline, cityConfig.tagline, 40);
-            }, 800);
+            cityTagline.textContent = cityConfig.tagline;
         }
         if (cityCTAText) {
             cityCTAText.textContent = `Know about other bear events or venues in ${cityConfig.name}? Help us keep this guide current!`;
         }
 
-        // Update calendar with smooth reveal
+        // Update calendar immediately
         const calendarGrid = document.querySelector('.calendar-grid');
         const calendarSection = document.querySelector('.weekly-calendar');
         if (calendarGrid) {
-            setTimeout(() => {
-                calendarGrid.innerHTML = this.generateCalendarEvents(events);
-                this.attachCalendarInteractions();
-                calendarSection?.classList.remove('content-hidden');
-            }, 1200);
+            calendarGrid.innerHTML = this.generateCalendarEvents(events);
+            this.attachCalendarInteractions();
+            calendarSection?.classList.remove('content-hidden');
         }
 
-        // Update events list with smooth reveal
+        // Update events list immediately
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
         if (eventsList) {
-            setTimeout(() => {
-                if (events?.length > 0) {
-                    eventsList.innerHTML = events.map(event => this.generateEventCard(event)).join('');
-                } else {
-                    eventsList.innerHTML = `
-                        <div class="no-events-message">
-                            <h3>📅 No Events Yet</h3>
-                            <p>We're still gathering event information for ${cityConfig.name}.</p>
-                            <p>Check back soon or help us by submitting events you know about!</p>
-                        </div>
-                    `;
-                }
-                eventsSection?.classList.remove('content-hidden');
-            }, 1600);
+            if (events?.length > 0) {
+                eventsList.innerHTML = events.map(event => this.generateEventCard(event)).join('');
+            } else {
+                eventsList.innerHTML = `
+                    <div class="no-events-message">
+                        <h3>📅 No Events Yet</h3>
+                        <p>We're still gathering event information for ${cityConfig.name}.</p>
+                        <p>Check back soon or help us by submitting events you know about!</p>
+                    </div>
+                `;
+            }
+            eventsSection?.classList.remove('content-hidden');
         }
 
-        // Initialize map with smooth reveal
+        // Initialize map immediately
         const mapSection = document.querySelector('.events-map-section');
-        setTimeout(() => {
-            this.initializeMap(cityConfig, events);
-            mapSection?.classList.remove('content-hidden');
-        }, 2000);
+        this.initializeMap(cityConfig, events);
+        mapSection?.classList.remove('content-hidden');
 
         // Update page metadata
         document.title = `${cityConfig.name} - Chunky Dad Bear Guide`;
@@ -617,22 +608,6 @@ class DynamicCalendarLoader {
         if (data) {
             this.updatePageContent(data.cityConfig, data.events);
         }
-    }
-
-    // Typing effect (adapted from landing page)
-    typeWriter(element, text, speed = 100) {
-        let i = 0;
-        element.innerHTML = '';
-        
-        function type() {
-            if (i < text.length) {
-                element.innerHTML += text.charAt(i);
-                i++;
-                setTimeout(type, speed);
-            }
-        }
-        
-        type();
     }
 
     // Initialize
