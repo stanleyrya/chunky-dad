@@ -341,15 +341,30 @@ class DynamicCalendarLoader {
     }
 
     parseICalDate(icalDate) {
+        if (!icalDate) return new Date();
+        
         if (icalDate.includes('T')) {
-            const dateStr = icalDate.replace(/[TZ]/g, ' ').trim();
-            return new Date(dateStr.substring(0, 4) + '-' + 
-                          dateStr.substring(4, 6) + '-' + 
-                          dateStr.substring(6, 8) + 'T' + 
-                          dateStr.substring(9, 11) + ':' + 
-                          dateStr.substring(11, 13) + ':' + 
-                          dateStr.substring(13, 15));
+            // DateTime format: YYYYMMDDTHHMMSS[Z]
+            const cleanDate = icalDate.replace(/[TZ]/g, '');
+            if (cleanDate.length >= 8) {
+                const year = cleanDate.substring(0, 4);
+                const month = cleanDate.substring(4, 6);
+                const day = cleanDate.substring(6, 8);
+                const hour = cleanDate.substring(8, 10) || '00';
+                const minute = cleanDate.substring(10, 12) || '00';
+                const second = cleanDate.substring(12, 14) || '00';
+                
+                return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+            }
+        } else if (icalDate.length === 8) {
+            // Date only format: YYYYMMDD (all-day event)
+            const year = icalDate.substring(0, 4);
+            const month = icalDate.substring(4, 6);
+            const day = icalDate.substring(6, 8);
+            
+            return new Date(`${year}-${month}-${day}T00:00:00`);
         }
+        
         return new Date();
     }
 
@@ -357,8 +372,8 @@ class DynamicCalendarLoader {
     getWeekBounds(date) {
         const start = new Date(date);
         const day = start.getDay();
-        const diff = start.getDate() - day; // Adjust to start of week (Sunday)
-        start.setDate(diff);
+        // Fix: Properly calculate days to subtract to get to Sunday
+        start.setDate(start.getDate() - day);
         start.setHours(0, 0, 0, 0);
         
         const end = new Date(start);
@@ -636,6 +651,10 @@ class DynamicCalendarLoader {
         const eventDate = new Date(event.startDate);
         const checkDate = new Date(date);
         
+        // Normalize dates to compare only date parts, not time
+        eventDate.setHours(0, 0, 0, 0);
+        checkDate.setHours(0, 0, 0, 0);
+        
         // Make sure we're not checking before the event started
         if (checkDate < eventDate) return false;
         
@@ -651,11 +670,16 @@ class DynamicCalendarLoader {
                 const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
                 if (dayMatch) {
                     const targetDay = parseInt(dayMatch[1]);
-                    return checkDate.getDate() === targetDay;
+                    // Check if this month has that many days
+                    const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
+                    return checkDate.getDate() === Math.min(targetDay, lastDayOfMonth);
                 }
             }
-            // Fallback: same day of month as original event
-            return eventDate.getDate() === checkDate.getDate();
+            // Fallback: same day of month as original event, but handle month lengths
+            const originalDay = eventDate.getDate();
+            const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
+            const targetDay = Math.min(originalDay, lastDayOfMonth);
+            return checkDate.getDate() === targetDay;
         } else if (recurrence.includes('FREQ=DAILY')) {
             // Daily events: occur every day
             return true;
