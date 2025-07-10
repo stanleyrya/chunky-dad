@@ -1285,30 +1285,31 @@ footer {
 @media (max-width: 768px) {
     .nav-menu {
         position: fixed;
-        top: 70px;
-        left: -100%;
+        top: 100%;
+        left: 0;
         width: 100%;
-        height: calc(100vh - 70px);
-        background: white;
+        background: rgba(102, 126, 234, 0.95);
+        backdrop-filter: blur(15px);
         flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        padding-top: 2rem;
-        transition: left 0.3s ease;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        transform: translateY(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
     }
 
     .nav-menu.active {
-        left: 0;
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: all;
     }
 
     .hamburger {
-        display: flex;
+        display: block;
     }
 
     .hero {
-        padding: 80px 0 40px;
-        min-height: 60vh;
+        flex-direction: column;
     }
 
     .hero-content h2 {
@@ -1321,7 +1322,6 @@ footer {
 
     .cities-grid {
         grid-template-columns: 1fr;
-        gap: 2rem;
     }
 
     .events-grid {
@@ -1329,44 +1329,40 @@ footer {
     }
 
     .business-categories {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .contact-content {
-        grid-template-columns: 1fr;
-        gap: 2rem;
+        flex-direction: column;
     }
 
     /* Enhanced Week View Mobile */
     .calendar-grid.week-view-grid {
         grid-template-columns: 1fr;
-        gap: 0.8rem;
+        gap: 1.5rem;
     }
 
     .calendar-day.week-view {
-        min-height: 120px;
-        padding: 1rem;
+        min-height: 200px;
+        padding: 1.5rem;
     }
 
     .calendar-day.week-view .day-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
         margin-bottom: 1rem;
+        padding-bottom: 0.8rem;
     }
 
     .calendar-day.week-view .day-meta {
-        align-items: flex-start;
-        width: 100%;
+        gap: 0.3rem;
     }
 
     .event-item.enhanced {
-        padding: 1rem;
-        margin-bottom: 0.6rem;
+        padding: 1.2rem;
+        margin-bottom: 1rem;
     }
 
     .event-item.enhanced .event-name {
-        font-size: 0.95rem;
+        font-size: 1rem;
     }
 
     /* Calendar Overview Mobile */
@@ -1376,12 +1372,11 @@ footer {
 
     .calendar-day.calendar-overview {
         min-height: 60px;
-        padding: 0.5rem;
+        padding: 0.6rem;
     }
 
     .day-number {
         font-size: 0.9rem;
-        margin-bottom: 0.3rem;
     }
 
     .event-dot {
@@ -1391,18 +1386,55 @@ footer {
 
     .today-marker {
         font-size: 0.5rem;
-        padding: 0.15rem 0.3rem;
+        padding: 0.1rem 0.3rem;
+    }
+
+    /* Month View Mobile Improvements */
+    .calendar-grid.month-view-grid {
+        gap: 2px;
+    }
+
+    .calendar-day.month-day {
+        min-height: 100px;
+    }
+
+    .calendar-day.month-day .day-header {
+        padding: 6px 8px;
+    }
+
+    .calendar-day.month-day .day-number {
+        font-size: 1rem;
+    }
+
+    .calendar-day.month-day .day-events {
+        padding: 6px;
+        gap: 4px;
+    }
+
+    .event-item.month-event {
+        padding: 6px 8px;
+        border-radius: 6px;
+    }
+
+    .event-item.month-event .event-name {
+        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+
+    .more-events {
+        font-size: 0.7rem;
+        padding: 4px;
     }
 
     .calendar-header {
         flex-direction: column;
-        align-items: stretch;
-        gap: 1.5rem;
+        gap: 1rem;
+        padding: 1.5rem;
     }
 
     .calendar-header h2 {
-        text-align: center;
-        font-size: 2rem;
+        font-size: 1.8rem;
+        margin-bottom: 0;
     }
 
     .calendar-controls {
@@ -1411,74 +1443,73 @@ footer {
     }
 
     .date-navigation {
-        justify-content: center;
+        order: 2;
     }
 
     .date-range {
-        min-width: 100px;
-    }
-
-    .calendar-day {
-        min-height: 140px;
-        padding: 1.2rem;
-    }
-
-    .day-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.3rem;
-    }
-
-    .day-indicator {
-        align-self: flex-start;
-    }
-
-    .day-date {
         font-size: 1rem;
     }
 
+    .calendar-day {
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    .day-header {
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .day-indicator {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+
+    .day-date {
+        font-size: 1.8rem;
+    }
+
     .event-item {
-        padding: 0.6rem;
-        font-size: 0.8rem;
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
     }
 
     .city-header h1 {
-        font-size: 2.2rem;
+        font-size: 2.5rem;
     }
 
     .event-card.detailed .event-header {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+        text-align: center;
+        gap: 0.5rem;
     }
 
     .event-meta {
-        align-items: flex-start;
-        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
     }
 
     .event-day {
-        font-size: 0.85rem;
-        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+        padding: 0.3rem 0.8rem;
     }
 
     .recurring-badge {
         font-size: 0.7rem;
-        padding: 0.2rem 0.6rem;
+        padding: 0.2rem 0.5rem;
     }
 
     #events-map {
-        height: 350px;
-        border-radius: 15px;
+        height: 250px;
     }
 
     .map-container {
-        border-radius: 15px;
-        border-width: 2px;
+        border-radius: 12px;
+        overflow: hidden;
     }
-    
+
     .events-map-section {
-        padding: 3rem 0;
+        padding: 2rem 1rem;
     }
 
     .events-map-section h2 {
@@ -1486,44 +1517,40 @@ footer {
     }
 
     .events-map-section p {
-        font-size: 1rem;
-        padding: 0 1rem;
+        font-size: 0.9rem;
+        line-height: 1.6;
     }
 
-    /* City selector mobile */
     .city-selector {
-        text-align: center;
-        padding: 20px;
-        margin-top: 25px;
+        padding: 2rem 1rem;
     }
-    
+
     .city-selector-title {
-        font-size: 1.1rem;
-        margin-bottom: 15px;
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
     }
-    
-    /* Hide city buttons, show dropdown on mobile */
+
     .city-buttons {
-        display: none;
+        gap: 1rem;
     }
-    
+
     .city-dropdown {
-        display: block;
+        margin-top: 1rem;
     }
-    
+
     .city-links {
         flex-direction: column;
-        align-items: center;
-    }
-    
-    .city-link {
-        width: 200px;
+        gap: 0.5rem;
     }
 
-    /* Modal mobile adjustments */
+    .city-link {
+        padding: 0.8rem 1rem;
+    }
+
     .modal-content {
         width: 95%;
-        margin: 1rem;
+        max-height: 85vh;
+        margin: 0 auto;
     }
 
     .modal-header {
@@ -1549,7 +1576,7 @@ footer {
     }
 
     .hero-content p {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
 
     .cities h2,
@@ -1564,27 +1591,28 @@ footer {
     }
 
     .logo h1 {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
     }
 
     /* Enhanced Week View for very small screens */
     .calendar-grid.week-view-grid {
-        grid-template-columns: 1fr;
-        gap: 0.8rem;
+        gap: 1rem;
     }
 
     .calendar-day.week-view {
-        min-height: auto;
+        min-height: 160px;
         padding: 1.2rem;
+        border-radius: 15px;
     }
 
     .event-item.enhanced {
-        padding: 0.8rem;
-        margin-bottom: 0.5rem;
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 0.8rem;
     }
 
     .event-item.enhanced .event-name {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
     }
 
     .event-item.enhanced .event-time,
@@ -1605,7 +1633,6 @@ footer {
 
     .day-number {
         font-size: 0.8rem;
-        margin-bottom: 0.2rem;
     }
 
     .event-dot {
@@ -1614,7 +1641,7 @@ footer {
     }
 
     .event-more {
-        font-size: 0.6rem;
+        font-size: 0.55rem;
     }
 
     .today-marker {
@@ -1622,39 +1649,78 @@ footer {
         padding: 0.1rem 0.2rem;
     }
 
-    .calendar-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.6rem;
+    /* Month View for very small screens */
+    .calendar-grid.month-view-grid {
+        gap: 1px;
+    }
+
+    .calendar-day.month-day {
+        min-height: 85px;
+    }
+
+    .calendar-day.month-day .day-header {
+        padding: 4px 6px;
+    }
+
+    .calendar-day.month-day .day-number {
+        font-size: 0.9rem;
+    }
+
+    .calendar-day.month-day .day-indicator {
+        font-size: 0.65rem;
+        padding: 2px 5px;
+    }
+
+    .calendar-day.month-day .day-events {
+        padding: 4px;
+        gap: 3px;
+    }
+
+    .event-item.month-event {
+        padding: 4px 6px;
+        border-radius: 5px;
+    }
+
+    .event-item.month-event .event-name {
+        font-size: 0.75rem;
+        line-height: 1.1;
+    }
+
+    .more-events {
+        font-size: 0.65rem;
+        padding: 3px;
+        border-radius: 4px;
     }
 
     .calendar-header h2 {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
 
     .view-btn {
-        padding: 0.5rem 1rem;
+        padding: 0.6rem 1rem;
         font-size: 0.8rem;
     }
 
     .nav-btn {
-        width: 32px;
-        height: 32px;
-        font-size: 0.9rem;
+        padding: 0.6rem;
+        font-size: 1.2rem;
+        width: 40px;
+        height: 40px;
     }
 
     .date-range {
-        font-size: 0.8rem;
-        min-width: 80px;
+        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
     }
 
     .today-btn {
-        padding: 0.5rem 1rem;
+        padding: 0.6rem 1rem;
         font-size: 0.8rem;
     }
 
     .calendar-day {
-        min-height: 120px;
-        padding: 1rem;
+        padding: 0.8rem;
+        border-radius: 10px;
     }
 
     .calendar-day h3 {
@@ -1662,8 +1728,8 @@ footer {
     }
 
     .event-item {
-        padding: 0.5rem;
-        font-size: 0.75rem;
+        padding: 0.6rem;
+        margin-bottom: 0.4rem;
     }
 
     .event-name {
@@ -1675,77 +1741,67 @@ footer {
     }
 
     .event-card.detailed {
-        padding: 1.5rem;
+        padding: 1rem;
     }
 
     .event-card.detailed h3 {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
     }
 
     .event-day {
         font-size: 0.8rem;
-        padding: 0.4rem 0.7rem;
+        padding: 0.25rem 0.6rem;
     }
 
     .recurring-badge {
         font-size: 0.65rem;
-        padding: 0.2rem 0.5rem;
+        padding: 0.15rem 0.4rem;
     }
 
     #events-map {
-        height: 300px;
-        border-radius: 15px;
+        height: 200px;
     }
 
     .map-container {
-        border-radius: 15px;
-        border-width: 2px;
-        padding: 2px;
+        border-radius: 10px;
     }
 
     .marker-pin {
-        width: 25px;
-        height: 35px;
+        transform: scale(0.8);
     }
 
     .marker-pin::before {
-        top: 3px;
-        width: 20px;
-        height: 20px;
+        width: 15px;
+        height: 15px;
     }
 
     .marker-pin::after {
-        bottom: 6px;
-        border-left-width: 5px;
-        border-right-width: 5px;
-        border-top-width: 8px;
+        border-width: 12px 6px 0;
     }
 
     .marker-icon {
-        top: 5px;
-        font-size: 0.85rem;
-        width: 16px;
-        height: 16px;
+        font-size: 0.7rem;
+        line-height: 15px;
     }
 
     .map-interaction-notice {
-        display: none !important;
+        font-size: 0.65rem !important;
+        padding: 4px 8px !important;
     }
 
     .events-map-section h2 {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
     }
 
     .events-map-section p {
-        font-size: 0.9rem;
-        padding: 0 0.5rem;
+        font-size: 0.85rem;
+        line-height: 1.5;
     }
 
-    /* Modal adjustments for very small screens */
     .modal-content {
         width: 98%;
-        margin: 0.5rem;
         max-height: 90vh;
+        border-radius: 15px;
     }
 
     .modal-header {
@@ -1758,25 +1814,27 @@ footer {
 
     .modal-body {
         padding: 0.8rem;
+        max-height: 70vh;
     }
 
     .modal-event-item {
         padding: 0.8rem;
+        border-radius: 10px;
     }
 
     .modal-event-item .event-name {
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
 
     .modal-event-item .event-time,
     .modal-event-item .event-venue,
     .modal-event-item .event-cover {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
 
     .switch-to-week {
         padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
 }
 
@@ -2090,9 +2148,9 @@ footer {
 .calendar-day.week-view {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 20px;
-    padding: 1.8rem;
+    padding: 2rem;
     text-align: left;
-    min-height: 220px;
+    min-height: 280px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.08);
     border: 2px solid #e8f2ff;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2105,8 +2163,8 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.2rem;
-    padding-bottom: 0.8rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
@@ -2114,31 +2172,31 @@ footer {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.3rem;
+    gap: 0.4rem;
 }
 
 .calendar-day.week-view .event-count {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: #667eea;
     font-weight: 500;
-    padding: 0.2rem 0.5rem;
+    padding: 0.3rem 0.6rem;
     background: rgba(102, 126, 234, 0.1);
-    border-radius: 10px;
+    border-radius: 12px;
 }
 
 .event-item.enhanced {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 255, 0.95) 100%);
     color: #333;
-    padding: 1.2rem;
-    border-radius: 14px;
-    font-size: 0.9rem;
+    padding: 1.5rem;
+    border-radius: 16px;
+    font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-left: 4px solid #667eea;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-    margin-bottom: 0.8rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    margin-bottom: 1.2rem;
 }
 
 .event-item.enhanced:last-child {
@@ -2147,28 +2205,28 @@ footer {
 
 .event-item.enhanced .event-name {
     font-weight: 700;
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-    line-height: 1.3;
+    margin-bottom: 0.6rem;
+    font-size: 1.1rem;
+    line-height: 1.4;
     color: #333;
 }
 
 .event-item.enhanced .event-time {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: #667eea;
     font-weight: 600;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
 }
 
 .event-item.enhanced .event-venue {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: #6b7280;
     font-weight: 500;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
 }
 
 .event-item.enhanced .event-cover {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: #059669;
     font-weight: 500;
 }
@@ -2478,7 +2536,7 @@ footer {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     text-align: center;
-    padding: 12px 8px;
+    padding: 15px 8px;
     font-weight: 600;
     border-radius: 8px 8px 0 0;
     border-bottom: 2px solid rgba(255,255,255,0.2);
@@ -2486,7 +2544,7 @@ footer {
 
 .calendar-day-header h4 {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
 }
 
@@ -2497,7 +2555,7 @@ footer {
     padding: 0;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    min-height: 120px;
+    min-height: 140px;
     display: flex;
     flex-direction: column;
 }
@@ -2527,7 +2585,7 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
+    padding: 10px 14px;
     background: #f8f9ff;
     border-bottom: 1px solid #e8f2ff;
     flex-shrink: 0;
@@ -2540,7 +2598,7 @@ footer {
 
 .calendar-day.month-day .day-number {
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: #333;
 }
 
@@ -2551,9 +2609,9 @@ footer {
 .calendar-day.month-day .day-indicator {
     background: #ff6b6b;
     color: white;
-    padding: 2px 6px;
-    border-radius: 8px;
-    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
     font-weight: 600;
 }
 
@@ -2564,68 +2622,50 @@ footer {
 
 .calendar-day.month-day .day-events {
     flex: 1;
-    padding: 8px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     overflow: hidden;
 }
 
 .event-item.month-event {
     background: linear-gradient(135deg, #e8f2ff 0%, #f0f4ff 100%);
     border: 1px solid #d0e1ff;
-    border-radius: 6px;
-    padding: 6px 8px;
+    border-radius: 8px;
+    padding: 8px 10px;
     margin: 0;
     transition: all 0.2s ease;
     cursor: pointer;
+    text-align: center;
 }
 
 .event-item.month-event:hover {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    transform: translateX(2px);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
 }
 
 .event-item.month-event .event-name {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-bottom: 2px;
-    line-height: 1.2;
-}
-
-.event-item.month-event .event-details {
-    display: flex;
-    justify-content: space-between;
-    gap: 4px;
-}
-
-.event-item.month-event .event-time,
-.event-item.month-event .event-venue {
-    font-size: 0.65rem;
-    opacity: 0.8;
-    flex: 1;
-}
-
-.event-item.month-event .event-time {
-    font-weight: 500;
-}
-
-.event-item.month-event .event-venue {
-    text-align: right;
-    font-style: italic;
+    margin: 0;
+    line-height: 1.3;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .more-events {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: #667eea;
     font-weight: 600;
     text-align: center;
-    padding: 4px;
+    padding: 6px;
     background: rgba(102, 126, 234, 0.1);
-    border-radius: 4px;
-    margin-top: 2px;
+    border-radius: 6px;
+    margin-top: 4px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 /* Smooth animations for all sections */
