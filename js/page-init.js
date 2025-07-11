@@ -30,9 +30,21 @@ class PageInitializer {
             return new Promise((resolve) => {
                 const checkInterval = setInterval(() => {
                     // Check if required modules are loaded
-                    const modulesLoaded = window.navigationManager && 
-                                         window.uiEffectsManager && 
-                                         window.formHandler;
+                    let modulesLoaded = window.navigationManager && 
+                                       window.uiEffectsManager && 
+                                       window.formHandler;
+                    
+                    // For city pages, also wait for calendar modules
+                    if (this.isCityPage) {
+                        modulesLoaded = modulesLoaded && 
+                                       window.CalendarManager &&
+                                       window.CalendarUI &&
+                                       window.CalendarControls &&
+                                       window.CalendarDataLoader &&
+                                       window.CitySelector &&
+                                       window.EventParser &&
+                                       typeof getCityConfig === 'function';
+                    }
                     
                     if (modulesLoaded) {
                         clearInterval(checkInterval);
@@ -64,9 +76,14 @@ class PageInitializer {
         console.log('Setting up city page behavior');
         
         // Initialize calendar manager if available
-        if (typeof DynamicCalendarLoader !== 'undefined') {
-            window.calendarLoader = new DynamicCalendarLoader();
-            window.calendarLoader.init();
+        if (typeof CalendarManager !== 'undefined') {
+            window.calendarManager = new CalendarManager();
+            window.calendarLoader = new DynamicCalendarLoader(); // Legacy compatibility
+            
+            // Initialize the calendar system
+            window.calendarManager.initialize().catch(error => {
+                console.error('Failed to initialize calendar manager:', error);
+            });
         }
         
         // City page specific initializations can go here
