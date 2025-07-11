@@ -741,6 +741,32 @@ class DynamicCalendarLoader extends CalendarCore {
                 maxZoom: 18
             }).addTo(map);
 
+            // Add fullscreen control
+            const fullscreenControl = L.control({position: 'topright'});
+            fullscreenControl.onAdd = function() {
+                const div = L.DomUtil.create('div', 'fullscreen-control');
+                div.innerHTML = '<button onclick="toggleFullscreen()" title="Toggle Fullscreen">⛶</button>';
+                div.style.cssText = `
+                    background: white;
+                    border: 2px solid rgba(0,0,0,0.2);
+                    border-radius: 6px;
+                    cursor: pointer;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                `;
+                div.querySelector('button').style.cssText = `
+                    background: none;
+                    border: none;
+                    font-size: 18px;
+                    padding: 8px 10px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                return div;
+            };
+            fullscreenControl.addTo(map);
+
             // Add map interaction notice
             const notice = L.control({position: 'bottomleft'});
             notice.onAdd = function() {
@@ -776,7 +802,12 @@ class DynamicCalendarLoader extends CalendarCore {
             
             let markersAdded = 0;
             
-            // Create custom marker icon
+            // Create custom marker icon with responsive sizing
+            const isMobile = window.innerWidth <= 768;
+            const iconSize = isMobile ? [50, 60] : [40, 50];
+            const iconAnchor = isMobile ? [25, 60] : [20, 50];
+            const popupAnchor = isMobile ? [0, -60] : [0, -50];
+            
             const customIcon = L.divIcon({
                 className: 'custom-marker',
                 html: `
@@ -784,14 +815,18 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="marker-icon">🐻</div>
                     </div>
                 `,
-                iconSize: [40, 50],
-                iconAnchor: [20, 50],
-                popupAnchor: [0, -50]
+                iconSize: iconSize,
+                iconAnchor: iconAnchor,
+                popupAnchor: popupAnchor
             });
 
             events.forEach(event => {
                 if (event.coordinates?.lat && event.coordinates?.lng && 
                     !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
+                    
+                    // Create Google Maps link
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${event.coordinates.lat},${event.coordinates.lng}`;
+                    
                     const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
                         icon: customIcon
                     })
@@ -803,6 +838,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 <p>📅 ${event.day} ${event.time}</p>
                                 <p>💰 ${event.cover}</p>
                                 ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
+                                <p><a href="${googleMapsUrl}" target="_blank" rel="noopener" class="google-maps-link">🗺️ Open in Google Maps</a></p>
                             </div>
                         `);
                     markersAdded++;
