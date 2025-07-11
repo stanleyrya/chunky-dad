@@ -1366,7 +1366,7 @@ footer {
 
     .calendar-day.week-view {
         min-height: 180px;
-        padding: 0.5rem;
+        padding: 0;
     }
 
     .calendar-day.week-view .day-header {
