@@ -732,7 +732,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 doubleClickZoom: true,
                 touchZoom: true,
                 dragging: true,
-                zoomControl: true
+                zoomControl: true,
+                fullscreenControl: false
             }).setView(mapCenter, mapZoom);
 
             // Use clean US-based OpenStreetMap tiles
@@ -741,24 +742,44 @@ class DynamicCalendarLoader extends CalendarCore {
                 maxZoom: 18
             }).addTo(map);
 
-            // Add map interaction notice
-            const notice = L.control({position: 'bottomleft'});
-            notice.onAdd = function() {
-                const div = L.DomUtil.create('div', 'map-interaction-notice');
-                div.innerHTML = '🖱️ Use Ctrl+Scroll to zoom';
-                div.style.cssText = `
-                    background: rgba(0,0,0,0.8);
-                    color: white;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    font-family: 'Poppins', sans-serif;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                    border: 1px solid rgba(255,255,255,0.2);
+            // Add fullscreen control
+            const fullscreenControl = L.control({position: 'topleft'});
+            fullscreenControl.onAdd = function() {
+                const div = L.DomUtil.create('div', 'leaflet-control-fullscreen');
+                div.innerHTML = `
+                    <button class="map-control-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
+                        📱
+                    </button>
                 `;
                 return div;
             };
-            notice.addTo(map);
+            fullscreenControl.addTo(map);
+
+            // Add "fit all markers" control
+            const fitMarkersControl = L.control({position: 'topleft'});
+            fitMarkersControl.onAdd = function() {
+                const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
+                div.innerHTML = `
+                    <button class="map-control-btn" onclick="fitAllMarkers()" title="Show All Events">
+                        🎯
+                    </button>
+                `;
+                return div;
+            };
+            fitMarkersControl.addTo(map);
+
+            // Add "my location" control
+            const myLocationControl = L.control({position: 'topleft'});
+            myLocationControl.onAdd = function() {
+                const div = L.DomUtil.create('div', 'leaflet-control-my-location');
+                div.innerHTML = `
+                    <button class="map-control-btn" onclick="showMyLocation()" title="Show My Location">
+                        📍
+                    </button>
+                `;
+                return div;
+            };
+            myLocationControl.addTo(map);
 
             // Enable scroll wheel zoom only when Ctrl is pressed
             map.on('wheel', function(e) {
@@ -775,6 +796,7 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             
             let markersAdded = 0;
+            const markers = []; // Store markers for fit all function
             
             // Create custom marker icon
             const customIcon = L.divIcon({
@@ -784,9 +806,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="marker-icon">🐻</div>
                     </div>
                 `,
-                iconSize: [40, 50],
-                iconAnchor: [20, 50],
-                popupAnchor: [0, -50]
+                iconSize: [44, 56],
+                iconAnchor: [22, 56],
+                popupAnchor: [0, -56]
             });
 
             events.forEach(event => {
@@ -805,6 +827,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
                             </div>
                         `);
+                    markers.push(marker);
                     markersAdded++;
                 }
             });
@@ -816,6 +839,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 mapZoom
             });
             window.eventsMap = map;
+            window.eventsMapMarkers = markers; // Store markers globally for controls
         } catch (error) {
             logger.componentError('MAP', 'Failed to initialize map', error);
         }
@@ -1086,15 +1110,109 @@ class DynamicCalendarLoader extends CalendarCore {
 // Map interaction function
 function showOnMap(lat, lng, eventName, barName) {
     if (window.eventsMap) {
-        window.eventsMap.setView([lat, lng], 16);
-        window.eventsMap.eachLayer(layer => {
-            if (layer instanceof L.Marker) {
-                const latLng = layer.getLatLng();
-                if (Math.abs(latLng.lat - lat) < 0.0001 && Math.abs(latLng.lng - lng) < 0.0001) {
-                    layer.openPopup();
+        // First scroll to the map section
+        const mapSection = document.querySelector('.events-map-section');
+        if (mapSection) {
+            mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // Then center the map on the location with a slight delay
+        setTimeout(() => {
+            window.eventsMap.setView([lat, lng], 16);
+            window.eventsMap.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    const latLng = layer.getLatLng();
+                    if (Math.abs(latLng.lat - lat) < 0.0001 && Math.abs(latLng.lng - lng) < 0.0001) {
+                        layer.openPopup();
+                    }
                 }
+            });
+        }, 300);
+        
+        logger.userInteraction('MAP', 'showOnMap called', { lat, lng, eventName, barName });
+    }
+}
+
+// Map control functions
+function fitAllMarkers() {
+    if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
+        const group = new L.featureGroup(window.eventsMapMarkers);
+        window.eventsMap.fitBounds(group.getBounds().pad(0.1));
+        logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
+    }
+}
+
+function toggleFullscreen() {
+    const mapContainer = document.querySelector('.map-container');
+    if (mapContainer) {
+        if (!document.fullscreenElement) {
+            mapContainer.requestFullscreen().then(() => {
+                // Invalidate size to fix map rendering in fullscreen
+                setTimeout(() => {
+                    if (window.eventsMap) {
+                        window.eventsMap.invalidateSize();
+                    }
+                }, 100);
+                logger.userInteraction('MAP', 'Fullscreen mode enabled');
+            }).catch(err => {
+                console.warn('Could not enable fullscreen mode:', err);
+            });
+        } else {
+            document.exitFullscreen().then(() => {
+                // Invalidate size to fix map rendering when exiting fullscreen
+                setTimeout(() => {
+                    if (window.eventsMap) {
+                        window.eventsMap.invalidateSize();
+                    }
+                }, 100);
+                logger.userInteraction('MAP', 'Fullscreen mode disabled');
+            });
+        }
+    }
+}
+
+function showMyLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                if (window.eventsMap) {
+                    // Remove existing location marker
+                    if (window.myLocationMarker) {
+                        window.eventsMap.removeLayer(window.myLocationMarker);
+                    }
+                    
+                    // Add new location marker
+                    const myLocationIcon = L.divIcon({
+                        className: 'my-location-marker',
+                        html: `
+                            <div class="my-location-pin">
+                                <div class="my-location-icon">📍</div>
+                            </div>
+                        `,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+                    
+                    window.myLocationMarker = L.marker([lat, lng], {
+                        icon: myLocationIcon
+                    }).addTo(window.eventsMap).bindPopup('📍 Your Location');
+                    
+                    // Center map on user location
+                    window.eventsMap.setView([lat, lng], 14);
+                    
+                    logger.userInteraction('MAP', 'My location shown', { lat, lng });
+                }
+            },
+            (error) => {
+                console.warn('Location access denied or unavailable:', error);
+                alert('Location access denied or unavailable. Please enable location services to use this feature.');
             }
-        });
+        );
+    } else {
+        alert('Geolocation is not supported by this browser.');
     }
 }
 
