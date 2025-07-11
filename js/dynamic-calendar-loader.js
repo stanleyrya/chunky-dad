@@ -671,7 +671,7 @@ class DynamicCalendarLoader {
             // Weekly events: occur on the same day of the week
             return eventDate.getDay() === checkDate.getDay();
         } else if (recurrence.includes('FREQ=MONTHLY')) {
-            // Monthly events: check for BYMONTHDAY pattern
+            // Monthly events: handle both BYMONTHDAY and BYDAY patterns
             if (recurrence.includes('BYMONTHDAY=')) {
                 const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
                 if (dayMatch) {
@@ -680,7 +680,36 @@ class DynamicCalendarLoader {
                     const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
                     return checkDate.getDate() === Math.min(targetDay, lastDayOfMonth);
                 }
+            } else if (recurrence.includes('BYDAY=')) {
+                // Handle BYDAY patterns like BYDAY=3TH (third Thursday) or BYDAY=-1SA (last Saturday)
+                const dayMatch = recurrence.match(/BYDAY=(-?\d+)([A-Z]{2})/);
+                if (dayMatch) {
+                    const occurrence = parseInt(dayMatch[1]); // 3 or -1 (negative means from end of month)
+                    const dayCode = dayMatch[2]; // TH, SA, etc.
+                    
+                    // Convert day code to day number (0 = Sunday, 6 = Saturday)
+                    const dayCodeToDayNumber = {
+                        'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
+                    };
+                    
+                    const targetDayOfWeek = dayCodeToDayNumber[dayCode];
+                    if (targetDayOfWeek === undefined) return false;
+                    
+                    // Check if the check date is the correct day of the week
+                    if (checkDate.getDay() !== targetDayOfWeek) return false;
+                    
+                    // Calculate the target date for this occurrence
+                    const targetDate = this.calculateByDayOccurrence(
+                        checkDate.getFullYear(), 
+                        checkDate.getMonth(), 
+                        occurrence, 
+                        targetDayOfWeek
+                    );
+                    
+                    return targetDate && checkDate.getTime() === targetDate.getTime();
+                }
             }
+            
             // Fallback: same day of month as original event, but handle month lengths
             const originalDay = eventDate.getDate();
             const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
@@ -697,6 +726,57 @@ class DynamicCalendarLoader {
         
         // Default fallback for other recurring patterns - use day of week
         return eventDate.getDay() === checkDate.getDay();
+    }
+
+    // Helper function to calculate the specific occurrence of a day in a month
+    // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
+    // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
+    calculateByDayOccurrence(year, month, occurrence, dayOfWeek) {
+        try {
+            if (occurrence > 0) {
+                // Find the nth occurrence of the day (e.g., 3rd Thursday)
+                const firstOfMonth = new Date(year, month, 1);
+                const firstDayOfWeek = firstOfMonth.getDay();
+                
+                // Calculate days to add to get to the first occurrence of the target day
+                let daysToAdd = (dayOfWeek - firstDayOfWeek + 7) % 7;
+                
+                // Add weeks to get to the nth occurrence
+                daysToAdd += (occurrence - 1) * 7;
+                
+                const targetDate = new Date(year, month, 1 + daysToAdd);
+                
+                // Verify it's still in the same month
+                if (targetDate.getMonth() !== month) {
+                    return null;
+                }
+                
+                return targetDate;
+            } else if (occurrence === -1) {
+                // Find the last occurrence of the day (e.g., last Saturday)
+                const lastOfMonth = new Date(year, month + 1, 0);
+                const lastDayOfWeek = lastOfMonth.getDay();
+                
+                // Calculate days to subtract to get to the last occurrence of the target day
+                let daysToSubtract = (lastDayOfWeek - dayOfWeek + 7) % 7;
+                
+                const targetDate = new Date(year, month + 1, 0 - daysToSubtract);
+                
+                // Verify it's still in the same month
+                if (targetDate.getMonth() !== month) {
+                    return null;
+                }
+                
+                return targetDate;
+            }
+            
+            return null;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error calculating BYDAY occurrence', {
+                year, month, occurrence, dayOfWeek, error
+            });
+            return null;
+        }
     }
 
     // Generate calendar events (enhanced for week/month/calendar view)
