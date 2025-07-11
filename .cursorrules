@@ -4,7 +4,8 @@
 Static website for gay bear travel guide with city guides, events, and bear-owned businesses. Built with vanilla HTML, CSS, and JavaScript.
 
 ## Key Guidelines
-- **No markdown documentation** - only update README minimally when needed
+- **NEVER create new markdown files** - absolutely no *.md files except existing README
+- **No documentation files** - do not create summaries, guides, or documentation
 - **Free tools only** - no API keys required
 - **GitHub Pages hosting** - deployed via GitHub Pages
 
@@ -151,3 +152,8 @@ logger.error('COMPONENT', 'error message', optionalData);
 - **Adding logging to new features**: Use component-specific logging patterns
 - **Debugging issues**: Check console logs, filter by component, review error messages
 - **Performance optimization**: Use logger.time/timeEnd for timing analysis
+
+## IMPORTANT RESTRICTIONS
+- **NEVER create new *.md files** - no documentation, summaries, or guides
+- **Only modify existing README** if absolutely necessary and requested
+- **No markdown documentation** - focus on code and functionality only
