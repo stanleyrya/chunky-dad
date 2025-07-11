@@ -113,6 +113,8 @@ This is a static website for "Chunky Dad" - a gay bear travel guide featuring ci
 - Ensure content is up-to-date and accurate
 - Use consistent terminology throughout the site
 - Include contact information and privacy policy
+- **Do not create markdown files for new features** - only update README with minimal info when necessary
+- Focus on code implementation rather than documentation
 
 ## Browser Support
 - Support modern browsers (Chrome, Firefox, Safari, Edge)
@@ -137,12 +139,25 @@ This is a static website for "Chunky Dad" - a gay bear travel guide featuring ci
 - Test with assistive technologies
 
 ## Deployment
+- **GitHub Pages hosting** - site is deployed via GitHub Pages
 - Use version control (Git)
 - Minify CSS and JavaScript for production
 - Optimize images before deployment
-- Set up proper caching headers
-- Use a CDN for static assets
-- Monitor site performance and uptime
+- GitHub Pages provides caching headers automatically
+- Use GitHub's CDN capabilities for static assets
+- Monitor site performance with free tools (Google PageSpeed Insights, GTmetrix)
+- Ensure all links and assets work with GitHub Pages URL structure
+
+## Tools and Resources
+- **Use free tools only** - no API keys required
+- Prefer vanilla JavaScript over libraries that require API keys
+- Use free image optimization tools (TinyPNG, Squoosh)
+- Leverage free CDNs (jsDelivr, cdnjs) for any external libraries
+- Use free testing tools (W3C validator, WAVE accessibility checker)
+- Utilize free performance monitoring (Google PageSpeed Insights, GTmetrix)
+- Use free font services (Google Fonts, Font Squirrel)
+- Prefer CSS-only solutions over JavaScript libraries when possible
+- Use browser developer tools for debugging and optimization
 
 ## Specific Project Notes
 - The site uses Python HTTP server for local development
