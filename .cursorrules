@@ -1,0 +1,56 @@
+# Chunky Dad Website - Cursor Rules
+
+## Project Overview
+Static website for gay bear travel guide with city guides, events, and bear-owned businesses. Built with vanilla HTML, CSS, and JavaScript.
+
+## Key Guidelines
+- **No markdown documentation** - only update README minimally when needed
+- **Free tools only** - no API keys required
+- **GitHub Pages hosting** - deployed via GitHub Pages
+
+## Code Style
+- Use semantic HTML5 elements
+- CSS Grid/Flexbox for layouts
+- ES6+ JavaScript (const/let, arrow functions, template literals)
+- 2-space indentation
+- Vanilla JavaScript preferred over libraries
+
+## File Structure
+```
+/
+├── index.html          # Main landing page
+├── city.html           # City guide template
+├── styles.css          # Main stylesheet
+├── script.js           # Main JavaScript file
+├── js/                 # Additional JavaScript modules
+│   ├── dynamic-calendar-loader.js
+│   └── city-config.js
+├── data/               # JSON data files
+└── README.md
+```
+
+## Current Patterns
+- `onclick` handlers for navigation
+- CSS Grid for card layouts
+- URL parameters for city guide content switching
+- Dynamic calendar loading
+- Responsive hamburger menu
+- CSS custom properties for theming
+
+## Development
+- Local server: `npm run dev` (Python HTTP server)
+- Test responsive design on mobile
+- Use browser dev tools for debugging
+
+## Project-Specific Notes
+- Bear community focus - inclusive, welcoming tone
+- Event calendar needs regular updates
+- City guides use URL parameters
+- Travel content should stay current
+- JavaScript required for navigation and dynamic content
+
+## Common Tasks
+- Adding new cities: Update city cards in index.html, add city config in js/city-config.js
+- Adding events: Update events section in index.html
+- Calendar updates: Modify js/dynamic-calendar-loader.js
+- Styling: Use existing CSS custom properties, follow grid patterns
