@@ -32,7 +32,7 @@ UID:v12lqkpglh2iupk54ttds6pcmg@google.com
 CREATED:20250708T205306Z
 DESCRIPTION:Website: <a href="https://animal.nyc" target="_blank">https://a
  nimal.nyc</a><br>Instagram: <a href="https://www.instagram.com/animal.nyc" 
- target="_blank">https://www.instagram.com/animal.nyc</a><br>Google Maps: <a
+ target="_blank">https://www.instagram.com/animal.nyc</a><br>Google Maps: <a
   href="https://maps.app.goo.gl/XvrwkXqQApYfaj6h9">https://maps.app.goo.gl/X
  vrwkXqQApYfaj6h9</a>
 LAST-MODIFIED:20250709T023757Z
@@ -67,7 +67,7 @@ UID:kakvb4r8ae8ippru69p8uo1o88@google.com
 CREATED:20250708T205659Z
 DESCRIPTION:Cover: Varies\, ~$25 tickets<br>Instagram: <a href="https://www
  .instagram.com/goldiloxx__" target="_blank">https://www.instagram.com/goldi
- loxx__</a><br>Google Maps: <a href="https://maps.app.goo.gl/EWAtZea7ZZukum1
+ loxx__</a><br>Google Maps: <a href="https://maps.app.goo.gl/EWAtZea7ZZukum1
  K9">https://maps.app.goo.gl/EWAtZea7ZZukum1K9</a>
 LAST-MODIFIED:20250709T023929Z
 LOCATION:40.75775322645565\, -73.99257438113817
@@ -85,13 +85,58 @@ UID:96d0b400rgfpagk14sc2bd1aks@google.com
 CREATED:20250708T205446Z
 DESCRIPTION:Name: Beer Blast<br>Bar: Eagle NYC<br>Cover: No cover till 9PM\
  , $20 cover at 9PM<br>Website: <a href="https://eagle-ny.com" target="_blan
- k">https://eagle-ny.com</a><br>Google Maps: <a href="https://maps.app.goo.g
+ k">https://eagle-ny.com</a><br>Google Maps: <a href="https://maps.app.goo.g
  l/8N8zpGGAYwXJjgsGA">https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA</a>
 LAST-MODIFIED:20250709T024004Z
 LOCATION:40.75168692425323\, -74.00431317114098
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Beer Blast
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250125T190000
+DTEND;TZID=America/New_York:20250125T230000
+RRULE:FREQ=MONTHLY;BYDAY=-1SA
+DTSTAMP:20250709T030310Z
+UID:test-last-saturday@test.com
+CREATED:20250709T120000Z
+DESCRIPTION:Cover: $10<br>Tea: Monthly event on the last Saturday of each month
+LAST-MODIFIED:20250709T120000Z
+LOCATION:40.7589\, -73.9851
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Last Saturday Party
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250116T200000
+DTEND;TZID=America/New_York:20250116T240000
+RRULE:FREQ=MONTHLY;BYDAY=3TH
+DTSTAMP:20250709T030310Z
+UID:test-third-thursday@test.com
+CREATED:20250709T120000Z
+DESCRIPTION:Cover: Free<br>Tea: Monthly event on the third Thursday of each month
+LAST-MODIFIED:20250709T120000Z
+LOCATION:40.7505\, -73.9934
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Third Thursday Meetup
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250105T180000
+DTEND;TZID=America/New_York:20250105T220000
+RRULE:FREQ=MONTHLY;BYDAY=1SU
+DTSTAMP:20250709T030310Z
+UID:test-first-sunday@test.com
+CREATED:20250709T120000Z
+DESCRIPTION:Cover: $5<br>Tea: Monthly event on the first Sunday of each month
+LAST-MODIFIED:20250709T120000Z
+LOCATION:40.7282\, -73.9942
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:First Sunday Brunch
 TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR
