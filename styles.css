@@ -731,7 +731,7 @@ header {
     padding: 0.5rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.3rem;
 }
 
 .event-item {
@@ -1398,7 +1398,7 @@ footer {
     /* Adjust daily events container for mobile */
     .daily-events {
         padding: 0.3rem;
-        gap: 0.3rem;
+        gap: 0.2rem;
     }
 
     /* Calendar Overview Mobile */
@@ -1674,7 +1674,7 @@ footer {
     /* Adjust daily events container for very small screens */
     .daily-events {
         padding: 0.2rem;
-        gap: 0.2rem;
+        gap: 0.15rem;
     }
 
     .event-item.enhanced .event-time,
@@ -2251,7 +2251,7 @@ footer {
 .event-item.enhanced {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 255, 0.95) 100%);
     color: #333;
-    padding: 0.7rem;
+    padding: 0.6rem;
     border-radius: 12px;
     font-size: 0.85rem;
     cursor: pointer;
@@ -2260,7 +2260,7 @@ footer {
     position: relative;
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.4rem;
 }
 
 .event-item.enhanced:last-child {
@@ -2679,19 +2679,19 @@ footer {
     color: white;
 }
 
-/* Fix white text readability for events in current day in month view */
+/* Fix text readability for events in current day in month view */
 .calendar-day.month-day.current .event-item.month-event {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    color: white !important;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(102, 126, 234, 0.3) !important;
+    color: #333 !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
 .calendar-day.month-day.current .event-item.month-event:hover {
-    background: rgba(255, 255, 255, 0.3) !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .calendar-day.month-day .day-events {
