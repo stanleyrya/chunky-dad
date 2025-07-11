@@ -63,7 +63,7 @@ class PageInitializer {
     setupCityPageBehavior() {
         console.log('Setting up city page behavior');
         
-        // Initialize calendar loader if available
+        // Initialize calendar manager if available
         if (typeof DynamicCalendarLoader !== 'undefined') {
             window.calendarLoader = new DynamicCalendarLoader();
             window.calendarLoader.init();
