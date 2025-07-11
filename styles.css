@@ -1079,6 +1079,7 @@ header {
     padding: 2rem 0;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     position: relative;
+    overflow: hidden;
 }
 
 @media (max-width: 768px) {
@@ -1122,6 +1123,7 @@ header {
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    padding: 0 1rem;
 }
 
 .map-container {
@@ -1132,6 +1134,8 @@ header {
     border: 4px solid white;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 4px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 #events-map {
@@ -1988,21 +1992,21 @@ footer {
     }
 
     .marker-pin {
-        transform: scale(0.8);
+        transform: scale(1.0);
     }
 
     .marker-pin::before {
-        width: 15px;
-        height: 15px;
+        width: 24px;
+        height: 24px;
     }
 
     .marker-pin::after {
-        border-width: 12px 6px 0;
+        border-width: 8px 4px 0;
     }
 
     .marker-icon {
-        font-size: 0.7rem;
-        line-height: 15px;
+        font-size: 1.2rem;
+        line-height: 20px;
     }
 
 
