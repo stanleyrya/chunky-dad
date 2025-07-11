@@ -1370,59 +1370,59 @@ footer {
     }
 
     .calendar-day.week-view {
-        min-height: 180px;
+        min-height: 120px;
         padding: 0;
     }
 
     .calendar-day.week-view .day-header {
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.25rem;
+        margin-bottom: 0.2rem;
+        padding-bottom: 0.1rem;
         flex-direction: column;
         align-items: flex-start;
     }
 
     .calendar-day.week-view .day-meta {
-        gap: 0.3rem;
-        margin-top: 0.2rem;
+        gap: 0.1rem;
+        margin-top: 0.1rem;
     }
 
     /* Fix overlapping day numbers with day names on mobile week view */
     .calendar-day.week-view h3 {
-        font-size: 0.9rem;
-        margin-bottom: 0.2rem;
+        font-size: 0.85rem;
+        margin-bottom: 0.1rem;
     }
 
     .calendar-day.week-view .day-date {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
     .event-item.enhanced {
-        padding: 0.6rem 0;
+        padding: 0.4rem 0;
         margin-bottom: 0;
-        border-radius: 6px;
+        border-radius: 4px;
     }
 
     /* Minimize padding for week view events on mobile */
     .calendar-day.week-view .event-item.enhanced {
-        padding: 0.3rem 0;
-        margin-bottom: 0.15rem;
-        border-radius: 6px;
+        padding: 0.2rem 0;
+        margin-bottom: 0.1rem;
+        border-radius: 4px;
     }
 
     .event-item.enhanced .event-name {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
 
     /* Adjust daily events container for mobile */
     .daily-events {
-        padding: 0.3rem 0;
-        gap: 0.2rem;
+        padding: 0.2rem 0;
+        gap: 0.1rem;
     }
 
     /* Remove padding from daily events in week view for tight fit on mobile */
     .calendar-day.week-view .daily-events {
         padding: 0;
-        gap: 0.15rem;
+        gap: 0.1rem;
     }
 
     /* Calendar Overview Mobile */
@@ -1455,36 +1455,36 @@ footer {
     }
 
     .calendar-day.month-day {
-        min-height: 80px;
+        min-height: 60px;
     }
 
     .calendar-day.month-day .day-header {
-        padding: 6px 0;
+        padding: 3px 0;
     }
 
     .calendar-day.month-day .day-number {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
 
     .calendar-day.month-day .day-events {
-        padding: 4px 0;
-        gap: 2px;
+        padding: 2px 0;
+        gap: 1px;
     }
 
     .event-item.month-event {
-        padding: 3px 0;
-        border-radius: 4px;
-        font-size: 0.7rem;
+        padding: 1px 0;
+        border-radius: 3px;
+        font-size: 0.65rem;
     }
 
     .event-item.month-event .event-name {
-        font-size: 0.7rem;
-        line-height: 1.1;
+        font-size: 0.65rem;
+        line-height: 1.0;
     }
 
     .more-events {
-        font-size: 0.6rem;
-        padding: 2px 0;
+        font-size: 0.55rem;
+        padding: 1px 0;
     }
 
     .calendar-header {
@@ -1669,8 +1669,8 @@ footer {
     }
 
     .calendar-day.week-view {
-        min-height: 160px;
-        padding: 0.4rem 0;
+        min-height: 100px;
+        padding: 0.2rem 0;
         border-radius: 0;
     }
 
@@ -1678,40 +1678,45 @@ footer {
     .calendar-day.week-view .day-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 0.1rem;
-        margin-bottom: 0.3rem;
-        padding-bottom: 0.15rem;
+        gap: 0.05rem;
+        margin-bottom: 0.15rem;
+        padding-bottom: 0.05rem;
     }
 
     .calendar-day.week-view h3 {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         margin-bottom: 0;
     }
 
     .calendar-day.week-view .day-date {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
 
     .event-item.enhanced {
-        padding: 0.5rem 0;
-        border-radius: 4px;
+        padding: 0.3rem 0;
+        border-radius: 3px;
         margin-bottom: 0;
     }
 
     .event-item.enhanced .event-name {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
     }
 
     /* Adjust daily events container for very small screens */
     .daily-events {
-        padding: 0.2rem 0;
-        gap: 0.15rem;
+        padding: 0.1rem 0;
+        gap: 0.05rem;
+    }
+
+    .calendar-day.week-view .event-item.enhanced {
+        padding: 0.15rem 0;
+        margin-bottom: 0.05rem;
     }
 
     .event-item.enhanced .event-time,
     .event-item.enhanced .event-venue,
     .event-item.enhanced .event-cover {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
 
     /* Calendar Overview for very small screens */
@@ -1748,42 +1753,42 @@ footer {
     }
 
     .calendar-day.month-day {
-        min-height: 70px;
+        min-height: 50px;
     }
 
     .calendar-day.month-day .day-header {
-        padding: 4px 0;
+        padding: 2px 0;
     }
 
     .calendar-day.month-day .day-number {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
 
     .calendar-day.month-day .day-indicator {
-        font-size: 0.6rem;
-        padding: 1px 3px;
+        font-size: 0.55rem;
+        padding: 1px 2px;
     }
 
     .calendar-day.month-day .day-events {
-        padding: 2px 0;
+        padding: 1px 0;
         gap: 1px;
     }
 
     .event-item.month-event {
-        padding: 2px 0;
-        border-radius: 3px;
-        font-size: 0.6rem;
+        padding: 1px 0;
+        border-radius: 2px;
+        font-size: 0.55rem;
     }
 
     .event-item.month-event .event-name {
-        font-size: 0.6rem;
-        line-height: 1.0;
+        font-size: 0.55rem;
+        line-height: 0.95;
     }
 
     .more-events {
-        font-size: 0.55rem;
-        padding: 2px 0;
-        border-radius: 3px;
+        font-size: 0.5rem;
+        padding: 1px 0;
+        border-radius: 2px;
     }
 
     .calendar-header h2 {
@@ -1930,6 +1935,81 @@ footer {
     .switch-to-week {
         padding: 0.6rem 1.2rem;
         font-size: 0.8rem;
+    }
+}
+
+/* Extra aggressive spacing reduction for iPhone and very small screens */
+@media (max-width: 390px) {
+    .calendar-day.week-view {
+        min-height: 80px;
+        padding: 0.1rem 0;
+    }
+
+    .calendar-day.week-view .day-header {
+        margin-bottom: 0.1rem;
+        padding-bottom: 0.05rem;
+    }
+
+    .calendar-day.week-view h3 {
+        font-size: 0.7rem;
+    }
+
+    .calendar-day.week-view .day-date {
+        font-size: 0.8rem;
+    }
+
+    .calendar-day.week-view .event-item.enhanced {
+        padding: 0.1rem 0;
+        margin-bottom: 0.05rem;
+    }
+
+    .calendar-day.week-view .daily-events {
+        padding: 0;
+        gap: 0.05rem;
+    }
+
+    .event-item.enhanced .event-name {
+        font-size: 0.8rem;
+        line-height: 1.1;
+    }
+
+    .event-item.enhanced .event-time,
+    .event-item.enhanced .event-venue,
+    .event-item.enhanced .event-cover {
+        font-size: 0.7rem;
+    }
+
+    /* Month view for very small iPhones */
+    .calendar-day.month-day {
+        min-height: 40px;
+    }
+
+    .calendar-day.month-day .day-header {
+        padding: 1px 0;
+    }
+
+    .calendar-day.month-day .day-number {
+        font-size: 0.65rem;
+    }
+
+    .calendar-day.month-day .day-events {
+        padding: 0;
+        gap: 0;
+    }
+
+    .event-item.month-event {
+        padding: 0;
+        font-size: 0.5rem;
+    }
+
+    .event-item.month-event .event-name {
+        font-size: 0.5rem;
+        line-height: 0.9;
+    }
+
+    .more-events {
+        font-size: 0.45rem;
+        padding: 0;
     }
 }
 
