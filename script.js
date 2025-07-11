@@ -2,27 +2,48 @@
 const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');
 
-hamburger.addEventListener('click', () => {
-    hamburger.classList.toggle('active');
-    navMenu.classList.toggle('active');
-});
+if (hamburger && navMenu) {
+    logger.componentInit('NAV', 'Mobile navigation setup');
+    
+    hamburger.addEventListener('click', () => {
+        logger.userInteraction('NAV', 'Mobile menu toggle clicked');
+        hamburger.classList.toggle('active');
+        navMenu.classList.toggle('active');
+        
+        const isActive = hamburger.classList.contains('active');
+        logger.debug('NAV', `Mobile menu ${isActive ? 'opened' : 'closed'}`);
+    });
+} else {
+    logger.warn('NAV', 'Mobile navigation elements not found');
+}
 
 // Close mobile menu when clicking on nav links
-document.querySelectorAll('.nav-menu a').forEach(link => {
+document.querySelectorAll('.nav-menu a').forEach((link, index) => {
     link.addEventListener('click', () => {
+        logger.userInteraction('NAV', `Navigation link clicked: ${link.textContent}`);
         hamburger.classList.remove('active');
         navMenu.classList.remove('active');
+        logger.debug('NAV', 'Mobile menu closed after link click');
     });
+});
+
+logger.componentLoad('NAV', 'Navigation setup complete', {
+    mobileElements: !!(hamburger && navMenu),
+    navLinks: document.querySelectorAll('.nav-menu a').length
 });
 
 // Smooth scrolling for navigation links
 function scrollToSection(sectionId) {
+    logger.userInteraction('NAV', `Scrolling to section: ${sectionId}`);
     const element = document.getElementById(sectionId);
     if (element) {
         element.scrollIntoView({
             behavior: 'smooth',
             block: 'start'
         });
+        logger.debug('NAV', `Successfully scrolled to ${sectionId}`);
+    } else {
+        logger.warn('NAV', `Section not found: ${sectionId}`);
     }
 }
 
@@ -30,12 +51,18 @@ function scrollToSection(sectionId) {
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         e.preventDefault();
+        const targetId = this.getAttribute('href').substring(1);
+        logger.userInteraction('NAV', `Anchor link clicked: #${targetId}`);
+        
         const target = document.querySelector(this.getAttribute('href'));
         if (target) {
             target.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
             });
+            logger.debug('NAV', `Smooth scroll to ${targetId} initiated`);
+        } else {
+            logger.warn('NAV', `Anchor target not found: #${targetId}`);
         }
     });
 });
@@ -43,18 +70,29 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 // Contact Form Handling - Only if form exists
 const contactForm = document.querySelector('.contact-form');
 if (contactForm) {
-    console.log('Contact form found, adding event listener');
+    logger.componentInit('FORM', 'Contact form found and initializing');
+    
     contactForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        logger.userInteraction('FORM', 'Contact form submitted');
         
         // Get form data
         const formData = new FormData(this);
         const name = this.querySelector('input[type="text"]').value;
         const email = this.querySelector('input[type="email"]').value;
         const message = this.querySelector('textarea').value;
+        const category = this.querySelector('select').value;
+        
+        logger.debug('FORM', 'Form data collected', {
+            name: name ? 'provided' : 'missing',
+            email: email ? 'provided' : 'missing',
+            message: message ? `${message.length} chars` : 'missing',
+            category: category || 'not selected'
+        });
         
         // Basic validation
         if (!name || !email || !message) {
+            logger.warn('FORM', 'Form validation failed - missing required fields');
             alert('Please fill in all fields');
             return;
         }
@@ -63,32 +101,47 @@ if (contactForm) {
         const submitButton = this.querySelector('button');
         const originalText = submitButton.textContent;
         
+        logger.info('FORM', 'Form submission started');
         submitButton.textContent = 'Sending...';
         submitButton.disabled = true;
         
         setTimeout(() => {
+            logger.pageLoad('FORM', 'Form submitted successfully');
             alert('Thank you for your message! We\'ll get back to you soon.');
             this.reset();
             submitButton.textContent = originalText;
             submitButton.disabled = false;
         }, 2000);
     });
+    
+    logger.componentLoad('FORM', 'Contact form setup complete');
 } else {
-    console.log('No contact form found on this page - skipping contact form setup');
+    logger.debug('FORM', 'No contact form found on this page - skipping setup');
 }
 
 // Header scroll effect - simplified for city page with dynamic scroll interactions
 const isMainPageHeader = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
-if (isMainPageHeader) {
+const header = document.querySelector('header');
+
+if (isMainPageHeader && header) {
+    logger.componentInit('PAGE', 'Main page header scroll effects');
+    
     window.addEventListener('scroll', () => {
-        const header = document.querySelector('header');
-        if (window.scrollY > 100) {
+        const scrollY = window.scrollY;
+        if (scrollY > 100) {
             header.style.background = 'rgba(102, 126, 234, 0.95)';
             header.style.backdropFilter = 'blur(10px)';
         } else {
             header.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
             header.style.backdropFilter = 'none';
         }
+    });
+    
+    logger.componentLoad('PAGE', 'Header scroll effects enabled');
+} else {
+    logger.debug('PAGE', 'Header scroll effects not applied', {
+        isMainPage: isMainPageHeader,
+        headerExists: !!header
     });
 }
 
@@ -101,32 +154,47 @@ const observerOptions = {
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
+            const elementClass = entry.target.classList[0] || 'unknown';
+            logger.debug('PAGE', `Element animated: ${elementClass}`);
             entry.target.classList.add('animate');
         }
     });
 }, observerOptions);
 
 // Observe all animation elements
-document.querySelectorAll('.about-card, .gallery-item, .contact-item').forEach(el => {
+const animationElements = document.querySelectorAll('.about-card, .gallery-item, .contact-item');
+animationElements.forEach(el => {
     observer.observe(el);
+});
+
+logger.componentLoad('PAGE', 'Intersection observer setup complete', {
+    elementsObserved: animationElements.length
 });
 
 // Add loading animation
 window.addEventListener('load', () => {
+    logger.performance('PAGE', 'Page load complete - adding loaded class');
     document.body.classList.add('loaded');
 });
 
 // Parallax effect for hero section
-window.addEventListener('scroll', () => {
-    const scrolled = window.pageYOffset;
-    const heroImage = document.querySelector('.hero-image');
-    if (heroImage) {
+const heroImage = document.querySelector('.hero-image');
+if (heroImage) {
+    logger.componentInit('PAGE', 'Hero parallax effect setup');
+    
+    window.addEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
         heroImage.style.transform = `translateY(${scrolled * 0.5}px)`;
-    }
-});
+    });
+    
+    logger.componentLoad('PAGE', 'Hero parallax effect enabled');
+} else {
+    logger.debug('PAGE', 'Hero image not found - parallax effect skipped');
+}
 
 // Add hover effects for gallery items
-document.querySelectorAll('.gallery-item').forEach(item => {
+const galleryItems = document.querySelectorAll('.gallery-item');
+galleryItems.forEach(item => {
     item.addEventListener('mouseenter', function() {
         this.style.transform = 'translateY(-10px) scale(1.02)';
     });
@@ -136,9 +204,17 @@ document.querySelectorAll('.gallery-item').forEach(item => {
     });
 });
 
+if (galleryItems.length > 0) {
+    logger.componentLoad('PAGE', 'Gallery hover effects enabled', {
+        itemCount: galleryItems.length
+    });
+}
+
 // Add click effects for CTA buttons
-document.querySelectorAll('.cta-button').forEach(button => {
+const ctaButtons = document.querySelectorAll('.cta-button');
+ctaButtons.forEach(button => {
     button.addEventListener('click', function() {
+        logger.userInteraction('PAGE', `CTA button clicked: ${this.textContent}`);
         this.style.transform = 'scale(0.95)';
         setTimeout(() => {
             this.style.transform = 'scale(1)';
@@ -146,8 +222,15 @@ document.querySelectorAll('.cta-button').forEach(button => {
     });
 });
 
+if (ctaButtons.length > 0) {
+    logger.componentLoad('PAGE', 'CTA button interactions enabled', {
+        buttonCount: ctaButtons.length
+    });
+}
+
 // Typing effect for main page hero title
 function typeWriter(element, text, speed = 100) {
+    logger.debug('PAGE', `Starting typewriter effect for: ${text.substring(0, 20)}...`);
     let i = 0;
     element.innerHTML = '';
     
@@ -156,6 +239,8 @@ function typeWriter(element, text, speed = 100) {
             element.innerHTML += text.charAt(i);
             i++;
             setTimeout(type, speed);
+        } else {
+            logger.debug('PAGE', 'Typewriter effect completed');
         }
     }
     
@@ -167,21 +252,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const isMainPage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
     const isCityPage = window.location.pathname.includes('city.html');
     
+    logger.info('PAGE', 'DOM content loaded', {
+        isMainPage,
+        isCityPage,
+        pathname: window.location.pathname
+    });
+    
     if (isMainPage) {
+        logger.componentInit('PAGE', 'Main page initialization');
+        
         // Main page: Add typing effect and smooth reveals
         const heroTitle = document.querySelector('.hero-content h2');
         if (heroTitle) {
             const originalText = heroTitle.textContent;
+            logger.debug('PAGE', 'Starting hero title animation');
             setTimeout(() => {
                 typeWriter(heroTitle, originalText, 60);
             }, 300);
         }
+        
+        logger.componentLoad('PAGE', 'Main page initialization complete');
     } else if (isCityPage) {
+        logger.componentInit('PAGE', 'City page initialization');
+        
         // City pages: Make everything visible immediately but smoothly
         document.body.classList.add('city-page');
         const sections = document.querySelectorAll('section');
         sections.forEach(section => {
             section.classList.add('fade-in');
+        });
+        
+        logger.componentLoad('PAGE', 'City page initialization complete', {
+            sectionsAnimated: sections.length
         });
     }
 });
@@ -192,6 +294,7 @@ function fadeInOnScroll() {
     if (!isMainPage) return;
     
     const sections = document.querySelectorAll('section');
+    let animatedCount = 0;
     
     sections.forEach(section => {
         const sectionTop = section.offsetTop;
@@ -199,9 +302,16 @@ function fadeInOnScroll() {
         const scrollPosition = window.scrollY;
         
         if (scrollPosition + windowHeight > sectionTop + 100) {
-            section.classList.add('fade-in');
+            if (!section.classList.contains('fade-in')) {
+                section.classList.add('fade-in');
+                animatedCount++;
+            }
         }
     });
+    
+    if (animatedCount > 0) {
+        logger.debug('PAGE', `Animated ${animatedCount} sections on scroll`);
+    }
 }
 
 // Apply scroll effects only on main page
@@ -209,6 +319,7 @@ const isMainPage = window.location.pathname.endsWith('index.html') || window.loc
 if (isMainPage) {
     window.addEventListener('scroll', fadeInOnScroll);
     fadeInOnScroll(); // Initial call
+    logger.componentLoad('PAGE', 'Main page scroll animations enabled');
 }
 
 // Add CSS for beautiful smooth effects on both pages
@@ -300,3 +411,5 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+logger.componentLoad('PAGE', 'Dynamic styles injected successfully');

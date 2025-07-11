@@ -23,6 +23,7 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 ├── styles.css          # Main stylesheet
 ├── script.js           # Main JavaScript file
 ├── js/                 # Additional JavaScript modules
+│   ├── logger.js       # Centralized logging system
 │   ├── dynamic-calendar-loader.js
 │   └── city-config.js
 ├── data/               # JSON data files
@@ -41,6 +42,9 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - Local server: `npm run dev` (Python HTTP server)
 - Test responsive design on mobile
 - Use browser dev tools for debugging
+- **Console logging**: Always check F12 → Console for color-coded debug information
+- **Performance monitoring**: Use logger timing functions for bottleneck identification
+- **Error tracking**: All errors automatically logged with context and stack traces
 
 ## Project-Specific Notes
 - Bear community focus - inclusive, welcoming tone
@@ -49,8 +53,85 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - Travel content should stay current
 - JavaScript required for navigation and dynamic content
 
+## Logging System
+- **Centralized logging** via `js/logger.js` - always use `logger` global object
+- **Component-based** with color-coded categories for easy debugging
+- **Multiple log levels**: DEBUG, INFO, WARN, ERROR with filtering capabilities
+- **Performance monitoring** built-in with timing functions
+- **Structured data** support for complex debugging information
+
+### Component Categories (use these exact names):
+- **PAGE**: Main page interactions, animations, scrolling effects
+- **CALENDAR**: Calendar loading, event parsing, display updates
+- **MAP**: Map initialization, markers, user interactions
+- **FORM**: Form validation, submission, user input processing
+- **NAV**: Navigation, menu interactions, smooth scrolling
+- **CITY**: City page loading, city switching, configuration
+- **EVENT**: Event interactions, detail viewing, calendar clicks
+- **SYSTEM**: System-level events, errors, initialization
+
+### Logging Patterns:
+```javascript
+// Component initialization
+logger.componentInit('COMPONENT', 'description', optionalData);
+
+// Successful operations
+logger.componentLoad('COMPONENT', 'success message', optionalData);
+
+// User interactions
+logger.userInteraction('COMPONENT', 'action description', optionalData);
+
+// API calls and data operations
+logger.apiCall('COMPONENT', 'operation description', optionalData);
+
+// Performance timing
+logger.time('COMPONENT', 'operation name');
+// ... do work ...
+logger.timeEnd('COMPONENT', 'operation name');
+
+// Error handling
+logger.componentError('COMPONENT', 'error description', errorObject);
+
+// General logging
+logger.debug('COMPONENT', 'debug message', optionalData);
+logger.info('COMPONENT', 'info message', optionalData);
+logger.warn('COMPONENT', 'warning message', optionalData);
+logger.error('COMPONENT', 'error message', optionalData);
+```
+
+### When to Log:
+- **Always**: Component initialization, major operations, errors
+- **User interactions**: Clicks, form submissions, navigation
+- **API operations**: Data fetching, parsing, success/failure
+- **Performance**: Critical operations that might be slow
+- **State changes**: View switching, data updates
+
+### Debugging Workflow:
+1. Open browser DevTools (F12) → Console tab
+2. Filter by component color or use console filters
+3. Look for error messages (red) and warnings (orange)
+4. Check timing information for performance issues
+5. Review user interaction flow for UX problems
+
+### Maintenance:
+- Keep component names consistent across all logging
+- Add logging to new features following existing patterns
+- Use structured data objects for complex information
+- Test logging in both development and production scenarios
+- Monitor console for errors during development
+
+### Production Considerations:
+- Debug mode enabled by default for development
+- For production deployment, consider: `logger.setLogLevel('WARN')` to reduce console noise
+- Logging system is lightweight and doesn't impact performance
+- Error logging always enabled regardless of debug mode
+- No API keys or sensitive data should be logged
+
 ## Common Tasks
 - Adding new cities: Update city cards in index.html, add city config in js/city-config.js
 - Adding events: Update events section in index.html
 - Calendar updates: Modify js/dynamic-calendar-loader.js
 - Styling: Use existing CSS custom properties, follow grid patterns
+- **Adding logging to new features**: Use component-specific logging patterns
+- **Debugging issues**: Check console logs, filter by component, review error messages
+- **Performance optimization**: Use logger.time/timeEnd for timing analysis
