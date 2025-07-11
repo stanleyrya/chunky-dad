@@ -1364,6 +1364,11 @@ footer {
         gap: 0;
     }
 
+    /* Remove container padding for calendar section on mobile */
+    .weekly-calendar .container {
+        padding: 0;
+    }
+
     .calendar-day.week-view {
         min-height: 180px;
         padding: 0;
@@ -1392,14 +1397,14 @@ footer {
     }
 
     .event-item.enhanced {
-        padding: 0.6rem;
+        padding: 0.6rem 0;
         margin-bottom: 0;
         border-radius: 6px;
     }
 
     /* Minimize padding for week view events on mobile */
     .calendar-day.week-view .event-item.enhanced {
-        padding: 0.3rem;
+        padding: 0.3rem 0;
         margin-bottom: 0.15rem;
         border-radius: 6px;
     }
@@ -1410,7 +1415,7 @@ footer {
 
     /* Adjust daily events container for mobile */
     .daily-events {
-        padding: 0.3rem;
+        padding: 0.3rem 0;
         gap: 0.2rem;
     }
 
@@ -1454,7 +1459,7 @@ footer {
     }
 
     .calendar-day.month-day .day-header {
-        padding: 6px 8px;
+        padding: 6px 0;
     }
 
     .calendar-day.month-day .day-number {
@@ -1462,12 +1467,12 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 4px 6px;
+        padding: 4px 0;
         gap: 2px;
     }
 
     .event-item.month-event {
-        padding: 3px 5px;
+        padding: 3px 0;
         border-radius: 4px;
         font-size: 0.7rem;
     }
@@ -1479,7 +1484,7 @@ footer {
 
     .more-events {
         font-size: 0.6rem;
-        padding: 2px 4px;
+        padding: 2px 0;
     }
 
     .calendar-header {
@@ -1528,7 +1533,7 @@ footer {
     }
 
     .event-item {
-        padding: 0.6rem;
+        padding: 0.6rem 0;
         margin-bottom: 0;
         border-radius: 6px;
     }
@@ -1658,9 +1663,14 @@ footer {
         gap: 0;
     }
 
+    /* Remove container padding for calendar section on very small screens */
+    .weekly-calendar .container {
+        padding: 0;
+    }
+
     .calendar-day.week-view {
         min-height: 160px;
-        padding: 0.4rem;
+        padding: 0.4rem 0;
         border-radius: 0;
     }
 
@@ -1683,7 +1693,7 @@ footer {
     }
 
     .event-item.enhanced {
-        padding: 0.5rem;
+        padding: 0.5rem 0;
         border-radius: 4px;
         margin-bottom: 0;
     }
@@ -1694,7 +1704,7 @@ footer {
 
     /* Adjust daily events container for very small screens */
     .daily-events {
-        padding: 0.2rem;
+        padding: 0.2rem 0;
         gap: 0.15rem;
     }
 
@@ -1742,7 +1752,7 @@ footer {
     }
 
     .calendar-day.month-day .day-header {
-        padding: 4px 6px;
+        padding: 4px 0;
     }
 
     .calendar-day.month-day .day-number {
@@ -1755,12 +1765,12 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 2px 4px;
+        padding: 2px 0;
         gap: 1px;
     }
 
     .event-item.month-event {
-        padding: 2px 4px;
+        padding: 2px 0;
         border-radius: 3px;
         font-size: 0.6rem;
     }
@@ -1772,7 +1782,7 @@ footer {
 
     .more-events {
         font-size: 0.55rem;
-        padding: 2px 3px;
+        padding: 2px 0;
         border-radius: 3px;
     }
 
@@ -1812,7 +1822,7 @@ footer {
     }
 
     .event-item {
-        padding: 0.5rem;
+        padding: 0.5rem 0;
         margin-bottom: 0;
         border-radius: 4px;
     }
