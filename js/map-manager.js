@@ -295,4 +295,5 @@ function showOnMap(lat, lng, eventName, barName) {
 // Export for use in other modules
 if (typeof window !== 'undefined') {
     window.MapManager = MapManager;
+    window.showOnMap = showOnMap; // Make globally accessible for inline onclick handlers
 }

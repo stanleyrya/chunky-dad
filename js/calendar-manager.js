@@ -5,13 +5,19 @@ class CalendarManager {
         this.allEvents = [];
         this.initialized = false;
         
-        // Initialize sub-modules
-        this.dataLoader = new CalendarDataLoader();
-        this.eventParser = new EventParser();
-        this.ui = new CalendarUI();
-        this.mapManager = new MapManager();
-        this.controls = new CalendarControls();
-        this.citySelector = new CitySelector();
+        // Initialize sub-modules (ensure they exist first)
+        this.dataLoader = window.CalendarDataLoader ? new CalendarDataLoader() : null;
+        this.eventParser = window.EventParser ? new EventParser() : null;
+        this.ui = window.CalendarUI ? new CalendarUI() : null;
+        this.mapManager = window.MapManager ? new MapManager() : null;
+        this.controls = window.CalendarControls ? new CalendarControls() : null;
+        this.citySelector = window.CitySelector ? new CitySelector() : null;
+        
+        // Store reference globally for other modules to access
+        window.calendarManager = this;
+        window.calendarUI = this.ui;
+        window.mapManager = this.mapManager;
+        window.eventParser = this.eventParser;
     }
 
     log(message, data = null) {
@@ -29,6 +35,12 @@ class CalendarManager {
         if (this.initialized) return;
 
         try {
+            // Verify all modules are available
+            if (!this.dataLoader || !this.eventParser || !this.ui || !this.mapManager || !this.controls || !this.citySelector) {
+                this.error('Not all calendar modules are available');
+                return;
+            }
+            
             // Initialize city selector first
             this.citySelector.initialize();
             
@@ -45,7 +57,7 @@ class CalendarManager {
             await this.loadCalendarData();
             
             // Initialize map if we have events
-            if (this.allEvents.length > 0) {
+            if (this.allEvents.length > 0 && this.mapManager) {
                 this.mapManager.initializeMap(
                     this.citySelector.getCurrentCityConfig(),
                     this.allEvents
