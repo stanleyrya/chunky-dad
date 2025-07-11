@@ -289,14 +289,14 @@ style.textContent = `
     }
     
     /* Smooth event card interactions */
-    .event-card.compact {
+    .event-card.detailed {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         will-change: transform;
     }
     
-    .event-card.compact:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    .event-card.detailed:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
     }
 `;
 document.head.appendChild(style);
