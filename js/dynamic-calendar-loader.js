@@ -1164,31 +1164,162 @@ function fitAllMarkers() {
 
 function toggleFullscreen() {
     const mapContainer = document.querySelector('.map-container');
-    if (mapContainer) {
-        if (!document.fullscreenElement) {
-            mapContainer.requestFullscreen().then(() => {
-                // Invalidate size to fix map rendering in fullscreen
-                setTimeout(() => {
-                    if (window.eventsMap) {
-                        window.eventsMap.invalidateSize();
-                    }
-                }, 100);
-                logger.userInteraction('MAP', 'Fullscreen mode enabled');
-            }).catch(err => {
-                console.warn('Could not enable fullscreen mode:', err);
-            });
-        } else {
-            document.exitFullscreen().then(() => {
-                // Invalidate size to fix map rendering when exiting fullscreen
-                setTimeout(() => {
-                    if (window.eventsMap) {
-                        window.eventsMap.invalidateSize();
-                    }
-                }, 100);
-                logger.userInteraction('MAP', 'Fullscreen mode disabled');
-            });
-        }
+    if (!mapContainer) return;
+    
+    logger.userInteraction('MAP', 'Fullscreen toggle requested');
+    
+    // Check if we're currently in fullscreen mode (including mobile pseudo-fullscreen)
+    const isCurrentlyFullscreen = mapContainer.classList.contains('mobile-fullscreen') || 
+                                 getFullscreenElement() !== null;
+    
+    if (isCurrentlyFullscreen) {
+        exitFullscreen(mapContainer);
+    } else {
+        enterFullscreen(mapContainer);
     }
+}
+
+// Enhanced fullscreen detection with vendor prefixes
+function getFullscreenElement() {
+    return document.fullscreenElement || 
+           document.webkitFullscreenElement || 
+           document.mozFullScreenElement || 
+           document.msFullscreenElement;
+}
+
+// Enhanced fullscreen API support detection
+function isFullscreenSupported() {
+    const doc = document.documentElement;
+    return !!(doc.requestFullscreen || 
+              doc.webkitRequestFullscreen || 
+              doc.mozRequestFullScreen || 
+              doc.msRequestFullscreen);
+}
+
+// Detect if we're on a mobile device (specifically iOS/mobile Safari)
+function isMobileDevice() {
+    return /iPhone|iPad|iPod|Android|Mobile|Opera Mini/i.test(navigator.userAgent) ||
+           ('ontouchstart' in window) ||
+           (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+}
+
+// Enhanced enter fullscreen with fallbacks
+function enterFullscreen(element) {
+    const isMobile = isMobileDevice();
+    const fullscreenSupported = isFullscreenSupported();
+    
+    // For mobile devices or when fullscreen API isn't supported, use CSS-based fullscreen
+    if (isMobile || !fullscreenSupported) {
+        enterMobileFullscreen(element);
+        return;
+    }
+    
+    // Try standard fullscreen API with vendor prefixes
+    const requestFullscreen = element.requestFullscreen || 
+                             element.webkitRequestFullscreen || 
+                             element.mozRequestFullScreen || 
+                             element.msRequestFullscreen;
+    
+    if (requestFullscreen) {
+        requestFullscreen.call(element).then(() => {
+            logger.userInteraction('MAP', 'Native fullscreen mode enabled');
+            setTimeout(() => {
+                if (window.eventsMap) {
+                    window.eventsMap.invalidateSize();
+                }
+            }, 100);
+        }).catch(err => {
+            logger.warn('MAP', 'Native fullscreen failed, falling back to mobile fullscreen', err);
+            enterMobileFullscreen(element);
+        });
+    } else {
+        // Fallback to mobile fullscreen
+        enterMobileFullscreen(element);
+    }
+}
+
+// Enhanced exit fullscreen with fallbacks
+function exitFullscreen(element) {
+    // First try to exit mobile fullscreen
+    if (element.classList.contains('mobile-fullscreen')) {
+        exitMobileFullscreen(element);
+        return;
+    }
+    
+    // Try standard fullscreen API with vendor prefixes
+    const exitFullscreenMethod = document.exitFullscreen || 
+                                 document.webkitExitFullscreen || 
+                                 document.mozCancelFullScreen || 
+                                 document.msExitFullscreen;
+    
+    if (exitFullscreenMethod && getFullscreenElement()) {
+        exitFullscreenMethod.call(document).then(() => {
+            logger.userInteraction('MAP', 'Native fullscreen mode disabled');
+            setTimeout(() => {
+                if (window.eventsMap) {
+                    window.eventsMap.invalidateSize();
+                }
+            }, 100);
+        }).catch(err => {
+            logger.warn('MAP', 'Native fullscreen exit failed', err);
+        });
+    }
+}
+
+// Mobile-friendly fullscreen implementation
+function enterMobileFullscreen(element) {
+    // Add mobile fullscreen class
+    element.classList.add('mobile-fullscreen');
+    
+    // Prevent body scrolling
+    document.body.style.overflow = 'hidden';
+    
+    // Hide mobile browser UI by scrolling
+    if (window.scrollTo) {
+        window.scrollTo(0, 1);
+        setTimeout(() => window.scrollTo(0, 0), 100);
+    }
+    
+    // For iOS Safari, set viewport to prevent zooming
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        viewport.setAttribute('data-original-content', viewport.content);
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    }
+    
+    logger.userInteraction('MAP', 'Mobile fullscreen mode enabled');
+    
+    // Invalidate map size after animation
+    setTimeout(() => {
+        if (window.eventsMap) {
+            window.eventsMap.invalidateSize();
+        }
+    }, 300);
+}
+
+// Exit mobile fullscreen
+function exitMobileFullscreen(element) {
+    // Remove mobile fullscreen class
+    element.classList.remove('mobile-fullscreen');
+    
+    // Restore body scrolling
+    document.body.style.overflow = '';
+    
+    // Restore original viewport if it was modified
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport && viewport.hasAttribute('data-original-content')) {
+        viewport.content = viewport.getAttribute('data-original-content');
+        viewport.removeAttribute('data-original-content');
+    }
+    
+    logger.userInteraction('MAP', 'Mobile fullscreen mode disabled');
+    
+    // Invalidate map size after animation
+    setTimeout(() => {
+        if (window.eventsMap) {
+            window.eventsMap.invalidateSize();
+        }
+    }, 300);
 }
 
 function showMyLocation() {
