@@ -304,7 +304,7 @@ class CalendarUI {
                     }
                 </div>
                 <div class="modal-footer">
-                    <button class="switch-to-week" onclick="window.calendarLoader.switchToWeekView('${dateString}')">
+                    <button class="switch-to-week" onclick="window.calendarManager.switchToWeekView('${dateString}')">
                         View Week
                     </button>
                 </div>

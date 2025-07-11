@@ -2203,9 +2203,60 @@ footer {
     border: 2px solid #667eea;
 }
 
+/* Event Card Highlighted (clicked from calendar) */
+.event-card.highlighted {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border-left: 4px solid #4f46e5 !important;
+    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4) !important;
+    transform: translateY(-4px) scale(1.02) !important;
+    animation: highlightFadeIn 0.5s ease-out;
+}
+
+.event-card.highlighted .label {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.event-card.highlighted .value {
+    color: white !important;
+}
+
+.event-card.highlighted .event-links a {
+    color: rgba(255, 255, 255, 0.9) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.event-card.highlighted .event-links a:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+}
+
+.event-card.highlighted .map-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.event-card.highlighted .map-link:hover {
+    color: white !important;
+}
+
 @keyframes highlightPulse {
     0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
     50% { box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3); }
+}
+
+@keyframes highlightFadeIn {
+    0% { 
+        transform: translateY(0) scale(1);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    }
+    50% { 
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.5);
+    }
+    100% { 
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+    }
 }
 
 /* Enhanced Week View Styles */
