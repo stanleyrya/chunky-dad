@@ -41,21 +41,13 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - Local server: `npm run dev` (Python HTTP server)
 - Test responsive design on mobile
 - Use browser dev tools for debugging
-- Validate HTML/CSS with W3C validator
-
-## Free Tools to Use
-- Image optimization: TinyPNG, Squoosh
-- CDNs: jsDelivr, cdnjs
-- Testing: W3C validator, WAVE accessibility checker
-- Performance: Google PageSpeed Insights
-- Fonts: Google Fonts
 
 ## Project-Specific Notes
 - Bear community focus - inclusive, welcoming tone
 - Event calendar needs regular updates
 - City guides use URL parameters
 - Travel content should stay current
-- All functionality works without JavaScript (progressive enhancement)
+- JavaScript required for navigation and dynamic content
 
 ## Common Tasks
 - Adding new cities: Update city cards in index.html, add city config in js/city-config.js
