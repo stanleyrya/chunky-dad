@@ -1,0 +1,163 @@
+# Chunky Dad Website - Cursor Rules
+
+## Project Overview
+This is a static website for "Chunky Dad" - a gay bear travel guide featuring city guides, events, and bear-owned businesses. The site is built with vanilla HTML, CSS, and JavaScript.
+
+## Code Style & Formatting
+
+### HTML
+- Use semantic HTML5 elements (`<header>`, `<nav>`, `<main>`, `<section>`, `<article>`, `<aside>`, `<footer>`)
+- Always include proper DOCTYPE declaration
+- Use lowercase for element names and attributes
+- Include alt attributes for all images
+- Use proper heading hierarchy (h1 → h2 → h3)
+- Include meta tags for SEO and social sharing
+- Validate HTML using W3C validator
+- Use meaningful class names that describe content, not appearance
+
+### CSS
+- Use CSS Grid and Flexbox for layouts
+- Follow BEM methodology for class naming (block__element--modifier)
+- Use CSS custom properties (variables) for colors, fonts, and spacing
+- Group related styles together
+- Use consistent indentation (2 spaces)
+- Prefer shorthand properties where appropriate
+- Use relative units (rem, em, %) for responsive design
+- Include focus states for accessibility
+- Use CSS logical properties for better internationalization
+
+### JavaScript
+- Use ES6+ features (const/let, arrow functions, template literals)
+- Prefer vanilla JavaScript over libraries when possible
+- Use camelCase for variables and functions
+- Use PascalCase for constructors and classes
+- Include JSDoc comments for functions
+- Use strict mode ('use strict')
+- Prefer event delegation over individual event listeners
+- Use async/await for asynchronous operations
+- Handle errors gracefully with try/catch blocks
+
+## File Organization
+
+### Structure
+```
+/
+├── index.html          # Main landing page
+├── city.html           # City guide template
+├── styles.css          # Main stylesheet
+├── script.js           # Main JavaScript file
+├── js/                 # Additional JavaScript modules
+│   ├── dynamic-calendar-loader.js
+│   └── city-config.js
+├── data/               # JSON data files
+└── README.md           # Project documentation
+```
+
+### Naming Conventions
+- Use kebab-case for file names (e.g., `city-guide.html`)
+- Use descriptive names that indicate purpose
+- Keep file names short but meaningful
+- Use consistent suffixes for similar file types
+
+## Development Workflow
+
+### Local Development
+- Use `npm run dev` to start the Python HTTP server
+- Test on multiple devices and browsers
+- Validate HTML, CSS, and JavaScript regularly
+- Use browser dev tools for debugging
+- Test with keyboard navigation
+- Verify mobile responsiveness
+
+### Performance
+- Optimize images (use WebP format when possible)
+- Minimize HTTP requests
+- Use CSS and JS minification for production
+- Implement lazy loading for images
+- Use appropriate image sizes for different screen densities
+- Avoid inline styles and scripts
+- Use efficient selectors in CSS
+
+## Accessibility (WCAG 2.1 AA)
+- Include proper ARIA labels and roles
+- Ensure sufficient color contrast (4.5:1 ratio)
+- Support keyboard navigation
+- Provide alternative text for images
+- Use semantic HTML structure
+- Test with screen readers
+- Include skip links for navigation
+- Ensure focus indicators are visible
+
+## SEO Best Practices
+- Use descriptive, unique page titles
+- Include meta descriptions for all pages
+- Use proper heading hierarchy
+- Include Open Graph meta tags
+- Add structured data (JSON-LD)
+- Use descriptive URLs
+- Include canonical URLs
+- Optimize for Core Web Vitals
+
+## Security
+- Validate and sanitize all user inputs
+- Use HTTPS for all external resources
+- Implement Content Security Policy headers
+- Avoid inline scripts and styles
+- Use secure headers (X-Frame-Options, X-Content-Type-Options)
+- Regularly update dependencies
+
+## Content Guidelines
+- Keep content inclusive and respectful
+- Use clear, concise language
+- Include proper attribution for images and content
+- Ensure content is up-to-date and accurate
+- Use consistent terminology throughout the site
+- Include contact information and privacy policy
+
+## Browser Support
+- Support modern browsers (Chrome, Firefox, Safari, Edge)
+- Graceful degradation for older browsers
+- Test on mobile devices (iOS Safari, Chrome Mobile)
+- Ensure core functionality works without JavaScript
+
+## Code Quality
+- Use consistent indentation (2 spaces)
+- Remove commented-out code before committing
+- Use meaningful commit messages
+- Keep functions small and focused
+- Use linting tools (ESLint, Stylelint)
+- Write self-documenting code with clear variable names
+
+## Testing
+- Test all interactive elements
+- Validate forms and error handling
+- Test responsive design on various screen sizes
+- Check loading performance
+- Verify cross-browser compatibility
+- Test with assistive technologies
+
+## Deployment
+- Use version control (Git)
+- Minify CSS and JavaScript for production
+- Optimize images before deployment
+- Set up proper caching headers
+- Use a CDN for static assets
+- Monitor site performance and uptime
+
+## Specific Project Notes
+- The site uses Python HTTP server for local development
+- Calendar functionality is dynamically loaded
+- City guides use URL parameters for content switching
+- Bear community focus requires inclusive, welcoming tone
+- Travel guide content should be regularly updated
+- Event calendar should be maintained with current information
+
+## Common Patterns
+- Use onclick handlers for navigation (current pattern)
+- Implement smooth scrolling for in-page navigation
+- Use CSS Grid for card layouts
+- Implement responsive navigation with hamburger menu
+- Use CSS custom properties for consistent theming
+- Include loading states for dynamic content
+
+Remember: This is a community-focused travel guide. Code should be maintainable, accessible, and welcoming to all users while serving the specific needs of the gay bear community.
