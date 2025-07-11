@@ -743,7 +743,7 @@ header {
 .event-item {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 255, 0.95) 100%);
     color: #333;
-    padding: 0.8rem;
+    padding: 0.8rem 0;
     border-radius: 8px;
     font-size: 0.85rem;
     cursor: pointer;
@@ -2362,7 +2362,7 @@ footer {
 .event-item.enhanced {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 255, 0.95) 100%);
     color: #333;
-    padding: 0.6rem;
+    padding: 0.6rem 0;
     border-radius: 12px;
     font-size: 0.85rem;
     cursor: pointer;
@@ -2376,7 +2376,7 @@ footer {
 
 /* Minimize padding for week view events to be tight with day sides */
 .calendar-day.week-view .event-item.enhanced {
-    padding: 0.4rem;
+    padding: 0.4rem 0;
     margin-bottom: 0.2rem;
     border-radius: 8px;
 }
@@ -2685,7 +2685,7 @@ footer {
     }
 
     .event-item.enhanced {
-        padding: 1rem;
+        padding: 1rem 0;
     }
 
     /* Calendar Overview for tablets */
@@ -2825,7 +2825,7 @@ footer {
     background: linear-gradient(135deg, #e8f2ff 0%, #f0f4ff 100%);
     border: 1px solid #d0e1ff;
     border-radius: 6px;
-    padding: 4px 6px;
+    padding: 4px 0;
     margin: 0;
     transition: all 0.2s ease;
     cursor: pointer;
