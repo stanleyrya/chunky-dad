@@ -67,6 +67,8 @@ class ChunkyDadApp {
             // Calendar functionality is only needed on city pages
             if (window.DynamicCalendarLoader) {
                 this.calendarLoader = new DynamicCalendarLoader();
+                // Make it globally accessible for backward compatibility
+                window.calendarLoader = this.calendarLoader;
                 await this.calendarLoader.init();
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
