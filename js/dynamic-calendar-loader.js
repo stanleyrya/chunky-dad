@@ -535,6 +535,12 @@ class DynamicCalendarLoader extends CalendarCore {
             days.push(currentDay);
         }
 
+        logger.debug('CALENDAR', `Generating week view with mobile-optimized event display`, {
+            eventCount: events.length,
+            weekStart: start.toISOString().split('T')[0],
+            weekEnd: end.toISOString().split('T')[0]
+        });
+
         return days.map(day => {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
@@ -552,13 +558,27 @@ class DynamicCalendarLoader extends CalendarCore {
             });
 
             const eventsHtml = dayEvents.length > 0 
-                ? dayEvents.map(event => `
-                    <div class="event-item enhanced" data-event-slug="${event.slug}">
-                        <div class="event-name">${event.name}</div>
-                        <div class="event-time">${event.time}</div>
-                        <div class="event-venue">${event.bar}</div>
-                    </div>
-                `).join('')
+                ? dayEvents.map(event => {
+                    // Mobile-first responsive design:
+                    // - Full information (event-name, event-time, event-venue) shown on tablets/desktop
+                    // - Minimal information (event-name-mobile, event-venue-mobile) shown on mobile
+                    // - CSS controls which elements are displayed based on screen size
+                    
+                    // Create mobile-friendly shortened venue name (first word or abbreviation)
+                    const shortVenue = event.bar.split(' ')[0] || event.bar;
+                    // Truncate event name if too long for mobile
+                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
+                    
+                    return `
+                        <div class="event-item enhanced" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
+                            <div class="event-name">${event.name}</div>
+                            <div class="event-name-mobile">${shortName}</div>
+                            <div class="event-time">${event.time}</div>
+                            <div class="event-venue">${event.bar}</div>
+                            <div class="event-venue-mobile">${shortVenue}</div>
+                        </div>
+                    `;
+                }).join('')
                 : '<div class="no-events">No events</div>';
 
             const isToday = day.getTime() === today.getTime();
