@@ -1081,6 +1081,18 @@ header {
     position: relative;
 }
 
+@media (max-width: 768px) {
+    .events-map-section {
+        padding: 1rem 0;
+        margin-left: -1rem;
+        margin-right: -1rem;
+    }
+    
+    .events-map-section .container {
+        padding: 0 1rem;
+    }
+}
+
 .events-map-section::before {
     content: '';
     position: absolute;
@@ -1129,6 +1141,23 @@ header {
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+@media (max-width: 768px) {
+    .map-container {
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        margin: 0 -1rem;
+    }
+    
+    #events-map {
+        height: 60vh;
+        min-height: 400px;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
 .map-popup {
     font-family: 'Poppins', sans-serif;
     max-width: 250px;
@@ -1159,8 +1188,8 @@ header {
 
 .marker-pin {
     position: relative;
-    width: 40px;
-    height: 50px;
+    width: 44px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1169,11 +1198,11 @@ header {
 .marker-pin::before {
     content: '';
     position: absolute;
-    top: 5px;
+    top: 6px;
     left: 50%;
     transform: translateX(-50%) rotate(-45deg);
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 50% 50% 50% 0;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
@@ -1183,32 +1212,33 @@ header {
 .marker-pin::after {
     content: '';
     position: absolute;
-    bottom: 8px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 10px solid #5a67d8;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 12px solid #5a67d8;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 .marker-icon {
     position: absolute;
-    top: 8px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     z-index: 10;
-    font-size: 1.1rem;
+    font-size: 1.4rem;
     color: white;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
+    margin-top: -12px;
 }
 
 .marker-pin:hover::before {
@@ -1235,6 +1265,103 @@ header {
 .event-card[data-lat]:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+}
+
+/* Map Controls */
+.map-control-btn {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 4px;
+}
+
+.map-control-btn:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.map-control-btn:active {
+    transform: translateY(0);
+}
+
+.leaflet-control-fullscreen,
+.leaflet-control-fit-markers,
+.leaflet-control-my-location {
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* My Location Marker */
+.my-location-marker {
+    background: none;
+    border: none;
+}
+
+.my-location-pin {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #4285f4;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+    border: 3px solid white;
+}
+
+.my-location-pin::before {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.my-location-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    font-size: 1.2rem;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Fullscreen styles for map */
+.map-container:fullscreen {
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.map-container:fullscreen #events-map {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
 }
 
 .error-message {
@@ -1578,17 +1705,10 @@ footer {
         padding: 0.2rem 0.5rem;
     }
 
-    #events-map {
-        height: 250px;
-    }
-
-    .map-container {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
     .events-map-section {
-        padding: 2rem 1rem;
+        padding: 1rem 0;
+        margin-left: -1rem;
+        margin-right: -1rem;
     }
 
     .events-map-section h2 {
