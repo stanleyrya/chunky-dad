@@ -557,63 +557,56 @@ class DynamicCalendarLoader {
         });
     }
 
-    // Generate event card (cleaned up and condensed)
+    // Generate event card (same as original)
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => 
-            `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`
+            `<a href="${link.url}" target="_blank" rel="noopener">${link.label}</a>`
         ).join('') : '';
 
-        // Only show cover if it exists and isn't a placeholder
-        const shouldShowCover = event.cover && 
-            event.cover !== 'Check event details' && 
-            event.cover !== 'TBD' && 
-            event.cover !== 'N/A' && 
-            event.cover.trim() !== '';
-
-        const coverHtml = shouldShowCover ? `
-            <div class="event-info-item">
-                <span class="info-icon">💰</span>
-                <span class="info-text">${event.cover}</span>
-            </div>
-        ` : '';
-
         const teaHtml = event.tea ? `
-            <div class="event-info-item">
-                <span class="info-icon">🍵</span>
-                <span class="info-text">${event.tea}</span>
+            <div class="detail-row tea">
+                <span class="label">Tea:</span>
+                <span class="value">${event.tea}</span>
             </div>
         ` : '';
 
         const locationHtml = event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
-            `<div class="event-info-item">
-                <span class="info-icon">📍</span>
-                <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar}')" class="map-link">
-                    ${event.bar}
-                </a>
+            `<div class="detail-row">
+                <span class="label">Location:</span>
+                <span class="value">
+                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar}')" class="map-link">
+                        📍 ${event.bar}
+                    </a>
+                </span>
             </div>` :
-            `<div class="event-info-item">
-                <span class="info-icon">📍</span>
-                <span class="info-text">${event.bar}</span>
+            `<div class="detail-row">
+                <span class="label">Bar:</span>
+                <span class="value">${event.bar}</span>
             </div>`;
 
         const recurringBadge = event.recurring ? 
-            `<span class="recurring-badge-compact">🔄</span>` : '';
+            `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
 
         return `
-            <div class="event-card compact" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
-                <div class="event-header-compact">
-                    <h3 class="event-title">${event.name}</h3>
-                    <div class="event-timing">
-                        <span class="event-day-time">${event.day} ${event.time}</span>
+            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
+                <div class="event-header">
+                    <h3>${event.name}</h3>
+                    <div class="event-meta">
+                        <div class="event-day">${event.day} ${event.time}</div>
                         ${recurringBadge}
                     </div>
                 </div>
-                <div class="event-info">
+                <div class="event-details">
                     ${locationHtml}
-                    ${coverHtml}
+                    <div class="detail-row">
+                        <span class="label">Cover:</span>
+                        <span class="value">${event.cover}</span>
+                    </div>
                     ${teaHtml}
+                    <div class="event-links">
+                        ${linksHtml}
+                    </div>
                 </div>
-                ${linksHtml ? `<div class="event-links-compact">${linksHtml}</div>` : ''}
             </div>
         `;
     }
