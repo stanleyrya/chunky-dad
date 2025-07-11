@@ -4,7 +4,6 @@ class DynamicCalendarLoader {
         this.eventsData = null;
         this.currentCity = null;
         this.currentCityConfig = null;
-        this.debugMode = true;
         this.locationCache = new Map();
         
         // View state management - enhanced with new calendar overview
@@ -12,17 +11,7 @@ class DynamicCalendarLoader {
         this.currentDate = new Date();
         this.allEvents = []; // Store all parsed events with dates
         
-        this.log('Dynamic CalendarLoader initialized');
-    }
-
-    log(message, data = null) {
-        if (this.debugMode) {
-            console.log(`[DynamicCalendarLoader] ${message}`, data || '');
-        }
-    }
-
-    error(message, data = null) {
-        console.error(`[DynamicCalendarLoader ERROR] ${message}`, data || '');
+        logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
 
     // Get city from URL parameters
@@ -130,7 +119,12 @@ class DynamicCalendarLoader {
 
     // Enhanced iCal parsing (same as original but with dynamic calendar ID)
     parseICalData(icalText) {
-        this.log('Starting iCal parsing', `Text length: ${icalText.length}`);
+        logger.time('CALENDAR', 'iCal parsing');
+        logger.info('CALENDAR', 'Starting iCal parsing', {
+            textLength: icalText.length,
+            city: this.currentCity
+        });
+        
         const events = [];
         const lines = icalText.split('\n');
         let currentEvent = null;
@@ -146,12 +140,12 @@ class DynamicCalendarLoader {
                 eventCount++;
             } else if (line === 'END:VEVENT' && currentEvent) {
                 if (currentEvent.title) {
-                    this.log(`Processing event: ${currentEvent.title}`);
+                    logger.debug('CALENDAR', `Processing event: ${currentEvent.title}`);
                     const eventData = this.parseEventData(currentEvent);
                     
                     if (eventData) {
                         events.push(eventData);
-                        this.log(`✅ Successfully parsed event: ${eventData.name}`);
+                        logger.debug('CALENDAR', `✅ Successfully parsed event: ${eventData.name}`);
                     }
                 }
                 currentEvent = null;
@@ -181,7 +175,8 @@ class DynamicCalendarLoader {
             }
         }
         
-        this.log(`📊 Parsing complete. Found ${eventCount} total events, ${events.length} with valid data`);
+        logger.timeEnd('CALENDAR', 'iCal parsing');
+        logger.info('CALENDAR', `📊 Parsing complete. Found ${eventCount} total events, ${events.length} with valid data`);
         return events;
     }
 
@@ -234,7 +229,7 @@ class DynamicCalendarLoader {
 
             return eventData;
         } catch (error) {
-            this.error(`Failed to parse event data:`, error.message);
+            logger.componentError('CALENDAR', 'Failed to parse event data', error);
             return null;
         }
     }
@@ -501,14 +496,18 @@ class DynamicCalendarLoader {
     }
 
     // Load calendar data for specific city
-    async loadCalendarData(cityKey) {
+        async loadCalendarData(cityKey) {
         const cityConfig = getCityConfig(cityKey);
         if (!cityConfig || !cityConfig.calendarId) {
-            this.error(`No calendar configuration found for city: ${cityKey}`);
+            logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
             return null;
         }
-
-        this.log(`Loading calendar data for ${cityConfig.name}`);
+        
+        logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+        logger.apiCall('CALENDAR', `Loading calendar data for ${cityConfig.name}`, {
+            cityKey,
+            calendarId: cityConfig.calendarId
+        });
         
         try {
             const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
@@ -521,7 +520,10 @@ class DynamicCalendarLoader {
             }
             
             const icalText = await response.text();
-            this.log('Successfully fetched iCal data', `Length: ${icalText.length} chars`);
+            logger.apiCall('CALENDAR', 'Successfully fetched iCal data', {
+                dataLength: icalText.length,
+                city: cityConfig.name
+            });
             
             const events = this.parseICalData(icalText);
             
@@ -533,10 +535,14 @@ class DynamicCalendarLoader {
                 events
             };
             
-            this.log(`Successfully processed calendar data for ${cityConfig.name}`, events);
+            logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+            logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
+                eventCount: events.length,
+                cityKey
+            });
             return this.eventsData;
         } catch (error) {
-            this.error('Error loading calendar data:', error);
+            logger.componentError('CALENDAR', 'Error loading calendar data', error);
             this.showCalendarError();
             return null;
         }
@@ -990,16 +996,28 @@ class DynamicCalendarLoader {
                 }
             });
 
-            this.log(`Map initialized with ${markersAdded} markers for ${cityConfig.name}`);
+            logger.componentLoad('MAP', `Map initialized with ${markersAdded} markers for ${cityConfig.name}`, {
+                markersAdded,
+                cityName: cityConfig.name,
+                mapCenter,
+                mapZoom
+            });
             window.eventsMap = map;
         } catch (error) {
-            this.error('Failed to initialize map:', error);
+            logger.componentError('MAP', 'Failed to initialize map', error);
         }
     }
 
     // Update calendar display with filtered events
     updateCalendarDisplay() {
+        logger.time('CALENDAR', 'Calendar display update');
         const filteredEvents = this.getFilteredEvents();
+        
+        logger.debug('CALENDAR', `Updating calendar display`, {
+            view: this.currentView,
+            eventCount: filteredEvents.length,
+            city: this.currentCity
+        });
         
         // Update calendar title
         const calendarTitle = document.getElementById('calendar-title');
@@ -1062,15 +1080,25 @@ class DynamicCalendarLoader {
             mapSection.style.display = 'block';
             this.initializeMap(this.currentCityConfig, filteredEvents);
         }
+        
+        logger.timeEnd('CALENDAR', 'Calendar display update');
+        logger.performance('CALENDAR', `Calendar display updated successfully`, {
+            view: this.currentView,
+            eventsDisplayed: filteredEvents.length,
+            city: this.currentCity
+        });
     }
 
     // Set up calendar controls
     setupCalendarControls() {
+        logger.componentInit('CALENDAR', 'Setting up calendar controls');
+        
         // View toggle buttons
         document.querySelectorAll('.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const newView = e.target.dataset.view;
                 if (newView !== this.currentView) {
+                    logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
                     this.currentView = newView;
                     
                     // Update active button
@@ -1088,16 +1116,30 @@ class DynamicCalendarLoader {
         const todayBtn = document.getElementById('today-btn');
         
         if (prevBtn) {
-            prevBtn.addEventListener('click', () => this.navigatePeriod('prev'));
+            prevBtn.addEventListener('click', () => {
+                logger.userInteraction('CALENDAR', 'Previous period clicked');
+                this.navigatePeriod('prev');
+            });
         }
         
         if (nextBtn) {
-            nextBtn.addEventListener('click', () => this.navigatePeriod('next'));
+            nextBtn.addEventListener('click', () => {
+                logger.userInteraction('CALENDAR', 'Next period clicked');
+                this.navigatePeriod('next');
+            });
         }
         
         if (todayBtn) {
-            todayBtn.addEventListener('click', () => this.goToToday());
+            todayBtn.addEventListener('click', () => {
+                logger.userInteraction('CALENDAR', 'Today button clicked');
+                this.goToToday();
+            });
         }
+        
+        logger.componentLoad('CALENDAR', 'Calendar controls setup complete', {
+            hasNavigation: !!(prevBtn && nextBtn && todayBtn),
+            viewButtons: document.querySelectorAll('.view-btn').length
+        });
         
         // Initialize date range display
         this.updateCalendarDisplay();
@@ -1163,17 +1205,29 @@ class DynamicCalendarLoader {
 
     // Attach calendar interactions
     attachCalendarInteractions() {
-        document.querySelectorAll('.event-item').forEach(item => {
+        const eventItems = document.querySelectorAll('.event-item');
+        
+        eventItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 const eventSlug = item.dataset.eventSlug;
+                logger.userInteraction('EVENT', `Calendar event clicked: ${eventSlug}`, {
+                    eventSlug,
+                    city: this.currentCity
+                });
+                
                 const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
                 if (eventCard) {
                     eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     eventCard.classList.add('highlight');
                     setTimeout(() => eventCard.classList.remove('highlight'), 2000);
+                    logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
+                } else {
+                    logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
                 }
             });
         });
+        
+        logger.debug('CALENDAR', `Attached interactions to ${eventItems.length} calendar items`);
     }
 
     // Main render function
@@ -1181,20 +1235,20 @@ class DynamicCalendarLoader {
         this.currentCity = this.getCityFromURL();
         this.currentCityConfig = getCityConfig(this.currentCity);
         
-        this.log(`Rendering city page for: ${this.currentCity}`);
+        logger.info('CITY', `Rendering city page for: ${this.currentCity}`);
         
         // Set up city selector
         this.setupCitySelector();
         
         // Check if city exists and has calendar
         if (!this.currentCityConfig) {
-            this.error(`City configuration not found: ${this.currentCity}`);
+            logger.componentError('CITY', `City configuration not found: ${this.currentCity}`);
             this.showCityNotFound();
             return;
         }
         
         if (!hasCityCalendar(this.currentCity)) {
-            this.log(`City ${this.currentCity} doesn't have calendar configured yet`);
+            logger.info('CITY', `City ${this.currentCity} doesn't have calendar configured yet`);
             this.updatePageContent(this.currentCityConfig, []);
             return;
         }
@@ -1202,13 +1256,16 @@ class DynamicCalendarLoader {
         // Load calendar data
         const data = await this.loadCalendarData(this.currentCity);
         if (data) {
+            logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
+                eventCount: data.events.length
+            });
             this.updatePageContent(data.cityConfig, data.events);
         }
     }
 
     // Initialize
     async init() {
-        this.log('Initializing DynamicCalendarLoader...');
+        logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         await this.renderCityPage();
     }
 }
