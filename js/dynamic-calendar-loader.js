@@ -1,15 +1,13 @@
 // Dynamic Google Calendar Loader - Supports multiple cities and calendars
-class DynamicCalendarLoader {
+class DynamicCalendarLoader extends CalendarCore {
     constructor() {
-        this.eventsData = null;
+        super();
         this.currentCity = null;
         this.currentCityConfig = null;
-        this.locationCache = new Map();
         
         // View state management - enhanced with new calendar overview
         this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
-        this.allEvents = []; // Store all parsed events with dates
         
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
@@ -117,275 +115,14 @@ class DynamicCalendarLoader {
         document.title = 'City Not Found - Chunky Dad';
     }
 
-    // Enhanced iCal parsing (same as original but with dynamic calendar ID)
-    parseICalData(icalText) {
-        logger.time('CALENDAR', 'iCal parsing');
-        logger.info('CALENDAR', 'Starting iCal parsing', {
-            textLength: icalText.length,
-            city: this.currentCity
-        });
-        
-        const events = [];
-        const lines = icalText.split('\n');
-        let currentEvent = null;
-        let inEvent = false;
-        let eventCount = 0;
-        
-        for (let line of lines) {
-            line = line.slice(0, -1); // Remove trailing character
-            
-            if (line === 'BEGIN:VEVENT') {
-                inEvent = true;
-                currentEvent = {};
-                eventCount++;
-            } else if (line === 'END:VEVENT' && currentEvent) {
-                if (currentEvent.title) {
-                    logger.debug('CALENDAR', `Processing event: ${currentEvent.title}`);
-                    const eventData = this.parseEventData(currentEvent);
-                    
-                    if (eventData) {
-                        events.push(eventData);
-                        logger.debug('CALENDAR', `✅ Successfully parsed event: ${eventData.name}`);
-                    }
-                }
-                currentEvent = null;
-                inEvent = false;
-            } else if (inEvent && currentEvent) {
-                if (line.startsWith('SUMMARY:')) {
-                    currentEvent.title = line.substring(8).replace(/\\,/g, ',').replace(/\\;/g, ';');
-                } else if (line.startsWith('DESCRIPTION:')) {
-                    currentEvent.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';');
-                } else if (line.startsWith(' ') && currentEvent.description) {
-                    currentEvent.description += line.substring(1);
-                } else if (line.startsWith('LOCATION:')) {
-                    currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';');
-                } else if (line.startsWith('DTSTART')) {
-                    const dateMatch = line.match(/DTSTART[^:]*:(.+)/);
-                    if (dateMatch) {
-                        currentEvent.start = this.parseICalDate(dateMatch[1]);
-                    }
-                } else if (line.startsWith('DTEND')) {
-                    const dateMatch = line.match(/DTEND[^:]*:(.+)/);
-                    if (dateMatch) {
-                        currentEvent.end = this.parseICalDate(dateMatch[1]);
-                    }
-                } else if (line.startsWith('RRULE:')) {
-                    currentEvent.recurrence = line.substring(6);
-                }
-            }
-        }
-        
-        logger.timeEnd('CALENDAR', 'iCal parsing');
-        logger.info('CALENDAR', `📊 Parsing complete. Found ${eventCount} total events, ${events.length} with valid data`);
-        return events;
-    }
 
-    // Parse event data (enhanced with actual dates)
+    // Override parseEventData to add city-specific data
     parseEventData(calendarEvent) {
-        try {
-            const eventData = {
-                name: calendarEvent.title,
-                day: this.getDayFromDate(calendarEvent.start),
-                time: this.getTimeRange(calendarEvent.start, calendarEvent.end),
-                cover: 'Check event details',
-                eventType: this.getEventType(calendarEvent.recurrence),
-                recurring: !!calendarEvent.recurrence,
-                recurrence: calendarEvent.recurrence, // Store the RRULE string
-                coordinates: calendarEvent.location,
-                startDate: calendarEvent.start, // Store actual date
-                endDate: calendarEvent.end
-            };
-
-            // Parse description for additional data
-            if (calendarEvent.description) {
-                const additionalData = this.parseKeyValueDescription(calendarEvent.description);
-                if (additionalData) {
-                    eventData.bar = additionalData.bar || 'TBD';
-                    eventData.cover = additionalData.cover || eventData.cover;
-                    eventData.tea = additionalData.tea || additionalData.description;
-                    eventData.website = additionalData.website;
-                    eventData.instagram = additionalData.instagram;
-                    eventData.facebook = additionalData.facebook;
-                    eventData.gmaps = additionalData.gmaps;
-                    eventData.links = this.parseLinks(additionalData);
-                    
-                    if (additionalData.type || additionalData.eventType) {
-                        eventData.eventType = additionalData.type || additionalData.eventType;
-                    }
-                }
-            }
-            
-            // Parse coordinates
-            if (calendarEvent.location) {
-                const latlong = calendarEvent.location.split(",");
-                eventData.coordinates = { 
-                    lat: parseFloat(latlong[0]?.trim()), 
-                    lng: parseFloat(latlong[1]?.trim()) 
-                };
-            }
-
-            eventData.slug = this.generateSlug(eventData.name);
+        const eventData = super.parseEventData(calendarEvent);
+        if (eventData) {
             eventData.citySlug = this.currentCity;
-
-            return eventData;
-        } catch (error) {
-            logger.componentError('CALENDAR', 'Failed to parse event data', error);
-            return null;
         }
-    }
-
-    // Helper methods (same as original)
-    parseKeyValueDescription(description) {
-        const data = {};
-        const keyMap = {
-            'bar': 'bar', 'location': 'bar', 'host': 'bar',
-            'cover': 'cover', 'cost': 'cover', 'price': 'cover',
-            'tea': 'tea', 'info': 'tea', 'description': 'tea',
-            'website': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
-            'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
-            'gmaps': 'gmaps', 'google maps': 'gmaps'
-        };
-
-        let textBlock = description;
-        if (textBlock.includes("<br>")) {
-            textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = textBlock;
-            textBlock = tempDiv.textContent || tempDiv.innerText || '';
-        }
-        
-        const lines = textBlock.replace("\\n", "\n").split("\n");
-        
-        for (let line of lines) {
-            line = line.trim();
-            if (!line) continue;
-            
-            const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
-            if (keyValueMatch) {
-                const key = keyValueMatch[1].trim().toLowerCase();
-                const value = keyValueMatch[2].trim();
-                const mappedKey = keyMap[key] || key;
-                data[mappedKey] = value;
-            }
-        }
-        
-        return Object.keys(data).length > 0 ? data : null;
-    }
-
-    parseLinks(data) {
-        const links = [];
-        
-        if (data.website) {
-            links.push({ type: 'website', url: data.website, label: '🌐 Website' });
-        }
-        if (data.instagram) {
-            links.push({ type: 'instagram', url: data.instagram, label: '📷 Instagram' });
-        }
-        if (data.facebook) {
-            links.push({ type: 'facebook', url: data.facebook, label: '📘 Facebook' });
-        }
-        if (data.gmaps) {
-            links.push({ type: 'gmaps', url: data.gmaps, label: '🗺️ Google Maps' });
-        }
-        
-        return links.length > 0 ? links : null;
-    }
-
-    generateSlug(name) {
-        return name.toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .trim();
-    }
-
-    getDayFromDate(date) {
-        if (!date) return 'TBD';
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        return days[date.getDay()];
-    }
-
-    getTimeRange(startDate, endDate) {
-        if (!startDate) return 'TBD';
-        
-        const formatTime = (date) => {
-            const hours = date.getHours();
-            const minutes = date.getMinutes();
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours % 12 || 12;
-            const displayMinutes = minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : '';
-            return `${displayHours}${displayMinutes}${ampm}`;
-        };
-        
-        const startTime = formatTime(startDate);
-        
-        if (endDate) {
-            const endTime = formatTime(endDate);
-            return `${startTime} - ${endTime}`;
-        }
-        
-        return startTime;
-    }
-
-    getEventType(recurrence) {
-        if (!recurrence) return 'routine';
-        if (recurrence.includes('WEEKLY')) return 'weekly';
-        if (recurrence.includes('MONTHLY')) return 'monthly';
-        if (recurrence.includes('DAILY')) return 'daily';
-        return 'recurring';
-    }
-
-    parseICalDate(icalDate) {
-        if (!icalDate) return new Date();
-        
-        if (icalDate.includes('T')) {
-            // DateTime format: YYYYMMDDTHHMMSS[Z]
-            const cleanDate = icalDate.replace(/[TZ]/g, '');
-            if (cleanDate.length >= 8) {
-                const year = cleanDate.substring(0, 4);
-                const month = cleanDate.substring(4, 6);
-                const day = cleanDate.substring(6, 8);
-                const hour = cleanDate.substring(8, 10) || '00';
-                const minute = cleanDate.substring(10, 12) || '00';
-                const second = cleanDate.substring(12, 14) || '00';
-                
-                return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
-            }
-        } else if (icalDate.length === 8) {
-            // Date only format: YYYYMMDD (all-day event)
-            const year = icalDate.substring(0, 4);
-            const month = icalDate.substring(4, 6);
-            const day = icalDate.substring(6, 8);
-            
-            return new Date(`${year}-${month}-${day}T00:00:00`);
-        }
-        
-        return new Date();
-    }
-
-    // Date utility methods
-    getWeekBounds(date) {
-        const start = new Date(date);
-        const day = start.getDay();
-        // Fix: Properly calculate days to subtract to get to Sunday
-        start.setDate(start.getDate() - day);
-        start.setHours(0, 0, 0, 0);
-        
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23, 59, 59, 999);
-        
-        return { start, end };
-    }
-
-    getMonthBounds(date) {
-        const start = new Date(date.getFullYear(), date.getMonth(), 1);
-        start.setHours(0, 0, 0, 0);
-        
-        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        end.setHours(23, 59, 59, 999);
-        
-        return { start, end };
+        return eventData;
     }
 
     getCurrentPeriodBounds() {
@@ -491,12 +228,8 @@ class DynamicCalendarLoader {
         }
     }
 
-    isEventInPeriod(eventDate, start, end) {
-        return eventDate >= start && eventDate <= end;
-    }
-
-    // Load calendar data for specific city
-        async loadCalendarData(cityKey) {
+    // Load calendar data for specific city (override to use CORS proxy)
+    async loadCalendarData(cityKey) {
         const cityConfig = getCityConfig(cityKey);
         if (!cityConfig || !cityConfig.calendarId) {
             logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
