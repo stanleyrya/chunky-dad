@@ -21,22 +21,38 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 ├── index.html          # Main landing page
 ├── city.html           # City guide template
 ├── styles.css          # Main stylesheet
-├── script.js           # Main JavaScript file
-├── js/                 # Additional JavaScript modules
+├── script.js           # Backward compatibility functions
+├── js/                 # Modular JavaScript architecture
 │   ├── logger.js       # Centralized logging system
-│   ├── dynamic-calendar-loader.js
-│   └── city-config.js
+│   ├── city-config.js  # City configuration data
+│   ├── navigation.js   # Navigation and scrolling
+│   ├── page-effects.js # Animations and visual effects
+│   ├── forms.js        # Form handling and validation
+│   ├── calendar-core.js # Calendar data parsing and management
+│   ├── dynamic-calendar-loader.js # Calendar UI and interactions
+│   └── app.js          # Main application coordinator
 ├── data/               # JSON data files
 └── README.md
 ```
 
 ## Current Patterns
-- `onclick` handlers for navigation
+- Modular JavaScript architecture with clear separation of concerns
+- ES6 classes with inheritance (CalendarCore → DynamicCalendarLoader)
+- Centralized application coordination via app.js
 - CSS Grid for card layouts
 - URL parameters for city guide content switching
 - Dynamic calendar loading
 - Responsive hamburger menu
 - CSS custom properties for theming
+
+## JavaScript Architecture
+- **app.js**: Main coordinator, initializes all modules based on page type
+- **navigation.js**: Handles mobile menu, smooth scrolling, navigation interactions
+- **page-effects.js**: Manages animations, scroll effects, visual enhancements
+- **forms.js**: Form validation, submission, user input processing
+- **calendar-core.js**: Core calendar data parsing, iCal processing, date utilities
+- **dynamic-calendar-loader.js**: Calendar UI rendering, interactions, map integration
+- **script.js**: Backward compatibility for HTML onclick handlers
 
 ## Development
 - Local server: `npm run dev` (Python HTTP server)
