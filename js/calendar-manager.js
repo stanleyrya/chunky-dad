@@ -65,6 +65,13 @@ class CalendarManager {
             }
             
             this.initialized = true;
+            
+            // Ensure controls are fully set up after calendar content is rendered
+            setTimeout(() => {
+                this.controls.setupCalendarInteractions();
+                this.log('Calendar event handlers re-initialized');
+            }, 200);
+            
             this.log('Calendar manager initialized successfully');
             
         } catch (error) {
@@ -125,6 +132,11 @@ class CalendarManager {
             // Update controls
             this.controls.updateCalendarTitle();
             this.controls.updateDateRangeDisplay();
+            
+            // Re-initialize event handlers for new content (critical fix)
+            setTimeout(() => {
+                this.controls.setupCalendarInteractions();
+            }, 100);
             
             this.log('Calendar display updated');
             

@@ -69,21 +69,65 @@ class CalendarControls {
 
     // Setup calendar day interactions
     setupCalendarInteractions() {
-        // Use event delegation for calendar day clicks
-        const calendarGrid = document.querySelector('.calendar-grid');
-        
-        if (calendarGrid) {
-            calendarGrid.addEventListener('click', (e) => {
-                const calendarDay = e.target.closest('.calendar-day');
-                
-                if (calendarDay && this.currentView === 'month') {
-                    const dateString = calendarDay.dataset.date;
-                    if (dateString) {
-                        this.handleDayClick(dateString);
-                    }
-                }
-            });
+        // Remove existing handlers first to avoid duplicates
+        if (this.calendarGridHandler) {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                calendarGrid.removeEventListener('click', this.calendarGridHandler);
+            }
         }
+        
+        if (this.eventsListHandler) {
+            const eventsList = document.querySelector('.events-list');
+            if (eventsList) {
+                eventsList.removeEventListener('click', this.eventsListHandler);
+            }
+        }
+        
+        // Create new handler functions and store references
+        this.calendarGridHandler = (e) => {
+            // Handle event item clicks (for sliding to event in list)
+            const eventItem = e.target.closest('.event-item, .month-event');
+            if (eventItem) {
+                const eventSlug = eventItem.dataset.eventSlug;
+                if (eventSlug) {
+                    this.handleEventItemClick(eventSlug);
+                    return; // Don't also trigger day click
+                }
+            }
+            
+            // Handle calendar day clicks
+            const calendarDay = e.target.closest('.calendar-day');
+            if (calendarDay && this.currentView === 'month') {
+                const dateString = calendarDay.dataset.date;
+                if (dateString) {
+                    this.handleDayClick(dateString);
+                }
+            }
+        };
+        
+        this.eventsListHandler = (e) => {
+            const eventCard = e.target.closest('.event-card');
+            if (eventCard) {
+                const eventSlug = eventCard.dataset.eventSlug;
+                if (eventSlug) {
+                    this.highlightEventCard(eventSlug);
+                }
+            }
+        };
+        
+        // Add new event listeners
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.addEventListener('click', this.calendarGridHandler);
+        }
+        
+        const eventsList = document.querySelector('.events-list');
+        if (eventsList) {
+            eventsList.addEventListener('click', this.eventsListHandler);
+        }
+        
+        this.log('Calendar interactions setup completed');
     }
 
     // Switch between week and month views
@@ -161,6 +205,48 @@ class CalendarControls {
         }
         
         this.log(`Day clicked: ${dateString}`);
+    }
+
+    // Handle event item click (slide to event in list)
+    handleEventItemClick(eventSlug) {
+        this.log(`Event item clicked: ${eventSlug}`);
+        
+        // Find the corresponding event card in the events list
+        const eventCard = document.querySelector(`.events-list .event-card[data-event-slug="${eventSlug}"]`);
+        if (eventCard) {
+            // Scroll to the event card with smooth animation
+            eventCard.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest'
+            });
+            
+            // Highlight the event card temporarily
+            this.highlightEventCard(eventSlug);
+        } else {
+            this.log(`Event card not found for slug: ${eventSlug}`);
+        }
+    }
+
+    // Highlight an event card temporarily
+    highlightEventCard(eventSlug) {
+        // Remove existing highlights
+        document.querySelectorAll('.event-card.highlighted').forEach(card => {
+            card.classList.remove('highlighted');
+        });
+        
+        // Find and highlight the target event card
+        const eventCard = document.querySelector(`.events-list .event-card[data-event-slug="${eventSlug}"]`);
+        if (eventCard) {
+            eventCard.classList.add('highlighted');
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                eventCard.classList.remove('highlighted');
+            }, 3000);
+            
+            this.log(`Highlighted event card: ${eventSlug}`);
+        }
     }
 
     // Get current view

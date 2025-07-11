@@ -78,7 +78,6 @@ class PageInitializer {
         // Initialize calendar manager if available
         if (typeof CalendarManager !== 'undefined') {
             window.calendarManager = new CalendarManager();
-            window.calendarLoader = new DynamicCalendarLoader(); // Legacy compatibility
             
             // Initialize the calendar system
             window.calendarManager.initialize().catch(error => {
