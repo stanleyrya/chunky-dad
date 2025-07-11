@@ -1098,11 +1098,5 @@ function showOnMap(lat, lng, eventName, barName) {
     }
 }
 
-// Initialize system
-document.addEventListener('DOMContentLoaded', () => {
-    const calendarLoader = new DynamicCalendarLoader();
-    window.calendarLoader = calendarLoader; // Make it globally accessible
-    calendarLoader.init();
-});
-
+// Export class for use in app.js - no auto-initialization
 window.DynamicCalendarLoader = DynamicCalendarLoader;

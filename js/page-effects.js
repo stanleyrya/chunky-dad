@@ -163,6 +163,13 @@ class PageEffectsManager {
     initializeMainPageEffects() {
         logger.componentInit('PAGE', 'Main page initialization');
         
+        // Immediately show the cities section which is critical
+        const citiesSection = document.querySelector('#cities');
+        if (citiesSection) {
+            citiesSection.classList.add('fade-in');
+            logger.debug('PAGE', 'Cities section made visible immediately');
+        }
+        
         // Add typing effect for hero title
         const heroTitle = document.querySelector('.hero-content h2');
         if (heroTitle) {
@@ -206,10 +213,12 @@ class PageEffectsManager {
                 const windowHeight = window.innerHeight;
                 const scrollPosition = window.scrollY;
                 
-                if (scrollPosition + windowHeight > sectionTop + 100) {
+                // More generous threshold to ensure sections become visible
+                if (scrollPosition + windowHeight > sectionTop + 50) {
                     if (!section.classList.contains('fade-in')) {
                         section.classList.add('fade-in');
                         animatedCount++;
+                        logger.debug('PAGE', `Section animated: ${section.className || section.id || 'unknown'}`);
                     }
                 }
             });
@@ -219,8 +228,12 @@ class PageEffectsManager {
             }
         };
 
+        // Initial call to show visible sections immediately
+        setTimeout(() => {
+            fadeInOnScroll();
+        }, 100);
+
         window.addEventListener('scroll', fadeInOnScroll);
-        fadeInOnScroll(); // Initial call
         logger.componentLoad('PAGE', 'Main page scroll animations enabled');
     }
 
@@ -254,11 +267,25 @@ class PageEffectsManager {
             body:not(.city-page) section:not(.hero) {
                 opacity: 0;
                 transform: translateY(40px);
+                transition: opacity 0.8s ease-out, transform 0.8s ease-out;
             }
             
-            body:not(.city-page) section.fade-in {
+            body:not(.city-page) section.fade-in,
+            body:not(.city-page) section:nth-child(-n+3) {
                 opacity: 1;
                 transform: translateY(0);
+            }
+            
+            /* Ensure critical sections are always visible after a delay */
+            body:not(.city-page) section {
+                animation: ensureVisible 1s ease-out 2s both;
+            }
+            
+            @keyframes ensureVisible {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
             }
             
             /* City pages: all sections visible immediately with smooth transitions */
