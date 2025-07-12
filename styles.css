@@ -287,7 +287,7 @@ header {
 .events-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 2rem;
+    gap: 1.5rem;
     width: 100%;
     box-sizing: border-box;
 }
@@ -295,7 +295,7 @@ header {
 .event-card {
     background: #f8f9ff;
     border-radius: 15px;
-    padding: 2rem;
+    padding: 1.5rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
@@ -895,15 +895,15 @@ header {
 }
 
 .events-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
 }
 
 .event-card.detailed {
     background: white;
     border-radius: 15px;
-    padding: 2rem;
+    padding: 1.5rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -946,6 +946,44 @@ header {
     display: flex;
     flex-direction: column;
     flex: 1;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.event-day {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.recurring-badge {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.detail-row {
+    display: flex;
+    margin-bottom: 0.5rem;
+}
+
+.detail-row.tea {
+    margin-top: 0.5rem;
+}
+
+.label {
+    font-weight: 600;
+    color: #333;
+    min-width: 60px;
+    margin-right: 1rem;
 }
 
 .event-card.detailed .event-details {
@@ -1525,6 +1563,12 @@ footer {
 
     .events-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .events-list {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
     .business-categories {
@@ -2153,6 +2197,12 @@ footer {
     
     .events-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .events-list {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
     .business-categories {
