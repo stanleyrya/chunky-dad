@@ -287,7 +287,7 @@ header {
 .events-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1.5rem;
+    gap: 2rem;
     width: 100%;
     box-sizing: border-box;
 }
@@ -295,7 +295,7 @@ header {
 .event-card {
     background: #f8f9ff;
     border-radius: 15px;
-    padding: 1.5rem;
+    padding: 2rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
@@ -517,45 +517,12 @@ header {
 }
 */
 
-    .calendar-controls {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.8rem;
-        width: 100%;
-        justify-content: center;
-        align-items: center;
-    }
-    
-    .view-toggle {
-        order: 1;
-        flex-shrink: 0;
-    }
-    
-    .today-btn {
-        order: 2;
-        flex-shrink: 0;
-        padding: 0.5rem 0.8rem;
-        font-size: 0.8rem;
-    }
-    
-    .date-navigation {
-        order: 3;
-        flex: 1;
-        max-width: 100%;
-        min-width: 200px;
-        padding: 0.3rem;
-    }
-    
-    .date-range {
-        font-size: 0.8rem;
-        min-width: 100px;
-    }
-    
-    .nav-btn {
-        width: 32px;
-        height: 32px;
-        font-size: 0.9rem;
-    }
+.calendar-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: nowrap;
+}
 
 .view-toggle {
     display: flex;
@@ -566,23 +533,28 @@ header {
     border: 2px solid #e8f2ff;
 }
 
-.today-btn {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+.view-btn {
+    background: transparent;
     border: none;
-    color: white;
     padding: 0.7rem 1.2rem;
-    border-radius: 12px;
+    border-radius: 8px;
     font-family: 'Poppins', sans-serif;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #666;
     font-size: 0.9rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.today-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+.view-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.view-btn:hover:not(.active) {
+    background: #f8f9ff;
+    color: #333;
 }
 
 .date-navigation {
@@ -624,28 +596,23 @@ header {
     font-size: 0.9rem;
 }
 
-.view-btn {
-    background: transparent;
+.today-btn {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
     border: none;
+    color: white;
     padding: 0.7rem 1.2rem;
-    border-radius: 8px;
+    border-radius: 12px;
     font-family: 'Poppins', sans-serif;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #666;
     font-size: 0.9rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.view-btn.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.view-btn:hover:not(.active) {
-    background: #f8f9ff;
-    color: #333;
+.today-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
 .calendar-grid {
@@ -895,22 +862,19 @@ header {
 }
 
 .events-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
 }
 
 .event-card.detailed {
     background: white;
     border-radius: 15px;
-    padding: 1.5rem;
+    padding: 2rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     will-change: transform;
-    display: flex;
-    flex-direction: column;
-    min-height: 200px;
 }
 
 .event-card.detailed:hover {
@@ -934,18 +898,15 @@ header {
 }
 
 .event-card.detailed h3 {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     color: #333;
     margin: 0;
     flex: 1;
-    line-height: 1.3;
-    padding-right: 1rem;
 }
 
-.event-card.detailed .event-body {
+.event-meta {
     display: flex;
     flex-direction: column;
-    flex: 1;
     align-items: flex-end;
     gap: 0.5rem;
 }
@@ -976,7 +937,9 @@ header {
 }
 
 .detail-row.tea {
-    margin-top: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
 }
 
 .label {
@@ -986,19 +949,16 @@ header {
     margin-right: 1rem;
 }
 
-.event-card.detailed .event-details {
+.value {
+    color: #666;
     flex: 1;
-    margin-bottom: 1rem;
 }
 
-.event-card.detailed .event-links {
-    margin-top: auto;
-    padding-top: 1rem;
-    border-top: 1px solid #f0f0f0;
+.event-links {
+    margin-top: 1rem;
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
-    justify-content: flex-start;
 }
 
 .event-links a {
@@ -1010,7 +970,6 @@ header {
     font-size: 0.9rem;
     font-weight: 500;
     transition: transform 0.3s ease;
-    white-space: nowrap;
 }
 
 .event-links a:hover {
@@ -1098,9 +1057,6 @@ header {
     padding: 2rem;
     border-radius: 15px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
 }
 
 .contact-form input,
@@ -1114,22 +1070,6 @@ header {
     font-family: 'Poppins', sans-serif;
     font-size: 1rem;
     transition: border-color 0.3s ease;
-    box-sizing: border-box;
-}
-
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
-    .contact-form {
-        padding: 1.5rem;
-        margin: 0;
-    }
-    
-    .contact-form input,
-    .contact-form textarea,
-    .contact-form select {
-        padding: 0.8rem;
-        font-size: 16px; /* Prevents zoom on iOS */
-    }
 }
 
 .contact-form input:focus,
@@ -1330,7 +1270,7 @@ header {
     justify-content: center;
     width: 26px;
     height: 26px;
-    margin-top: -2px; /* Adjusted from -6px to be even lower and better centered */
+    margin-top: -12px;
 }
 
 .marker-pin:hover::before {
@@ -1410,32 +1350,6 @@ header {
     width: 100vw;
     height: 100vh;
     border-radius: 0;
-}
-
-/* Mobile fullscreen styles */
-.map-container.mobile-fullscreen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 9999;
-    background: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border-radius: 0;
-}
-
-.map-container.mobile-fullscreen #events-map {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-}
-
-.map-container.mobile-fullscreen .leaflet-control-container {
-    z-index: 10000;
 }
 
 .error-message {
@@ -1563,12 +1477,6 @@ footer {
 
     .events-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    .events-list {
-        grid-template-columns: 1fr;
-        gap: 1rem;
     }
 
     .business-categories {
@@ -2135,7 +2043,6 @@ footer {
     .marker-icon {
         font-size: 1.2rem;
         line-height: 20px;
-        margin-top: -3px; /* Further reduced for mobile to center better */
     }
 
 
@@ -2197,12 +2104,6 @@ footer {
     
     .events-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .events-list {
-        grid-template-columns: 1fr;
-        gap: 1rem;
     }
     
     .business-categories {
@@ -3432,54 +3333,4 @@ footer {
     .weekly-calendar .container {
         padding: 0 1rem;
     }
-}
-
-.event-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.5rem;
-}
-
-.event-day {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.recurring-badge {
-    background: linear-gradient(45deg, #10b981, #059669);
-    color: white;
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    display: inline-block;
-}
-
-.detail-row {
-    display: flex;
-    margin-bottom: 0.5rem;
-}
-
-.detail-row.tea {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e0e0e0;
-}
-
-.label {
-    font-weight: 600;
-    color: #333;
-    min-width: 60px;
-    margin-right: 1rem;
-}
-
-.value {
-    color: #666;
-    flex: 1;
 }

@@ -88,44 +88,17 @@ class FormsManager {
         submitButton.textContent = 'Sending...';
         submitButton.disabled = true;
         
-        // Create mailto link with the form data
-        const subject = encodeURIComponent(`Bear Intel Submission: ${formData.category || 'General'}`);
-        const body = encodeURIComponent(
-            `Name: ${formData.name}\n` +
-            `Email: ${formData.email}\n` +
-            `Category: ${formData.category || 'Not specified'}\n\n` +
-            `Message:\n${formData.message}\n\n` +
-            `---\nSubmitted via Chunky Dad website form`
-        );
-        
-        const mailtoLink = `mailto:info@chunky.dad?subject=${subject}&body=${body}`;
-        
-        // Open email client
-        try {
-            window.location.href = mailtoLink;
+        // Simulate form submission (replace with actual API call when needed)
+        setTimeout(() => {
+            logger.pageLoad('FORM', 'Form submitted successfully');
+            alert('Thank you for your message! We\'ll get back to you soon.');
             
-            // Show success message after a short delay
-            setTimeout(() => {
-                logger.pageLoad('FORM', 'Form submission completed - email client opened');
-                alert('Thank you! Your email client should open with your message. If it doesn\'t open automatically, please email us at info@chunky.dad');
-                
-                this.resetForm();
-                
-                // Restore button state
-                submitButton.textContent = originalText;
-                submitButton.disabled = false;
-            }, 1000);
-            
-        } catch (error) {
-            logger.componentError('FORM', 'Error opening email client', error);
-            
-            // Fallback: show email address
-            alert(`Please send your message to: info@chunky.dad\n\nSubject: ${decodeURIComponent(subject)}\n\nMessage: ${formData.message}`);
+            this.resetForm();
             
             // Restore button state
             submitButton.textContent = originalText;
             submitButton.disabled = false;
-        }
+        }, 2000);
     }
 
     resetForm() {

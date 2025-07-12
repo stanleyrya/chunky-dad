@@ -135,7 +135,7 @@ class CalendarCore {
             'tea': 'tea', 'info': 'tea', 'description': 'tea',
             'website': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
-            'gmaps': 'gmaps', 'google maps': 'gmaps', 'maps': 'gmaps'
+            'gmaps': 'gmaps', 'google maps': 'gmaps'
         };
 
         let textBlock = description;
@@ -148,63 +148,18 @@ class CalendarCore {
         
         const lines = textBlock.replace("\\n", "\n").split("\n");
         
-        logger.debug('CALENDAR', 'Parsing event description', {
-            originalLines: lines.length,
-            textLength: textBlock.length
-        });
-        
         for (let line of lines) {
             line = line.trim();
             if (!line) continue;
             
-            // More robust parsing for key-value pairs
-            const keyValueMatch = line.match(/^([^:=\-]+)[:=\-]\s*(.+)$/);
+            const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
             if (keyValueMatch) {
                 const key = keyValueMatch[1].trim().toLowerCase();
                 const value = keyValueMatch[2].trim();
                 const mappedKey = keyMap[key] || key;
-                
-                // Prevent overwriting existing values unless the new value is more specific
-                if (!data[mappedKey] || value.length > data[mappedKey].length) {
-                    data[mappedKey] = value;
-                    logger.debug('CALENDAR', `Parsed key-value pair: ${key} -> ${mappedKey} = ${value}`);
-                }
-            } else {
-                // Check if the line contains a URL without a key
-                const urlMatch = line.match(/(https?:\/\/[^\s]+)/);
-                if (urlMatch) {
-                    const url = urlMatch[1];
-                    // Try to determine the type of URL
-                    if (url.includes('instagram.com')) {
-                        if (!data.instagram) {
-                            data.instagram = url;
-                            logger.debug('CALENDAR', `Auto-detected Instagram URL: ${url}`);
-                        }
-                    } else if (url.includes('facebook.com')) {
-                        if (!data.facebook) {
-                            data.facebook = url;
-                            logger.debug('CALENDAR', `Auto-detected Facebook URL: ${url}`);
-                        }
-                    } else if (url.includes('maps.google.com') || url.includes('goo.gl/maps')) {
-                        if (!data.gmaps) {
-                            data.gmaps = url;
-                            logger.debug('CALENDAR', `Auto-detected Google Maps URL: ${url}`);
-                        }
-                    } else {
-                        // Generic website URL
-                        if (!data.website) {
-                            data.website = url;
-                            logger.debug('CALENDAR', `Auto-detected website URL: ${url}`);
-                        }
-                    }
-                }
+                data[mappedKey] = value;
             }
         }
-        
-        logger.debug('CALENDAR', 'Description parsing complete', {
-            keysFound: Object.keys(data),
-            dataEntries: Object.entries(data).map(([k, v]) => `${k}: ${v.substring(0, 50)}...`)
-        });
         
         return Object.keys(data).length > 0 ? data : null;
     }
@@ -213,36 +168,18 @@ class CalendarCore {
     parseLinks(data) {
         const links = [];
         
-        // Process links in order of priority
-        const linkTypes = [
-            { key: 'website', label: '🌐 Website' },
-            { key: 'instagram', label: '📷 Instagram' },
-            { key: 'facebook', label: '📘 Facebook' },
-            { key: 'gmaps', label: '🗺️ Google Maps' }
-        ];
-        
-        for (const linkType of linkTypes) {
-            const url = data[linkType.key];
-            if (url && url.trim()) {
-                // Validate URL format
-                try {
-                    new URL(url);
-                    links.push({ 
-                        type: linkType.key, 
-                        url: url.trim(), 
-                        label: linkType.label 
-                    });
-                    logger.debug('CALENDAR', `Added ${linkType.key} link: ${url.trim()}`);
-                } catch (error) {
-                    logger.warn('CALENDAR', `Invalid URL for ${linkType.key}: ${url}`, error);
-                }
-            }
+        if (data.website) {
+            links.push({ type: 'website', url: data.website, label: '🌐 Website' });
         }
-        
-        logger.debug('CALENDAR', 'Links parsing complete', {
-            linkCount: links.length,
-            linkTypes: links.map(l => l.type)
-        });
+        if (data.instagram) {
+            links.push({ type: 'instagram', url: data.instagram, label: '📷 Instagram' });
+        }
+        if (data.facebook) {
+            links.push({ type: 'facebook', url: data.facebook, label: '📘 Facebook' });
+        }
+        if (data.gmaps) {
+            links.push({ type: 'gmaps', url: data.gmaps, label: '🗺️ Google Maps' });
+        }
         
         return links.length > 0 ? links : null;
     }
