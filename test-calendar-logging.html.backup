@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Parsing Test - Chunky Dad</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+            display: block;
+        }
+        .test-button:hover {
+            background: #5a67d8;
+        }
+        .results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-debug { color: #6c757d; }
+        .log-info { color: #0066cc; }
+        .log-warn { color: #f39c12; }
+        .log-error { color: #e74c3c; }
+        .log-success { color: #27ae60; }
+        .events-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .event-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .event-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .event-details {
+            color: #666;
+            font-size: 14px;
+        }
+        .recurring-badge {
+            background: #27ae60;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 Calendar Parsing Test & Debug Center</h1>
+        
+        <div class="test-section">
+            <h2>🔍 About This Test Page</h2>
+            <p><strong>Purpose:</strong> This comprehensive test page validates the calendar parsing functionality, logging system, and data processing capabilities of the Chunky Dad calendar system.</p>
+            
+            <h3>📋 What This Page Tests:</h3>
+            <ul>
+                <li><strong>iCal File Parsing:</strong> Validates proper parsing of Google Calendar .ics files</li>
+                <li><strong>Event Data Extraction:</strong> Tests extraction of event names, dates, times, locations, and descriptions</li>
+                <li><strong>Recurring Event Processing:</strong> Validates weekly, monthly, and custom recurring patterns</li>
+                <li><strong>Coordinate Parsing:</strong> Tests latitude/longitude extraction from location data</li>
+                <li><strong>Description Field Parsing:</strong> Validates key-value pair extraction from event descriptions</li>
+                <li><strong>Logging System:</strong> Comprehensive test of the centralized logging system with color-coded output</li>
+                <li><strong>Error Handling:</strong> Tests graceful handling of malformed calendar data</li>
+            </ul>
+            
+            <h3>📊 Sample Data Contains:</h3>
+            <ul>
+                <li><strong>7 Total Events</strong> with varying complexity levels</li>
+                <li><strong>Weekly Events:</strong> Bears Are Animals, Bear Happy Hour, Beer Blast</li>
+                <li><strong>Monthly Events:</strong> Goldiloxx, Last Saturday Party, Third Thursday Meetup, First Sunday Brunch</li>
+                <li><strong>Complex Recurring Patterns:</strong> Last Saturday, Third Thursday, First Sunday</li>
+                <li><strong>Location Data:</strong> Both coordinate-based and text-based locations</li>
+                <li><strong>Rich Descriptions:</strong> Events with websites, Instagram, Google Maps links</li>
+                <li><strong>Variable Cover Charges:</strong> Free, paid, and time-based pricing</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 Calendar Parsing Test</h2>
+            <p>Load and parse the sample NYC calendar file to test the enhanced logging functionality and data extraction.</p>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="test-button" onclick="testCalendarParsing()">
+                    📊 Parse Sample Calendar File
+                </button>
+                
+                <button class="test-button" onclick="clearLogs()">
+                    🧹 Clear Logs
+                </button>
+                
+                <button class="test-button" onclick="showEventStats()">
+                    📈 Show Event Statistics
+                </button>
+                
+                <button class="test-button" onclick="testRecurringEvents()">
+                    🔄 Test Recurring Event Logic
+                </button>
+                
+                <button class="test-button" onclick="downloadLogData()">
+                    💾 Download Log Data
+                </button>
+            </div>
+            
+            <div class="results" id="log-display">
+                <div class="log-entry log-info">🚀 Calendar Test Center Ready! Click "Parse Sample Calendar File" to begin comprehensive testing...</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📅 Parsed Events</h2>
+            <p>Detailed view of all successfully parsed events with their extracted data fields.</p>
+            <div id="events-display" class="events-display">
+                <!-- Events will be displayed here -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Event Statistics & Analysis</h2>
+            <div id="stats-display" style="display: none;">
+                <!-- Statistics will be displayed here -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔄 Recurring Event Testing</h2>
+            <p>Test the recurring event logic with different date ranges and patterns.</p>
+            <div id="recurring-test-display" style="display: none;">
+                <!-- Recurring event test results will be displayed here -->
+            </div>
+        </div>
+        
+
+    </div>
+    
+    <script src="js/logger.js"></script>
+    <script src="js/calendar-core.js"></script>
+    
+    <script>
+        // Add comprehensive error handling and diagnostics
+        window.addEventListener('error', function(e) {
+            console.error('Global JavaScript Error:', e.error);
+            document.getElementById('log-display').innerHTML += 
+                `<div class="log-entry log-error">💥 JavaScript Error: ${e.error.message} at ${e.filename}:${e.lineno}</div>`;
+        });
+
+        // Check if scripts loaded properly
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Diagnostic Check:');
+            console.log('- logger available:', typeof logger !== 'undefined');
+            console.log('- CalendarCore available:', typeof CalendarCore !== 'undefined');
+            console.log('- ChunkyLogger available:', typeof ChunkyLogger !== 'undefined');
+            
+            if (typeof logger === 'undefined') {
+                document.getElementById('log-display').innerHTML += 
+                    '<div class="log-entry log-error">❌ Logger not loaded! Check js/logger.js</div>';
+            }
+            if (typeof CalendarCore === 'undefined') {
+                document.getElementById('log-display').innerHTML += 
+                    '<div class="log-entry log-error">❌ CalendarCore not loaded! Check js/calendar-core.js</div>';
+            }
+        });
+
+        // Override logger output to display in our test page (with safety check)
+        let originalLog = null;
+        function setupLoggerOverride() {
+            if (typeof logger !== 'undefined' && logger.log) {
+                originalLog = logger.log;
+                logger.log = function(level, component, message, data) {
+                    originalLog.call(this, level, component, message, data);
+                    
+                    const logDisplay = document.getElementById('log-display');
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `log-entry log-${level.toLowerCase()}`;
+                    
+                    let logText = `[${level}] ${component}: ${message}`;
+                    if (data && typeof data === 'object') {
+                        logText += ' ' + JSON.stringify(data, null, 2);
+                    }
+                    
+                    logEntry.textContent = logText;
+                    logDisplay.appendChild(logEntry);
+                    logDisplay.scrollTop = logDisplay.scrollHeight;
+                };
+            }
+        }
+        
+        // Set up logger override when page loads
+        window.addEventListener('load', setupLoggerOverride);
+        
+        let calendarCore = null;
+        let parsedEvents = [];
+        
+        async function testCalendarParsing() {
+            try {
+                logger.info('TEST', 'Starting calendar parsing test');
+                
+                // Initialize calendar core
+                calendarCore = new CalendarCore();
+                
+                // Load the sample calendar file
+                const response = await fetch('data/sample-calendar-file-nyc.ics');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const icalText = await response.text();
+                logger.info('TEST', 'Successfully loaded sample calendar file', {
+                    fileSize: icalText.length,
+                    fileName: 'sample-calendar-file-nyc.ics'
+                });
+                
+                // Parse the calendar data
+                parsedEvents = calendarCore.parseICalData(icalText);
+                
+                // Display the parsed events
+                displayEvents(parsedEvents);
+                
+                logger.info('TEST', 'Calendar parsing test completed successfully', {
+                    totalEvents: parsedEvents.length,
+                    recurringEvents: parsedEvents.filter(e => e.recurring).length,
+                    oneTimeEvents: parsedEvents.filter(e => !e.recurring).length
+                });
+                
+            } catch (error) {
+                logger.error('TEST', 'Calendar parsing test failed', error);
+            }
+        }
+        
+        function displayEvents(events) {
+            const eventsDisplay = document.getElementById('events-display');
+            eventsDisplay.innerHTML = '';
+            
+            if (events.length === 0) {
+                eventsDisplay.innerHTML = '<div class="event-card">No events parsed</div>';
+                return;
+            }
+            
+            events.forEach(event => {
+                const eventCard = document.createElement('div');
+                eventCard.className = 'event-card';
+                
+                eventCard.innerHTML = `
+                    <div class="event-name">
+                        ${event.name}
+                        ${event.recurring ? '<span class="recurring-badge">Recurring</span>' : ''}
+                    </div>
+                    <div class="event-details">
+                        <div><strong>Day:</strong> ${event.day}</div>
+                        <div><strong>Time:</strong> ${event.time}</div>
+                        <div><strong>Venue:</strong> ${event.bar || 'TBD'}</div>
+                        <div><strong>Cover:</strong> ${event.cover || 'TBD'}</div>
+                        ${event.tea ? `<div><strong>Tea:</strong> ${event.tea}</div>` : ''}
+                        ${event.coordinates ? `<div><strong>Coordinates:</strong> ${event.coordinates.lat}, ${event.coordinates.lng}</div>` : ''}
+                        ${event.eventType ? `<div><strong>Type:</strong> ${event.eventType}</div>` : ''}
+                    </div>
+                `;
+                
+                eventsDisplay.appendChild(eventCard);
+            });
+        }
+        
+
+        
+        function clearLogs() {
+            document.getElementById('log-display').innerHTML = '<div class="log-entry log-info">🧹 Logs cleared. Click "Parse Sample Calendar File" to test...</div>';
+        }
+        
+        function showEventStats() {
+            if (!parsedEvents || parsedEvents.length === 0) {
+                logger.warn('TEST', 'No events parsed yet. Please parse calendar file first.');
+                return;
+            }
+            
+            logger.info('TEST', 'Generating event statistics');
+            
+            const stats = {
+                totalEvents: parsedEvents.length,
+                recurringEvents: parsedEvents.filter(e => e.recurring).length,
+                oneTimeEvents: parsedEvents.filter(e => !e.recurring).length,
+                weeklyEvents: parsedEvents.filter(e => e.eventType === 'weekly').length,
+                monthlyEvents: parsedEvents.filter(e => e.eventType === 'monthly').length,
+                eventsWithCoordinates: parsedEvents.filter(e => e.coordinates?.lat && e.coordinates?.lng).length,
+                eventsWithLinks: parsedEvents.filter(e => e.links && e.links.length > 0).length,
+                eventsWithTea: parsedEvents.filter(e => e.tea).length,
+                uniqueVenues: [...new Set(parsedEvents.filter(e => e.bar && e.bar !== 'TBD').map(e => e.bar))].length,
+                eventTypes: {}
+            };
+            
+            // Count event types
+            parsedEvents.forEach(event => {
+                const type = event.eventType || 'unknown';
+                stats.eventTypes[type] = (stats.eventTypes[type] || 0) + 1;
+            });
+            
+            displayEventStats(stats);
+            
+            logger.info('TEST', 'Event statistics generated', stats);
+        }
+        
+        function displayEventStats(stats) {
+            const statsDisplay = document.getElementById('stats-display');
+            statsDisplay.style.display = 'block';
+            
+            const eventTypesList = Object.entries(stats.eventTypes)
+                .map(([type, count]) => `<li><strong>${type}:</strong> ${count} events</li>`)
+                .join('');
+            
+            statsDisplay.innerHTML = `
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                    <div class="stat-card" style="background: #f0f9ff; padding: 15px; border-radius: 8px; border-left: 4px solid #0066cc;">
+                        <h4 style="margin: 0 0 10px 0; color: #0066cc;">📊 Event Totals</h4>
+                        <p><strong>Total Events:</strong> ${stats.totalEvents}</p>
+                        <p><strong>Recurring:</strong> ${stats.recurringEvents}</p>
+                        <p><strong>One-time:</strong> ${stats.oneTimeEvents}</p>
+                    </div>
+                    
+                    <div class="stat-card" style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #27ae60;">
+                        <h4 style="margin: 0 0 10px 0; color: #27ae60;">🔄 Recurring Patterns</h4>
+                        <p><strong>Weekly:</strong> ${stats.weeklyEvents}</p>
+                        <p><strong>Monthly:</strong> ${stats.monthlyEvents}</p>
+                        <p><strong>Recurrence Rate:</strong> ${Math.round((stats.recurringEvents / stats.totalEvents) * 100)}%</p>
+                    </div>
+                    
+                    <div class="stat-card" style="background: #fdf2f8; padding: 15px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                        <h4 style="margin: 0 0 10px 0; color: #e74c3c;">📍 Location Data</h4>
+                        <p><strong>With Coordinates:</strong> ${stats.eventsWithCoordinates}</p>
+                        <p><strong>Unique Venues:</strong> ${stats.uniqueVenues}</p>
+                        <p><strong>Location Coverage:</strong> ${Math.round((stats.eventsWithCoordinates / stats.totalEvents) * 100)}%</p>
+                    </div>
+                    
+                    <div class="stat-card" style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f39c12;">
+                        <h4 style="margin: 0 0 10px 0; color: #f39c12;">🔗 Rich Data</h4>
+                        <p><strong>With Links:</strong> ${stats.eventsWithLinks}</p>
+                        <p><strong>With Tea/Info:</strong> ${stats.eventsWithTea}</p>
+                        <p><strong>Data Richness:</strong> ${Math.round((stats.eventsWithLinks / stats.totalEvents) * 100)}%</p>
+                    </div>
+                </div>
+                
+                <div class="event-types" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">📋 Event Types Breakdown</h4>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        ${eventTypesList}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function testRecurringEvents() {
+            if (!parsedEvents || parsedEvents.length === 0) {
+                logger.warn('TEST', 'No events parsed yet. Please parse calendar file first.');
+                return;
+            }
+            
+            logger.info('TEST', 'Testing recurring event logic');
+            
+            const testDates = [
+                { name: 'This Week', start: new Date(), end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+                { name: 'Next Month', start: new Date(), end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+                { name: 'Next 3 Months', start: new Date(), end: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) }
+            ];
+            
+            const recurringEvents = parsedEvents.filter(e => e.recurring);
+            const results = [];
+            
+            testDates.forEach(testPeriod => {
+                const eventsInPeriod = recurringEvents.filter(event => {
+                    if (!calendarCore) return false;
+                    return calendarCore.isRecurringEventInPeriod(event, testPeriod.start, testPeriod.end);
+                });
+                
+                results.push({
+                    period: testPeriod.name,
+                    count: eventsInPeriod.length,
+                    events: eventsInPeriod.map(e => e.name)
+                });
+                
+                logger.debug('TEST', `${testPeriod.name}: ${eventsInPeriod.length} recurring events`, {
+                    period: testPeriod.name,
+                    events: eventsInPeriod.map(e => e.name)
+                });
+            });
+            
+            displayRecurringEventResults(results);
+            
+            logger.info('TEST', 'Recurring event logic test completed', {
+                totalRecurringEvents: recurringEvents.length,
+                testPeriods: results.length
+            });
+        }
+        
+        function displayRecurringEventResults(results) {
+            const recurringDisplay = document.getElementById('recurring-test-display');
+            recurringDisplay.style.display = 'block';
+            
+            const resultsHtml = results.map(result => `
+                <div class="recurring-result" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #667eea;">
+                    <h4 style="margin: 0 0 10px 0; color: #667eea;">📅 ${result.period}</h4>
+                    <p><strong>Events Found:</strong> ${result.count}</p>
+                    ${result.events.length > 0 ? `
+                        <p><strong>Event Names:</strong></p>
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            ${result.events.map(name => `<li>${name}</li>`).join('')}
+                        </ul>
+                    ` : '<p><em>No recurring events found in this period</em></p>'}
+                </div>
+            `).join('');
+            
+            recurringDisplay.innerHTML = `
+                <div class="recurring-results">
+                    <h4>🔄 Recurring Event Detection Results</h4>
+                    <p>Testing how many recurring events would appear in different time periods:</p>
+                    ${resultsHtml}
+                </div>
+            `;
+        }
+        
+        function downloadLogData() {
+            logger.info('TEST', 'Preparing log data download');
+            
+            const logEntries = Array.from(document.querySelectorAll('.log-entry'))
+                .map(entry => entry.textContent);
+            
+            const logData = {
+                timestamp: new Date().toISOString(),
+                testSession: 'calendar-parsing-test',
+                totalLogEntries: logEntries.length,
+                parsedEvents: parsedEvents?.length || 0,
+                logs: logEntries
+            };
+            
+            const dataStr = JSON.stringify(logData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `calendar-test-logs-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            
+            logger.info('TEST', 'Log data download initiated', {
+                entries: logEntries.length,
+                filename: link.download
+            });
+        }
+    </script>
+</body>
+</html>
