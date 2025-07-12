@@ -316,8 +316,8 @@ class DynamicCalendarLoader extends CalendarCore {
     // Generate event card (same as original)
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => 
-            `<a href="${link.url}" target="_blank" rel="noopener">${link.label}</a>`
-        ).join('') : '';
+            `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`
+        ).join(' ') : '';
 
         const teaHtml = event.tea ? `
             <div class="detail-row tea">
