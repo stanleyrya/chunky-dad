@@ -298,10 +298,6 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate event card (same as original)
     generateEventCard(event) {
-        const linksHtml = event.links ? event.links.map(link => 
-            `<a href="${link.url}" target="_blank" rel="noopener">${link.label}</a>`
-        ).join('') : '';
-
         const teaHtml = event.tea ? `
             <div class="detail-row tea">
                 <span class="label">Tea:</span>
@@ -326,6 +322,10 @@ class DynamicCalendarLoader extends CalendarCore {
         const recurringBadge = event.recurring ? 
             `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
 
+        const linksHtml = event.links ? event.links.map(link => 
+            `<a href="${link.url}" target="_blank" rel="noopener">${link.label}</a>`
+        ).join('') : '';
+
         return `
             <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
@@ -335,16 +335,16 @@ class DynamicCalendarLoader extends CalendarCore {
                         ${recurringBadge}
                     </div>
                 </div>
-                <div class="event-details">
-                    ${locationHtml}
-                    <div class="detail-row">
-                        <span class="label">Cover:</span>
-                        <span class="value">${event.cover}</span>
+                <div class="event-body">
+                    <div class="event-details">
+                        ${locationHtml}
+                        <div class="detail-row">
+                            <span class="label">Cover:</span>
+                            <span class="value">${event.cover}</span>
+                        </div>
+                        ${teaHtml}
                     </div>
-                    ${teaHtml}
-                    <div class="event-links">
-                        ${linksHtml}
-                    </div>
+                    ${linksHtml ? `<div class="event-links">${linksHtml}</div>` : ''}
                 </div>
             </div>
         `;
@@ -728,7 +728,7 @@ class DynamicCalendarLoader extends CalendarCore {
             fullscreenControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-fullscreen');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
+                    <button class="map-control-btn" onclick="window.toggleFullscreen()" title="Toggle Fullscreen">
                         📱
                     </button>
                 `;
@@ -741,7 +741,7 @@ class DynamicCalendarLoader extends CalendarCore {
             fitMarkersControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="fitAllMarkers()" title="Show All Events">
+                    <button class="map-control-btn" onclick="window.fitAllMarkers()" title="Show All Events">
                         🎯
                     </button>
                 `;
@@ -754,7 +754,7 @@ class DynamicCalendarLoader extends CalendarCore {
             myLocationControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-my-location');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="showMyLocation()" title="Show My Location">
+                    <button class="map-control-btn" onclick="window.showMyLocation()" title="Show My Location">
                         📍
                     </button>
                 `;
