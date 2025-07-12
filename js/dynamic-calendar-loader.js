@@ -309,6 +309,13 @@ class DynamicCalendarLoader extends CalendarCore {
             </div>
         ` : '';
 
+        const coverHtml = event.cover && event.cover !== 'Check event details' && event.cover.trim() !== '' ? `
+            <div class="detail-row">
+                <span class="label">Cover:</span>
+                <span class="value">${event.cover}</span>
+            </div>
+        ` : '';
+
         const locationHtml = event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
             `<div class="detail-row">
                 <span class="label">Location:</span>
@@ -337,10 +344,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 </div>
                 <div class="event-details">
                     ${locationHtml}
-                    <div class="detail-row">
-                        <span class="label">Cover:</span>
-                        <span class="value">${event.cover}</span>
-                    </div>
+                    ${coverHtml}
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
