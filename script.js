@@ -51,13 +51,7 @@ function showOnMap(lat, lng, eventName, barName) {
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
         const group = new L.featureGroup(window.eventsMapMarkers);
-        // Use different padding for mobile vs desktop
-        const isMobile = window.innerWidth <= 768;
-        const padding = isMobile ? [10, 10] : [20, 20];
-        window.eventsMap.fitBounds(group.getBounds(), {
-            padding: padding,
-            maxZoom: 13
-        });
+        window.eventsMap.fitBounds(group.getBounds().pad(0.1));
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     }
 }

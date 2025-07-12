@@ -298,17 +298,14 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate event card (same as original)
     generateEventCard(event) {
+        const linksHtml = event.links ? event.links.map(link => 
+            `<a href="${link.url}" target="_blank" rel="noopener">${link.label}</a>`
+        ).join('') : '';
+
         const teaHtml = event.tea ? `
             <div class="detail-row tea">
                 <span class="label">Tea:</span>
                 <span class="value">${event.tea}</span>
-            </div>
-        ` : '';
-
-        const coverHtml = event.cover && event.cover !== 'Check event details' && event.cover.trim() !== '' ? `
-            <div class="detail-row">
-                <span class="label">Cover:</span>
-                <span class="value">${event.cover}</span>
             </div>
         ` : '';
 
@@ -329,10 +326,6 @@ class DynamicCalendarLoader extends CalendarCore {
         const recurringBadge = event.recurring ? 
             `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
 
-        const linksHtml = event.links ? event.links.map(link => 
-            `<a href="${link.url}" target="_blank" rel="noopener">${link.label}</a>`
-        ).join('') : '';
-
         return `
             <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
@@ -344,12 +337,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 </div>
                 <div class="event-details">
                     ${locationHtml}
-                    ${coverHtml}
+                    <div class="detail-row">
+                        <span class="label">Cover:</span>
+                        <span class="value">${event.cover}</span>
+                    </div>
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
                     </div>
-                    ${linksHtml ? `<div class="event-links">${linksHtml}</div>` : ''}
                 </div>
             </div>
         `;
@@ -733,7 +728,7 @@ class DynamicCalendarLoader extends CalendarCore {
             fullscreenControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-fullscreen');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="window.toggleFullscreen()" title="Toggle Fullscreen">
+                    <button class="map-control-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
                         📱
                     </button>
                 `;
@@ -746,7 +741,7 @@ class DynamicCalendarLoader extends CalendarCore {
             fitMarkersControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="window.fitAllMarkers()" title="Show All Events">
+                    <button class="map-control-btn" onclick="fitAllMarkers()" title="Show All Events">
                         🎯
                     </button>
                 `;
@@ -759,7 +754,7 @@ class DynamicCalendarLoader extends CalendarCore {
             myLocationControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-my-location');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="window.showMyLocation()" title="Show My Location">
+                    <button class="map-control-btn" onclick="showMyLocation()" title="Show My Location">
                         📍
                     </button>
                 `;
@@ -793,8 +788,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     </div>
                 `,
                 iconSize: [44, 56],
-                iconAnchor: [22, 52], // Adjusted from 56 to 52 to center better
-                popupAnchor: [0, -52]
+                iconAnchor: [22, 56],
+                popupAnchor: [0, -56]
             });
 
             events.forEach(event => {
@@ -821,11 +816,8 @@ class DynamicCalendarLoader extends CalendarCore {
             // Fit map to show all markers using Leaflet's built-in bounds calculation
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
-                // Use different padding for mobile vs desktop
-                const isMobile = window.innerWidth <= 768;
-                const padding = isMobile ? [10, 10] : [20, 20];
                 map.fitBounds(group.getBounds(), {
-                    padding: padding,
+                    padding: [20, 20],
                     maxZoom: 13
                 });
             }
@@ -1135,13 +1127,7 @@ function showOnMap(lat, lng, eventName, barName) {
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
         const group = new L.featureGroup(window.eventsMapMarkers);
-        // Use different padding for mobile vs desktop
-        const isMobile = window.innerWidth <= 768;
-        const padding = isMobile ? [10, 10] : [20, 20];
-        window.eventsMap.fitBounds(group.getBounds(), {
-            padding: padding,
-            maxZoom: 13
-        });
+        window.eventsMap.fitBounds(group.getBounds().pad(0.1));
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     }
 }
