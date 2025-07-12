@@ -13,12 +13,27 @@ body {
     margin: 0;
     padding: 0;
     padding-top: 80px; /* Account for fixed header */
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+html {
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* Prevent all elements from overflowing on small screens */
+@media (max-width: 768px) {
+    * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
 }
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Header and Navigation */
@@ -42,6 +57,8 @@ header {
     max-width: 1200px;
     margin: 0 auto;
     position: relative;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .logo h1 {
@@ -193,8 +210,10 @@ header {
 
 .cities-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .city-card {
@@ -267,8 +286,10 @@ header {
 
 .events-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 2rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .event-card {
@@ -338,8 +359,10 @@ header {
 
 .business-categories {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 2rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .category-card {
@@ -1147,7 +1170,7 @@ header {
         border: none;
         box-shadow: none;
         padding: 0;
-        margin: 0 -1rem;
+        margin: 0;
     }
     
     #events-map {
@@ -1492,7 +1515,7 @@ footer {
     }
 
     .business-categories {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
     }
 
     .contact-content {
@@ -1641,14 +1664,27 @@ footer {
     }
 
     .calendar-controls {
-        flex-direction: row;
+        flex-direction: column;
         gap: 0.5rem;
         flex-wrap: wrap;
         justify-content: center;
+        align-items: center;
+        width: 100%;
     }
 
     .date-navigation {
+        order: 1;
+        margin-bottom: 0.5rem;
+        max-width: 300px;
+        width: 100%;
+    }
+    
+    .view-toggle {
         order: 2;
+    }
+    
+    .today-btn {
+        order: 3;
     }
 
     .date-range {
@@ -1707,8 +1743,8 @@ footer {
 
     .events-map-section {
         padding: 1rem 0;
-        margin-left: -1rem;
-        margin-right: -1rem;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .events-map-section h2 {
@@ -1786,7 +1822,7 @@ footer {
     }
 
     .nav-container {
-        padding: 1rem;
+        padding: 1rem 0.5rem;
     }
 
     .logo h1 {
@@ -2099,6 +2135,35 @@ footer {
 }
 
 /* Extra aggressive spacing reduction for iPhone and very small screens */
+@media (max-width: 480px) {
+    .cities-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .business-categories {
+        grid-template-columns: 1fr;
+    }
+    
+    .calendar-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+    
+    .view-toggle {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    
+    .date-navigation {
+        max-width: 280px;
+    }
+}
+
 @media (max-width: 390px) {
     .calendar-day.week-view {
         min-height: auto;
