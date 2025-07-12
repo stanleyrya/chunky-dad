@@ -91,6 +91,18 @@
             font-size: 12px;
             margin-left: 10px;
         }
+        .city-selector {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .city-selector select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -98,11 +110,28 @@
         <h1>📅 Calendar Parsing Test</h1>
         
         <div class="test-section">
-            <h2>Test Calendar File Parsing</h2>
-            <p>This test page will load and parse the sample NYC calendar file to verify the enhanced logging functionality.</p>
+            <h2>Test Calendar Data Loading</h2>
+            <p>This test page will load calendar data using the proper DynamicCalendarLoader class and city configuration.</p>
+            
+            <div class="city-selector">
+                <label for="city-select">Select City: </label>
+                <select id="city-select">
+                    <option value="">Choose a city...</option>
+                    <option value="new-york">🗽 New York</option>
+                    <option value="seattle">🌲 Seattle</option>
+                    <option value="los-angeles">🌴 Los Angeles</option>
+                    <option value="toronto">🍁 Toronto</option>
+                    <option value="london">🇬🇧 London</option>
+                    <option value="chicago">🏙️ Chicago</option>
+                </select>
+            </div>
             
             <button class="test-button" onclick="testCalendarParsing()">
-                Parse Sample Calendar File
+                Load Calendar Data
+            </button>
+            
+            <button class="test-button" onclick="testLocalCalendarFile()">
+                Test Local Calendar File
             </button>
             
             <button class="test-button" onclick="clearLogs()">
@@ -110,7 +139,7 @@
             </button>
             
             <div class="results" id="log-display">
-                <div class="log-entry log-info">Click "Parse Sample Calendar File" to test the enhanced logging...</div>
+                <div class="log-entry log-info">Select a city and click "Load Calendar Data" to test...</div>
             </div>
         </div>
         
@@ -136,7 +165,9 @@
     </div>
     
     <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
     <script src="js/calendar-core.js"></script>
+    <script src="js/dynamic-calendar-loader.js"></script>
     
     <script>
         // Override logger output to display in our test page
@@ -158,24 +189,63 @@
             logDisplay.scrollTop = logDisplay.scrollHeight;
         };
         
-        let calendarCore = null;
+        let calendarLoader = null;
         let parsedEvents = [];
         
         async function testCalendarParsing() {
             try {
-                logger.info('TEST', 'Starting calendar parsing test');
+                const citySelect = document.getElementById('city-select');
+                const selectedCity = citySelect.value;
                 
-                // Initialize calendar core
-                calendarCore = new CalendarCore();
+                if (!selectedCity) {
+                    logger.error('TEST', 'Please select a city first');
+                    return;
+                }
                 
-                // Load the sample calendar file
+                logger.info('TEST', 'Starting calendar parsing test', { city: selectedCity });
+                
+                // Initialize calendar loader
+                calendarLoader = new DynamicCalendarLoader();
+                
+                // Load calendar data for the selected city
+                const calendarData = await calendarLoader.loadCalendarData(selectedCity);
+                
+                if (calendarData && calendarData.events) {
+                    parsedEvents = calendarData.events;
+                    
+                    // Display the parsed events
+                    displayEvents(parsedEvents);
+                    
+                    logger.info('TEST', 'Calendar parsing test completed successfully', {
+                        city: selectedCity,
+                        totalEvents: parsedEvents.length,
+                        recurringEvents: parsedEvents.filter(e => e.recurring).length,
+                        oneTimeEvents: parsedEvents.filter(e => !e.recurring).length
+                    });
+                } else {
+                    logger.error('TEST', 'Failed to load calendar data', { city: selectedCity });
+                }
+                
+            } catch (error) {
+                logger.error('TEST', 'Calendar parsing test failed', error);
+            }
+        }
+        
+        async function testLocalCalendarFile() {
+            try {
+                logger.info('TEST', 'Starting local calendar file test');
+                
+                // Initialize calendar core for local file testing
+                const calendarCore = new CalendarCore();
+                
+                // Load the local sample calendar file
                 const response = await fetch('data/sample-calendar-file-nyc.ics');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const icalText = await response.text();
-                logger.info('TEST', 'Successfully loaded sample calendar file', {
+                logger.info('TEST', 'Successfully loaded local calendar file', {
                     fileSize: icalText.length,
                     fileName: 'sample-calendar-file-nyc.ics'
                 });
@@ -186,14 +256,14 @@
                 // Display the parsed events
                 displayEvents(parsedEvents);
                 
-                logger.info('TEST', 'Calendar parsing test completed successfully', {
+                logger.info('TEST', 'Local calendar file test completed successfully', {
                     totalEvents: parsedEvents.length,
                     recurringEvents: parsedEvents.filter(e => e.recurring).length,
                     oneTimeEvents: parsedEvents.filter(e => !e.recurring).length
                 });
                 
             } catch (error) {
-                logger.error('TEST', 'Calendar parsing test failed', error);
+                logger.error('TEST', 'Local calendar file test failed', error);
             }
         }
         
@@ -275,8 +345,37 @@
         }
         
         function clearLogs() {
-            document.getElementById('log-display').innerHTML = '<div class="log-entry log-info">Logs cleared. Click "Parse Sample Calendar File" to test...</div>';
+            document.getElementById('log-display').innerHTML = '<div class="log-entry log-info">Logs cleared. Select a city and click "Load Calendar Data" to test...</div>';
         }
+        
+        // Add CSS for mobile fullscreen
+        const style = document.createElement('style');
+        style.textContent = `
+            .mobile-fullscreen {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                z-index: 9999 !important;
+                background: #e8f4f8 !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Initialize city selector
+        document.getElementById('city-select').addEventListener('change', function() {
+            const selectedCity = this.value;
+            if (selectedCity) {
+                logger.info('TEST', 'City selected', { city: selectedCity });
+            }
+        });
+        
+        logger.info('TEST', 'Calendar test page initialized successfully');
     </script>
 </body>
 </html>
