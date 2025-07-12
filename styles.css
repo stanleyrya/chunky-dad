@@ -2134,19 +2134,16 @@ footer {
         flex-direction: column;
         gap: 0.5rem;
         width: 100%;
-        align-items: stretch;
     }
     
     .view-toggle {
-        flex-direction: row;
+        flex-direction: column;
         gap: 0.3rem;
-        width: 100%;
-        justify-content: center;
     }
     
     .date-navigation {
-        width: 100%;
-        max-width: none;
+        max-width: 280px;
+        margin: 0 auto;
     }
 }
 
