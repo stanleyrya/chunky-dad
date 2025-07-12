@@ -36,7 +36,7 @@ chunky-dad/
 ├── index.html           # Homepage with city overview and event highlights
 ├── new-york.html        # NYC bear guide with weekly calendar and events
 ├── styles.css           # Bear-themed responsive styling
-├── script.js            # Interactive features and navigation
+├── js/                 # Modular JavaScript architecture
 ├── package.json         # Project configuration
 └── README.md           # This file
 ```
@@ -83,7 +83,7 @@ The site is designed for GitHub Pages deployment at `chunky.dad`.
 - `index.html`
 - `new-york.html` (and other city pages)
 - `styles.css`
-- `script.js`
+- `js/` directory containing modular JavaScript files
 
 ## Content Guidelines
 
