@@ -185,24 +185,56 @@
     <script src="js/calendar-core.js"></script>
     
     <script>
-        // Override logger output to display in our test page
-        const originalLog = logger.log;
-        logger.log = function(level, component, message, data) {
-            originalLog.call(this, level, component, message, data);
+        // Add comprehensive error handling and diagnostics
+        window.addEventListener('error', function(e) {
+            console.error('Global JavaScript Error:', e.error);
+            document.getElementById('log-display').innerHTML += 
+                `<div class="log-entry log-error">💥 JavaScript Error: ${e.error.message} at ${e.filename}:${e.lineno}</div>`;
+        });
+
+        // Check if scripts loaded properly
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Diagnostic Check:');
+            console.log('- logger available:', typeof logger !== 'undefined');
+            console.log('- CalendarCore available:', typeof CalendarCore !== 'undefined');
+            console.log('- ChunkyLogger available:', typeof ChunkyLogger !== 'undefined');
             
-            const logDisplay = document.getElementById('log-display');
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${level.toLowerCase()}`;
-            
-            let logText = `[${level}] ${component}: ${message}`;
-            if (data && typeof data === 'object') {
-                logText += ' ' + JSON.stringify(data, null, 2);
+            if (typeof logger === 'undefined') {
+                document.getElementById('log-display').innerHTML += 
+                    '<div class="log-entry log-error">❌ Logger not loaded! Check js/logger.js</div>';
             }
-            
-            logEntry.textContent = logText;
-            logDisplay.appendChild(logEntry);
-            logDisplay.scrollTop = logDisplay.scrollHeight;
-        };
+            if (typeof CalendarCore === 'undefined') {
+                document.getElementById('log-display').innerHTML += 
+                    '<div class="log-entry log-error">❌ CalendarCore not loaded! Check js/calendar-core.js</div>';
+            }
+        });
+
+        // Override logger output to display in our test page (with safety check)
+        let originalLog = null;
+        function setupLoggerOverride() {
+            if (typeof logger !== 'undefined' && logger.log) {
+                originalLog = logger.log;
+                logger.log = function(level, component, message, data) {
+                    originalLog.call(this, level, component, message, data);
+                    
+                    const logDisplay = document.getElementById('log-display');
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `log-entry log-${level.toLowerCase()}`;
+                    
+                    let logText = `[${level}] ${component}: ${message}`;
+                    if (data && typeof data === 'object') {
+                        logText += ' ' + JSON.stringify(data, null, 2);
+                    }
+                    
+                    logEntry.textContent = logText;
+                    logDisplay.appendChild(logEntry);
+                    logDisplay.scrollTop = logDisplay.scrollHeight;
+                };
+            }
+        }
+        
+        // Set up logger override when page loads
+        window.addEventListener('load', setupLoggerOverride);
         
         let calendarCore = null;
         let parsedEvents = [];
