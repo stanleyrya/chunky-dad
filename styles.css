@@ -1259,7 +1259,7 @@ header {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -55%);
     z-index: 10;
     font-size: 1.4rem;
     color: white;
@@ -1270,7 +1270,7 @@ header {
     justify-content: center;
     width: 26px;
     height: 26px;
-    margin-top: -12px;
+    margin-top: -8px;
 }
 
 .marker-pin:hover::before {
@@ -1352,7 +1352,7 @@ header {
     border-radius: 0;
 }
 
-/* Mobile fullscreen styles - missing implementation */
+/* Mobile fullscreen styles */
 .map-container.mobile-fullscreen {
     position: fixed;
     top: 0;
@@ -1368,6 +1368,7 @@ header {
     border-radius: 0;
     box-shadow: none;
     transition: all 0.3s ease;
+    margin: 0;
 }
 
 .map-container.mobile-fullscreen #events-map {
@@ -2148,9 +2149,10 @@ footer {
     }
     
     .date-navigation {
-        max-width: none;
         width: auto;
         flex-shrink: 0;
+        max-width: 280px;
+        margin: 0 auto;
     }
 }
 
