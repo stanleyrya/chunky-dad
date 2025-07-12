@@ -1361,8 +1361,13 @@ header {
     height: 100vh;
     z-index: 9999;
     background: black;
-    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transition: all 0.3s ease;
     margin: 0;
 }
 
@@ -1370,6 +1375,7 @@ header {
     width: 100vw;
     height: 100vh;
     border-radius: 0;
+    box-shadow: none;
 }
 
 .error-message {
@@ -1660,8 +1666,9 @@ footer {
     .date-navigation {
         order: 1;
         margin-bottom: 0.5rem;
-        max-width: 300px;
-        width: 100%;
+        max-width: none;
+        width: auto;
+        flex-shrink: 0;
     }
     
     .view-toggle {
@@ -2142,6 +2149,8 @@ footer {
     }
     
     .date-navigation {
+        width: auto;
+        flex-shrink: 0;
         max-width: 280px;
         margin: 0 auto;
     }

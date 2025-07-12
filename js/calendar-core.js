@@ -14,48 +14,130 @@ class CalendarCore {
             textLength: icalText.length
         });
         
+        // Log the beginning of the calendar file for debugging
+        const filePreview = icalText.substring(0, 500);
+        logger.debug('CALENDAR', 'Calendar file preview (first 500 chars):', {
+            preview: filePreview,
+            totalLength: icalText.length
+        });
+        
+        // Log calendar metadata
+        const calendarNameMatch = icalText.match(/X-WR-CALNAME:(.+)/);
+        const calendarTimezoneMatch = icalText.match(/X-WR-TIMEZONE:(.+)/);
+        const versionMatch = icalText.match(/VERSION:(.+)/);
+        
+        if (calendarNameMatch || calendarTimezoneMatch || versionMatch) {
+            logger.info('CALENDAR', 'Calendar metadata found', {
+                calendarName: calendarNameMatch ? calendarNameMatch[1].trim() : 'Not specified',
+                timezone: calendarTimezoneMatch ? calendarTimezoneMatch[1].trim() : 'Not specified',
+                version: versionMatch ? versionMatch[1].trim() : 'Not specified'
+            });
+        }
+        
         const events = [];
         const lines = icalText.split('\n');
         let currentEvent = null;
         let inEvent = false;
         let eventCount = 0;
+        let invalidLines = [];
         
-        for (let line of lines) {
-            line = line.slice(0, -1); // Remove trailing character
+        logger.debug('CALENDAR', `Processing ${lines.length} lines from calendar file`);
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            
+            // Handle line continuation (RFC 5545 - lines starting with space or tab)
+            while (i + 1 < lines.length && (lines[i + 1].startsWith(' ') || lines[i + 1].startsWith('\t'))) {
+                i++;
+                line += lines[i].substring(1); // Remove the leading space/tab
+            }
+            
+            // Remove trailing \r if present
+            line = line.replace(/\r$/, '');
             
             if (line === 'BEGIN:VEVENT') {
                 inEvent = true;
                 currentEvent = {};
                 eventCount++;
+                logger.debug('CALENDAR', `Starting to parse event #${eventCount}`);
             } else if (line === 'END:VEVENT' && currentEvent) {
                 if (currentEvent.title) {
-                    logger.debug('CALENDAR', `Processing event: ${currentEvent.title}`);
+                    logger.debug('CALENDAR', `Processing event: ${currentEvent.title}`, {
+                        eventNumber: eventCount,
+                        hasDescription: !!currentEvent.description,
+                        hasLocation: !!currentEvent.location,
+                        hasStart: !!currentEvent.start,
+                        hasEnd: !!currentEvent.end,
+                        hasRecurrence: !!currentEvent.recurrence
+                    });
+                    
                     const eventData = this.parseEventData(currentEvent);
                     
                     if (eventData) {
                         events.push(eventData);
-                        logger.debug('CALENDAR', `✅ Successfully parsed event: ${eventData.name}`);
+                        logger.debug('CALENDAR', `✅ Successfully parsed event: ${eventData.name}`, {
+                            eventType: eventData.eventType,
+                            day: eventData.day,
+                            time: eventData.time,
+                            venue: eventData.bar,
+                            recurring: eventData.recurring
+                        });
+                    } else {
+                        logger.warn('CALENDAR', `❌ Failed to parse event: ${currentEvent.title}`, {
+                            eventNumber: eventCount,
+                            rawEvent: currentEvent
+                        });
                     }
+                } else {
+                    logger.warn('CALENDAR', `❌ Event #${eventCount} has no title, skipping`, {
+                        rawEvent: currentEvent
+                    });
                 }
                 currentEvent = null;
                 inEvent = false;
             } else if (inEvent && currentEvent) {
-                this.parseEventLine(line, currentEvent);
+                const parsed = this.parseEventLine(line, currentEvent);
+                if (!parsed && line.trim() !== '') {
+                    invalidLines.push({ line, eventNumber: eventCount });
+                }
             }
         }
         
+        // Log any lines that couldn't be parsed
+        if (invalidLines.length > 0) {
+            logger.warn('CALENDAR', `Found ${invalidLines.length} unparseable lines`, {
+                sampleInvalidLines: invalidLines.slice(0, 5), // Show first 5 invalid lines
+                totalInvalidLines: invalidLines.length
+            });
+        }
+        
         logger.timeEnd('CALENDAR', 'iCal parsing');
-        logger.info('CALENDAR', `📊 Parsing complete. Found ${eventCount} total events, ${events.length} with valid data`);
+        logger.info('CALENDAR', `📊 Parsing complete. Found ${eventCount} total events, ${events.length} with valid data`, {
+            successRate: `${Math.round((events.length / eventCount) * 100)}%`,
+            invalidLinesCount: invalidLines.length,
+            averageEventDataPoints: events.length > 0 ? Math.round(events.reduce((acc, event) => {
+                let points = 0;
+                if (event.name) points++;
+                if (event.time) points++;
+                if (event.bar) points++;
+                if (event.cover) points++;
+                if (event.tea) points++;
+                if (event.coordinates) points++;
+                if (event.links) points++;
+                return acc + points;
+            }, 0) / events.length) : 0
+        });
+        
         return events;
     }
 
     parseEventLine(line, currentEvent) {
+        let parsed = true;
+        
         if (line.startsWith('SUMMARY:')) {
             currentEvent.title = line.substring(8).replace(/\\,/g, ',').replace(/\\;/g, ';');
         } else if (line.startsWith('DESCRIPTION:')) {
             currentEvent.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';');
-        } else if (line.startsWith(' ') && currentEvent.description) {
-            currentEvent.description += line.substring(1);
         } else if (line.startsWith('LOCATION:')) {
             currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';');
         } else if (line.startsWith('DTSTART')) {
@@ -70,7 +152,28 @@ class CalendarCore {
             }
         } else if (line.startsWith('RRULE:')) {
             currentEvent.recurrence = line.substring(6);
+        } else if (line.startsWith('UID:') || line.startsWith('DTSTAMP:') || line.startsWith('CREATED:') || 
+                   line.startsWith('LAST-MODIFIED:') || line.startsWith('SEQUENCE:') || line.startsWith('STATUS:') || 
+                   line.startsWith('TRANSP:') || line.startsWith('ORGANIZER:') || line.startsWith('ATTENDEE:') ||
+                   line.startsWith('CLASS:') || line.startsWith('PRIORITY:') || line.startsWith('CATEGORIES:') ||
+                   line.startsWith('COMMENT:') || line.startsWith('CONTACT:') || line.startsWith('REQUEST-STATUS:') ||
+                   line.startsWith('RELATED-TO:') || line.startsWith('RESOURCES:') || line.startsWith('RDATE:') ||
+                   line.startsWith('EXDATE:') || line.startsWith('EXRULE:') || line.startsWith('ATTACH:') ||
+                   line.startsWith('ALARM:') || line.startsWith('VALARM:') || line.startsWith('FREEBUSY:') ||
+                   line.startsWith('DURATION:') || line.startsWith('TZID:') || line.startsWith('TZOFFSETFROM:') ||
+                   line.startsWith('TZOFFSETTO:') || line.startsWith('TZNAME:') || line.startsWith('DTSTART:') ||
+                   line.startsWith('FREQ:') || line.startsWith('UNTIL:') || line.startsWith('COUNT:') ||
+                   line.startsWith('INTERVAL:') || line.startsWith('BYSECOND:') || line.startsWith('BYMINUTE:') ||
+                   line.startsWith('BYHOUR:') || line.startsWith('BYDAY:') || line.startsWith('BYMONTHDAY:') ||
+                   line.startsWith('BYYEARDAY:') || line.startsWith('BYWEEKNO:') || line.startsWith('BYMONTH:') ||
+                   line.startsWith('BYSETPOS:') || line.startsWith('WKST:') || line.trim() === '') {
+            // These are known iCalendar properties that we don't need to parse but are valid
+            parsed = true;
+        } else {
+            parsed = false;
         }
+        
+        return parsed;
     }
 
     // Parse individual event data

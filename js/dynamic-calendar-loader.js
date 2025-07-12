@@ -255,8 +255,25 @@ class DynamicCalendarLoader extends CalendarCore {
             const icalText = await response.text();
             logger.apiCall('CALENDAR', 'Successfully fetched iCal data', {
                 dataLength: icalText.length,
-                city: cityConfig.name
+                city: cityConfig.name,
+                url: icalUrl
             });
+            
+            // Log sample of the fetched data for debugging
+            if (icalText.length > 0) {
+                logger.debug('CALENDAR', 'Raw iCal data sample', {
+                    firstLine: icalText.split('\n')[0],
+                    hasEvents: icalText.includes('BEGIN:VEVENT'),
+                    eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
+                    calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
+                    encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format'
+                });
+            } else {
+                logger.warn('CALENDAR', 'Empty iCal data received', {
+                    city: cityConfig.name,
+                    url: icalUrl
+                });
+            }
             
             const events = this.parseICalData(icalText);
             
