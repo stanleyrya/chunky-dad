@@ -287,7 +287,7 @@ header {
 .events-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 2rem;
+    gap: 1.5rem;
     width: 100%;
     box-sizing: border-box;
 }
@@ -295,7 +295,7 @@ header {
 .event-card {
     background: #f8f9ff;
     border-radius: 15px;
-    padding: 2rem;
+    padding: 1.5rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
@@ -862,15 +862,15 @@ header {
 }
 
 .events-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
 }
 
 .event-card.detailed {
     background: white;
     border-radius: 15px;
-    padding: 2rem;
+    padding: 1.5rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -937,9 +937,7 @@ header {
 }
 
 .detail-row.tea {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e0e0e0;
+    margin-top: 0.5rem;
 }
 
 .label {
@@ -1503,6 +1501,12 @@ footer {
 
     .events-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .events-list {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
     .business-categories {
@@ -2131,6 +2135,12 @@ footer {
     
     .events-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .events-list {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
     .business-categories {
