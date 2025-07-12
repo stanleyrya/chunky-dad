@@ -242,27 +242,77 @@ class CalendarCore {
         };
 
         let textBlock = description;
-        if (textBlock.includes("<br>")) {
+        
+        // First, handle HTML content - extract URLs from anchor tags and convert to plain text
+        if (textBlock.includes("<a href=") || textBlock.includes("<br>")) {
+            // Extract URLs from anchor tags before converting to plain text
+            const linkMatches = textBlock.match(/<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi);
+            if (linkMatches) {
+                linkMatches.forEach(linkMatch => {
+                    const urlMatch = linkMatch.match(/href=["']([^"']+)["']/);
+                    if (urlMatch) {
+                        const url = urlMatch[1];
+                        // Replace the HTML anchor tag with just the URL
+                        textBlock = textBlock.replace(linkMatch, url);
+                    }
+                });
+            }
+            
+            // Convert HTML breaks to newlines
             textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
+            
+            // Remove any remaining HTML tags
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = textBlock;
             textBlock = tempDiv.textContent || tempDiv.innerText || '';
         }
         
-        const lines = textBlock.replace("\\n", "\n").split("\n");
+        // Replace escaped newlines with actual newlines
+        textBlock = textBlock.replace(/\\n/g, "\n");
+        
+        const lines = textBlock.split("\n");
+        
+        logger.debug('CALENDAR', 'Parsing event description', {
+            originalLength: description.length,
+            processedLength: textBlock.length,
+            linesCount: lines.length,
+            containsHTML: description.includes('<'),
+            extractedLines: lines.slice(0, 3) // Show first 3 lines for debugging
+        });
         
         for (let line of lines) {
             line = line.trim();
             if (!line) continue;
             
+            // Match key-value pairs with various separators
             const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
             if (keyValueMatch) {
                 const key = keyValueMatch[1].trim().toLowerCase();
                 const value = keyValueMatch[2].trim();
                 const mappedKey = keyMap[key] || key;
-                data[mappedKey] = value;
+                
+                // Additional validation for URLs
+                if (['website', 'instagram', 'facebook', 'gmaps'].includes(mappedKey)) {
+                    // Ensure we have a valid URL
+                    if (value.startsWith('http://') || value.startsWith('https://')) {
+                        data[mappedKey] = value;
+                        logger.debug('CALENDAR', `Extracted ${mappedKey} URL: ${value}`);
+                    } else {
+                        logger.warn('CALENDAR', `Invalid URL format for ${mappedKey}: ${value}`);
+                    }
+                } else {
+                    data[mappedKey] = value;
+                }
             }
         }
+        
+        logger.debug('CALENDAR', 'Description parsing complete', {
+            extractedKeys: Object.keys(data),
+            hasWebsite: !!data.website,
+            hasInstagram: !!data.instagram,
+            hasFacebook: !!data.facebook,
+            hasGmaps: !!data.gmaps
+        });
         
         return Object.keys(data).length > 0 ? data : null;
     }

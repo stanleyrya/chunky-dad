@@ -976,6 +976,56 @@ header {
     transform: translateY(-2px);
 }
 
+/* Enhanced event link styling */
+.event-link {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+    padding: 8px 16px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: 4px 6px;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    border: 2px solid transparent;
+}
+
+.event-link:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    border-color: rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+.event-link:active {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 3px 12px rgba(102, 126, 234, 0.6);
+}
+
+/* Responsive link styling */
+@media (max-width: 768px) {
+    .event-link {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        margin: 3px 4px;
+    }
+}
+
+/* Fix for links in event cards */
+.event-card.detailed .event-links {
+    margin-top: 12px;
+    text-align: left;
+    padding-top: 8px;
+    border-top: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.event-card.detailed .event-links .event-link {
+    margin-right: 8px;
+    margin-bottom: 6px;
+}
+
 /* City CTA Section */
 .city-cta {
     padding: 30px 0;
