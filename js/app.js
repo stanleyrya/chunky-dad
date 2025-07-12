@@ -3,6 +3,7 @@ class ChunkyDadApp {
     constructor() {
         this.isMainPage = this.checkIfMainPage();
         this.isCityPage = this.checkIfCityPage();
+        this.isTestPage = this.checkIfTestPage();
         
         // Initialize modules
         this.navigationManager = null;
@@ -13,6 +14,7 @@ class ChunkyDadApp {
         logger.componentInit('SYSTEM', 'Chunky Dad App initializing', {
             isMainPage: this.isMainPage,
             isCityPage: this.isCityPage,
+            isTestPage: this.isTestPage,
             pathname: window.location.pathname
         });
         
@@ -29,13 +31,17 @@ class ChunkyDadApp {
         return window.location.pathname.includes('city.html');
     }
 
+    checkIfTestPage() {
+        return window.location.pathname.includes('test-calendar-logging.html');
+    }
+
     async init() {
         try {
             // Always initialize core modules
             this.initializeCoreModules();
             
             // Initialize page-specific modules
-            if (this.isCityPage) {
+            if (this.isCityPage || this.isTestPage) {
                 await this.initializeCityPageModules();
             }
             
@@ -61,7 +67,8 @@ class ChunkyDadApp {
     }
 
     async initializeCityPageModules() {
-        logger.info('SYSTEM', 'Initializing city page modules');
+        const pageType = this.isTestPage ? 'test page' : 'city page';
+        logger.info('SYSTEM', `Initializing ${pageType} modules`);
         
         try {
             // Calendar functionality is only needed on city pages
@@ -74,9 +81,11 @@ class ChunkyDadApp {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
             }
             
-            logger.componentLoad('SYSTEM', 'City page modules initialized');
+            const pageType = this.isTestPage ? 'test page' : 'city page';
+            logger.componentLoad('SYSTEM', `${pageType} modules initialized`);
         } catch (error) {
-            logger.componentError('SYSTEM', 'City page module initialization failed', error);
+            const pageType = this.isTestPage ? 'test page' : 'city page';
+            logger.componentError('SYSTEM', `${pageType} module initialization failed`, error);
         }
     }
 
