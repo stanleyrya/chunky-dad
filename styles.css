@@ -1327,7 +1327,6 @@ header {
     transform: translateY(0);
 }
 
-.leaflet-control-fullscreen,
 .leaflet-control-fit-markers,
 .leaflet-control-my-location {
     background: none;
@@ -1337,46 +1336,10 @@ header {
 
 /* My Location Circle - using Leaflet's built-in circle instead of custom marker */
 
-/* Fullscreen styles for map */
-.map-container:fullscreen {
-    background: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-}
 
-.map-container:fullscreen #events-map {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-}
 
 /* Mobile fullscreen styles */
-.map-container.mobile-fullscreen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 9999;
-    background: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-    transition: all 0.3s ease;
-    margin: 0;
-}
 
-.map-container.mobile-fullscreen #events-map {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-    box-shadow: none;
-}
 
 .error-message {
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
