@@ -788,8 +788,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     </div>
                 `,
                 iconSize: [44, 56],
-                iconAnchor: [22, 56],
-                popupAnchor: [0, -56]
+                iconAnchor: [22, 52], // Adjusted from 56 to 52 to center better
+                popupAnchor: [0, -52]
             });
 
             events.forEach(event => {
@@ -816,8 +816,11 @@ class DynamicCalendarLoader extends CalendarCore {
             // Fit map to show all markers using Leaflet's built-in bounds calculation
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
+                // Use different padding for mobile vs desktop
+                const isMobile = window.innerWidth <= 768;
+                const padding = isMobile ? [10, 10] : [20, 20];
                 map.fitBounds(group.getBounds(), {
-                    padding: [20, 20],
+                    padding: padding,
                     maxZoom: 13
                 });
             }
@@ -1127,7 +1130,13 @@ function showOnMap(lat, lng, eventName, barName) {
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
         const group = new L.featureGroup(window.eventsMapMarkers);
-        window.eventsMap.fitBounds(group.getBounds().pad(0.1));
+        // Use different padding for mobile vs desktop
+        const isMobile = window.innerWidth <= 768;
+        const padding = isMobile ? [10, 10] : [20, 20];
+        window.eventsMap.fitBounds(group.getBounds(), {
+            padding: padding,
+            maxZoom: 13
+        });
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     }
 }
