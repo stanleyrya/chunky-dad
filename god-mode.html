@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>God Mode - Testing Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+
+        .card p {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 15px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .back-btn {
+                position: static;
+                display: block;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            
+            .status {
+                position: static;
+                display: block;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-btn">← Back to Main</a>
+    <div class="status">🔧 Development Mode</div>
+
+    <div class="container">
+        <h1>🔧 God Mode</h1>
+        <p class="subtitle">Testing Dashboard - Access all hidden testing files</p>
+
+        <div class="section">
+            <h2>📅 Event Display Tests</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Carousel View</h3>
+                    <p>Test event display in a horizontal carousel format with smooth scrolling and navigation controls.</p>
+                    <a href="testing/event-test-1-carousel.html" class="btn">Open Carousel</a>
+                </div>
+
+                <div class="card">
+                    <h3>Timeline View</h3>
+                    <p>Chronological timeline display of events with date-based organization and visual flow.</p>
+                    <a href="testing/event-test-2-timeline.html" class="btn">Open Timeline</a>
+                </div>
+
+                <div class="card">
+                    <h3>Map View</h3>
+                    <p>Geographic display of events on an interactive map with location-based filtering.</p>
+                    <a href="testing/event-test-3-map.html" class="btn">Open Map</a>
+                </div>
+
+                <div class="card">
+                    <h3>Masonry Layout</h3>
+                    <p>Pinterest-style masonry grid layout for events with dynamic sizing and positioning.</p>
+                    <a href="testing/event-test-4-masonry.html" class="btn">Open Masonry</a>
+                </div>
+
+                <div class="card">
+                    <h3>Heatmap View</h3>
+                    <p>Calendar heatmap showing event density and frequency across different time periods.</p>
+                    <a href="testing/event-test-5-heatmap.html" class="btn">Open Heatmap</a>
+                </div>
+
+                <div class="card">
+                    <h3>Ticker Display</h3>
+                    <p>Horizontal scrolling ticker showing upcoming events in a news-style format.</p>
+                    <a href="testing/event-test-6-ticker.html" class="btn">Open Ticker</a>
+                </div>
+
+                <div class="card">
+                    <h3>Circular Layout</h3>
+                    <p>Radial/circular arrangement of events with center-focused navigation and organization.</p>
+                    <a href="testing/event-test-7-circular.html" class="btn">Open Circular</a>
+                </div>
+
+                <div class="card">
+                    <h3>Kanban Board</h3>
+                    <p>Drag-and-drop kanban board for event management with status-based columns.</p>
+                    <a href="testing/event-test-8-kanban.html" class="btn">Open Kanban</a>
+                </div>
+
+                <div class="card">
+                    <h3>Bubbles View</h3>
+                    <p>Interactive bubble chart displaying events with size-based importance and category colors.</p>
+                    <a href="testing/event-test-9-bubbles.html" class="btn">Open Bubbles</a>
+                </div>
+
+                <div class="card">
+                    <h3>Flip Cards</h3>
+                    <p>3D flip card interface for events with front/back information display and animations.</p>
+                    <a href="testing/event-test-10-flipcards.html" class="btn">Open Flip Cards</a>
+                </div>
+
+                <div class="card">
+                    <h3>Week View</h3>
+                    <p>Traditional weekly calendar view with day-by-day event organization and time slots.</p>
+                    <a href="testing/event-test-11-weekview.html" class="btn">Open Week View</a>
+                </div>
+
+                <div class="card">
+                    <h3>Swipe Tiles</h3>
+                    <p>Mobile-friendly swipeable tile interface for browsing events with touch gestures.</p>
+                    <a href="testing/event-test-12-swipe-tiles.html" class="btn">Open Swipe Tiles</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 System Tests</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Test Index</h3>
+                    <p>Main testing index page with overview of all available test interfaces and navigation.</p>
+                    <a href="testing/event-test-index.html" class="btn">Open Test Index</a>
+                </div>
+
+                <div class="card">
+                    <h3>Calendar Logging</h3>
+                    <p>Comprehensive logging and debugging interface for calendar functionality and data processing.</p>
+                    <a href="testing/test-calendar-logging.html" class="btn">Open Calendar Logging</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click tracking
+            const links = document.querySelectorAll('.btn');
+            links.forEach(link => {
+                link.addEventListener('click', function() {
+                    console.log('🔧 God Mode: Opening', this.href);
+                });
+            });
+
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key) {
+                        case '1':
+                            e.preventDefault();
+                            window.open('testing/event-test-1-carousel.html', '_blank');
+                            break;
+                        case '2':
+                            e.preventDefault();
+                            window.open('testing/event-test-2-timeline.html', '_blank');
+                            break;
+                        case '3':
+                            e.preventDefault();
+                            window.open('testing/event-test-3-map.html', '_blank');
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            window.open('index.html', '_blank');
+                            break;
+                    }
+                }
+            });
+
+            // Add some visual feedback
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
