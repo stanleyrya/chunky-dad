@@ -97,6 +97,7 @@ class HeaderManager {
         emojiButton.innerHTML = `
             <span class="city-emoji" id="current-city-emoji">${this.currentCity?.emoji || '🏙️'}</span>
             <span class="city-name" id="current-city-name">${cityName}</span>
+            <span class="city-carrot">▼</span>
         `;
         
         // Create dropdown
@@ -142,6 +143,8 @@ class HeaderManager {
         const closeDropdown = (e) => {
             if (!citySelector.contains(e.target)) {
                 dropdown.classList.remove('open');
+                const button = document.getElementById('city-switcher-btn');
+                if (button) button.classList.remove('active');
                 // Reset inline styles when closing
                 dropdown.style.pointerEvents = '';
                 dropdown.style.visibility = '';
@@ -172,9 +175,11 @@ class HeaderManager {
 
     toggleDropdown(dropdown) {
         const isVisible = dropdown.classList.contains('open');
+        const button = document.getElementById('city-switcher-btn');
         
         if (isVisible) {
             dropdown.classList.remove('open');
+            if (button) button.classList.remove('active');
             this.logger.debug('HEADER', 'Dropdown closed');
             // Reset inline styles when closing
             dropdown.style.pointerEvents = '';
@@ -183,6 +188,7 @@ class HeaderManager {
             dropdown.style.transform = '';
         } else {
             dropdown.classList.add('open');
+            if (button) button.classList.add('active');
             this.logger.debug('HEADER', 'Dropdown opened');
             
             // Force dropdown to be visible and clickable
@@ -268,6 +274,7 @@ class HeaderManager {
             emojiButton.innerHTML = `
                 <span class="city-emoji" id="current-city-emoji">${this.currentCity.emoji}</span>
                 <span class="city-name" id="current-city-name">${cityName}</span>
+                <span class="city-carrot">▼</span>
             `;
             emojiButton.setAttribute('aria-label', `Switch city - currently ${cityName}`);
         }
