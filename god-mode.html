@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>God Mode - Testing Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
         * {
             margin: 0;
@@ -16,6 +17,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            padding-top: 100px; /* Account for fixed header */
         }
 
         .container {
@@ -168,6 +170,28 @@
     </style>
 </head>
 <body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1>🐻 Chunky Dad [DEBUG]</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#cities">Cities</a></li>
+                    <li><a href="index.html#events">Events</a></li>
+                    <li><a href="index.html#businesses">Businesses</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
     <a href="index.html" class="back-btn">← Back to Main</a>
     <div class="status">🔧 Development Mode</div>
 
@@ -270,6 +294,13 @@
         </div>
     </div>
 
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/header-manager.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/page-effects.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/app.js"></script>
     <script>
         // Add some interactive features
         document.addEventListener('DOMContentLoaded', function() {
