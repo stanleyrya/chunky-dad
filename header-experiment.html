@@ -15,294 +15,134 @@
         }
         
         .experiment-section {
-            margin-bottom: 40px;
-            padding: 20px;
+            margin-bottom: 60px;
+            padding: 30px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            background: #f9f9f9;
+            border-radius: 12px;
+            background: #fafafa;
         }
         
         .experiment-title {
             font-size: 24px;
             font-weight: 600;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             color: #333;
+            border-bottom: 2px solid #ff6b35;
+            padding-bottom: 10px;
         }
         
         .header-preview {
             background: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
-            margin: 15px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header-preview h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .header-preview a {
+            text-decoration: none;
+            color: inherit;
         }
         
         .city-selector {
-            margin: 20px 0;
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         
-        .city-selector select {
-            padding: 10px;
-            font-size: 16px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
+        .city-btn {
+            padding: 8px 16px;
+            border: 2px solid #ff6b35;
             background: white;
+            color: #ff6b35;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
         
-        .code-example {
-            background: #f4f4f4;
-            padding: 15px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            margin: 15px 0;
-            overflow-x: auto;
+        .city-btn:hover,
+        .city-btn.active {
+            background: #ff6b35;
+            color: white;
         }
         
-        .comparison-grid {
+        .description {
+            color: #666;
+            font-style: italic;
+            margin-top: 10px;
+        }
+        
+        .experiment-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
-            margin: 20px 0;
+            margin-top: 20px;
         }
         
-        .comparison-item {
+        .header-variant {
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #ff6b35;
         }
         
-        .comparison-item h4 {
+        .variant-title {
+            font-weight: 600;
             margin-bottom: 10px;
             color: #333;
         }
         
-        .logo-variation {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 10px 0;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 4px;
-            text-align: center;
-        }
-
-        /* City Button and Overlay Styles */
-        .city-button {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        }
-
-        .city-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .city-button .city-emoji {
-            font-size: 16px;
-        }
-
-        .city-button .city-name {
-            font-weight: 600;
-        }
-
-        .city-button .dropdown-arrow {
-            font-size: 12px;
-            transition: transform 0.3s ease;
-        }
-
-        .city-button.active .dropdown-arrow {
-            transform: rotate(180deg);
-        }
-
-        /* Overlay Styles */
-        .city-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(4px);
-        }
-
-        .city-overlay.active {
-            display: flex;
-        }
-
-        .city-dropdown-modal {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .city-dropdown-header {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-
-        .city-dropdown-header h3 {
-            font-size: 24px;
-            font-weight: 600;
-            color: #333;
+        .variant-preview {
+            font-size: 18px;
+            font-weight: 700;
             margin-bottom: 8px;
         }
-
-        .city-dropdown-header p {
-            color: #666;
+        
+        .variant-description {
             font-size: 14px;
-        }
-
-        .cities-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .city-option {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .city-option:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-        }
-
-        .city-option.selected {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .city-option .city-emoji {
-            font-size: 24px;
-        }
-
-        .city-option .city-info {
-            flex: 1;
-        }
-
-        .city-option .city-name {
-            font-weight: 600;
-            font-size: 16px;
-            margin-bottom: 4px;
-        }
-
-        .city-option .city-tagline {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        .city-dropdown-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-
-        .city-dropdown-btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .city-dropdown-btn.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .city-dropdown-btn.secondary {
-            background: #f0f0f0;
             color: #666;
         }
-
-        .city-dropdown-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        
+        .emoji-header {
+            font-size: 32px;
         }
-
-        /* Header integration styles */
-        .nav-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
+        
+        .gradient-text {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
-        .nav-left {
-            display: flex;
-            align-items: center;
-            gap: 20px;
+        
+        .bear-emoji {
+            font-size: 24px;
+            margin-right: 8px;
         }
-
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
+        
+        .city-emoji {
+            font-size: 20px;
+            margin-right: 8px;
         }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .city-button .city-name {
-                display: none;
-            }
-            
-            .city-button {
-                padding: 8px 12px;
-            }
-            
-            .cities-grid {
-                grid-template-columns: 1fr;
-            }
+        
+        .domain-style {
+            font-family: 'Courier New', monospace;
+            color: #666;
+        }
+        
+        .tagline-style {
+            font-size: 14px;
+            color: #888;
+            font-weight: 300;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -310,279 +150,144 @@
     <header>
         <nav>
             <div class="nav-container">
-                <div class="nav-left">
-                    <div class="logo">
-                        <h1 id="dynamic-logo">🐻 Chunky Dad</h1>
-                    </div>
-                    <button id="city-button" class="city-button" onclick="toggleCityOverlay()">
-                        <span class="city-emoji" id="current-city-emoji">🌍</span>
-                        <span class="city-name" id="current-city-name">Select City</span>
-                        <span class="dropdown-arrow">▼</span>
-                    </button>
+                <div class="logo">
+                    <h1><a href="index.html">🐻 Chunky Dad</a></h1>
                 </div>
                 
-                <div class="nav-right">
-                    <ul class="nav-menu">
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="index.html#cities">Cities</a></li>
-                        <li><a href="index.html#events">Events</a></li>
-                        <li><a href="index.html#businesses">Businesses</a></li>
-                        <li><a href="index.html#contact">Contact</a></li>
-                    </ul>
-                    <div class="hamburger">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="city.html">City Guide</a></li>
+                    <li><a href="header-experiment.html" class="active">Header Experiment</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
             </div>
         </nav>
     </header>
 
-    <!-- City Overlay Dropdown -->
-    <div id="city-overlay" class="city-overlay" onclick="closeCityOverlay()">
-        <div class="city-dropdown-modal" onclick="event.stopPropagation()">
-            <div class="city-dropdown-header">
-                <h3>🌍 Choose Your City</h3>
-                <p>Select a city to see local bear events and guides</p>
-            </div>
-            
-            <div class="cities-grid" id="cities-grid">
-                <!-- Will be populated by JavaScript -->
-            </div>
-            
-            <div class="city-dropdown-actions">
-                <button class="city-dropdown-btn secondary" onclick="closeCityOverlay()">Cancel</button>
-                <button class="city-dropdown-btn primary" onclick="applyCitySelection()">Go to City</button>
-            </div>
-        </div>
-    </div>
-
     <main class="experiment-container">
         <section class="experiment-section">
-            <h2 class="experiment-title">🐻 Header Experiment: City Button with Overlay</h2>
-            <p>This experiment adds a city button to the existing "Chunky Dad" header. When clicked, it opens an overlay dropdown to switch between cities while maintaining the main brand identity.</p>
-            
-            <div class="header-preview">
-                <h3>Current Header with City Button:</h3>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: 20px;">
-                            <h1 style="margin: 0; font-size: 24px;">🐻 Chunky Dad</h1>
-                            <button class="city-button" style="margin: 0;">
-                                <span class="city-emoji">🌍</span>
-                                <span class="city-name">Select City</span>
-                                <span class="dropdown-arrow">▼</span>
-                            </button>
-                        </div>
-                        <ul style="display: flex; gap: 20px; list-style: none; margin: 0;">
-                            <li><a href="#" style="text-decoration: none; color: #333;">Home</a></li>
-                            <li><a href="#" style="text-decoration: none; color: #333;">Cities</a></li>
-                            <li><a href="#" style="text-decoration: none; color: #333;">Events</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="experiment-section">
-            <h3 class="experiment-title">How It Works</h3>
-            <div class="comparison-grid">
-                <div class="comparison-item">
-                    <h4>1. City Button</h4>
-                    <p>The city button shows the current city with emoji and name. It's positioned next to the main logo.</p>
-                    <ul>
-                        <li>Shows current city emoji and name</li>
-                        <li>Gradient background for visual appeal</li>
-                        <li>Hover effects and animations</li>
-                        <li>Responsive design (hides city name on mobile)</li>
-                    </ul>
-                </div>
-                
-                <div class="comparison-item">
-                    <h4>2. Overlay Dropdown</h4>
-                    <p>Clicking the city button opens a full-screen overlay with all available cities.</p>
-                    <ul>
-                        <li>Backdrop blur effect</li>
-                        <li>Grid layout of city options</li>
-                        <li>City emoji, name, and tagline</li>
-                        <li>Smooth animations and transitions</li>
-                    </ul>
-                </div>
-                
-                <div class="comparison-item">
-                    <h4>3. City Selection</h4>
-                    <p>Users can browse and select cities, then navigate to the city guide.</p>
-                    <ul>
-                        <li>Visual feedback on hover and selection</li>
-                        <li>Clear call-to-action buttons</li>
-                        <li>Maintains current city state</li>
-                        <li>Easy navigation to city.html</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <section class="experiment-section">
-            <h3 class="experiment-title">Implementation Code</h3>
-            
-            <h4>HTML Structure:</h4>
-            <div class="code-example">
-&lt;div class="nav-left"&gt;
-    &lt;div class="logo"&gt;
-        &lt;h1&gt;🐻 Chunky Dad&lt;/h1&gt;
-    &lt;/div&gt;
-    &lt;button id="city-button" class="city-button" onclick="toggleCityOverlay()"&gt;
-        &lt;span class="city-emoji"&gt;🌍&lt;/span&gt;
-        &lt;span class="city-name"&gt;Select City&lt;/span&gt;
-        &lt;span class="dropdown-arrow"&gt;▼&lt;/span&gt;
-    &lt;/button&gt;
-&lt;/div&gt;
-
-&lt;!-- City Overlay --&gt;
-&lt;div id="city-overlay" class="city-overlay"&gt;
-    &lt;div class="city-dropdown-modal"&gt;
-        &lt;div class="cities-grid" id="cities-grid"&gt;&lt;/div&gt;
-    &lt;/div&gt;
-&lt;/div&gt;
-            </div>
-            
-            <h4>JavaScript Implementation:</h4>
-            <div class="code-example">
-// City button functionality
-let selectedCityKey = null;
-
-function toggleCityOverlay() {
-    const overlay = document.getElementById('city-overlay');
-    const button = document.getElementById('city-button');
-    
-    if (overlay.classList.contains('active')) {
-        closeCityOverlay();
-    } else {
-        openCityOverlay();
-    }
-}
-
-function openCityOverlay() {
-    const overlay = document.getElementById('city-overlay');
-    const button = document.getElementById('city-button');
-    
-    overlay.classList.add('active');
-    button.classList.add('active');
-    
-    // Populate cities grid
-    populateCitiesGrid();
-    
-    logger.userInteraction('NAV', 'City overlay opened');
-}
-
-function closeCityOverlay() {
-    const overlay = document.getElementById('city-overlay');
-    const button = document.getElementById('city-button');
-    
-    overlay.classList.remove('active');
-    button.classList.remove('active');
-    
-    logger.userInteraction('NAV', 'City overlay closed');
-}
-
-function populateCitiesGrid() {
-    const grid = document.getElementById('cities-grid');
-    const cities = getAvailableCities();
-    
-    grid.innerHTML = cities.map(city => `
-        &lt;div class="city-option" onclick="selectCity('${city.key}')"&gt;
-            &lt;span class="city-emoji"&gt;${city.emoji}&lt;/span&gt;
-            &lt;div class="city-info"&gt;
-                &lt;div class="city-name"&gt;${city.name}&lt;/div&gt;
-                &lt;div class="city-tagline"&gt;${city.tagline}&lt;/div&gt;
-            &lt;/div&gt;
-        &lt;/div&gt;
-    `).join('');
-}
-
-function selectCity(cityKey) {
-    selectedCityKey = cityKey;
-    
-    // Update visual selection
-    document.querySelectorAll('.city-option').forEach(option => {
-        option.classList.remove('selected');
-    });
-    
-    const selectedOption = document.querySelector(`[onclick="selectCity('${cityKey}')"]`);
-    if (selectedOption) {
-        selectedOption.classList.add('selected');
-    }
-    
-    logger.userInteraction('NAV', `City selected: ${cityKey}`);
-}
-
-function applyCitySelection() {
-    if (selectedCityKey) {
-        // Navigate to city page
-        window.location.href = `city.html?city=${selectedCityKey}`;
-    }
-    closeCityOverlay();
-}
-            </div>
-        </section>
-
-        <section class="experiment-section">
-            <h3 class="experiment-title">Benefits of This Approach</h3>
-            <div class="comparison-grid">
-                <div class="comparison-item">
-                    <h4>✅ Maintains Brand Identity</h4>
-                    <p>Keeps "Chunky Dad" as the main brand while adding city functionality</p>
-                    <ul>
-                        <li>No confusion about site identity</li>
-                        <li>Consistent branding across all pages</li>
-                        <li>Clear hierarchy with logo prominence</li>
-                    </ul>
-                </div>
-                
-                <div class="comparison-item">
-                    <h4>✅ Enhanced User Experience</h4>
-                    <p>Provides easy city switching without losing context</p>
-                    <ul>
-                        <li>Quick access to all cities</li>
-                        <li>Visual city selection with emojis</li>
-                        <li>Overlay doesn't disrupt page flow</li>
-                    </ul>
-                </div>
-                
-                <div class="comparison-item">
-                    <h4>✅ Mobile Friendly</h4>
-                    <p>Responsive design that works on all devices</p>
-                    <ul>
-                        <li>City name hides on small screens</li>
-                        <li>Touch-friendly overlay interface</li>
-                        <li>Optimized for mobile navigation</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <section class="experiment-section">
-            <h3 class="experiment-title">Previous Experiment: Dynamic Header</h3>
-            <p>This is the previous experiment that changed the entire header to "Chunky [City]":</p>
+            <h1 class="experiment-title">🐻 Header Experiment - City Guide Variations</h1>
+            <p>Exploring different header options for city-specific pages. Click on city buttons to see how each header looks with different cities.</p>
             
             <div class="city-selector">
-                <label for="city-select">Select a city to see the header variation:</label>
-                <select id="city-select" onchange="updateHeader()">
-                    <option value="">Chunky Dad (Default)</option>
-                    <option value="new-york">New York</option>
-                    <option value="seattle">Seattle</option>
-                    <option value="los-angeles">Los Angeles</option>
-                    <option value="toronto">Toronto</option>
-                    <option value="london">London</option>
-                    <option value="chicago">Chicago</option>
-                    <option value="berlin">Berlin</option>
-                </select>
+                <button class="city-btn active" data-city="new-york">🗽 New York</button>
+                <button class="city-btn" data-city="seattle">🌲 Seattle</button>
+                <button class="city-btn" data-city="los-angeles">🌴 Los Angeles</button>
+                <button class="city-btn" data-city="toronto">🍁 Toronto</button>
+                <button class="city-btn" data-city="london">🇬🇧 London</button>
+                <button class="city-btn" data-city="chicago">🏙️ Chicago</button>
+                <button class="city-btn" data-city="berlin">🇩🇪 Berlin</button>
             </div>
+        </section>
+
+        <!-- Original Requested Variations -->
+        <section class="experiment-section">
+            <h2 class="experiment-title">Your Requested Variations</h2>
             
+            <div class="experiment-grid">
+                <div class="header-variant">
+                    <div class="variant-title">1. City Name Only</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview" id="city-name-only">🗽 New York</h1>
+                    </div>
+                    <div class="variant-description">Replace "Chunky Dad" with just the city name and emoji</div>
+                </div>
+                
+                <div class="header-variant">
+                    <div class="variant-title">2. Domain Style</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview domain-style">chunky.dad</h1>
+                    </div>
+                    <div class="variant-description">Replace with clean domain-style branding</div>
+                </div>
+                
+                <div class="header-variant">
+                    <div class="variant-title">3. Domain + City</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview domain-style" id="domain-city">chunky.dad/new-york</h1>
+                    </div>
+                    <div class="variant-description">Domain-style with city path</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Additional Creative Variations -->
+        <section class="experiment-section">
+            <h2 class="experiment-title">Additional Creative Ideas</h2>
+            
+            <div class="experiment-grid">
+                <div class="header-variant">
+                    <div class="variant-title">4. Bear + City Emoji</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview" id="bear-city-emoji">🐻🗽 New York</h1>
+                    </div>
+                    <div class="variant-description">Bear emoji + city emoji + city name</div>
+                </div>
+                
+                <div class="header-variant">
+                    <div class="variant-title">5. Gradient Brand</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview gradient-text" id="gradient-brand">Chunky Dad</h1>
+                        <div class="tagline-style" id="gradient-tagline">New York Bear Guide</div>
+                    </div>
+                    <div class="variant-description">Gradient text with city subtitle</div>
+                </div>
+                
+                <div class="header-variant">
+                    <div class="variant-title">6. Bear Community</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview" id="bear-community">🐻 Bear Community</h1>
+                        <div class="tagline-style" id="community-tagline">New York Chapter</div>
+                    </div>
+                    <div class="variant-description">Community-focused branding</div>
+                </div>
+                
+                <div class="header-variant">
+                    <div class="variant-title">7. City Bear Guide</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview" id="city-bear-guide">New York Bear Guide</h1>
+                        <div class="tagline-style">by Chunky Dad</div>
+                    </div>
+                    <div class="variant-description">City-focused with brand attribution</div>
+                </div>
+                
+                <div class="header-variant">
+                    <div class="variant-title">8. Bear Scene</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview" id="bear-scene">🐻 New York Bear Scene</h1>
+                    </div>
+                    <div class="variant-description">Emphasizes the local bear community</div>
+                </div>
+                
+                <div class="header-variant">
+                    <div class="variant-title">9. Minimalist</div>
+                    <div class="header-preview">
+                        <h1 class="variant-preview" id="minimalist">New York</h1>
+                        <div class="tagline-style">🐻 chunky.dad</div>
+                    </div>
+                    <div class="variant-description">Clean, minimal approach</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Implementation Notes -->
+        <section class="experiment-section">
+            <h2 class="experiment-title">Implementation Notes</h2>
             <div class="header-preview">
-                <h3>Dynamic Header Preview:</h3>
-                <div id="header-preview-content" class="logo-variation">🐻 Chunky Dad</div>
+                <h3>How to Implement:</h3>
+                <ul>
+                    <li>Update the header in <code>city.html</code> to use dynamic content</li>
+                    <li>Modify <code>js/city-config.js</code> to include header variations</li>
+                    <li>Update <code>js/app.js</code> to handle header switching</li>
+                    <li>Consider URL parameters for header style selection</li>
+                </ul>
+                
+                <h3>Recommended Approach:</h3>
+                <p>I'd suggest implementing a header configuration system that allows for different styles per city or globally. This could be controlled via URL parameters like <code>?header=domain</code> or <code>?header=city-only</code>.</p>
             </div>
         </section>
     </main>
@@ -596,117 +301,58 @@ function applyCitySelection() {
     <script src="js/logger.js"></script>
     <script src="js/city-config.js"></script>
     <script>
-        // Initialize logger
-        logger.componentInit('EXPERIMENT', 'Header experiment page loaded');
-        
-        // City button and overlay functionality
-        let selectedCityKey = null;
+        // City data for the experiment
+        const cityData = {
+            'new-york': { name: 'New York', emoji: '🗽', tagline: 'What\'s the bear 411?' },
+            'seattle': { name: 'Seattle', emoji: '🌲', tagline: 'Emerald City bears unite!' },
+            'los-angeles': { name: 'Los Angeles', emoji: '🌴', tagline: 'West Coast bear vibes' },
+            'toronto': { name: 'Toronto', emoji: '🍁', tagline: 'Great White North bears' },
+            'london': { name: 'London', emoji: '🇬🇧', tagline: 'British bears welcome' },
+            'chicago': { name: 'Chicago', emoji: '🏙️', tagline: 'Windy City bears' },
+            'berlin': { name: 'Berlin', emoji: '🇩🇪', tagline: 'European bear capital' }
+        };
 
-        function toggleCityOverlay() {
-            const overlay = document.getElementById('city-overlay');
-            const button = document.getElementById('city-button');
+        let currentCity = 'new-york';
+
+        // Update all header variations when city changes
+        function updateHeaders(cityKey) {
+            const city = cityData[cityKey];
+            if (!city) return;
+
+            // Update requested variations
+            document.getElementById('city-name-only').textContent = `${city.emoji} ${city.name}`;
+            document.getElementById('domain-city').textContent = `chunky.dad/${cityKey}`;
             
-            if (overlay.classList.contains('active')) {
-                closeCityOverlay();
-            } else {
-                openCityOverlay();
-            }
+            // Update additional variations
+            document.getElementById('bear-city-emoji').textContent = `🐻${city.emoji} ${city.name}`;
+            document.getElementById('gradient-tagline').textContent = `${city.name} Bear Guide`;
+            document.getElementById('community-tagline').textContent = `${city.name} Chapter`;
+            document.getElementById('city-bear-guide').textContent = `${city.name} Bear Guide`;
+            document.getElementById('bear-scene').textContent = `🐻 ${city.name} Bear Scene`;
+            document.getElementById('minimalist').textContent = city.name;
         }
 
-        function openCityOverlay() {
-            const overlay = document.getElementById('city-overlay');
-            const button = document.getElementById('city-button');
-            
-            overlay.classList.add('active');
-            button.classList.add('active');
-            
-            // Populate cities grid
-            populateCitiesGrid();
-            
-            logger.userInteraction('EXPERIMENT', 'City overlay opened');
-        }
-
-        function closeCityOverlay() {
-            const overlay = document.getElementById('city-overlay');
-            const button = document.getElementById('city-button');
-            
-            overlay.classList.remove('active');
-            button.classList.remove('active');
-            
-            logger.userInteraction('EXPERIMENT', 'City overlay closed');
-        }
-
-        function populateCitiesGrid() {
-            const grid = document.getElementById('cities-grid');
-            const cities = getAvailableCities();
-            
-            grid.innerHTML = cities.map(city => `
-                <div class="city-option" onclick="selectCity('${city.key}')">
-                    <span class="city-emoji">${city.emoji}</span>
-                    <div class="city-info">
-                        <div class="city-name">${city.name}</div>
-                        <div class="city-tagline">${city.tagline}</div>
-                    </div>
-                </div>
-            `).join('');
-            
-            logger.componentLoad('EXPERIMENT', 'Cities grid populated', { cityCount: cities.length });
-        }
-
-        function selectCity(cityKey) {
-            selectedCityKey = cityKey;
-            
-            // Update visual selection
-            document.querySelectorAll('.city-option').forEach(option => {
-                option.classList.remove('selected');
-            });
-            
-            const selectedOption = document.querySelector(`[onclick="selectCity('${cityKey}')"]`);
-            if (selectedOption) {
-                selectedOption.classList.add('selected');
-            }
-            
-            logger.userInteraction('EXPERIMENT', `City selected: ${cityKey}`);
-        }
-
-        function applyCitySelection() {
-            if (selectedCityKey) {
-                // Navigate to city page
-                window.location.href = `city.html?city=${selectedCityKey}`;
-            }
-            closeCityOverlay();
-        }
-
-        // Previous experiment function (dynamic header)
-        function updateHeader() {
-            const citySelect = document.getElementById('city-select');
-            const selectedCity = citySelect.value;
-            const previewElement = document.getElementById('header-preview-content');
-            const logoElement = document.getElementById('dynamic-logo');
-            
-            if (selectedCity) {
-                const cityConfig = getCityConfig(selectedCity);
-                if (cityConfig) {
-                    const newHeader = `🐻 Chunky ${cityConfig.name}`;
-                    previewElement.textContent = newHeader;
-                    logoElement.innerHTML = newHeader;
-                    
-                    logger.userInteraction('EXPERIMENT', `Header changed to: ${newHeader}`, {
-                        city: selectedCity,
-                        cityName: cityConfig.name
-                    });
-                }
-            } else {
-                // Default
-                previewElement.textContent = '🐻 Chunky Dad';
-                logoElement.innerHTML = '🐻 Chunky Dad';
+        // City button click handlers
+        document.querySelectorAll('.city-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active button
+                document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
                 
-                logger.userInteraction('EXPERIMENT', 'Header reset to default: Chunky Dad');
-            }
-        }
+                // Update city and headers
+                currentCity = this.dataset.city;
+                updateHeaders(currentCity);
+                
+                logger.userInteraction('EXPERIMENT', `Switched to city: ${currentCity}`);
+            });
+        });
+
+        // Initialize with default city
+        updateHeaders(currentCity);
         
-        // Initialize the experiment
-        logger.componentLoad('EXPERIMENT', 'Header experiment ready for testing');
+        logger.componentInit('EXPERIMENT', 'Header experiment page loaded');
     </script>
+    <script src="js/navigation.js"></script>
+    <script src="js/page-effects.js"></script>
 </body>
 </html>
