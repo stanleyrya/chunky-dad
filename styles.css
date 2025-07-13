@@ -1,3 +1,16 @@
+/* CSS Custom Properties */
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #ff6b6b;
+    --accent-color: #764ba2;
+    --success-color: #4ecdc4;
+    --warning-color: #ffd700;
+    --text-primary: #333;
+    --text-secondary: #666;
+    --background-light: #f8f9ff;
+    --border-light: #e8f2ff;
+}
+
 /* Reset and Base Styles */
 * {
     margin: 0;
