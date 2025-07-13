@@ -229,25 +229,17 @@
                             </div>
                         </div>
                     </div>
-                    <!-- 
-                    EMAIL SETUP REQUIRED:
-                    1. Go to https://formspree.io and create a free account
-                    2. Create a new form and get your form ID
-                    3. Replace "YOUR_FORM_ID_HERE" with your actual form ID
-                    4. The form will send emails to info@chunky.dad
-                    -->
-                    <form class="contact-form" action="https://formspree.io/f/YOUR_FORM_ID_HERE" method="POST">
-                        <input type="text" name="name" placeholder="Your Name" required>
-                        <input type="email" name="email" placeholder="Your Email" required>
-                        <select name="category" required>
+                    <form class="contact-form">
+                        <input type="text" id="contact-name" placeholder="Your Name" required>
+                        <input type="email" id="contact-email" placeholder="Your Email" required>
+                        <select id="contact-category" required>
                             <option value="">What kind of info are you sharing?</option>
-                            <option value="event">Bear Event</option>
-                            <option value="business">Bear-Owned Business</option>
-                            <option value="venue">Bar/Venue</option>
-                            <option value="other">Other</option>
+                            <option value="Bear Event">Bear Event</option>
+                            <option value="Bear-Owned Business">Bear-Owned Business</option>
+                            <option value="Bar/Venue">Bar/Venue</option>
+                            <option value="Other">Other</option>
                         </select>
-                        <textarea name="message" placeholder="Tell us all the juicy details..." rows="5" required></textarea>
-                        <input type="hidden" name="_next" value="https://chunky.dad">
+                        <textarea id="contact-message" placeholder="Tell us all the juicy details..." rows="5" required></textarea>
                         <button type="submit">Send the Tea ☕</button>
                     </form>
                 </div>
