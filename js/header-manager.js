@@ -83,23 +83,25 @@ class HeaderManager {
 
         // Create city selector container
         const citySelector = document.createElement('div');
-        citySelector.className = 'header-city-selector';
+        citySelector.className = 'city-switcher';
         
         // Create emoji button with city name for larger screens
         const emojiButton = document.createElement('button');
-        emojiButton.className = 'city-emoji-button';
+        emojiButton.className = 'city-switcher-btn';
+        emojiButton.id = 'city-switcher-btn';
+        emojiButton.setAttribute('aria-label', 'Switch city');
         
         // Add city name for larger screens
         const cityName = this.currentCity?.name || 'Switch City';
         emojiButton.innerHTML = `
-            <span class="city-emoji">${this.currentCity?.emoji || '🏙️'}</span>
-            <span class="city-name-text">${cityName}</span>
+            <span class="city-emoji" id="current-city-emoji">${this.currentCity?.emoji || '🏙️'}</span>
+            <span class="city-name" id="current-city-name">${cityName}</span>
         `;
-        emojiButton.setAttribute('aria-label', `Switch city - currently ${cityName}`);
         
         // Create dropdown
         const dropdown = document.createElement('div');
-        dropdown.className = 'city-dropdown-menu';
+        dropdown.className = 'city-dropdown';
+        dropdown.id = 'city-dropdown';
         
         // Add city options
         const cities = getAvailableCities();
@@ -126,7 +128,7 @@ class HeaderManager {
         // Close dropdown when clicking outside
         const closeDropdown = (e) => {
             if (!citySelector.contains(e.target)) {
-                dropdown.classList.remove('dropdown-open');
+                dropdown.classList.remove('open');
             }
         };
         
@@ -141,17 +143,17 @@ class HeaderManager {
         citySelector.appendChild(dropdown);
         navContainer.appendChild(citySelector);
 
-        this.logger.componentLoad('HEADER', 'City selector added to header with z-index: 10000');
+        this.logger.componentLoad('HEADER', 'City selector added to header with z-index: 10001');
     }
 
     toggleDropdown(dropdown) {
-        const isVisible = dropdown.classList.contains('dropdown-open');
+        const isVisible = dropdown.classList.contains('open');
         
         if (isVisible) {
-            dropdown.classList.remove('dropdown-open');
+            dropdown.classList.remove('open');
             this.logger.debug('HEADER', 'Dropdown closed');
         } else {
-            dropdown.classList.add('dropdown-open');
+            dropdown.classList.add('open');
             this.logger.debug('HEADER', 'Dropdown opened');
         }
     }
@@ -186,12 +188,12 @@ class HeaderManager {
         this.updateHeaderTitle();
         
         // Update emoji button if it exists
-        const emojiButton = document.querySelector('.city-emoji-button');
+        const emojiButton = document.getElementById('city-switcher-btn');
         if (emojiButton && this.currentCity) {
             const cityName = this.currentCity.name || 'Switch City';
             emojiButton.innerHTML = `
-                <span class="city-emoji">${this.currentCity.emoji}</span>
-                <span class="city-name-text">${cityName}</span>
+                <span class="city-emoji" id="current-city-emoji">${this.currentCity.emoji}</span>
+                <span class="city-name" id="current-city-name">${cityName}</span>
             `;
             emojiButton.setAttribute('aria-label', `Switch city - currently ${cityName}`);
         }
