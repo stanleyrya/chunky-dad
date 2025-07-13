@@ -85,16 +85,21 @@ class HeaderManager {
         const citySelector = document.createElement('div');
         citySelector.className = 'header-city-selector';
         
-        // Create emoji button
+        // Create emoji button with city name for larger screens
         const emojiButton = document.createElement('button');
         emojiButton.className = 'city-emoji-button';
-        emojiButton.innerHTML = this.currentCity?.emoji || '🏙️';
-        emojiButton.setAttribute('aria-label', 'Switch city');
+        
+        // Add city name for larger screens
+        const cityName = this.currentCity?.name || 'Switch City';
+        emojiButton.innerHTML = `
+            <span class="city-emoji">${this.currentCity?.emoji || '🏙️'}</span>
+            <span class="city-name-text">${cityName}</span>
+        `;
+        emojiButton.setAttribute('aria-label', `Switch city - currently ${cityName}`);
         
         // Create dropdown
         const dropdown = document.createElement('div');
         dropdown.className = 'city-dropdown-menu';
-        dropdown.style.display = 'none';
         
         // Add city options
         const cities = getAvailableCities();
@@ -114,13 +119,18 @@ class HeaderManager {
         // Add event listeners
         emojiButton.addEventListener('click', (e) => {
             e.stopPropagation();
+            this.logger.userInteraction('HEADER', 'City switcher button clicked');
             this.toggleDropdown(dropdown);
         });
 
         // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            dropdown.style.display = 'none';
-        });
+        const closeDropdown = (e) => {
+            if (!citySelector.contains(e.target)) {
+                dropdown.classList.remove('dropdown-open');
+            }
+        };
+        
+        document.addEventListener('click', closeDropdown);
 
         // Prevent dropdown from closing when clicking inside
         dropdown.addEventListener('click', (e) => {
@@ -135,15 +145,14 @@ class HeaderManager {
     }
 
     toggleDropdown(dropdown) {
-        const isVisible = dropdown.style.display !== 'none';
-        dropdown.style.display = isVisible ? 'none' : 'block';
+        const isVisible = dropdown.classList.contains('dropdown-open');
         
-        if (!isVisible) {
-            // Add animation class
+        if (isVisible) {
+            dropdown.classList.remove('dropdown-open');
+            this.logger.debug('HEADER', 'Dropdown closed');
+        } else {
             dropdown.classList.add('dropdown-open');
-            setTimeout(() => {
-                dropdown.classList.remove('dropdown-open');
-            }, 300);
+            this.logger.debug('HEADER', 'Dropdown opened');
         }
     }
 
@@ -179,7 +188,12 @@ class HeaderManager {
         // Update emoji button if it exists
         const emojiButton = document.querySelector('.city-emoji-button');
         if (emojiButton && this.currentCity) {
-            emojiButton.innerHTML = this.currentCity.emoji;
+            const cityName = this.currentCity.name || 'Switch City';
+            emojiButton.innerHTML = `
+                <span class="city-emoji">${this.currentCity.emoji}</span>
+                <span class="city-name-text">${cityName}</span>
+            `;
+            emojiButton.setAttribute('aria-label', `Switch city - currently ${cityName}`);
         }
     }
 }
