@@ -9,25 +9,34 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #f5f5f5;
+            background: #0d0d0d;
+            color: #e0e0e0;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
+            background: #1a1a1a;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.5);
         }
         h1 {
-            color: #333;
+            color: #f0f0f0;
             text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        h2 {
+            color: #e0e0e0;
+        }
+        p {
+            color: #b0b0b0;
         }
         .test-section {
             margin: 20px 0;
             padding: 20px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #333;
             border-radius: 8px;
+            background: #0f0f0f;
         }
         .test-button {
             background: #667eea;
@@ -36,31 +45,93 @@
             padding: 10px 20px;
             border-radius: 5px;
             cursor: pointer;
-            margin: 10px 0;
-            display: block;
+            margin: 10px 5px 10px 0;
+            display: inline-block;
+            transition: all 0.2s ease;
         }
         .test-button:hover {
             background: #5a67d8;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+        .fullscreen-button {
+            background: #e67e22;
+        }
+        .fullscreen-button:hover {
+            background: #d35400;
+            box-shadow: 0 2px 8px rgba(230, 126, 34, 0.4);
         }
         .results {
-            background: #f8f9fa;
+            background: #000;
             padding: 15px;
             border-radius: 5px;
             margin: 10px 0;
-            max-height: 400px;
+            height: 600px;
             overflow-y: auto;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+        .results.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            border-radius: 0;
+            z-index: 9999;
+            background: #000;
+            padding: 20px;
+        }
+        .fullscreen-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            padding: 10px 20px;
+            z-index: 10000;
+            border-bottom: 1px solid #333;
+        }
+        .results.fullscreen + .fullscreen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .log-entry {
-            padding: 5px 0;
-            border-bottom: 1px solid #e0e0e0;
-            font-family: monospace;
-            font-size: 12px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #222;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
-        .log-debug { color: #6c757d; }
-        .log-info { color: #0066cc; }
-        .log-warn { color: #f39c12; }
-        .log-error { color: #e74c3c; }
-        .log-success { color: #27ae60; }
+        .log-entry:hover {
+            background: #111;
+        }
+        /* Updated log colors for dark mode */
+        .log-debug { 
+            color: #8b92a1;
+            opacity: 0.8;
+        }
+        .log-info { 
+            color: #4da6ff;
+        }
+        .log-warn { 
+            color: #ffc107;
+            font-weight: 500;
+        }
+        .log-error { 
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        .log-success { 
+            color: #51cf66;
+        }
         .events-display {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -68,20 +139,29 @@
             margin: 20px 0;
         }
         .event-card {
-            background: white;
-            border: 1px solid #ddd;
+            background: #1a1a1a;
+            border: 1px solid #333;
             border-radius: 8px;
             padding: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        }
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            border-color: #667eea;
         }
         .event-name {
             font-weight: bold;
-            color: #333;
+            color: #f0f0f0;
             margin-bottom: 5px;
         }
         .event-details {
-            color: #666;
+            color: #a0a0a0;
             font-size: 14px;
+        }
+        .event-details strong {
+            color: #c0c0c0;
         }
         .recurring-badge {
             background: #27ae60;
@@ -90,6 +170,58 @@
             border-radius: 3px;
             font-size: 12px;
             margin-left: 10px;
+        }
+        .map-container {
+            background: #1a1a1a !important;
+            color: #e0e0e0;
+        }
+        /* Scrollbar styling for dark mode */
+        .results::-webkit-scrollbar {
+            width: 12px;
+        }
+        .results::-webkit-scrollbar-track {
+            background: #111;
+            border-radius: 6px;
+        }
+        .results::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 6px;
+        }
+        .results::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+        /* Mobile fullscreen styles */
+        .mobile-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            background: #1a1a1a !important;
+        }
+        .log-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .log-filter {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .log-filter:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .log-counter {
+            color: #808080;
+            font-size: 14px;
+            margin-left: auto;
         }
     </style>
 </head>
@@ -109,8 +241,29 @@
                 Clear Logs
             </button>
             
+            <button class="test-button fullscreen-button" onclick="toggleLogFullscreen()">
+                Toggle Log Fullscreen
+            </button>
+            
+            <div class="log-controls">
+                <label style="color: #a0a0a0;">Filter logs:</label>
+                <select class="log-filter" id="log-level-filter" onchange="filterLogs()">
+                    <option value="all">All Levels</option>
+                    <option value="debug">Debug</option>
+                    <option value="info">Info</option>
+                    <option value="warn">Warnings</option>
+                    <option value="error">Errors</option>
+                </select>
+                <input type="text" class="log-filter" id="log-search" placeholder="Search logs..." onkeyup="filterLogs()" style="width: 200px;">
+                <span class="log-counter" id="log-counter">0 entries</span>
+            </div>
+            
             <div class="results" id="log-display">
                 <div class="log-entry log-info">Click "Parse Sample Calendar File" to test the enhanced logging...</div>
+            </div>
+            <div class="fullscreen-header" id="fullscreen-header">
+                <h3 style="margin: 0; color: #f0f0f0;">📋 Log Viewer - Fullscreen Mode</h3>
+                <button class="test-button" onclick="toggleLogFullscreen()">Exit Fullscreen</button>
             </div>
         </div>
         
@@ -124,7 +277,7 @@
         <div class="test-section">
             <h2>Mobile Fullscreen Map Test</h2>
             <p>Test the mobile fullscreen functionality (should work on both mobile and desktop).</p>
-            <div class="map-container" id="test-map-container" style="width: 100%; height: 300px; background: #e8f4f8; border: 2px solid #667eea; border-radius: 10px; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div class="map-container" id="test-map-container" style="width: 100%; height: 300px; background: #1a1a1a; border: 2px solid #667eea; border-radius: 10px; position: relative; display: flex; align-items: center; justify-content: center;">
                 <div style="text-align: center;">
                     <p>📍 Test Map Container</p>
                     <button class="test-button" onclick="testFullscreen()">
@@ -139,6 +292,9 @@
     <script src="js/calendar-core.js"></script>
     
     <script>
+        // Track log entries for filtering
+        let allLogEntries = [];
+        
         // Override logger output to display in our test page
         const originalLog = logger.log;
         logger.log = function(level, component, message, data) {
@@ -147,16 +303,61 @@
             const logDisplay = document.getElementById('log-display');
             const logEntry = document.createElement('div');
             logEntry.className = `log-entry log-${level.toLowerCase()}`;
+            logEntry.dataset.level = level.toLowerCase();
             
             let logText = `[${level}] ${component}: ${message}`;
             if (data && typeof data === 'object') {
-                logText += ' ' + JSON.stringify(data, null, 2);
+                logText += '\n' + JSON.stringify(data, null, 2);
             }
             
             logEntry.textContent = logText;
             logDisplay.appendChild(logEntry);
             logDisplay.scrollTop = logDisplay.scrollHeight;
+            
+            // Track entries
+            allLogEntries.push(logEntry);
+            updateLogCounter();
         };
+        
+        function updateLogCounter() {
+            const visibleCount = document.querySelectorAll('#log-display .log-entry:not([style*="display: none"])').length;
+            document.getElementById('log-counter').textContent = `${visibleCount} entries`;
+        }
+        
+        function filterLogs() {
+            const levelFilter = document.getElementById('log-level-filter').value;
+            const searchTerm = document.getElementById('log-search').value.toLowerCase();
+            
+            allLogEntries.forEach(entry => {
+                const matchesLevel = levelFilter === 'all' || entry.dataset.level === levelFilter;
+                const matchesSearch = !searchTerm || entry.textContent.toLowerCase().includes(searchTerm);
+                
+                entry.style.display = matchesLevel && matchesSearch ? 'block' : 'none';
+            });
+            
+            updateLogCounter();
+        }
+        
+        function toggleLogFullscreen() {
+            const logDisplay = document.getElementById('log-display');
+            const container = document.querySelector('.container');
+            
+            if (logDisplay.classList.contains('fullscreen')) {
+                logDisplay.classList.remove('fullscreen');
+                document.body.style.overflow = '';
+                
+                // Move log display back to its original position
+                const logSection = document.querySelector('.test-section');
+                logSection.appendChild(logDisplay);
+            } else {
+                logDisplay.classList.add('fullscreen');
+                document.body.style.overflow = 'hidden';
+                
+                // Move log display to body for proper fullscreen
+                document.body.appendChild(logDisplay);
+                document.body.appendChild(document.getElementById('fullscreen-header'));
+            }
+        }
         
         let calendarCore = null;
         let parsedEvents = [];
@@ -268,14 +469,16 @@
             logger.info('TEST', 'Exited mobile fullscreen mode');
             
             // Remove exit button
-            const exitBtn = element.querySelector('button[onclick*="exitMobileFullscreen"]');
+            const exitBtn = element.querySelector('button[style*="position: absolute"]');
             if (exitBtn) {
                 exitBtn.remove();
             }
         }
         
         function clearLogs() {
+            allLogEntries = [];
             document.getElementById('log-display').innerHTML = '<div class="log-entry log-info">Logs cleared. Click "Parse Sample Calendar File" to test...</div>';
+            updateLogCounter();
         }
     </script>
 </body>
