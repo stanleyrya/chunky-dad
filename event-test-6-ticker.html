@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Ticker - Chunky Dad</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background: #f5f5f5;
+            font-family: 'Inter', sans-serif;
+        }
+        .test-header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        .back-link {
+            color: var(--secondary-color);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .ticker-container {
+            max-width: 100%;
+            margin: 3rem 0;
+            background: #222;
+            padding: 1rem 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .ticker-wrapper {
+            display: flex;
+            white-space: nowrap;
+            animation: scroll 30s linear infinite;
+        }
+        .ticker-wrapper:hover {
+            animation-play-state: paused;
+        }
+        @keyframes scroll {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+        .ticker-content {
+            display: flex;
+            padding-right: 4rem;
+        }
+        .ticker-item {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 2rem;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .ticker-item:hover {
+            transform: scale(1.05);
+        }
+        .ticker-icon {
+            font-size: 1.5rem;
+            margin-right: 0.75rem;
+        }
+        .ticker-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .ticker-date {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+        }
+        .ticker-title {
+            font-weight: 600;
+        }
+        .speed-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .speed-btn {
+            padding: 0.5rem 1.5rem;
+            background: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        .speed-btn:hover, .speed-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        .featured-events {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 1rem;
+        }
+        .featured-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .featured-header h2 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .event-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .event-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .event-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .event-header .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .event-body {
+            padding: 1.5rem;
+        }
+        .event-date {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .event-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin: 0.5rem 0;
+        }
+        .event-venue {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        .event-description {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .event-cta {
+            display: block;
+            text-align: center;
+            padding: 0.75rem;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+        .event-cta:hover {
+            background: var(--secondary-color);
+        }
+        .ticker-2 {
+            background: var(--primary-color);
+            animation-direction: reverse;
+            animation-duration: 25s;
+        }
+        .ticker-3 {
+            background: #444;
+            animation-duration: 35s;
+        }
+        .multi-ticker {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <a href="event-test-index.html" class="back-link">← Back to all variations</a>
+        <h1>Animated Ticker</h1>
+        <p>Continuous scrolling event announcements</p>
+    </div>
+
+    <div class="ticker-container">
+        <div class="ticker-wrapper">
+            <div class="ticker-content" id="tickerContent1">
+                <!-- Events will be duplicated here for seamless loop -->
+            </div>
+            <div class="ticker-content" id="tickerContent2">
+                <!-- Duplicate for seamless scrolling -->
+            </div>
+        </div>
+    </div>
+
+    <div class="speed-controls">
+        <button class="speed-btn" onclick="setSpeed('slow')">Slow</button>
+        <button class="speed-btn active" onclick="setSpeed('normal')">Normal</button>
+        <button class="speed-btn" onclick="setSpeed('fast')">Fast</button>
+        <button class="speed-btn" onclick="togglePause()">Pause/Play</button>
+    </div>
+
+    <div class="featured-events">
+        <div class="featured-header">
+            <h2>Featured Events</h2>
+            <p>Click any event in the ticker above or explore our featured events below</p>
+        </div>
+        
+        <div class="event-grid" id="eventGrid">
+            <!-- Featured events will be populated here -->
+        </div>
+    </div>
+
+    <!-- Multiple ticker lanes -->
+    <div class="ticker-container ticker-2 multi-ticker">
+        <div class="ticker-wrapper">
+            <div class="ticker-content" id="tickerContent3"></div>
+            <div class="ticker-content" id="tickerContent4"></div>
+        </div>
+    </div>
+
+    <div class="ticker-container ticker-3 multi-ticker">
+        <div class="ticker-wrapper">
+            <div class="ticker-content" id="tickerContent5"></div>
+            <div class="ticker-content" id="tickerContent6"></div>
+        </div>
+    </div>
+
+    <script>
+        // Sample event data
+        const events = [
+            {
+                id: 1,
+                title: "Bear Week Pool Party",
+                date: "Saturday, March 15",
+                venue: "Wet Bear Pool Club",
+                description: "Join us for the biggest pool party of the season with DJ Thunder spinning all day.",
+                icon: "🏊",
+                featured: true
+            },
+            {
+                id: 2,
+                title: "Leather & Lace Night",
+                date: "Friday, March 21", 
+                venue: "The Den Bar",
+                description: "Dress code strictly enforced. Prizes for best outfit. Happy hour until 10pm.",
+                icon: "🎭",
+                featured: false
+            },
+            {
+                id: 3,
+                title: "Sunday Beer Bust",
+                date: "Sunday, March 23",
+                venue: "Growler's Pub",
+                description: "All you can drink beer from 3-8pm. BBQ on the patio starting at 4pm.",
+                icon: "🍺",
+                featured: true
+            },
+            {
+                id: 4,
+                title: "Trivia Night",
+                date: "Wednesday, March 26",
+                venue: "Smart Bear Cafe", 
+                description: "Test your knowledge and win prizes. Teams of up to 6 people. Free entry.",
+                icon: "🧠",
+                featured: false
+            },
+            {
+                id: 5,
+                title: "Karaoke Thursdays",
+                date: "Thursday, March 27",
+                venue: "Honey's Lounge",
+                description: "Show off your vocal skills or just come to cheer. Half price drinks for singers.",
+                icon: "🎤",
+                featured: false
+            },
+            {
+                id: 6,
+                title: "Dance Party: Retro Night",
+                date: "Saturday, March 29",
+                venue: "Club Furr",
+                description: "80s and 90s hits all night long. Costume contest at midnight.",
+                icon: "🕺",
+                featured: true
+            },
+            {
+                id: 7,
+                title: "Art Show Opening",
+                date: "Friday, April 4",
+                venue: "Gallery Bear",
+                description: "Featuring local queer artists. Wine and cheese reception from 6-9pm.",
+                icon: "🎨",
+                featured: false
+            },
+            {
+                id: 8,
+                title: "Game Night",
+                date: "Tuesday, April 8",
+                venue: "The Cave",
+                description: "Board games, video games, and more. Bring your favorite game to share.",
+                icon: "🎮",
+                featured: false
+            }
+        ];
+
+        let isPaused = false;
+
+        function createTickerItem(event) {
+            return `
+                <div class="ticker-item" onclick="showEventDetail(${event.id})">
+                    <span class="ticker-icon">${event.icon}</span>
+                    <div class="ticker-text">
+                        <span class="ticker-date">${event.date}</span>
+                        <span class="ticker-title">${event.title} @ ${event.venue}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initTicker() {
+            // Populate all ticker lanes
+            const tickerContents = [
+                document.getElementById('tickerContent1'),
+                document.getElementById('tickerContent2'),
+                document.getElementById('tickerContent3'),
+                document.getElementById('tickerContent4'),
+                document.getElementById('tickerContent5'),
+                document.getElementById('tickerContent6')
+            ];
+            
+            tickerContents.forEach(container => {
+                events.forEach(event => {
+                    container.innerHTML += createTickerItem(event);
+                });
+            });
+            
+            // Populate featured events
+            const featuredEvents = events.filter(e => e.featured);
+            const eventGrid = document.getElementById('eventGrid');
+            
+            featuredEvents.forEach(event => {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.onclick = () => showEventDetail(event.id);
+                card.innerHTML = `
+                    <div class="event-header">
+                        <div class="icon">${event.icon}</div>
+                    </div>
+                    <div class="event-body">
+                        <div class="event-date">${event.date}</div>
+                        <h3 class="event-title">${event.title}</h3>
+                        <div class="event-venue">📍 ${event.venue}</div>
+                        <p class="event-description">${event.description}</p>
+                        <a href="#" class="event-cta">View Details</a>
+                    </div>
+                `;
+                eventGrid.appendChild(card);
+            });
+        }
+
+        function setSpeed(speed) {
+            const tickers = document.querySelectorAll('.ticker-wrapper');
+            const buttons = document.querySelectorAll('.speed-btn');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            let duration;
+            switch(speed) {
+                case 'slow':
+                    duration = '50s';
+                    break;
+                case 'fast':
+                    duration = '15s';
+                    break;
+                default:
+                    duration = '30s';
+            }
+            
+            tickers.forEach((ticker, index) => {
+                ticker.style.animationDuration = duration;
+                // Vary speeds for multi-lane effect
+                if (index > 0) {
+                    const modifier = index % 2 === 0 ? 0.8 : 1.2;
+                    ticker.style.animationDuration = `${parseFloat(duration) * modifier}s`;
+                }
+            });
+        }
+
+        function togglePause() {
+            const tickers = document.querySelectorAll('.ticker-wrapper');
+            isPaused = !isPaused;
+            
+            tickers.forEach(ticker => {
+                ticker.style.animationPlayState = isPaused ? 'paused' : 'running';
+            });
+        }
+
+        function showEventDetail(eventId) {
+            const event = events.find(e => e.id === eventId);
+            if (event) {
+                alert(`Event Details:\n\n${event.title}\n${event.date}\n${event.venue}\n\n${event.description}`);
+            }
+        }
+
+        // Initialize on load
+        initTicker();
+    </script>
+</body>
+</html>

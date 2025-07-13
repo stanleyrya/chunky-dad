@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Carousel - Chunky Dad</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background: #f5f5f5;
+            font-family: 'Inter', sans-serif;
+        }
+        .test-header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        .back-link {
+            color: var(--secondary-color);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .carousel-container {
+            margin: 2rem 0;
+            position: relative;
+            padding: 0 2rem;
+        }
+        .carousel-wrapper {
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) #f0f0f0;
+        }
+        .carousel-wrapper::-webkit-scrollbar {
+            height: 8px;
+        }
+        .carousel-wrapper::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        .carousel-wrapper::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+        .carousel-track {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1rem 0 2rem;
+        }
+        .event-card {
+            flex: 0 0 350px;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        .event-card:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+        .event-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+        }
+        .event-content {
+            padding: 1.5rem;
+        }
+        .event-date {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        .event-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.75rem;
+        }
+        .event-venue {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .event-description {
+            color: #555;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        .carousel-nav:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        .carousel-nav.prev {
+            left: 0;
+        }
+        .carousel-nav.next {
+            right: 0;
+        }
+        .carousel-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+        .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .indicator.active {
+            background: var(--primary-color);
+            width: 24px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <a href="event-test-index.html" class="back-link">← Back to all variations</a>
+        <h1>Swipe Carousel</h1>
+        <p>Swipe or scroll horizontally to browse events</p>
+    </div>
+
+    <div class="carousel-container">
+        <button class="carousel-nav prev" onclick="scrollCarousel(-1)">‹</button>
+        <button class="carousel-nav next" onclick="scrollCarousel(1)">›</button>
+        
+        <div class="carousel-wrapper" id="carousel">
+            <div class="carousel-track" id="eventCarousel">
+                <!-- Events will be populated here -->
+            </div>
+        </div>
+        
+        <div class="carousel-indicators" id="indicators"></div>
+    </div>
+
+    <script>
+        // Sample event data
+        const events = [
+            {
+                title: "Bear Week Pool Party",
+                date: "Saturday, March 15",
+                venue: "Wet Bear Pool Club",
+                description: "Join us for the biggest pool party of the season with DJ Thunder spinning all day.",
+                icon: "🏊"
+            },
+            {
+                title: "Leather & Lace Night",
+                date: "Friday, March 21", 
+                venue: "The Den Bar",
+                description: "Dress code strictly enforced. Prizes for best outfit. Happy hour until 10pm.",
+                icon: "🎭"
+            },
+            {
+                title: "Sunday Beer Bust",
+                date: "Sunday, March 23",
+                venue: "Growler's Pub",
+                description: "All you can drink beer from 3-8pm. BBQ on the patio starting at 4pm.",
+                icon: "🍺"
+            },
+            {
+                title: "Trivia Night",
+                date: "Wednesday, March 26",
+                venue: "Smart Bear Cafe", 
+                description: "Test your knowledge and win prizes. Teams of up to 6 people. Free entry.",
+                icon: "🧠"
+            },
+            {
+                title: "Karaoke Thursdays",
+                date: "Thursday, March 27",
+                venue: "Honey's Lounge",
+                description: "Show off your vocal skills or just come to cheer. Half price drinks for singers.",
+                icon: "🎤"
+            },
+            {
+                title: "Dance Party: Retro Night",
+                date: "Saturday, March 29",
+                venue: "Club Furr",
+                description: "80s and 90s hits all night long. Costume contest at midnight.",
+                icon: "🕺"
+            },
+            {
+                title: "Art Show Opening",
+                date: "Friday, April 4",
+                venue: "Gallery Bear",
+                description: "Featuring local queer artists. Wine and cheese reception from 6-9pm.",
+                icon: "🎨"
+            },
+            {
+                title: "Game Night",
+                date: "Tuesday, April 8",
+                venue: "The Cave",
+                description: "Board games, video games, and more. Bring your favorite game to share.",
+                icon: "🎮"
+            }
+        ];
+
+        // Initialize carousel
+        function initCarousel() {
+            const carousel = document.getElementById('eventCarousel');
+            const indicatorsContainer = document.getElementById('indicators');
+            
+            // Populate events
+            events.forEach((event, index) => {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.innerHTML = `
+                    <div class="event-image">${event.icon}</div>
+                    <div class="event-content">
+                        <div class="event-date">${event.date}</div>
+                        <h3 class="event-title">${event.title}</h3>
+                        <div class="event-venue">📍 ${event.venue}</div>
+                        <p class="event-description">${event.description}</p>
+                    </div>
+                `;
+                carousel.appendChild(card);
+                
+                // Create indicator
+                const indicator = document.createElement('div');
+                indicator.className = 'indicator';
+                if (index === 0) indicator.classList.add('active');
+                indicator.onclick = () => scrollToCard(index);
+                indicatorsContainer.appendChild(indicator);
+            });
+            
+            // Add scroll listener for indicators
+            document.getElementById('carousel').addEventListener('scroll', updateIndicators);
+        }
+
+        function scrollCarousel(direction) {
+            const carousel = document.getElementById('carousel');
+            const cardWidth = 350 + 24; // card width + gap
+            carousel.scrollBy({
+                left: direction * cardWidth,
+                behavior: 'smooth'
+            });
+        }
+
+        function scrollToCard(index) {
+            const carousel = document.getElementById('carousel');
+            const cardWidth = 350 + 24;
+            carousel.scrollTo({
+                left: index * cardWidth,
+                behavior: 'smooth'
+            });
+        }
+
+        function updateIndicators() {
+            const carousel = document.getElementById('carousel');
+            const indicators = document.querySelectorAll('.indicator');
+            const cardWidth = 350 + 24;
+            const currentIndex = Math.round(carousel.scrollLeft / cardWidth);
+            
+            indicators.forEach((indicator, index) => {
+                indicator.classList.toggle('active', index === currentIndex);
+            });
+        }
+
+        // Touch support for mobile
+        let startX, scrollLeft;
+        const carousel = document.getElementById('carousel');
+
+        carousel.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].pageX - carousel.offsetLeft;
+            scrollLeft = carousel.scrollLeft;
+        });
+
+        carousel.addEventListener('touchmove', (e) => {
+            if (!startX) return;
+            const x = e.touches[0].pageX - carousel.offsetLeft;
+            const walk = (x - startX) * 2;
+            carousel.scrollLeft = scrollLeft - walk;
+        });
+
+        // Initialize on load
+        initCarousel();
+    </script>
+</body>
+</html>

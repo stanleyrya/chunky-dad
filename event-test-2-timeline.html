@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Timeline - Chunky Dad</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background: #f5f5f5;
+            font-family: 'Inter', sans-serif;
+        }
+        .test-header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        .back-link {
+            color: var(--secondary-color);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .timeline-container {
+            max-width: 800px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            position: relative;
+        }
+        .timeline-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color);
+            transform: translateX(-50%);
+        }
+        .timeline-event {
+            position: relative;
+            margin-bottom: 3rem;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.5s ease;
+        }
+        .timeline-event.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .timeline-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            width: calc(50% - 40px);
+            position: relative;
+        }
+        .timeline-event:nth-child(odd) .timeline-content {
+            margin-left: auto;
+        }
+        .timeline-event:nth-child(even) .timeline-content {
+            margin-right: auto;
+        }
+        .timeline-dot {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: var(--primary-color);
+            border: 4px solid white;
+            border-radius: 50%;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        .timeline-arrow {
+            position: absolute;
+            top: 2rem;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        .timeline-event:nth-child(odd) .timeline-arrow {
+            left: -10px;
+            border-width: 10px 10px 10px 0;
+            border-color: transparent white transparent transparent;
+        }
+        .timeline-event:nth-child(even) .timeline-arrow {
+            right: -10px;
+            border-width: 10px 0 10px 10px;
+            border-color: transparent transparent transparent white;
+        }
+        .event-date {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        .event-time {
+            position: absolute;
+            top: 2rem;
+            font-weight: 600;
+            color: #666;
+            transform: translateY(-50%);
+        }
+        .timeline-event:nth-child(odd) .event-time {
+            right: calc(50% + 40px);
+            text-align: right;
+        }
+        .timeline-event:nth-child(even) .event-time {
+            left: calc(50% + 40px);
+        }
+        .event-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.75rem;
+        }
+        .event-venue {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .event-description {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .event-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 768px) {
+            .timeline-line {
+                left: 40px;
+            }
+            .timeline-content {
+                width: calc(100% - 80px);
+                margin-left: 60px !important;
+                margin-right: 0 !important;
+            }
+            .timeline-dot {
+                left: 40px;
+            }
+            .timeline-arrow {
+                left: -10px !important;
+                right: auto !important;
+                border-width: 10px 10px 10px 0 !important;
+                border-color: transparent white transparent transparent !important;
+            }
+            .event-time {
+                position: static !important;
+                margin-bottom: 0.5rem;
+                text-align: left !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <a href="event-test-index.html" class="back-link">← Back to all variations</a>
+        <h1>Timeline View</h1>
+        <p>Events displayed chronologically on a vertical timeline</p>
+    </div>
+
+    <div class="timeline-container">
+        <div class="timeline-line"></div>
+        <div id="timelineEvents">
+            <!-- Events will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        // Sample event data
+        const events = [
+            {
+                title: "Bear Week Pool Party",
+                date: "Saturday, March 15",
+                time: "2:00 PM",
+                venue: "Wet Bear Pool Club",
+                description: "Join us for the biggest pool party of the season with DJ Thunder spinning all day.",
+                icon: "🏊"
+            },
+            {
+                title: "Leather & Lace Night",
+                date: "Friday, March 21",
+                time: "9:00 PM", 
+                venue: "The Den Bar",
+                description: "Dress code strictly enforced. Prizes for best outfit. Happy hour until 10pm.",
+                icon: "🎭"
+            },
+            {
+                title: "Sunday Beer Bust",
+                date: "Sunday, March 23",
+                time: "3:00 PM",
+                venue: "Growler's Pub",
+                description: "All you can drink beer from 3-8pm. BBQ on the patio starting at 4pm.",
+                icon: "🍺"
+            },
+            {
+                title: "Trivia Night",
+                date: "Wednesday, March 26",
+                time: "7:00 PM",
+                venue: "Smart Bear Cafe", 
+                description: "Test your knowledge and win prizes. Teams of up to 6 people. Free entry.",
+                icon: "🧠"
+            },
+            {
+                title: "Karaoke Thursdays",
+                date: "Thursday, March 27",
+                time: "8:00 PM",
+                venue: "Honey's Lounge",
+                description: "Show off your vocal skills or just come to cheer. Half price drinks for singers.",
+                icon: "🎤"
+            },
+            {
+                title: "Dance Party: Retro Night",
+                date: "Saturday, March 29",
+                time: "10:00 PM",
+                venue: "Club Furr",
+                description: "80s and 90s hits all night long. Costume contest at midnight.",
+                icon: "🕺"
+            }
+        ];
+
+        // Initialize timeline
+        function initTimeline() {
+            const container = document.getElementById('timelineEvents');
+            
+            events.forEach((event, index) => {
+                const eventElement = document.createElement('div');
+                eventElement.className = 'timeline-event';
+                eventElement.innerHTML = `
+                    <div class="event-time">${event.time}</div>
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-arrow"></div>
+                        <div class="event-icon">${event.icon}</div>
+                        <div class="event-date">${event.date}</div>
+                        <h3 class="event-title">${event.title}</h3>
+                        <div class="event-venue">📍 ${event.venue}</div>
+                        <p class="event-description">${event.description}</p>
+                    </div>
+                `;
+                container.appendChild(eventElement);
+            });
+            
+            // Intersection Observer for animation
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -100px 0px'
+            });
+            
+            document.querySelectorAll('.timeline-event').forEach(event => {
+                observer.observe(event);
+            });
+        }
+
+        // Initialize on load
+        initTimeline();
+    </script>
+</body>
+</html>
