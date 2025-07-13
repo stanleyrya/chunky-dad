@@ -13,12 +13,18 @@
           crossorigin=""/>
     <style>
         /* Debugging-specific styles */
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+        }
+        
         .debug-panel {
             background: #1a1a1a;
             border-radius: 12px;
             padding: 20px;
             margin: 20px 0;
             border: 2px solid #333;
+            color: #e0e0e0;
         }
         
         .debug-header {
@@ -56,6 +62,8 @@
         .debug-btn:hover {
             background: #444;
             border-color: #FFA500;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(255, 165, 0, 0.3);
         }
         
         .debug-btn.active {
@@ -91,6 +99,11 @@
             white-space: pre-wrap;
             word-break: break-word;
             color: #ccc;
+            background: #0a0a0a;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
         }
         
         .event-selector {
@@ -117,11 +130,13 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s ease;
+            color: #e0e0e0;
         }
         
         .event-item:hover {
             background: #333;
             border-color: #FFA500;
+            transform: translateX(2px);
         }
         
         .event-item.selected {
@@ -153,6 +168,13 @@
             border-radius: 8px;
             border: 1px solid #333;
             text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: #FFA500;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.2);
         }
         
         .stat-value {
@@ -189,6 +211,7 @@
         .city-quick-btn:hover {
             background: #444;
             border-color: #FFA500;
+            transform: translateY(-2px);
         }
         
         .city-quick-btn.current {
@@ -197,36 +220,192 @@
             border-color: #FFA500;
         }
         
+        .city-quick-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
         .city-emoji {
             font-size: 2rem;
             margin-bottom: 5px;
         }
         
+        /* Enhanced Log Section Styles */
+        .log-container {
+            position: relative;
+            background: #0d0d0d;
+            border-radius: 8px;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+        
+        .log-container.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9999;
+            margin: 0;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .log-filters {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .log-search {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            background: #0d0d0d;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .log-search:focus {
+            outline: none;
+            border-color: #FFA500;
+            box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+        }
+        
+        .component-filter {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .component-btn {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .component-btn:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+        
+        .component-btn.active {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+        }
+        
         .processing-log {
             background: #0d0d0d;
             padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            max-height: 300px;
+            max-height: 500px;
             overflow-y: auto;
             font-family: 'Courier New', monospace;
             font-size: 0.85rem;
+            color: #e0e0e0;
+        }
+        
+        .log-container.fullscreen .processing-log {
+            max-height: none;
+            flex: 1;
         }
         
         .log-entry {
-            padding: 5px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #222;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            transition: background 0.2s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 165, 0, 0.05);
         }
         
         .log-timestamp {
             color: #666;
-            margin-right: 10px;
+            white-space: nowrap;
+            font-size: 0.8rem;
         }
         
-        .log-level-debug { color: #888; }
-        .log-level-info { color: #3498db; }
-        .log-level-warn { color: #f39c12; }
-        .log-level-error { color: #e74c3c; }
+        .log-level {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        
+        .log-level-debug { 
+            color: #888;
+            background: rgba(136, 136, 136, 0.1);
+        }
+        .log-level-info { 
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+        .log-level-warn { 
+            color: #f39c12;
+            background: rgba(243, 156, 18, 0.1);
+        }
+        .log-level-error { 
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+        
+        .log-component {
+            color: #61afef;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .log-message {
+            flex: 1;
+            color: #e0e0e0;
+        }
+        
+        .log-data {
+            margin-top: 5px;
+            padding: 8px;
+            background: #0a0a0a;
+            border-radius: 4px;
+            font-size: 0.8em;
+            color: #999;
+            border: 1px solid #222;
+        }
+        
+        .fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            z-index: 10;
+        }
+        
+        .fullscreen-btn:hover {
+            background: #444;
+            border-color: #FFA500;
+        }
         
         .data-comparison {
             margin: 20px 0;
@@ -247,6 +426,48 @@
             color: #2ecc71;
         }
         
+        /* Syntax highlighting for processed data */
+        .json-string { color: #98c379; }
+        .json-number { color: #d19a66; }
+        .json-boolean { color: #56b6c2; }
+        .json-null { color: #e06c75; }
+        .json-key { color: #e06c75; }
+        
+        /* Input and search styling */
+        input[type="text"], input[type="search"] {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        input[type="text"]:focus, input[type="search"]:focus {
+            outline: none;
+            border-color: #FFA500;
+            box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+        }
+        
+        /* Scrollbar styling for dark mode */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #0d0d0d;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+        
         @media (max-width: 768px) {
             .event-debugger {
                 grid-template-columns: 1fr;
@@ -254,6 +475,15 @@
             
             .city-quick-switch {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .log-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .log-search {
+                width: 100%;
             }
         }
     </style>
@@ -362,14 +592,31 @@
                     <div class="debug-header">
                         <h2 class="debug-title">📋 Processing Log</h2>
                         <div class="debug-controls">
-                            <button class="debug-btn" id="log-debug">Debug</button>
-                            <button class="debug-btn" id="log-info">Info</button>
-                            <button class="debug-btn" id="log-warn">Warnings</button>
-                            <button class="debug-btn" id="log-error">Errors</button>
+                            <button class="debug-btn" id="log-toggle-fullscreen">⛶ Fullscreen</button>
+                            <button class="debug-btn" id="log-clear">🗑️ Clear</button>
+                            <button class="debug-btn" id="log-export">💾 Export</button>
                         </div>
                     </div>
-                    <div class="processing-log" id="processing-log">
-                        <!-- Populated by JavaScript -->
+                    <div class="log-container" id="log-container">
+                        <div class="log-filters">
+                            <input type="search" class="log-search" id="log-search" placeholder="🔍 Search logs...">
+                            
+                            <div class="debug-controls">
+                                <button class="debug-btn" id="log-all" class="active">All</button>
+                                <button class="debug-btn" id="log-debug">Debug</button>
+                                <button class="debug-btn" id="log-info">Info</button>
+                                <button class="debug-btn" id="log-warn">Warnings</button>
+                                <button class="debug-btn" id="log-error">Errors</button>
+                            </div>
+                            
+                            <div class="component-filter" id="component-filter">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                        <div class="processing-log" id="processing-log">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                        <button class="fullscreen-btn" id="fullscreen-close" style="display: none;">✕ Close</button>
                     </div>
                 </div>
                 
@@ -421,6 +668,10 @@
                 this.rawCalendarData = '';
                 this.eventFilter = 'all';
                 this.logFilter = 'all';
+                this.logSearchTerm = '';
+                this.activeComponents = new Set();
+                this.allComponents = new Set();
+                this.isLogFullscreen = false;
                 
                 // Override logger methods to capture logs
                 this.originalLogMethods = {
@@ -443,6 +694,9 @@
                         // Call original method
                         self.originalLogMethods[level](component, message, data);
                         
+                        // Track component
+                        self.allComponents.add(component);
+                        
                         // Capture log
                         self.debugLogs.push({
                             timestamp: new Date(),
@@ -454,6 +708,7 @@
                         
                         // Update UI
                         self.updateProcessingLog();
+                        self.updateComponentFilter();
                     };
                 });
             }
@@ -598,30 +853,114 @@
             highlightProcessedData(json) {
                 // Add syntax highlighting
                 return json
-                    .replace(/(".*?")/g, '<span style="color: #98c379;">$1</span>')
-                    .replace(/(:)(\s*)([0-9]+)/g, '$1$2<span style="color: #d19a66;">$3</span>')
-                    .replace(/(:)(\s*)(true|false)/g, '$1$2<span style="color: #56b6c2;">$3</span>')
-                    .replace(/(:)(\s*)(null)/g, '$1$2<span style="color: #e06c75;">$3</span>');
+                    .replace(/(".*?")/g, '<span class="json-string">$1</span>')
+                    .replace(/(:)(\s*)([0-9]+)/g, '$1$2<span class="json-number">$3</span>')
+                    .replace(/(:)(\s*)(true|false)/g, '$1$2<span class="json-boolean">$3</span>')
+                    .replace(/(:)(\s*)(null)/g, '$1$2<span class="json-null">$3</span>');
             }
             
             updateProcessingLog() {
                 const container = document.getElementById('processing-log');
                 const filteredLogs = this.debugLogs.filter(log => {
-                    if (this.logFilter === 'all') return true;
-                    return log.level === this.logFilter;
+                    // Filter by level
+                    if (this.logFilter !== 'all' && log.level !== this.logFilter) return false;
+                    
+                    // Filter by component
+                    if (this.activeComponents.size > 0 && !this.activeComponents.has(log.component)) return false;
+                    
+                    // Filter by search term
+                    if (this.logSearchTerm) {
+                        const searchableText = `${log.component} ${log.message} ${JSON.stringify(log.data || '')}`.toLowerCase();
+                        if (!searchableText.includes(this.logSearchTerm.toLowerCase())) return false;
+                    }
+                    
+                    return true;
                 });
                 
-                const recentLogs = filteredLogs.slice(-50).reverse();
+                const maxLogs = this.isLogFullscreen ? 500 : 100;
+                const recentLogs = filteredLogs.slice(-maxLogs).reverse();
                 
-                container.innerHTML = recentLogs.map(log => `
-                    <div class="log-entry">
-                        <span class="log-timestamp">${log.timestamp.toLocaleTimeString()}</span>
-                        <span class="log-level-${log.level}">[${log.level.toUpperCase()}]</span>
-                        <span style="color: #61afef;">[${log.component}]</span>
-                        ${log.message}
-                        ${log.data ? `<pre style="margin: 5px 0; font-size: 0.8em; color: #666;">${JSON.stringify(log.data, null, 2)}</pre>` : ''}
-                    </div>
+                container.innerHTML = recentLogs.map(log => {
+                    const logContent = `
+                        <div class="log-entry">
+                            <span class="log-timestamp">${log.timestamp.toLocaleTimeString()}</span>
+                            <span class="log-level log-level-${log.level}">[${log.level.toUpperCase().padEnd(5)}]</span>
+                            <span class="log-component">[${log.component}]</span>
+                            <div class="log-message">${this.escapeHtml(log.message)}
+                                ${log.data ? `<div class="log-data">${this.formatLogData(log.data)}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    return logContent;
+                }).join('');
+                
+                // Auto-scroll to bottom if near bottom
+                if (container.scrollHeight - container.scrollTop - container.clientHeight < 100) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            formatLogData(data) {
+                try {
+                    const json = JSON.stringify(data, null, 2);
+                    return this.escapeHtml(json);
+                } catch (e) {
+                    return this.escapeHtml(String(data));
+                }
+            }
+            
+            updateComponentFilter() {
+                const container = document.getElementById('component-filter');
+                const components = Array.from(this.allComponents).sort();
+                
+                container.innerHTML = components.map(component => `
+                    <button class="component-btn ${this.activeComponents.has(component) ? 'active' : ''}" 
+                            data-component="${component}">
+                        ${component}
+                    </button>
                 `).join('');
+                
+                // Add click handlers
+                container.querySelectorAll('.component-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const component = btn.dataset.component;
+                        if (this.activeComponents.has(component)) {
+                            this.activeComponents.delete(component);
+                        } else {
+                            this.activeComponents.add(component);
+                        }
+                        this.updateComponentFilter();
+                        this.updateProcessingLog();
+                    });
+                });
+            }
+            
+            toggleLogFullscreen() {
+                const container = document.getElementById('log-container');
+                const closeBtn = document.getElementById('fullscreen-close');
+                const toggleBtn = document.getElementById('log-toggle-fullscreen');
+                
+                this.isLogFullscreen = !this.isLogFullscreen;
+                
+                if (this.isLogFullscreen) {
+                    container.classList.add('fullscreen');
+                    closeBtn.style.display = 'block';
+                    toggleBtn.innerHTML = '⛶ Exit Fullscreen';
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    container.classList.remove('fullscreen');
+                    closeBtn.style.display = 'none';
+                    toggleBtn.innerHTML = '⛶ Fullscreen';
+                    document.body.style.overflow = '';
+                }
+                
+                this.updateProcessingLog();
             }
             
             setupEventHandlers() {
@@ -656,12 +995,44 @@
                 });
                 
                 // Log filters
+                document.getElementById('log-all').addEventListener('click', () => {
+                    this.logFilter = 'all';
+                    this.updateLogButtons();
+                    this.updateProcessingLog();
+                });
+                
                 ['debug', 'info', 'warn', 'error'].forEach(level => {
                     document.getElementById(`log-${level}`).addEventListener('click', () => {
-                        this.logFilter = this.logFilter === level ? 'all' : level;
+                        this.logFilter = level;
                         this.updateLogButtons();
                         this.updateProcessingLog();
                     });
+                });
+                
+                // Log search
+                document.getElementById('log-search').addEventListener('input', (e) => {
+                    this.logSearchTerm = e.target.value;
+                    this.updateProcessingLog();
+                });
+                
+                // Fullscreen toggle
+                document.getElementById('log-toggle-fullscreen').addEventListener('click', () => {
+                    this.toggleLogFullscreen();
+                });
+                
+                document.getElementById('fullscreen-close').addEventListener('click', () => {
+                    this.toggleLogFullscreen();
+                });
+                
+                // Log clear
+                document.getElementById('log-clear').addEventListener('click', () => {
+                    this.debugLogs = [];
+                    this.updateProcessingLog();
+                });
+                
+                // Log export
+                document.getElementById('log-export').addEventListener('click', () => {
+                    this.exportLogs();
                 });
                 
                 // Advanced tools
@@ -709,6 +1080,27 @@
                     e.preventDefault();
                     this.exportDebugData();
                 });
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    // Escape to exit fullscreen
+                    if (e.key === 'Escape' && this.isLogFullscreen) {
+                        this.toggleLogFullscreen();
+                    }
+                    
+                    // Ctrl/Cmd + K to focus search
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                        e.preventDefault();
+                        document.getElementById('log-search').focus();
+                    }
+                    
+                    // Ctrl/Cmd + L to clear logs
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                        e.preventDefault();
+                        this.debugLogs = [];
+                        this.updateProcessingLog();
+                    }
+                });
             }
             
             updateFilterButtons() {
@@ -719,12 +1111,25 @@
             }
             
             updateLogButtons() {
-                document.querySelectorAll('#log-debug, #log-info, #log-warn, #log-error').forEach(btn => {
+                document.querySelectorAll('#log-all, #log-debug, #log-info, #log-warn, #log-error').forEach(btn => {
                     btn.classList.remove('active');
                 });
-                if (this.logFilter !== 'all') {
-                    document.getElementById(`log-${this.logFilter}`).classList.add('active');
-                }
+                document.getElementById(`log-${this.logFilter}`).classList.add('active');
+            }
+            
+            exportLogs() {
+                const exportData = {
+                    timestamp: new Date().toISOString(),
+                    city: this.currentCity,
+                    filters: {
+                        level: this.logFilter,
+                        components: Array.from(this.activeComponents),
+                        search: this.logSearchTerm
+                    },
+                    logs: this.debugLogs
+                };
+                
+                this.downloadData(JSON.stringify(exportData, null, 2), `logs-${this.currentCity}-${Date.now()}.json`, 'application/json');
             }
             
             testEventParsing() {
