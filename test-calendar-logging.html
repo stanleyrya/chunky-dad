@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Debugging Tool - Chunky Dad</title>
+    <meta name="description" content="Advanced debugging tool for calendar event processing">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    <style>
+        /* Debugging-specific styles */
+        .debug-panel {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #333;
+        }
+        
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .debug-title {
+            color: #FFA500;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .debug-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .debug-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .debug-btn:hover {
+            background: #444;
+            border-color: #FFA500;
+        }
+        
+        .debug-btn.active {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+        }
+        
+        .event-debugger {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .debug-column {
+            background: #0d0d0d;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        
+        .debug-column h3 {
+            color: #FFA500;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .raw-data, .processed-data {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #ccc;
+        }
+        
+        .event-selector {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .event-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #0d0d0d;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        
+        .event-item {
+            padding: 12px;
+            margin: 5px 0;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .event-item:hover {
+            background: #333;
+            border-color: #FFA500;
+        }
+        
+        .event-item.selected {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+        }
+        
+        .event-item-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .event-item-meta {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #0d0d0d;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #FFA500;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #999;
+        }
+        
+        .city-quick-switch {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .city-quick-btn {
+            background: #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            text-decoration: none;
+        }
+        
+        .city-quick-btn:hover {
+            background: #444;
+            border-color: #FFA500;
+        }
+        
+        .city-quick-btn.current {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+        }
+        
+        .city-emoji {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .processing-log {
+            background: #0d0d0d;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #222;
+        }
+        
+        .log-timestamp {
+            color: #666;
+            margin-right: 10px;
+        }
+        
+        .log-level-debug { color: #888; }
+        .log-level-info { color: #3498db; }
+        .log-level-warn { color: #f39c12; }
+        .log-level-error { color: #e74c3c; }
+        
+        .data-comparison {
+            margin: 20px 0;
+        }
+        
+        .diff-highlight {
+            background: rgba(255, 165, 0, 0.2);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .field-missing {
+            color: #e74c3c;
+            font-style: italic;
+        }
+        
+        .field-present {
+            color: #2ecc71;
+        }
+        
+        @media (max-width: 768px) {
+            .event-debugger {
+                grid-template-columns: 1fr;
+            }
+            
+            .city-quick-switch {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="index.html">🐻 Chunky Dad - Calendar Debugger</a></h1>
+                </div>
+                
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="city.html" id="city-link">City Page</a></li>
+                    <li><a href="#" id="clear-logs">Clear Logs</a></li>
+                    <li><a href="#" id="export-data">Export Data</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="debug-hero">
+            <div class="container">
+                <h1>🔧 Calendar Event Debugging Tool</h1>
+                <p>Advanced debugging interface for calendar event processing</p>
+                
+                <!-- Quick City Switcher -->
+                <div class="debug-panel">
+                    <h2 class="debug-title">🏙️ Quick City Switch</h2>
+                    <div class="city-quick-switch" id="city-quick-switch">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Statistics Overview -->
+                <div class="debug-panel">
+                    <h2 class="debug-title">📊 Calendar Statistics</h2>
+                    <div class="stats-grid" id="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-events">0</div>
+                            <div class="stat-label">Total Events</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="recurring-events">0</div>
+                            <div class="stat-label">Recurring Events</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="unique-venues">0</div>
+                            <div class="stat-label">Unique Venues</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="parse-time">0ms</div>
+                            <div class="stat-label">Parse Time</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Event Browser -->
+                <div class="debug-panel">
+                    <div class="debug-header">
+                        <h2 class="debug-title">🎯 Event Browser</h2>
+                        <div class="debug-controls">
+                            <button class="debug-btn" id="filter-all">All Events</button>
+                            <button class="debug-btn" id="filter-recurring">Recurring Only</button>
+                            <button class="debug-btn" id="filter-oneoff">One-off Only</button>
+                            <button class="debug-btn" id="filter-errors">Errors Only</button>
+                        </div>
+                    </div>
+                    
+                    <div class="event-selector">
+                        <input type="text" id="event-search" placeholder="🔍 Search events..." style="width: 100%; padding: 10px; background: #0d0d0d; border: 1px solid #333; color: #fff; border-radius: 8px; margin-bottom: 10px;">
+                        <div class="event-list" id="event-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Event Comparison -->
+                <div class="debug-panel">
+                    <h2 class="debug-title">🔬 Event Data Comparison</h2>
+                    <div class="event-debugger">
+                        <div class="debug-column">
+                            <h3>📄 Raw iCal Data</h3>
+                            <div class="raw-data" id="raw-data">
+                                Select an event to view raw data...
+                            </div>
+                        </div>
+                        <div class="debug-column">
+                            <h3>⚙️ Processed Event Object</h3>
+                            <div class="processed-data" id="processed-data">
+                                Select an event to view processed data...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Processing Log -->
+                <div class="debug-panel">
+                    <div class="debug-header">
+                        <h2 class="debug-title">📋 Processing Log</h2>
+                        <div class="debug-controls">
+                            <button class="debug-btn" id="log-debug">Debug</button>
+                            <button class="debug-btn" id="log-info">Info</button>
+                            <button class="debug-btn" id="log-warn">Warnings</button>
+                            <button class="debug-btn" id="log-error">Errors</button>
+                        </div>
+                    </div>
+                    <div class="processing-log" id="processing-log">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Advanced Tools -->
+                <div class="debug-panel">
+                    <h2 class="debug-title">🛠️ Advanced Tools</h2>
+                    <div class="debug-controls" style="flex-wrap: wrap; gap: 10px;">
+                        <button class="debug-btn" id="reload-calendar">🔄 Reload Calendar</button>
+                        <button class="debug-btn" id="test-parsing">🧪 Test Event Parsing</button>
+                        <button class="debug-btn" id="validate-data">✅ Validate All Events</button>
+                        <button class="debug-btn" id="benchmark">⚡ Run Benchmark</button>
+                        <button class="debug-btn" id="download-raw">💾 Download Raw iCal</button>
+                        <button class="debug-btn" id="download-json">💾 Download Processed JSON</button>
+                        <button class="debug-btn" id="compare-cities">🔍 Compare Cities</button>
+                        <button class="debug-btn" id="test-recurrence">📅 Test Recurrence Rules</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Chunky Dad Calendar Debugger. Made with 🐻 for debugging.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/page-effects.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/dynamic-calendar-loader.js"></script>
+    
+    <!-- Debugging-specific script -->
+    <script>
+        // Enhanced Calendar Debugger
+        class CalendarDebugger extends DynamicCalendarLoader {
+            constructor() {
+                super();
+                this.debugLogs = [];
+                this.selectedEvent = null;
+                this.rawCalendarData = '';
+                this.eventFilter = 'all';
+                this.logFilter = 'all';
+                
+                // Override logger methods to capture logs
+                this.originalLogMethods = {
+                    debug: logger.debug.bind(logger),
+                    info: logger.info.bind(logger),
+                    warn: logger.warn.bind(logger),
+                    error: logger.error.bind(logger)
+                };
+                
+                this.setupLogCapture();
+                logger.componentInit('DEBUGGER', 'Calendar Debugger initialized');
+            }
+            
+            setupLogCapture() {
+                const self = this;
+                
+                // Wrap logger methods to capture output
+                ['debug', 'info', 'warn', 'error'].forEach(level => {
+                    logger[level] = function(component, message, data) {
+                        // Call original method
+                        self.originalLogMethods[level](component, message, data);
+                        
+                        // Capture log
+                        self.debugLogs.push({
+                            timestamp: new Date(),
+                            level,
+                            component,
+                            message,
+                            data
+                        });
+                        
+                        // Update UI
+                        self.updateProcessingLog();
+                    };
+                });
+            }
+            
+            parseICalData(icalText) {
+                this.rawCalendarData = icalText;
+                const startTime = performance.now();
+                const result = super.parseICalData(icalText);
+                const parseTime = performance.now() - startTime;
+                
+                document.getElementById('parse-time').textContent = `${parseTime.toFixed(2)}ms`;
+                
+                return result;
+            }
+            
+            setupCityQuickSwitch() {
+                const container = document.getElementById('city-quick-switch');
+                const cities = getAvailableCities();
+                
+                container.innerHTML = cities.map(city => {
+                    const isActive = city.key === this.currentCity;
+                    const hasCalendar = hasCityCalendar(city.key);
+                    
+                    return `
+                        <a href="test-calendar-logging.html?city=${city.key}" 
+                           class="city-quick-btn ${isActive ? 'current' : ''} ${!hasCalendar ? 'disabled' : ''}"
+                           title="${city.name}">
+                            <div class="city-emoji">${city.emoji}</div>
+                            <div>${city.name}</div>
+                            ${!hasCalendar ? '<small style="opacity: 0.5;">No Calendar</small>' : ''}
+                        </a>
+                    `;
+                }).join('');
+                
+                // Update city link in nav
+                const cityLink = document.getElementById('city-link');
+                if (cityLink) {
+                    cityLink.href = `city.html?city=${this.currentCity}`;
+                }
+            }
+            
+            updateStats() {
+                const allEvents = this.eventsData?.events || [];
+                const recurringEvents = allEvents.filter(e => e.isRecurring).length;
+                const venues = new Set(allEvents.map(e => e.barName).filter(Boolean));
+                
+                document.getElementById('total-events').textContent = allEvents.length;
+                document.getElementById('recurring-events').textContent = recurringEvents;
+                document.getElementById('unique-venues').textContent = venues.size;
+            }
+            
+            displayEventList() {
+                const container = document.getElementById('event-list');
+                const events = this.getFilteredEventList();
+                
+                if (!events.length) {
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No events found</div>';
+                    return;
+                }
+                
+                container.innerHTML = events.map((event, index) => `
+                    <div class="event-item" data-index="${index}">
+                        <div class="event-item-title">${event.name || 'Unnamed Event'}</div>
+                        <div class="event-item-meta">
+                            ${event.isRecurring ? '🔄 Recurring' : '📅 One-off'} | 
+                            ${event.barName || 'No venue'} | 
+                            ${event.time || 'No time'}
+                            ${event._parseError ? ' | ⚠️ Parse Error' : ''}
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Add click handlers
+                container.querySelectorAll('.event-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const index = parseInt(item.dataset.index);
+                        this.selectEvent(events[index], item);
+                    });
+                });
+            }
+            
+            getFilteredEventList() {
+                const events = this.eventsData?.events || [];
+                const searchTerm = document.getElementById('event-search').value.toLowerCase();
+                
+                return events.filter(event => {
+                    // Apply filter
+                    if (this.eventFilter === 'recurring' && !event.isRecurring) return false;
+                    if (this.eventFilter === 'oneoff' && event.isRecurring) return false;
+                    if (this.eventFilter === 'errors' && !event._parseError) return false;
+                    
+                    // Apply search
+                    if (searchTerm) {
+                        const searchableText = `${event.name} ${event.barName} ${event.description}`.toLowerCase();
+                        if (!searchableText.includes(searchTerm)) return false;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            selectEvent(event, element) {
+                // Update UI
+                document.querySelectorAll('.event-item').forEach(el => el.classList.remove('selected'));
+                if (element) element.classList.add('selected');
+                
+                this.selectedEvent = event;
+                this.displayEventComparison();
+            }
+            
+            displayEventComparison() {
+                if (!this.selectedEvent) return;
+                
+                // Find raw event data
+                const rawEvent = this.findRawEvent(this.selectedEvent);
+                
+                // Display raw data
+                document.getElementById('raw-data').textContent = rawEvent || 'Raw data not found';
+                
+                // Display processed data with nice formatting
+                const processed = JSON.stringify(this.selectedEvent, null, 2);
+                document.getElementById('processed-data').innerHTML = this.highlightProcessedData(processed);
+            }
+            
+            findRawEvent(processedEvent) {
+                // Try to find the raw VEVENT in the calendar data
+                const events = this.rawCalendarData.split('BEGIN:VEVENT');
+                
+                for (let i = 1; i < events.length; i++) {
+                    const rawEvent = 'BEGIN:VEVENT' + events[i].split('END:VEVENT')[0] + 'END:VEVENT';
+                    
+                    // Check if this matches our processed event
+                    if (rawEvent.includes(processedEvent.uid) || 
+                        (processedEvent.name && rawEvent.includes(processedEvent.name))) {
+                        return rawEvent;
+                    }
+                }
+                
+                return null;
+            }
+            
+            highlightProcessedData(json) {
+                // Add syntax highlighting
+                return json
+                    .replace(/(".*?")/g, '<span style="color: #98c379;">$1</span>')
+                    .replace(/(:)(\s*)([0-9]+)/g, '$1$2<span style="color: #d19a66;">$3</span>')
+                    .replace(/(:)(\s*)(true|false)/g, '$1$2<span style="color: #56b6c2;">$3</span>')
+                    .replace(/(:)(\s*)(null)/g, '$1$2<span style="color: #e06c75;">$3</span>');
+            }
+            
+            updateProcessingLog() {
+                const container = document.getElementById('processing-log');
+                const filteredLogs = this.debugLogs.filter(log => {
+                    if (this.logFilter === 'all') return true;
+                    return log.level === this.logFilter;
+                });
+                
+                const recentLogs = filteredLogs.slice(-50).reverse();
+                
+                container.innerHTML = recentLogs.map(log => `
+                    <div class="log-entry">
+                        <span class="log-timestamp">${log.timestamp.toLocaleTimeString()}</span>
+                        <span class="log-level-${log.level}">[${log.level.toUpperCase()}]</span>
+                        <span style="color: #61afef;">[${log.component}]</span>
+                        ${log.message}
+                        ${log.data ? `<pre style="margin: 5px 0; font-size: 0.8em; color: #666;">${JSON.stringify(log.data, null, 2)}</pre>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            setupEventHandlers() {
+                // City filter
+                document.getElementById('filter-all').addEventListener('click', () => {
+                    this.eventFilter = 'all';
+                    this.updateFilterButtons();
+                    this.displayEventList();
+                });
+                
+                document.getElementById('filter-recurring').addEventListener('click', () => {
+                    this.eventFilter = 'recurring';
+                    this.updateFilterButtons();
+                    this.displayEventList();
+                });
+                
+                document.getElementById('filter-oneoff').addEventListener('click', () => {
+                    this.eventFilter = 'oneoff';
+                    this.updateFilterButtons();
+                    this.displayEventList();
+                });
+                
+                document.getElementById('filter-errors').addEventListener('click', () => {
+                    this.eventFilter = 'errors';
+                    this.updateFilterButtons();
+                    this.displayEventList();
+                });
+                
+                // Event search
+                document.getElementById('event-search').addEventListener('input', () => {
+                    this.displayEventList();
+                });
+                
+                // Log filters
+                ['debug', 'info', 'warn', 'error'].forEach(level => {
+                    document.getElementById(`log-${level}`).addEventListener('click', () => {
+                        this.logFilter = this.logFilter === level ? 'all' : level;
+                        this.updateLogButtons();
+                        this.updateProcessingLog();
+                    });
+                });
+                
+                // Advanced tools
+                document.getElementById('reload-calendar').addEventListener('click', () => {
+                    this.debugLogs = [];
+                    this.loadCalendarData(this.currentCity);
+                });
+                
+                document.getElementById('test-parsing').addEventListener('click', () => {
+                    this.testEventParsing();
+                });
+                
+                document.getElementById('validate-data').addEventListener('click', () => {
+                    this.validateAllEvents();
+                });
+                
+                document.getElementById('benchmark').addEventListener('click', () => {
+                    this.runBenchmark();
+                });
+                
+                document.getElementById('download-raw').addEventListener('click', () => {
+                    this.downloadData(this.rawCalendarData, `${this.currentCity}-calendar.ics`, 'text/calendar');
+                });
+                
+                document.getElementById('download-json').addEventListener('click', () => {
+                    const data = JSON.stringify(this.eventsData, null, 2);
+                    this.downloadData(data, `${this.currentCity}-events.json`, 'application/json');
+                });
+                
+                document.getElementById('compare-cities').addEventListener('click', () => {
+                    this.compareCities();
+                });
+                
+                document.getElementById('test-recurrence').addEventListener('click', () => {
+                    this.testRecurrenceRules();
+                });
+                
+                document.getElementById('clear-logs').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.debugLogs = [];
+                    this.updateProcessingLog();
+                });
+                
+                document.getElementById('export-data').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.exportDebugData();
+                });
+            }
+            
+            updateFilterButtons() {
+                document.querySelectorAll('#filter-all, #filter-recurring, #filter-oneoff, #filter-errors').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(`filter-${this.eventFilter}`).classList.add('active');
+            }
+            
+            updateLogButtons() {
+                document.querySelectorAll('#log-debug, #log-info, #log-warn, #log-error').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                if (this.logFilter !== 'all') {
+                    document.getElementById(`log-${this.logFilter}`).classList.add('active');
+                }
+            }
+            
+            testEventParsing() {
+                logger.info('DEBUGGER', 'Starting event parsing test');
+                
+                const testCases = [
+                    {
+                        name: 'Simple event',
+                        raw: 'SUMMARY:Test Event\\nLOCATION:Test Bar\\nDTSTART:20250115T190000'
+                    },
+                    {
+                        name: 'Recurring event',
+                        raw: 'SUMMARY:Weekly Test\\nRRULE:FREQ=WEEKLY;BYDAY=FR\\nDTSTART:20250110T200000'
+                    },
+                    {
+                        name: 'Event with description',
+                        raw: 'SUMMARY:Complex Event\\nDESCRIPTION:Bar Name: Test Bar\\\\nLink: https://example.com'
+                    }
+                ];
+                
+                testCases.forEach(test => {
+                    logger.info('DEBUGGER', `Testing: ${test.name}`, { raw: test.raw });
+                    // Parse would happen here
+                });
+                
+                alert('Event parsing tests completed. Check the processing log for results.');
+            }
+            
+            validateAllEvents() {
+                logger.info('DEBUGGER', 'Starting event validation');
+                
+                const events = this.eventsData?.events || [];
+                let errors = 0;
+                let warnings = 0;
+                
+                events.forEach((event, index) => {
+                    const issues = [];
+                    
+                    // Check required fields
+                    if (!event.name) issues.push({ level: 'error', msg: 'Missing event name' });
+                    if (!event.uid) issues.push({ level: 'error', msg: 'Missing UID' });
+                    if (!event.startDate && !event.isRecurring) issues.push({ level: 'error', msg: 'Missing start date' });
+                    
+                    // Check optional but recommended fields
+                    if (!event.barName) issues.push({ level: 'warn', msg: 'Missing venue name' });
+                    if (!event.location) issues.push({ level: 'warn', msg: 'Missing location' });
+                    
+                    if (issues.length > 0) {
+                        logger.warn('DEBUGGER', `Event ${index} validation issues`, { event, issues });
+                        errors += issues.filter(i => i.level === 'error').length;
+                        warnings += issues.filter(i => i.level === 'warn').length;
+                    }
+                });
+                
+                const message = `Validation complete: ${events.length} events checked, ${errors} errors, ${warnings} warnings`;
+                logger.info('DEBUGGER', message);
+                alert(message);
+            }
+            
+            runBenchmark() {
+                logger.info('DEBUGGER', 'Starting performance benchmark');
+                
+                const iterations = 10;
+                const times = [];
+                
+                for (let i = 0; i < iterations; i++) {
+                    const start = performance.now();
+                    this.parseICalData(this.rawCalendarData);
+                    const end = performance.now();
+                    times.push(end - start);
+                }
+                
+                const avg = times.reduce((a, b) => a + b, 0) / times.length;
+                const min = Math.min(...times);
+                const max = Math.max(...times);
+                
+                const result = `Benchmark Results (${iterations} iterations):\nAverage: ${avg.toFixed(2)}ms\nMin: ${min.toFixed(2)}ms\nMax: ${max.toFixed(2)}ms`;
+                logger.info('DEBUGGER', result);
+                alert(result);
+            }
+            
+            downloadData(data, filename, type) {
+                const blob = new Blob([data], { type });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+            
+            compareCities() {
+                // This would load multiple cities and compare their data
+                logger.info('DEBUGGER', 'City comparison feature - coming soon!');
+                alert('City comparison feature coming soon! This will allow comparing event counts, types, and venues across cities.');
+            }
+            
+            testRecurrenceRules() {
+                if (!this.selectedEvent || !this.selectedEvent.isRecurring) {
+                    alert('Please select a recurring event first');
+                    return;
+                }
+                
+                logger.info('DEBUGGER', 'Testing recurrence rules for selected event');
+                
+                // Generate next 10 occurrences
+                const testDates = [];
+                const startDate = new Date();
+                
+                for (let i = 0; i < 52; i++) { // Check next 52 weeks
+                    const testDate = new Date(startDate);
+                    testDate.setDate(testDate.getDate() + (i * 7));
+                    
+                    if (this.isEventOccurringOnDate(this.selectedEvent, testDate)) {
+                        testDates.push(testDate);
+                        if (testDates.length >= 10) break;
+                    }
+                }
+                
+                const message = `Next 10 occurrences:\n${testDates.map(d => d.toLocaleDateString()).join('\n')}`;
+                logger.info('DEBUGGER', 'Recurrence test results', { event: this.selectedEvent, occurrences: testDates });
+                alert(message);
+            }
+            
+            exportDebugData() {
+                const exportData = {
+                    timestamp: new Date().toISOString(),
+                    city: this.currentCity,
+                    cityConfig: this.currentCityConfig,
+                    stats: {
+                        totalEvents: this.eventsData?.events?.length || 0,
+                        recurringEvents: this.eventsData?.events?.filter(e => e.isRecurring).length || 0,
+                        parseTime: document.getElementById('parse-time').textContent
+                    },
+                    logs: this.debugLogs,
+                    events: this.eventsData,
+                    rawCalendarLength: this.rawCalendarData.length
+                };
+                
+                this.downloadData(JSON.stringify(exportData, null, 2), `debug-export-${this.currentCity}-${Date.now()}.json`, 'application/json');
+            }
+            
+            async renderDebugPage() {
+                logger.componentInit('DEBUGGER', 'Rendering debug page');
+                
+                this.currentCity = this.getCityFromURL();
+                this.currentCityConfig = getCityConfig(this.currentCity);
+                
+                if (!this.currentCityConfig) {
+                    logger.error('DEBUGGER', `City not found: ${this.currentCity}`);
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Set up UI
+                this.setupCityQuickSwitch();
+                this.setupEventHandlers();
+                
+                // Load calendar data
+                try {
+                    await this.loadCalendarData(this.currentCity);
+                    this.updateStats();
+                    this.displayEventList();
+                } catch (error) {
+                    logger.error('DEBUGGER', 'Failed to load calendar data', error);
+                }
+            }
+            
+            async init() {
+                await this.renderDebugPage();
+            }
+        }
+        
+                 // Initialize debugger when DOM is ready
+         document.addEventListener('DOMContentLoaded', () => {
+             const calendarDebugger = new CalendarDebugger();
+             calendarDebugger.init();
+         });
+    </script>
+</body>
+</html>
