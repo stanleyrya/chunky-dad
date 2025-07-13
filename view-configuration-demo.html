@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Configuration Demo - Chunky Dad</title>
+    <meta name="description" content="Interactive demo for configuring event views in the modular system">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    <style>
+        /* Demo-specific styles */
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+        }
+        
+        .demo-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-bottom: 2px solid #FFA500;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        
+        .demo-header h1 {
+            color: #FFA500;
+            text-align: center;
+            margin: 0;
+            font-size: 2rem;
+        }
+        
+        .demo-header p {
+            text-align: center;
+            margin: 10px 0 0 0;
+            opacity: 0.8;
+        }
+        
+        .demo-controls {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            border: 2px solid #333;
+        }
+        
+        .demo-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .demo-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .demo-section h3 {
+            color: #FFA500;
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .demo-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .demo-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .demo-btn:hover {
+            background: #444;
+            border-color: #FFA500;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+        }
+        
+        .demo-btn.active {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+        }
+        
+        .demo-btn.danger {
+            background: #663333;
+            border-color: #ff4444;
+        }
+        
+        .demo-btn.danger:hover {
+            background: #884444;
+            border-color: #ff6666;
+        }
+        
+        .current-views {
+            background: #0d0d0d;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            margin-top: 15px;
+        }
+        
+        .current-views h4 {
+            margin: 0 0 10px 0;
+            color: #FFA500;
+            font-size: 1rem;
+        }
+        
+        .view-status {
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .city-demo-info {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .city-demo-info h2 {
+            color: #FFA500;
+            margin: 0 0 15px 0;
+        }
+        
+        .back-link {
+            color: #FFA500;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .demo-example {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .demo-example h4 {
+            color: #FFA500;
+            margin: 0 0 15px 0;
+        }
+        
+        .demo-example code {
+            background: #000;
+            color: #0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .demo-example pre {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        /* Override some main styles for demo */
+        .weekly-calendar, .events, .events-map-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-buttons {
+                flex-direction: column;
+            }
+            
+            .demo-btn {
+                text-align: center;
+            }
+            
+            .demo-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="index.html">🐻 Chunky Dad</a></h1>
+                </div>
+                
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#cities">Cities</a></li>
+                    <li><a href="index.html#events">Events</a></li>
+                    <li><a href="index.html#businesses">Businesses</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="demo-header">
+        <div class="container">
+            <h1>🔧 View Configuration Demo</h1>
+            <p>Interactive demonstration of the modular event view system</p>
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <a href="javascript:history.back()" class="back-link">← Back to Previous Page</a>
+            
+            <div class="city-demo-info">
+                <h2 id="demo-city-title">🏙️ Demo City</h2>
+                <p>This page demonstrates the modular event view system. You can toggle views on and off, try different configurations, and see how easy it is to customize the display.</p>
+                <p><strong>Current City:</strong> <span id="demo-current-city">Loading...</span></p>
+            </div>
+
+            <div class="demo-controls">
+                <div class="demo-section">
+                    <h3>👁️ Toggle Individual Views</h3>
+                    <p>Enable or disable specific event views to see how they work independently.</p>
+                    <div class="demo-buttons">
+                        <button onclick="toggleView('calendar')" class="demo-btn" id="calendar-toggle">
+                            📅 Calendar View
+                        </button>
+                        <button onclick="toggleView('eventlist')" class="demo-btn" id="eventlist-toggle">
+                            📝 Event List View
+                        </button>
+                        <button onclick="toggleView('map')" class="demo-btn" id="map-toggle">
+                            🗺️ Map View
+                        </button>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <h3>⚡ Quick Configurations</h3>
+                    <p>Instantly switch to predefined view combinations.</p>
+                    <div class="demo-buttons">
+                        <button onclick="setConfiguration('calendar-only')" class="demo-btn">
+                            📅 Calendar Only
+                        </button>
+                        <button onclick="setConfiguration('list-only')" class="demo-btn">
+                            📝 List Only
+                        </button>
+                        <button onclick="setConfiguration('map-only')" class="demo-btn">
+                            🗺️ Map Only
+                        </button>
+                        <button onclick="setConfiguration('all-views')" class="demo-btn">
+                            🎯 All Views
+                        </button>
+                        <button onclick="setConfiguration('minimal')" class="demo-btn">
+                            ⚡ Minimal (List + Map)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <h3>🧪 Custom View Demo</h3>
+                    <p>See how easy it is to add custom views to the system.</p>
+                    <div class="demo-buttons">
+                        <button onclick="addCustomView()" class="demo-btn" id="add-custom-btn">
+                            ➕ Add Custom Summary View
+                        </button>
+                        <button onclick="removeCustomView()" class="demo-btn danger" id="remove-custom-btn" style="display: none;">
+                            ➖ Remove Custom View
+                        </button>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <h3>📊 Current View Status</h3>
+                    <div class="current-views">
+                        <h4>Active Views:</h4>
+                        <div class="view-status" id="current-views-display">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo-example">
+                <h4>💻 How to Add Your Own View</h4>
+                <p>Creating a new view is simple! Here's an example:</p>
+                <pre><code>// 1. Create your view class
+class MyCustomView extends EventView {
+    constructor(containerId) {
+        super(containerId, 'MyCustom');
+    }
+    
+    render(events, cityConfig) {
+        if (!this.container) return;
+        
+        this.container.innerHTML = `
+            &lt;h3&gt;My Custom View&lt;/h3&gt;
+            &lt;p&gt;${events.length} events in ${cityConfig.name}&lt;/p&gt;
+        `;
+    }
+}
+
+// 2. Register it with the view manager
+calendarLoader.viewManager.registerView('custom', new MyCustomView('#my-container'));
+
+// 3. Enable it
+calendarLoader.enableView('custom');</code></pre>
+            </div>
+
+            <div class="demo-example">
+                <h4>🎛️ HTML Configuration</h4>
+                <p>You can also configure views directly in HTML:</p>
+                <pre><code>&lt;!-- Enable a view --&gt;
+&lt;section data-event-view="calendar" data-view-enabled="true"&gt;
+    &lt;div id="calendar-view-container"&gt;&lt;/div&gt;
+&lt;/section&gt;
+
+&lt;!-- Disable a view --&gt;
+&lt;section data-event-view="map" data-view-enabled="false"&gt;
+    &lt;div id="events-map"&gt;&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+            </div>
+        </div>
+
+        <!-- Demo Event Views (same structure as city.html but for demo) -->
+        <section class="weekly-calendar" data-event-view="calendar" data-view-enabled="true">
+            <div class="container">
+                <div class="calendar-header">
+                    <h2 id="calendar-title">This Week's Schedule</h2>
+                    <div class="calendar-controls">
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="week">📅 Week</button>
+                            <button class="view-btn" data-view="month">📊 Month</button>
+                        </div>
+                        <div class="date-navigation">
+                            <button class="nav-btn" id="prev-period">←</button>
+                            <span class="date-range" id="date-range"></span>
+                            <button class="nav-btn" id="next-period">→</button>
+                        </div>
+                        <button class="today-btn" id="today-btn">Today</button>
+                    </div>
+                </div>
+                <div class="calendar-grid" id="calendar-view-container">
+                    <div class="loading-message">📅 Getting latest events...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="events" data-event-view="eventlist" data-view-enabled="true">
+            <div class="container">
+                <h2>Events</h2>
+                <div class="events-list" id="eventlist-view-container">
+                    <div class="loading-message">🎉 Getting events...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="events-map-section" data-event-view="map" data-view-enabled="true">
+            <div class="container">
+                <h2>📍 Event Locations</h2>
+                <p>Click on any location pin to see event details, or click the 📍 links in events above.</p>
+                <div class="map-container">
+                    <div id="events-map"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Custom view placeholder -->
+        <section class="custom-view-section" data-event-view="custom" data-view-enabled="false" style="display: none;">
+            <div class="container">
+                <div id="custom-view-container"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Chunky Dad. Made with 🐻 for the bear community.</p>
+            <div class="social-links">
+                <a href="#" title="Instagram">📷</a>
+                <a href="#" title="Twitter">🐦</a>
+                <a href="#" title="Facebook">📘</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/page-effects.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/event-views.js"></script>
+    <script src="js/modular-calendar-loader.js"></script>
+    
+    <script>
+        // View Configuration Demo Logic
+        let calendarLoader = null;
+        let hasCustomView = false;
+
+        // Initialize demo when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize the modular calendar loader
+            if (window.ModularCalendarLoader) {
+                calendarLoader = new ModularCalendarLoader();
+                window.calendarLoader = calendarLoader;
+                await calendarLoader.init();
+                
+                // Update demo display
+                updateDemoDisplay();
+                updateCurrentViewsDisplay();
+                
+                logger.info('DEMO', 'View configuration demo initialized');
+            }
+        });
+
+        function updateDemoDisplay() {
+            const cityTitle = document.getElementById('demo-city-title');
+            const currentCity = document.getElementById('demo-current-city');
+            
+            if (calendarLoader && calendarLoader.currentCityConfig) {
+                const cityConfig = calendarLoader.currentCityConfig;
+                cityTitle.textContent = `${cityConfig.emoji} ${cityConfig.name} Demo`;
+                currentCity.textContent = cityConfig.name;
+            }
+        }
+
+        function updateCurrentViewsDisplay() {
+            const currentViewsDiv = document.getElementById('current-views-display');
+            
+            if (calendarLoader && calendarLoader.viewManager) {
+                const activeViews = calendarLoader.getActiveViews();
+                if (activeViews.length > 0) {
+                    currentViewsDiv.innerHTML = activeViews.map(v => 
+                        `• <strong>${v.name}</strong> (${v.view.viewType})`
+                    ).join('<br>');
+                } else {
+                    currentViewsDiv.innerHTML = '<em>No active views</em>';
+                }
+                
+                // Update button states
+                updateButtonStates();
+            }
+        }
+
+        function updateButtonStates() {
+            const viewManager = calendarLoader.viewManager;
+            
+            // Update toggle buttons
+            const calendarBtn = document.getElementById('calendar-toggle');
+            const eventlistBtn = document.getElementById('eventlist-toggle');
+            const mapBtn = document.getElementById('map-toggle');
+            
+            if (calendarBtn) {
+                calendarBtn.classList.toggle('active', viewManager.activeViews.has('calendar'));
+            }
+            if (eventlistBtn) {
+                eventlistBtn.classList.toggle('active', viewManager.activeViews.has('eventlist'));
+            }
+            if (mapBtn) {
+                mapBtn.classList.toggle('active', viewManager.activeViews.has('map'));
+            }
+            
+            // Update custom view buttons
+            const addBtn = document.getElementById('add-custom-btn');
+            const removeBtn = document.getElementById('remove-custom-btn');
+            
+            if (hasCustomView) {
+                addBtn.style.display = 'none';
+                removeBtn.style.display = 'inline-block';
+            } else {
+                addBtn.style.display = 'inline-block';
+                removeBtn.style.display = 'none';
+            }
+        }
+
+        function toggleView(viewName) {
+            if (!calendarLoader) return;
+            
+            const viewManager = calendarLoader.viewManager;
+            
+            if (viewManager.activeViews.has(viewName)) {
+                calendarLoader.disableView(viewName);
+                logger.userInteraction('DEMO', `View disabled: ${viewName}`);
+            } else {
+                calendarLoader.enableView(viewName);
+                logger.userInteraction('DEMO', `View enabled: ${viewName}`);
+            }
+            
+            updateCurrentViewsDisplay();
+        }
+
+        function setConfiguration(configName) {
+            if (!calendarLoader) return;
+            
+            // First disable all standard views
+            ['calendar', 'eventlist', 'map'].forEach(viewName => {
+                calendarLoader.disableView(viewName);
+            });
+            
+            // Then enable based on configuration
+            switch (configName) {
+                case 'calendar-only':
+                    calendarLoader.enableView('calendar');
+                    break;
+                case 'list-only':
+                    calendarLoader.enableView('eventlist');
+                    break;
+                case 'map-only':
+                    calendarLoader.enableView('map');
+                    break;
+                case 'all-views':
+                    calendarLoader.enableView('calendar');
+                    calendarLoader.enableView('eventlist');
+                    calendarLoader.enableView('map');
+                    break;
+                case 'minimal':
+                    calendarLoader.enableView('eventlist');
+                    calendarLoader.enableView('map');
+                    break;
+            }
+            
+            logger.userInteraction('DEMO', `Configuration set to: ${configName}`);
+            updateCurrentViewsDisplay();
+        }
+
+        function addCustomView() {
+            if (!calendarLoader || hasCustomView) return;
+            
+            // Create a custom summary view
+            class CustomSummaryView extends EventView {
+                constructor() {
+                    super('#custom-view-container', 'CustomSummary');
+                }
+                
+                render(events, cityConfig) {
+                    if (!this.container) return;
+                    
+                    const upcomingEvents = events.filter(e => e.startDate && new Date(e.startDate) > new Date());
+                    const recurringEvents = events.filter(e => e.recurring);
+                    const venues = [...new Set(events.map(e => e.bar))];
+                    
+                    this.container.innerHTML = `
+                        <div style="background: #1a1a1a; padding: 25px; border-radius: 12px; border: 1px solid #333; margin: 20px 0;">
+                            <h3 style="color: #FFA500; margin: 0 0 20px 0;">📊 Custom Event Summary</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                                <div style="background: #0d0d0d; padding: 15px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 2rem; color: #FFA500; font-weight: bold;">${events.length}</div>
+                                    <div style="color: #ccc;">Total Events</div>
+                                </div>
+                                <div style="background: #0d0d0d; padding: 15px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 2rem; color: #4CAF50; font-weight: bold;">${upcomingEvents.length}</div>
+                                    <div style="color: #ccc;">Upcoming</div>
+                                </div>
+                                <div style="background: #0d0d0d; padding: 15px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 2rem; color: #2196F3; font-weight: bold;">${recurringEvents.length}</div>
+                                    <div style="color: #ccc;">Recurring</div>
+                                </div>
+                                <div style="background: #0d0d0d; padding: 15px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 2rem; color: #FF9800; font-weight: bold;">${venues.length}</div>
+                                    <div style="color: #ccc;">Venues</div>
+                                </div>
+                            </div>
+                            <p style="margin: 20px 0 0 0; text-align: center; opacity: 0.8;">
+                                <em>This is a demonstration of how easy it is to add custom views!</em>
+                            </p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Register and enable the custom view
+            const customView = new CustomSummaryView();
+            calendarLoader.viewManager.registerView('custom', customView);
+            calendarLoader.enableView('custom');
+            
+            // Show the custom view section
+            const customSection = document.querySelector('[data-event-view="custom"]');
+            if (customSection) {
+                customSection.style.display = 'block';
+                customSection.dataset.viewEnabled = 'true';
+            }
+            
+            hasCustomView = true;
+            updateCurrentViewsDisplay();
+            
+            logger.userInteraction('DEMO', 'Custom summary view added');
+        }
+
+        function removeCustomView() {
+            if (!calendarLoader || !hasCustomView) return;
+            
+            // Unregister the custom view
+            calendarLoader.viewManager.unregisterView('custom');
+            
+            // Hide the custom view section
+            const customSection = document.querySelector('[data-event-view="custom"]');
+            if (customSection) {
+                customSection.style.display = 'none';
+                customSection.dataset.viewEnabled = 'false';
+            }
+            
+            hasCustomView = false;
+            updateCurrentViewsDisplay();
+            
+            logger.userInteraction('DEMO', 'Custom summary view removed');
+        }
+    </script>
+</body>
+</html>
