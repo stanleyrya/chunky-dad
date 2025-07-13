@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Header Experiment - Chunky [City] Variation</title>
+    <meta name="description" content="Experiment showing dynamic header with city-specific branding">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .experiment-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .experiment-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        
+        .experiment-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .header-preview {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .city-selector {
+            margin: 20px 0;
+        }
+        
+        .city-selector select {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .code-example {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .comparison-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-item h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .logo-variation {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1 id="dynamic-logo">🐻 Chunky Dad</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#cities">Cities</a></li>
+                    <li><a href="index.html#events">Events</a></li>
+                    <li><a href="index.html#businesses">Businesses</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="experiment-container">
+        <section class="experiment-section">
+            <h2 class="experiment-title">🐻 Header Experiment: Chunky [City] Variation</h2>
+            <p>This experiment demonstrates how the header could dynamically change to show "Chunky [City]" instead of just "Chunky Dad" when viewing city-specific content.</p>
+            
+            <div class="city-selector">
+                <label for="city-select">Select a city to see the header variation:</label>
+                <select id="city-select" onchange="updateHeader()">
+                    <option value="">Chunky Dad (Default)</option>
+                    <option value="new-york">New York</option>
+                    <option value="seattle">Seattle</option>
+                    <option value="los-angeles">Los Angeles</option>
+                    <option value="toronto">Toronto</option>
+                    <option value="london">London</option>
+                    <option value="chicago">Chicago</option>
+                    <option value="berlin">Berlin</option>
+                </select>
+            </div>
+            
+            <div class="header-preview">
+                <h3>Current Header Preview:</h3>
+                <div id="header-preview-content" class="logo-variation">🐻 Chunky Dad</div>
+            </div>
+        </section>
+
+        <section class="experiment-section">
+            <h3 class="experiment-title">Comparison: Current vs Proposed</h3>
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h4>Current Header</h4>
+                    <div class="logo-variation">🐻 Chunky Dad</div>
+                    <p><strong>Pros:</strong></p>
+                    <ul>
+                        <li>Consistent branding across all pages</li>
+                        <li>Simple and recognizable</li>
+                        <li>No confusion about site identity</li>
+                    </ul>
+                    <p><strong>Cons:</strong></p>
+                    <ul>
+                        <li>Generic - doesn't feel city-specific</li>
+                        <li>Misses opportunity for local connection</li>
+                        <li>Less engaging for city-focused content</li>
+                    </ul>
+                </div>
+                
+                <div class="comparison-item">
+                    <h4>Proposed: Chunky [City]</h4>
+                    <div class="logo-variation">🐻 Chunky Seattle</div>
+                    <p><strong>Pros:</strong></p>
+                    <ul>
+                        <li>Creates local connection and relevance</li>
+                        <li>More engaging for city-specific content</li>
+                        <li>Feels personalized to the user's location</li>
+                        <li>Maintains brand recognition with "Chunky"</li>
+                    </ul>
+                    <p><strong>Cons:</strong></p>
+                    <ul>
+                        <li>Could be confusing if not implemented consistently</li>
+                        <li>Might dilute the main brand identity</li>
+                        <li>Requires careful implementation across all pages</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="experiment-section">
+            <h3 class="experiment-title">Implementation Examples</h3>
+            
+            <h4>JavaScript Implementation:</h4>
+            <div class="code-example">
+// Function to update header based on current city
+function updateHeaderForCity(cityKey) {
+    const cityConfig = getCityConfig(cityKey);
+    const logoElement = document.querySelector('.logo h1');
+    
+    if (cityConfig) {
+        // Update the logo text
+        logoElement.innerHTML = `🐻 Chunky ${cityConfig.name}`;
+        
+        // Update page title
+        document.title = `Chunky ${cityConfig.name} - Bear Guide`;
+        
+        // Add city-specific styling if needed
+        logoElement.classList.add('city-specific');
+    } else {
+        // Fallback to default
+        logoElement.innerHTML = '🐻 Chunky Dad';
+        document.title = 'Chunky Dad - Your Gay Bear Travel Guide';
+        logoElement.classList.remove('city-specific');
+    }
+}
+
+// Call this function when city changes
+// updateHeaderForCity('seattle'); // Example usage
+            </div>
+            
+            <h4>CSS for City-Specific Styling:</h4>
+            <div class="code-example">
+/* Optional: Add city-specific styling */
+.logo h1.city-specific {
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.3s ease;
+}
+
+/* City-specific color themes */
+.logo h1[data-city="seattle"] {
+    color: #2c5530; /* Seattle green */
+}
+
+.logo h1[data-city="new-york"] {
+    color: #0033cc; /* NYC blue */
+}
+            </div>
+        </section>
+
+        <section class="experiment-section">
+            <h3 class="experiment-title">All City Variations</h3>
+            <div class="comparison-grid">
+                <div class="logo-variation">🐻 Chunky New York</div>
+                <div class="logo-variation">🐻 Chunky Seattle</div>
+                <div class="logo-variation">🐻 Chunky Los Angeles</div>
+                <div class="logo-variation">🐻 Chunky Toronto</div>
+                <div class="logo-variation">🐻 Chunky London</div>
+                <div class="logo-variation">🐻 Chunky Chicago</div>
+                <div class="logo-variation">🐻 Chunky Berlin</div>
+            </div>
+        </section>
+
+        <section class="experiment-section">
+            <h3 class="experiment-title">Recommendations</h3>
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h4>Option 1: Full Implementation</h4>
+                    <p>Implement "Chunky [City]" on all city-specific pages:</p>
+                    <ul>
+                        <li>city.html pages</li>
+                        <li>City-specific event pages</li>
+                        <li>Local business directories</li>
+                    </ul>
+                    <p><strong>Best for:</strong> Strong local focus and engagement</p>
+                </div>
+                
+                <div class="comparison-item">
+                    <h4>Option 2: Selective Implementation</h4>
+                    <p>Use "Chunky [City]" only on city guide pages:</p>
+                    <ul>
+                        <li>Keep "Chunky Dad" on main pages</li>
+                        <li>Use city variation only on city.html</li>
+                        <li>Maintain consistent branding elsewhere</li>
+                    </ul>
+                    <p><strong>Best for:</strong> Balanced approach with clear hierarchy</p>
+                </div>
+                
+                <div class="comparison-item">
+                    <h4>Option 3: A/B Testing</h4>
+                    <p>Test both variations with users:</p>
+                    <ul>
+                        <li>Implement both versions</li>
+                        <li>Measure user engagement</li>
+                        <li>Gather feedback from bear community</li>
+                        <li>Choose based on data</li>
+                    </ul>
+                    <p><strong>Best for:</strong> Data-driven decision making</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Chunky Dad. Made with 🐻 for the bear community.</p>
+        </div>
+    </footer>
+
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script>
+        // Initialize logger
+        logger.componentInit('EXPERIMENT', 'Header experiment page loaded');
+        
+        function updateHeader() {
+            const citySelect = document.getElementById('city-select');
+            const selectedCity = citySelect.value;
+            const previewElement = document.getElementById('header-preview-content');
+            const logoElement = document.getElementById('dynamic-logo');
+            
+            if (selectedCity) {
+                const cityConfig = getCityConfig(selectedCity);
+                if (cityConfig) {
+                    const newHeader = `🐻 Chunky ${cityConfig.name}`;
+                    previewElement.textContent = newHeader;
+                    logoElement.innerHTML = newHeader;
+                    
+                    logger.userInteraction('EXPERIMENT', `Header changed to: ${newHeader}`, {
+                        city: selectedCity,
+                        cityName: cityConfig.name
+                    });
+                }
+            } else {
+                // Default
+                previewElement.textContent = '🐻 Chunky Dad';
+                logoElement.innerHTML = '🐻 Chunky Dad';
+                
+                logger.userInteraction('EXPERIMENT', 'Header reset to default: Chunky Dad');
+            }
+        }
+        
+        // Initialize the experiment
+        logger.componentLoad('EXPERIMENT', 'Header experiment ready for testing');
+    </script>
+</body>
+</html>
