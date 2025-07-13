@@ -72,13 +72,18 @@ class ChunkyDadApp {
         
         try {
             // Calendar functionality is only needed on city pages
-            if (window.DynamicCalendarLoader) {
-                this.calendarLoader = new DynamicCalendarLoader();
+            if (window.ModularCalendarLoader) {
+                this.calendarLoader = new ModularCalendarLoader();
                 // Make it globally accessible for backward compatibility
                 window.calendarLoader = this.calendarLoader;
                 await this.calendarLoader.init();
+            } else if (window.DynamicCalendarLoader) {
+                // Fallback to old calendar loader
+                this.calendarLoader = new DynamicCalendarLoader();
+                window.calendarLoader = this.calendarLoader;
+                await this.calendarLoader.init();
             } else {
-                logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
+                logger.warn('SYSTEM', 'No calendar loader available');
             }
             
             const pageType = this.isTestPage ? 'test page' : 'city page';

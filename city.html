@@ -83,7 +83,7 @@
             </div>
         </section>
 
-        <section class="weekly-calendar">
+        <section class="weekly-calendar" data-event-view="calendar" data-view-enabled="true">
             <div class="container">
                 <div class="calendar-header">
                     <h2 id="calendar-title">This Week's Schedule</h2>
@@ -100,22 +100,22 @@
                         <button class="today-btn" id="today-btn">Today</button>
                     </div>
                 </div>
-                <div class="calendar-grid">
+                <div class="calendar-grid" id="calendar-view-container">
                     <div class="loading-message">📅 Getting latest events...</div>
                 </div>
             </div>
         </section>
 
-        <section class="events">
+        <section class="events" data-event-view="eventlist" data-view-enabled="true">
             <div class="container">
                 <h2>Events</h2>
-                <div class="events-list">
+                <div class="events-list" id="eventlist-view-container">
                     <div class="loading-message">🎉 Getting events...</div>
                 </div>
             </div>
         </section>
 
-        <section class="events-map-section">
+        <section class="events-map-section" data-event-view="map" data-view-enabled="true">
             <div class="container">
                 <h2>📍 Event Locations</h2>
                 <p>Click on any location pin to see event details, or click the 📍 links in events above.</p>
@@ -158,7 +158,9 @@
     <script src="js/navigation.js"></script>
     <script src="js/page-effects.js"></script>
     <script src="js/forms.js"></script>
-    <script src="js/dynamic-calendar-loader.js"></script>
+    <script src="js/event-views.js"></script>
+    <script src="js/modular-calendar-loader.js"></script>
+    <script src="js/view-configuration-demo.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
