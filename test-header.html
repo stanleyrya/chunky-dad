@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Header Test - Chunky Dad</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1></h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="city.html">Cities</a></li>
+                    <li><a href="test-header.html" class="active">Test</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main style="padding-top: 100px;">
+        <div class="container">
+            <h1>🐻 Header Test Page</h1>
+            <p>This page tests the dynamic header functionality.</p>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3>Expected Behavior:</h3>
+                <ul>
+                    <li>Header should show "chunky.dad" (not "Chunky Dad")</li>
+                    <li>Logo should have bear emoji + text</li>
+                    <li>No city selector emoji button (not a city page)</li>
+                </ul>
+            </div>
+            
+            <div style="background: #e8f4f8; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3>Test Links:</h3>
+                <p><a href="index.html">Main Page</a> - Should show "chunky.dad"</p>
+                <p><a href="city.html?city=new-york">New York City Page</a> - Should show "chunky.dad/new-york" + 🗽 button</p>
+                <p><a href="city.html?city=seattle">Seattle City Page</a> - Should show "chunky.dad/seattle" + 🌲 button</p>
+                <p><a href="test-calendar-logging.html">Debug Page</a> - Should show "chunky.dad/debug/test-calendar-logging"</p>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3>Debug Info:</h3>
+                <p>Check browser console (F12) for header manager logs.</p>
+                <p>Look for logs with component "HEADER" for debugging information.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Chunky Dad. Made with 🐻 for the bear community.</p>
+        </div>
+    </footer>
+
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/header-manager.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/page-effects.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -78,11 +78,188 @@ header {
     color: white;
     font-size: 1.8rem;
     font-weight: 600;
+    margin: 0;
 }
 
 .logo a {
     color: white;
     text-decoration: none;
+}
+
+/* Dynamic Header Styles */
+.logo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.logo-link:hover {
+    transform: scale(1.05);
+}
+
+.bear-emoji {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.logo-text {
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+/* Header City Selector */
+.header-city-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.city-emoji-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    color: white;
+}
+
+.city-emoji-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+}
+
+.city-emoji-button:active {
+    transform: scale(0.95);
+}
+
+/* City Dropdown Menu */
+.city-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    padding: 0.5rem;
+    min-width: 200px;
+    z-index: 1001;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: dropdownSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.city-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #333;
+    font-weight: 500;
+}
+
+.city-dropdown-item:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    transform: translateX(5px);
+}
+
+.city-dropdown-item:first-child {
+    border-radius: 10px 10px 0 0;
+}
+
+.city-dropdown-item:last-child {
+    border-radius: 0 0 10px 10px;
+}
+
+.city-item-emoji {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+.city-item-name {
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .logo h1 {
+        font-size: 1.5rem;
+    }
+    
+    .bear-emoji {
+        font-size: 1.3rem;
+    }
+    
+    .city-emoji-button {
+        width: 40px;
+        height: 40px;
+        font-size: 1.3rem;
+    }
+    
+    .city-dropdown-menu {
+        min-width: 180px;
+        right: -10px;
+    }
+    
+    .city-dropdown-item {
+        padding: 0.6rem 0.8rem;
+    }
+    
+    .city-item-emoji {
+        font-size: 1.1rem;
+    }
+    
+    .city-item-name {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo h1 {
+        font-size: 1.3rem;
+    }
+    
+    .bear-emoji {
+        font-size: 1.1rem;
+    }
+    
+    .city-emoji-button {
+        width: 35px;
+        height: 35px;
+        font-size: 1.1rem;
+    }
+    
+    .city-dropdown-menu {
+        min-width: 160px;
+        right: -15px;
+    }
 }
 
 .nav-menu {
