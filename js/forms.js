@@ -102,43 +102,11 @@ Sent from chunky.dad contact form`);
         // Open email client
         window.location.href = mailtoUrl;
         
-        // Show success message
-        this.showSuccessMessage('Email client opened! Please send the email to complete your submission.');
-        
-        logger.info('FORM', 'Email client opened with pre-filled content');
-    }
-
-    showSuccessMessage(message) {
-        const notification = document.createElement('div');
-        notification.className = 'success-notification';
-        notification.innerHTML = `
-            <div class="notification-content">
-                <span class="notification-icon">✅</span>
-                <span class="notification-text">${message}</span>
-                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Show notification with animation
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 10);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    if (notification.parentElement) {
-                        notification.remove();
-                    }
-                }, 300);
-            }
-        }, 5000);
-        
-        logger.info('FORM', 'Success message displayed', { message });
+        logger.info('FORM', 'Email client opened with pre-filled content', {
+            to: this.mailtoEmail,
+            subject: `Bear Intel: ${formData.category}`,
+            messageLength: formData.message.length
+        });
     }
 
     resetForm() {
