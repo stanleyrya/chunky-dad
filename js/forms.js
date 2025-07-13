@@ -2,6 +2,7 @@
 class FormsManager {
     constructor() {
         this.contactForm = document.querySelector('.contact-form');
+        this.mailtoEmail = 'info@chunky.dad';
         this.init();
     }
 
@@ -36,7 +37,7 @@ class FormsManager {
             return;
         }
 
-        this.submitForm(formData);
+        this.submitViaEmail(formData);
     }
 
     collectFormData() {
@@ -61,16 +62,18 @@ class FormsManager {
         const { name, email, message } = formData;
         
         if (!name || !email || !message) {
-            logger.warn('FORM', 'Form validation failed - missing required fields');
-            alert('Please fill in all fields');
+            logger.warn('FORM', 'Form validation failed - missing required fields', {
+                name: !!name,
+                email: !!email,
+                message: !!message
+            });
             return false;
         }
 
         // Basic email validation
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
-            logger.warn('FORM', 'Form validation failed - invalid email format');
-            alert('Please enter a valid email address');
+            logger.warn('FORM', 'Form validation failed - invalid email format', { email });
             return false;
         }
 
@@ -78,27 +81,34 @@ class FormsManager {
         return true;
     }
 
-    submitForm(formData) {
-        const submitButton = this.contactForm.querySelector('button');
-        const originalText = submitButton.textContent;
+    submitViaEmail(formData) {
+        logger.userInteraction('FORM', 'Form submitted via email');
         
-        logger.info('FORM', 'Form submission started');
+        // Create email content
+        const subject = encodeURIComponent(`Bear Intel: ${formData.category}`);
+        const body = encodeURIComponent(`Name: ${formData.name}
+Email: ${formData.email}
+Category: ${formData.category}
+
+Message:
+${formData.message}
+
+---
+Sent from chunky.dad contact form`);
         
-        // Update button state
-        submitButton.textContent = 'Sending...';
-        submitButton.disabled = true;
+        const mailtoUrl = `mailto:${this.mailtoEmail}?subject=${subject}&body=${body}`;
         
-        // Simulate form submission (replace with actual API call when needed)
-        setTimeout(() => {
-            logger.pageLoad('FORM', 'Form submitted successfully');
-            alert('Thank you for your message! We\'ll get back to you soon.');
-            
-            this.resetForm();
-            
-            // Restore button state
-            submitButton.textContent = originalText;
-            submitButton.disabled = false;
-        }, 2000);
+        // Reset form
+        this.resetForm();
+        
+        // Open email client
+        window.location.href = mailtoUrl;
+        
+        logger.info('FORM', 'Email client opened with pre-filled content', {
+            to: this.mailtoEmail,
+            subject: `Bear Intel: ${formData.category}`,
+            messageLength: formData.message.length
+        });
     }
 
     resetForm() {
