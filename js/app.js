@@ -63,6 +63,9 @@ class ChunkyDadApp {
         // Forms are needed on pages that have forms
         this.formsManager = new FormsManager();
         
+        // Make formsManager globally accessible for modal interactions
+        window.formsManager = this.formsManager;
+        
         logger.componentLoad('SYSTEM', 'Core modules initialized');
     }
 
