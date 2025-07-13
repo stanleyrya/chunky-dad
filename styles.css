@@ -62,7 +62,111 @@ header {
     overflow: hidden;
 }
 
+/* City Switcher */
+.city-switcher {
+    position: relative;
+    margin-left: auto;
+    margin-right: 1rem;
+    z-index: 10001;
+}
 
+.city-switcher-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    min-width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    color: white;
+    font-family: inherit;
+}
+
+.city-emoji {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.city-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    display: none; /* Hidden by default, shown on larger screens */
+}
+
+.city-switcher-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.city-switcher-btn:active {
+    transform: scale(0.95);
+}
+
+.city-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    min-width: 200px;
+    z-index: 10002;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.city-dropdown.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.city-option {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    margin: 0.25rem 0;
+    color: #333;
+    text-decoration: none;
+}
+
+.city-option:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    transform: translateX(5px);
+}
+
+.city-option-emoji {
+    font-size: 1.2rem;
+    margin-right: 0.75rem;
+    width: 24px;
+    text-align: center;
+}
+
+.city-option-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+}
 
 /* Debug Info for Test Pages */
 .debug-info {
@@ -1793,11 +1897,11 @@ footer {
     }
 
     /* Mobile header adjustments */
-    .header-city-selector {
+    .city-switcher {
         margin-right: 0.5rem;
     }
 
-    .city-emoji-button {
+    .city-switcher-btn {
         min-width: 40px;
         width: 40px;
         height: 40px;
@@ -1813,10 +1917,10 @@ footer {
         display: none !important;
     }
 
-    .city-dropdown-menu {
+    .city-dropdown {
         right: -10px;
         min-width: 180px;
-        z-index: 9999;
+        z-index: 10002;
     }
 
     .debug-info {
@@ -3145,11 +3249,11 @@ footer {
     }
 
     /* Show city name on larger screens */
-    .city-name-text {
+    .city-name {
         display: inline-block !important;
     }
 
-    .city-emoji-button {
+    .city-switcher-btn {
         min-width: auto;
         width: auto;
     }
