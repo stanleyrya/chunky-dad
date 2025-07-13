@@ -42,10 +42,16 @@ class HeaderManager {
             return;
         }
 
-        // Always show the bear icon and chunky.dad
         let title = '🐻 chunky.dad';
         
-        if (this.isTestPage) {
+        if (this.isCityPage()) {
+            const cityKey = this.getCityFromURL();
+            const cityConfig = getCityConfig(cityKey);
+            if (cityConfig) {
+                title = `🐻 chunky.dad/${cityKey}`;
+                this.currentCity = cityConfig;
+            }
+        } else if (this.isTestPage) {
             title = '🐻 chunky.dad [DEBUG]';
         }
 
