@@ -299,24 +299,18 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Show calendar error
-    showCalendarError(message = null) {
-        const defaultMessage = `We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.`;
-        const displayMessage = message || defaultMessage;
-        
+    showCalendarError() {
         const errorMessage = `
             <div class="error-message">
-                <h3>⚠️ Calendar Error</h3>
-                <p>${displayMessage}</p>
-                <p><strong>Try:</strong> Refreshing the page, or check back later.</p>
-                <button onclick="location.reload()" class="cta-button">🔄 Refresh Page</button>
+                <h3>📅 Calendar Temporarily Unavailable</h3>
+                <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
+                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
             </div>
         `;
         
         document.querySelectorAll('.calendar-grid, .events-list').forEach(el => {
             if (el) el.innerHTML = errorMessage;
         });
-        
-        logger.componentError('CALENDAR', 'Calendar error displayed to user', { message: displayMessage });
     }
 
     // Generate event card (same as original)
@@ -874,43 +868,43 @@ class DynamicCalendarLoader extends CalendarCore {
             dateRange.textContent = this.formatDateRange(start, end);
         }
         
-        // Use modular event views system
-        if (!window.eventViewsManager) {
-            logger.componentError('CALENDAR', 'Event views manager not available');
-            this.showCalendarError('Event display system not available. Please refresh the page.');
-            return;
+        // Update calendar grid
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents);
+            this.attachCalendarInteractions();
+            
+            // Update grid layout based on view
+            if (this.currentView === 'month') {
+                calendarGrid.className = 'calendar-grid month-view-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                calendarGrid.style.gridTemplateRows = 'auto repeat(6, minmax(90px, auto))';
+            } else {
+                calendarGrid.className = 'calendar-grid week-view-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                calendarGrid.style.gridTemplateRows = 'auto';
+                calendarGrid.style.minHeight = 'auto';
+            }
         }
         
-        try {
-            // Ensure calendar view is activated
-            if (!window.eventViewsManager.getActiveView('calendar-view-container')) {
-                window.eventViewsManager.activateView('calendar-view-container', 'calendar', {
-                    view: this.currentView
-                });
+        // Update events list (show for both week and month views)
+        const eventsList = document.querySelector('.events-list');
+        const eventsSection = document.querySelector('.events');
+        if (eventsList && eventsSection) {
+            eventsSection.style.display = 'block';
+            if (filteredEvents?.length > 0) {
+                eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
+            } else {
+                const { start, end } = this.getCurrentPeriodBounds();
+                const periodText = this.currentView === 'week' ? 'this week' : 'this month';
+                eventsList.innerHTML = `
+                    <div class="no-events-message">
+                        <h3>📅 No Events ${this.currentView === 'week' ? 'This Week' : 'This Month'}</h3>
+                        <p>No events scheduled for ${periodText}.</p>
+                        <p>Check other weeks/months or help us by submitting events you know about!</p>
+                    </div>
+                `;
             }
-            
-            // Render events in calendar view
-            const { start, end } = this.getCurrentPeriodBounds();
-            window.eventViewsManager.renderEvents('calendar-view-container', filteredEvents, {
-                view: this.currentView,
-                startDate: start,
-                endDate: end
-            });
-            
-            // Ensure events list view is activated
-            if (!window.eventViewsManager.getActiveView('events-list-container')) {
-                window.eventViewsManager.activateView('events-list-container', 'list', {
-                    showMapLinks: true,
-                    showVenue: true
-                });
-            }
-            
-            // Render events in list view
-            window.eventViewsManager.renderEvents('events-list-container', filteredEvents);
-        } catch (error) {
-            logger.componentError('CALENDAR', 'Error updating calendar display', error);
-            this.showCalendarError('Unable to display events. Please try refreshing the page.');
-            return;
         }
         
         // Update map (show for both week and month views)
