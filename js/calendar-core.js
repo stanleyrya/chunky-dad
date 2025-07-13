@@ -49,7 +49,9 @@ class CalendarCore {
             // Handle line continuation (RFC 5545 - lines starting with space or tab)
             while (i + 1 < lines.length && (lines[i + 1].startsWith(' ') || lines[i + 1].startsWith('\t'))) {
                 i++;
-                line += lines[i].substring(1); // Remove the leading space/tab
+                // Remove leading space/tab and trailing \r from continuation line
+                const continuationLine = lines[i].substring(1).replace(/\r$/, '');
+                line += continuationLine;
             }
             
             // Remove trailing \r if present
@@ -247,7 +249,15 @@ class CalendarCore {
             'gmaps': 'gmaps', 'google maps': 'gmaps'
         };
 
-        let textBlock = description;
+        // Clean up any remaining carriage returns that might interfere with parsing
+        const carriageReturnCount = (description.match(/\r/g) || []).length;
+        if (carriageReturnCount > 0) {
+            logger.debug('CALENDAR', 'Removing carriage returns from description', {
+                count: carriageReturnCount,
+                sampleBefore: description.substring(0, 100).replace(/\r/g, '\\r').replace(/\n/g, '\\n')
+            });
+        }
+        let textBlock = description.replace(/\r/g, '');
         
         // First, handle HTML content - extract URLs from anchor tags and convert to plain text
         if (textBlock.includes("<a href=") || textBlock.includes("<br>")) {
