@@ -189,11 +189,17 @@ class CalendarCore {
                 recurrence: calendarEvent.recurrence,
                 coordinates: calendarEvent.location,
                 startDate: calendarEvent.start,
-                endDate: calendarEvent.end
+                endDate: calendarEvent.end,
+                unprocessedDescription: calendarEvent.description || null // Store raw description for debugging
             };
 
             // Parse description for additional data
             if (calendarEvent.description) {
+                logger.debug('CALENDAR', 'Processing event description', {
+                    eventName: eventData.name,
+                    descriptionLength: calendarEvent.description.length,
+                    descriptionPreview: calendarEvent.description.substring(0, 100) + '...'
+                });
                 const additionalData = this.parseKeyValueDescription(calendarEvent.description);
                 if (additionalData) {
                     eventData.bar = additionalData.bar || 'TBD';
