@@ -75,31 +75,13 @@ class ChunkyDadApp {
         
         try {
             // Calendar functionality is only needed on city pages
-            if (this.isTestPage) {
-                // Use the original DynamicCalendarLoader for test pages to maintain compatibility
-                if (window.DynamicCalendarLoader) {
-                    this.calendarLoader = new DynamicCalendarLoader();
-                    // Make it globally accessible for backward compatibility
-                    window.calendarLoader = this.calendarLoader;
-                    await this.calendarLoader.init();
-                } else {
-                    logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
-                }
+            if (window.ModularCalendarLoader) {
+                this.calendarLoader = new ModularCalendarLoader();
+                // Make it globally accessible for backward compatibility
+                window.calendarLoader = this.calendarLoader;
+                await this.calendarLoader.init();
             } else {
-                // Use the new modular system for city pages
-                if (window.ModularCalendarLoader) {
-                    this.calendarLoader = new ModularCalendarLoader();
-                    // Make it globally accessible for backward compatibility
-                    window.calendarLoader = this.calendarLoader;
-                    await this.calendarLoader.init();
-                } else {
-                    logger.warn('SYSTEM', 'ModularCalendarLoader not available, falling back to DynamicCalendarLoader');
-                    if (window.DynamicCalendarLoader) {
-                        this.calendarLoader = new DynamicCalendarLoader();
-                        window.calendarLoader = this.calendarLoader;
-                        await this.calendarLoader.init();
-                    }
-                }
+                logger.warn('SYSTEM', 'ModularCalendarLoader not available');
             }
             
             logger.componentLoad('SYSTEM', `${pageType} modules initialized`);
