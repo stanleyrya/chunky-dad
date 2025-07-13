@@ -23,7 +23,6 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 ├── city.html           # City guide template
 ├── styles.css          # Main stylesheet
 ├── js/                 # Modular JavaScript architecture
-├── js/                 # Modular JavaScript architecture
 │   ├── logger.js       # Centralized logging system
 │   ├── city-config.js  # City configuration data
 │   ├── navigation.js   # Navigation and scrolling
@@ -56,6 +55,7 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - **js/app.js**: Main coordinator, initializes all modules based on page type
 
 ## Development
+- **ALWAYS pull from main before making any changes** - run `git pull origin main` first
 - Local server: `npm run dev` (Python HTTP server)
 - Test responsive design on mobile
 - Use browser dev tools for debugging
