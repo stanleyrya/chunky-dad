@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>God Mode - Chunky Dad Debug Hub</title>
+    <meta name="description" content="Debug and testing hub for Chunky Dad development">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        
+        .god-mode-header {
+            background: linear-gradient(135deg, #FF0000 0%, #8B0000 50%, #000000 100%);
+            padding: 40px 0;
+            text-align: center;
+            border-bottom: 3px solid #FF0000;
+            box-shadow: 0 4px 20px rgba(255, 0, 0, 0.3);
+        }
+        
+        .god-mode-header h1 {
+            font-size: 3rem;
+            margin: 0;
+            color: #ffffff;
+            text-shadow: 0 0 20px #FF0000;
+            animation: pulse 2s infinite;
+        }
+        
+        .god-mode-header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { text-shadow: 0 0 20px #FF0000; }
+            50% { text-shadow: 0 0 30px #FF0000, 0 0 40px #FF4444; }
+        }
+        
+        .god-mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 40px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .god-mode-section {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .god-mode-section:hover {
+            border-color: #FF0000;
+            box-shadow: 0 8px 25px rgba(255, 0, 0, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .god-mode-section h2 {
+            color: #FF0000;
+            margin: 0 0 20px 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .god-mode-links {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .god-mode-link {
+            display: block;
+            padding: 12px 16px;
+            background: #333;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            border: 1px solid #555;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .god-mode-link:hover {
+            background: #444;
+            border-color: #FF0000;
+            color: #fff;
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+        }
+        
+        .god-mode-link.featured {
+            background: linear-gradient(45deg, #FF0000, #8B0000);
+            border-color: #FF0000;
+            font-weight: 600;
+        }
+        
+        .god-mode-link.featured:hover {
+            background: linear-gradient(45deg, #FF4444, #AA0000);
+            transform: translateX(5px) scale(1.02);
+        }
+        
+        .back-to-site {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #333;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: 1px solid #555;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .back-to-site:hover {
+            background: #444;
+            border-color: #FF0000;
+            color: #fff;
+        }
+        
+        .warning {
+            background: #2d1a1a;
+            border: 1px solid #ff4444;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #ffcccc;
+        }
+        
+        .warning strong {
+            color: #ff6666;
+        }
+        
+        @media (max-width: 768px) {
+            .god-mode-header h1 {
+                font-size: 2rem;
+            }
+            
+            .god-mode-grid {
+                grid-template-columns: 1fr;
+                padding: 20px 15px;
+            }
+            
+            .back-to-site {
+                position: static;
+                display: block;
+                margin: 20px auto;
+                text-align: center;
+                width: fit-content;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-to-site">← Back to Site</a>
+    
+    <div class="god-mode-header">
+        <h1>⚡ GOD MODE ⚡</h1>
+        <p>Debug & Testing Hub</p>
+    </div>
+
+    <div class="warning">
+        <strong>⚠️ Warning:</strong> This page contains development and debugging tools. These are not intended for regular users and may expose technical details or cause unexpected behavior.
+    </div>
+
+    <div class="god-mode-grid">
+        <div class="god-mode-section">
+            <h2>🔧 Debug Tools</h2>
+            <div class="god-mode-links">
+                <a href="test-calendar-logging.html" class="god-mode-link featured">
+                    📅 Calendar Debugger
+                </a>
+                <a href="view-configuration-demo.html" class="god-mode-link featured">
+                    👁️ View Configuration Demo
+                </a>
+            </div>
+        </div>
+
+        <div class="god-mode-section">
+            <h2>🎨 Event Display Tests</h2>
+            <div class="god-mode-links">
+                <a href="event-test-index.html" class="god-mode-link">
+                    📋 All Event Test Variations
+                </a>
+                <a href="event-test-1-carousel.html" class="god-mode-link">
+                    🎠 Carousel View
+                </a>
+                <a href="event-test-2-timeline.html" class="god-mode-link">
+                    📊 Timeline View
+                </a>
+                <a href="event-test-3-map.html" class="god-mode-link">
+                    🗺️ Map View
+                </a>
+                <a href="event-test-4-masonry.html" class="god-mode-link">
+                    🧱 Masonry Layout
+                </a>
+                <a href="event-test-5-heatmap.html" class="god-mode-link">
+                    🔥 Heatmap View
+                </a>
+            </div>
+        </div>
+
+        <div class="god-mode-section">
+            <h2>⚡ Advanced Tests</h2>
+            <div class="god-mode-links">
+                <a href="event-test-6-ticker.html" class="god-mode-link">
+                    📰 Ticker View
+                </a>
+                <a href="event-test-7-circular.html" class="god-mode-link">
+                    ⭕ Circular Layout
+                </a>
+                <a href="event-test-8-kanban.html" class="god-mode-link">
+                    📌 Kanban Board
+                </a>
+                <a href="event-test-9-bubbles.html" class="god-mode-link">
+                    🫧 Bubble Chart
+                </a>
+                <a href="event-test-10-flipcards.html" class="god-mode-link">
+                    🎴 Flip Cards
+                </a>
+                <a href="event-test-11-weekview.html" class="god-mode-link">
+                    📅 Week View
+                </a>
+                <a href="event-test-12-swipe-tiles.html" class="god-mode-link">
+                    📱 Swipe Tiles
+                </a>
+            </div>
+        </div>
+
+        <div class="god-mode-section">
+            <h2>🧪 Experimental</h2>
+            <div class="god-mode-links">
+                <a href="header-experiment.html" class="god-mode-link">
+                    🎯 Header Experiment
+                </a>
+                <a href="city.html?city=new-york" class="god-mode-link">
+                    🏙️ City Page (New York)
+                </a>
+                <a href="city.html?city=chicago" class="god-mode-link">
+                    🏙️ City Page (Chicago)
+                </a>
+                <a href="city.html?city=los-angeles" class="god-mode-link">
+                    🏙️ City Page (Los Angeles)
+                </a>
+            </div>
+        </div>
+
+        <div class="god-mode-section">
+            <h2>📊 System Info</h2>
+            <div class="god-mode-links">
+                <a href="#" onclick="downloadSystemInfo()" class="god-mode-link">
+                    📋 Download System Info
+                </a>
+                <a href="#" onclick="clearAllData()" class="god-mode-link">
+                    🗑️ Clear All Storage
+                </a>
+                <a href="#" onclick="toggleDebugMode()" class="god-mode-link">
+                    🐛 Toggle Debug Mode
+                </a>
+                <a href="javascript:window.open('', '_blank').document.write('<pre>' + JSON.stringify(localStorage, null, 2) + '</pre>')" class="god-mode-link">
+                    💾 View LocalStorage
+                </a>
+            </div>
+        </div>
+
+        <div class="god-mode-section">
+            <h2>🚀 Quick Actions</h2>
+            <div class="god-mode-links">
+                <a href="index.html" class="god-mode-link">
+                    🏠 Main Site
+                </a>
+                <a href="https://github.com/your-repo" class="god-mode-link" target="_blank">
+                    💻 GitHub Repository
+                </a>
+                <a href="#" onclick="window.location.reload()" class="god-mode-link">
+                    🔄 Reload Page
+                </a>
+                <a href="#" onclick="console.clear(); alert('Console cleared!')" class="god-mode-link">
+                    🧹 Clear Console
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadSystemInfo() {
+            const systemInfo = {
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                viewport: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                },
+                localStorage: Object.keys(localStorage).length,
+                sessionStorage: Object.keys(sessionStorage).length,
+                screen: {
+                    width: screen.width,
+                    height: screen.height,
+                    colorDepth: screen.colorDepth
+                },
+                connection: navigator.connection ? {
+                    effectiveType: navigator.connection.effectiveType,
+                    downlink: navigator.connection.downlink
+                } : 'N/A'
+            };
+
+            const blob = new Blob([JSON.stringify(systemInfo, null, 2)], {
+                type: 'application/json'
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `system-info-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            alert('System info downloaded!');
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear ALL stored data? This cannot be undone.')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear cookies
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                
+                alert('All data cleared! You may want to refresh the page.');
+            }
+        }
+
+        function toggleDebugMode() {
+            const currentDebug = localStorage.getItem('debugMode') === 'true';
+            localStorage.setItem('debugMode', !currentDebug);
+            alert(`Debug mode ${!currentDebug ? 'enabled' : 'disabled'}! Refresh pages to apply.`);
+        }
+
+        // Add some visual effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click effects to all god-mode-link elements
+            document.querySelectorAll('.god-mode-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Create ripple effect
+                    const ripple = document.createElement('span');
+                    ripple.style.cssText = `
+                        position: absolute;
+                        width: 10px;
+                        height: 10px;
+                        background: rgba(255, 0, 0, 0.6);
+                        border-radius: 50%;
+                        pointer-events: none;
+                        transform: translate(-50%, -50%);
+                        animation: ripple 0.6s linear;
+                    `;
+                    
+                    const rect = this.getBoundingClientRect();
+                    ripple.style.left = (e.clientX - rect.left) + 'px';
+                    ripple.style.top = (e.clientY - rect.top) + 'px';
+                    
+                    this.style.position = 'relative';
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+
+            // Add CSS for ripple animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes ripple {
+                    to {
+                        transform: translate(-50%, -50%) scale(20);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

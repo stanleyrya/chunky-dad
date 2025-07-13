@@ -37,7 +37,8 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 
 ## Current Patterns
 - Modular JavaScript architecture with clear separation of concerns
-- ES6 classes with inheritance (CalendarCore → DynamicCalendarLoader)
+- ES6 classes with inheritance (CalendarCore → ModularCalendarLoader)
+- Modular event view system with pluggable components
 - Centralized application coordination via app.js
 - CSS Grid for card layouts
 - URL parameters for city guide content switching
