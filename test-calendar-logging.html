@@ -376,6 +376,22 @@
         .log-message {
             flex: 1;
             color: #e0e0e0;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .processing-log.no-wrap .log-message {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .processing-log.no-wrap .log-entry {
+            flex-wrap: nowrap;
+        }
+        
+        .processing-log.no-wrap {
+            overflow-x: auto;
         }
         
         .log-data {
@@ -590,8 +606,9 @@
                 <!-- Processing Log -->
                 <div class="debug-panel">
                     <div class="debug-header">
-                        <h2 class="debug-title">📋 Processing Log</h2>
+                        <h2 class="debug-title">📋 Processing Logs</h2>
                         <div class="debug-controls">
+                            <button class="debug-btn" id="log-toggle-wrap">↔️ Toggle Wrap</button>
                             <button class="debug-btn" id="log-toggle-fullscreen">⛶ Fullscreen</button>
                             <button class="debug-btn" id="log-clear">🗑️ Clear</button>
                             <button class="debug-btn" id="log-export">💾 Export</button>
@@ -672,6 +689,7 @@
                 this.activeComponents = new Set();
                 this.allComponents = new Set();
                 this.isLogFullscreen = false;
+                this.isLogWrap = false; // New property for line wrap
                 
                 // Override logger methods to capture logs
                 this.originalLogMethods = {
@@ -878,7 +896,7 @@
                 });
                 
                 const maxLogs = this.isLogFullscreen ? 500 : 100;
-                const recentLogs = filteredLogs.slice(-maxLogs).reverse();
+                const recentLogs = filteredLogs.slice(-maxLogs);
                 
                 container.innerHTML = recentLogs.map(log => {
                     const logContent = `
@@ -963,6 +981,21 @@
                 this.updateProcessingLog();
             }
             
+            toggleLogWrap() {
+                const container = document.getElementById('processing-log');
+                const wrapBtn = document.getElementById('log-toggle-wrap');
+                this.isLogWrap = !this.isLogWrap;
+                
+                if (this.isLogWrap) {
+                    container.classList.add('no-wrap');
+                    wrapBtn.innerHTML = '↔️ Exit No-Wrap';
+                } else {
+                    container.classList.remove('no-wrap');
+                    wrapBtn.innerHTML = '↔️ Toggle Wrap';
+                }
+                this.updateProcessingLog();
+            }
+            
             setupEventHandlers() {
                 // City filter
                 document.getElementById('filter-all').addEventListener('click', () => {
@@ -1018,6 +1051,11 @@
                 // Fullscreen toggle
                 document.getElementById('log-toggle-fullscreen').addEventListener('click', () => {
                     this.toggleLogFullscreen();
+                });
+                
+                // Toggle wrap
+                document.getElementById('log-toggle-wrap').addEventListener('click', () => {
+                    this.toggleLogWrap();
                 });
                 
                 document.getElementById('fullscreen-close').addEventListener('click', () => {
