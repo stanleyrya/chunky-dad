@@ -42,17 +42,11 @@ class HeaderManager {
             return;
         }
 
-        let title = '🐻 Chunky Dad';
+        // Always show the bear icon and chunky.dad
+        let title = '🐻 chunky.dad';
         
-        if (this.isCityPage()) {
-            const cityKey = this.getCityFromURL();
-            const cityConfig = getCityConfig(cityKey);
-            if (cityConfig) {
-                title = `${cityConfig.emoji} chunky.dad/${cityKey}`;
-                this.currentCity = cityConfig;
-            }
-        } else if (this.isTestPage) {
-            title = '🐻 Chunky Dad [DEBUG]';
+        if (this.isTestPage) {
+            title = '🐻 chunky.dad [DEBUG]';
         }
 
         // Update the title

@@ -1,7 +1,7 @@
 {
   "name": "chunky-dad-website",
   "version": "1.0.0",
-  "description": "A modern static website for Chunky Dad",
+  "description": "A modern static website for chunky.dad",
   "main": "index.html",
   "scripts": {
     "start": "python3 -m http.server 8000",

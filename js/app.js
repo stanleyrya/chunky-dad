@@ -11,7 +11,7 @@ class ChunkyDadApp {
         this.formsManager = null;
         this.calendarLoader = null;
         
-        logger.componentInit('SYSTEM', 'Chunky Dad App initializing', {
+        logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
             isCityPage: this.isCityPage,
             isTestPage: this.isTestPage,
@@ -45,7 +45,7 @@ class ChunkyDadApp {
                 await this.initializeCityPageModules();
             }
             
-            logger.componentLoad('SYSTEM', 'Chunky Dad App initialization complete');
+            logger.componentLoad('SYSTEM', 'chunky.dad App initialization complete');
         } catch (error) {
             logger.componentError('SYSTEM', 'App initialization failed', error);
         }
