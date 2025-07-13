@@ -62,16 +62,18 @@ class FormsManager {
         const { name, email, message } = formData;
         
         if (!name || !email || !message) {
-            logger.warn('FORM', 'Form validation failed - missing required fields');
-            alert('Please fill in all fields');
+            logger.warn('FORM', 'Form validation failed - missing required fields', {
+                name: !!name,
+                email: !!email,
+                message: !!message
+            });
             return false;
         }
 
         // Basic email validation
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
-            logger.warn('FORM', 'Form validation failed - invalid email format');
-            alert('Please enter a valid email address');
+            logger.warn('FORM', 'Form validation failed - invalid email format', { email });
             return false;
         }
 
