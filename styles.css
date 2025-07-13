@@ -73,15 +73,29 @@ header {
     background: rgba(255, 255, 255, 0.2);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
-    width: 45px;
+    min-width: 45px;
     height: 45px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(10px);
+}
+
+.city-emoji {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.city-name-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: white;
+    white-space: nowrap;
+    display: none; /* Hidden by default, shown on larger screens */
 }
 
 .city-emoji-button:hover {
@@ -111,11 +125,13 @@ header {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    pointer-events: none;
 }
 
 .city-dropdown-menu.dropdown-open {
     opacity: 1;
     transform: translateY(0);
+    pointer-events: auto;
 }
 
 .city-option {
@@ -1936,9 +1952,19 @@ footer {
     }
 
     .city-emoji-button {
+        min-width: 40px;
         width: 40px;
         height: 40px;
+        padding: 0;
+    }
+
+    .city-emoji {
         font-size: 1.3rem;
+    }
+
+    /* Hide navigation menu on city pages */
+    .city-page-nav {
+        display: none !important;
     }
 
     .city-dropdown-menu {
@@ -3518,5 +3544,15 @@ footer {
 
     .weekly-calendar .container {
         padding: 0 1rem;
+    }
+
+    /* Show city name on larger screens */
+    .city-name-text {
+        display: inline-block !important;
+    }
+
+    .city-emoji-button {
+        min-width: auto;
+        width: auto;
     }
 }
