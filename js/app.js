@@ -114,6 +114,15 @@ class ChunkyDadApp {
             logger.warn('NAV', 'Navigation manager not available for scrolling');
         }
     }
+
+    // Update header when city changes (for city pages)
+    updateHeaderForCity(cityKey) {
+        if (window.headerManager) {
+            window.headerManager.updateForCity(cityKey);
+        } else {
+            logger.warn('SYSTEM', 'Header manager not available for city update');
+        }
+    }
 }
 
 // Initialize the app when DOM is ready
