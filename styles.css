@@ -102,6 +102,13 @@ header {
     display: none; /* Hidden by default, shown on larger screens */
 }
 
+.city-carrot {
+    font-size: 0.7rem;
+    margin-left: 0.25rem;
+    transition: transform 0.3s ease;
+    opacity: 0.8;
+}
+
 .city-switcher-btn:hover {
     background: rgba(255, 255, 255, 0.3);
     border-color: rgba(255, 255, 255, 0.5);
@@ -145,6 +152,10 @@ header {
     pointer-events: auto !important;
     visibility: visible !important;
     display: block !important;
+}
+
+.city-switcher-btn.active .city-carrot {
+    transform: rotate(180deg);
 }
 
 .city-option {
@@ -1923,6 +1934,11 @@ footer {
         font-size: 1.3rem;
     }
 
+    .city-carrot {
+        font-size: 0.6rem;
+        margin-left: 0.2rem;
+    }
+
     /* Hide navigation menu on city pages */
     .city-page-nav {
         display: none !important;
@@ -3261,6 +3277,11 @@ footer {
 
     /* Show city name on larger screens */
     .city-name {
+        display: inline-block !important;
+    }
+
+    /* Ensure carrot is always visible */
+    .city-carrot {
         display: inline-block !important;
     }
 
