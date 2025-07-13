@@ -868,6 +868,55 @@ class DynamicCalendarLoader extends CalendarCore {
             dateRange.textContent = this.formatDateRange(start, end);
         }
         
+        // Use modular event views system for calendar
+        if (window.eventViewsManager) {
+            // Ensure calendar view is activated
+            if (!window.eventViewsManager.getActiveView('calendar-view-container')) {
+                window.eventViewsManager.activateView('calendar-view-container', 'calendar', {
+                    view: this.currentView
+                });
+            }
+            
+            // Render events in calendar view
+            const { start, end } = this.getCurrentPeriodBounds();
+            window.eventViewsManager.renderEvents('calendar-view-container', filteredEvents, {
+                view: this.currentView,
+                startDate: start,
+                endDate: end
+            });
+            
+            // Ensure events list view is activated
+            if (!window.eventViewsManager.getActiveView('events-list-container')) {
+                window.eventViewsManager.activateView('events-list-container', 'list', {
+                    showMapLinks: true,
+                    showVenue: true
+                });
+            }
+            
+            // Render events in list view
+            window.eventViewsManager.renderEvents('events-list-container', filteredEvents);
+        } else {
+            // Fallback to original method if event views manager is not available
+            this.updateCalendarDisplayLegacy(filteredEvents);
+        }
+        
+        // Update map (show for both week and month views)
+        const mapSection = document.querySelector('.events-map-section');
+        if (mapSection) {
+            mapSection.style.display = 'block';
+            this.initializeMap(this.currentCityConfig, filteredEvents);
+        }
+        
+        logger.timeEnd('CALENDAR', 'Calendar display update');
+        logger.performance('CALENDAR', `Calendar display updated successfully`, {
+            view: this.currentView,
+            eventsDisplayed: filteredEvents.length,
+            city: this.currentCity
+        });
+    }
+
+    // Legacy method for fallback
+    updateCalendarDisplayLegacy(filteredEvents) {
         // Update calendar grid
         const calendarGrid = document.querySelector('.calendar-grid');
         if (calendarGrid) {
@@ -906,20 +955,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 `;
             }
         }
-        
-        // Update map (show for both week and month views)
-        const mapSection = document.querySelector('.events-map-section');
-        if (mapSection) {
-            mapSection.style.display = 'block';
-            this.initializeMap(this.currentCityConfig, filteredEvents);
-        }
-        
-        logger.timeEnd('CALENDAR', 'Calendar display update');
-        logger.performance('CALENDAR', `Calendar display updated successfully`, {
-            view: this.currentView,
-            eventsDisplayed: filteredEvents.length,
-            city: this.currentCity
-        });
     }
 
     // Set up calendar controls
