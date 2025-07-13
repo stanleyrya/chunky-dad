@@ -1,10 +1,10 @@
-# Chunky Dad - Gay Bear Travel Guide
+# chunky.dad - Gay Bear Travel Guide
 
 A fun and edgy travel resource for the gay bear community, providing quick and essential information for travel planning and discovering bear-owned businesses worldwide.
 
 ## About
 
-Chunky Dad is the ultimate guide for gay bears on the go! We focus on two main goals:
+chunky.dad is the ultimate guide for gay bears on the go! We focus on two main goals:
 
 1. **Travel Information**: Quick and dirty guides to the best bear scenes in major cities, plus time-specific event pages for legendary gatherings
 2. **Bear-Owned Businesses**: Directory of businesses owned by and for the bear community
