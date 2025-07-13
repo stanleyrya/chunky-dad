@@ -119,7 +119,7 @@ header {
     padding: 0.5rem;
     margin-top: 0.5rem;
     min-width: 200px;
-    z-index: 1001;
+    z-index: 10000;
     opacity: 0;
     transform: translateY(-10px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
