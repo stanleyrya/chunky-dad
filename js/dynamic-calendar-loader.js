@@ -112,7 +112,7 @@ class DynamicCalendarLoader extends CalendarCore {
             cityPage.style.display = 'none';
         }
         
-        document.title = 'City Not Found - Chunky Dad';
+        document.title = 'City Not Found - chunky.dad';
     }
 
 
@@ -1027,7 +1027,7 @@ class DynamicCalendarLoader extends CalendarCore {
         mapSection?.classList.remove('content-hidden');
 
         // Update page metadata
-        document.title = `${cityConfig.name} - Chunky Dad Bear Guide`;
+        document.title = `${cityConfig.name} - chunky.dad Bear Guide`;
         const metaDescription = document.querySelector('meta[name="description"]');
         if (metaDescription) {
             metaDescription.setAttribute('content', 
