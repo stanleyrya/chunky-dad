@@ -1,4 +1,4 @@
-// Centralized Logging System for Chunky Dad
+// Centralized Logging System for chunky.dad
 // Provides consistent, useful debugging information for users and developers
 
 class ChunkyLogger {
