@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Display Test Variations - Chunky Dad</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .test-card {
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .test-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .test-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        .test-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        .test-link {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.3s ease;
+        }
+        .test-link:hover {
+            background: var(--secondary-color);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Event Display Variations</h1>
+        <p class="subtitle">
+            Explore 10 different creative ways to display events on the city page. 
+            Each variation offers a unique user experience and visual approach.
+        </p>
+        
+        <div class="test-grid">
+            <div class="test-card">
+                <h3>1. Swipe Carousel</h3>
+                <p>Horizontal scrolling carousel with touch/swipe support. Events displayed as cards that extend beyond the viewport.</p>
+                <a href="event-test-1-carousel.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>2. Timeline View</h3>
+                <p>Vertical timeline showing events chronologically with connecting lines and time markers.</p>
+                <a href="event-test-2-timeline.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>3. Map Integration</h3>
+                <p>Interactive map with event pins. Click pins to see event details in a popup.</p>
+                <a href="event-test-3-map.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>4. Masonry Grid</h3>
+                <p>Pinterest-style masonry layout with variable height cards creating an organic flow.</p>
+                <a href="event-test-4-masonry.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>5. Calendar Heatmap</h3>
+                <p>GitHub-style contribution graph showing event density. Darker colors indicate more events.</p>
+                <a href="event-test-5-heatmap.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>6. Animated Ticker</h3>
+                <p>Continuous scrolling ticker showing upcoming events. Pauses on hover for interaction.</p>
+                <a href="event-test-6-ticker.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>7. Circular Layout</h3>
+                <p>Events arranged in a circular pattern around a central hub. Rotates for navigation.</p>
+                <a href="event-test-7-circular.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>8. Kanban Board</h3>
+                <p>Events organized by time of day (Morning, Afternoon, Evening) in draggable columns.</p>
+                <a href="event-test-8-kanban.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>9. Filter Bubbles</h3>
+                <p>Interactive bubble interface. Click category bubbles to filter and reveal events.</p>
+                <a href="event-test-9-bubbles.html" class="test-link">View Demo</a>
+            </div>
+            
+            <div class="test-card">
+                <h3>10. Flip Cards</h3>
+                <p>3D flip cards showing event preview on front, full details on back. Click to flip.</p>
+                <a href="event-test-10-flipcards.html" class="test-link">View Demo</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
