@@ -141,7 +141,7 @@ class HeaderManager {
         citySelector.appendChild(dropdown);
         navContainer.appendChild(citySelector);
 
-        this.logger.componentLoad('HEADER', 'City selector added to header');
+        this.logger.componentLoad('HEADER', 'City selector added to header with z-index: 10000');
     }
 
     toggleDropdown(dropdown) {
