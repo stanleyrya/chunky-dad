@@ -8,6 +8,7 @@ class FormsManager {
     init() {
         logger.componentInit('FORM', 'Forms manager initializing');
         this.setupContactForm();
+        this.checkForFormResponse();
         logger.componentLoad('FORM', 'Forms manager initialized');
     }
 
@@ -27,16 +28,27 @@ class FormsManager {
     }
 
     handleContactFormSubmission(event) {
-        event.preventDefault();
         logger.userInteraction('FORM', 'Contact form submitted');
         
         const formData = this.collectFormData();
         
         if (!this.validateFormData(formData)) {
+            event.preventDefault();
             return;
         }
 
-        this.submitForm(formData);
+        // Check if Formspree is properly configured
+        const formAction = this.contactForm.action;
+        if (formAction.includes('YOUR_FORM_ID_HERE')) {
+            event.preventDefault();
+            logger.componentError('FORM', 'Formspree not configured - showing setup instructions');
+            alert('Email feature not yet configured. Please contact the site administrator to set up email functionality.');
+            return;
+        }
+
+        // Let the form submit naturally to Formspree
+        this.updateButtonState('Sending...', true);
+        logger.info('FORM', 'Form submission started - sending to Formspree');
     }
 
     collectFormData() {
@@ -78,33 +90,48 @@ class FormsManager {
         return true;
     }
 
-    submitForm(formData) {
+    updateButtonState(text, disabled = false) {
         const submitButton = this.contactForm.querySelector('button');
-        const originalText = submitButton.textContent;
-        
-        logger.info('FORM', 'Form submission started');
-        
-        // Update button state
-        submitButton.textContent = 'Sending...';
-        submitButton.disabled = true;
-        
-        // Simulate form submission (replace with actual API call when needed)
-        setTimeout(() => {
-            logger.pageLoad('FORM', 'Form submitted successfully');
+        if (submitButton) {
+            submitButton.textContent = text;
+            submitButton.disabled = disabled;
+        }
+    }
+
+    // Handle form submission success/failure
+    handleFormResponse(success = true) {
+        if (success) {
+            logger.pageLoad('FORM', 'Form submitted successfully via Formspree');
             alert('Thank you for your message! We\'ll get back to you soon.');
-            
             this.resetForm();
-            
-            // Restore button state
-            submitButton.textContent = originalText;
-            submitButton.disabled = false;
-        }, 2000);
+        } else {
+            logger.componentError('FORM', 'Form submission failed');
+            alert('Sorry, there was an error sending your message. Please try again.');
+        }
+        
+        this.updateButtonState('Send the Tea ☕', false);
     }
 
     resetForm() {
         if (this.contactForm) {
             this.contactForm.reset();
             logger.debug('FORM', 'Form reset successfully');
+        }
+    }
+
+    // Check for form submission response from Formspree redirect
+    checkForFormResponse() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'true') {
+            logger.pageLoad('FORM', 'Form submission successful - redirected from Formspree');
+            alert('Thank you for your message! We\'ll get back to you soon.');
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (urlParams.get('success') === 'false') {
+            logger.componentError('FORM', 'Form submission failed - redirected from Formspree');
+            alert('Sorry, there was an error sending your message. Please try again.');
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
 
