@@ -75,6 +75,7 @@ class HeaderManager {
     }
 
     addCitySelector() {
+        this.logger.componentInit('HEADER', 'Adding city selector to header');
         const navContainer = document.querySelector('.nav-container');
         if (!navContainer) {
             this.logger.componentError('HEADER', 'Nav container not found');
@@ -125,10 +126,27 @@ class HeaderManager {
             this.toggleDropdown(dropdown);
         });
 
+        // Add fallback click handler for better compatibility
+        emojiButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+        });
+
+        // Add touch support for mobile devices
+        emojiButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.logger.userInteraction('HEADER', 'City switcher button touched');
+            this.toggleDropdown(dropdown);
+        });
+
         // Close dropdown when clicking outside
         const closeDropdown = (e) => {
             if (!citySelector.contains(e.target)) {
                 dropdown.classList.remove('open');
+                // Reset inline styles when closing
+                dropdown.style.pointerEvents = '';
+                dropdown.style.visibility = '';
+                dropdown.style.opacity = '';
+                dropdown.style.transform = '';
             }
         };
         
@@ -143,7 +161,13 @@ class HeaderManager {
         citySelector.appendChild(dropdown);
         navContainer.appendChild(citySelector);
 
-        this.logger.componentLoad('HEADER', 'City selector added to header with z-index: 10001');
+        this.logger.componentLoad('HEADER', `City selector added to header with ${cities.length} cities`);
+        this.logger.debug('HEADER', `Dropdown element created with ID: ${dropdown.id}`);
+        
+        // Verify dropdown is properly positioned
+        setTimeout(() => {
+            this.verifyDropdownSetup(dropdown, citySelector);
+        }, 100);
     }
 
     toggleDropdown(dropdown) {
@@ -152,9 +176,59 @@ class HeaderManager {
         if (isVisible) {
             dropdown.classList.remove('open');
             this.logger.debug('HEADER', 'Dropdown closed');
+            // Reset inline styles when closing
+            dropdown.style.pointerEvents = '';
+            dropdown.style.visibility = '';
+            dropdown.style.opacity = '';
+            dropdown.style.transform = '';
         } else {
             dropdown.classList.add('open');
             this.logger.debug('HEADER', 'Dropdown opened');
+            
+            // Force dropdown to be visible and clickable
+            dropdown.style.pointerEvents = 'auto';
+            dropdown.style.visibility = 'visible';
+            dropdown.style.opacity = '1';
+            dropdown.style.transform = 'translateY(0)';
+            
+            // Ensure dropdown is properly positioned and not clipped
+            setTimeout(() => {
+                this.ensureDropdownVisibility(dropdown);
+            }, 10);
+        }
+    }
+
+    ensureDropdownVisibility(dropdown) {
+        // Check if dropdown is visible in viewport
+        const rect = dropdown.getBoundingClientRect();
+        const isVisible = rect.top >= 0 && rect.left >= 0 && 
+                         rect.bottom <= window.innerHeight && 
+                         rect.right <= window.innerWidth;
+        
+        if (!isVisible) {
+            this.logger.debug('HEADER', 'Dropdown may be clipped, adjusting position');
+            // If dropdown is clipped, adjust position
+            if (rect.bottom > window.innerHeight) {
+                dropdown.style.top = 'auto';
+                dropdown.style.bottom = '100%';
+                dropdown.style.marginTop = '0';
+                dropdown.style.marginBottom = '0.5rem';
+            }
+        }
+    }
+
+    verifyDropdownSetup(dropdown, citySelector) {
+        const rect = dropdown.getBoundingClientRect();
+        const parentRect = citySelector.getBoundingClientRect();
+        
+        this.logger.debug('HEADER', `Dropdown verification - Parent: ${parentRect.width}x${parentRect.height}, Dropdown: ${rect.width}x${rect.height}`);
+        this.logger.debug('HEADER', `Dropdown position - Top: ${rect.top}, Left: ${rect.left}, Z-index: ${window.getComputedStyle(dropdown).zIndex}`);
+        
+        // Check if dropdown is properly positioned relative to parent
+        if (rect.width > 0 && rect.height > 0) {
+            this.logger.componentLoad('HEADER', 'Dropdown setup verified successfully');
+        } else {
+            this.logger.componentError('HEADER', 'Dropdown has zero dimensions - positioning issue detected');
         }
     }
 
