@@ -96,6 +96,7 @@ class HeaderManager {
         emojiButton.innerHTML = `
             <span class="city-emoji" id="current-city-emoji">${this.currentCity?.emoji || '🏙️'}</span>
             <span class="city-name" id="current-city-name">${cityName}</span>
+            <span class="city-carrot">▼</span>
         `;
         
         // Create dropdown
@@ -129,6 +130,7 @@ class HeaderManager {
         const closeDropdown = (e) => {
             if (!citySelector.contains(e.target)) {
                 dropdown.classList.remove('open');
+                emojiButton.classList.remove('active');
             }
         };
         
@@ -143,17 +145,20 @@ class HeaderManager {
         citySelector.appendChild(dropdown);
         navContainer.appendChild(citySelector);
 
-        this.logger.componentLoad('HEADER', 'City selector added to header with z-index: 10001');
+        this.logger.componentLoad('HEADER', 'City selector added to header with z-index: 10001 and carrot symbol');
     }
 
     toggleDropdown(dropdown) {
         const isVisible = dropdown.classList.contains('open');
+        const emojiButton = document.getElementById('city-switcher-btn');
         
         if (isVisible) {
             dropdown.classList.remove('open');
+            emojiButton?.classList.remove('active');
             this.logger.debug('HEADER', 'Dropdown closed');
         } else {
             dropdown.classList.add('open');
+            emojiButton?.classList.add('active');
             this.logger.debug('HEADER', 'Dropdown opened');
         }
     }
@@ -194,6 +199,7 @@ class HeaderManager {
             emojiButton.innerHTML = `
                 <span class="city-emoji" id="current-city-emoji">${this.currentCity.emoji}</span>
                 <span class="city-name" id="current-city-name">${cityName}</span>
+                <span class="city-carrot">▼</span>
             `;
             emojiButton.setAttribute('aria-label', `Switch city - currently ${cityName}`);
         }
