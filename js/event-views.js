@@ -33,6 +33,7 @@ class EventViewsManager {
         const view = this.views.get(viewName);
         if (!view) {
             logger.componentError('EVENT_VIEWS', `View not found: ${viewName}`);
+            this.showViewError(containerId, `View type "${viewName}" is not available.`);
             return false;
         }
 
@@ -42,21 +43,27 @@ class EventViewsManager {
             return false;
         }
 
-        // Cleanup previous view if exists
-        this.deactivateView(containerId);
+        try {
+            // Cleanup previous view if exists
+            this.deactivateView(containerId);
 
-        // Store active view info
-        this.activeViews.set(containerId, {
-            viewName,
-            container,
-            options
-        });
+            // Store active view info
+            this.activeViews.set(containerId, {
+                viewName,
+                container,
+                options
+            });
 
-        // Setup the view
-        view.setup(container, options);
+            // Setup the view
+            view.setup(container, options);
 
-        logger.userInteraction('EVENT_VIEWS', `View activated: ${viewName} for container ${containerId}`, options);
-        return true;
+            logger.userInteraction('EVENT_VIEWS', `View activated: ${viewName} for container ${containerId}`, options);
+            return true;
+        } catch (error) {
+            logger.componentError('EVENT_VIEWS', `Error activating view ${viewName}`, error);
+            this.showViewError(containerId, `Unable to activate view "${viewName}". Please try refreshing the page.`);
+            return false;
+        }
     }
 
     // Deactivate a view
@@ -77,12 +84,14 @@ class EventViewsManager {
         const activeView = this.activeViews.get(containerId);
         if (!activeView) {
             logger.componentError('EVENT_VIEWS', `No active view for container: ${containerId}`);
+            this.showViewError(containerId, 'No view is currently active for this section.');
             return false;
         }
 
         const view = this.views.get(activeView.viewName);
         if (!view) {
             logger.componentError('EVENT_VIEWS', `View not found: ${activeView.viewName}`);
+            this.showViewError(containerId, `View type "${activeView.viewName}" is not available.`);
             return false;
         }
 
@@ -95,7 +104,22 @@ class EventViewsManager {
             return true;
         } catch (error) {
             logger.componentError('EVENT_VIEWS', `Error rendering events in ${activeView.viewName}`, error);
+            this.showViewError(containerId, 'Unable to display events. Please try refreshing the page.');
             return false;
+        }
+    }
+
+    // Show error message for a specific container
+    showViewError(containerId, message) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `
+                <div class="error-message">
+                    <h3>⚠️ Display Error</h3>
+                    <p>${message}</p>
+                    <button onclick="location.reload()" class="cta-button">🔄 Refresh Page</button>
+                </div>
+            `;
         }
     }
 

@@ -63,6 +63,13 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - **Performance monitoring**: Use logger timing functions for bottleneck identification
 - **Error tracking**: All errors automatically logged with context and stack traces
 
+## Error Handling & System Design
+- **Graceful error handling**: Display user-friendly error messages when operations fail
+- **NO complex legacy systems**: Avoid creating fallback systems, dual code paths, or complex compatibility layers
+- **Fail fast**: If a feature doesn't work, show an error message rather than falling back to old systems
+- **Simple is better**: Prefer simple, direct implementations over complex multi-path systems
+- **Clean architecture**: When updating systems, replace old functionality rather than maintaining parallel systems
+
 ## Project-Specific Notes
 - Bear community focus - inclusive, welcoming tone
 - Event calendar needs regular updates
