@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chunky.dad Ultimate Style Tester - Web Dev Tool</title>
+    <title>🎨 Chunky.dad Ultimate Style Tester - Advanced Web Dev Tool</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -14,27 +15,62 @@
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #0f4c75 100%);
             color: #fff;
             min-height: 100vh;
             overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
         }
 
         .tester-container {
             display: grid;
-            grid-template-columns: 350px 1fr;
+            grid-template-columns: 380px 1fr;
             height: 100vh;
             position: relative;
         }
 
         .controls-panel {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px;
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(30px);
+            border-right: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 25px;
             overflow-y: auto;
             position: relative;
             z-index: 10;
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .controls-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            border-radius: 4px;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #45b7d1, #4ecdc4);
         }
 
         .preview-panel {
@@ -55,59 +91,112 @@
 
         .panel-header {
             text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 35px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid rgba(78, 205, 196, 0.3);
+            position: relative;
+        }
+
+        .panel-header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            border-radius: 1px;
         }
 
         .panel-header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1, #ff6b6b, #764ba2);
+            background-size: 300% 300%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
 
         .panel-header p {
-            font-size: 0.9rem;
-            opacity: 0.8;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            font-weight: 400;
+            letter-spacing: 0.5px;
         }
 
         .control-section {
-            margin-bottom: 25px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .control-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .control-section:hover::before {
+            opacity: 1;
+        }
+
+        .control-section:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(78, 205, 196, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
         }
 
         .control-section h3 {
-            font-size: 1rem;
-            font-weight: 500;
-            margin-bottom: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 18px;
             color: #4ecdc4;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .preset-themes {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
         }
 
         .theme-btn {
-            padding: 12px 8px;
+            padding: 14px 10px;
             border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
             color: #fff;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
 
         .theme-btn:hover {
@@ -419,6 +508,57 @@
             margin-top: 5px;
         }
 
+        .effect-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 8px 0;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-control:hover {
+            color: #4ecdc4;
+        }
+
+        .checkbox-control input[type="checkbox"] {
+            display: none;
+        }
+
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .checkbox-control input[type="checkbox"]:checked + .checkmark {
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            border-color: #4ecdc4;
+        }
+
+        .checkbox-control input[type="checkbox"]:checked + .checkmark::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
         /* Mobile Responsive Design */
         @media (max-width: 768px) {
             .tester-container {
@@ -543,6 +683,11 @@
                     <button class="theme-btn" data-theme="rainbow">Rainbow</button>
                     <button class="theme-btn" data-theme="pride">Pride</button>
                     <button class="theme-btn" data-theme="retro">Retro</button>
+                    <button class="theme-btn" data-theme="cyberpunk">Cyberpunk</button>
+                    <button class="theme-btn" data-theme="vintage">Vintage</button>
+                    <button class="theme-btn" data-theme="minimal">Minimal</button>
+                    <button class="theme-btn" data-theme="gradient">Gradient</button>
+                    <button class="theme-btn" data-theme="monochrome">Monochrome</button>
                 </div>
             </div>
 
@@ -603,6 +748,42 @@
                         <input type="range" class="slider-input" id="animation-speed" min="0.1" max="3" step="0.1" value="1">
                         <div class="slider-value" id="animation-speed-value">1x</div>
                     </div>
+                    <div class="slider-control">
+                        <label>Blur Effect</label>
+                        <input type="range" class="slider-input" id="blur-effect" min="0" max="20" value="0">
+                        <div class="slider-value" id="blur-effect-value">0px</div>
+                    </div>
+                    <div class="slider-control">
+                        <label>Glow Intensity</label>
+                        <input type="range" class="slider-input" id="glow-intensity" min="0" max="30" value="0">
+                        <div class="slider-value" id="glow-intensity-value">0px</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>🎭 Dynamic Effects</h3>
+                <div class="effect-controls">
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="enable-parallax">
+                        <span class="checkmark"></span>
+                        Enable Parallax Effects
+                    </label>
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="enable-glow">
+                        <span class="checkmark"></span>
+                        Enable Glow Effects
+                    </label>
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="enable-glassmorphism">
+                        <span class="checkmark"></span>
+                        Enable Glassmorphism
+                    </label>
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="enable-animations">
+                        <span class="checkmark"></span>
+                        Enable Animations
+                    </label>
                 </div>
             </div>
 
@@ -627,6 +808,16 @@
                 <div style="display: flex; gap: 10px;">
                     <button class="action-btn secondary" id="rotate-device">Rotate</button>
                     <button class="action-btn secondary" id="fullscreen">Fullscreen</button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>🌐 Page Testing</h3>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="action-btn" onclick="window.styleTester.loadPage('../index.html')">🏠 Home Page</button>
+                    <button class="action-btn" onclick="window.styleTester.loadPage('../city.html?city=new-york')">🗽 NYC City Page</button>
+                    <button class="action-btn" onclick="window.styleTester.loadPage('../city.html?city=seattle')">🌲 Seattle City Page</button>
+                    <button class="action-btn secondary" onclick="window.styleTester.loadPage('../city.html?city=los-angeles')">🌴 LA City Page</button>
                 </div>
             </div>
         </div>
@@ -754,6 +945,41 @@
                         accent: '#f9ca24',
                         text: '#ffffff',
                         background: '#2d3436'
+                    },
+                    cyberpunk: {
+                        primary: '#ff00ff',
+                        secondary: '#00ffff',
+                        accent: '#ffff00',
+                        text: '#ffffff',
+                        background: '#000000'
+                    },
+                    vintage: {
+                        primary: '#8b4513',
+                        secondary: '#daa520',
+                        accent: '#cd853f',
+                        text: '#2f1b14',
+                        background: '#f5f5dc'
+                    },
+                    minimal: {
+                        primary: '#333333',
+                        secondary: '#666666',
+                        accent: '#999999',
+                        text: '#000000',
+                        background: '#ffffff'
+                    },
+                    gradient: {
+                        primary: '#667eea',
+                        secondary: '#764ba2',
+                        accent: '#f093fb',
+                        text: '#ffffff',
+                        background: '#667eea'
+                    },
+                    monochrome: {
+                        primary: '#000000',
+                        secondary: '#333333',
+                        accent: '#666666',
+                        text: '#ffffff',
+                        background: '#000000'
                     }
                 };
                 
@@ -827,6 +1053,13 @@
                     });
                 });
 
+                // Checkbox controls
+                document.querySelectorAll('.checkbox-control input').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        this.applyDynamicEffects();
+                    });
+                });
+
                 // View buttons
                 document.getElementById('mobile-view').addEventListener('click', () => this.setView('mobile'));
                 document.getElementById('tablet-view').addEventListener('click', () => this.setView('tablet'));
@@ -888,6 +1121,9 @@
                         --accent-color: ${colors.accent} !important;
                         --text-primary: ${colors.text} !important;
                         --background-light: ${colors.background} !important;
+                        --success-color: ${colors.accent} !important;
+                        --warning-color: ${colors.secondary} !important;
+                        --border-light: ${colors.primary}20 !important;
                     }
                     
                     body {
@@ -895,22 +1131,42 @@
                         color: ${colors.text} !important;
                     }
                     
+                    header {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                    }
+                    
                     .city-card, .event-card, .category-card {
                         background-color: ${colors.background} !important;
                         color: ${colors.text} !important;
+                        border: 1px solid ${colors.primary}20 !important;
                     }
                     
-                    .btn-primary {
-                        background-color: ${colors.primary} !important;
-                        border-color: ${colors.primary} !important;
+                    .cta-button {
+                        background: linear-gradient(45deg, ${colors.primary}, ${colors.accent}) !important;
+                        color: ${colors.background} !important;
                     }
                     
-                    .btn-secondary {
-                        background-color: ${colors.secondary} !important;
-                        border-color: ${colors.secondary} !important;
+                    .cta-button.secondary {
+                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.accent}) !important;
+                        color: ${colors.background} !important;
                     }
                     
-                    .accent-color {
+                    .city-switcher-btn {
+                        background: linear-gradient(135deg, ${colors.primary}20 0%, ${colors.accent}20 100%) !important;
+                        border-color: ${colors.primary}40 !important;
+                    }
+                    
+                    .calendar-day.current {
+                        background: linear-gradient(135deg, ${colors.primary}20 0%, ${colors.accent}20 100%) !important;
+                    }
+                    
+                    .event-item {
+                        background: ${colors.background} !important;
+                        border-left: 3px solid ${colors.primary} !important;
+                    }
+                    
+                    .highlight {
+                        background: ${colors.accent}20 !important;
                         color: ${colors.accent} !important;
                     }
                 `;
@@ -924,6 +1180,8 @@
                 const borderRadius = document.getElementById('border-radius').value;
                 const shadowIntensity = document.getElementById('shadow-intensity').value;
                 const animationSpeed = document.getElementById('animation-speed').value;
+                const blurEffect = document.getElementById('blur-effect').value;
+                const glowIntensity = document.getElementById('glow-intensity').value;
 
                 const css = `
                     * {
@@ -932,15 +1190,86 @@
                     
                     .city-card, .event-card, .category-card {
                         box-shadow: 0 ${shadowIntensity}px ${shadowIntensity * 2}px rgba(0,0,0,0.1) !important;
+                        backdrop-filter: blur(${blurEffect}px) !important;
                     }
                     
                     * {
                         animation-duration: ${animationSpeed}s !important;
                         transition-duration: ${animationSpeed}s !important;
                     }
+                    
+                    .cta-button, .city-switcher-btn {
+                        box-shadow: 0 0 ${glowIntensity}px rgba(78, 205, 196, 0.5) !important;
+                    }
+                    
+                    .calendar-day.current {
+                        box-shadow: 0 0 ${glowIntensity}px rgba(78, 205, 196, 0.3) !important;
+                    }
                 `;
 
                 this.injectCSS(css, 'advanced-styles');
+            }
+
+            applyDynamicEffects() {
+                const enableParallax = document.getElementById('enable-parallax').checked;
+                const enableGlow = document.getElementById('enable-glow').checked;
+                const enableGlassmorphism = document.getElementById('enable-glassmorphism').checked;
+                const enableAnimations = document.getElementById('enable-animations').checked;
+
+                let css = '';
+
+                if (enableParallax) {
+                    css += `
+                        .hero-image {
+                            transform: translateY(var(--parallax-offset, 0px)) !important;
+                        }
+                        
+                        .city-card, .event-card {
+                            transform: translateY(calc(var(--parallax-offset, 0px) * 0.1)) !important;
+                        }
+                    `;
+                }
+
+                if (enableGlow) {
+                    css += `
+                        .cta-button:hover {
+                            box-shadow: 0 0 30px rgba(78, 205, 196, 0.6) !important;
+                        }
+                        
+                        .city-card:hover, .event-card:hover {
+                            box-shadow: 0 0 25px rgba(78, 205, 196, 0.4) !important;
+                        }
+                    `;
+                }
+
+                if (enableGlassmorphism) {
+                    css += `
+                        .city-card, .event-card, .category-card {
+                            background: rgba(255, 255, 255, 0.1) !important;
+                            backdrop-filter: blur(20px) !important;
+                            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                        }
+                        
+                        header {
+                            backdrop-filter: blur(20px) !important;
+                        }
+                    `;
+                }
+
+                if (enableAnimations) {
+                    css += `
+                        .city-card, .event-card, .category-card {
+                            animation: float 6s ease-in-out infinite !important;
+                        }
+                        
+                        @keyframes float {
+                            0%, 100% { transform: translateY(0px); }
+                            50% { transform: translateY(-10px); }
+                        }
+                    `;
+                }
+
+                this.injectCSS(css, 'dynamic-effects');
             }
 
             injectCSS(css, id = 'style-tester-css') {
@@ -1142,11 +1471,23 @@
                 const overlay = document.getElementById('loading-overlay');
                 overlay.style.display = 'none';
             }
+
+            loadPage(url) {
+                this.showLoading();
+                this.iframeLoaded = false;
+                this.iframe.src = url;
+                this.showNotification(`Loading ${url}...`);
+            }
+
+            showLoading() {
+                const overlay = document.getElementById('loading-overlay');
+                overlay.style.display = 'flex';
+            }
         }
 
         // Initialize the style tester when the page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new UltimateStyleTester();
+            window.styleTester = new UltimateStyleTester();
         });
     </script>
 </body>
