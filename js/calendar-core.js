@@ -211,7 +211,6 @@ class CalendarCore {
                     eventData.instagram = additionalData.instagram;
                     eventData.facebook = additionalData.facebook;
                     eventData.gmaps = additionalData.gmaps;
-                    eventData.shortname = additionalData.shortname; // Manual short name override
                     eventData.links = this.parseLinks(additionalData);
                     
                     if (additionalData.type || additionalData.eventType) {
@@ -247,8 +246,7 @@ class CalendarCore {
             'tea': 'tea', 'info': 'tea', 'description': 'tea',
             'website': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
-            'gmaps': 'gmaps', 'google maps': 'gmaps',
-            'shortname': 'shortname', 'short name': 'shortname', 'nickname': 'shortname'
+            'gmaps': 'gmaps', 'google maps': 'gmaps'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing

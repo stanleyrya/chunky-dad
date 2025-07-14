@@ -26,59 +26,6 @@ class DynamicCalendarLoader extends CalendarCore {
         return cityParam;
     }
 
-    // Get time-based emoji for events
-    getTimeEmoji(timeString) {
-        if (!timeString) return '🕐';
-        
-        // Extract hour from various time formats
-        const hourMatch = timeString.match(/(\d{1,2}):?(\d{2})?\s*(am|pm|AM|PM)?/);
-        if (!hourMatch) return '🕐';
-        
-        let hour = parseInt(hourMatch[1]);
-        const ampm = hourMatch[3] ? hourMatch[3].toLowerCase() : '';
-        
-        // Convert to 24-hour format
-        if (ampm === 'pm' && hour !== 12) hour += 12;
-        if (ampm === 'am' && hour === 12) hour = 0;
-        
-        // Return emoji based on time of day
-        if (hour >= 5 && hour < 12) return '🌅'; // Morning
-        if (hour >= 12 && hour < 17) return '☀️'; // Afternoon
-        if (hour >= 17 && hour < 20) return '🌆'; // Evening
-        if (hour >= 20 && hour < 24) return '🌙'; // Night
-        if (hour >= 0 && hour < 5) return '🌙'; // Late night
-        
-        return '🕐'; // Default
-    }
-
-    // Get smart short name for events
-    getSmartShortName(event) {
-        // First check if there's a manual short name override
-        if (event.shortname) {
-            return event.shortname;
-        }
-        
-        // If name is short enough, use it as is
-        if (event.name.length <= 20) {
-            return event.name;
-        }
-        
-        // Smart truncation - try to preserve key words
-        const words = event.name.split(' ');
-        if (words.length > 1) {
-            // Try to keep first and last word if possible
-            const firstWord = words[0];
-            const lastWord = words[words.length - 1];
-            
-            if ((firstWord + ' ' + lastWord).length <= 17) {
-                return firstWord + ' ' + lastWord;
-            }
-        }
-        
-        // Fall back to simple truncation
-        return event.name.substring(0, 17) + '...';
-    }
-
     // Set up city selector and populate with available cities
     setupCitySelector() {
         const availableCitiesList = document.getElementById('available-cities-list');
@@ -155,7 +102,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 </div>
                             </div>
                         `).join('')
-                        : '<p class="no-modal-events">🎯 Free day! Perfect for exploring or creating your own adventure.</p>'
+                        : '<p class="no-modal-events">No events scheduled for this day.</p>'
                     }
                 </div>
                 <div class="modal-footer">
@@ -308,7 +255,7 @@ class DynamicCalendarLoader extends CalendarCore {
         });
     }
 
-    // Generate event card (enhanced with compact layout)
+    // Generate event card (same as original)
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => 
             `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`
@@ -344,10 +291,7 @@ class DynamicCalendarLoader extends CalendarCore {
         ` : '';
 
         const recurringBadge = event.recurring ? 
-            `<span class="event-frequency">🔄 ${event.eventType}</span>` : '';
-
-        // Get time emoji for visual indication
-        const timeEmoji = this.getTimeEmoji(event.time);
+            `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
 
         // Format day/time more concisely (e.g., "Thu 5pm-9pm")
         const formatDayTime = (day, time) => {
@@ -362,16 +306,13 @@ class DynamicCalendarLoader extends CalendarCore {
                     <h3>${event.name}</h3>
                     <div class="event-meta">
                         <div class="event-day">${formatDayTime(event.day, event.time)}</div>
+                        ${recurringBadge}
                     </div>
                 </div>
                 <div class="event-details">
                     ${locationHtml}
                     ${coverHtml}
                     ${teaHtml}
-                    <div class="event-meta-compact">
-                        <span class="event-time-emoji">${timeEmoji}</span>
-                        ${recurringBadge}
-                    </div>
                     <div class="event-links">
                         ${linksHtml}
                     </div>
@@ -591,19 +532,18 @@ class DynamicCalendarLoader extends CalendarCore {
                 ? dayEvents.map(event => {
                     // Mobile-friendly shortened versions
                     const shortVenue = event.bar.split(' ')[0] || event.bar;
-                    const shortName = this.getSmartShortName(event);
-                    const timeEmoji = this.getTimeEmoji(event.time);
+                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
-                            <div class="event-time">${timeEmoji} ${event.time}</div>
+                            <div class="event-time">${event.time}</div>
                             <div class="event-venue">${event.bar}</div>
                             <div class="event-venue-mobile">${shortVenue}</div>
                         </div>
                     `;
                 }).join('')
-                : '<div class="no-events">📅 Check other days</div>';
+                : '<div class="no-events">No events</div>';
 
             const isToday = day.getTime() === today.getTime();
             const currentClass = isToday ? ' current' : '';
@@ -685,13 +625,12 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
                     const shortVenue = event.bar.split(' ')[0] || event.bar;
-                    const shortName = this.getSmartShortName(event);
-                    const timeEmoji = this.getTimeEmoji(event.time);
+                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
-                            <div class="event-time">${timeEmoji} ${event.time}</div>
+                            <div class="event-time">${event.time}</div>
                             <div class="event-venue">${event.bar}</div>
                             <div class="event-venue-mobile">${shortVenue}</div>
                         </div>
@@ -911,9 +850,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 const periodText = this.currentView === 'week' ? 'this week' : 'this month';
                 eventsList.innerHTML = `
                     <div class="no-events-message">
-                        <h3>🎯 Ready for Adventure?</h3>
-                        <p>No events scheduled for ${periodText}, but that doesn't mean the fun stops!</p>
-                        <p>Check other weeks/months, or help us discover events you know about!</p>
+                        <h3>📅 No Events ${this.currentView === 'week' ? 'This Week' : 'This Month'}</h3>
+                        <p>No events scheduled for ${periodText}.</p>
+                        <p>Check other weeks/months or help us by submitting events you know about!</p>
                     </div>
                 `;
             }
