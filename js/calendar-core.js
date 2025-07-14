@@ -1,22 +1,22 @@
-// Event Data Manager - Handles event data parsing, filtering, and management
-class EventDataManager {
+// Calendar Core Module - Handles calendar data parsing, iCal processing, and event data management
+class CalendarCore {
     constructor() {
         this.eventsData = null;
         this.allEvents = [];
         this.locationCache = new Map();
-        logger.componentInit('EVENT', 'Event Data Manager initialized');
+        logger.componentInit('CALENDAR', 'Calendar core initialized');
     }
 
     // Parse iCal data and extract events
     parseICalData(icalText) {
-        logger.time('EVENT', 'iCal parsing');
-        logger.info('EVENT', 'Starting iCal parsing', {
+        logger.time('CALENDAR', 'iCal parsing');
+        logger.info('CALENDAR', 'Starting iCal parsing', {
             textLength: icalText.length
         });
         
         // Log the beginning of the calendar file for debugging
         const filePreview = icalText.substring(0, 500);
-        logger.debug('EVENT', 'Calendar file preview (first 500 chars):', {
+        logger.debug('CALENDAR', 'Calendar file preview (first 500 chars):', {
             preview: filePreview,
             totalLength: icalText.length
         });
@@ -27,7 +27,7 @@ class EventDataManager {
         const versionMatch = icalText.match(/VERSION:(.+)/);
         
         if (calendarNameMatch || calendarTimezoneMatch || versionMatch) {
-            logger.info('EVENT', 'Calendar metadata found', {
+            logger.info('CALENDAR', 'Calendar metadata found', {
                 calendarName: calendarNameMatch ? calendarNameMatch[1].trim() : 'Not specified',
                 timezone: calendarTimezoneMatch ? calendarTimezoneMatch[1].trim() : 'Not specified',
                 version: versionMatch ? versionMatch[1].trim() : 'Not specified'
@@ -41,7 +41,7 @@ class EventDataManager {
         let eventCount = 0;
         let invalidLines = [];
         
-        logger.debug('EVENT', `Processing ${lines.length} lines from calendar file`);
+        logger.debug('CALENDAR', `Processing ${lines.length} lines from calendar file`);
         
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
@@ -61,10 +61,10 @@ class EventDataManager {
                 inEvent = true;
                 currentEvent = {};
                 eventCount++;
-                logger.debug('EVENT', `Starting to parse event #${eventCount}`);
+                logger.debug('CALENDAR', `Starting to parse event #${eventCount}`);
             } else if (line === 'END:VEVENT' && currentEvent) {
                 if (currentEvent.title) {
-                    logger.debug('EVENT', `Processing event: ${currentEvent.title}`, {
+                    logger.debug('CALENDAR', `Processing event: ${currentEvent.title}`, {
                         eventNumber: eventCount,
                         hasDescription: !!currentEvent.description,
                         hasLocation: !!currentEvent.location,
@@ -77,7 +77,7 @@ class EventDataManager {
                     
                     if (eventData) {
                         events.push(eventData);
-                        logger.debug('EVENT', `✅ Successfully parsed event: ${eventData.name}`, {
+                        logger.debug('CALENDAR', `✅ Successfully parsed event: ${eventData.name}`, {
                             eventType: eventData.eventType,
                             day: eventData.day,
                             time: eventData.time,
@@ -85,13 +85,13 @@ class EventDataManager {
                             recurring: eventData.recurring
                         });
                     } else {
-                        logger.warn('EVENT', `❌ Failed to parse event: ${currentEvent.title}`, {
+                        logger.warn('CALENDAR', `❌ Failed to parse event: ${currentEvent.title}`, {
                             eventNumber: eventCount,
                             rawEvent: currentEvent
                         });
                     }
                 } else {
-                    logger.warn('EVENT', `❌ Event #${eventCount} has no title, skipping`, {
+                    logger.warn('CALENDAR', `❌ Event #${eventCount} has no title, skipping`, {
                         rawEvent: currentEvent
                     });
                 }
@@ -107,14 +107,14 @@ class EventDataManager {
         
         // Log any lines that couldn't be parsed
         if (invalidLines.length > 0) {
-            logger.warn('EVENT', `Found ${invalidLines.length} unparseable lines`, {
+            logger.warn('CALENDAR', `Found ${invalidLines.length} unparseable lines`, {
                 sampleInvalidLines: invalidLines.slice(0, 5), // Show first 5 invalid lines
                 totalInvalidLines: invalidLines.length
             });
         }
         
-        logger.timeEnd('EVENT', 'iCal parsing');
-        logger.info('EVENT', `📊 Parsing complete. Found ${eventCount} total events, ${events.length} with valid data`, {
+        logger.timeEnd('CALENDAR', 'iCal parsing');
+        logger.info('CALENDAR', `📊 Parsing complete. Found ${eventCount} total events, ${events.length} with valid data`, {
             successRate: `${Math.round((events.length / eventCount) * 100)}%`,
             invalidLinesCount: invalidLines.length,
             averageEventDataPoints: events.length > 0 ? Math.round(events.reduce((acc, event) => {
@@ -197,7 +197,7 @@ class EventDataManager {
 
             // Parse description for additional data
             if (calendarEvent.description) {
-                logger.debug('EVENT', 'Processing event description', {
+                logger.debug('CALENDAR', 'Processing event description', {
                     eventName: eventData.name,
                     descriptionLength: calendarEvent.description.length,
                     descriptionPreview: calendarEvent.description.substring(0, 100) + '...'
@@ -232,7 +232,7 @@ class EventDataManager {
 
             return eventData;
         } catch (error) {
-            logger.componentError('EVENT', 'Failed to parse event data', error);
+            logger.componentError('CALENDAR', 'Failed to parse event data', error);
             return null;
         }
     }
@@ -249,94 +249,193 @@ class EventDataManager {
             'gmaps': 'gmaps', 'google maps': 'gmaps'
         };
 
-        const lines = description.split('\n');
-        for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (!trimmedLine) continue;
-
-            // Check for key-value format (key: value)
-            const colonIndex = trimmedLine.indexOf(':');
-            if (colonIndex > 0) {
-                const key = trimmedLine.substring(0, colonIndex).trim().toLowerCase();
-                const value = trimmedLine.substring(colonIndex + 1).trim();
+        // Clean up any remaining carriage returns that might interfere with parsing
+        const carriageReturnCount = (description.match(/\r/g) || []).length;
+        if (carriageReturnCount > 0) {
+            logger.debug('CALENDAR', 'Removing carriage returns from description', {
+                count: carriageReturnCount,
+                sampleBefore: description.substring(0, 100).replace(/\r/g, '\\r').replace(/\n/g, '\\n')
+            });
+        }
+        let textBlock = description.replace(/\r/g, '');
+        
+        // First, handle HTML content - extract URLs from anchor tags and convert to plain text
+        if (textBlock.includes("<a href=") || textBlock.includes("<br>")) {
+            // Extract URLs from anchor tags before converting to plain text
+            const linkMatches = textBlock.match(/<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi);
+            if (linkMatches) {
+                linkMatches.forEach(linkMatch => {
+                    const urlMatch = linkMatch.match(/href=["']([^"']+)["']/);
+                    if (urlMatch) {
+                        const url = urlMatch[1];
+                        // Replace the HTML anchor tag with just the URL
+                        textBlock = textBlock.replace(linkMatch, url);
+                    }
+                });
+            }
+            
+            // Convert HTML breaks to newlines
+            textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
+            
+            // Remove any remaining HTML tags
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = textBlock;
+            textBlock = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        
+        // Replace escaped newlines with actual newlines
+        textBlock = textBlock.replace(/\\n/g, "\n");
+        
+        const lines = textBlock.split("\n");
+        
+        logger.debug('CALENDAR', 'Parsing event description', {
+            originalLength: description.length,
+            processedLength: textBlock.length,
+            linesCount: lines.length,
+            containsHTML: description.includes('<'),
+            extractedLines: lines.slice(0, 3) // Show first 3 lines for debugging
+        });
+        
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            
+            // Match key-value pairs with various separators
+            const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
+            if (keyValueMatch) {
+                const key = keyValueMatch[1].trim().toLowerCase();
+                const value = keyValueMatch[2].trim();
+                const mappedKey = keyMap[key] || key;
                 
-                if (keyMap[key] && value) {
-                    data[keyMap[key]] = value;
+                // Additional validation for URLs
+                if (['website', 'instagram', 'facebook', 'gmaps'].includes(mappedKey)) {
+                    // Ensure we have a valid URL
+                    if (value.startsWith('http://') || value.startsWith('https://')) {
+                        data[mappedKey] = value;
+                        logger.debug('CALENDAR', `Extracted ${mappedKey} URL: ${value}`);
+                    } else {
+                        logger.warn('CALENDAR', `Invalid URL format for ${mappedKey}: ${value}`);
+                    }
+                } else {
+                    data[mappedKey] = value;
                 }
             }
         }
-
+        
+        logger.debug('CALENDAR', 'Description parsing complete', {
+            extractedKeys: Object.keys(data),
+            hasWebsite: !!data.website,
+            hasInstagram: !!data.instagram,
+            hasFacebook: !!data.facebook,
+            hasGmaps: !!data.gmaps
+        });
+        
         return Object.keys(data).length > 0 ? data : null;
     }
 
+    // Parse links from event data
     parseLinks(data) {
-        const links = {};
-        if (data.website) links.website = data.website;
-        if (data.instagram) links.instagram = data.instagram;
-        if (data.facebook) links.facebook = data.facebook;
-        if (data.gmaps) links.gmaps = data.gmaps;
-        return Object.keys(links).length > 0 ? links : null;
+        const links = [];
+        
+        if (data.website) {
+            links.push({ type: 'website', url: data.website, label: '🌐 Website' });
+        }
+        if (data.instagram) {
+            links.push({ type: 'instagram', url: data.instagram, label: '📷 Instagram' });
+        }
+        if (data.facebook) {
+            links.push({ type: 'facebook', url: data.facebook, label: '📘 Facebook' });
+        }
+        if (data.gmaps) {
+            links.push({ type: 'gmaps', url: data.gmaps, label: '🗺️ Google Maps' });
+        }
+        
+        return links.length > 0 ? links : null;
     }
 
+    // Generate URL slug from event name
     generateSlug(name) {
         return name.toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim();
     }
 
+    // Date and time utility methods
     getDayFromDate(date) {
-        return date.toLocaleDateString('en-US', { weekday: 'long' });
+        if (!date) return 'TBD';
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return days[date.getDay()];
     }
 
     getTimeRange(startDate, endDate) {
+        if (!startDate) return 'TBD';
+        
         const formatTime = (date) => {
-            return date.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit',
-                hour12: true 
-            });
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : '';
+            return `${displayHours}${displayMinutes}${ampm}`;
         };
         
         const startTime = formatTime(startDate);
-        const endTime = formatTime(endDate);
         
-        return startTime === endTime ? startTime : `${startTime} - ${endTime}`;
+        if (endDate) {
+            const endTime = formatTime(endDate);
+            return `${startTime} - ${endTime}`;
+        }
+        
+        return startTime;
     }
 
     getEventType(recurrence) {
-        return recurrence ? 'Recurring' : 'One-off';
+        if (!recurrence) return 'routine';
+        if (recurrence.includes('WEEKLY')) return 'weekly';
+        if (recurrence.includes('MONTHLY')) return 'monthly';
+        if (recurrence.includes('DAILY')) return 'daily';
+        return 'recurring';
     }
 
     parseICalDate(icalDate) {
-        // Handle different iCal date formats
+        if (!icalDate) return new Date();
+        
         if (icalDate.includes('T')) {
-            // Date-time format: 20231201T190000Z or 20231201T190000
-            const dateStr = icalDate.replace(/[TZ]/g, '');
-            const year = parseInt(dateStr.substring(0, 4));
-            const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
-            const day = parseInt(dateStr.substring(6, 8));
-            const hour = parseInt(dateStr.substring(9, 11));
-            const minute = parseInt(dateStr.substring(11, 13));
-            const second = parseInt(dateStr.substring(13, 15));
+            // DateTime format: YYYYMMDDTHHMMSS[Z]
+            const cleanDate = icalDate.replace(/[TZ]/g, '');
+            if (cleanDate.length >= 8) {
+                const year = cleanDate.substring(0, 4);
+                const month = cleanDate.substring(4, 6);
+                const day = cleanDate.substring(6, 8);
+                const hour = cleanDate.substring(8, 10) || '00';
+                const minute = cleanDate.substring(10, 12) || '00';
+                const second = cleanDate.substring(12, 14) || '00';
+                
+                return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+            }
+        } else if (icalDate.length === 8) {
+            // Date only format: YYYYMMDD (all-day event)
+            const year = icalDate.substring(0, 4);
+            const month = icalDate.substring(4, 6);
+            const day = icalDate.substring(6, 8);
             
-            return new Date(year, month, day, hour, minute, second);
-        } else {
-            // Date-only format: 20231201
-            const year = parseInt(icalDate.substring(0, 4));
-            const month = parseInt(icalDate.substring(4, 6)) - 1;
-            const day = parseInt(icalDate.substring(6, 8));
-            
-            return new Date(year, month, day);
+            return new Date(`${year}-${month}-${day}T00:00:00`);
         }
+        
+        return new Date();
     }
 
+    // Date range utility methods
     getWeekBounds(date) {
         const start = new Date(date);
-        start.setDate(start.getDate() - start.getDay());
+        const day = start.getDay();
+        start.setDate(start.getDate() - day);
         start.setHours(0, 0, 0, 0);
         
         const end = new Date(start);
-        end.setDate(end.getDate() + 6);
+        end.setDate(start.getDate() + 6);
         end.setHours(23, 59, 59, 999);
         
         return { start, end };
@@ -344,156 +443,109 @@ class EventDataManager {
 
     getMonthBounds(date) {
         const start = new Date(date.getFullYear(), date.getMonth(), 1);
-        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+        start.setHours(0, 0, 0, 0);
+        
+        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        end.setHours(23, 59, 59, 999);
         
         return { start, end };
     }
 
+    // Check if event falls within a date range
     isEventInPeriod(eventDate, start, end) {
         return eventDate >= start && eventDate <= end;
     }
 
+    // Handle recurring events
     isRecurringEventInPeriod(event, start, end) {
-        if (!event.recurrence) return false;
+        if (!event.recurring || !event.recurrence) return false;
         
-        try {
-            const rrule = event.recurrence;
-            const freqMatch = rrule.match(/FREQ=([^;]+)/);
-            const untilMatch = rrule.match(/UNTIL=([^;]+)/);
-            const countMatch = rrule.match(/COUNT=([^;]+)/);
-            const intervalMatch = rrule.match(/INTERVAL=([^;]+)/);
-            const byDayMatch = rrule.match(/BYDAY=([^;]+)/);
-            
-            if (!freqMatch) return false;
-            
-            const frequency = freqMatch[1];
-            const interval = intervalMatch ? parseInt(intervalMatch[1]) : 1;
-            
-            // Parse until date if present
-            let untilDate = null;
-            if (untilMatch) {
-                untilDate = this.parseICalDate(untilMatch[1]);
-                if (untilDate < start) return false;
-            }
-            
-            // Check if event occurs within the period
-            const eventStart = event.startDate;
-            if (!eventStart) return false;
-            
-            // For weekly recurring events
-            if (frequency === 'WEEKLY') {
-                const dayOfWeek = eventStart.getDay();
-                const byDay = byDayMatch ? byDayMatch[1] : this.getDayAbbreviation(dayOfWeek);
-                
-                // Check each week in the period
-                let currentDate = new Date(start);
-                while (currentDate <= end) {
-                    if (this.isDayOfWeek(currentDate, byDay)) {
-                        return true;
-                    }
-                    currentDate.setDate(currentDate.getDate() + 7 * interval);
-                }
-            }
-            
-            // For monthly recurring events
-            if (frequency === 'MONTHLY') {
-                const dayOfMonth = eventStart.getDate();
-                let currentDate = new Date(start);
-                
-                while (currentDate <= end) {
-                    const testDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayOfMonth);
-                    if (testDate >= start && testDate <= end) {
-                        return true;
-                    }
-                    currentDate.setMonth(currentDate.getMonth() + interval);
-                }
-            }
-            
-            return false;
-        } catch (error) {
-            logger.componentError('EVENT', 'Error checking recurring event period', error);
-            return false;
+        const eventStartDate = new Date(event.startDate);
+        if (eventStartDate > end) return false;
+        
+        // Check if the recurrence pattern matches the period
+        const rules = event.recurrence.split(';');
+        let freq = null;
+        let interval = 1;
+        
+        for (const rule of rules) {
+            const [key, value] = rule.split('=');
+            if (key === 'FREQ') freq = value;
+            if (key === 'INTERVAL') interval = parseInt(value);
         }
+        
+        if (!freq) return false;
+        
+        // Simple recurring event check
+        let current = new Date(eventStartDate);
+        while (current <= end) {
+            if (current >= start && current <= end) {
+                return true;
+            }
+            
+            switch (freq) {
+                case 'DAILY':
+                    current.setDate(current.getDate() + interval);
+                    break;
+                case 'WEEKLY':
+                    current.setDate(current.getDate() + (7 * interval));
+                    break;
+                case 'MONTHLY':
+                    current.setMonth(current.getMonth() + interval);
+                    break;
+                default:
+                    return false;
+            }
+        }
+        
+        return false;
     }
 
-    getDayAbbreviation(dayOfWeek) {
-        const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-        return days[dayOfWeek];
-    }
-
-    isDayOfWeek(date, dayAbbreviation) {
-        const dayMap = {
-            'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
-        };
-        return date.getDay() === dayMap[dayAbbreviation];
-    }
-
+    // Filter events by date range
     filterEventsByDateRange(events, startDate, endDate) {
         return events.filter(event => {
-            if (event.recurring) {
-                return this.isRecurringEventInPeriod(event, startDate, endDate);
-            } else {
-                return this.isEventInPeriod(event.startDate, startDate, endDate);
+            const eventDate = new Date(event.startDate);
+            return this.isEventInPeriod(eventDate, startDate, endDate) ||
+                   this.isRecurringEventInPeriod(event, startDate, endDate);
+        });
+    }
+
+    // Load calendar data from iCal URL
+    async loadCalendarData(calendarId) {
+        try {
+            logger.time('CALENDAR', 'Calendar data loading');
+            logger.apiCall('CALENDAR', `Loading calendar data for ID: ${calendarId}`);
+            
+            const icalUrl = `https://calendar.google.com/calendar/ical/${calendarId}/public/basic.ics`;
+            const response = await fetch(icalUrl);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        });
-    }
-
-    // Set events data
-    setEventsData(events, cityConfig = null) {
-        this.allEvents = events;
-        this.eventsData = {
-            cityConfig,
-            events
-        };
-        logger.componentLoad('EVENT', 'Events data set', {
-            eventCount: events.length,
-            cityConfig: cityConfig?.name || 'Unknown'
-        });
-    }
-
-    // Get all events
-    getAllEvents() {
-        return this.allEvents;
-    }
-
-    // Get events data
-    getEventsData() {
-        return this.eventsData;
-    }
-
-    // Get filtered events for a date range
-    getEventsForPeriod(startDate, endDate) {
-        return this.filterEventsByDateRange(this.allEvents, startDate, endDate);
-    }
-
-    // Get events by type
-    getEventsByType(type) {
-        return this.allEvents.filter(event => event.eventType === type);
-    }
-
-    // Get recurring events
-    getRecurringEvents() {
-        return this.allEvents.filter(event => event.recurring);
-    }
-
-    // Get one-off events
-    getOneOffEvents() {
-        return this.allEvents.filter(event => !event.recurring);
-    }
-
-    // Search events
-    searchEvents(query) {
-        const searchTerm = query.toLowerCase();
-        return this.allEvents.filter(event => {
-            const searchableText = `${event.name} ${event.bar} ${event.tea || ''}`.toLowerCase();
-            return searchableText.includes(searchTerm);
-        });
+            
+            const icalData = await response.text();
+            const events = this.parseICalData(icalData);
+            
+            this.eventsData = events;
+            this.allEvents = events;
+            
+            logger.timeEnd('CALENDAR', 'Calendar data loading');
+            logger.componentLoad('CALENDAR', 'Calendar data loaded successfully', {
+                eventCount: events.length,
+                calendarId: calendarId
+            });
+            
+            return events;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Failed to load calendar data', error);
+            throw error;
+        }
     }
 }
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = EventDataManager;
+    module.exports = CalendarCore;
 } else {
-    window.EventDataManager = EventDataManager;
+    window.CalendarCore = CalendarCore;
 }
