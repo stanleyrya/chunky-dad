@@ -282,24 +282,36 @@ class DynamicCalendarLoader extends CalendarCore {
                 <span class="value">${event.bar}</span>
             </div>`;
 
+        // Only show cover if it exists and has meaningful content
+        const coverHtml = event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
+            <div class="detail-row">
+                <span class="label">Cover:</span>
+                <span class="value">${event.cover}</span>
+            </div>
+        ` : '';
+
         const recurringBadge = event.recurring ? 
             `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
+
+        // Format day/time more concisely (e.g., "Thu 5pm-9pm")
+        const formatDayTime = (day, time) => {
+            // Convert day to 3-letter format if it's longer
+            const shortDay = day.length > 3 ? day.substring(0, 3) : day;
+            return `${shortDay} ${time}`;
+        };
 
         return `
             <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
                     <h3>${event.name}</h3>
                     <div class="event-meta">
-                        <div class="event-day">${event.day} ${event.time}</div>
+                        <div class="event-day">${formatDayTime(event.day, event.time)}</div>
                         ${recurringBadge}
                     </div>
                 </div>
                 <div class="event-details">
                     ${locationHtml}
-                    <div class="detail-row">
-                        <span class="label">Cover:</span>
-                        <span class="value">${event.cover}</span>
-                    </div>
+                    ${coverHtml}
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
