@@ -510,7 +510,7 @@ header {
 /* Events Section */
 .events {
     padding: 0;
-    background: white;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
 }
 
 .events h2 {
@@ -1159,12 +1159,14 @@ header {
 }
 
 .event-card.detailed .event-header {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 1.5rem;
     border-bottom: 2px solid #f0f0f0;
     padding-bottom: 1rem;
+    padding-right: 100px; /* Add space for floating event-meta */
 }
 
 .event-card.detailed h3 {
@@ -1175,11 +1177,15 @@ header {
 }
 
 .event-meta {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 0.5rem;
     flex-shrink: 0;
+    z-index: 10;
 }
 
 .event-day {
@@ -1226,7 +1232,7 @@ header {
 .event-links {
     margin-top: 1rem;
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
@@ -1234,9 +1240,9 @@ header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     text-decoration: none;
-    padding: 0.5rem 1rem;
+    padding: 0.3rem 0.8rem;
     border-radius: 20px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
     transition: transform 0.3s ease;
 }
@@ -1287,7 +1293,6 @@ header {
     margin-top: 12px;
     text-align: left;
     padding-top: 8px;
-    border-top: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .event-card.detailed .event-links .event-link {
@@ -1419,7 +1424,7 @@ header {
 /* Enhanced Map Section */
 .events-map-section {
     padding: 2rem 0;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
     position: relative;
     overflow: hidden;
 }
@@ -1806,9 +1811,9 @@ footer {
         gap: 0.5rem;
     }
 
-    /* Reduce container padding but keep some spacing */
+    /* Remove container padding */
     .weekly-calendar .container {
-        padding: 0 0.5rem;
+        padding: 0;
     }
 
     .calendar-day.week-view {
@@ -2003,12 +2008,17 @@ footer {
         flex-direction: row;
         text-align: left;
         gap: 0.5rem;
+        padding-right: 100px; /* Add space for floating event-meta */
     }
 
     .event-meta {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
         flex-direction: column;
         gap: 0.5rem;
         flex-shrink: 0;
+        z-index: 10;
     }
 
     .event-day {
@@ -2168,9 +2178,9 @@ footer {
         gap: 0;
     }
 
-    /* Minimal container padding for small screens */
+    /* Remove container padding for small screens */
     .weekly-calendar .container {
-        padding: 0 0.25rem;
+        padding: 0;
     }
 
     .calendar-day.week-view {
@@ -3379,7 +3389,7 @@ footer {
     }
 
     .weekly-calendar .container {
-        padding: 0 1rem;
+        padding: 0;
     }
 
     /* Show city name on larger screens */
