@@ -36,12 +36,16 @@ html {
 /* Prevent all elements from overflowing on small screens */
 @media (max-width: 768px) {
     body {
-        padding-top: 70px; /* Reduced header height */
+        padding-top: 60px; /* Reduced header height */
     }
     
     * {
         max-width: 100%;
         box-sizing: border-box;
+    }
+    
+    header {
+        height: 60px;
     }
 }
 
@@ -1667,7 +1671,8 @@ footer {
 /* Responsive Design */
 @media (max-width: 768px) {
     .nav-container {
-        padding: 0.75rem 1rem;
+        padding: 0.5rem 1rem;
+        height: 60px;
     }
     
     .nav-menu {
@@ -1997,11 +2002,11 @@ footer {
     .city-switcher-btn {
         min-width: auto;
         width: auto;
-        min-height: 40px;
-        height: 40px;
-        padding: 0.4rem 0.8rem;
-        gap: 0.4rem;
-        border-radius: 10px;
+        min-height: 36px;
+        height: 36px;
+        padding: 0.3rem 0.6rem;
+        gap: 0.3rem;
+        border-radius: 8px;
     }
 
     .city-emoji {
@@ -2036,7 +2041,11 @@ footer {
 
 @media (max-width: 480px) {
     body {
-        padding-top: 60px; /* Even smaller header height */
+        padding-top: 50px; /* Even smaller header height */
+    }
+    
+    header {
+        height: 50px;
     }
     
     .hero-content h2 {
@@ -2055,12 +2064,28 @@ footer {
     }
 
     .nav-container {
-        padding: 0.5rem 0.5rem;
-        height: 60px;
+        padding: 0.3rem 0.5rem;
+        height: 50px;
     }
 
     .logo h1 {
         font-size: 1.2rem;
+    }
+    
+    .city-switcher-btn {
+        min-height: 32px;
+        height: 32px;
+        padding: 0.2rem 0.5rem;
+        gap: 0.2rem;
+        border-radius: 6px;
+    }
+    
+    .city-emoji {
+        font-size: 1.2rem;
+    }
+    
+    .city-carrot {
+        font-size: 0.6rem;
     }
 
     /* Mobile-first week view - show minimal information */
