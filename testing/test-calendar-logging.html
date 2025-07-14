@@ -672,12 +672,15 @@
     <script src="../js/navigation.js"></script>
     <script src="../js/page-effects.js"></script>
     <script src="../js/forms.js"></script>
-    <script src="../js/dynamic-calendar-loader.js"></script>
+    <script src="../js/event-data-manager.js"></script>
+    <script src="../js/event-display-components.js"></script>
+    <script src="../js/event-view-controller.js"></script>
+    <script src="../js/modular-calendar-loader.js"></script>
     
     <!-- Debugging-specific script -->
     <script>
-        // Enhanced Calendar Debugger
-        class CalendarDebugger extends DynamicCalendarLoader {
+        // Enhanced Calendar Debugger using new modular system
+        class CalendarDebugger extends ModularCalendarLoader {
             constructor() {
                 super();
                 this.debugLogs = [];
@@ -769,9 +772,9 @@
             }
             
             updateStats() {
-                const allEvents = this.eventsData?.events || [];
-                const recurringEvents = allEvents.filter(e => e.isRecurring).length;
-                const venues = new Set(allEvents.map(e => e.barName).filter(Boolean));
+                const allEvents = this.eventDataManager.getAllEvents();
+                const recurringEvents = allEvents.filter(e => e.recurring).length;
+                const venues = new Set(allEvents.map(e => e.bar).filter(Boolean));
                 
                 document.getElementById('total-events').textContent = allEvents.length;
                 document.getElementById('recurring-events').textContent = recurringEvents;
@@ -791,8 +794,8 @@
                     <div class="event-item" data-index="${index}">
                         <div class="event-item-title">${event.name || 'Unnamed Event'}</div>
                         <div class="event-item-meta">
-                            ${event.isRecurring ? '🔄 Recurring' : '📅 One-off'} | 
-                            ${event.barName || 'No venue'} | 
+                            ${event.recurring ? '🔄 Recurring' : '📅 One-off'} | 
+                            ${event.bar || 'No venue'} | 
                             ${event.time || 'No time'}
                             ${event._parseError ? ' | ⚠️ Parse Error' : ''}
                         </div>
@@ -809,18 +812,18 @@
             }
             
             getFilteredEventList() {
-                const events = this.eventsData?.events || [];
+                const events = this.eventDataManager.getAllEvents();
                 const searchTerm = document.getElementById('event-search').value.toLowerCase();
                 
                 return events.filter(event => {
                     // Apply filter
-                    if (this.eventFilter === 'recurring' && !event.isRecurring) return false;
-                    if (this.eventFilter === 'oneoff' && event.isRecurring) return false;
+                    if (this.eventFilter === 'recurring' && !event.recurring) return false;
+                    if (this.eventFilter === 'oneoff' && event.recurring) return false;
                     if (this.eventFilter === 'errors' && !event._parseError) return false;
                     
                     // Apply search
                     if (searchTerm) {
-                        const searchableText = `${event.name} ${event.barName} ${event.description}`.toLowerCase();
+                        const searchableText = `${event.name} ${event.bar} ${event.tea || ''}`.toLowerCase();
                         if (!searchableText.includes(searchTerm)) return false;
                     }
                     
@@ -1199,7 +1202,7 @@
             validateAllEvents() {
                 logger.info('DEBUGGER', 'Starting event validation');
                 
-                const events = this.eventsData?.events || [];
+                const events = this.eventDataManager.getAllEvents();
                 let errors = 0;
                 let warnings = 0;
                 
@@ -1208,12 +1211,11 @@
                     
                     // Check required fields
                     if (!event.name) issues.push({ level: 'error', msg: 'Missing event name' });
-                    if (!event.uid) issues.push({ level: 'error', msg: 'Missing UID' });
-                    if (!event.startDate && !event.isRecurring) issues.push({ level: 'error', msg: 'Missing start date' });
+                    if (!event.startDate && !event.recurring) issues.push({ level: 'error', msg: 'Missing start date' });
                     
                     // Check optional but recommended fields
-                    if (!event.barName) issues.push({ level: 'warn', msg: 'Missing venue name' });
-                    if (!event.location) issues.push({ level: 'warn', msg: 'Missing location' });
+                    if (!event.bar) issues.push({ level: 'warn', msg: 'Missing venue name' });
+                    if (!event.coordinates) issues.push({ level: 'warn', msg: 'Missing location coordinates' });
                     
                     if (issues.length > 0) {
                         logger.warn('DEBUGGER', `Event ${index} validation issues`, { event, issues });
@@ -1293,17 +1295,18 @@
             }
             
             exportDebugData() {
+                const events = this.eventDataManager.getAllEvents();
                 const exportData = {
                     timestamp: new Date().toISOString(),
                     city: this.currentCity,
                     cityConfig: this.currentCityConfig,
                     stats: {
-                        totalEvents: this.eventsData?.events?.length || 0,
-                        recurringEvents: this.eventsData?.events?.filter(e => e.isRecurring).length || 0,
+                        totalEvents: events.length,
+                        recurringEvents: events.filter(e => e.recurring).length,
                         parseTime: document.getElementById('parse-time').textContent
                     },
                     logs: this.debugLogs,
-                    events: this.eventsData,
+                    events: this.eventDataManager.getEventsData(),
                     rawCalendarLength: this.rawCalendarData.length
                 };
                 
