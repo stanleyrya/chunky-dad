@@ -580,6 +580,99 @@ header {
     color: #666;
 }
 
+/* Enhanced event details layout for mobile - more compact */
+.event-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.event-details .detail-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.event-details .detail-row .label {
+    font-weight: 600;
+    color: #667eea;
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.event-details .detail-row .value {
+    color: #333;
+    flex: 1;
+}
+
+/* Compact event meta for mobile */
+.event-meta-compact {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.event-meta-compact .event-time-emoji {
+    font-size: 1.1rem;
+    margin-right: 0.25rem;
+}
+
+.event-meta-compact .event-frequency {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+    .event-details {
+        gap: 0.3rem;
+    }
+    
+    .event-details .detail-row {
+        gap: 0.3rem;
+    }
+    
+    .event-details .detail-row .label {
+        min-width: 50px;
+        font-size: 0.85rem;
+    }
+    
+    .event-details .detail-row .value {
+        font-size: 0.9rem;
+    }
+    
+    .event-meta-compact {
+        gap: 0.3rem;
+    }
+    
+    .event-meta-compact .event-frequency {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.5rem;
+    }
+    
+    /* Hide duplicate recurring badge in event meta */
+    .event-card.detailed .event-meta .recurring-badge {
+        display: none;
+    }
+    
+    /* Adjust event card spacing on mobile */
+    .event-card.detailed {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .event-card.detailed .event-header {
+        margin-bottom: 0.75rem;
+    }
+}
+
 /* Businesses Section */
 .businesses {
     padding: 80px 0;
@@ -668,7 +761,7 @@ header {
 
 /* Weekly Calendar */
 .weekly-calendar {
-    padding: 30px 0;
+    padding: 0;
     background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
     position: relative;
 }
@@ -688,7 +781,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 1.5rem;
+    padding: 1rem 0;
     position: relative;
     z-index: 2;
     flex-wrap: wrap;
@@ -1162,9 +1255,8 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
 }
 
 .event-card.detailed h3 {
@@ -1224,9 +1316,9 @@ header {
 }
 
 .event-links {
-    margin-top: 1rem;
+    margin-top: 0.5rem;
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
@@ -1250,13 +1342,13 @@ header {
     display: inline-block;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white !important;
-    padding: 8px 16px;
-    border-radius: 25px;
+    padding: 6px 12px;
+    border-radius: 20px;
     text-decoration: none;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    margin: 4px 6px;
+    margin: 2px 4px;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     border: 2px solid transparent;
 }
@@ -1276,18 +1368,17 @@ header {
 /* Responsive link styling */
 @media (max-width: 768px) {
     .event-link {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-        margin: 3px 4px;
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        margin: 2px 3px;
     }
 }
 
 /* Fix for links in event cards */
 .event-card.detailed .event-links {
-    margin-top: 12px;
+    margin-top: 8px;
     text-align: left;
-    padding-top: 8px;
-    border-top: 1px solid rgba(102, 126, 234, 0.1);
+    padding-top: 0;
 }
 
 .event-card.detailed .event-links .event-link {
@@ -3436,6 +3527,162 @@ footer {
     word-wrap: normal;
     overflow-wrap: normal;
   }
+}
+
+/* Calendar grid optimizations for mobile viewing */
+.calendar-grid {
+    min-height: 200px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Week view specific optimizations */
+.week-view-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Month view specific optimizations */
+.month-view-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+/* Calendar day styling for compact view */
+.calendar-day {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.5rem;
+    min-height: 80px;
+    transition: all 0.2s ease;
+}
+
+.calendar-day:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.calendar-day.current {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.calendar-day.current .day-header h3,
+.calendar-day.current .day-header .day-date {
+    color: white;
+}
+
+/* Event item styling in calendar */
+.event-item {
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 4px;
+    padding: 0.25rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.event-item:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: translateY(-1px);
+}
+
+.event-item .event-name {
+    font-weight: 600;
+    margin-bottom: 0.1rem;
+}
+
+.event-item .event-time {
+    color: #666;
+    font-size: 0.7rem;
+}
+
+.event-item .event-venue {
+    color: #888;
+    font-size: 0.7rem;
+}
+
+/* Mobile-specific calendar adjustments */
+@media (max-width: 768px) {
+    .calendar-header {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+    
+    .calendar-header h2 {
+        font-size: 1.8rem;
+        margin: 0;
+    }
+    
+    .calendar-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        gap: 0.5rem;
+    }
+    
+    .calendar-grid {
+        max-height: 50vh;
+        gap: 0.25rem;
+    }
+    
+    .calendar-day {
+        padding: 0.25rem;
+        min-height: 60px;
+    }
+    
+    .day-header h3 {
+        font-size: 0.9rem;
+        margin: 0 0 0.25rem 0;
+    }
+    
+    .day-header .day-date {
+        font-size: 0.8rem;
+    }
+    
+    .event-item {
+        padding: 0.2rem;
+        margin-bottom: 0.2rem;
+    }
+    
+    .event-item .event-name {
+        display: none; /* Hide full name on mobile */
+    }
+    
+    .event-item .event-name-mobile {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.1rem;
+    }
+    
+    .event-item .event-venue {
+        display: none; /* Hide full venue on mobile */
+    }
+    
+    .event-item .event-venue-mobile {
+        display: block;
+        color: #888;
+        font-size: 0.7rem;
+    }
+}
+
+/* Desktop-specific calendar adjustments */
+@media (min-width: 769px) {
+    .event-item .event-name-mobile {
+        display: none;
+    }
+    
+    .event-item .event-venue-mobile {
+        display: none;
+    }
 }
 
 
