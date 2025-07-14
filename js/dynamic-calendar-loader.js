@@ -58,13 +58,46 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
 
-    // Override parseEventData to add city-specific data
+    // Override parseEventData to add city-specific data and short-name
     parseEventData(calendarEvent) {
         const eventData = super.parseEventData(calendarEvent);
         if (eventData) {
             eventData.citySlug = this.currentCity;
+            
+            // Add short-name if not provided, generate from event name
+            if (!eventData.shortName) {
+                eventData.shortName = this.generateShortName(eventData.name);
+            }
         }
         return eventData;
+    }
+
+    // Generate short name from event name
+    generateShortName(eventName) {
+        if (!eventName) return '';
+        
+        // Remove common words and abbreviate
+        const stopWords = ['the', 'and', 'or', 'at', 'in', 'on', 'with', 'for', 'of', 'to', 'a', 'an'];
+        const words = eventName.toLowerCase().split(' ');
+        const filteredWords = words.filter(word => !stopWords.includes(word));
+        
+        // Take first 2-3 meaningful words and abbreviate if too long
+        const shortWords = filteredWords.slice(0, 3);
+        let shortName = shortWords.join(' ');
+        
+        // If still too long, try abbreviating
+        if (shortName.length > 15) {
+            shortName = shortWords.map(word => 
+                word.length > 6 ? word.substring(0, 6) + '.' : word
+            ).join(' ');
+        }
+        
+        // If still too long, just take first word
+        if (shortName.length > 15) {
+            shortName = filteredWords[0] || eventName.split(' ')[0];
+        }
+        
+        return shortName;
     }
 
     getCurrentPeriodBounds() {
@@ -102,7 +135,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 </div>
                             </div>
                         `).join('')
-                        : '<p class="no-modal-events">No events scheduled for this day.</p>'
+                        : ''
                     }
                 </div>
                 <div class="modal-footer">
@@ -532,7 +565,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 ? dayEvents.map(event => {
                     // Mobile-friendly shortened versions
                     const shortVenue = event.bar.split(' ')[0] || event.bar;
-                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
+                    const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
@@ -543,7 +576,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         </div>
                     `;
                 }).join('')
-                : '<div class="no-events">No events</div>';
+                : '';
 
             const isToday = day.getTime() === today.getTime();
             const currentClass = isToday ? ' current' : '';
@@ -625,7 +658,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
                     const shortVenue = event.bar.split(' ')[0] || event.bar;
-                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
+                    const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
@@ -806,10 +839,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Update calendar title
         const calendarTitle = document.getElementById('calendar-title');
         if (calendarTitle) {
-            const titleText = this.currentView === 'week' 
-                ? "This Week's Schedule" 
-                : "This Month's Schedule";
-            calendarTitle.textContent = titleText;
+            calendarTitle.textContent = '';
         }
         
         // Update date range
@@ -846,15 +876,7 @@ class DynamicCalendarLoader extends CalendarCore {
             if (filteredEvents?.length > 0) {
                 eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
             } else {
-                const { start, end } = this.getCurrentPeriodBounds();
-                const periodText = this.currentView === 'week' ? 'this week' : 'this month';
-                eventsList.innerHTML = `
-                    <div class="no-events-message">
-                        <h3>📅 No Events ${this.currentView === 'week' ? 'This Week' : 'This Month'}</h3>
-                        <p>No events scheduled for ${periodText}.</p>
-                        <p>Check other weeks/months or help us by submitting events you know about!</p>
-                    </div>
-                `;
+                eventsList.innerHTML = '';
             }
         }
         
