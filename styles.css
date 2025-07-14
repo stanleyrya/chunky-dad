@@ -35,6 +35,10 @@ html {
 
 /* Prevent all elements from overflowing on small screens */
 @media (max-width: 768px) {
+    body {
+        padding-top: 70px; /* Reduced header height */
+    }
+    
     * {
         max-width: 100%;
         box-sizing: border-box;
@@ -1599,6 +1603,10 @@ footer {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .nav-container {
+        padding: 0.75rem 1rem;
+    }
+    
     .nav-menu {
         position: fixed;
         top: 100%;
@@ -1958,6 +1966,10 @@ footer {
 }
 
 @media (max-width: 480px) {
+    body {
+        padding-top: 60px; /* Even smaller header height */
+    }
+    
     .hero-content h2 {
         font-size: 2rem;
     }
@@ -1974,7 +1986,7 @@ footer {
     }
 
     .nav-container {
-        padding: 1rem 0.5rem;
+        padding: 0.5rem 0.5rem;
     }
 
     .logo h1 {
