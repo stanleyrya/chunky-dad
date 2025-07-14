@@ -60,6 +60,7 @@ header {
     z-index: 9998;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: visible;
+    height: 80px;
 }
 
 /* City Switcher */
@@ -75,15 +76,15 @@ header {
 .city-switcher-btn {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%);
     border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 25px;
+    border-radius: 12px;
     min-width: auto;
-    height: auto;
-    min-height: 48px;
+    height: 44px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
-    padding: 0.7rem 1.2rem;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(15px);
@@ -108,7 +109,7 @@ header {
 }
 
 .city-emoji {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
     flex-shrink: 0;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
     transition: transform 0.3s ease;
@@ -277,12 +278,13 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
+    padding: 0.75rem 2rem;
     max-width: 1200px;
     margin: 0 auto;
     position: relative;
     width: 100%;
     box-sizing: border-box;
+    height: 80px;
     /* Ensure dropdowns are not clipped */
     overflow: visible;
 }
@@ -1987,14 +1989,15 @@ footer {
     .city-switcher-btn {
         min-width: auto;
         width: auto;
-        min-height: 42px;
-        padding: 0.6rem 1rem;
-        gap: 0.5rem;
-        border-radius: 20px;
+        min-height: 40px;
+        height: 40px;
+        padding: 0.4rem 0.8rem;
+        gap: 0.4rem;
+        border-radius: 10px;
     }
 
     .city-emoji {
-        font-size: 1.3rem;
+        font-size: 1.5rem;
     }
 
     .city-carrot {
@@ -2040,7 +2043,8 @@ footer {
     }
 
     .nav-container {
-        padding: 1rem 0.5rem;
+        padding: 0.75rem 0.5rem;
+        height: 70px;
     }
 
     .logo h1 {
