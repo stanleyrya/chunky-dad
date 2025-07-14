@@ -518,18 +518,11 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
-                    // Mobile-first responsive design:
-                    // - Full information (event-name, event-time, event-venue) shown on tablets/desktop
-                    // - Minimal information (event-name-mobile, event-venue-mobile) shown on mobile
-                    // - CSS controls which elements are displayed based on screen size
-                    
-                    // Create mobile-friendly shortened venue name (first word or abbreviation)
+                    // Mobile-friendly shortened versions
                     const shortVenue = event.bar.split(' ')[0] || event.bar;
-                    // Truncate event name if too long for mobile
                     const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
-                    
                     return `
-                        <div class="event-item enhanced" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
                             <div class="event-time">${event.time}</div>
@@ -619,11 +612,15 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    // Show only first word of event name to save space
-                    const shortName = event.name.split(' ')[0];
+                    const shortVenue = event.bar.split(' ')[0] || event.bar;
+                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
                     return `
-                        <div class="event-item month-event" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time} - ${event.cover}">
-                            <div class="event-name">${shortName}</div>
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
+                            <div class="event-name">${event.name}</div>
+                            <div class="event-name-mobile">${shortName}</div>
+                            <div class="event-time">${event.time}</div>
+                            <div class="event-venue">${event.bar}</div>
+                            <div class="event-venue-mobile">${shortVenue}</div>
                         </div>
                     `;
                 }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
