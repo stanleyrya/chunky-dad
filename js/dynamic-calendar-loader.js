@@ -518,11 +518,16 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
+                    // Mobile-friendly shortened versions
+                    const shortVenue = event.bar.split(' ')[0] || event.bar;
+                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
+                            <div class="event-name-mobile">${shortName}</div>
                             <div class="event-time">${event.time}</div>
                             <div class="event-venue">${event.bar}</div>
+                            <div class="event-venue-mobile">${shortVenue}</div>
                         </div>
                     `;
                 }).join('')
@@ -607,10 +612,15 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
+                    const shortVenue = event.bar.split(' ')[0] || event.bar;
+                    const shortName = event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name;
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
+                            <div class="event-name-mobile">${shortName}</div>
                             <div class="event-time">${event.time}</div>
+                            <div class="event-venue">${event.bar}</div>
+                            <div class="event-venue-mobile">${shortVenue}</div>
                         </div>
                     `;
                 }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
