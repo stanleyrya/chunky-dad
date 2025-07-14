@@ -292,7 +292,7 @@ header {
     position: relative;
     width: 100%;
     box-sizing: border-box;
-    height: 80px;
+    height: 100%;
     /* Ensure dropdowns are not clipped */
     overflow: visible;
 }
