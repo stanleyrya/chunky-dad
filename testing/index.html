@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Tools - chunky.dad</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #4ecdc4;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #45b7d1;
+            transform: translateX(-5px);
+        }
+
+        .test-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .category {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .category h2 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .test-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .test-link {
+            display: block;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .test-link:hover {
+            background: rgba(78, 205, 196, 0.1);
+            border-color: #4ecdc4;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.2);
+        }
+
+        .featured {
+            background: rgba(78, 205, 196, 0.1);
+            border-color: #4ecdc4;
+        }
+
+        .featured:hover {
+            background: rgba(78, 205, 196, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .test-categories {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">← Back to Main Site</a>
+        
+        <div class="header">
+            <h1>🧪 Testing Tools</h1>
+            <p>Professional development and testing utilities for chunky.dad</p>
+        </div>
+
+        <div class="test-categories">
+            <div class="category">
+                <h2>🎨 Style Testing</h2>
+                <div class="test-links">
+                    <a href="ultimate-style-tester.html" class="test-link featured">Ultimate Style Tester</a>
+                    <a href="style-tester.html" class="test-link">Style Tester (Legacy)</a>
+                    <a href="style-test.html" class="test-link">Style Test</a>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>📅 Calendar Testing</h2>
+                <div class="test-links">
+                    <a href="test-calendar-logging.html" class="test-link">Calendar Logging Test</a>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>🎪 Event Display Tests</h2>
+                <div class="test-links">
+                    <a href="event-test-index.html" class="test-link">Event Test Index</a>
+                    <a href="event-test-1-carousel.html" class="test-link">Carousel View</a>
+                    <a href="event-test-2-timeline.html" class="test-link">Timeline View</a>
+                    <a href="event-test-3-map.html" class="test-link">Map View</a>
+                    <a href="event-test-4-masonry.html" class="test-link">Masonry View</a>
+                    <a href="event-test-5-heatmap.html" class="test-link">Heatmap View</a>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>🔧 Development Tools</h2>
+                <div class="test-links">
+                    <a href="god-mode.html" class="test-link">God Mode</a>
+                    <a href="header-experiment.html" class="test-link">Header Experiment</a>
+                    <a href="header-test.html" class="test-link">Header Test</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
