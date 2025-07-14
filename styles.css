@@ -52,7 +52,7 @@ html {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 1em;
     width: 100%;
     box-sizing: border-box;
 }
@@ -509,7 +509,7 @@ header {
 
 /* Events Section */
 .events {
-    padding: 80px 0;
+    padding: 0;
     background: white;
 }
 
@@ -688,7 +688,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
     position: relative;
     z-index: 2;
     flex-wrap: wrap;
@@ -1134,7 +1134,7 @@ header {
 .events-list {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1rem;
 }
 
 .event-card.detailed {
@@ -1179,6 +1179,7 @@ header {
     flex-direction: column;
     align-items: flex-end;
     gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .event-day {
@@ -1207,9 +1208,7 @@ header {
 }
 
 .detail-row.tea {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e0e0e0;
+    margin-top: 0.5rem;
 }
 
 .label {
@@ -1936,7 +1935,7 @@ footer {
     .calendar-header {
         flex-direction: column;
         gap: 1rem;
-        padding: 1.5rem;
+        padding: 0.5rem;
     }
 
     .calendar-header h2 {
@@ -2001,14 +2000,15 @@ footer {
 
 
     .event-card.detailed .event-header {
-        flex-direction: column;
-        text-align: center;
+        flex-direction: row;
+        text-align: left;
         gap: 0.5rem;
     }
 
     .event-meta {
         flex-direction: column;
         gap: 0.5rem;
+        flex-shrink: 0;
     }
 
     .event-day {
