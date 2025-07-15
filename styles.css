@@ -1587,9 +1587,6 @@ header {
 
 .marker-icon {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -55%);
     z-index: 10;
     font-size: 1.4rem;
     color: white;
@@ -3203,6 +3200,12 @@ footer {
     font-weight: 600;
     border-radius: 8px 8px 0 0;
     border-bottom: 2px solid rgba(255,255,255,0.2);
+}
+
+@media (max-width: 768px) {
+    .calendar-day-header {
+        padding: 8px 4px;
+    }
 }
 
 .calendar-day-header h4 {

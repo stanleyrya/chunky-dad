@@ -385,7 +385,7 @@ class CalendarCore {
         
         if (endDate) {
             const endTime = formatTime(endDate);
-            return `${startTime} - ${endTime}`;
+                            return `${startTime}-${endTime}`;
         }
         
         return startTime;
