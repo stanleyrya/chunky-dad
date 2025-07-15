@@ -346,15 +346,15 @@ class DynamicCalendarLoader extends CalendarCore {
             `<div class="detail-row">
                 <span class="label">Location:</span>
                 <span class="value">
-                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar}')" class="map-link">
-                        📍 ${event.bar}
+                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
+                        📍 ${event.bar || 'Location'}
                     </a>
                 </span>
             </div>` :
-            `<div class="detail-row">
+            (event.bar ? `<div class="detail-row">
                 <span class="label">Bar:</span>
                 <span class="value">${event.bar}</span>
-            </div>`;
+            </div>` : '');
 
         // Only show cover if it exists and has meaningful content
         const coverHtml = event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
@@ -608,11 +608,11 @@ class DynamicCalendarLoader extends CalendarCore {
                     const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${event.bar}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
                 }).join('')
@@ -700,11 +700,11 @@ class DynamicCalendarLoader extends CalendarCore {
                     const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${event.bar}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
                 }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
@@ -746,7 +746,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
             // Set up default map center and zoom (lower zoom to show more area)
             let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
-            let mapZoom = cityConfig.mapZoom || 10; // Reduced from 11 to 10 for better overview
+            let mapZoom = cityConfig.mapZoom || 11; // Increased from 10 to 11 for better detail on desktop
 
             const map = L.map('events-map', {
                 scrollWheelZoom: false,
@@ -831,7 +831,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         .bindPopup(`
                             <div class="map-popup">
                                 <h4>${event.name}</h4>
-                                <p><strong>📍 ${event.bar}</strong></p>
+                                <p><strong>📍 ${event.bar || 'Location'}</strong></p>
                                 <p>📅 ${event.day} ${event.time}</p>
                                 <p>💰 ${event.cover}</p>
                                 ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
@@ -878,7 +878,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Update calendar title
         const calendarTitle = document.getElementById('calendar-title');
         if (calendarTitle) {
-            calendarTitle.textContent = `${this.currentCityConfig?.name || 'City'} Events`;
+            calendarTitle.textContent = `What's the vibe?`;
         }
         
         // Update date range
