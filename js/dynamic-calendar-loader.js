@@ -74,7 +74,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate short name from bar name or event name
     generateShortName(barName, eventName) {
-        // Prefer bar name if available
+        // Prefer bar name if available, otherwise use event name
         const sourceName = barName || eventName;
         if (!sourceName) return '';
         
@@ -102,30 +102,31 @@ class DynamicCalendarLoader extends CalendarCore {
         return shortName;
     }
 
-    // Format time for mobile display with simplified past-midnight format
+    // Format time for mobile display with simplified format (4a-5p)
     formatTimeForMobile(timeString) {
         if (!timeString) return '';
         
-        // Check if it's a time range that goes past midnight
-        const pastMidnightRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
-        const match = timeString.match(pastMidnightRegex);
+        // Check if it's a time range
+        const timeRangeRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
+        const match = timeString.match(timeRangeRegex);
         
         if (match) {
             const startTime = match[1];
             const endTime = match[2];
-            
-            // Check if end time is AM and start time is PM (indicates past midnight)
-            const startIsPM = startTime.toUpperCase().includes('PM');
-            const endIsAM = endTime.toUpperCase().includes('AM');
-            
-            if (startIsPM && endIsAM) {
-                // Format as "5PM->" for past midnight events
-                return startTime + '->';
-            }
+            return this.simplifyTimeFormat(startTime) + '-' + this.simplifyTimeFormat(endTime);
         }
         
-        // Return original time string for regular events
-        return timeString;
+        // For single times, just simplify
+        return this.simplifyTimeFormat(timeString);
+    }
+
+    // Convert time format to simplified version (4 AM -> 4a, 5 PM -> 5p)
+    simplifyTimeFormat(timeString) {
+        if (!timeString) return '';
+        
+        return timeString.replace(/(\d{1,2}(?::\d{2})?)\s*(AM|PM)/gi, (match, time, period) => {
+            return time + (period.toLowerCase() === 'am' ? 'a' : 'p');
+        });
     }
 
     getCurrentPeriodBounds() {
@@ -331,7 +332,7 @@ class DynamicCalendarLoader extends CalendarCore {
             else if (label.includes('rsvp')) emoji = '✅';
             else if (label.includes('more info')) emoji = 'ℹ️';
             
-            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${emoji} ${link.label}</a>`;
+            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`;
         }).join(' ') : '';
 
         const teaHtml = event.tea ? `
@@ -743,9 +744,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
             );
 
-            // Set up default map center and zoom
+            // Set up default map center and zoom (lower zoom to show more area)
             let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
-            let mapZoom = cityConfig.mapZoom || 11;
+            let mapZoom = cityConfig.mapZoom || 10; // Reduced from 11 to 10 for better overview
 
             const map = L.map('events-map', {
                 scrollWheelZoom: false,
@@ -846,7 +847,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const group = new L.featureGroup(markers);
                 map.fitBounds(group.getBounds(), {
                     padding: [20, 20],
-                    maxZoom: 13
+                    maxZoom: 12 // Reduced from 13 to 12 for better overview when markers overlap
                 });
             }
 
@@ -877,7 +878,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Update calendar title
         const calendarTitle = document.getElementById('calendar-title');
         if (calendarTitle) {
-            calendarTitle.textContent = '';
+            calendarTitle.textContent = `${this.currentCityConfig?.name || 'City'} Events`;
         }
         
         // Update date range
