@@ -160,7 +160,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 <div class="event-details">
                                     <span class="event-time">${event.time}</span>
                                     <span class="event-venue">${event.bar}</span>
-                                    <span class="event-cover">${event.cover}</span>
+                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
                                 </div>
                             </div>
                         `).join('')
