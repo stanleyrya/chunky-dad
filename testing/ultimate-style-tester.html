@@ -39,7 +39,7 @@
 
         .tester-container {
             display: grid;
-            grid-template-columns: 380px 1fr;
+            grid-template-columns: 400px 1fr;
             height: 100vh;
             position: relative;
         }
@@ -559,6 +559,17 @@
             font-weight: bold;
         }
 
+        .color-section {
+            margin-bottom: 15px;
+        }
+
+        .color-section h4 {
+            font-size: 0.9rem;
+            color: #45b7d1;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
         /* Mobile Responsive Design */
         @media (max-width: 768px) {
             .tester-container {
@@ -692,54 +703,170 @@
             </div>
 
             <div class="control-section">
-                <h3>🎨 Custom Colors</h3>
-                <div class="color-control">
-                    <label>Primary Color</label>
-                    <div class="color-input-group">
-                        <input type="color" class="color-picker" id="primary-color" value="#667eea">
-                        <input type="text" class="color-input" id="primary-color-text" value="#667eea">
+                <h3>🎨 Primary Colors</h3>
+                <div class="color-section">
+                    <div class="color-control">
+                        <label>Primary Color</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="primary-color" value="#667eea">
+                            <input type="text" class="color-input" id="primary-color-text" value="#667eea">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Secondary Color</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="secondary-color" value="#ff6b6b">
+                            <input type="text" class="color-input" id="secondary-color-text" value="#ff6b6b">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Accent Color</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="accent-color" value="#764ba2">
+                            <input type="text" class="color-input" id="accent-color-text" value="#764ba2">
+                        </div>
                     </div>
                 </div>
-                <div class="color-control">
-                    <label>Secondary Color</label>
-                    <div class="color-input-group">
-                        <input type="color" class="color-picker" id="secondary-color" value="#ff6b6b">
-                        <input type="text" class="color-input" id="secondary-color-text" value="#ff6b6b">
+            </div>
+
+            <div class="control-section">
+                <h3>📝 Text Colors</h3>
+                <div class="color-section">
+                    <div class="color-control">
+                        <label>Primary Text</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="text-primary-color" value="#333333">
+                            <input type="text" class="color-input" id="text-primary-color-text" value="#333333">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Secondary Text</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="text-secondary-color" value="#666666">
+                            <input type="text" class="color-input" id="text-secondary-color-text" value="#666666">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Muted Text</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="muted-text-color" value="#999999">
+                            <input type="text" class="color-input" id="muted-text-color-text" value="#999999">
+                        </div>
                     </div>
                 </div>
-                <div class="color-control">
-                    <label>Accent Color</label>
-                    <div class="color-input-group">
-                        <input type="color" class="color-picker" id="accent-color" value="#764ba2">
-                        <input type="text" class="color-input" id="accent-color-text" value="#764ba2">
+            </div>
+
+            <div class="control-section">
+                <h3>🎭 Background Colors</h3>
+                <div class="color-section">
+                    <div class="color-control">
+                        <label>Light Background</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="background-light-color" value="#f8f9ff">
+                            <input type="text" class="color-input" id="background-light-color-text" value="#f8f9ff">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Dark Background</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="background-dark-color" value="#1a1a2e">
+                            <input type="text" class="color-input" id="background-dark-color-text" value="#1a1a2e">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Card Background</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="card-background-color" value="#ffffff">
+                            <input type="text" class="color-input" id="card-background-color-text" value="#ffffff">
+                        </div>
                     </div>
                 </div>
-                <div class="color-control">
-                    <label>Text Color</label>
-                    <div class="color-input-group">
-                        <input type="color" class="color-picker" id="text-color" value="#333333">
-                        <input type="text" class="color-input" id="text-color-text" value="#333333">
+            </div>
+
+            <div class="control-section">
+                <h3>🔗 Border Colors</h3>
+                <div class="color-section">
+                    <div class="color-control">
+                        <label>Light Border</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="border-light-color" value="#e8f2ff">
+                            <input type="text" class="color-input" id="border-light-color-text" value="#e8f2ff">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Medium Border</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="border-medium-color" value="#e0e0e0">
+                            <input type="text" class="color-input" id="border-medium-color-text" value="#e0e0e0">
+                        </div>
                     </div>
                 </div>
-                <div class="color-control">
-                    <label>Background Color</label>
-                    <div class="color-input-group">
-                        <input type="color" class="color-picker" id="background-color" value="#f8f9ff">
-                        <input type="text" class="color-input" id="background-color-text" value="#f8f9ff">
+            </div>
+
+            <div class="control-section">
+                <h3>🎯 Status Colors</h3>
+                <div class="color-section">
+                    <div class="color-control">
+                        <label>Success Color</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="success-color" value="#4ecdc4">
+                            <input type="text" class="color-input" id="success-color-text" value="#4ecdc4">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Success Light</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="success-light-color" value="#10b981">
+                            <input type="text" class="color-input" id="success-light-color-text" value="#10b981">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Warning Color</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="warning-color" value="#ffd700">
+                            <input type="text" class="color-input" id="warning-color-text" value="#ffd700">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Error Color</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="error-color" value="#dc2626">
+                            <input type="text" class="color-input" id="error-color-text" value="#dc2626">
+                        </div>
                     </div>
                 </div>
-                <div class="color-control">
-                    <label>Success Color</label>
-                    <div class="color-input-group">
-                        <input type="color" class="color-picker" id="success-color" value="#4ecdc4">
-                        <input type="text" class="color-input" id="success-color-text" value="#4ecdc4">
+            </div>
+
+            <div class="control-section">
+                <h3>🌈 Extended Colors</h3>
+                <div class="color-section">
+                    <div class="color-control">
+                        <label>Blue Accent</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="blue-accent-color" value="#45b7d1">
+                            <input type="text" class="color-input" id="blue-accent-color-text" value="#45b7d1">
+                        </div>
                     </div>
-                </div>
-                <div class="color-control">
-                    <label>Warning Color</label>
-                    <div class="color-input-group">
-                        <input type="color" class="color-picker" id="warning-color" value="#ffd700">
-                        <input type="text" class="color-input" id="warning-color-text" value="#ffd700">
+                    <div class="color-control">
+                        <label>Purple Blue</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="purple-blue-color" value="#5a67d8">
+                            <input type="text" class="color-input" id="purple-blue-color-text" value="#5a67d8">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Teal</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="teal-color" value="#44a08d">
+                            <input type="text" class="color-input" id="teal-color-text" value="#44a08d">
+                        </div>
+                    </div>
+                    <div class="color-control">
+                        <label>Orange</label>
+                        <div class="color-input-group">
+                            <input type="color" class="color-picker" id="orange-color" value="#ee5a24">
+                            <input type="text" class="color-input" id="orange-color-text" value="#ee5a24">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -875,7 +1002,7 @@
         </span>
         <span class="status-item">
             <span class="status-label">Colors:</span> 
-            <span id="color-count">5</span>
+            <span id="color-count">18</span>
         </span>
     </div>
 
@@ -894,136 +1021,316 @@
                         primary: '#667eea',
                         secondary: '#ff6b6b',
                         accent: '#764ba2',
-                        text: '#333333',
-                        background: '#f8f9ff',
+                        'text-primary': '#333333',
+                        'text-secondary': '#666666',
+                        'muted-text': '#999999',
+                        'background-light': '#f8f9ff',
+                        'background-dark': '#1a1a2e',
+                        'card-background': '#ffffff',
+                        'border-light': '#e8f2ff',
+                        'border-medium': '#e0e0e0',
                         success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'success-light': '#10b981',
+                        warning: '#ffd700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     'bear-flag': {
                         primary: '#000000',
                         secondary: '#8B4513',
                         accent: '#FFD700',
-                        text: '#FFFFFF',
-                        background: '#000000',
+                        'text-primary': '#FFFFFF',
+                        'text-secondary': '#CCCCCC',
+                        'muted-text': '#999999',
+                        'background-light': '#000000',
+                        'background-dark': '#0f0f0f',
+                        'card-background': '#1a1a1a',
+                        'border-light': '#333333',
+                        'border-medium': '#555555',
                         success: '#4ecdc4',
-                        warning: '#FFD700'
+                        'success-light': '#10b981',
+                        warning: '#FFD700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     'dark-mode': {
                         primary: '#4ecdc4',
                         secondary: '#ff6b6b',
                         accent: '#45b7d1',
-                        text: '#ffffff',
-                        background: '#1a1a2e',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#cccccc',
+                        'muted-text': '#999999',
+                        'background-light': '#1a1a2e',
+                        'background-dark': '#0f0f23',
+                        'card-background': '#2a2a3e',
+                        'border-light': '#333344',
+                        'border-medium': '#444455',
                         success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'success-light': '#10b981',
+                        warning: '#ffd700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     neon: {
                         primary: '#ff00ff',
                         secondary: '#00ffff',
                         accent: '#ffff00',
-                        text: '#ffffff',
-                        background: '#000000',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#cccccc',
+                        'muted-text': '#999999',
+                        'background-light': '#000000',
+                        'background-dark': '#0f0f0f',
+                        'card-background': '#1a1a1a',
+                        'border-light': '#333333',
+                        'border-medium': '#555555',
                         success: '#00ff00',
-                        warning: '#ffff00'
+                        'success-light': '#00cc00',
+                        warning: '#ffff00',
+                        error: '#ff0000',
+                        'blue-accent': '#00ffff',
+                        'purple-blue': '#ff00ff',
+                        teal: '#00ff80',
+                        orange: '#ff8000'
                     },
                     sunset: {
                         primary: '#ff6b35',
                         secondary: '#f7931e',
                         accent: '#ffd23f',
-                        text: '#ffffff',
-                        background: '#2c1810',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#eeeeee',
+                        'muted-text': '#cccccc',
+                        'background-light': '#2c1810',
+                        'background-dark': '#1a0e08',
+                        'card-background': '#3c2820',
+                        'border-light': '#5c3830',
+                        'border-medium': '#7c4840',
                         success: '#4ecdc4',
-                        warning: '#ffd23f'
+                        'success-light': '#10b981',
+                        warning: '#ffd23f',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     ocean: {
                         primary: '#006994',
                         secondary: '#00b4d8',
                         accent: '#90e0ef',
-                        text: '#ffffff',
-                        background: '#001d3d',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#e0e0e0',
+                        'muted-text': '#b0b0b0',
+                        'background-light': '#001d3d',
+                        'background-dark': '#001122',
+                        'card-background': '#002d4d',
+                        'border-light': '#003d5d',
+                        'border-medium': '#004d6d',
                         success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'success-light': '#10b981',
+                        warning: '#ffd700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     forest: {
                         primary: '#2d5016',
                         secondary: '#4a7c59',
                         accent: '#7fb069',
-                        text: '#ffffff',
-                        background: '#1a2f1a',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#e0e0e0',
+                        'muted-text': '#b0b0b0',
+                        'background-light': '#1a2f1a',
+                        'background-dark': '#0f1f0f',
+                        'card-background': '#2a3f2a',
+                        'border-light': '#3a4f3a',
+                        'border-medium': '#4a5f4a',
                         success: '#7fb069',
-                        warning: '#ffd700'
+                        'success-light': '#10b981',
+                        warning: '#ffd700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     rainbow: {
                         primary: '#ff0000',
                         secondary: '#00ff00',
                         accent: '#0000ff',
-                        text: '#ffffff',
-                        background: '#000000',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#eeeeee',
+                        'muted-text': '#cccccc',
+                        'background-light': '#000000',
+                        'background-dark': '#0f0f0f',
+                        'card-background': '#1a1a1a',
+                        'border-light': '#333333',
+                        'border-medium': '#555555',
                         success: '#00ff00',
-                        warning: '#ffff00'
+                        'success-light': '#00cc00',
+                        warning: '#ffff00',
+                        error: '#ff0000',
+                        'blue-accent': '#0080ff',
+                        'purple-blue': '#8000ff',
+                        teal: '#00ff80',
+                        orange: '#ff8000'
                     },
                     pride: {
                         primary: '#ff0018',
                         secondary: '#ffa52c',
                         accent: '#ffff41',
-                        text: '#ffffff',
-                        background: '#000000',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#eeeeee',
+                        'muted-text': '#cccccc',
+                        'background-light': '#000000',
+                        'background-dark': '#0f0f0f',
+                        'card-background': '#1a1a1a',
+                        'border-light': '#333333',
+                        'border-medium': '#555555',
                         success: '#4ecdc4',
-                        warning: '#ffff41'
+                        'success-light': '#10b981',
+                        warning: '#ffff41',
+                        error: '#dc2626',
+                        'blue-accent': '#0080ff',
+                        'purple-blue': '#8000ff',
+                        teal: '#00ff80',
+                        orange: '#ff8000'
                     },
                     retro: {
                         primary: '#ff6b9d',
                         secondary: '#c44569',
                         accent: '#f9ca24',
-                        text: '#ffffff',
-                        background: '#2d3436',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#eeeeee',
+                        'muted-text': '#cccccc',
+                        'background-light': '#2d3436',
+                        'background-dark': '#1d2426',
+                        'card-background': '#3d4446',
+                        'border-light': '#4d5456',
+                        'border-medium': '#5d6466',
                         success: '#4ecdc4',
-                        warning: '#f9ca24'
+                        'success-light': '#10b981',
+                        warning: '#f9ca24',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     cyberpunk: {
                         primary: '#ff00ff',
                         secondary: '#00ffff',
                         accent: '#ffff00',
-                        text: '#ffffff',
-                        background: '#000000',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#cccccc',
+                        'muted-text': '#999999',
+                        'background-light': '#000000',
+                        'background-dark': '#0f0f0f',
+                        'card-background': '#1a1a1a',
+                        'border-light': '#333333',
+                        'border-medium': '#555555',
                         success: '#00ff00',
-                        warning: '#ffff00'
+                        'success-light': '#00cc00',
+                        warning: '#ffff00',
+                        error: '#ff0000',
+                        'blue-accent': '#00ffff',
+                        'purple-blue': '#ff00ff',
+                        teal: '#00ff80',
+                        orange: '#ff8000'
                     },
                     vintage: {
                         primary: '#8b4513',
                         secondary: '#daa520',
                         accent: '#cd853f',
-                        text: '#2f1b14',
-                        background: '#f5f5dc',
+                        'text-primary': '#2f1b14',
+                        'text-secondary': '#4f3b34',
+                        'muted-text': '#6f5b54',
+                        'background-light': '#f5f5dc',
+                        'background-dark': '#e5e5cc',
+                        'card-background': '#ffffff',
+                        'border-light': '#d5d5bc',
+                        'border-medium': '#c5c5ac',
                         success: '#4ecdc4',
-                        warning: '#daa520'
+                        'success-light': '#10b981',
+                        warning: '#daa520',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     minimal: {
                         primary: '#333333',
                         secondary: '#666666',
                         accent: '#999999',
-                        text: '#000000',
-                        background: '#ffffff',
+                        'text-primary': '#000000',
+                        'text-secondary': '#333333',
+                        'muted-text': '#666666',
+                        'background-light': '#ffffff',
+                        'background-dark': '#f0f0f0',
+                        'card-background': '#ffffff',
+                        'border-light': '#e0e0e0',
+                        'border-medium': '#cccccc',
                         success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'success-light': '#10b981',
+                        warning: '#ffd700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     gradient: {
                         primary: '#667eea',
                         secondary: '#764ba2',
                         accent: '#f093fb',
-                        text: '#ffffff',
-                        background: '#667eea',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#eeeeee',
+                        'muted-text': '#cccccc',
+                        'background-light': '#667eea',
+                        'background-dark': '#564ba2',
+                        'card-background': '#7788ee',
+                        'border-light': '#8899ff',
+                        'border-medium': '#99aaff',
                         success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'success-light': '#10b981',
+                        warning: '#ffd700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     },
                     monochrome: {
                         primary: '#000000',
                         secondary: '#333333',
                         accent: '#666666',
-                        text: '#ffffff',
-                        background: '#000000',
+                        'text-primary': '#ffffff',
+                        'text-secondary': '#cccccc',
+                        'muted-text': '#999999',
+                        'background-light': '#000000',
+                        'background-dark': '#0f0f0f',
+                        'card-background': '#1a1a1a',
+                        'border-light': '#333333',
+                        'border-medium': '#555555',
                         success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'success-light': '#10b981',
+                        warning: '#ffd700',
+                        error: '#dc2626',
+                        'blue-accent': '#45b7d1',
+                        'purple-blue': '#5a67d8',
+                        teal: '#44a08d',
+                        orange: '#ee5a24'
                     }
                 };
                 
@@ -1154,10 +1461,22 @@
                     primary: document.getElementById('primary-color-text').value,
                     secondary: document.getElementById('secondary-color-text').value,
                     accent: document.getElementById('accent-color-text').value,
-                    text: document.getElementById('text-color-text').value,
-                    background: document.getElementById('background-color-text').value,
+                    'text-primary': document.getElementById('text-primary-color-text').value,
+                    'text-secondary': document.getElementById('text-secondary-color-text').value,
+                    'muted-text': document.getElementById('muted-text-color-text').value,
+                    'background-light': document.getElementById('background-light-color-text').value,
+                    'background-dark': document.getElementById('background-dark-color-text').value,
+                    'card-background': document.getElementById('card-background-color-text').value,
+                    'border-light': document.getElementById('border-light-color-text').value,
+                    'border-medium': document.getElementById('border-medium-color-text').value,
                     success: document.getElementById('success-color-text').value,
-                    warning: document.getElementById('warning-color-text').value
+                    'success-light': document.getElementById('success-light-color-text').value,
+                    warning: document.getElementById('warning-color-text').value,
+                    error: document.getElementById('error-color-text').value,
+                    'blue-accent': document.getElementById('blue-accent-color-text').value,
+                    'purple-blue': document.getElementById('purple-blue-color-text').value,
+                    teal: document.getElementById('teal-color-text').value,
+                    orange: document.getElementById('orange-color-text').value
                 };
 
                 const css = `
@@ -1165,16 +1484,17 @@
                         --primary-color: ${colors.primary} !important;
                         --secondary-color: ${colors.secondary} !important;
                         --accent-color: ${colors.accent} !important;
-                        --text-primary: ${colors.text} !important;
-                        --background-light: ${colors.background} !important;
+                        --text-primary: ${colors['text-primary']} !important;
+                        --text-secondary: ${colors['text-secondary']} !important;
+                        --background-light: ${colors['background-light']} !important;
+                        --border-light: ${colors['border-light']} !important;
                         --success-color: ${colors.success} !important;
                         --warning-color: ${colors.warning} !important;
-                        --border-light: ${colors.primary}20 !important;
                     }
                     
                     body {
-                        background-color: ${colors.background} !important;
-                        color: ${colors.text} !important;
+                        background-color: ${colors['background-light']} !important;
+                        color: ${colors['text-primary']} !important;
                     }
                     
                     header {
@@ -1182,19 +1502,24 @@
                     }
                     
                     .city-card, .event-card, .category-card {
-                        background-color: ${colors.background} !important;
-                        color: ${colors.text} !important;
-                        border: 1px solid ${colors.primary}20 !important;
+                        background-color: ${colors['card-background']} !important;
+                        color: ${colors['text-primary']} !important;
+                        border: 1px solid ${colors['border-light']} !important;
+                    }
+                    
+                    .city-card:hover, .event-card:hover, .category-card:hover {
+                        border-color: ${colors.primary} !important;
+                        box-shadow: 0 8px 25px ${colors.primary}20 !important;
                     }
                     
                     .cta-button {
                         background: linear-gradient(45deg, ${colors.primary}, ${colors.accent}) !important;
-                        color: ${colors.background} !important;
+                        color: ${colors['background-light']} !important;
                     }
                     
                     .cta-button.secondary {
-                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.accent}) !important;
-                        color: ${colors.background} !important;
+                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.orange}) !important;
+                        color: ${colors['background-light']} !important;
                     }
                     
                     .city-switcher-btn {
@@ -1202,18 +1527,200 @@
                         border-color: ${colors.primary}40 !important;
                     }
                     
+                    .city-switcher-btn:hover {
+                        background: linear-gradient(135deg, ${colors.primary}30 0%, ${colors.accent}30 100%) !important;
+                        border-color: ${colors.primary}60 !important;
+                    }
+                    
+                    .city-dropdown {
+                        background: ${colors['card-background']} !important;
+                        border: 1px solid ${colors['border-light']} !important;
+                    }
+                    
+                    .city-option {
+                        color: ${colors['text-primary']} !important;
+                    }
+                    
+                    .city-option:hover {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .calendar-day {
+                        background: ${colors['card-background']} !important;
+                        border: 1px solid ${colors['border-light']} !important;
+                        color: ${colors['text-primary']} !important;
+                    }
+                    
+                    .calendar-day:hover {
+                        border-color: ${colors.primary} !important;
+                        box-shadow: 0 8px 25px ${colors.primary}15 !important;
+                    }
+                    
                     .calendar-day.current {
-                        background: linear-gradient(135deg, ${colors.primary}20 0%, ${colors.accent}20 100%) !important;
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                        border-color: ${colors.primary} !important;
                     }
                     
                     .event-item {
-                        background: ${colors.background} !important;
+                        background: ${colors['background-light']} !important;
                         border-left: 3px solid ${colors.primary} !important;
+                        color: ${colors['text-primary']} !important;
+                    }
+                    
+                    .event-item:hover {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .event-time {
+                        color: ${colors['blue-accent']} !important;
+                    }
+                    
+                    .event-venue {
+                        color: ${colors['text-secondary']} !important;
+                    }
+                    
+                    .event-item:hover .event-time,
+                    .event-item:hover .event-venue {
+                        color: ${colors['background-light']}cc !important;
+                    }
+                    
+                    .calendar-day.current .event-item {
+                        background: ${colors['background-light']}dd !important;
+                        color: ${colors['text-primary']} !important;
+                    }
+                    
+                    .calendar-day.current .event-item:hover {
+                        background: ${colors['background-light']} !important;
+                        color: ${colors['text-primary']} !important;
+                    }
+                    
+                    .event-day {
+                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.orange}) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .recurring-badge {
+                        background: linear-gradient(45deg, ${colors['success-light']}, ${colors.success}) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .event-link {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .event-link:hover {
+                        background: linear-gradient(135deg, ${colors['purple-blue']} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .view-btn.active {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .nav-btn {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .today-btn {
+                        background: linear-gradient(135deg, ${colors.secondary} 0%, ${colors.orange} 100%) !important;
+                        color: ${colors['background-light']} !important;
                     }
                     
                     .highlight {
-                        background: ${colors.accent}20 !important;
+                        background: ${colors['background-light']}dd !important;
+                        color: ${colors.primary} !important;
+                    }
+                    
+                    .no-events {
+                        color: ${colors['muted-text']} !important;
+                    }
+                    
+                    .calendar-day.current .no-events {
+                        color: ${colors['background-light']}aa !important;
+                    }
+                    
+                    .error-message {
+                        background: ${colors.error}20 !important;
+                        border: 2px solid ${colors.error} !important;
+                        color: ${colors.error} !important;
+                    }
+                    
+                    .contact-form input:focus,
+                    .contact-form textarea:focus,
+                    .contact-form select:focus {
+                        border-color: ${colors.primary} !important;
+                    }
+                    
+                    .contact-form button {
+                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.orange}) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .modal-header {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .modal-event-item {
+                        background: ${colors['background-light']}dd !important;
+                        border-left: 4px solid ${colors.primary} !important;
+                        color: ${colors['text-primary']} !important;
+                    }
+                    
+                    .modal-event-item:hover {
+                        background: ${colors['background-light']}ee !important;
+                        border-left-color: ${colors.accent} !important;
+                    }
+                    
+                    .switch-to-week {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .map-popup h4 {
+                        color: ${colors.primary} !important;
+                    }
+                    
+                    .map-link {
+                        color: ${colors.primary} !important;
+                    }
+                    
+                    .map-link:hover {
                         color: ${colors.accent} !important;
+                    }
+                    
+                    .marker-pin::before {
+                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                    }
+                    
+                    .more-events {
+                        color: ${colors.primary} !important;
+                        background: ${colors.primary}10 !important;
+                        border: 1px solid ${colors.primary}20 !important;
+                    }
+                    
+                    .event-dot {
+                        background: ${colors['success-light']} !important;
+                    }
+                    
+                    .today-marker {
+                        background: ${colors.secondary} !important;
+                        color: ${colors['background-light']} !important;
+                    }
+                    
+                    .social-links a:hover {
+                        color: ${colors.primary} !important;
+                    }
+                    
+                    footer {
+                        background: ${colors['background-dark']} !important;
+                        color: ${colors['text-primary']} !important;
                     }
                 `;
 
@@ -1446,15 +1953,20 @@
             }
 
             updateShareURL() {
-                const colors = {
-                    primary: document.getElementById('primary-color-text').value,
-                    secondary: document.getElementById('secondary-color-text').value,
-                    accent: document.getElementById('accent-color-text').value,
-                    text: document.getElementById('text-color-text').value,
-                    background: document.getElementById('background-color-text').value,
-                    success: document.getElementById('success-color-text').value,
-                    warning: document.getElementById('warning-color-text').value
-                };
+                const colorKeys = [
+                    'primary', 'secondary', 'accent', 'text-primary', 'text-secondary', 
+                    'muted-text', 'background-light', 'background-dark', 'card-background',
+                    'border-light', 'border-medium', 'success', 'success-light', 'warning',
+                    'error', 'blue-accent', 'purple-blue', 'teal', 'orange'
+                ];
+
+                const colors = {};
+                colorKeys.forEach(key => {
+                    const textElement = document.getElementById(key + '-color-text');
+                    if (textElement) {
+                        colors[key] = textElement.value;
+                    }
+                });
 
                 const params = new URLSearchParams();
                 Object.keys(colors).forEach(key => {
@@ -1481,7 +1993,13 @@
                 }
 
                 // Load custom colors from URL
-                const colorKeys = ['primary', 'secondary', 'accent', 'text', 'background', 'success', 'warning'];
+                const colorKeys = [
+                    'primary', 'secondary', 'accent', 'text-primary', 'text-secondary', 
+                    'muted-text', 'background-light', 'background-dark', 'card-background',
+                    'border-light', 'border-medium', 'success', 'success-light', 'warning',
+                    'error', 'blue-accent', 'purple-blue', 'teal', 'orange'
+                ];
+                
                 colorKeys.forEach(key => {
                     const color = params.get(key);
                     if (color) {
@@ -1502,7 +2020,7 @@
             updateStatusBar() {
                 document.getElementById('current-theme').textContent = this.currentTheme;
                 document.getElementById('current-view').textContent = this.currentView;
-                document.getElementById('color-count').textContent = '7';
+                document.getElementById('color-count').textContent = '18';
             }
 
             showNotification(message) {
