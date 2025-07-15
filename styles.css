@@ -668,7 +668,7 @@ header {
 
 /* Weekly Calendar */
 .weekly-calendar {
-    padding: 30px 0;
+    padding: 0;
     background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
     position: relative;
 }
@@ -1438,7 +1438,6 @@ header {
     
     .events-map-section .container {
         padding: 0 1rem;
-        max-width: 100%;
         overflow-x: hidden;
     }
 }
