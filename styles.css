@@ -1205,6 +1205,22 @@ header {
     white-space: nowrap;
 }
 
+/* Desktop: Allow more space for full day names */
+@media (min-width: 769px) {
+    .event-day {
+        min-width: auto;
+        padding: 0.5rem 1.2rem;
+    }
+}
+
+/* Mobile: Compact styling for abbreviated day names */
+@media (max-width: 768px) {
+    .event-day {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+
 .recurring-badge {
     background: linear-gradient(45deg, #10b981, #059669);
     color: white;
