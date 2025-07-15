@@ -204,7 +204,7 @@ class CalendarCore {
                 });
                 const additionalData = this.parseKeyValueDescription(calendarEvent.description);
                 if (additionalData) {
-                    eventData.bar = additionalData.bar || 'TBD';
+                    eventData.bar = additionalData.bar || '';
                     eventData.cover = additionalData.cover || eventData.cover;
                     eventData.tea = additionalData.tea || additionalData.description;
                     eventData.website = additionalData.website;

@@ -74,8 +74,8 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate short name from bar name or event name
     generateShortName(barName, eventName) {
-        // Skip TBD bar names and prefer event name, otherwise use bar name
-        const sourceName = (barName && barName !== 'TBD') ? barName : eventName;
+        // Prefer bar name if available, otherwise use event name
+        const sourceName = barName || eventName;
         if (!sourceName) return '';
         
         // Remove common words and abbreviate while preserving original casing
@@ -106,25 +106,10 @@ class DynamicCalendarLoader extends CalendarCore {
     formatTimeForMobile(timeString) {
         if (!timeString) return '';
         
-        // Check if it's a time range that goes past midnight
-        const pastMidnightRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
-        const match = timeString.match(pastMidnightRegex);
+        // Check if it's a time range
+        const timeRangeRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
+        const match = timeString.match(timeRangeRegex);
         
-        if (match) {
-            const startTime = match[1];
-            const endTime = match[2];
-            
-            // Check if end time is AM and start time is PM (indicates past midnight)
-            const startIsPM = startTime.toUpperCase().includes('PM');
-            const endIsAM = endTime.toUpperCase().includes('AM');
-            
-            if (startIsPM && endIsAM) {
-                // Format as "5p->" for past midnight events
-                return this.simplifyTimeFormat(startTime) + '->';
-            }
-        }
-        
-        // For regular time ranges, simplify both times
         if (match) {
             const startTime = match[1];
             const endTime = match[2];
@@ -139,17 +124,9 @@ class DynamicCalendarLoader extends CalendarCore {
     simplifyTimeFormat(timeString) {
         if (!timeString) return '';
         
-        // Match time patterns like "4 AM", "5:30 PM", "4AM", "5:30PM"
-        const timeRegex = /(\d{1,2}(?::\d{2})?)\s*(AM|PM)/i;
-        const match = timeString.match(timeRegex);
-        
-        if (match) {
-            const time = match[1];
-            const period = match[2].toLowerCase();
-            return time + (period === 'am' ? 'a' : 'p');
-        }
-        
-        return timeString;
+        return timeString.replace(/(\d{1,2}(?::\d{2})?)\s*(AM|PM)/gi, (match, time, period) => {
+            return time + (period.toLowerCase() === 'am' ? 'a' : 'p');
+        });
     }
 
     getCurrentPeriodBounds() {
