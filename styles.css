@@ -27,6 +27,34 @@
     --black: #000000;
     --transparent: transparent;
     
+    /* Semantic Colors - Consolidated */
+    --color-primary: var(--primary-color);
+    --color-secondary: var(--secondary-color);
+    --color-accent: var(--accent-color);
+    --color-success: var(--success-color);
+    --color-warning: var(--warning-color);
+    --color-error: #dc2626;
+    --color-info: #3b82f6;
+    
+    /* Text Colors - Semantic */
+    --color-text: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-text-muted: var(--text-muted);
+    --color-text-inverse: var(--white);
+    
+    /* Background Colors - Semantic */
+    --color-bg: var(--background-primary);
+    --color-bg-light: var(--background-light);
+    --color-bg-lighter: var(--background-lighter);
+    --color-bg-secondary: var(--background-secondary);
+    --color-bg-dark: #1a1a2e;
+    --color-bg-darker: #0f0f23;
+    
+    /* Border Colors - Semantic */
+    --color-border: var(--border-light);
+    --color-border-light: var(--border-lighter);
+    --color-border-dark: #333;
+    
     /* Gradient Colors */
     --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
     --gradient-secondary: linear-gradient(45deg, var(--secondary-color), #ee5a24);
@@ -34,11 +62,27 @@
     --gradient-warning: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
     --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
     --gradient-success-alt: linear-gradient(45deg, #10b981, #059669);
+    --gradient-error: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     
     /* Shadow Colors */
     --shadow-light: rgba(0, 0, 0, 0.1);
     --shadow-medium: rgba(0, 0, 0, 0.15);
     --shadow-heavy: rgba(0, 0, 0, 0.25);
+    --shadow-primary: rgba(102, 126, 234, 0.3);
+    --shadow-success: rgba(78, 205, 196, 0.3);
+    --shadow-error: rgba(220, 38, 38, 0.3);
+    
+    /* Interactive Colors */
+    --color-hover: var(--primary-color);
+    --color-active: var(--accent-color);
+    --color-focus: var(--primary-color);
+    --color-disabled: var(--text-muted);
+    
+    /* Status Colors */
+    --color-online: #10b981;
+    --color-offline: #6b7280;
+    --color-busy: #f59e0b;
+    --color-away: #f97316;
 }
 
 /* Reset and Base Styles */
@@ -747,7 +791,7 @@ header {
     display: block;
     width: 80px;
     height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: var(--gradient-primary);
     margin: 1rem 0 0;
     border-radius: 2px;
 }
@@ -1195,7 +1239,7 @@ header {
 
 .event-card.detailed.highlight {
     background: var(--gradient-warning);
-    border: 2px solid #f97316;
+    border: 2px solid var(--color-away);
     transform: scale(1.02);
 }
 
@@ -1320,7 +1364,7 @@ header {
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
     border-color: rgba(255, 255, 255, 0.3);
-    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    background: var(--gradient-primary);
 }
 
 .event-link:active {
@@ -1566,7 +1610,7 @@ header {
 
 .map-popup h4 {
     margin: 0 0 0.5rem 0;
-    color: #667eea;
+    color: var(--primary-color);
     font-size: 1.1rem;
     font-weight: 600;
 }
@@ -1620,7 +1664,7 @@ header {
     height: 0;
     border-left: 7px solid transparent;
     border-right: 7px solid transparent;
-    border-top: 12px solid #5a67d8;
+    border-top: 12px solid var(--primary-color);
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
@@ -1640,12 +1684,12 @@ header {
 }
 
 .marker-pin:hover::before {
-    background: linear-gradient(135deg, #5a67d8 0%, #6d28d9 100%);
+    background: var(--gradient-primary);
     transform: translateX(-50%) rotate(-45deg) scale(1.1);
 }
 
 .map-link {
-    color: #667eea;
+    color: var(--primary-color);
     text-decoration: none;
     font-weight: 500;
     transition: all 0.3s ease;
@@ -1655,7 +1699,7 @@ header {
 }
 
 .map-link:hover {
-    color: #764ba2;
+    color: var(--accent-color);
     text-decoration: underline;
     transform: translateY(-1px);
 }
@@ -1683,10 +1727,10 @@ header {
 }
 
 .map-control-btn:hover {
-    background: #f8f9fa;
-    border-color: #667eea;
+    background: var(--background-light);
+    border-color: var(--primary-color);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 .map-control-btn:active {
@@ -1708,8 +1752,8 @@ header {
 
 
 .error-message {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border: 2px solid #f87171;
+    background: var(--gradient-error);
+    border: 2px solid var(--color-error);
     border-radius: 15px;
     padding: 2rem;
     margin: 2rem 0;
@@ -1717,7 +1761,7 @@ header {
 }
 
 .error-message h3 {
-    color: #dc2626;
+    color: var(--color-error);
     margin-bottom: 1rem;
     font-size: 1.3rem;
 }
