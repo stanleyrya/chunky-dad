@@ -611,15 +611,13 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
-                    // Mobile-friendly shortened versions
-                    const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
-                    const mobileTime = this.formatTimeForMobile(event.time);
+                    const displayName = event.shortName || (event.name.length > 25 ? event.name.substring(0, 22) + '...' : event.name);
+                    const displayTime = this.formatTimeForMobile(event.time);
                     
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${shortName}</div>
-                            <div class="event-time">${mobileTime}</div>
+                            <div class="event-name">${displayName}</div>
+                            <div class="event-time">${displayTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
@@ -717,14 +715,13 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
-                    const mobileTime = this.formatTimeForMobile(event.time);
+                    const displayName = event.shortName || (event.name.length > 18 ? event.name.substring(0, 15) + '...' : event.name);
+                    const displayTime = this.formatTimeForMobile(event.time);
                     
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${shortName}</div>
-                            <div class="event-time">${mobileTime}</div>
+                            <div class="event-name">${displayName}</div>
+                            <div class="event-time">${displayTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;

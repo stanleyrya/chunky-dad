@@ -728,6 +728,20 @@
                         <input type="text" class="color-input" id="background-color-text" value="#f8f9ff">
                     </div>
                 </div>
+                <div class="color-control">
+                    <label>Success Color</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="success-color" value="#4ecdc4">
+                        <input type="text" class="color-input" id="success-color-text" value="#4ecdc4">
+                    </div>
+                </div>
+                <div class="color-control">
+                    <label>Warning Color</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="warning-color" value="#ffd700">
+                        <input type="text" class="color-input" id="warning-color-text" value="#ffd700">
+                    </div>
+                </div>
             </div>
 
             <div class="control-section">
@@ -881,105 +895,135 @@
                         secondary: '#ff6b6b',
                         accent: '#764ba2',
                         text: '#333333',
-                        background: '#f8f9ff'
+                        background: '#f8f9ff',
+                        success: '#4ecdc4',
+                        warning: '#ffd700'
                     },
                     'bear-flag': {
                         primary: '#000000',
                         secondary: '#8B4513',
                         accent: '#FFD700',
                         text: '#FFFFFF',
-                        background: '#000000'
+                        background: '#000000',
+                        success: '#4ecdc4',
+                        warning: '#FFD700'
                     },
                     'dark-mode': {
                         primary: '#4ecdc4',
                         secondary: '#ff6b6b',
                         accent: '#45b7d1',
                         text: '#ffffff',
-                        background: '#1a1a2e'
+                        background: '#1a1a2e',
+                        success: '#4ecdc4',
+                        warning: '#ffd700'
                     },
                     neon: {
                         primary: '#ff00ff',
                         secondary: '#00ffff',
                         accent: '#ffff00',
                         text: '#ffffff',
-                        background: '#000000'
+                        background: '#000000',
+                        success: '#00ff00',
+                        warning: '#ffff00'
                     },
                     sunset: {
                         primary: '#ff6b35',
                         secondary: '#f7931e',
                         accent: '#ffd23f',
                         text: '#ffffff',
-                        background: '#2c1810'
+                        background: '#2c1810',
+                        success: '#4ecdc4',
+                        warning: '#ffd23f'
                     },
                     ocean: {
                         primary: '#006994',
                         secondary: '#00b4d8',
                         accent: '#90e0ef',
                         text: '#ffffff',
-                        background: '#001d3d'
+                        background: '#001d3d',
+                        success: '#4ecdc4',
+                        warning: '#ffd700'
                     },
                     forest: {
                         primary: '#2d5016',
                         secondary: '#4a7c59',
                         accent: '#7fb069',
                         text: '#ffffff',
-                        background: '#1a2f1a'
+                        background: '#1a2f1a',
+                        success: '#7fb069',
+                        warning: '#ffd700'
                     },
                     rainbow: {
                         primary: '#ff0000',
                         secondary: '#00ff00',
                         accent: '#0000ff',
                         text: '#ffffff',
-                        background: '#000000'
+                        background: '#000000',
+                        success: '#00ff00',
+                        warning: '#ffff00'
                     },
                     pride: {
                         primary: '#ff0018',
                         secondary: '#ffa52c',
                         accent: '#ffff41',
                         text: '#ffffff',
-                        background: '#000000'
+                        background: '#000000',
+                        success: '#4ecdc4',
+                        warning: '#ffff41'
                     },
                     retro: {
                         primary: '#ff6b9d',
                         secondary: '#c44569',
                         accent: '#f9ca24',
                         text: '#ffffff',
-                        background: '#2d3436'
+                        background: '#2d3436',
+                        success: '#4ecdc4',
+                        warning: '#f9ca24'
                     },
                     cyberpunk: {
                         primary: '#ff00ff',
                         secondary: '#00ffff',
                         accent: '#ffff00',
                         text: '#ffffff',
-                        background: '#000000'
+                        background: '#000000',
+                        success: '#00ff00',
+                        warning: '#ffff00'
                     },
                     vintage: {
                         primary: '#8b4513',
                         secondary: '#daa520',
                         accent: '#cd853f',
                         text: '#2f1b14',
-                        background: '#f5f5dc'
+                        background: '#f5f5dc',
+                        success: '#4ecdc4',
+                        warning: '#daa520'
                     },
                     minimal: {
                         primary: '#333333',
                         secondary: '#666666',
                         accent: '#999999',
                         text: '#000000',
-                        background: '#ffffff'
+                        background: '#ffffff',
+                        success: '#4ecdc4',
+                        warning: '#ffd700'
                     },
                     gradient: {
                         primary: '#667eea',
                         secondary: '#764ba2',
                         accent: '#f093fb',
                         text: '#ffffff',
-                        background: '#667eea'
+                        background: '#667eea',
+                        success: '#4ecdc4',
+                        warning: '#ffd700'
                     },
                     monochrome: {
                         primary: '#000000',
                         secondary: '#333333',
                         accent: '#666666',
                         text: '#ffffff',
-                        background: '#000000'
+                        background: '#000000',
+                        success: '#4ecdc4',
+                        warning: '#ffd700'
                     }
                 };
                 
@@ -1111,7 +1155,9 @@
                     secondary: document.getElementById('secondary-color-text').value,
                     accent: document.getElementById('accent-color-text').value,
                     text: document.getElementById('text-color-text').value,
-                    background: document.getElementById('background-color-text').value
+                    background: document.getElementById('background-color-text').value,
+                    success: document.getElementById('success-color-text').value,
+                    warning: document.getElementById('warning-color-text').value
                 };
 
                 const css = `
@@ -1121,8 +1167,8 @@
                         --accent-color: ${colors.accent} !important;
                         --text-primary: ${colors.text} !important;
                         --background-light: ${colors.background} !important;
-                        --success-color: ${colors.accent} !important;
-                        --warning-color: ${colors.secondary} !important;
+                        --success-color: ${colors.success} !important;
+                        --warning-color: ${colors.warning} !important;
                         --border-light: ${colors.primary}20 !important;
                     }
                     
@@ -1405,7 +1451,9 @@
                     secondary: document.getElementById('secondary-color-text').value,
                     accent: document.getElementById('accent-color-text').value,
                     text: document.getElementById('text-color-text').value,
-                    background: document.getElementById('background-color-text').value
+                    background: document.getElementById('background-color-text').value,
+                    success: document.getElementById('success-color-text').value,
+                    warning: document.getElementById('warning-color-text').value
                 };
 
                 const params = new URLSearchParams();
@@ -1433,7 +1481,7 @@
                 }
 
                 // Load custom colors from URL
-                const colorKeys = ['primary', 'secondary', 'accent', 'text', 'background'];
+                const colorKeys = ['primary', 'secondary', 'accent', 'text', 'background', 'success', 'warning'];
                 colorKeys.forEach(key => {
                     const color = params.get(key);
                     if (color) {
@@ -1454,7 +1502,7 @@
             updateStatusBar() {
                 document.getElementById('current-theme').textContent = this.currentTheme;
                 document.getElementById('current-view').textContent = this.currentView;
-                document.getElementById('color-count').textContent = '5';
+                document.getElementById('color-count').textContent = '7';
             }
 
             showNotification(message) {

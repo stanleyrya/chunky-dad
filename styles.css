@@ -980,8 +980,8 @@ header {
     line-height: 1.3;
 }
 
-/* Mobile and tablet specific padding for event items */
-@media (max-width: 1024px) {
+/* Mobile specific padding for event items */
+@media (max-width: 768px) {
     .event-item {
         padding: 0.2rem;
     }
@@ -1084,6 +1084,7 @@ header {
     }
 }
 
+/* Consolidated mobile optimization */
 @media (max-width: 480px) {
     .calendar-grid {
         gap: 0.2rem;
@@ -1094,28 +1095,13 @@ header {
         min-height: 80px;
     }
     
-    .day-header {
-        padding-bottom: 0.3rem;
-        margin-bottom: 0.3rem;
-    }
-    
     .day-header h3 {
         font-size: 0.75rem;
-    }
-    
-    .day-date {
-        font-size: 0.9rem;
     }
     
     .event-item {
         padding: 0.3rem;
         font-size: 0.7rem;
-        margin-bottom: 0.15rem;
-    }
-    
-    .event-name {
-        font-size: 0.7rem;
-        margin-bottom: 0.1rem;
     }
     
     .event-time,
@@ -1208,7 +1194,6 @@ header {
 /* Desktop: Allow more space for full day names */
 @media (min-width: 769px) {
     .event-day {
-        min-width: auto;
         padding: 0.5rem 1.2rem;
     }
 }
@@ -1744,11 +1729,7 @@ footer {
 
 /* Mobile-first responsive design for calendar views */
 
-/* Default mobile styles for event items */
-.event-name-mobile,
-.event-venue-mobile {
-    display: none;
-}
+/* Simplified event styling */
 
 .event-name,
 .event-time,
@@ -2140,9 +2121,10 @@ footer {
     }
 }
 
+/* Additional small screen optimizations */
 @media (max-width: 480px) {
     body {
-        padding-top: 50px; /* Even smaller header height */
+        padding-top: 50px;
     }
     
     header {
@@ -2151,10 +2133,6 @@ footer {
     
     .hero-content h2 {
         font-size: 2rem;
-    }
-
-    .hero-content p {
-        font-size: 0.9rem;
     }
 
     .cities h2,
@@ -2235,16 +2213,7 @@ footer {
         display: none;
     }
 
-    .event-item.enhanced .event-name-mobile {
-        display: block;
-        font-size: 0.8rem;
-        font-weight: 600;
-        line-height: 1.2;
-    }
-
-    .event-item.enhanced .event-venue-mobile {
-        display: none; /* Hide venue in week view on small screens */
-    }
+/* Removed redundant mobile event classes */
 
     .event-item.enhanced {
         padding: 0.15rem 0;
@@ -2498,16 +2467,10 @@ footer {
     }
 }
 
-/* Extra aggressive spacing reduction for iPhone and very small screens */
+/* Grid layout simplification for small screens */
 @media (max-width: 480px) {
-    .cities-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .events-grid {
-        grid-template-columns: 1fr;
-    }
-    
+    .cities-grid,
+    .events-grid,
     .business-categories {
         grid-template-columns: 1fr;
     }
@@ -2515,7 +2478,6 @@ footer {
     .calendar-controls {
         flex-direction: row;
         gap: 0.25rem;
-        width: 100%;
         flex-wrap: wrap;
     }
     
@@ -2634,15 +2596,7 @@ footer {
         gap: 0.05rem;
     }
 
-    /* Ultra-compact mobile event display */
-    .event-item.enhanced .event-name-mobile {
-        font-size: 0.75rem;
-        line-height: 1.1;
-    }
-
-    .event-item.enhanced .event-venue-mobile {
-        display: none; /* Hide venue in week view on small screens */
-    }
+/* Removed redundant mobile event classes */
 
     /* Remove all container padding for maximum space */
     .weekly-calendar .container {
@@ -3139,12 +3093,10 @@ footer {
     transform: translateY(-2px);
 }
 
-/* For larger tablets, show both but make buttons smaller */
-@media (min-width: 769px) and (max-width: 1024px) {
-
-    /* Enhanced Week View for tablets - show full information */
+/* Simplified desktop view - tablets and up */
+@media (min-width: 769px) {
     .calendar-grid.week-view-grid {
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 0.8rem;
     }
 
@@ -3154,49 +3106,10 @@ footer {
     }
 
     .event-item.enhanced {
-        padding: 1rem 0;
+        padding: 0.8rem 0;
     }
 
-    /* Ensure full event information is displayed on tablets */
-    .event-item.enhanced .event-name {
-        display: block;
-        font-size: 0.9rem;
-    }
-
-    .event-item.enhanced .event-time {
-        display: block;
-        font-size: 0.8rem;
-    }
-
-    .event-item.enhanced .event-venue {
-        display: block;
-        font-size: 0.8rem;
-    }
-
-    /* Hide mobile-specific elements on tablets */
-    .event-item.enhanced .event-name-mobile,
-    .event-item.enhanced .event-venue-mobile {
-        display: none;
-    }
-
-    /* Calendar Overview for tablets */
-    .calendar-overview-grid {
-        gap: 0.4rem;
-    }
-
-    .calendar-day.calendar-overview {
-        min-height: 70px;
-        padding: 0.8rem;
-    }
-
-    .day-number {
-        font-size: 1rem;
-    }
-
-    .event-dot {
-        width: 5px;
-        height: 5px;
-    }
+/* Simplified desktop event styling */
 }
 
 /* Month View Improvements */
@@ -3443,10 +3356,7 @@ footer {
 }
 
 /* Mobile-specific event name/venue for both week and month views */
-.event-name-mobile,
-.event-venue-mobile {
-  display: none;
-}
+/* Removed redundant mobile classes */
 
 @media (max-width: 768px) {
   .event-name {
