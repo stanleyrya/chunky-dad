@@ -1,14 +1,43 @@
 /* CSS Custom Properties */
 :root {
+    /* Primary Brand Colors */
     --primary-color: #667eea;
     --secondary-color: #ff6b6b;
     --accent-color: #764ba2;
     --success-color: #4ecdc4;
     --warning-color: #ffd700;
+    
+    /* Text Colors */
     --text-primary: #333;
     --text-secondary: #666;
+    --text-muted: #999;
+    
+    /* Background Colors */
+    --background-primary: #ffffff;
     --background-light: #f8f9ff;
+    --background-lighter: #f8f9fa;
+    --background-secondary: #e8f2ff;
+    
+    /* Border Colors */
     --border-light: #e8f2ff;
+    --border-lighter: #d0e1ff;
+    
+    /* Additional Colors */
+    --white: #ffffff;
+    --black: #000000;
+    --transparent: transparent;
+    
+    /* Gradient Colors */
+    --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    --gradient-secondary: linear-gradient(45deg, var(--secondary-color), #ee5a24);
+    --gradient-success: linear-gradient(45deg, var(--success-color), #44a08d);
+    --gradient-warning: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+    --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
+    
+    /* Shadow Colors */
+    --shadow-light: rgba(0, 0, 0, 0.1);
+    --shadow-medium: rgba(0, 0, 0, 0.15);
+    --shadow-heavy: rgba(0, 0, 0, 0.25);
 }
 
 /* Reset and Base Styles */
@@ -22,6 +51,7 @@ body {
     font-family: 'Poppins', sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
+    background-color: var(--background-primary);
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
@@ -209,7 +239,7 @@ header {
     border-radius: 15px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin: 0.3rem 0;
-    color: #333;
+    color: var(--text-primary);
     text-decoration: none;
     position: relative;
     overflow: hidden;
@@ -222,14 +252,14 @@ header {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
 }
 
 .city-option:hover {
-    color: white;
+    color: var(--white);
     transform: translateX(8px);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
@@ -270,7 +300,7 @@ header {
 }
 
 .debug-label {
-    color: #ffc107;
+    color: var(--warning-color);
     font-weight: bold;
     margin-right: 0.5rem;
 }
@@ -296,13 +326,13 @@ header {
 }
 
 .logo h1 {
-    color: white;
+    color: var(--white);
     font-size: 1.8rem;
     font-weight: 600;
 }
 
 .logo a {
-    color: white;
+    color: var(--white);
     text-decoration: none;
 }
 
@@ -313,14 +343,14 @@ header {
 }
 
 .nav-menu a {
-    color: white;
+    color: var(--white);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s ease;
 }
 
 .nav-menu a:hover {
-    color: #ffd700;
+    color: var(--warning-color);
 }
 
 .hamburger {
@@ -332,15 +362,15 @@ header {
 .hamburger span {
     width: 25px;
     height: 3px;
-    background: white;
+    background: var(--white);
     margin: 3px 0;
     transition: 0.3s;
 }
 
 /* Hero Section */
 .hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     padding: 120px 0 80px;
     display: flex;
     align-items: center;
@@ -371,8 +401,8 @@ header {
 }
 
 .cta-button {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-    color: white;
+    background: var(--gradient-secondary);
+    color: var(--white);
     border: none;
     padding: 15px 30px;
     font-size: 1.1rem;
@@ -386,7 +416,7 @@ header {
 }
 
 .cta-button.secondary {
-    background: linear-gradient(45deg, #4ecdc4, #44a08d);
+    background: var(--gradient-success);
     box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
 }
 
@@ -424,7 +454,7 @@ header {
 .section-subtitle {
     text-align: center;
     font-size: 1.2rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 3rem;
     font-weight: 400;
 }
@@ -432,14 +462,14 @@ header {
 /* Cities Section */
 .cities {
     padding: 80px 0;
-    background: #f8f9ff;
+    background: var(--background-light);
 }
 
 .cities h2 {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .cities-grid {
@@ -451,10 +481,10 @@ header {
 }
 
 .city-card {
-    background: white;
+    background: var(--background-primary);
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px var(--shadow-light);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     will-change: transform;
@@ -462,17 +492,17 @@ header {
 
 .city-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+    box-shadow: 0 12px 35px var(--shadow-medium);
 }
 
 .city-image {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 3rem;
-    color: white;
+    color: var(--white);
 }
 
 .city-info {
@@ -482,11 +512,11 @@ header {
 .city-info h3 {
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .city-info p {
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 1rem;
 }
 
@@ -497,8 +527,8 @@ header {
 }
 
 .highlight {
-    background: #e8f2ff;
-    color: #667eea;
+    background: var(--background-secondary);
+    color: var(--primary-color);
     padding: 0.3rem 0.8rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -514,7 +544,7 @@ header {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .events-grid {
@@ -526,10 +556,10 @@ header {
 }
 
 .event-card {
-    background: #f8f9ff;
+    background: var(--background-light);
     border-radius: 15px;
     padding: 2rem;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 20px var(--shadow-light);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
 }
@@ -551,8 +581,8 @@ header {
 }
 
 .event-date {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-    color: white;
+    background: var(--gradient-secondary);
+    color: var(--white);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -561,7 +591,7 @@ header {
 
 .event-card h3 {
     font-size: 1.5rem;
-    color: #333;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
@@ -573,20 +603,20 @@ header {
 
 .event-details span {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 /* Businesses Section */
 .businesses {
     padding: 80px 0;
-    background: #f8f9ff;
+    background: var(--background-light);
 }
 
 .businesses h2 {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .business-categories {
@@ -598,11 +628,11 @@ header {
 }
 
 .category-card {
-    background: white;
+    background: var(--background-primary);
     padding: 2rem;
     border-radius: 15px;
     text-align: center;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 20px var(--shadow-light);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     will-change: transform;
@@ -620,17 +650,17 @@ header {
 .category-card h3 {
     font-size: 1.3rem;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .category-card p {
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 1rem;
 }
 
 .coming-soon {
-    background: linear-gradient(45deg, #4ecdc4, #44a08d);
-    color: white;
+    background: var(--gradient-success);
+    color: var(--white);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -640,7 +670,7 @@ header {
 /* City Page Styles */
 .city-page {
     padding-top: 0px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    background: var(--gradient-light);
 }
 
 
@@ -685,7 +715,7 @@ header {
 .whats-the-vibe-header {
     text-align: center;
     margin-bottom: 2rem;
-    color: #333;
+    color: var(--text-primary);
     font-size: 2rem;
 }
 
@@ -705,7 +735,7 @@ header {
 
 .calendar-header h2 {
     font-size: 2.5rem;
-    color: #333;
+    color: var(--text-primary);
     position: relative;
     margin: 0;
 }
@@ -731,11 +761,11 @@ header {
 
 .view-toggle {
     display: flex;
-    background: white;
+    background: var(--background-primary);
     border-radius: 12px;
     padding: 4px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: 2px solid #e8f2ff;
+    box-shadow: 0 4px 15px var(--shadow-light);
+    border: 2px solid var(--border-light);
 }
 
 .view-btn {
@@ -747,36 +777,36 @@ header {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #666;
+    color: var(--text-secondary);
     font-size: 0.9rem;
 }
 
 .view-btn.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .view-btn:hover:not(.active) {
-    background: #f8f9ff;
-    color: #333;
+    background: var(--background-light);
+    color: var(--text-primary);
 }
 
 .date-navigation {
     display: flex;
     align-items: center;
     gap: 1rem;
-    background: white;
+    background: var(--background-primary);
     border-radius: 12px;
     padding: 0.5rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: 2px solid #e8f2ff;
+    box-shadow: 0 4px 15px var(--shadow-light);
+    border: 2px solid var(--border-light);
 }
 
 .nav-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     border: none;
-    color: white;
+    color: var(--white);
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -795,16 +825,16 @@ header {
 
 .date-range {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
     min-width: 120px;
     text-align: center;
     font-size: 0.9rem;
 }
 
 .today-btn {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    background: var(--gradient-secondary);
     border: none;
-    color: white;
+    color: var(--white);
     padding: 0.7rem 1.2rem;
     border-radius: 12px;
     font-family: 'Poppins', sans-serif;
@@ -812,7 +842,7 @@ header {
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 0.9rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px var(--shadow-light);
 }
 
 .today-btn:hover {
