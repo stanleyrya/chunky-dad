@@ -993,7 +993,7 @@ header {
 /* Mobile and tablet specific padding for event items */
 @media (max-width: 1024px) {
     .event-item {
-        padding: 0.1rem;
+        padding: 0.2rem;
     }
 }
 

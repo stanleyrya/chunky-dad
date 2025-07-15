@@ -64,22 +64,24 @@ class DynamicCalendarLoader extends CalendarCore {
         if (eventData) {
             eventData.citySlug = this.currentCity;
             
-            // Add short-name if not provided, generate from event name
+            // Add short-name if not provided, generate from bar name or event name
             if (!eventData.shortName) {
-                eventData.shortName = this.generateShortName(eventData.name);
+                eventData.shortName = this.generateShortName(eventData.bar, eventData.name);
             }
         }
         return eventData;
     }
 
-    // Generate short name from event name
-    generateShortName(eventName) {
-        if (!eventName) return '';
+    // Generate short name from bar name or event name
+    generateShortName(barName, eventName) {
+        // Prefer bar name if available
+        const sourceName = barName || eventName;
+        if (!sourceName) return '';
         
-        // Remove common words and abbreviate
+        // Remove common words and abbreviate while preserving original casing
         const stopWords = ['the', 'and', 'or', 'at', 'in', 'on', 'with', 'for', 'of', 'to', 'a', 'an'];
-        const words = eventName.toLowerCase().split(' ');
-        const filteredWords = words.filter(word => !stopWords.includes(word));
+        const words = sourceName.split(' ');
+        const filteredWords = words.filter(word => !stopWords.includes(word.toLowerCase()));
         
         // Take first 2-3 meaningful words and abbreviate if too long
         const shortWords = filteredWords.slice(0, 3);
@@ -94,10 +96,36 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If still too long, just take first word
         if (shortName.length > 15) {
-            shortName = filteredWords[0] || eventName.split(' ')[0];
+            shortName = filteredWords[0] || sourceName.split(' ')[0];
         }
         
         return shortName;
+    }
+
+    // Format time for mobile display with simplified past-midnight format
+    formatTimeForMobile(timeString) {
+        if (!timeString) return '';
+        
+        // Check if it's a time range that goes past midnight
+        const pastMidnightRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
+        const match = timeString.match(pastMidnightRegex);
+        
+        if (match) {
+            const startTime = match[1];
+            const endTime = match[2];
+            
+            // Check if end time is AM and start time is PM (indicates past midnight)
+            const startIsPM = startTime.toUpperCase().includes('PM');
+            const endIsAM = endTime.toUpperCase().includes('AM');
+            
+            if (startIsPM && endIsAM) {
+                // Format as "5PM->" for past midnight events
+                return startTime + '->';
+            }
+        }
+        
+        // Return original time string for regular events
+        return timeString;
     }
 
     getCurrentPeriodBounds() {
@@ -290,9 +318,21 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate event card (same as original)
     generateEventCard(event) {
-        const linksHtml = event.links ? event.links.map(link => 
-            `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`
-        ).join(' ') : '';
+        const linksHtml = event.links ? event.links.map(link => {
+            // Add appropriate emoji based on link type
+            let emoji = '🔗'; // default link emoji
+            const label = link.label.toLowerCase();
+            
+            if (label.includes('facebook')) emoji = '📘';
+            else if (label.includes('instagram')) emoji = '📷';
+            else if (label.includes('twitter')) emoji = '🐦';
+            else if (label.includes('website') || label.includes('site')) emoji = '🔗';
+            else if (label.includes('tickets') || label.includes('ticket')) emoji = '🎫';
+            else if (label.includes('rsvp')) emoji = '✅';
+            else if (label.includes('more info')) emoji = 'ℹ️';
+            
+            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${emoji} ${link.label}</a>`;
+        }).join(' ') : '';
 
         const teaHtml = event.tea ? `
             <div class="detail-row tea">
@@ -564,15 +604,14 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
                     // Mobile-friendly shortened versions
-                    const shortVenue = event.bar.split(' ')[0] || event.bar;
                     const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
+                    const mobileTime = this.formatTimeForMobile(event.time);
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
-                            <div class="event-time">${event.time}</div>
+                            <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar}</div>
-                            <div class="event-venue-mobile">${shortVenue}</div>
                         </div>
                     `;
                 }).join('')
@@ -657,15 +696,14 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    const shortVenue = event.bar.split(' ')[0] || event.bar;
                     const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
+                    const mobileTime = this.formatTimeForMobile(event.time);
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
-                            <div class="event-time">${event.time}</div>
+                            <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar}</div>
-                            <div class="event-venue-mobile">${shortVenue}</div>
                         </div>
                     `;
                 }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
