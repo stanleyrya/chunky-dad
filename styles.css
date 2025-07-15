@@ -669,16 +669,7 @@ header {
     position: relative;
 }
 
-.weekly-calendar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100%;
-    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23667eea' fill-opacity='0.02'%3E%3Cpath d='M20 20c0-6.627-5.373-12-12-12s-12 5.373-12 12 5.373 12 12 12 12-5.373 12-12zm12 0c0-6.627-5.373-12-12-12s-12 5.373-12 12 5.373 12 12 12 12-5.373 12-12z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
-    pointer-events: none;
-}
+/* Removed .weekly-calendar::before background */
 
 .calendar-header {
     display: flex;
@@ -1001,6 +992,37 @@ header {
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+}
+
+/* Past event styling */
+.event-item.past-event {
+    background: rgba(128, 128, 128, 0.1);
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    color: #888;
+    opacity: 0.6;
+}
+
+.event-item.past-event:hover {
+    background: rgba(128, 128, 128, 0.2);
+    border-color: rgba(128, 128, 128, 0.3);
+    color: #666;
+    transform: none;
+    box-shadow: none;
+}
+
+.event-card.past-event {
+    background: rgba(128, 128, 128, 0.1);
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    color: #888;
+    opacity: 0.6;
+}
+
+.event-card.past-event:hover {
+    background: rgba(128, 128, 128, 0.2);
+    border-color: rgba(128, 128, 128, 0.3);
+    color: #666;
+    transform: none;
+    box-shadow: none;
 }
 
 .calendar-day.current .event-item {
