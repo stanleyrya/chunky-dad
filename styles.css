@@ -1,88 +1,58 @@
 /* CSS Custom Properties */
 :root {
-    /* Primary Brand Colors */
+    /* Core Brand Colors - These match the testing file */
     --primary-color: #667eea;
     --secondary-color: #ff6b6b;
     --accent-color: #764ba2;
-    --success-color: #4ecdc4;
-    --warning-color: #ffd700;
     
-    /* Text Colors */
+    /* Text Colors - These match the testing file */
     --text-primary: #333;
     --text-secondary: #666;
-    --text-muted: #999;
     
-    /* Background Colors */
+    /* Background Colors - These match the testing file */
     --background-primary: #ffffff;
     --background-light: #f8f9ff;
+    
+    /* Derived Colors - Calculated from core variables */
+    --text-muted: #999;
+    --text-inverse: #ffffff;
     --background-lighter: #f8f9fa;
     --background-secondary: #e8f2ff;
-    
-    /* Border Colors */
+    --background-dark: #1a1a2e;
+    --background-darker: #0f0f23;
     --border-light: #e8f2ff;
     --border-lighter: #d0e1ff;
-    
-    /* Additional Colors */
+    --border-dark: #333;
     --white: #ffffff;
     --black: #000000;
     --transparent: transparent;
     
-    /* Semantic Colors - Consolidated */
-    --color-primary: var(--primary-color);
-    --color-secondary: var(--secondary-color);
-    --color-accent: var(--accent-color);
-    --color-success: var(--success-color);
-    --color-warning: var(--warning-color);
-    --color-error: #dc2626;
-    --color-info: #3b82f6;
+    /* Status Colors */
+    --success-color: #4ecdc4;
+    --warning-color: #ffd700;
+    --error-color: #dc2626;
+    --info-color: #3b82f6;
+    --color-online: #10b981;
+    --color-offline: #6b7280;
+    --color-busy: #f59e0b;
+    --color-away: #f97316;
     
-    /* Text Colors - Semantic */
-    --color-text: var(--text-primary);
-    --color-text-secondary: var(--text-secondary);
-    --color-text-muted: var(--text-muted);
-    --color-text-inverse: var(--white);
-    
-    /* Background Colors - Semantic */
-    --color-bg: var(--background-primary);
-    --color-bg-light: var(--background-light);
-    --color-bg-lighter: var(--background-lighter);
-    --color-bg-secondary: var(--background-secondary);
-    --color-bg-dark: #1a1a2e;
-    --color-bg-darker: #0f0f23;
-    
-    /* Border Colors - Semantic */
-    --color-border: var(--border-light);
-    --color-border-light: var(--border-lighter);
-    --color-border-dark: #333;
-    
-    /* Gradient Colors */
+    /* Gradients */
     --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
     --gradient-secondary: linear-gradient(45deg, var(--secondary-color), #ee5a24);
     --gradient-success: linear-gradient(45deg, var(--success-color), #44a08d);
-    --gradient-warning: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+    --gradient-warning: linear-gradient(135deg, var(--background-primary) 0%, #fed7aa 100%);
     --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
-    --gradient-success-alt: linear-gradient(45deg, #10b981, #059669);
+    --gradient-success-alt: linear-gradient(45deg, var(--success-color), #059669);
     --gradient-error: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     
-    /* Shadow Colors */
+    /* Shadows */
     --shadow-light: rgba(0, 0, 0, 0.1);
     --shadow-medium: rgba(0, 0, 0, 0.15);
     --shadow-heavy: rgba(0, 0, 0, 0.25);
     --shadow-primary: rgba(102, 126, 234, 0.3);
     --shadow-success: rgba(78, 205, 196, 0.3);
     --shadow-error: rgba(220, 38, 38, 0.3);
-    
-    /* Interactive Colors */
-    --color-hover: var(--primary-color);
-    --color-active: var(--accent-color);
-    --color-focus: var(--primary-color);
-    --color-disabled: var(--text-muted);
-    
-    /* Status Colors */
-    --color-online: #10b981;
-    --color-offline: #6b7280;
-    --color-busy: #f59e0b;
-    --color-away: #f97316;
 }
 
 /* Reset and Base Styles */
@@ -133,8 +103,8 @@ html {
 
 /* Header and Navigation */
 header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background: var(--gradient-primary);
+    box-shadow: 0 2px 10px var(--shadow-light);
     position: fixed;
     top: 0;
     left: 0;
@@ -169,9 +139,9 @@ header {
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(15px);
-    color: white;
+    color: var(--text-inverse);
     font-family: inherit;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px var(--shadow-medium);
     position: relative;
     overflow: hidden;
 }
@@ -218,7 +188,7 @@ header {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 100%);
     border-color: rgba(255, 255, 255, 0.6);
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 8px 30px var(--shadow-heavy);
 }
 
 .city-switcher-btn:hover::before {
@@ -235,7 +205,7 @@ header {
 
 .city-switcher-btn:active {
     transform: translateY(0) scale(0.98);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px var(--shadow-medium);
 }
 
 .city-dropdown {
@@ -244,7 +214,7 @@ header {
     right: 0;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
     border-radius: 20px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 15px 40px var(--shadow-heavy);
     padding: 0.8rem;
     margin-top: 0.8rem;
     min-width: 220px;
@@ -304,9 +274,9 @@ header {
 }
 
 .city-option:hover {
-    color: var(--white);
+    color: var(--text-inverse);
     transform: translateX(8px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 15px var(--shadow-primary);
 }
 
 .city-option:hover::before {
@@ -371,13 +341,13 @@ header {
 }
 
 .logo h1 {
-    color: var(--white);
+    color: var(--text-inverse);
     font-size: 1.8rem;
     font-weight: 600;
 }
 
 .logo a {
-    color: var(--white);
+    color: var(--text-inverse);
     text-decoration: none;
 }
 
@@ -388,7 +358,7 @@ header {
 }
 
 .nav-menu a {
-    color: var(--white);
+    color: var(--text-inverse);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s ease;
@@ -407,7 +377,7 @@ header {
 .hamburger span {
     width: 25px;
     height: 3px;
-    background: var(--white);
+    background: var(--text-inverse);
     margin: 3px 0;
     transition: 0.3s;
 }
@@ -415,7 +385,7 @@ header {
 /* Hero Section */
 .hero {
     background: var(--gradient-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 120px 0 80px;
     display: flex;
     align-items: center;
@@ -447,7 +417,7 @@ header {
 
 .cta-button {
     background: var(--gradient-secondary);
-    color: var(--white);
+    color: var(--text-inverse);
     border: none;
     padding: 15px 30px;
     font-size: 1.1rem;
@@ -828,8 +798,8 @@ header {
 
 .view-btn.active {
     background: var(--gradient-primary);
-    color: var(--white);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    color: var(--text-inverse);
+    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 .view-btn:hover:not(.active) {
@@ -851,7 +821,7 @@ header {
 .nav-btn {
     background: var(--gradient-primary);
     border: none;
-    color: var(--white);
+    color: var(--text-inverse);
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -865,7 +835,7 @@ header {
 
 .nav-btn:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 .date-range {
@@ -879,7 +849,7 @@ header {
 .today-btn {
     background: var(--gradient-secondary);
     border: none;
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.7rem 1.2rem;
     border-radius: 12px;
     font-family: 'Poppins', sans-serif;
@@ -944,9 +914,9 @@ header {
 
 .calendar-day.current {
     background: var(--gradient-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     border-color: var(--primary-color);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 15px var(--shadow-primary);
 }
 
 .calendar-day.current::before {
@@ -962,7 +932,7 @@ header {
 
 .calendar-day.current:hover {
     transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 18px 40px rgba(102, 126, 234, 0.35);
+    box-shadow: 0 18px 40px var(--shadow-primary);
 }
 
 .day-header {
@@ -997,12 +967,12 @@ header {
 }
 
 .calendar-day.current .day-date {
-    color: var(--white);
+    color: var(--text-inverse);
 }
 
 .day-indicator {
     background: var(--secondary-color);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.2rem 0.5rem;
     border-radius: 8px;
     font-size: 0.7rem;
@@ -1064,22 +1034,22 @@ header {
 
 .event-item:hover {
     background: var(--gradient-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 3px 10px var(--shadow-primary);
 }
 
 
 
 .calendar-day.current .event-item {
     background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(102, 126, 234, 0.3);
+    border: 1px solid var(--shadow-primary);
     color: var(--text-primary);
 }
 
 .calendar-day.current .event-item:hover {
     background: var(--gradient-primary);
-    color: var(--white);
+    color: var(--text-inverse);
 }
 
 .event-name {
@@ -1348,7 +1318,7 @@ header {
 .event-link {
     display: inline-block;
     background: var(--gradient-primary);
-    color: var(--white) !important;
+    color: var(--text-inverse) !important;
     padding: 8px 16px;
     border-radius: 25px;
     text-decoration: none;
@@ -1356,20 +1326,20 @@ header {
     font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin: 4px 6px;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 2px 8px var(--shadow-primary);
     border: 2px solid transparent;
 }
 
 .event-link:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 6px 20px var(--shadow-primary);
     border-color: rgba(255, 255, 255, 0.3);
     background: var(--gradient-primary);
 }
 
 .event-link:active {
     transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 3px 12px rgba(102, 126, 234, 0.6);
+    box-shadow: 0 3px 12px var(--shadow-primary);
 }
 
 /* Responsive link styling */
@@ -1396,7 +1366,7 @@ header {
 .city-cta {
     padding: 30px 0;
     background: var(--gradient-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     text-align: center;
 }
 
@@ -1456,7 +1426,7 @@ header {
     justify-content: center;
     background: var(--gradient-primary);
     border-radius: 50%;
-    color: var(--white);
+    color: var(--text-inverse);
 }
 
 .contact-item h3 {
@@ -1481,7 +1451,7 @@ header {
     width: 100%;
     padding: 1rem;
     margin-bottom: 1rem;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border-light);
     border-radius: 10px;
     font-family: 'Poppins', sans-serif;
     font-size: 1rem;
@@ -1497,7 +1467,7 @@ header {
 
 .contact-form button {
     background: var(--gradient-secondary);
-    color: var(--white);
+    color: var(--text-inverse);
     border: none;
     padding: 15px 30px;
     width: 100%;
@@ -1648,10 +1618,10 @@ header {
     transform: translateX(-50%) rotate(-45deg);
     width: 32px;
     height: 32px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     border-radius: 50% 50% 50% 0;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    border: 3px solid white;
+    box-shadow: 0 4px 12px var(--shadow-primary);
+    border: 3px solid var(--white);
 }
 
 .marker-pin::after {
@@ -1711,8 +1681,8 @@ header {
 
 /* Map Controls */
 .map-control-btn {
-    background: white;
-    border: 2px solid #ddd;
+    background: var(--white);
+    border: 2px solid var(--border-light);
     border-radius: 8px;
     width: 34px;
     height: 34px;
@@ -1722,7 +1692,7 @@ header {
     cursor: pointer;
     font-size: 16px;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px var(--shadow-light);
     margin-bottom: 4px;
 }
 
@@ -1767,13 +1737,13 @@ header {
 }
 
 .error-message p {
-    color: #7f1d1d;
+    color: var(--error-color);
     margin-bottom: 1rem;
     line-height: 1.6;
 }
 
 .error-message ul {
-    color: #7f1d1d;
+    color: var(--error-color);
     text-align: left;
     margin: 1rem 0;
     padding-left: 1.5rem;
@@ -1784,7 +1754,7 @@ header {
 }
 
 .error-message a {
-    color: #dc2626;
+    color: var(--error-color);
     font-weight: 600;
     text-decoration: none;
 }
@@ -2887,7 +2857,7 @@ footer {
 }
 
 .error-content h1 {
-    color: #667eea;
+    color: var(--primary-color);
     margin-bottom: 20px;
 }
 
@@ -2906,8 +2876,8 @@ footer {
 .city-link {
     display: inline-block;
     padding: 10px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     text-decoration: none;
     border-radius: 25px;
     transition: transform 0.2s ease;
@@ -2922,29 +2892,29 @@ footer {
 .loading-message {
     text-align: center;
     padding: 40px 20px;
-    color: #666;
+    color: var(--text-secondary);
     font-size: 18px;
-    background: #f8f9fa;
+    background: var(--background-lighter);
     border-radius: 8px;
 }
 
 .no-events-message {
     text-align: center;
     padding: 40px 20px;
-    background: #f8f9fa;
+    background: var(--background-lighter);
     border-radius: 8px;
     margin: 20px 0;
 }
 
 .no-events-message h3 {
-    color: #667eea;
+    color: var(--primary-color);
     margin-bottom: 15px;
 }
 
 /* Event Card Highlight Animation */
 .event-card.highlight {
     animation: highlightPulse 2s ease-in-out;
-    border: 2px solid #667eea;
+    border: 2px solid var(--primary-color);
 }
 
 @keyframes highlightPulse {
@@ -2978,7 +2948,7 @@ footer {
     text-align: center;
     min-height: 80px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border: 1px solid #e8f2ff;
+    border: 1px solid var(--border-light);
     transition: all 0.2s ease;
     cursor: pointer;
     position: relative;
@@ -2989,24 +2959,24 @@ footer {
 
 .calendar-day.calendar-overview:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
-    border-color: #667eea;
+    box-shadow: 0 6px 20px var(--shadow-primary);
+    border-color: var(--primary-color);
 }
 
 .calendar-day.calendar-overview.current {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-color: #667eea;
+    background: var(--gradient-primary);
+    color: var(--white);
+    border-color: var(--primary-color);
 }
 
 .calendar-day.calendar-overview.has-events {
-    border-color: #10b981;
-    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-color: var(--color-online);
+    background: linear-gradient(135deg, var(--background-primary) 0%, #f0fdf4 100%);
 }
 
 .calendar-day.calendar-overview.has-events:hover {
-    border-color: #059669;
-    background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
+    border-color: var(--success-color);
+    background: linear-gradient(135deg, var(--background-primary) 0%, #ecfdf5 100%);
 }
 
 .day-number {
@@ -3026,7 +2996,7 @@ footer {
 .event-dot {
     width: 6px;
     height: 6px;
-    background: #10b981;
+    background: var(--color-online);
     border-radius: 50%;
 }
 
@@ -3036,7 +3006,7 @@ footer {
 
 .event-more {
     font-size: 0.7rem;
-    color: #667eea;
+    color: var(--primary-color);
     font-weight: 600;
 }
 
@@ -3044,8 +3014,8 @@ footer {
     position: absolute;
     top: 0.3rem;
     right: 0.3rem;
-    background: #ff6b6b;
-    color: white;
+    background: var(--secondary-color);
+    color: var(--text-inverse);
     font-size: 0.6rem;
     padding: 0.2rem 0.4rem;
     border-radius: 8px;
@@ -3097,8 +3067,8 @@ footer {
 }
 
 .modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--text-inverse);
     padding: 1.5rem;
     display: flex;
     justify-content: space-between;
@@ -3113,7 +3083,7 @@ footer {
 .modal-close {
     background: none;
     border: none;
-    color: white;
+    color: var(--text-inverse);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0;
@@ -3137,11 +3107,11 @@ footer {
 }
 
 .modal-event-item {
-    background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+    background: linear-gradient(135deg, var(--background-light) 0%, var(--background-secondary) 100%);
     border-radius: 12px;
     padding: 1.2rem;
     margin-bottom: 1rem;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--primary-color);
     cursor: pointer;
     transition: transform 0.2s ease;
 }
@@ -3158,7 +3128,7 @@ footer {
     font-weight: 700;
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .modal-event-item .event-details {
@@ -3168,40 +3138,40 @@ footer {
 }
 
 .modal-event-item .event-time {
-    color: #667eea;
+    color: var(--primary-color);
     font-weight: 600;
     font-size: 0.9rem;
 }
 
 .modal-event-item .event-venue {
-    color: #6b7280;
+    color: var(--color-offline);
     font-weight: 500;
     font-size: 0.9rem;
 }
 
 .modal-event-item .event-cover {
-    color: #059669;
+    color: var(--success-color);
     font-weight: 500;
     font-size: 0.9rem;
 }
 
 .no-modal-events {
     text-align: center;
-    color: #6b7280;
+    color: var(--color-offline);
     font-style: italic;
     margin: 2rem 0;
 }
 
 .modal-footer {
-    background: #f8f9ff;
+    background: var(--background-light);
     padding: 1rem 1.5rem;
     display: flex;
     justify-content: flex-end;
 }
 
 .switch-to-week {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--text-inverse);
     border: none;
     padding: 0.7rem 1.5rem;
     border-radius: 10px;
@@ -3276,8 +3246,8 @@ footer {
 
 /* Month View Improvements */
 .calendar-day-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     text-align: center;
     padding: 15px 8px;
     font-weight: 600;
@@ -3308,7 +3278,7 @@ footer {
 
 .more-events {
     font-size: 0.75rem;
-    color: #667eea;
+    color: var(--primary-color);
     font-weight: 600;
     text-align: center;
     padding: 6px;
@@ -3364,10 +3334,10 @@ footer {
 
 /* Enhanced Today Highlighting for Week View */
 .calendar-day.week-view.current {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    color: white !important;
-    border-color: #5a67d8 !important;
-    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4) !important;
+    background: var(--gradient-primary) !important;
+    color: var(--text-inverse) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 15px 40px var(--shadow-primary) !important;
     transform: scale(1.02);
 }
 
@@ -3541,7 +3511,7 @@ footer {
   .event-venue-mobile {
     display: block;
     font-size: 0.7rem;
-    color: #667eea;
+    color: var(--primary-color);
     font-weight: 500;
     margin-bottom: 0.1rem;
     word-wrap: normal;
