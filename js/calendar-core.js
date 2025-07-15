@@ -185,7 +185,6 @@ class CalendarCore {
                 name: calendarEvent.title,
                 day: this.getDayFromDate(calendarEvent.start),
                 time: this.getTimeRange(calendarEvent.start, calendarEvent.end),
-                cover: 'Check event details',
                 eventType: this.getEventType(calendarEvent.recurrence),
                 recurring: !!calendarEvent.recurrence,
                 recurrence: calendarEvent.recurrence,
@@ -205,7 +204,9 @@ class CalendarCore {
                 const additionalData = this.parseKeyValueDescription(calendarEvent.description);
                 if (additionalData) {
                     eventData.bar = additionalData.bar;
-                    eventData.cover = additionalData.cover || eventData.cover;
+                    if (additionalData.cover) {
+                        eventData.cover = additionalData.cover;
+                    }
                     eventData.tea = additionalData.tea || additionalData.description;
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;
