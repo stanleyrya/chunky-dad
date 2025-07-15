@@ -33,6 +33,7 @@
     --gradient-success: linear-gradient(45deg, var(--success-color), #44a08d);
     --gradient-warning: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
     --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
+    --gradient-success-alt: linear-gradient(45deg, #10b981, #059669);
     
     /* Shadow Colors */
     --shadow-light: rgba(0, 0, 0, 0.1);
@@ -880,8 +881,8 @@ header {
 }
 
 .calendar-day {
-    background: white;
-    border: 1px solid #e8f2ff;
+    background: var(--background-primary);
+    border: 1px solid var(--border-light);
     border-radius: 8px;
     padding: 0.75rem;
     min-height: 120px;
@@ -893,14 +894,14 @@ header {
 
 .calendar-day:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-    border-color: #667eea;
+    box-shadow: 0 8px 25px var(--shadow-medium);
+    border-color: var(--primary-color);
 }
 
 .calendar-day.current {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-color: #667eea;
+    background: var(--gradient-primary);
+    color: var(--white);
+    border-color: var(--primary-color);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
 }
 
@@ -911,7 +912,7 @@ header {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
     border-radius: 20px 20px 0 0;
 }
 
@@ -938,7 +939,7 @@ header {
     font-size: 0.9rem;
     font-weight: 600;
     margin: 0;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .calendar-day.current .day-header h3 {
@@ -948,16 +949,16 @@ header {
 .day-date {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .calendar-day.current .day-date {
-    color: white;
+    color: var(--white);
 }
 
 .day-indicator {
-    background: #ff6b6b;
-    color: white;
+    background: var(--secondary-color);
+    color: var(--white);
     padding: 0.2rem 0.5rem;
     border-radius: 8px;
     font-size: 0.7rem;
@@ -970,7 +971,7 @@ header {
 
 .calendar-day.other-month {
     opacity: 0.4;
-    background: #f8f9fa;
+    background: var(--background-lighter);
 }
 
 .calendar-day.other-month:hover {
@@ -999,8 +1000,8 @@ header {
 
 /* Unified event styling */
 .event-item {
-    background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
-    border: 1px solid #d0e1ff;
+    background: linear-gradient(135deg, var(--background-light) 0%, var(--background-secondary) 100%);
+    border: 1px solid var(--border-lighter);
     border-radius: 6px;
     padding: 0.5rem;
     margin-bottom: 0.25rem;
@@ -1018,8 +1019,8 @@ header {
 }
 
 .event-item:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     transform: translateY(-1px);
     box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
 }
@@ -1029,12 +1030,12 @@ header {
 .calendar-day.current .event-item {
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(102, 126, 234, 0.3);
-    color: #333;
+    color: var(--text-primary);
 }
 
 .calendar-day.current .event-item:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
 }
 
 .event-name {
@@ -1046,14 +1047,14 @@ header {
 
 .event-time {
     font-size: 0.75rem;
-    color: #667eea;
+    color: var(--primary-color);
     font-weight: 500;
     margin-bottom: 0.1rem;
 }
 
 .event-venue {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-secondary);
     font-weight: 500;
 }
 
@@ -1063,7 +1064,7 @@ header {
 }
 
 .no-events {
-    color: #999;
+    color: var(--text-muted);
     font-style: italic;
     text-align: center;
     padding: 0;
@@ -1159,7 +1160,7 @@ header {
 .routine-events,
 .monthly-events {
     padding: 30px 0;
-    background: #f8f9ff;
+    background: var(--background-light);
 }
 
 .weekly-events h2,
@@ -1168,7 +1169,7 @@ header {
     text-align: center;
     font-size: 2rem;
     margin-bottom: 2rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .events-list {
@@ -1178,10 +1179,10 @@ header {
 }
 
 .event-card.detailed {
-    background: white;
+    background: var(--background-primary);
     border-radius: 15px;
     padding: 2rem;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 20px var(--shadow-light);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     will-change: transform;
@@ -1189,11 +1190,11 @@ header {
 
 .event-card.detailed:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    box-shadow: 0 10px 30px var(--shadow-medium);
 }
 
 .event-card.detailed.highlight {
-    background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+    background: var(--gradient-warning);
     border: 2px solid #f97316;
     transform: scale(1.02);
 }
@@ -1208,7 +1209,7 @@ header {
 
 .event-card.detailed h3 {
     font-size: 1.5rem;
-    color: #333;
+    color: var(--text-primary);
     margin: 0;
     flex: 1;
 }
@@ -1226,8 +1227,8 @@ header {
 }
 
 .event-day {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-    color: white;
+    background: var(--gradient-secondary);
+    color: var(--white);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -1252,8 +1253,8 @@ header {
 }
 
 .recurring-badge {
-    background: linear-gradient(45deg, #10b981, #059669);
-    color: white;
+    background: var(--gradient-success-alt);
+    color: var(--white);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
     font-size: 0.8rem;
@@ -1268,13 +1269,13 @@ header {
 
 .label {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
     min-width: 60px;
     margin-right: 1rem;
 }
 
 .value {
-    color: #666;
+    color: var(--text-secondary);
     flex: 1;
 }
 
@@ -1285,8 +1286,8 @@ header {
 }
 
 .event-links a {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     text-decoration: none;
     padding: 0.3rem 0.8rem;
     border-radius: 20px;
@@ -1302,8 +1303,8 @@ header {
 /* Enhanced event link styling */
 .event-link {
     display: inline-block;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white !important;
+    background: var(--gradient-primary);
+    color: var(--white) !important;
     padding: 8px 16px;
     border-radius: 25px;
     text-decoration: none;
@@ -1350,8 +1351,8 @@ header {
 /* City CTA Section */
 .city-cta {
     padding: 30px 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--white);
     text-align: center;
 }
 
@@ -1369,14 +1370,14 @@ header {
 /* Contact Section */
 .contact {
     padding: 80px 0;
-    background: #f8f9ff;
+    background: var(--background-light);
 }
 
 .contact h2 {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 3rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .contact-content {
@@ -1396,10 +1397,10 @@ header {
     display: flex;
     align-items: center;
     gap: 1rem;
-    background: white;
+    background: var(--background-primary);
     padding: 1.5rem;
     border-radius: 10px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 3px 10px var(--shadow-light);
 }
 
 .contact-icon {
@@ -1409,25 +1410,25 @@ header {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     border-radius: 50%;
-    color: white;
+    color: var(--white);
 }
 
 .contact-item h3 {
-    color: #333;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
 .contact-item p {
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .contact-form {
-    background: white;
+    background: var(--background-primary);
     padding: 2rem;
     border-radius: 15px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 20px var(--shadow-light);
 }
 
 .contact-form input,
@@ -1447,12 +1448,12 @@ header {
 .contact-form textarea:focus,
 .contact-form select:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--primary-color);
 }
 
 .contact-form button {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-    color: white;
+    background: var(--gradient-secondary);
+    color: var(--white);
     border: none;
     padding: 15px 30px;
     width: 100%;
@@ -1502,7 +1503,7 @@ header {
 .events-map-section h2 {
     text-align: center;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-primary);
     font-size: 2.2rem;
     font-weight: 700;
 }
@@ -1510,7 +1511,7 @@ header {
 .events-map-section p {
     text-align: center;
     margin-bottom: 2rem;
-    color: #666;
+    color: var(--text-secondary);
     font-size: 1.1rem;
     max-width: 600px;
     margin-left: auto;
@@ -1522,9 +1523,9 @@ header {
     position: relative;
     border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
-    border: 4px solid white;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 15px 50px var(--shadow-heavy);
+    border: 4px solid var(--background-primary);
+    background: var(--gradient-primary);
     padding: 4px;
     box-sizing: border-box;
 }
@@ -1750,8 +1751,8 @@ header {
 
 /* Footer */
 footer {
-    background: #333;
-    color: white;
+    background: var(--black);
+    color: var(--white);
     padding: 2rem 0;
     text-align: center;
 }
@@ -1761,7 +1762,7 @@ footer {
 }
 
 .social-links a {
-    color: white;
+    color: var(--white);
     text-decoration: none;
     margin: 0 1rem;
     font-size: 1.5rem;
