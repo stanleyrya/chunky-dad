@@ -702,9 +702,9 @@
                 </div>
             </div>
 
-            <!-- Primary Colors -->
+            <!-- Primary Brand Colors -->
             <div class="control-section">
-                <h3>🎨 Primary Colors</h3>
+                <h3>🎨 Primary Brand Colors</h3>
                 <div class="color-control">
                     <label for="primary-color">Primary Color (--primary-color)</label>
                     <div class="color-input-group">
@@ -747,6 +747,108 @@
             </div>
 
             <!-- Text Colors -->
+            <div class="control-section">
+                <h3>📝 Text Colors</h3>
+                <div class="color-control">
+                    <label for="text-primary">Primary Text (--text-primary)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="text-primary" value="#333">
+                        <input type="text" class="color-input" id="text-primary-text" value="#333">
+                    </div>
+                </div>
+                
+                <div class="color-control">
+                    <label for="text-secondary">Secondary Text (--text-secondary)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="text-secondary" value="#666">
+                        <input type="text" class="color-input" id="text-secondary-text" value="#666">
+                    </div>
+                </div>
+                
+                <div class="color-control">
+                    <label for="text-muted">Muted Text (--text-muted)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="text-muted" value="#999">
+                        <input type="text" class="color-input" id="text-muted-text" value="#999">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Background Colors -->
+            <div class="control-section">
+                <h3>🎨 Background Colors</h3>
+                <div class="color-control">
+                    <label for="background-primary">Primary Background (--background-primary)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="background-primary" value="#ffffff">
+                        <input type="text" class="color-input" id="background-primary-text" value="#ffffff">
+                    </div>
+                </div>
+                
+                <div class="color-control">
+                    <label for="background-light">Light Background (--background-light)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="background-light" value="#f8f9ff">
+                        <input type="text" class="color-input" id="background-light-text" value="#f8f9ff">
+                    </div>
+                </div>
+                
+                <div class="color-control">
+                    <label for="background-lighter">Lighter Background (--background-lighter)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="background-lighter" value="#f8f9fa">
+                        <input type="text" class="color-input" id="background-lighter-text" value="#f8f9fa">
+                    </div>
+                </div>
+                
+                <div class="color-control">
+                    <label for="background-secondary">Secondary Background (--background-secondary)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="background-secondary" value="#e8f2ff">
+                        <input type="text" class="color-input" id="background-secondary-text" value="#e8f2ff">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Border Colors -->
+            <div class="control-section">
+                <h3>🔲 Border Colors</h3>
+                <div class="color-control">
+                    <label for="border-light">Light Border (--border-light)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="border-light" value="#e8f2ff">
+                        <input type="text" class="color-input" id="border-light-text" value="#e8f2ff">
+                    </div>
+                </div>
+                
+                <div class="color-control">
+                    <label for="border-lighter">Lighter Border (--border-lighter)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="border-lighter" value="#d0e1ff">
+                        <input type="text" class="color-input" id="border-lighter-text" value="#d0e1ff">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Colors -->
+            <div class="control-section">
+                <h3>🎯 Additional Colors</h3>
+                <div class="color-control">
+                    <label for="white">White (--white)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="white" value="#ffffff">
+                        <input type="text" class="color-input" id="white-text" value="#ffffff">
+                    </div>
+                </div>
+                
+                <div class="color-control">
+                    <label for="black">Black (--black)</label>
+                    <div class="color-input-group">
+                        <input type="color" class="color-picker" id="black" value="#333">
+                        <input type="text" class="color-input" id="black-text" value="#333">
+                    </div>
+                </div>
+            </div>
             <div class="control-section">
                 <h3>📝 Text Colors</h3>
                 <div class="color-control">
@@ -938,89 +1040,145 @@
                         primary: '#667eea',
                         secondary: '#ff6b6b',
                         accent: '#764ba2',
-                        'text-primary': '#333333',
-                        'text-secondary': '#666666',
-                        'background-light': '#f8f9ff',
-                        'border-light': '#e8f2ff',
                         success: '#4ecdc4',
-                        warning: '#ffd700'
+                        warning: '#ffd700',
+                        'text-primary': '#333',
+                        'text-secondary': '#666',
+                        'text-muted': '#999',
+                        'background-primary': '#ffffff',
+                        'background-light': '#f8f9ff',
+                        'background-lighter': '#f8f9fa',
+                        'background-secondary': '#e8f2ff',
+                        'border-light': '#e8f2ff',
+                        'border-lighter': '#d0e1ff',
+                        'white': '#ffffff',
+                        'black': '#333'
                     },
                     'bear-flag': {
                         primary: '#000000',
                         secondary: '#8B4513',
                         accent: '#FFD700',
+                        success: '#4ecdc4',
+                        warning: '#FFD700',
                         'text-primary': '#FFFFFF',
                         'text-secondary': '#CCCCCC',
+                        'text-muted': '#999999',
+                        'background-primary': '#000000',
                         'background-light': '#000000',
+                        'background-lighter': '#111111',
+                        'background-secondary': '#333333',
                         'border-light': '#333333',
-                        success: '#4ecdc4',
-                        warning: '#FFD700'
+                        'border-lighter': '#444444',
+                        'white': '#ffffff',
+                        'black': '#000000'
                     },
                     'dark-mode': {
                         primary: '#4ecdc4',
                         secondary: '#ff6b6b',
                         accent: '#45b7d1',
+                        success: '#4ecdc4',
+                        warning: '#ffd700',
                         'text-primary': '#ffffff',
                         'text-secondary': '#cccccc',
+                        'text-muted': '#999999',
+                        'background-primary': '#1a1a2e',
                         'background-light': '#1a1a2e',
+                        'background-lighter': '#16213e',
+                        'background-secondary': '#333344',
                         'border-light': '#333344',
-                        success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'border-lighter': '#444455',
+                        'white': '#ffffff',
+                        'black': '#1a1a2e'
                     },
                     neon: {
                         primary: '#ff00ff',
                         secondary: '#00ffff',
                         accent: '#ffff00',
+                        success: '#00ff00',
+                        warning: '#ffff00',
                         'text-primary': '#ffffff',
                         'text-secondary': '#cccccc',
+                        'text-muted': '#999999',
+                        'background-primary': '#000000',
                         'background-light': '#000000',
+                        'background-lighter': '#111111',
+                        'background-secondary': '#333333',
                         'border-light': '#333333',
-                        success: '#00ff00',
-                        warning: '#ffff00'
+                        'border-lighter': '#444444',
+                        'white': '#ffffff',
+                        'black': '#000000'
                     },
                     sunset: {
                         primary: '#ff6b35',
                         secondary: '#f7931e',
                         accent: '#ffd23f',
+                        success: '#4ecdc4',
+                        warning: '#ffd23f',
                         'text-primary': '#ffffff',
                         'text-secondary': '#eeeeee',
+                        'text-muted': '#cccccc',
+                        'background-primary': '#2c1810',
                         'background-light': '#2c1810',
+                        'background-lighter': '#3c2820',
+                        'background-secondary': '#5c3830',
                         'border-light': '#5c3830',
-                        success: '#4ecdc4',
-                        warning: '#ffd23f'
+                        'border-lighter': '#6c4830',
+                        'white': '#ffffff',
+                        'black': '#2c1810'
                     },
                     ocean: {
                         primary: '#006994',
                         secondary: '#00b4d8',
                         accent: '#90e0ef',
+                        success: '#4ecdc4',
+                        warning: '#ffd700',
                         'text-primary': '#ffffff',
                         'text-secondary': '#e0e0e0',
+                        'text-muted': '#cccccc',
+                        'background-primary': '#001d3d',
                         'background-light': '#001d3d',
+                        'background-lighter': '#002d4d',
+                        'background-secondary': '#003d5d',
                         'border-light': '#003d5d',
-                        success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'border-lighter': '#004d6d',
+                        'white': '#ffffff',
+                        'black': '#001d3d'
                     },
                     pride: {
                         primary: '#ff0018',
                         secondary: '#ffa52c',
                         accent: '#ffff41',
+                        success: '#4ecdc4',
+                        warning: '#ffff41',
                         'text-primary': '#ffffff',
                         'text-secondary': '#eeeeee',
+                        'text-muted': '#cccccc',
+                        'background-primary': '#000000',
                         'background-light': '#000000',
+                        'background-lighter': '#111111',
+                        'background-secondary': '#333333',
                         'border-light': '#333333',
-                        success: '#4ecdc4',
-                        warning: '#ffff41'
+                        'border-lighter': '#444444',
+                        'white': '#ffffff',
+                        'black': '#000000'
                     },
                     minimal: {
                         primary: '#333333',
                         secondary: '#666666',
                         accent: '#999999',
+                        success: '#4ecdc4',
+                        warning: '#ffd700',
                         'text-primary': '#000000',
                         'text-secondary': '#333333',
+                        'text-muted': '#666666',
+                        'background-primary': '#ffffff',
                         'background-light': '#ffffff',
+                        'background-lighter': '#f8f8f8',
+                        'background-secondary': '#f0f0f0',
                         'border-light': '#e0e0e0',
-                        success: '#4ecdc4',
-                        warning: '#ffd700'
+                        'border-lighter': '#d0d0d0',
+                        'white': '#ffffff',
+                        'black': '#000000'
                     }
                 };
                 
@@ -1147,264 +1305,44 @@
             }
 
             applyCustomColors() {
-                const colors = {
-                    primary: document.getElementById('primary-color-text').value,
-                    secondary: document.getElementById('secondary-color-text').value,
-                    accent: document.getElementById('accent-color-text').value,
-                    'text-primary': document.getElementById('text-primary-color-text').value,
-                    'text-secondary': document.getElementById('text-secondary-color-text').value,
-                    'background-light': document.getElementById('background-light-color-text').value,
-                    'border-light': document.getElementById('border-light-color-text').value,
-                    success: document.getElementById('success-color-text').value,
-                    warning: document.getElementById('warning-color-text').value
-                };
+                const colors = {};
+                const colorKeys = [
+                    'primary', 'secondary', 'accent', 'success', 'warning',
+                    'text-primary', 'text-secondary', 'text-muted',
+                    'background-primary', 'background-light', 'background-lighter', 'background-secondary',
+                    'border-light', 'border-lighter',
+                    'white', 'black'
+                ];
 
-                const css = `
-                    :root {
-                        --primary-color: ${colors.primary} !important;
-                        --secondary-color: ${colors.secondary} !important;
-                        --accent-color: ${colors.accent} !important;
-                        --text-primary: ${colors['text-primary']} !important;
-                        --text-secondary: ${colors['text-secondary']} !important;
-                        --background-light: ${colors['background-light']} !important;
-                        --border-light: ${colors['border-light']} !important;
-                        --success-color: ${colors.success} !important;
-                        --warning-color: ${colors.warning} !important;
+                colorKeys.forEach(key => {
+                    const textElement = document.getElementById(key + '-text');
+                    if (textElement) {
+                        colors[key] = textElement.value;
                     }
-                    
-                    body {
-                        background-color: ${colors['background-light']} !important;
-                        color: ${colors['text-primary']} !important;
-                    }
-                    
-                    header {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                    }
-                    
-                    .city-card, .event-card, .category-card {
-                        background-color: ${colors['background-light']} !important;
-                        color: ${colors['text-primary']} !important;
-                        border: 1px solid ${colors['border-light']} !important;
-                    }
-                    
-                    .city-card:hover, .event-card:hover, .category-card:hover {
-                        border-color: ${colors.primary} !important;
-                        box-shadow: 0 8px 25px ${colors.primary}20 !important;
-                    }
-                    
-                    .cta-button {
-                        background: linear-gradient(45deg, ${colors.primary}, ${colors.accent}) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .cta-button.secondary {
-                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.warning}) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .city-switcher-btn {
-                        background: linear-gradient(135deg, ${colors.primary}20 0%, ${colors.accent}20 100%) !important;
-                        border-color: ${colors.primary}40 !important;
-                    }
-                    
-                    .city-switcher-btn:hover {
-                        background: linear-gradient(135deg, ${colors.primary}30 0%, ${colors.accent}30 100%) !important;
-                        border-color: ${colors.primary}60 !important;
-                    }
-                    
-                    .city-dropdown {
-                        background: ${colors['background-light']} !important;
-                        border: 1px solid ${colors['border-light']} !important;
-                    }
-                    
-                    .city-option {
-                        color: ${colors['text-primary']} !important;
-                    }
-                    
-                    .city-option:hover {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .calendar-day {
-                        background: ${colors['background-light']} !important;
-                        border: 1px solid ${colors['border-light']} !important;
-                        color: ${colors['text-primary']} !important;
-                    }
-                    
-                    .calendar-day:hover {
-                        border-color: ${colors.primary} !important;
-                        box-shadow: 0 8px 25px ${colors.primary}15 !important;
-                    }
-                    
-                    .calendar-day.current {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                        border-color: ${colors.primary} !important;
-                    }
-                    
-                    .event-item {
-                        background: ${colors['background-light']} !important;
-                        border-left: 3px solid ${colors.primary} !important;
-                        color: ${colors['text-primary']} !important;
-                    }
-                    
-                    .event-item:hover {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .event-time {
-                        color: ${colors.primary} !important;
-                    }
-                    
-                    .event-venue {
-                        color: ${colors['text-secondary']} !important;
-                    }
-                    
-                    .event-item:hover .event-time,
-                    .event-item:hover .event-venue {
-                        color: ${colors['background-light']}cc !important;
-                    }
-                    
-                    .calendar-day.current .event-item {
-                        background: ${colors['background-light']}dd !important;
-                        color: ${colors['text-primary']} !important;
-                    }
-                    
-                    .calendar-day.current .event-item:hover {
-                        background: ${colors['background-light']} !important;
-                        color: ${colors['text-primary']} !important;
-                    }
-                    
-                    .event-day {
-                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.warning}) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .recurring-badge {
-                        background: linear-gradient(45deg, ${colors.success}, ${colors.success}) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .event-link {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .event-link:hover {
-                        background: linear-gradient(135deg, ${colors.accent} 0%, ${colors.primary} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .view-btn.active {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .nav-btn {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .today-btn {
-                        background: linear-gradient(135deg, ${colors.secondary} 0%, ${colors.warning} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .highlight {
-                        background: ${colors['background-light']}dd !important;
-                        color: ${colors.primary} !important;
-                    }
-                    
-                    .no-events {
-                        color: ${colors['text-secondary']} !important;
-                    }
-                    
-                    .calendar-day.current .no-events {
-                        color: ${colors['background-light']}aa !important;
-                    }
-                    
-                    .error-message {
-                        background: ${colors.secondary}20 !important;
-                        border: 2px solid ${colors.secondary} !important;
-                        color: ${colors.secondary} !important;
-                    }
-                    
-                    .contact-form input:focus,
-                    .contact-form textarea:focus,
-                    .contact-form select:focus {
-                        border-color: ${colors.primary} !important;
-                    }
-                    
-                    .contact-form button {
-                        background: linear-gradient(45deg, ${colors.secondary}, ${colors.warning}) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .modal-header {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .modal-event-item {
-                        background: ${colors['background-light']}dd !important;
-                        border-left: 4px solid ${colors.primary} !important;
-                        color: ${colors['text-primary']} !important;
-                    }
-                    
-                    .modal-event-item:hover {
-                        background: ${colors['background-light']}ee !important;
-                        border-left-color: ${colors.accent} !important;
-                    }
-                    
-                    .switch-to-week {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .map-popup h4 {
-                        color: ${colors.primary} !important;
-                    }
-                    
-                    .map-link {
-                        color: ${colors.primary} !important;
-                    }
-                    
-                    .map-link:hover {
-                        color: ${colors.accent} !important;
-                    }
-                    
-                    .marker-pin::before {
-                        background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
-                    }
-                    
-                    .more-events {
-                        color: ${colors.primary} !important;
-                        background: ${colors.primary}10 !important;
-                        border: 1px solid ${colors.primary}20 !important;
-                    }
-                    
-                    .event-dot {
-                        background: ${colors['success-light']} !important;
-                    }
-                    
-                    .today-marker {
-                        background: ${colors.secondary} !important;
-                        color: ${colors['background-light']} !important;
-                    }
-                    
-                    .social-links a:hover {
-                        color: ${colors.primary} !important;
-                    }
-                    
-                    footer {
-                        background: ${colors['background-dark']} !important;
-                        color: ${colors['text-primary']} !important;
-                    }
+                });
+
+                // Create CSS variables string
+                let cssVariables = ':root {';
+                Object.keys(colors).forEach(key => {
+                    const cssVarName = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    cssVariables += `\n    --${cssVarName}: ${colors[key]} !important;`;
+                });
+                cssVariables += '\n}';
+
+                // Add gradient variables
+                cssVariables += `
+                    --gradient-primary: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%) !important;
+                    --gradient-secondary: linear-gradient(45deg, ${colors.secondary}, #ee5a24) !important;
+                    --gradient-success: linear-gradient(45deg, ${colors.success}, #44a08d) !important;
+                    --gradient-success-alt: linear-gradient(45deg, #10b981, #059669) !important;
+                    --gradient-warning: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%) !important;
+                    --gradient-light: linear-gradient(135deg, ${colors['background-primary']} 0%, ${colors['background-light']} 100%) !important;
+                    --shadow-light: rgba(0, 0, 0, 0.1) !important;
+                    --shadow-medium: rgba(0, 0, 0, 0.15) !important;
+                    --shadow-heavy: rgba(0, 0, 0, 0.2) !important;
                 `;
 
-                this.injectCSS(css, 'custom-colors');
+                this.injectCSS(cssVariables, 'custom-colors');
                 this.updateShareURL();
                 this.updateStatusBar();
             }
@@ -1634,13 +1572,16 @@
 
             updateShareURL() {
                 const colorKeys = [
-                    'primary', 'secondary', 'accent', 'text-primary', 'text-secondary',
-                    'background-light', 'border-light', 'success', 'warning'
+                    'primary', 'secondary', 'accent', 'success', 'warning',
+                    'text-primary', 'text-secondary', 'text-muted',
+                    'background-primary', 'background-light', 'background-lighter', 'background-secondary',
+                    'border-light', 'border-lighter',
+                    'white', 'black'
                 ];
 
                 const colors = {};
                 colorKeys.forEach(key => {
-                    const textElement = document.getElementById(key + '-color-text');
+                    const textElement = document.getElementById(key + '-text');
                     if (textElement) {
                         colors[key] = textElement.value;
                     }
@@ -1672,15 +1613,18 @@
 
                 // Load custom colors from URL
                 const colorKeys = [
-                    'primary', 'secondary', 'accent', 'text-primary', 'text-secondary',
-                    'background-light', 'border-light', 'success', 'warning'
+                    'primary', 'secondary', 'accent', 'success', 'warning',
+                    'text-primary', 'text-secondary', 'text-muted',
+                    'background-primary', 'background-light', 'background-lighter', 'background-secondary',
+                    'border-light', 'border-lighter',
+                    'white', 'black'
                 ];
                 
                 colorKeys.forEach(key => {
                     const color = params.get(key);
                     if (color) {
-                        const picker = document.getElementById(key + '-color');
-                        const text = document.getElementById(key + '-color-text');
+                        const picker = document.getElementById(key);
+                        const text = document.getElementById(key + '-text');
                         if (picker && text) {
                             picker.value = color;
                             text.value = color;
@@ -1696,7 +1640,7 @@
             updateStatusBar() {
                 document.getElementById('current-theme').textContent = this.currentTheme;
                 document.getElementById('current-view').textContent = this.currentView;
-                document.getElementById('color-count').textContent = '18';
+                document.getElementById('color-count').textContent = '16';
             }
 
             showNotification(message) {
