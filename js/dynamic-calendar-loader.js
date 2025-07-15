@@ -375,9 +375,10 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Format day/time more concisely (e.g., "Thu 5pm-9pm")
         const formatDayTime = (day, time) => {
-            // Convert day to 3-letter format if it's longer
-            const shortDay = day.length > 3 ? day.substring(0, 3) : day;
-            return `${shortDay} ${time}`;
+            // For desktop, show full day name; for mobile, show abbreviated
+            const isDesktop = window.innerWidth > 768;
+            const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
+            return `${displayDay} ${time}`;
         };
 
         return `
@@ -766,7 +767,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
             // Set up default map center and zoom (lower zoom to show more area)
             let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
-            let mapZoom = cityConfig.mapZoom || 11; // Increased from 10 to 11 for better detail on desktop
+            let mapZoom = cityConfig.mapZoom || 10; // Reduced from 11 to 10 for better overview on desktop
 
             const map = L.map('events-map', {
                 scrollWheelZoom: false,
@@ -853,7 +854,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 <h4>${event.name}</h4>
                                 <p><strong>📍 ${event.bar || 'Location'}</strong></p>
                                 <p>📅 ${event.day} ${event.time}</p>
-                                <p>💰 ${event.cover}</p>
+                                ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<p>💰 ${event.cover}</p>` : ''}
                                 ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
                             </div>
                         `);
@@ -865,9 +866,10 @@ class DynamicCalendarLoader extends CalendarCore {
             // Fit map to show all markers using Leaflet's built-in bounds calculation
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
+                const isMobile = window.innerWidth <= 768;
                 map.fitBounds(group.getBounds(), {
                     padding: [20, 20],
-                    maxZoom: 12 // Reduced from 13 to 12 for better overview when markers overlap
+                    maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
                 });
             }
 
@@ -1164,7 +1166,11 @@ function showOnMap(lat, lng, eventName, barName) {
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
         const group = new L.featureGroup(window.eventsMapMarkers);
-        window.eventsMap.fitBounds(group.getBounds().pad(0.1));
+        const isMobile = window.innerWidth <= 768;
+        window.eventsMap.fitBounds(group.getBounds(), {
+            padding: [20, 20],
+            maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
+        });
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     }
 }
