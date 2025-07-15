@@ -317,108 +317,13 @@ class DynamicCalendarLoader extends CalendarCore {
         });
     }
 
-    // Helper function to check if event is in the past
-    isEventInPast(event) {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        if (!event.startDate) return false;
-        
-        // For recurring events, check if the event is happening today or in the future
-        if (event.recurring) {
-            // Check if event occurs today or in the future
-            const nextOccurrence = this.getNextEventOccurrence(event, today);
-            const isPast = !nextOccurrence || nextOccurrence < today;
-            
-            logger.debug('CALENDAR', `Checking if recurring event is past: ${event.name}`, {
-                nextOccurrence: nextOccurrence ? nextOccurrence.toISOString().split('T')[0] : 'none',
-                isPast: isPast,
-                today: today.toISOString().split('T')[0]
-            });
-            
-            return isPast;
-        }
-        
-        // For one-time events, check if the event date is in the past
-        const eventDate = new Date(event.startDate);
-        const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-        const isPast = eventDateOnly < today;
-        
-        logger.debug('CALENDAR', `Checking if one-time event is past: ${event.name}`, {
-            eventDate: eventDateOnly.toISOString().split('T')[0],
-            isPast: isPast,
-            today: today.toISOString().split('T')[0]
-        });
-        
-        return isPast;
-    }
 
-    // Helper function to get next occurrence of a recurring event
-    getNextEventOccurrence(event, fromDate) {
-        if (!event.recurring || !event.startDate) return null;
-        
-        const startDate = new Date(event.startDate);
-        const checkDate = new Date(fromDate);
-        
-        // Look ahead up to 1 year for next occurrence
-        const maxDate = new Date(checkDate);
-        maxDate.setFullYear(maxDate.getFullYear() + 1);
-        
-        while (checkDate <= maxDate) {
-            if (this.isEventOccurringOnDate(event, checkDate)) {
-                return new Date(checkDate);
-            }
-            checkDate.setDate(checkDate.getDate() + 1);
-        }
-        
-        return null;
-    }
 
-    // Get future events for the events list, filtered and sorted by date
-    getFutureEventsForList(events) {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        logger.debug('CALENDAR', `Filtering and sorting ${events.length} events for events list`);
-        
-        // Filter to only future events and add sortable dates
-        const futureEvents = events.map(event => {
-            let nextOccurrence = null;
-            
-            if (event.recurring) {
-                // For recurring events, find the next occurrence
-                nextOccurrence = this.getNextEventOccurrence(event, today);
-                if (!nextOccurrence) return null; // No future occurrences
-            } else {
-                // For one-time events, check if it's in the future
-                if (!event.startDate) return null;
-                const eventDate = new Date(event.startDate);
-                const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-                
-                if (eventDateOnly < today) return null; // Past event
-                nextOccurrence = eventDateOnly;
-            }
-            
-            return {
-                ...event,
-                nextOccurrence: nextOccurrence
-            };
-        }).filter(event => event !== null);
-        
-        // Sort by next occurrence date
-        futureEvents.sort((a, b) => {
-            return a.nextOccurrence - b.nextOccurrence;
-        });
-        
-        logger.debug('CALENDAR', `Filtered to ${futureEvents.length} future events`, {
-            originalCount: events.length,
-            filteredCount: futureEvents.length
-        });
-        
-        return futureEvents;
-    }
 
-    // Generate event card (enhanced with past event detection)
+
+
+
+    // Generate event card
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => {
             // Add appropriate emoji based on link type
@@ -475,12 +380,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return `${shortDay} ${time}`;
         };
 
-        // Check if event is in the past and add appropriate class
-        const isPastEvent = this.isEventInPast(event);
-        const pastEventClass = isPastEvent ? ' past-event' : '';
-
         return `
-            <div class="event-card detailed${pastEventClass}" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
+            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
                     <h3>${event.name}</h3>
                     <div class="event-meta">
@@ -713,12 +614,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
-                    // Check if event is in the past and add appropriate class
-                    const isPastEvent = this.isEventInPast(event);
-                    const pastEventClass = isPastEvent ? ' past-event' : '';
-                    
                     return `
-                        <div class="event-item${pastEventClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
                             <div class="event-time">${mobileTime}</div>
@@ -822,12 +719,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
-                    // Check if event is in the past and add appropriate class
-                    const isPastEvent = this.isEventInPast(event);
-                    const pastEventClass = isPastEvent ? ' past-event' : '';
-                    
                     return `
-                        <div class="event-item${pastEventClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             <div class="event-name">${event.name}</div>
                             <div class="event-name-mobile">${shortName}</div>
                             <div class="event-time">${mobileTime}</div>
@@ -1054,9 +947,7 @@ class DynamicCalendarLoader extends CalendarCore {
         if (eventsList && eventsSection) {
             eventsSection.style.display = 'block';
             if (filteredEvents?.length > 0) {
-                // Filter out past events and sort by date looking forward
-                const futureEvents = this.getFutureEventsForList(filteredEvents);
-                eventsList.innerHTML = futureEvents.map(event => this.generateEventCard(event)).join('');
+                eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
             } else {
                 eventsList.innerHTML = '';
             }

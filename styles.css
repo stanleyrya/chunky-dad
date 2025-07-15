@@ -994,36 +994,7 @@ header {
     box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
 }
 
-/* Past event styling */
-.event-item.past-event {
-    background: rgba(128, 128, 128, 0.1);
-    border: 1px solid rgba(128, 128, 128, 0.2);
-    color: #888;
-    opacity: 0.6;
-}
 
-.event-item.past-event:hover {
-    background: rgba(128, 128, 128, 0.2);
-    border-color: rgba(128, 128, 128, 0.3);
-    color: #666;
-    transform: none;
-    box-shadow: none;
-}
-
-.event-card.past-event {
-    background: rgba(128, 128, 128, 0.1);
-    border: 1px solid rgba(128, 128, 128, 0.2);
-    color: #888;
-    opacity: 0.6;
-}
-
-.event-card.past-event:hover {
-    background: rgba(128, 128, 128, 0.2);
-    border-color: rgba(128, 128, 128, 0.3);
-    color: #666;
-    transform: none;
-    box-shadow: none;
-}
 
 .calendar-day.current .event-item {
     background: rgba(255, 255, 255, 0.9);
@@ -1264,7 +1235,6 @@ header {
 .event-links {
     margin-top: 1rem;
     display: flex;
-    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
