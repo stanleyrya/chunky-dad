@@ -67,7 +67,6 @@ header {
     z-index: 9998;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: visible;
-    height: 80px;
 }
 
 /* City Switcher */
@@ -993,7 +992,7 @@ header {
 /* Mobile and tablet specific padding for event items */
 @media (max-width: 1024px) {
     .event-item {
-        padding: 0.1rem;
+        padding: 0.2rem;
     }
 }
 
@@ -2553,6 +2552,10 @@ footer {
         padding: 0.4rem 0.6rem;
         font-size: 0.7rem;
         flex-shrink: 0;
+    }
+    
+    .event-item {
+        padding: 0.2rem;
     }
 }
 
