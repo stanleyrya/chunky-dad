@@ -1115,7 +1115,6 @@ header {
     }
     
     .event-item {
-        padding: 0.4rem;
         font-size: 0.75rem;
         margin-bottom: 0.2rem;
     }
@@ -1159,7 +1158,6 @@ header {
     }
     
     .event-item {
-        padding: 0.3rem;
         font-size: 0.7rem;
         margin-bottom: 0.15rem;
     }
@@ -2580,25 +2578,14 @@ footer {
     }
 }
 
-/* Extra aggressive spacing reduction for iPhone and very small screens */
-@media (max-width: 480px) {
-    .cities-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .events-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .business-categories {
-        grid-template-columns: 1fr;
-    }
-    
+/* Calendar controls for medium-small screens */
+@media (max-width: 550px) {
     .calendar-controls {
         flex-direction: row;
         gap: 0.25rem;
         width: 100%;
         flex-wrap: wrap;
+        justify-content: center;
     }
     
     .view-toggle {
@@ -2639,6 +2626,21 @@ footer {
         padding: 0.4rem 0.6rem;
         font-size: 0.7rem;
         flex-shrink: 0;
+    }
+}
+
+/* Extra aggressive spacing reduction for iPhone and very small screens */
+@media (max-width: 480px) {
+    .cities-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .business-categories {
+        grid-template-columns: 1fr;
     }
     
     .event-item {
