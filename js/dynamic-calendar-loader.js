@@ -167,6 +167,11 @@ class DynamicCalendarLoader extends CalendarCore {
             `rgba(13, 110, 253, ${progress * 0.1})`;  // Blue tint for left swipe
         calendarGrid.style.backgroundColor = backgroundColor;
         
+        // Add subtle shadow effect for depth
+        const shadowBlur = Math.min(progress * 20, 10);
+        const shadowOffset = Math.min(progress * 10, 5);
+        calendarGrid.style.boxShadow = `0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${progress * 0.3})`;
+        
         // Add visual indicator for swipe direction
         this.updateSwipeDirectionIndicator(deltaX, progress);
     }
@@ -214,11 +219,12 @@ class DynamicCalendarLoader extends CalendarCore {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) return;
         
-        // Reset transform, opacity, background, scale, and rotation with smooth transition
-        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out';
+        // Reset transform, opacity, background, scale, rotation, and shadow with smooth transition
+        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out';
         calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
         calendarGrid.style.opacity = '1';
         calendarGrid.style.backgroundColor = '';
+        calendarGrid.style.boxShadow = '';
         
         // Remove transition after animation completes
         setTimeout(() => {
