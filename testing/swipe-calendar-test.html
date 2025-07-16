@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swipe Calendar Test - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            background: #f5f5f5;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .test-header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .test-header h1 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .test-instructions {
+            background: white;
+            margin: 1rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .test-instructions h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+        .test-instructions ul {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .test-instructions li {
+            margin-bottom: 0.5rem;
+        }
+        .test-instructions .highlight {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <a href="index.html" class="back-link">← Back to Tests</a>
+        <h1>📱 Swipe Calendar Test</h1>
+        <p>Test swipe navigation for week/month views</p>
+    </div>
+
+    <div class="test-instructions">
+        <h3>How to Test Swipe Functionality:</h3>
+        <ul>
+            <li><span class="highlight">Mobile/Tablet:</span> Swipe left/right on the calendar grid to navigate between weeks/months</li>
+            <li><span class="highlight">Desktop:</span> Use left/right arrow keys to navigate</li>
+            <li><span class="highlight">Visual Feedback:</span> Watch for swipe animations and the hint indicator on mobile</li>
+            <li><span class="highlight">Logging:</span> Open browser console (F12) to see detailed swipe detection logs</li>
+        </ul>
+    </div>
+
+    <!-- Test the actual calendar implementation -->
+    <main class="city-page">
+        <section class="weekly-calendar">
+            <div class="container">
+                <div class="calendar-header">
+                    <h2 id="calendar-title">Swipe Test Calendar</h2>
+                    <div class="calendar-controls">
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="week">📅 Week</button>
+                            <button class="view-btn" data-view="month">📊 Month</button>
+                        </div>
+                        <div class="date-navigation">
+                            <button class="nav-btn" id="prev-period">←</button>
+                            <span class="date-range" id="date-range"></span>
+                            <button class="nav-btn" id="next-period">→</button>
+                        </div>
+                        <button class="today-btn" id="today-btn">Today</button>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    <div class="loading-message">📅 Loading test calendar...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/city-config.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+    
+    <script>
+        // Initialize test calendar with sample data
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create a test instance
+            const testCalendar = new DynamicCalendarLoader();
+            
+            // Override the loadCalendarData method to return test data
+            testCalendar.loadCalendarData = async function(cityKey) {
+                logger.info('TEST', 'Loading test calendar data');
+                
+                // Create sample events for testing
+                const testEvents = [
+                    {
+                        name: 'Test Event 1',
+                        bar: 'Test Bar',
+                        time: '8:00 PM',
+                        date: new Date().toISOString().split('T')[0],
+                        slug: 'test-event-1'
+                    },
+                    {
+                        name: 'Test Event 2',
+                        bar: 'Another Bar',
+                        time: '10:00 PM',
+                        date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
+                        slug: 'test-event-2'
+                    }
+                ];
+                
+                return {
+                    cityConfig: {
+                        name: 'Test City',
+                        key: 'test-city',
+                        calendarId: 'test-calendar'
+                    },
+                    events: testEvents
+                };
+            };
+            
+            // Initialize the test calendar
+            testCalendar.init();
+            
+            logger.info('TEST', 'Swipe calendar test initialized');
+        });
+    </script>
+</body>
+</html>

@@ -9,7 +9,103 @@ class DynamicCalendarLoader extends CalendarCore {
         this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
         
+        // Swipe functionality
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchEndX = 0;
+        this.touchEndY = 0;
+        this.minSwipeDistance = 50; // Minimum distance for a swipe
+        this.maxSwipeTime = 300; // Maximum time for a swipe (ms)
+        this.touchStartTime = 0;
+        
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
+    }
+
+    // Swipe detection methods
+    setupSwipeHandlers() {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) {
+            logger.warn('CALENDAR', 'Calendar grid not found for swipe setup');
+            return;
+        }
+
+        // Touch start
+        calendarGrid.addEventListener('touchstart', (e) => {
+            this.touchStartX = e.touches[0].clientX;
+            this.touchStartY = e.touches[0].clientY;
+            this.touchStartTime = Date.now();
+            
+            logger.debug('CALENDAR', 'Touch start detected', {
+                x: this.touchStartX,
+                y: this.touchStartY
+            });
+        }, { passive: true });
+
+        // Touch end
+        calendarGrid.addEventListener('touchend', (e) => {
+            this.touchEndX = e.changedTouches[0].clientX;
+            this.touchEndY = e.changedTouches[0].clientY;
+            const touchEndTime = Date.now();
+            
+            logger.debug('CALENDAR', 'Touch end detected', {
+                x: this.touchEndX,
+                y: this.touchEndY,
+                duration: touchEndTime - this.touchStartTime
+            });
+            
+            this.handleSwipe(touchEndTime - this.touchStartTime);
+        }, { passive: true });
+
+        // Prevent default touch behavior to avoid conflicts
+        calendarGrid.addEventListener('touchmove', (e) => {
+            // Allow scrolling but prevent default to avoid conflicts
+        }, { passive: true });
+
+        logger.componentLoad('CALENDAR', 'Swipe handlers setup complete');
+    }
+
+    handleSwipe(duration) {
+        const deltaX = this.touchEndX - this.touchStartX;
+        const deltaY = this.touchEndY - this.touchStartY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Check if it's a valid swipe
+        if (duration > this.maxSwipeTime || distance < this.minSwipeDistance) {
+            logger.debug('CALENDAR', 'Swipe invalid - too slow or too short', {
+                duration,
+                distance,
+                maxTime: this.maxSwipeTime,
+                minDistance: this.minSwipeDistance
+            });
+            return;
+        }
+        
+        // Check if it's more horizontal than vertical (swipe vs scroll)
+        if (Math.abs(deltaX) < Math.abs(deltaY)) {
+            logger.debug('CALENDAR', 'Swipe ignored - more vertical than horizontal');
+            return;
+        }
+        
+        // Hide swipe hint after first successful swipe
+        this.hideSwipeHint();
+        
+        // Determine swipe direction
+        if (deltaX > 0) {
+            // Swipe right - go to previous period
+            logger.userInteraction('CALENDAR', 'Swipe right detected - navigating to previous period');
+            this.navigatePeriod('prev');
+        } else {
+            // Swipe left - go to next period
+            logger.userInteraction('CALENDAR', 'Swipe left detected - navigating to next period');
+            this.navigatePeriod('next');
+        }
+    }
+
+    hideSwipeHint() {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.style.setProperty('--swipe-hint-opacity', '0');
+        }
     }
 
     // Get city from URL parameters
@@ -203,6 +299,18 @@ class DynamicCalendarLoader extends CalendarCore {
 
     navigatePeriod(direction) {
         const delta = direction === 'next' ? 1 : -1;
+        
+        // Add visual feedback for swipe navigation
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            const animationClass = direction === 'next' ? 'swipe-left' : 'swipe-right';
+            calendarGrid.classList.add(animationClass);
+            
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                calendarGrid.classList.remove(animationClass);
+            }, 300);
+        }
         
         if (this.currentView === 'week') {
             this.currentDate.setDate(this.currentDate.getDate() + (delta * 7));
@@ -1017,6 +1125,12 @@ class DynamicCalendarLoader extends CalendarCore {
             });
         }
         
+        // Setup swipe handlers for mobile navigation
+        this.setupSwipeHandlers();
+        
+        // Setup keyboard navigation
+        this.setupKeyboardHandlers();
+        
         logger.componentLoad('CALENDAR', 'Calendar controls setup complete', {
             hasNavigation: !!(prevBtn && nextBtn && todayBtn),
             viewButtons: document.querySelectorAll('.view-btn').length
@@ -1024,6 +1138,36 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Initialize date range display
         this.updateCalendarDisplay();
+    }
+
+    setupKeyboardHandlers() {
+        document.addEventListener('keydown', (e) => {
+            // Only handle keyboard navigation when calendar is focused or visible
+            const calendarSection = document.querySelector('.weekly-calendar');
+            if (!calendarSection || calendarSection.classList.contains('content-hidden')) {
+                return;
+            }
+            
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    logger.userInteraction('CALENDAR', 'Left arrow key pressed - navigating to previous period');
+                    this.navigatePeriod('prev');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    logger.userInteraction('CALENDAR', 'Right arrow key pressed - navigating to next period');
+                    this.navigatePeriod('next');
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    logger.userInteraction('CALENDAR', 'Home key pressed - going to today');
+                    this.goToToday();
+                    break;
+            }
+        });
+        
+        logger.componentLoad('CALENDAR', 'Keyboard handlers setup complete');
     }
 
 
