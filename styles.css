@@ -39,12 +39,12 @@
     
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    --gradient-secondary: linear-gradient(45deg, var(--secondary-color), #ee5a24);
-    --gradient-success: linear-gradient(45deg, var(--success-color), #44a08d);
-    --gradient-warning: linear-gradient(135deg, var(--background-primary) 0%, #fed7aa 100%);
+    --gradient-secondary: linear-gradient(45deg, var(--secondary-color), var(--accent-color) 100%);
+    --gradient-success: linear-gradient(45deg, var(--success-color), var(--primary-color) 100%);
+    --gradient-warning: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
     --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
-    --gradient-success-alt: linear-gradient(45deg, var(--success-color), #059669);
-    --gradient-error: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    --gradient-success-alt: linear-gradient(45deg, var(--success-color), var(--primary-color) 100%);
+    --gradient-error: linear-gradient(135deg, var(--background-light) 0%, var(--background-light) 100%);
     
     /* Shadows */
     --shadow-light: rgba(0, 0, 0, 0.1);
@@ -2971,12 +2971,12 @@ footer {
 
 .calendar-day.calendar-overview.has-events {
     border-color: var(--color-online);
-    background: linear-gradient(135deg, var(--background-primary) 0%, #f0fdf4 100%);
+            background: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
 }
 
 .calendar-day.calendar-overview.has-events:hover {
     border-color: var(--success-color);
-    background: linear-gradient(135deg, var(--background-primary) 0%, #ecfdf5 100%);
+            background: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
 }
 
 .day-number {
