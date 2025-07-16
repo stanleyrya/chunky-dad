@@ -342,7 +342,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }).join(' ') : '';
 
         const teaHtml = event.tea ? `
-            <div class="detail-row tea">
+            <div class="detail-row">
                 <span class="label">Tea:</span>
                 <span class="value">${event.tea}</span>
             </div>

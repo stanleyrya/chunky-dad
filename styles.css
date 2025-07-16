@@ -37,13 +37,19 @@
     --color-busy: #f59e0b;
     --color-away: #f97316;
     
+    /* Additional Color Variables for Gradients */
+    --color-danger: #ff6b6b;
+    --color-danger-dark: #ee5a24;
+    --color-success-light: #10b981;
+    --color-success-dark: #059669;
+    
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    --gradient-secondary: linear-gradient(45deg, rgb(255, 107, 107), rgb(238, 90, 36));
+    --gradient-secondary: linear-gradient(45deg, var(--color-danger), var(--color-danger-dark));
     --gradient-success: linear-gradient(45deg, var(--success-color), var(--primary-color) 100%);
     --gradient-warning: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
     --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
-    --gradient-success-alt: linear-gradient(45deg, rgb(16, 185, 129), rgb(5, 150, 105));
+    --gradient-success-alt: linear-gradient(45deg, var(--color-success-light), var(--color-success-dark));
     --gradient-error: linear-gradient(135deg, var(--background-light) 0%, var(--background-light) 100%);
     
     /* Shadows */
@@ -1279,18 +1285,22 @@ header {
 .detail-row {
     display: flex;
     margin-bottom: 0.5rem;
+    align-items: flex-start;
 }
 
 .label {
     font-weight: 600;
     color: var(--text-primary);
-    min-width: 60px;
+    min-width: 80px;
     margin-right: 1rem;
+    flex-shrink: 0;
 }
 
 .value {
     color: var(--text-secondary);
     flex: 1;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .event-links {
