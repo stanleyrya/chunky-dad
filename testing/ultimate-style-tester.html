@@ -428,7 +428,8 @@
                 <h3>⚡ Actions</h3>
                 <button class="action-btn" onclick="styleTester.applyCustomColors()">Apply Changes</button>
                 <button class="action-btn secondary" onclick="styleTester.resetColors()">Reset to Default</button>
-                <button class="action-btn" onclick="styleTester.shuffleColors()">🎲 Shuffle Colors</button>
+                <button class="action-btn" onclick="styleTester.shuffleColors('smart')">🎲 Smart Shuffle</button>
+                <button class="action-btn" onclick="styleTester.shuffleColors('random')">🎲 Random Shuffle</button>
                 <button class="action-btn secondary" onclick="styleTester.randomTheme()">🎯 Random Theme</button>
                 <button class="action-btn" onclick="styleTester.loadPage('../index.html')">Load Homepage</button>
                 <button class="action-btn secondary" onclick="styleTester.loadPage('../city.html?city=los-angeles')">Load LA City</button>
@@ -741,7 +742,7 @@
                 this.showNotification('Colors reset to default!');
             }
 
-            shuffleColors() {
+            shuffleColors(mode = 'smart') {
                 // Get all available colors from all themes
                 const allColors = [];
                 Object.values(this.themes).forEach(theme => {
@@ -754,6 +755,24 @@
 
                 // Shuffle the colors array
                 const shuffledColors = [...allColors].sort(() => Math.random() - 0.5);
+
+                if (mode === 'random') {
+                    // True random shuffle - just assign colors in order
+                    const colorKeys = ['primary', 'secondary', 'accent', 'background-primary', 'background-light', 'text-primary', 'text-secondary'];
+                    colorKeys.forEach((key, index) => {
+                        const color = shuffledColors[index % shuffledColors.length];
+                        const picker = document.getElementById(key);
+                        const text = document.getElementById(key + '-text');
+                        if (picker && text) {
+                            picker.value = color;
+                            text.value = color;
+                        }
+                    });
+                    
+                    this.applyCustomColors();
+                    this.showNotification('Colors shuffled randomly! 🎲');
+                    return;
+                }
 
                 // Smart color assignment based on color type
                 const backgrounds = shuffledColors.filter(color => {
