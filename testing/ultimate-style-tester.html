@@ -357,6 +357,9 @@
                     <button class="theme-btn" data-theme="neon" onclick="styleTester.applyTheme('neon')">Neon</button>
                     <button class="theme-btn" data-theme="sunset" onclick="styleTester.applyTheme('sunset')">Sunset</button>
                     <button class="theme-btn" data-theme="ocean" onclick="styleTester.applyTheme('ocean')">Ocean</button>
+                    <button class="theme-btn" data-theme="sage" onclick="styleTester.applyTheme('sage')">Sage</button>
+                    <button class="theme-btn" data-theme="taupe" onclick="styleTester.applyTheme('taupe')">Taupe</button>
+                    <button class="theme-btn" data-theme="orange" onclick="styleTester.applyTheme('orange')">Orange</button>
                 </div>
             </div>
 
@@ -425,6 +428,8 @@
                 <h3>⚡ Actions</h3>
                 <button class="action-btn" onclick="styleTester.applyCustomColors()">Apply Changes</button>
                 <button class="action-btn secondary" onclick="styleTester.resetColors()">Reset to Default</button>
+                <button class="action-btn" onclick="styleTester.shuffleColors()">🎲 Shuffle Colors</button>
+                <button class="action-btn secondary" onclick="styleTester.randomTheme()">🎯 Random Theme</button>
                 <button class="action-btn" onclick="styleTester.loadPage('../index.html')">Load Homepage</button>
                 <button class="action-btn secondary" onclick="styleTester.loadPage('../city.html?city=los-angeles')">Load LA City</button>
             </div>
@@ -518,6 +523,33 @@
                         'background-light': '#002d4d',
                         'text-primary': '#ffffff',
                         'text-secondary': '#e0e0e0'
+                    },
+                    sage: {
+                        primary: '#BCBBA3',
+                        secondary: '#978B7D',
+                        accent: '#E14F38',
+                        'background-primary': '#FEF3CE',
+                        'background-light': '#D2CDAB',
+                        'text-primary': '#000001',
+                        'text-secondary': '#685159'
+                    },
+                    taupe: {
+                        primary: '#51443E',
+                        secondary: '#2A2D2A',
+                        accent: '#E14F38',
+                        'background-primary': '#FEF3CE',
+                        'background-light': '#D2CDAB',
+                        'text-primary': '#000000',
+                        'text-secondary': '#BCBBA3'
+                    },
+                    orange: {
+                        primary: '#FD9433',
+                        secondary: '#E14F38',
+                        accent: '#7094A0',
+                        'background-primary': '#51443E',
+                        'background-light': '#2A2D2A',
+                        'text-primary': '#000000',
+                        'text-secondary': '#BCBBA3'
                     }
                 };
 
@@ -707,6 +739,80 @@
             resetColors() {
                 this.applyTheme('default');
                 this.showNotification('Colors reset to default!');
+            }
+
+            shuffleColors() {
+                // Get all available colors from all themes
+                const allColors = [];
+                Object.values(this.themes).forEach(theme => {
+                    Object.values(theme).forEach(color => {
+                        if (!allColors.includes(color)) {
+                            allColors.push(color);
+                        }
+                    });
+                });
+
+                // Shuffle the colors array
+                const shuffledColors = [...allColors].sort(() => Math.random() - 0.5);
+
+                // Smart color assignment based on color type
+                const backgrounds = shuffledColors.filter(color => {
+                    const hex = color.replace('#', '');
+                    const r = parseInt(hex.substr(0, 2), 16);
+                    const g = parseInt(hex.substr(2, 2), 16);
+                    const b = parseInt(hex.substr(4, 2), 16);
+                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                    return brightness > 150; // Light colors for backgrounds
+                });
+
+                const darks = shuffledColors.filter(color => {
+                    const hex = color.replace('#', '');
+                    const r = parseInt(hex.substr(0, 2), 16);
+                    const g = parseInt(hex.substr(2, 2), 16);
+                    const b = parseInt(hex.substr(4, 2), 16);
+                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                    return brightness < 100; // Dark colors for text
+                });
+
+                const accents = shuffledColors.filter(color => {
+                    const hex = color.replace('#', '');
+                    const r = parseInt(hex.substr(0, 2), 16);
+                    const g = parseInt(hex.substr(2, 2), 16);
+                    const b = parseInt(hex.substr(4, 2), 16);
+                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                    return brightness >= 100 && brightness <= 150; // Medium brightness for accents
+                });
+
+                // Apply colors intelligently
+                const colorAssignments = {
+                    'background-primary': backgrounds[0] || shuffledColors[0],
+                    'background-light': backgrounds[1] || backgrounds[0] || shuffledColors[1],
+                    'text-primary': darks[0] || shuffledColors[2],
+                    'text-secondary': darks[1] || darks[0] || shuffledColors[3],
+                    'primary': accents[0] || shuffledColors[4],
+                    'secondary': accents[1] || accents[0] || shuffledColors[5],
+                    'accent': shuffledColors[6] || shuffledColors[0]
+                };
+
+                // Apply the colors
+                Object.entries(colorAssignments).forEach(([key, color]) => {
+                    const picker = document.getElementById(key);
+                    const text = document.getElementById(key + '-text');
+                    if (picker && text && color) {
+                        picker.value = color;
+                        text.value = color;
+                    }
+                });
+
+                this.applyCustomColors();
+                this.showNotification('Colors shuffled intelligently! 🎲');
+            }
+
+            randomTheme() {
+                const themeNames = Object.keys(this.themes);
+                const randomThemeName = themeNames[Math.floor(Math.random() * themeNames.length)];
+                this.applyTheme(randomThemeName);
+                this.showNotification(`Random theme applied: ${randomThemeName}! 🎯`);
             }
 
             loadPage(url) {
