@@ -900,7 +900,9 @@ header {
     }
 }
 
-/* Swipe animations */
+/* Swipe animations - Disabled in favor of JavaScript-controlled animations */
+/* These CSS animations were conflicting with the JavaScript swipe implementation */
+/*
 .calendar-grid.swipe-left {
     animation: swipeLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -938,6 +940,7 @@ header {
         opacity: 1;
     }
 }
+*/
 
 /* Touch feedback for calendar grid */
 .calendar-grid {
@@ -945,7 +948,8 @@ header {
     user-select: none; /* Prevent text selection during swipes */
     position: relative; /* Ensure proper positioning for swipe animations */
     will-change: transform, opacity, background-color; /* Optimize for animations */
-    transition: transform 0.1s ease-out, opacity 0.1s ease-out, background-color 0.1s ease-out; /* Smooth transitions */
+    /* Transition removed to allow JavaScript to control animations */
+    /* transition: transform 0.1s ease-out, opacity 0.1s ease-out, background-color 0.1s ease-out; */
 }
 
 /* Swipe indicator for mobile */

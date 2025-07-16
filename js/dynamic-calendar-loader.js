@@ -116,11 +116,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 )
             });
             
-            // Reset visual feedback
-            this.resetSwipeVisualFeedback();
-            
             if (this.isSwiping) {
                 this.handleSwipe(duration);
+            } else {
+                // Only reset visual feedback if not swiping
+                this.resetSwipeVisualFeedback();
             }
             
             // Reset touch state
@@ -219,6 +219,12 @@ class DynamicCalendarLoader extends CalendarCore {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) return;
         
+        // Only reset if we're not in the middle of a transition animation
+        if (calendarGrid.style.transition && calendarGrid.style.transition.includes('0.3s')) {
+            logger.debug('CALENDAR', 'Skipping visual feedback reset during transition animation');
+            return;
+        }
+        
         // Reset transform, opacity, background, scale, rotation, and shadow with smooth transition
         calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out';
         calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
@@ -251,12 +257,16 @@ class DynamicCalendarLoader extends CalendarCore {
                 maxTime: this.maxSwipeTime,
                 minDistance: this.minSwipeDistance
             });
+            // Reset visual feedback for invalid swipe
+            this.resetSwipeVisualFeedback();
             return;
         }
         
         // Check if it's more horizontal than vertical (swipe vs scroll)
         if (Math.abs(deltaX) < Math.abs(deltaY)) {
             logger.debug('CALENDAR', 'Swipe ignored - more vertical than horizontal');
+            // Reset visual feedback for vertical swipe
+            this.resetSwipeVisualFeedback();
             return;
         }
         
@@ -268,27 +278,22 @@ class DynamicCalendarLoader extends CalendarCore {
                               Math.abs(this.swipeVelocity) > 0.3; // Lower velocity threshold for better responsiveness
         
         if (shouldNavigate) {
-            if (deltaX > 0) {
-                // Swipe right - go to previous period
-                logger.userInteraction('CALENDAR', 'Swipe right detected - navigating to previous period', {
-                    distance: deltaX,
-                    velocity: this.swipeVelocity
-                });
-                this.navigatePeriod('prev');
-            } else {
-                // Swipe left - go to next period
-                logger.userInteraction('CALENDAR', 'Swipe left detected - navigating to next period', {
-                    distance: deltaX,
-                    velocity: this.swipeVelocity
-                });
-                this.navigatePeriod('next');
-            }
+            const direction = deltaX > 0 ? 'prev' : 'next';
+            logger.userInteraction('CALENDAR', `Swipe ${direction === 'prev' ? 'right' : 'left'} detected - navigating to ${direction} period`, {
+                distance: deltaX,
+                velocity: this.swipeVelocity
+            });
+            
+            // Animate the swipe transition
+            this.animateSwipeTransition(direction, deltaX);
         } else {
             logger.debug('CALENDAR', 'Swipe distance/velocity insufficient for navigation', {
                 distance: deltaX,
                 threshold: this.swipeThreshold,
                 velocity: this.swipeVelocity
             });
+            // Reset visual feedback for insufficient swipe
+            this.resetSwipeVisualFeedback();
         }
     }
 
@@ -297,6 +302,77 @@ class DynamicCalendarLoader extends CalendarCore {
         if (calendarGrid) {
             calendarGrid.style.setProperty('--swipe-hint-opacity', '0');
         }
+    }
+
+    // Animate swipe transition with smooth off-screen movement
+    animateSwipeTransition(direction, deltaX) {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        logger.debug('CALENDAR', 'Starting swipe transition animation', {
+            direction,
+            deltaX,
+            currentTransform: calendarGrid.style.transform
+        });
+        
+        // Calculate the target position (off-screen)
+        const screenWidth = window.innerWidth;
+        const targetTranslateX = direction === 'prev' ? screenWidth : -screenWidth;
+        
+        // Remove transition temporarily to set initial position
+        calendarGrid.style.transition = 'none';
+        
+        // Set the current position from the swipe
+        const currentTranslateX = deltaX * 0.5; // Match the visual feedback position
+        calendarGrid.style.transform = `translateX(${currentTranslateX}px) scale(1) rotateY(0deg)`;
+        
+        // Force a reflow to ensure the position is set
+        calendarGrid.offsetHeight;
+        
+        // Add smooth transition for the animation
+        calendarGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+        
+        // Animate to off-screen position
+        requestAnimationFrame(() => {
+            calendarGrid.style.transform = `translateX(${targetTranslateX}px) scale(0.95) rotateY(${direction === 'prev' ? 5 : -5}deg)`;
+            calendarGrid.style.opacity = '0.7';
+            
+            // After animation completes, update content and animate new content in
+            setTimeout(() => {
+                // Update the calendar content (skip immediate display update)
+                this.navigatePeriod(direction, false);
+                
+                // Update the display to get new content
+                this.updateCalendarDisplay();
+                
+                // Prepare new content to slide in from opposite direction
+                const newCalendarGrid = document.querySelector('.calendar-grid');
+                if (newCalendarGrid) {
+                    // Set initial position (off-screen from opposite direction)
+                    const initialTranslateX = direction === 'prev' ? -screenWidth : screenWidth;
+                    newCalendarGrid.style.transition = 'none';
+                    newCalendarGrid.style.transform = `translateX(${initialTranslateX}px) scale(0.95) rotateY(${direction === 'prev' ? -5 : 5}deg)`;
+                    newCalendarGrid.style.opacity = '0.7';
+                    
+                    // Force reflow
+                    newCalendarGrid.offsetHeight;
+                    
+                    // Animate to center position
+                    newCalendarGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+                    requestAnimationFrame(() => {
+                        newCalendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
+                        newCalendarGrid.style.opacity = '1';
+                        
+                        // Clean up after animation
+                        setTimeout(() => {
+                            newCalendarGrid.style.transition = '';
+                            newCalendarGrid.style.transform = '';
+                            newCalendarGrid.style.opacity = '';
+                        }, 300);
+                    });
+                }
+            }, 300);
+        });
     }
 
     // Get city from URL parameters
@@ -488,12 +564,13 @@ class DynamicCalendarLoader extends CalendarCore {
         this.updateCalendarDisplay();
     }
 
-    navigatePeriod(direction) {
+    navigatePeriod(direction, skipAnimation = false) {
         const delta = direction === 'next' ? 1 : -1;
         
         logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
             currentView: this.currentView,
-            currentDate: this.currentDate.toISOString()
+            currentDate: this.currentDate.toISOString(),
+            skipAnimation
         });
         
         if (this.currentView === 'week') {
@@ -502,7 +579,10 @@ class DynamicCalendarLoader extends CalendarCore {
             this.currentDate.setMonth(this.currentDate.getMonth() + delta);
         }
         
-        this.updateCalendarDisplay();
+        // Only update display immediately if not part of a swipe animation
+        if (skipAnimation) {
+            this.updateCalendarDisplay();
+        }
     }
 
     goToToday() {
@@ -1291,14 +1371,14 @@ class DynamicCalendarLoader extends CalendarCore {
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
                 logger.userInteraction('CALENDAR', 'Previous period clicked');
-                this.navigatePeriod('prev');
+                this.navigatePeriod('prev', true);
             });
         }
         
         if (nextBtn) {
             nextBtn.addEventListener('click', () => {
                 logger.userInteraction('CALENDAR', 'Next period clicked');
-                this.navigatePeriod('next');
+                this.navigatePeriod('next', true);
             });
         }
         
@@ -1336,12 +1416,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 case 'ArrowLeft':
                     e.preventDefault();
                     logger.userInteraction('CALENDAR', 'Left arrow key pressed - navigating to previous period');
-                    this.navigatePeriod('prev');
+                    this.navigatePeriod('prev', true);
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
                     logger.userInteraction('CALENDAR', 'Right arrow key pressed - navigating to next period');
-                    this.navigatePeriod('next');
+                    this.navigatePeriod('next', true);
                     break;
                 case 'Home':
                     e.preventDefault();
