@@ -900,6 +900,84 @@ header {
     }
 }
 
+/* Swipe animations */
+.calendar-grid.swipe-left {
+    animation: swipeLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.calendar-grid.swipe-right {
+    animation: swipeRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes swipeLeft {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateX(-20px);
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes swipeRight {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateX(20px);
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Touch feedback for calendar grid */
+.calendar-grid {
+    touch-action: pan-y; /* Allow vertical scrolling, handle horizontal swipes ourselves */
+    user-select: none; /* Prevent text selection during swipes */
+}
+
+/* Swipe indicator for mobile */
+@media (max-width: 768px) {
+    .calendar-grid {
+        --swipe-hint-opacity: 0.7;
+    }
+    
+    .calendar-grid::before {
+        content: '← Swipe to navigate →';
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        opacity: var(--swipe-hint-opacity);
+        pointer-events: none;
+        z-index: 1;
+        animation: swipeHint 2s ease-in-out infinite;
+        transition: opacity 0.3s ease;
+    }
+    
+    @keyframes swipeHint {
+        0%, 100% {
+            opacity: calc(var(--swipe-hint-opacity) * 0.4);
+            transform: translateX(-50%) translateY(0);
+        }
+        50% {
+            opacity: var(--swipe-hint-opacity);
+            transform: translateX(-50%) translateY(-2px);
+        }
+    }
+}
+
 .calendar-day {
     background: var(--background-primary);
     border: 1px solid var(--border-light);
