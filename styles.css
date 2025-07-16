@@ -1117,6 +1117,7 @@ header {
     .event-item {
         font-size: 0.75rem;
         margin-bottom: 0.2rem;
+        padding: 0;
     }
     
     .event-name {
@@ -1297,6 +1298,12 @@ header {
     height: 100%;
     pointer-events: none;
     z-index: 1;
+}
+
+/* Add space between label and value */
+.detail-row .label::after {
+    content: ' ';
+    margin-right: 0.5rem;
 }
 
 
@@ -2618,7 +2625,7 @@ footer {
     }
     
     .today-btn {
-        padding: 0.4rem 0.6rem;
+        padding: 0.5rem 0.8rem;
         font-size: 0.7rem;
         flex-shrink: 0;
     }
