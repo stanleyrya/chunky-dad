@@ -1288,6 +1288,13 @@ header {
     align-items: flex-start;
 }
 
+.detail-row::before {
+    content: '';
+    width: 80px;
+    flex-shrink: 0;
+    order: -1;
+}
+
 .label {
     font-weight: 600;
     color: var(--text-primary);
