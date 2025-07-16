@@ -2043,7 +2043,7 @@ footer {
 
     .date-navigation {
         order: 1;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0; /* Removed margin-bottom to fix alignment with other buttons */
         max-width: none;
         width: auto;
         flex-shrink: 0;
