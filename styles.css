@@ -1285,7 +1285,6 @@ header {
     margin-bottom: 0.5rem;
     align-items: flex-start;
     position: relative;
-    order: 3;
 }
 
 /* Add spacer for first detail-row to protect against recurring-badge overlap */
@@ -1298,6 +1297,7 @@ header {
     height: 100%;
     pointer-events: none;
     z-index: 1;
+    order: 3;
 }
 
 /* Add space between label and value */
