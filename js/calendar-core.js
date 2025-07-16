@@ -212,6 +212,13 @@ class CalendarCore {
                     eventData.instagram = additionalData.instagram;
                     eventData.facebook = additionalData.facebook;
                     eventData.gmaps = additionalData.gmaps;
+                    eventData.shortName = additionalData.shortName;
+                    if (additionalData.shortName) {
+                        logger.debug('CALENDAR', 'Extracted shortName from description', {
+                            eventName: eventData.name,
+                            shortName: additionalData.shortName
+                        });
+                    }
                     eventData.links = this.parseLinks(additionalData);
                     
                     if (additionalData.type || additionalData.eventType) {
@@ -247,7 +254,8 @@ class CalendarCore {
             'tea': 'tea', 'info': 'tea', 'description': 'tea',
             'website': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
-            'gmaps': 'gmaps', 'google maps': 'gmaps'
+            'gmaps': 'gmaps', 'google maps': 'gmaps',
+            'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing
@@ -319,6 +327,12 @@ class CalendarCore {
                     }
                 } else {
                     data[mappedKey] = value;
+                    if (mappedKey === 'shortName') {
+                        logger.debug('CALENDAR', 'Found shortName in description', {
+                            key: key,
+                            value: value
+                        });
+                    }
                 }
             }
         }
