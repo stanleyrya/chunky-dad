@@ -360,6 +360,7 @@
                     <button class="theme-btn" data-theme="sage" onclick="styleTester.applyTheme('sage')">Sage</button>
                     <button class="theme-btn" data-theme="taupe" onclick="styleTester.applyTheme('taupe')">Taupe</button>
                     <button class="theme-btn" data-theme="orange" onclick="styleTester.applyTheme('orange')">Orange</button>
+                    <button class="theme-btn" data-theme="comet" onclick="styleTester.applyTheme('comet')">Comet</button>
                 </div>
             </div>
 
@@ -404,6 +405,16 @@
                         <input type="text" id="background-light-text" class="color-input" value="#f8f9ff">
                     </div>
                 </div>
+            </div>
+
+            <div class="control-section">
+                <h3>🔗 Share & Actions</h3>
+                <button class="action-btn" onclick="styleTester.shareStyles()">📤 Share Styles</button>
+                <button class="action-btn secondary" onclick="styleTester.copyShareLink()">📋 Copy Link</button>
+                <button class="action-btn" onclick="styleTester.randomTheme()">🎲 Random Theme</button>
+                <button class="action-btn secondary" onclick="styleTester.shuffleColors('smart')">🎨 Smart Shuffle</button>
+                <button class="action-btn secondary" onclick="styleTester.shuffleColors('random')">🎲 Random Shuffle</button>
+                <button class="action-btn" onclick="styleTester.resetColors()">🔄 Reset</button>
             </div>
 
             <div class="control-section">
@@ -617,6 +628,9 @@
                     });
                     this.pendingStyles = [];
                     
+                    // Set up iframe link handling
+                    this.setupIframeLinkHandling();
+                    
                     this.showNotification('Website loaded successfully!');
                 });
 
@@ -633,6 +647,50 @@
                         this.showNotification('Loading timeout - check console for errors');
                     }
                 }, 10000);
+            }
+
+            setupIframeLinkHandling() {
+                try {
+                    const iframeDoc = this.iframe.contentDocument || this.iframe.contentWindow.document;
+                    if (!iframeDoc) return;
+
+                    // Listen for clicks on links in the iframe
+                    iframeDoc.addEventListener('click', (e) => {
+                        const link = e.target.closest('a');
+                        if (link && link.href) {
+                            // If it's an internal link, handle it
+                            if (link.href.includes(window.location.origin) || 
+                                link.href.startsWith('/') || 
+                                link.href.startsWith('./') || 
+                                link.href.startsWith('../')) {
+                                
+                                e.preventDefault();
+                                this.handleIframeNavigation(link.href);
+                            }
+                        }
+                    });
+
+                    // Also listen for navigation events
+                    this.iframe.addEventListener('load', () => {
+                        // Reapply styles after navigation
+                        setTimeout(() => {
+                            this.applyCustomColors();
+                        }, 100);
+                    });
+
+                } catch (error) {
+                    console.warn('Could not set up iframe link handling:', error);
+                }
+            }
+
+            handleIframeNavigation(url) {
+                this.showNotification('Navigating to: ' + url);
+                this.iframe.src = url;
+                
+                // Reapply styles after a short delay
+                setTimeout(() => {
+                    this.applyCustomColors();
+                }, 500);
             }
 
             applyTheme(themeName) {
@@ -678,6 +736,11 @@
                 `;
 
                 this.injectCSS(css, 'style-tester-css');
+                
+                // Set theme to custom when colors are manually changed
+                this.currentTheme = 'custom';
+                this.updateStatusBar();
+                
                 this.showNotification('Colors applied!');
             }
 
@@ -858,11 +921,97 @@
                 
                 if (theme && this.themes[theme]) {
                     this.applyTheme(theme);
+                } else {
+                    // Check for individual color parameters
+                    const colorKeys = ['primary', 'secondary', 'accent', 'background-primary', 'background-light', 'text-primary', 'text-secondary'];
+                    let hasCustomColors = false;
+                    
+                    colorKeys.forEach(key => {
+                        const color = params.get(key);
+                        if (color) {
+                            const picker = document.getElementById(key);
+                            const text = document.getElementById(key + '-text');
+                            if (picker && text) {
+                                picker.value = color;
+                                text.value = color;
+                                hasCustomColors = true;
+                            }
+                        }
+                    });
+                    
+                    if (hasCustomColors) {
+                        this.currentTheme = 'custom';
+                        this.applyCustomColors();
+                    }
                 }
                 
                 if (view) {
                     this.setView(view);
                 }
+            }
+
+            shareStyles() {
+                const shareUrl = this.generateShareURL();
+                
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Chunky.dad Style Tester',
+                        text: 'Check out this custom style for chunky.dad!',
+                        url: shareUrl
+                    }).then(() => {
+                        this.showNotification('Shared successfully!');
+                    }).catch((error) => {
+                        console.log('Error sharing:', error);
+                        this.copyShareLink();
+                    });
+                } else {
+                    this.copyShareLink();
+                }
+            }
+
+            copyShareLink() {
+                const shareUrl = this.generateShareURL();
+                
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    this.showNotification('Share link copied to clipboard!');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = shareUrl;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    this.showNotification('Share link copied to clipboard!');
+                });
+            }
+
+            generateShareURL() {
+                const currentColors = {
+                    primary: document.getElementById('primary').value,
+                    secondary: document.getElementById('secondary').value,
+                    accent: document.getElementById('accent').value,
+                    'background-primary': document.getElementById('background-primary').value,
+                    'background-light': document.getElementById('background-light').value,
+                    'text-primary': document.getElementById('text-primary').value,
+                    'text-secondary': document.getElementById('text-secondary').value
+                };
+
+                const params = new URLSearchParams();
+                
+                // Add theme if it's a preset
+                if (this.currentTheme !== 'custom') {
+                    params.set('theme', this.currentTheme);
+                } else {
+                    // Add individual colors
+                    Object.entries(currentColors).forEach(([key, value]) => {
+                        params.set(key, value);
+                    });
+                }
+                
+                params.set('view', this.currentView);
+                
+                return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
             }
 
             updateStatusBar() {
