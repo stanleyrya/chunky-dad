@@ -1290,13 +1290,14 @@ header {
 /* Add spacer for first detail-row to protect against recurring-badge overlap */
 .detail-row:first-child::before {
     content: '';
-    position: absolute;
+    position: relative;
     top: 0;
     right: 0;
     width: 90px; /* Match the width of recurring-badge + some buffer */
     height: 100%;
     pointer-events: none;
     z-index: 1;
+    order: 3;
 }
 
 /* Add space between label and value */
@@ -1310,7 +1311,6 @@ header {
 .label {
     font-weight: 600;
     color: var(--text-primary);
-    min-width: 80px;
     margin-right: 0.5rem; /* Reduced from 1rem to bring columns closer */
     flex-shrink: 0;
 }
