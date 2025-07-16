@@ -1117,6 +1117,7 @@ header {
     .event-item {
         font-size: 0.75rem;
         margin-bottom: 0.2rem;
+        padding: 0;
     }
     
     .event-name {
