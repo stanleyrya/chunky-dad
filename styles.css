@@ -1285,6 +1285,7 @@ header {
     margin-bottom: 0.5rem;
     align-items: flex-start;
     position: relative;
+    order: 3;
 }
 
 /* Add spacer for first detail-row to protect against recurring-badge overlap */
