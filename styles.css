@@ -943,6 +943,9 @@ header {
 .calendar-grid {
     touch-action: pan-y; /* Allow vertical scrolling, handle horizontal swipes ourselves */
     user-select: none; /* Prevent text selection during swipes */
+    position: relative; /* Ensure proper positioning for swipe animations */
+    will-change: transform, opacity, background-color; /* Optimize for animations */
+    transition: transform 0.1s ease-out, opacity 0.1s ease-out, background-color 0.1s ease-out; /* Smooth transitions */
 }
 
 /* Swipe indicator for mobile */

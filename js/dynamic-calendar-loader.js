@@ -9,19 +9,26 @@ class DynamicCalendarLoader extends CalendarCore {
         this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
         
-        // Swipe functionality
+        // Enhanced swipe functionality
         this.touchStartX = 0;
         this.touchStartY = 0;
+        this.touchCurrentX = 0;
+        this.touchCurrentY = 0;
         this.touchEndX = 0;
         this.touchEndY = 0;
-        this.minSwipeDistance = 50; // Minimum distance for a swipe
+        this.minSwipeDistance = 30; // Minimum distance for a swipe (reduced for better responsiveness)
         this.maxSwipeTime = 300; // Maximum time for a swipe (ms)
         this.touchStartTime = 0;
+        this.isSwiping = false;
+        this.swipeThreshold = 80; // Distance to trigger navigation (reduced for better responsiveness)
+        this.swipeVelocity = 0;
+        this.lastTouchTime = 0;
+        this.lastTouchX = 0;
         
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
 
-    // Swipe detection methods
+    // Enhanced swipe detection methods
     setupSwipeHandlers() {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) {
@@ -33,35 +40,202 @@ class DynamicCalendarLoader extends CalendarCore {
         calendarGrid.addEventListener('touchstart', (e) => {
             this.touchStartX = e.touches[0].clientX;
             this.touchStartY = e.touches[0].clientY;
+            this.touchCurrentX = this.touchStartX;
+            this.touchCurrentY = this.touchStartY;
             this.touchStartTime = Date.now();
+            this.isSwiping = false;
+            this.swipeVelocity = 0;
+            this.lastTouchTime = this.touchStartTime;
+            this.lastTouchX = this.touchStartX;
             
-            logger.debug('CALENDAR', 'Touch start detected', {
+            logger.userInteraction('CALENDAR', 'Touch start detected', {
                 x: this.touchStartX,
-                y: this.touchStartY
+                y: this.touchStartY,
+                timestamp: this.touchStartTime
             });
         }, { passive: true });
+
+        // Touch move - track finger movement in real-time
+        calendarGrid.addEventListener('touchmove', (e) => {
+            if (!this.touchStartX) return; // No active touch
+            
+            this.touchCurrentX = e.touches[0].clientX;
+            this.touchCurrentY = e.touches[0].clientY;
+            const currentTime = Date.now();
+            
+            // Calculate velocity
+            const timeDelta = currentTime - this.lastTouchTime;
+            if (timeDelta > 0) {
+                const distanceDelta = this.touchCurrentX - this.lastTouchX;
+                this.swipeVelocity = distanceDelta / timeDelta;
+            }
+            
+            this.lastTouchTime = currentTime;
+            this.lastTouchX = this.touchCurrentX;
+            
+            // Calculate horizontal movement
+            const deltaX = this.touchCurrentX - this.touchStartX;
+            const deltaY = this.touchCurrentY - this.touchStartY;
+            
+            // Check if this is a horizontal swipe (reduced threshold for better responsiveness)
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 5) {
+                this.isSwiping = true;
+                
+                // Apply visual feedback - move the calendar with the finger
+                this.updateSwipeVisualFeedback(deltaX);
+                
+                // Prevent default to avoid scrolling
+                e.preventDefault();
+                
+                logger.debug('CALENDAR', 'Swipe in progress', {
+                    deltaX,
+                    deltaY,
+                    velocity: this.swipeVelocity,
+                    progress: Math.min(Math.abs(deltaX) / (window.innerWidth * 0.4), 1)
+                });
+            }
+        }, { passive: false });
 
         // Touch end
         calendarGrid.addEventListener('touchend', (e) => {
+            if (!this.touchStartX) return; // No active touch
+            
             this.touchEndX = e.changedTouches[0].clientX;
             this.touchEndY = e.changedTouches[0].clientY;
             const touchEndTime = Date.now();
+            const duration = touchEndTime - this.touchStartTime;
             
-            logger.debug('CALENDAR', 'Touch end detected', {
+            logger.userInteraction('CALENDAR', 'Touch end detected', {
                 x: this.touchEndX,
                 y: this.touchEndY,
-                duration: touchEndTime - this.touchStartTime
+                duration,
+                isSwiping: this.isSwiping,
+                totalDistance: Math.sqrt(
+                    Math.pow(this.touchEndX - this.touchStartX, 2) + 
+                    Math.pow(this.touchEndY - this.touchStartY, 2)
+                )
             });
             
-            this.handleSwipe(touchEndTime - this.touchStartTime);
+            // Reset visual feedback
+            this.resetSwipeVisualFeedback();
+            
+            if (this.isSwiping) {
+                this.handleSwipe(duration);
+            }
+            
+            // Reset touch state
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+            this.touchCurrentX = 0;
+            this.touchCurrentY = 0;
+            this.isSwiping = false;
         }, { passive: true });
 
-        // Prevent default touch behavior to avoid conflicts
-        calendarGrid.addEventListener('touchmove', (e) => {
-            // Allow scrolling but prevent default to avoid conflicts
+        // Touch cancel
+        calendarGrid.addEventListener('touchcancel', (e) => {
+            this.resetSwipeVisualFeedback();
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+            this.touchCurrentX = 0;
+            this.touchCurrentY = 0;
+            this.isSwiping = false;
         }, { passive: true });
 
-        logger.componentLoad('CALENDAR', 'Swipe handlers setup complete');
+        logger.componentLoad('CALENDAR', 'Enhanced swipe handlers setup complete');
+    }
+
+    // Update visual feedback during swipe
+    updateSwipeVisualFeedback(deltaX) {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        // Calculate opacity and transform based on swipe distance
+        const maxDistance = window.innerWidth * 0.4; // 40% of screen width for better visual feedback
+        const progress = Math.min(Math.abs(deltaX) / maxDistance, 1);
+        const opacity = 1 - (progress * 0.2); // Reduce opacity as user swipes (less dramatic)
+        const translateX = deltaX * 0.5; // Move calendar with finger (50% of finger movement for more responsive feel)
+        
+        // Apply transform, opacity, subtle scale, and rotation effects
+        const scale = 1 - (progress * 0.05); // Slight scale down as user swipes
+        const rotation = (deltaX / window.innerWidth) * 2; // Subtle rotation based on swipe distance
+        calendarGrid.style.transform = `translateX(${translateX}px) scale(${scale}) rotateY(${rotation}deg)`;
+        calendarGrid.style.opacity = opacity;
+        
+        // Add subtle background color change to indicate swipe progress
+        const backgroundColor = deltaX > 0 ? 
+            `rgba(255, 193, 7, ${progress * 0.1})` : // Yellow tint for right swipe
+            `rgba(13, 110, 253, ${progress * 0.1})`;  // Blue tint for left swipe
+        calendarGrid.style.backgroundColor = backgroundColor;
+        
+        // Add subtle shadow effect for depth
+        const shadowBlur = Math.min(progress * 20, 10);
+        const shadowOffset = Math.min(progress * 10, 5);
+        calendarGrid.style.boxShadow = `0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${progress * 0.3})`;
+        
+        // Add visual indicator for swipe direction
+        this.updateSwipeDirectionIndicator(deltaX, progress);
+    }
+
+    // Update swipe direction indicator
+    updateSwipeDirectionIndicator(deltaX, progress) {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        // Remove existing indicators
+        const existingIndicator = calendarGrid.querySelector('.swipe-direction-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        // Only show indicator if swipe is significant
+        if (progress > 0.1) {
+            const indicator = document.createElement('div');
+            indicator.className = 'swipe-direction-indicator';
+            indicator.style.cssText = `
+                position: absolute;
+                top: 50%;
+                ${deltaX > 0 ? 'right' : 'left'}: 20px;
+                transform: translateY(-50%);
+                background: var(--primary-color);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                z-index: 1000;
+                opacity: ${progress * 0.9};
+                transition: opacity 0.1s ease;
+                pointer-events: none;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            `;
+            indicator.textContent = deltaX > 0 ? '← Previous' : 'Next →';
+            
+            calendarGrid.appendChild(indicator);
+        }
+    }
+
+    // Reset visual feedback
+    resetSwipeVisualFeedback() {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        // Reset transform, opacity, background, scale, rotation, and shadow with smooth transition
+        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out';
+        calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
+        calendarGrid.style.opacity = '1';
+        calendarGrid.style.backgroundColor = '';
+        calendarGrid.style.boxShadow = '';
+        
+        // Remove transition after animation completes
+        setTimeout(() => {
+            calendarGrid.style.transition = '';
+        }, 200);
+        
+        // Remove direction indicator
+        const indicator = calendarGrid.querySelector('.swipe-direction-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
     }
 
     handleSwipe(duration) {
@@ -89,15 +263,32 @@ class DynamicCalendarLoader extends CalendarCore {
         // Hide swipe hint after first successful swipe
         this.hideSwipeHint();
         
-        // Determine swipe direction
-        if (deltaX > 0) {
-            // Swipe right - go to previous period
-            logger.userInteraction('CALENDAR', 'Swipe right detected - navigating to previous period');
-            this.navigatePeriod('prev');
+        // Determine swipe direction based on distance or velocity
+        const shouldNavigate = Math.abs(deltaX) > this.swipeThreshold || 
+                              Math.abs(this.swipeVelocity) > 0.3; // Lower velocity threshold for better responsiveness
+        
+        if (shouldNavigate) {
+            if (deltaX > 0) {
+                // Swipe right - go to previous period
+                logger.userInteraction('CALENDAR', 'Swipe right detected - navigating to previous period', {
+                    distance: deltaX,
+                    velocity: this.swipeVelocity
+                });
+                this.navigatePeriod('prev');
+            } else {
+                // Swipe left - go to next period
+                logger.userInteraction('CALENDAR', 'Swipe left detected - navigating to next period', {
+                    distance: deltaX,
+                    velocity: this.swipeVelocity
+                });
+                this.navigatePeriod('next');
+            }
         } else {
-            // Swipe left - go to next period
-            logger.userInteraction('CALENDAR', 'Swipe left detected - navigating to next period');
-            this.navigatePeriod('next');
+            logger.debug('CALENDAR', 'Swipe distance/velocity insufficient for navigation', {
+                distance: deltaX,
+                threshold: this.swipeThreshold,
+                velocity: this.swipeVelocity
+            });
         }
     }
 
@@ -300,17 +491,10 @@ class DynamicCalendarLoader extends CalendarCore {
     navigatePeriod(direction) {
         const delta = direction === 'next' ? 1 : -1;
         
-        // Add visual feedback for swipe navigation
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (calendarGrid) {
-            const animationClass = direction === 'next' ? 'swipe-left' : 'swipe-right';
-            calendarGrid.classList.add(animationClass);
-            
-            // Remove animation class after animation completes
-            setTimeout(() => {
-                calendarGrid.classList.remove(animationClass);
-            }, 300);
-        }
+        logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
+            currentView: this.currentView,
+            currentDate: this.currentDate.toISOString()
+        });
         
         if (this.currentView === 'week') {
             this.currentDate.setDate(this.currentDate.getDate() + (delta * 7));
