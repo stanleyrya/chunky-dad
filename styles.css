@@ -1310,7 +1310,6 @@ header {
 .label {
     font-weight: 600;
     color: var(--text-primary);
-    min-width: 80px;
     margin-right: 0.5rem; /* Reduced from 1rem to bring columns closer */
     flex-shrink: 0;
 }
