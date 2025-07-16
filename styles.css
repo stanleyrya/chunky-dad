@@ -1299,13 +1299,7 @@ header {
     z-index: 1;
 }
 
-/* Remove the general spacer that was causing layout issues */
-/* .detail-row::before {
-    content: '';
-    width: 80px;
-    flex-shrink: 0;
-    order: -1;
-} */
+
 
 .label {
     font-weight: 600;
