@@ -1115,7 +1115,6 @@ header {
     }
     
     .event-item {
-        padding: 0.4rem;
         font-size: 0.75rem;
         margin-bottom: 0.2rem;
     }
@@ -1159,7 +1158,6 @@ header {
     }
     
     .event-item {
-        padding: 0.3rem;
         font-size: 0.7rem;
         margin-bottom: 0.15rem;
     }
@@ -2041,7 +2039,7 @@ footer {
 
     .calendar-controls {
         flex-direction: row;
-        gap: 0.25rem;
+        gap: 0.3rem;
         flex-wrap: wrap;
         justify-content: center;
         align-items: center;
@@ -2054,29 +2052,18 @@ footer {
         max-width: none;
         width: auto;
         flex-shrink: 0;
-        padding: 0.25rem;
-        gap: 0.5rem;
     }
     
     .view-toggle {
         order: 2;
-        flex-direction: row;
-        gap: 2px;
-        padding: 2px;
-        flex-shrink: 0;
     }
     
     .today-btn {
         order: 3;
-        padding: 0.4rem 0.6rem;
-        font-size: 0.7rem;
-        flex-shrink: 0;
     }
 
     .date-range {
-        font-size: 0.7rem;
-        min-width: 80px;
-        padding: 0;
+        font-size: 1rem;
     }
 
     .calendar-day {
@@ -2099,7 +2086,7 @@ footer {
     }
 
     .event-item {
-        padding: 0;
+        padding: 0.6rem 0;
         margin-bottom: 0;
         border-radius: 6px;
     }
@@ -2448,27 +2435,26 @@ footer {
     }
 
     .view-btn {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.7rem;
-        min-width: auto;
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
     }
 
     .nav-btn {
-        padding: 0.4rem;
-        font-size: 0.9rem;
-        width: 30px;
-        height: 30px;
+        padding: 0.5rem;
+        font-size: 1rem;
+        width: 36px;
+        height: 36px;
     }
 
     .date-range {
-        font-size: 0.7rem;
-        padding: 0.4rem 0.6rem;
-        min-width: 80px;
+        font-size: 0.8rem;
+        padding: 0.5rem 0.8rem;
+        min-width: 100px;
     }
 
     .today-btn {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.7rem;
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
     }
 
     .calendar-day {
@@ -2481,7 +2467,7 @@ footer {
     }
 
     .event-item {
-        padding: 0;
+        padding: 0.5rem 0;
         margin-bottom: 0;
         border-radius: 4px;
     }
@@ -2592,25 +2578,14 @@ footer {
     }
 }
 
-/* Extra aggressive spacing reduction for iPhone and very small screens */
-@media (max-width: 480px) {
-    .cities-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .events-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .business-categories {
-        grid-template-columns: 1fr;
-    }
-    
+/* Calendar controls for medium-small screens */
+@media (max-width: 550px) {
     .calendar-controls {
         flex-direction: row;
         gap: 0.25rem;
         width: 100%;
         flex-wrap: wrap;
+        justify-content: center;
     }
     
     .view-toggle {
@@ -2651,6 +2626,21 @@ footer {
         padding: 0.4rem 0.6rem;
         font-size: 0.7rem;
         flex-shrink: 0;
+    }
+}
+
+/* Extra aggressive spacing reduction for iPhone and very small screens */
+@media (max-width: 480px) {
+    .cities-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .business-categories {
+        grid-template-columns: 1fr;
     }
     
     .event-item {
