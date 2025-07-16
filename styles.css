@@ -1286,13 +1286,26 @@ header {
     display: flex;
     margin-bottom: 0.5rem;
     align-items: flex-start;
+    position: relative;
+}
+
+/* Add spacer for first detail-row to protect against recurring-badge overlap */
+.detail-row:first-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 90px; /* Match the width of recurring-badge + some buffer */
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .label {
     font-weight: 600;
     color: var(--text-primary);
     min-width: 80px;
-    margin-right: 1rem;
+    margin-right: 0.5rem; /* Reduced from 1rem to bring columns closer */
     flex-shrink: 0;
 }
 
