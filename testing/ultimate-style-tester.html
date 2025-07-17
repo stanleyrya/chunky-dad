@@ -444,6 +444,8 @@
                         <button class="action-btn small secondary" onclick="styleTester.resetColors()">Reset</button>
                         <button class="action-btn small" onclick="styleTester.randomTheme()">Random Theme</button>
                         <button class="action-btn small secondary" onclick="styleTester.shuffleColors('smart')">Smart Shuffle</button>
+                        <button class="action-btn small" onclick="styleTester.shuffleColors('theme')">Theme Shuffle</button>
+                        <button class="action-btn small secondary" onclick="styleTester.expandTheme()">Expand Theme</button>
                     </div>
                     <button class="action-btn" onclick="styleTester.shareStyles()">📤 Share Styles</button>
                     <button class="action-btn secondary" onclick="styleTester.copyShareLink()">📋 Copy Link</button>
@@ -485,6 +487,8 @@
                         <button class="theme-btn" data-theme="taupe" onclick="styleTester.applyTheme('taupe')">Taupe</button>
                         <button class="theme-btn" data-theme="orange" onclick="styleTester.applyTheme('orange')">Orange</button>
                         <button class="theme-btn" data-theme="comet" onclick="styleTester.applyTheme('comet')">Comet</button>
+                        <button class="theme-btn" data-theme="oxford" onclick="styleTester.applyTheme('oxford')">Oxford</button>
+                        <button class="theme-btn" data-theme="caribbean" onclick="styleTester.applyTheme('caribbean')">Caribbean</button>
                     </div>
                 </div>
             </div>
@@ -1402,6 +1406,98 @@
                         'gradient-success-end': '#d94f57',
                         'gradient-light-start': '#f2ede5',
                         'gradient-light-end': '#f2ede5'
+                    },
+                    oxford: {
+                        'primary-color': '#14213d',
+                        'secondary-color': '#fca311',
+                        'accent-color': '#e5e5e5',
+                        'background-primary': '#ffffff',
+                        'background-light': '#f8f9ff',
+                        'background-lighter': '#f8f9fa',
+                        'background-secondary': '#e8f2ff',
+                        'background-dark': '#14213d',
+                        'background-darker': '#000000',
+                        'text-primary': '#14213d',
+                        'text-secondary': '#666666',
+                        'text-muted': '#999999',
+                        'text-inverse': '#ffffff',
+                        'border-light': '#e5e5e5',
+                        'border-lighter': '#f0f0f0',
+                        'border-dark': '#14213d',
+                        'success-color': '#fca311',
+                        'warning-color': '#ffd700',
+                        'error-color': '#dc2626',
+                        'info-color': '#14213d',
+                        'color-online': '#fca311',
+                        'color-offline': '#6b7280',
+                        'color-busy': '#ffd700',
+                        'color-away': '#fca311',
+                        'color-danger': '#dc2626',
+                        'color-danger-dark': '#b91c1c',
+                        'color-success-light': '#fca311',
+                        'color-success-dark': '#e0940f',
+                        'white': '#ffffff',
+                        'black': '#000000',
+                        'shadow-light': 'rgba(20, 33, 61, 0.1)',
+                        'shadow-medium': 'rgba(20, 33, 61, 0.15)',
+                        'shadow-heavy': 'rgba(20, 33, 61, 0.25)',
+                        'shadow-primary': 'rgba(20, 33, 61, 0.3)',
+                        'shadow-success': 'rgba(252, 163, 17, 0.3)',
+                        'shadow-error': 'rgba(220, 38, 38, 0.3)',
+                        'gradient-primary-start': '#14213d',
+                        'gradient-primary-end': '#fca311',
+                        'gradient-secondary-start': '#fca311',
+                        'gradient-secondary-end': '#e5e5e5',
+                        'gradient-success-start': '#fca311',
+                        'gradient-success-end': '#14213d',
+                        'gradient-light-start': '#ffffff',
+                        'gradient-light-end': '#f8f9ff'
+                    },
+                    caribbean: {
+                        'primary-color': '#15616d',
+                        'secondary-color': '#ff7d00',
+                        'accent-color': '#ffecd1',
+                        'background-primary': '#001524',
+                        'background-light': '#002034',
+                        'background-lighter': '#002b44',
+                        'background-secondary': '#003554',
+                        'background-dark': '#000914',
+                        'background-darker': '#000000',
+                        'text-primary': '#ffecd1',
+                        'text-secondary': '#cccccc',
+                        'text-muted': '#999999',
+                        'text-inverse': '#001524',
+                        'border-light': '#003554',
+                        'border-lighter': '#004564',
+                        'border-dark': '#ffecd1',
+                        'success-color': '#ff7d00',
+                        'warning-color': '#ffd700',
+                        'error-color': '#ff7d00',
+                        'info-color': '#15616d',
+                        'color-online': '#ff7d00',
+                        'color-offline': '#666666',
+                        'color-busy': '#ffd700',
+                        'color-away': '#ff7d00',
+                        'color-danger': '#ff7d00',
+                        'color-danger-dark': '#cc6400',
+                        'color-success-light': '#ff7d00',
+                        'color-success-dark': '#cc6400',
+                        'white': '#ffffff',
+                        'black': '#000000',
+                        'shadow-light': 'rgba(21, 97, 109, 0.3)',
+                        'shadow-medium': 'rgba(255, 125, 0, 0.3)',
+                        'shadow-heavy': 'rgba(255, 236, 209, 0.3)',
+                        'shadow-primary': 'rgba(21, 97, 109, 0.3)',
+                        'shadow-success': 'rgba(255, 125, 0, 0.3)',
+                        'shadow-error': 'rgba(255, 125, 0, 0.3)',
+                        'gradient-primary-start': '#15616d',
+                        'gradient-primary-end': '#ff7d00',
+                        'gradient-secondary-start': '#ff7d00',
+                        'gradient-secondary-end': '#ffecd1',
+                        'gradient-success-start': '#ff7d00',
+                        'gradient-success-end': '#15616d',
+                        'gradient-light-start': '#001524',
+                        'gradient-light-end': '#002034'
                     }
                 };
 
@@ -1684,15 +1780,26 @@
             }
 
             shuffleColors(mode = 'smart') {
-                // Get all available colors from all themes
-                const allColors = [];
-                Object.values(this.themes).forEach(theme => {
-                    Object.values(theme).forEach(color => {
-                        if (!allColors.includes(color)) {
-                            allColors.push(color);
-                        }
+                let allColors = [];
+                
+                if (mode === 'theme') {
+                    // Use only colors from the current theme
+                    if (this.currentTheme && this.currentTheme !== 'custom' && this.themes[this.currentTheme]) {
+                        allColors = Object.values(this.themes[this.currentTheme]);
+                    } else {
+                        // If no current theme or custom, use default theme
+                        allColors = Object.values(this.themes.default);
+                    }
+                } else {
+                    // Get all available colors from all themes
+                    Object.values(this.themes).forEach(theme => {
+                        Object.values(theme).forEach(color => {
+                            if (!allColors.includes(color)) {
+                                allColors.push(color);
+                            }
+                        });
                     });
-                });
+                }
 
                 // Shuffle the colors array
                 const shuffledColors = [...allColors].sort(() => Math.random() - 0.5);
@@ -1814,7 +1921,158 @@
                 });
 
                 this.applyCustomColors();
-                this.showNotification('Colors shuffled intelligently! 🎲');
+                if (mode === 'theme') {
+                    this.showNotification('Colors shuffled within current theme! 🎨');
+                } else {
+                    this.showNotification('Colors shuffled intelligently! 🎲');
+                }
+            }
+
+            expandTheme() {
+                // Get the current theme colors
+                let currentColors = {};
+                if (this.currentTheme && this.currentTheme !== 'custom' && this.themes[this.currentTheme]) {
+                    currentColors = this.themes[this.currentTheme];
+                } else {
+                    currentColors = this.themes.default;
+                }
+
+                // Create color variations by adjusting brightness and saturation
+                const colorVariations = {};
+                
+                Object.entries(currentColors).forEach(([key, color]) => {
+                    if (color.startsWith('#')) {
+                        // Create variations for hex colors
+                        const variations = this.createColorVariations(color);
+                        colorVariations[key] = variations[Math.floor(Math.random() * variations.length)];
+                    } else if (color.startsWith('rgba')) {
+                        // Handle rgba colors (shadows)
+                        colorVariations[key] = color;
+                    } else {
+                        colorVariations[key] = color;
+                    }
+                });
+
+                // Apply the variations
+                Object.entries(colorVariations).forEach(([key, color]) => {
+                    const picker = document.getElementById(key);
+                    const text = document.getElementById(key + '-text');
+                    if (picker && text && color) {
+                        picker.value = color;
+                        text.value = color;
+                    }
+                });
+
+                this.applyCustomColors();
+                this.showNotification('Theme expanded with color variations! 🌈');
+            }
+
+            createColorVariations(hexColor) {
+                const variations = [];
+                
+                // Parse hex color
+                const hex = hexColor.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                
+                // Convert to HSL for easier manipulation
+                const hsl = this.rgbToHsl(r, g, b);
+                
+                // Create variations
+                variations.push(hexColor); // Original
+                
+                // Lighter variations
+                for (let i = 1; i <= 3; i++) {
+                    const lighter = this.hslToHex(hsl.h, hsl.s, Math.min(100, hsl.l + (i * 10)));
+                    variations.push(lighter);
+                }
+                
+                // Darker variations
+                for (let i = 1; i <= 3; i++) {
+                    const darker = this.hslToHex(hsl.h, hsl.s, Math.max(0, hsl.l - (i * 10)));
+                    variations.push(darker);
+                }
+                
+                // Saturation variations
+                for (let i = 1; i <= 2; i++) {
+                    const moreSat = this.hslToHex(hsl.h, Math.min(100, hsl.s + (i * 15)), hsl.l);
+                    variations.push(moreSat);
+                    
+                    const lessSat = this.hslToHex(hsl.h, Math.max(0, hsl.s - (i * 15)), hsl.l);
+                    variations.push(lessSat);
+                }
+                
+                // Hue variations (slight shifts)
+                for (let i = 1; i <= 2; i++) {
+                    const hueShift1 = this.hslToHex((hsl.h + (i * 15)) % 360, hsl.s, hsl.l);
+                    variations.push(hueShift1);
+                    
+                    const hueShift2 = this.hslToHex((hsl.h - (i * 15) + 360) % 360, hsl.s, hsl.l);
+                    variations.push(hueShift2);
+                }
+                
+                return variations;
+            }
+
+            rgbToHsl(r, g, b) {
+                r /= 255;
+                g /= 255;
+                b /= 255;
+                
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+                
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+                
+                return {
+                    h: Math.round(h * 360),
+                    s: Math.round(s * 100),
+                    l: Math.round(l * 100)
+                };
+            }
+
+            hslToHex(h, s, l) {
+                s /= 100;
+                l /= 100;
+                
+                const c = (1 - Math.abs(2 * l - 1)) * s;
+                const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+                const m = l - c / 2;
+                let r = 0, g = 0, b = 0;
+                
+                if (0 <= h && h < 60) {
+                    r = c; g = x; b = 0;
+                } else if (60 <= h && h < 120) {
+                    r = x; g = c; b = 0;
+                } else if (120 <= h && h < 180) {
+                    r = 0; g = c; b = x;
+                } else if (180 <= h && h < 240) {
+                    r = 0; g = x; b = c;
+                } else if (240 <= h && h < 300) {
+                    r = x; g = 0; b = c;
+                } else if (300 <= h && h < 360) {
+                    r = c; g = 0; b = x;
+                }
+                
+                const rHex = Math.round((r + m) * 255).toString(16).padStart(2, '0');
+                const gHex = Math.round((g + m) * 255).toString(16).padStart(2, '0');
+                const bHex = Math.round((b + m) * 255).toString(16).padStart(2, '0');
+                
+                return `#${rHex}${gHex}${bHex}`;
             }
 
             randomTheme() {
