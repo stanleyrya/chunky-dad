@@ -3643,6 +3643,83 @@ footer {
   }
 }
 
+/* Calendar cache container for improved swipe experience */
+.calendar-cache-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
 
+.calendar-cache-container .calendar-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    will-change: transform, opacity;
+}
 
+.calendar-cache-container .calendar-grid-previous {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.calendar-cache-container .calendar-grid-current {
+    transform: translateX(0%);
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.calendar-cache-container .calendar-grid-next {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Ensure proper positioning for cached grids */
+.calendar-cache-container .calendar-grid-previous,
+.calendar-cache-container .calendar-grid-current,
+.calendar-cache-container .calendar-grid-next {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Touch feedback for calendar cache container */
+.calendar-cache-container {
+    touch-action: pan-y; /* Allow vertical scrolling, handle horizontal swipes ourselves */
+    user-select: none; /* Prevent text selection during swipes */
+    will-change: transform, opacity, background-color; /* Optimize for animations */
+}
+
+/* Swipe indicator for mobile on cache container */
+@media (max-width: 768px) {
+    .calendar-cache-container {
+        --swipe-hint-opacity: 0.7;
+    }
+    
+    .calendar-cache-container::before {
+        content: '← Swipe to navigate →';
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        opacity: var(--swipe-hint-opacity);
+        pointer-events: none;
+        z-index: 1;
+        animation: swipeHint 2s ease-in-out infinite;
+        transition: opacity 0.3s ease;
+    }
+}
 

@@ -9,7 +9,7 @@ class DynamicCalendarLoader extends CalendarCore {
         this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
         
-        // Enhanced swipe functionality
+        // Enhanced swipe functionality with caching
         this.touchStartX = 0;
         this.touchStartY = 0;
         this.touchCurrentX = 0;
@@ -25,19 +25,196 @@ class DynamicCalendarLoader extends CalendarCore {
         this.lastTouchTime = 0;
         this.lastTouchX = 0;
         
-        logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
+        // Calendar caching for improved swipe experience
+        this.calendarCache = {
+            previous: null,
+            current: null,
+            next: null
+        };
+        this.cacheContainer = null;
+        this.isCacheInitialized = false;
+        
+        logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized with caching');
+    }
+
+    // Initialize calendar cache container and structure
+    initializeCalendarCache() {
+        logger.time('CALENDAR', 'Calendar cache initialization');
+        
+        try {
+            // Find the existing calendar grid container
+            const existingCalendarGrid = document.querySelector('.calendar-grid');
+            if (!existingCalendarGrid) {
+                logger.warn('CALENDAR', 'No existing calendar grid found for cache initialization');
+                return;
+            }
+        
+        // Create cache container
+        this.cacheContainer = document.createElement('div');
+        this.cacheContainer.className = 'calendar-cache-container';
+        this.cacheContainer.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        `;
+        
+        // Create three calendar grids for previous, current, and next
+        const positions = ['previous', 'current', 'next'];
+        positions.forEach((position, index) => {
+            const grid = document.createElement('div');
+            grid.className = `calendar-grid calendar-grid-${position}`;
+            grid.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                transform: translateX(${index === 0 ? '-100%' : index === 1 ? '0%' : '100%'});
+                opacity: ${index === 1 ? '1' : '0'};
+                pointer-events: ${index === 1 ? 'auto' : 'none'};
+                transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+                z-index: ${index === 1 ? '2' : '1'};
+            `;
+            
+            this.cacheContainer.appendChild(grid);
+            this.calendarCache[position] = grid;
+        });
+        
+        // Replace the existing calendar grid with our cache container
+        existingCalendarGrid.parentNode.insertBefore(this.cacheContainer, existingCalendarGrid);
+        this.cacheContainer.appendChild(existingCalendarGrid);
+        
+        // Update the current cache reference
+        this.calendarCache.current = existingCalendarGrid;
+        existingCalendarGrid.className = 'calendar-grid calendar-grid-current';
+        
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error initializing calendar cache', error);
+            return;
+        }
+        
+        logger.timeEnd('CALENDAR', 'Calendar cache initialization');
+        logger.componentLoad('CALENDAR', 'Calendar cache container initialized', {
+            hasPrevious: !!this.calendarCache.previous,
+            hasCurrent: !!this.calendarCache.current,
+            hasNext: !!this.calendarCache.next
+        });
+    }
+
+    // Generate and cache calendar content for a specific period
+    async generateCachedCalendarContent(position, date, events) {
+        logger.time('CALENDAR', `Generating cached content for ${position} period`);
+        
+        const grid = this.calendarCache[position];
+        if (!grid) {
+            logger.warn('CALENDAR', `No grid found for position: ${position}`);
+            return;
+        }
+        
+        // Temporarily set the current date to generate content for the target period
+        const originalDate = new Date(this.currentDate);
+        this.currentDate = new Date(date);
+        
+        // Generate the calendar content
+        const filteredEvents = this.getFilteredEvents();
+        grid.innerHTML = this.generateCalendarEvents(filteredEvents);
+        
+        // Update grid layout based on view
+        if (this.currentDate.getTime() !== originalDate.getTime()) {
+            if (this.currentView === 'month') {
+                grid.className = 'calendar-grid calendar-grid-month-view-grid';
+                grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                
+                const dayElements = grid.querySelectorAll('.calendar-day, .calendar-day-header');
+                const headerRows = grid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
+                const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
+                const totalRows = headerRows + dayRows;
+                
+                grid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
+            } else {
+                grid.className = 'calendar-grid calendar-grid-week-view-grid';
+                grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                grid.style.gridTemplateRows = 'auto';
+                grid.style.minHeight = 'auto';
+            }
+        }
+        
+        // Restore the original date
+        this.currentDate = originalDate;
+        
+        logger.timeEnd('CALENDAR', `Generating cached content for ${position} period`);
+        logger.debug('CALENDAR', `Cached content generated for ${position}`, {
+            eventCount: filteredEvents.length,
+            date: date.toISOString()
+        });
+    }
+
+    // Update all cached calendar content
+    async updateCalendarCache() {
+        if (!this.cacheContainer || !this.isCacheInitialized) {
+            return;
+        }
+        
+        logger.time('CALENDAR', 'Updating calendar cache');
+        
+        const { start, end } = this.getCurrentPeriodBounds();
+        const filteredEvents = this.getFilteredEvents();
+        
+        // Calculate dates for previous and next periods
+        const prevDate = new Date(this.currentDate);
+        const nextDate = new Date(this.currentDate);
+        
+        if (this.currentView === 'week') {
+            prevDate.setDate(prevDate.getDate() - 7);
+            nextDate.setDate(nextDate.getDate() + 7);
+        } else {
+            prevDate.setMonth(prevDate.getMonth() - 1);
+            nextDate.setMonth(nextDate.getMonth() + 1);
+        }
+        
+        // Generate cached content for all positions
+        await Promise.all([
+            this.generateCachedCalendarContent('previous', prevDate, filteredEvents),
+            this.generateCachedCalendarContent('next', nextDate, filteredEvents)
+        ]);
+        
+        logger.timeEnd('CALENDAR', 'Updating calendar cache');
+        logger.componentLoad('CALENDAR', 'Calendar cache updated successfully');
+    }
+
+    // Get the date for a specific cache position
+    getDateForCachePosition(position) {
+        const date = new Date(this.currentDate);
+        
+        if (position === 'previous') {
+            if (this.currentView === 'week') {
+                date.setDate(date.getDate() - 7);
+            } else {
+                date.setMonth(date.getMonth() - 1);
+            }
+        } else if (position === 'next') {
+            if (this.currentView === 'week') {
+                date.setDate(date.getDate() + 7);
+            } else {
+                date.setMonth(date.getMonth() + 1);
+            }
+        }
+        
+        return date;
     }
 
     // Enhanced swipe detection methods
     setupSwipeHandlers() {
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (!calendarGrid) {
-            logger.warn('CALENDAR', 'Calendar grid not found for swipe setup');
+        // Use cache container if available, otherwise fall back to single calendar grid
+        const swipeTarget = this.cacheContainer || document.querySelector('.calendar-grid');
+        if (!swipeTarget) {
+            logger.warn('CALENDAR', 'No swipe target found for swipe setup');
             return;
         }
 
         // Touch start
-        calendarGrid.addEventListener('touchstart', (e) => {
+        swipeTarget.addEventListener('touchstart', (e) => {
             this.touchStartX = e.touches[0].clientX;
             this.touchStartY = e.touches[0].clientY;
             this.touchCurrentX = this.touchStartX;
@@ -56,7 +233,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }, { passive: true });
 
         // Touch move - track finger movement in real-time
-        calendarGrid.addEventListener('touchmove', (e) => {
+        swipeTarget.addEventListener('touchmove', (e) => {
             if (!this.touchStartX) return; // No active touch
             
             this.touchCurrentX = e.touches[0].clientX;
@@ -97,7 +274,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }, { passive: false });
 
         // Touch end
-        calendarGrid.addEventListener('touchend', (e) => {
+        swipeTarget.addEventListener('touchend', (e) => {
             if (!this.touchStartX) return; // No active touch
             
             this.touchEndX = e.changedTouches[0].clientX;
@@ -132,7 +309,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }, { passive: true });
 
         // Touch cancel
-        calendarGrid.addEventListener('touchcancel', (e) => {
+        swipeTarget.addEventListener('touchcancel', (e) => {
             this.resetSwipeVisualFeedback();
             this.touchStartX = 0;
             this.touchStartY = 0;
@@ -146,8 +323,9 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Update visual feedback during swipe
     updateSwipeVisualFeedback(deltaX) {
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (!calendarGrid) return;
+        // Use cache container if available, otherwise fall back to single calendar grid
+        const swipeTarget = this.cacheContainer || document.querySelector('.calendar-grid');
+        if (!swipeTarget) return;
         
         // Calculate opacity and transform based on swipe distance
         const maxDistance = window.innerWidth * 0.4; // 40% of screen width for better visual feedback
@@ -158,19 +336,19 @@ class DynamicCalendarLoader extends CalendarCore {
         // Apply transform, opacity, subtle scale, and rotation effects
         const scale = 1 - (progress * 0.05); // Slight scale down as user swipes
         const rotation = (deltaX / window.innerWidth) * 2; // Subtle rotation based on swipe distance
-        calendarGrid.style.transform = `translateX(${translateX}px) scale(${scale}) rotateY(${rotation}deg)`;
-        calendarGrid.style.opacity = opacity;
+        swipeTarget.style.transform = `translateX(${translateX}px) scale(${scale}) rotateY(${rotation}deg)`;
+        swipeTarget.style.opacity = opacity;
         
         // Add subtle background color change to indicate swipe progress
         const backgroundColor = deltaX > 0 ? 
             `rgba(255, 193, 7, ${progress * 0.1})` : // Yellow tint for right swipe
             `rgba(13, 110, 253, ${progress * 0.1})`;  // Blue tint for left swipe
-        calendarGrid.style.backgroundColor = backgroundColor;
+        swipeTarget.style.backgroundColor = backgroundColor;
         
         // Add subtle shadow effect for depth
         const shadowBlur = Math.min(progress * 20, 10);
         const shadowOffset = Math.min(progress * 10, 5);
-        calendarGrid.style.boxShadow = `0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${progress * 0.3})`;
+        swipeTarget.style.boxShadow = `0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${progress * 0.3})`;
         
         // Add visual indicator for swipe direction
         this.updateSwipeDirectionIndicator(deltaX, progress);
@@ -178,11 +356,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Update swipe direction indicator
     updateSwipeDirectionIndicator(deltaX, progress) {
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (!calendarGrid) return;
+        // Use cache container if available, otherwise fall back to single calendar grid
+        const swipeTarget = this.cacheContainer || document.querySelector('.calendar-grid');
+        if (!swipeTarget) return;
         
         // Remove existing indicators
-        const existingIndicator = calendarGrid.querySelector('.swipe-direction-indicator');
+        const existingIndicator = swipeTarget.querySelector('.swipe-direction-indicator');
         if (existingIndicator) {
             existingIndicator.remove();
         }
@@ -210,35 +389,36 @@ class DynamicCalendarLoader extends CalendarCore {
             `;
             indicator.textContent = deltaX > 0 ? '← Previous' : 'Next →';
             
-            calendarGrid.appendChild(indicator);
+            swipeTarget.appendChild(indicator);
         }
     }
 
     // Reset visual feedback
     resetSwipeVisualFeedback() {
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (!calendarGrid) return;
+        // Use cache container if available, otherwise fall back to single calendar grid
+        const swipeTarget = this.cacheContainer || document.querySelector('.calendar-grid');
+        if (!swipeTarget) return;
         
         // Only reset if we're not in the middle of a transition animation
-        if (calendarGrid.style.transition && calendarGrid.style.transition.includes('0.3s')) {
+        if (swipeTarget.style.transition && swipeTarget.style.transition.includes('0.3s')) {
             logger.debug('CALENDAR', 'Skipping visual feedback reset during transition animation');
             return;
         }
         
         // Reset transform, opacity, background, scale, rotation, and shadow with smooth transition
-        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out';
-        calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
-        calendarGrid.style.opacity = '1';
-        calendarGrid.style.backgroundColor = '';
-        calendarGrid.style.boxShadow = '';
+        swipeTarget.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out';
+        swipeTarget.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
+        swipeTarget.style.opacity = '1';
+        swipeTarget.style.backgroundColor = '';
+        swipeTarget.style.boxShadow = '';
         
         // Remove transition after animation completes
         setTimeout(() => {
-            calendarGrid.style.transition = '';
+            swipeTarget.style.transition = '';
         }, 200);
         
         // Remove direction indicator
-        const indicator = calendarGrid.querySelector('.swipe-direction-indicator');
+        const indicator = swipeTarget.querySelector('.swipe-direction-indicator');
         if (indicator) {
             indicator.remove();
         }
@@ -298,21 +478,97 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     hideSwipeHint() {
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (calendarGrid) {
-            calendarGrid.style.setProperty('--swipe-hint-opacity', '0');
+        // Use cache container if available, otherwise fall back to single calendar grid
+        const swipeTarget = this.cacheContainer || document.querySelector('.calendar-grid');
+        if (swipeTarget) {
+            swipeTarget.style.setProperty('--swipe-hint-opacity', '0');
         }
     }
 
-    // Animate swipe transition with smooth off-screen movement
+    // Animate swipe transition with cached content for smooth experience
     animateSwipeTransition(direction, deltaX) {
+        if (!this.cacheContainer || !this.isCacheInitialized) {
+            // Fall back to original animation if cache is not available
+            this.animateSwipeTransitionFallback(direction, deltaX);
+            return;
+        }
+        
+        logger.debug('CALENDAR', 'Starting cached swipe transition animation', {
+            direction,
+            deltaX,
+            hasCache: !!this.cacheContainer
+        });
+        
+        const screenWidth = window.innerWidth;
+        const currentGrid = this.calendarCache.current;
+        const targetGrid = this.calendarCache[direction === 'prev' ? 'previous' : 'next'];
+        
+        if (!currentGrid || !targetGrid) {
+            logger.warn('CALENDAR', 'Missing grid for cached animation', {
+                hasCurrent: !!currentGrid,
+                hasTarget: !!targetGrid,
+                direction
+            });
+            this.animateSwipeTransitionFallback(direction, deltaX);
+            return;
+        }
+        
+        // Show the target grid (next/previous period) during the swipe
+        targetGrid.style.opacity = '1';
+        targetGrid.style.pointerEvents = 'auto';
+        targetGrid.style.zIndex = '3';
+        
+        // Position the target grid based on swipe direction
+        const targetInitialX = direction === 'prev' ? -screenWidth : screenWidth;
+        targetGrid.style.transform = `translateX(${targetInitialX}px) scale(0.95) rotateY(${direction === 'prev' ? -5 : 5}deg)`;
+        
+        // Force reflow
+        targetGrid.offsetHeight;
+        
+        // Animate both grids simultaneously
+        requestAnimationFrame(() => {
+            // Animate current grid out
+            currentGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+            currentGrid.style.transform = `translateX(${direction === 'prev' ? screenWidth : -screenWidth}px) scale(0.95) rotateY(${direction === 'prev' ? 5 : -5}deg)`;
+            currentGrid.style.opacity = '0.7';
+            currentGrid.style.pointerEvents = 'none';
+            currentGrid.style.zIndex = '1';
+            
+            // Animate target grid in
+            targetGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+            targetGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
+            targetGrid.style.opacity = '1';
+            
+            // After animation completes, update the calendar state and cache
+            setTimeout(() => {
+                // Update the calendar content
+                this.navigatePeriod(direction, false);
+                
+                // Update the display to get new content
+                this.updateCalendarDisplay();
+                
+                // Update the cache for the new position
+                this.updateCalendarCache();
+                
+                // Reset grid positions and states
+                this.resetCacheGridStates();
+                
+                logger.componentLoad('CALENDAR', 'Cached swipe transition completed', {
+                    direction,
+                    newDate: this.currentDate.toISOString()
+                });
+            }, 300);
+        });
+    }
+
+    // Fallback animation for when cache is not available
+    animateSwipeTransitionFallback(direction, deltaX) {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) return;
         
-        logger.debug('CALENDAR', 'Starting swipe transition animation', {
+        logger.debug('CALENDAR', 'Using fallback swipe animation', {
             direction,
-            deltaX,
-            currentTransform: calendarGrid.style.transform
+            deltaX
         });
         
         // Calculate the target position (off-screen)
@@ -372,6 +628,23 @@ class DynamicCalendarLoader extends CalendarCore {
                     });
                 }
             }, 300);
+        });
+    }
+
+    // Reset cache grid states after animation
+    resetCacheGridStates() {
+        if (!this.cacheContainer) return;
+        
+        const positions = ['previous', 'current', 'next'];
+        positions.forEach((position, index) => {
+            const grid = this.calendarCache[position];
+            if (grid) {
+                grid.style.transition = '';
+                grid.style.transform = `translateX(${index === 0 ? '-100%' : index === 1 ? '0%' : '100%'})`;
+                grid.style.opacity = index === 1 ? '1' : '0';
+                grid.style.pointerEvents = index === 1 ? 'auto' : 'none';
+                grid.style.zIndex = index === 1 ? '2' : '1';
+            }
         });
     }
 
@@ -1269,6 +1542,14 @@ class DynamicCalendarLoader extends CalendarCore {
             city: this.currentCity
         });
         
+        // Initialize cache if not already done
+        if (!this.isCacheInitialized) {
+            logger.debug('CALENDAR', 'Initializing calendar cache for first time');
+            this.initializeCalendarCache();
+            this.isCacheInitialized = true;
+            logger.componentLoad('CALENDAR', 'Calendar cache initialization completed');
+        }
+        
         // Update calendar title
         const calendarTitle = document.getElementById('calendar-title');
         if (calendarTitle) {
@@ -1282,15 +1563,15 @@ class DynamicCalendarLoader extends CalendarCore {
             dateRange.textContent = this.formatDateRange(start, end);
         }
         
-        // Update calendar grid
-        const calendarGrid = document.querySelector('.calendar-grid');
+        // Update calendar grid (use current cache grid if available)
+        const calendarGrid = this.calendarCache.current || document.querySelector('.calendar-grid');
         if (calendarGrid) {
             calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents);
             this.attachCalendarInteractions();
             
             // Update grid layout based on view
             if (this.currentView === 'month') {
-                calendarGrid.className = 'calendar-grid month-view-grid';
+                calendarGrid.className = 'calendar-grid calendar-grid-current month-view-grid';
                 calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
                 
                 // Calculate the optimal number of rows based on the actual content
@@ -1308,7 +1589,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     totalRows: totalRows
                 });
             } else {
-                calendarGrid.className = 'calendar-grid week-view-grid';
+                calendarGrid.className = 'calendar-grid calendar-grid-current week-view-grid';
                 calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
                 calendarGrid.style.gridTemplateRows = 'auto';
                 calendarGrid.style.minHeight = 'auto';
@@ -1332,6 +1613,11 @@ class DynamicCalendarLoader extends CalendarCore {
         if (mapSection) {
             mapSection.style.display = 'block';
             this.initializeMap(this.currentCityConfig, filteredEvents);
+        }
+        
+        // Update cache after display is updated
+        if (this.isCacheInitialized) {
+            this.updateCalendarCache();
         }
         
         logger.timeEnd('CALENDAR', 'Calendar display update');
