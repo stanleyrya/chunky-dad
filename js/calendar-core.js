@@ -4,15 +4,20 @@ class CalendarCore {
         this.eventsData = null;
         this.allEvents = [];
         this.locationCache = new Map();
+        this.defaultTimezone = null; // Store default timezone for the city
         logger.componentInit('CALENDAR', 'Calendar core initialized');
     }
 
     // Parse iCal data and extract events
-    parseICalData(icalText) {
+    parseICalData(icalText, defaultTimezone = null) {
         logger.time('CALENDAR', 'iCal parsing');
         logger.info('CALENDAR', 'Starting iCal parsing', {
-            textLength: icalText.length
+            textLength: icalText.length,
+            defaultTimezone: defaultTimezone || 'None specified'
         });
+        
+        // Store the default timezone for use in date parsing
+        this.defaultTimezone = defaultTimezone;
         
         // Log the beginning of the calendar file for debugging
         const filePreview = icalText.substring(0, 500);
@@ -143,14 +148,16 @@ class CalendarCore {
         } else if (line.startsWith('LOCATION:')) {
             currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';');
         } else if (line.startsWith('DTSTART')) {
-            const dateMatch = line.match(/DTSTART[^:]*:(.+)/);
-            if (dateMatch) {
-                currentEvent.start = this.parseICalDate(dateMatch[1]);
+            // Extract everything after DTSTART, including timezone info
+            const colonIndex = line.indexOf(':');
+            if (colonIndex !== -1) {
+                currentEvent.start = this.parseICalDate(line.substring(colonIndex + 1));
             }
         } else if (line.startsWith('DTEND')) {
-            const dateMatch = line.match(/DTEND[^:]*:(.+)/);
-            if (dateMatch) {
-                currentEvent.end = this.parseICalDate(dateMatch[1]);
+            // Extract everything after DTEND, including timezone info
+            const colonIndex = line.indexOf(':');
+            if (colonIndex !== -1) {
+                currentEvent.end = this.parseICalDate(line.substring(colonIndex + 1));
             }
         } else if (line.startsWith('RRULE:')) {
             currentEvent.recurrence = line.substring(6);
@@ -405,7 +412,42 @@ class CalendarCore {
     parseICalDate(icalDate) {
         if (!icalDate) return new Date();
         
-        if (icalDate.includes('T')) {
+        // Check if date has timezone information
+        const hasTimezone = icalDate.includes('TZID=');
+        const isUTC = icalDate.endsWith('Z');
+        
+        if (hasTimezone) {
+            // Extract timezone and date parts
+            // Format: TZID=America/Vancouver:20250717T170000
+            const tzMatch = icalDate.match(/TZID=([^:]+):(.+)/);
+            if (tzMatch) {
+                const timezone = tzMatch[1];
+                const dateStr = tzMatch[2];
+                
+                // Parse the date components
+                if (dateStr.length >= 8) {
+                    const year = dateStr.substring(0, 4);
+                    const month = dateStr.substring(4, 6);
+                    const day = dateStr.substring(6, 8);
+                    const hour = dateStr.substring(9, 11) || '00';
+                    const minute = dateStr.substring(11, 13) || '00';
+                    const second = dateStr.substring(13, 15) || '00';
+                    
+                    // Create date string and let browser handle timezone conversion
+                    // This will create a date in the local timezone
+                    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                    
+                    logger.debug('CALENDAR', 'Parsed date with timezone', {
+                        originalDate: icalDate,
+                        timezone: timezone,
+                        parsedDate: date.toISOString(),
+                        localString: date.toString()
+                    });
+                    
+                    return date;
+                }
+            }
+        } else if (icalDate.includes('T')) {
             // DateTime format: YYYYMMDDTHHMMSS[Z]
             const cleanDate = icalDate.replace(/[TZ]/g, '');
             if (cleanDate.length >= 8) {
@@ -416,7 +458,52 @@ class CalendarCore {
                 const minute = cleanDate.substring(10, 12) || '00';
                 const second = cleanDate.substring(12, 14) || '00';
                 
-                return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                if (isUTC) {
+                    // Date is in UTC, create as UTC and convert to local
+                    const utcDate = new Date(Date.UTC(
+                        parseInt(year), 
+                        parseInt(month) - 1, 
+                        parseInt(day),
+                        parseInt(hour),
+                        parseInt(minute),
+                        parseInt(second)
+                    ));
+                    
+                    logger.debug('CALENDAR', 'Parsed UTC date', {
+                        originalDate: icalDate,
+                        utcDate: utcDate.toISOString(),
+                        localString: utcDate.toString()
+                    });
+                    
+                    return utcDate;
+                } else {
+                    // No timezone specified - use default timezone if available
+                    if (this.defaultTimezone) {
+                        // For now, we'll assume the time is in the city's local timezone
+                        // and create the date accordingly
+                        const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                        
+                        logger.debug('CALENDAR', 'Parsed date with default timezone', {
+                            originalDate: icalDate,
+                            defaultTimezone: this.defaultTimezone,
+                            parsedDate: date.toISOString(),
+                            localString: date.toString()
+                        });
+                        
+                        return date;
+                    } else {
+                        // No timezone info at all - assume local time
+                        const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                        
+                        logger.warn('CALENDAR', 'Parsed date without timezone info', {
+                            originalDate: icalDate,
+                            parsedDate: date.toISOString(),
+                            localString: date.toString()
+                        });
+                        
+                        return date;
+                    }
+                }
             }
         } else if (icalDate.length === 8) {
             // Date only format: YYYYMMDD (all-day event)
