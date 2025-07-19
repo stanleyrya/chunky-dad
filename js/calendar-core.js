@@ -569,34 +569,39 @@ class CalendarCore {
                 let date;
                 
                 if (isUTC) {
-                    // UTC time - create date in UTC
+                    // UTC time - create date in UTC first
                     date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-                } else {
-                    // Create date in local time initially
-                    date = new Date(year, month - 1, day, hour, minute, second);
                     
-                    // If we have timezone data and this matches the calendar timezone, adjust for the offset
-                    if (this.timezoneData && (timezone === this.timezoneData.tzid || (!timezone && this.calendarTimezone === this.timezoneData.tzid))) {
+                    // Convert UTC to calendar timezone if we have timezone data
+                    if (this.timezoneData && this.calendarTimezone === this.timezoneData.tzid) {
                         // Get the appropriate offset (daylight or standard) for this date
                         const offset = this.getTimezoneOffsetForDate(date);
                         if (offset !== null) {
-                            // Convert from calendar timezone to local by applying the offset difference
-                            const localOffset = date.getTimezoneOffset(); // in minutes, negative for timezones ahead of UTC
+                            // Convert from UTC to calendar timezone
                             const calendarOffset = this.parseOffsetString(offset); // in minutes, negative for timezones ahead of UTC
-                            const offsetDiff = calendarOffset - localOffset;
                             
-                            // Adjust the date by the offset difference
-                            date = new Date(date.getTime() - (offsetDiff * 60 * 1000));
+                            // Adjust the UTC date to the calendar timezone
+                            // For example: UTC 5AM + (-7 hours for PDT) = 10PM previous day
+                            date = new Date(date.getTime() + (calendarOffset * 60 * 1000));
                             
-                            logger.debug('CALENDAR', 'Applied timezone offset', {
-                                originalTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                                timezone: timezone || this.calendarTimezone,
+                            logger.debug('CALENDAR', 'Converted UTC to calendar timezone', {
+                                utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
+                                calendarTimezone: this.calendarTimezone,
                                 calendarOffset: offset,
-                                localOffset: localOffset,
-                                adjustedTime: date.toLocaleString()
+                                localTime: date.toLocaleString()
                             });
                         }
                     }
+                } else {
+                    // Non-UTC time - this is already in the calendar's timezone, just create as local
+                    date = new Date(year, month - 1, day, hour, minute, second);
+                    
+                    // No conversion needed - JavaScript will display this correctly in user's local timezone
+                    logger.debug('CALENDAR', 'Calendar timezone time (no conversion needed)', {
+                        calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                        timezone: timezone || this.calendarTimezone,
+                        localDisplay: date.toLocaleString()
+                    });
                 }
                 
                 return date;
