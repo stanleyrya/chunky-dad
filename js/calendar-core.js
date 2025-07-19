@@ -572,26 +572,13 @@ class CalendarCore {
                     // UTC time - create date in UTC first
                     date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
                     
-                    // Convert UTC to calendar timezone if we have timezone data
-                    if (this.timezoneData && this.calendarTimezone === this.timezoneData.tzid) {
-                        // Get the appropriate offset (daylight or standard) for this date
-                        const offset = this.getTimezoneOffsetForDate(date);
-                        if (offset !== null) {
-                            // Convert from UTC to calendar timezone
-                            const calendarOffset = this.parseOffsetString(offset); // in minutes, negative for timezones ahead of UTC
-                            
-                            // Adjust the UTC date to the calendar timezone
-                            // For example: UTC 5AM + (-7 hours for PDT) = 10PM previous day
-                            date = new Date(date.getTime() + (calendarOffset * 60 * 1000));
-                            
-                            logger.debug('CALENDAR', 'Converted UTC to calendar timezone', {
-                                utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
-                                calendarTimezone: this.calendarTimezone,
-                                calendarOffset: offset,
-                                localTime: date.toLocaleString()
-                            });
-                        }
-                    }
+                    // UTC times (ending with Z) are already in UTC and should not be converted
+                    // The JavaScript Date object will automatically display them in the user's local timezone
+                    logger.debug('CALENDAR', 'Parsed UTC time', {
+                        utcString: dateStr,
+                        utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
+                        localDisplay: date.toLocaleString()
+                    });
                 } else {
                     // Non-UTC time - this is already in the calendar's timezone, just create as local
                     date = new Date(year, month - 1, day, hour, minute, second);
