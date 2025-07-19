@@ -658,13 +658,17 @@ class DynamicCalendarLoader extends CalendarCore {
             
             this.eventsData = {
                 cityConfig,
-                events
+                events,
+                calendarTimezone: this.calendarTimezone,
+                timezoneData: this.timezoneData
             };
             
             logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
             logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
                 eventCount: events.length,
-                cityKey
+                cityKey,
+                calendarTimezone: this.calendarTimezone,
+                hasTimezoneData: !!this.timezoneData
             });
             return this.eventsData;
         } catch (error) {
