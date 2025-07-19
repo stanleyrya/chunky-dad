@@ -833,9 +833,9 @@
             }
             
             updateStats() {
-                const allEvents = this.eventsData?.events || [];
-                const recurringEvents = allEvents.filter(e => e.isRecurring).length;
-                const venues = new Set(allEvents.map(e => e.barName).filter(Boolean));
+                const allEvents = this.allEvents || [];
+                const recurringEvents = allEvents.filter(e => e.recurring).length;
+                const venues = new Set(allEvents.map(e => e.bar).filter(Boolean));
                 
                 document.getElementById('total-events').textContent = allEvents.length;
                 document.getElementById('recurring-events').textContent = recurringEvents;
@@ -855,8 +855,8 @@
                     <div class="event-item" data-index="${index}">
                         <div class="event-item-title">${event.name || 'Unnamed Event'}</div>
                         <div class="event-item-meta">
-                            ${event.isRecurring ? '🔄 Recurring' : '📅 One-off'} | 
-                            ${event.barName || 'No venue'} | 
+                            ${event.recurring ? '🔄 Recurring' : '📅 One-off'} | 
+                            ${event.bar || 'No venue'} | 
                             ${event.time || 'No time'}
                             ${event._parseError ? ' | ⚠️ Parse Error' : ''}
                         </div>
@@ -867,24 +867,25 @@
                 container.querySelectorAll('.event-item').forEach(item => {
                     item.addEventListener('click', () => {
                         const index = parseInt(item.dataset.index);
-                        this.selectEvent(events[index], item);
+                        const filteredEvents = this.getFilteredEventList();
+                        this.selectEvent(filteredEvents[index], item);
                     });
                 });
             }
             
             getFilteredEventList() {
-                const events = this.eventsData?.events || [];
+                const events = this.allEvents || [];
                 const searchTerm = document.getElementById('event-search').value.toLowerCase();
                 
                 return events.filter(event => {
                     // Apply filter
-                    if (this.eventFilter === 'recurring' && !event.isRecurring) return false;
-                    if (this.eventFilter === 'oneoff' && event.isRecurring) return false;
+                    if (this.eventFilter === 'recurring' && !event.recurring) return false;
+                    if (this.eventFilter === 'oneoff' && event.recurring) return false;
                     if (this.eventFilter === 'errors' && !event._parseError) return false;
                     
                     // Apply search
                     if (searchTerm) {
-                        const searchableText = `${event.name} ${event.barName} ${event.description}`.toLowerCase();
+                        const searchableText = `${event.name} ${event.bar || ''} ${event.tea || ''}`.toLowerCase();
                         if (!searchableText.includes(searchTerm)) return false;
                     }
                     
@@ -950,7 +951,7 @@
             
             displayTimezoneTranslation() {
                 if (!this.selectedEvent || !this.selectedEvent.startDate) {
-                    document.getElementById('tz-translation').textContent = 'No date information available';
+                    document.getElementById('tz-translation').innerHTML = '<pre style="margin: 0; color: #999;">No event selected</pre>';
                     return;
                 }
                 
@@ -974,7 +975,7 @@
                 
                 // Step 3: Display formatting
                 translationSteps += `3. Display Formatting:\n`;
-                translationSteps += `   Method: ${event.wasUTC && event.calendarTimezone ? 'formatTimeInTimezone()' : 'getTimeRange()'}\n`;
+                translationSteps += `   Method: ${event.wasUTC && event.calendarTimezone ? 'Calendar timezone conversion' : 'Direct local display'}\n`;
                 translationSteps += `   Day: ${event.day}\n`;
                 translationSteps += `   Time: ${event.time}\n\n`;
                 
@@ -1141,9 +1142,8 @@
                 for (let i = 1; i < events.length; i++) {
                     const rawEvent = 'BEGIN:VEVENT' + events[i].split('END:VEVENT')[0] + 'END:VEVENT';
                     
-                    // Check if this matches our processed event
-                    if (rawEvent.includes(processedEvent.uid) || 
-                        (processedEvent.name && rawEvent.includes(processedEvent.name))) {
+                    // Check if this matches our processed event by name
+                    if (processedEvent.name && rawEvent.includes(`SUMMARY:${processedEvent.name}`)) {
                         return rawEvent;
                     }
                 }
@@ -1553,7 +1553,7 @@
             }
             
             testRecurrenceRules() {
-                if (!this.selectedEvent || !this.selectedEvent.isRecurring) {
+                if (!this.selectedEvent || !this.selectedEvent.recurring) {
                     alert('Please select a recurring event first');
                     return;
                 }
