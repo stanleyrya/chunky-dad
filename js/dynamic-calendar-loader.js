@@ -482,6 +482,17 @@ class DynamicCalendarLoader extends CalendarCore {
         // For single times, just simplify
         return this.simplifyTimeFormat(timeString);
     }
+    
+    // Format event time in the city's timezone
+    formatEventTimeInCityTimezone(event) {
+        if (!event.startDate) return event.time || 'TBD';
+        
+        // Get the city's timezone
+        const cityTimezone = this.currentCityConfig?.defaultTimezone || this.defaultTimezone;
+        
+        // Re-format the time range using the city's timezone
+        return this.getTimeRange(event.startDate, event.endDate, cityTimezone);
+    }
 
     // Convert time format to simplified version (4 AM -> 4a, 5 PM -> 5p)
     simplifyTimeFormat(timeString) {
@@ -750,6 +761,9 @@ class DynamicCalendarLoader extends CalendarCore {
             // For desktop, show full day name; for mobile, show abbreviated
             const isDesktop = window.innerWidth > 768;
             const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
+            
+            // If we need to reformat the time for the city's timezone
+            // The time should already be formatted in the city's timezone from parseEventData
             return `${displayDay} ${time}`;
         };
 
