@@ -191,7 +191,7 @@ class CalendarCore {
             const eventData = {
                 name: calendarEvent.title,
                 day: this.getDayFromDate(calendarEvent.start),
-                time: this.getTimeRange(calendarEvent.start, calendarEvent.end, this.defaultTimezone),
+                time: this.getTimeRange(calendarEvent.start, calendarEvent.end),
                 eventType: this.getEventType(calendarEvent.recurrence),
                 recurring: !!calendarEvent.recurrence,
                 recurrence: calendarEvent.recurrence,
@@ -379,46 +379,10 @@ class CalendarCore {
         return days[date.getDay()];
     }
 
-    getTimeRange(startDate, endDate, timezone) {
+    getTimeRange(startDate, endDate) {
         if (!startDate) return 'TBD';
         
-        const formatTime = (date, tz) => {
-            // If timezone is provided, format the time in that timezone
-            if (tz) {
-                try {
-                    const formatter = new Intl.DateTimeFormat('en-US', {
-                        timeZone: tz,
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    });
-                    
-                    const parts = formatter.formatToParts(date);
-                    let hour = '';
-                    let minute = '';
-                    let dayPeriod = '';
-                    
-                    for (const part of parts) {
-                        if (part.type === 'hour') hour = part.value;
-                        if (part.type === 'minute') minute = part.value;
-                        if (part.type === 'dayPeriod') dayPeriod = part.value;
-                    }
-                    
-                    // Format as H:MM AM/PM or H AM/PM
-                    if (minute === '00') {
-                        return `${hour}${dayPeriod}`;
-                    } else {
-                        return `${hour}:${minute}${dayPeriod}`;
-                    }
-                } catch (error) {
-                    logger.warn('CALENDAR', 'Failed to format time with timezone', {
-                        error: error.message,
-                        timezone: tz
-                    });
-                }
-            }
-            
-            // Fallback to local timezone formatting
+        const formatTime = (date) => {
             const hours = date.getHours();
             const minutes = date.getMinutes();
             const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -427,10 +391,10 @@ class CalendarCore {
             return `${displayHours}${displayMinutes}${ampm}`;
         };
         
-        const startTime = formatTime(startDate, timezone || this.defaultTimezone);
+        const startTime = formatTime(startDate);
         
         if (endDate) {
-            const endTime = formatTime(endDate, timezone || this.defaultTimezone);
+            const endTime = formatTime(endDate);
             return `${startTime}-${endTime}`;
         }
         
@@ -469,17 +433,17 @@ class CalendarCore {
                     const minute = parseInt(dateStr.substring(11, 13) || '00');
                     const second = parseInt(dateStr.substring(13, 15) || '00');
                     
-                    // Use the timezone-aware date parsing approach
-                    const convertedDate = this.convertTimezoneToUTC(year, month, day, hour, minute, second, timezone);
+                    // Create date in local timezone (ignoring the TZID for now)
+                    const date = new Date(year, month, day, hour, minute, second);
                     
-                    logger.debug('CALENDAR', 'Parsed date with timezone', {
+                    logger.debug('CALENDAR', 'Parsed date with timezone (as local)', {
                         originalDate: icalDate,
-                        timezone: timezone,
-                        parsedDate: convertedDate.toISOString(),
-                        localString: convertedDate.toString()
+                        requestedTimezone: timezone,
+                        parsedDate: date.toISOString(),
+                        localString: date.toString()
                     });
                     
-                    return convertedDate;
+                    return date;
                 }
             }
         } else if (icalDate.includes('T')) {
@@ -552,193 +516,7 @@ class CalendarCore {
         return new Date();
     }
 
-    // Convert a date/time in a specific timezone to UTC
-    convertTimezoneToUTC(year, month, day, hour, minute, second, timezone) {
-        try {
-            // Create a date string that represents the time in the given timezone
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
-            
-            // Use Intl.DateTimeFormat to get the UTC equivalent
-            // First, we need to find what UTC time corresponds to this local time in the given timezone
-            
-            // Create a test date and format it in the target timezone
-            const testDate = new Date(dateStr);
-            const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: timezone,
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            });
-            
-            // Binary search approach to find the correct UTC time
-            let low = testDate.getTime() - 24 * 60 * 60 * 1000; // 24 hours before
-            let high = testDate.getTime() + 24 * 60 * 60 * 1000; // 24 hours after
-            let bestMatch = testDate.getTime();
-            let iterations = 0;
-            
-            while (high - low > 1000 && iterations < 50) { // 1 second precision
-                const mid = Math.floor((low + high) / 2);
-                const midDate = new Date(mid);
-                
-                const parts = formatter.formatToParts(midDate);
-                const formatted = this.extractDateFromParts(parts);
-                
-                const formattedTime = new Date(
-                    formatted.year,
-                    formatted.month - 1,
-                    formatted.day,
-                    formatted.hour,
-                    formatted.minute,
-                    formatted.second
-                ).getTime();
-                
-                const targetTime = new Date(year, month, day, hour, minute, second).getTime();
-                
-                if (formattedTime < targetTime) {
-                    low = mid;
-                } else if (formattedTime > targetTime) {
-                    high = mid;
-                } else {
-                    bestMatch = mid;
-                    break;
-                }
-                
-                iterations++;
-            }
-            
-            const result = new Date(bestMatch);
-            
-            logger.debug('CALENDAR', 'Timezone conversion complete', {
-                inputTime: `${year}-${month + 1}-${day} ${hour}:${minute}:${second}`,
-                timezone: timezone,
-                utcResult: result.toISOString(),
-                iterations: iterations
-            });
-            
-            return result;
-            
-        } catch (error) {
-            logger.warn('CALENDAR', 'Timezone conversion failed, using fallback', {
-                error: error.message,
-                timezone: timezone
-            });
-            
-            // Fallback: use simple offset calculation
-            return this.fallbackTimezoneConversion(year, month, day, hour, minute, second, timezone);
-        }
-    }
-    
-    // Extract date components from Intl.DateTimeFormat parts
-    extractDateFromParts(parts) {
-        const result = {};
-        for (const part of parts) {
-            switch (part.type) {
-                case 'year': result.year = parseInt(part.value); break;
-                case 'month': result.month = parseInt(part.value); break;
-                case 'day': result.day = parseInt(part.value); break;
-                case 'hour': result.hour = parseInt(part.value); break;
-                case 'minute': result.minute = parseInt(part.value); break;
-                case 'second': result.second = parseInt(part.value); break;
-            }
-        }
-        return result;
-    }
-    
-    // Fallback timezone conversion using offset table
-    fallbackTimezoneConversion(year, month, day, hour, minute, second, timezone) {
-        // Timezone offset table (in minutes from UTC)
-        // Note: These are standard time offsets; DST will be added if applicable
-        const tzOffsets = {
-            'America/Vancouver': -480, // UTC-8 (PST)
-            'America/Los_Angeles': -480, // UTC-8 (PST)
-            'America/New_York': -300, // UTC-5 (EST)
-            'America/Toronto': -300, // UTC-5 (EST)
-            'America/Chicago': -360, // UTC-6 (CST)
-            'Europe/London': 0, // UTC+0 (GMT)
-            'Europe/Berlin': 60, // UTC+1 (CET)
-        };
-        
-        // Create a date object representing the time in the given timezone
-        // We'll use a different approach: create the date as if it were UTC,
-        // then adjust by the timezone offset
-        
-        // First, determine if DST applies for this date in this timezone
-        const tempDate = new Date(year, month, day, hour, minute, second);
-        const isDST = this.isDaylightSavingTime(tempDate, timezone);
-        
-        // Get base offset in minutes
-        let offsetMinutes = tzOffsets[timezone] || 0;
-        
-        // Adjust for DST if applicable (DST typically adds 1 hour)
-        if (isDST) {
-            offsetMinutes += 60;
-        }
-        
-        // Create the UTC timestamp by treating the input as local time in the target timezone
-        // and then adjusting by the offset
-        const localMillis = Date.UTC(year, month, day, hour, minute, second);
-        const utcMillis = localMillis + (offsetMinutes * 60 * 1000);
-        
-        const result = new Date(utcMillis);
-        
-        logger.debug('CALENDAR', 'Fallback timezone conversion', {
-            input: `${year}-${month + 1}-${day} ${hour}:${minute}:${second}`,
-            timezone: timezone,
-            isDST: isDST,
-            offsetMinutes: offsetMinutes,
-            utcResult: result.toISOString()
-        });
-        
-        return result;
-    }
-    
-    // Simplified DST check
-    isDaylightSavingTime(date, timezone) {
-        const year = date.getFullYear();
-        const month = date.getMonth(); // 0-based (0 = January, 6 = July)
-        const day = date.getDate();
-        
-        // Simplified DST rules (actual rules are more complex)
-        if (timezone.startsWith('America/')) {
-            // US/Canada: DST from second Sunday in March to first Sunday in November
-            if (month < 2 || month > 10) return false; // Jan, Feb, Dec
-            if (month > 2 && month < 10) return true; // Apr-Oct (includes July = month 6)
-            
-            // March (month 2) or November (month 10) - need more complex check
-            if (month === 2) { // March
-                // Find second Sunday
-                const firstDay = new Date(year, 2, 1).getDay();
-                const secondSunday = firstDay === 0 ? 8 : 15 - firstDay;
-                return day >= secondSunday;
-            } else { // November (month 10)
-                // Find first Sunday
-                const firstDay = new Date(year, 10, 1).getDay();
-                const firstSunday = firstDay === 0 ? 1 : 8 - firstDay;
-                return day < firstSunday;
-            }
-        } else if (timezone.startsWith('Europe/')) {
-            // Europe: DST from last Sunday in March to last Sunday in October
-            if (month < 2 || month > 9) return false; // Jan, Feb, Nov, Dec
-            if (month > 2 && month < 9) return true; // Apr-Sep
-            
-            // March or October - need more complex check
-            const lastDay = new Date(year, month + 1, 0).getDate();
-            const lastDayOfWeek = new Date(year, month, lastDay).getDay();
-            const lastSunday = lastDayOfWeek === 0 ? lastDay : lastDay - lastDayOfWeek;
-            
-            if (month === 2) { // March
-                return day >= lastSunday;
-            } else { // October
-                return day < lastSunday;
-            }
-        }
-        
-        return false;
-    }
+
 
     // Date range utility methods
     getWeekBounds(date) {
