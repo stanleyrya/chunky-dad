@@ -316,7 +316,9 @@ class CalendarCore {
                 startTimezone: calendarEvent.startTimezone || null,
                 endTimezone: calendarEvent.endTimezone || null,
                 // Store calendar default timezone as fallback
-                calendarTimezone: this.calendarTimezone || null
+                calendarTimezone: this.calendarTimezone || null,
+                // Store whether the original time was in UTC format (for debugging)
+                wasUTC: calendarEvent.start?._wasUTC || false
             };
 
             // Parse description for additional data
@@ -543,6 +545,7 @@ class CalendarCore {
         // Check if the date has timezone information
         let timezone = null;
         let dateStr = icalDate;
+        let wasUTC = false; // Track if the original date was in UTC format
         
         // Check for TZID parameter (e.g., TZID=America/New_York:20240315T190000)
         if (icalDate.includes('TZID=')) {
@@ -556,6 +559,7 @@ class CalendarCore {
         if (dateStr.includes('T')) {
             // DateTime format: YYYYMMDDTHHMMSS[Z]
             const isUTC = dateStr.endsWith('Z');
+            wasUTC = isUTC; // Store for debugging
             const cleanDate = dateStr.replace(/[TZ]/g, '');
             
             if (cleanDate.length >= 8) {
@@ -598,35 +602,42 @@ class CalendarCore {
                             // Create a LOCAL date object (not UTC) with these components
                             date = new Date(localYear, localMonth, localDay, localHour, localMinute, localSecond);
                             
-                            logger.debug('CALENDAR', 'Converted UTC to local date using calendar timezone', {
+                            logger.debug('CALENDAR', 'Converted UTC to calendar timezone (creating local date object)', {
                                 originalUTC: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
                                 calendarTimezone: this.calendarTimezone,
                                 calendarOffset: offset,
                                 offsetMinutes: calendarOffset,
                                 convertedLocal: `${localYear}-${(localMonth + 1).toString().padStart(2, '0')}-${localDay.toString().padStart(2, '0')} ${localHour.toString().padStart(2, '0')}:${localMinute.toString().padStart(2, '0')}`,
                                 resultDate: date.toString(),
-                                resultISO: date.toISOString()
+                                resultISO: date.toISOString(),
+                                note: 'Created local Date object for display in user\'s timezone'
                             });
                         }
                     } else {
-                        // No timezone data available, just use the UTC date as-is
-                        logger.debug('CALENDAR', 'No timezone data for conversion, using UTC date as-is', {
+                        // No timezone data available, create local date from UTC components
+                        logger.debug('CALENDAR', 'UTC date without timezone conversion (creating local date from UTC)', {
                             utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
                             resultDate: date.toString(),
-                            resultISO: date.toISOString()
+                            resultISO: date.toISOString(),
+                            note: 'No calendar timezone data available for conversion'
                         });
                     }
                 } else {
-                    // Non-UTC time - this is already in the calendar's timezone, just create as local
+                    // Non-UTC time - this is already in the calendar's timezone, create as local date
                     date = new Date(year, month - 1, day, hour, minute, second);
                     
                     // No conversion needed - JavaScript will display this correctly in user's local timezone
-                    logger.debug('CALENDAR', 'Calendar timezone time (no conversion needed)', {
+                    logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
                         calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                        timezone: timezone || this.calendarTimezone,
-                        localDisplay: date.toLocaleString()
+                        timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
+                        localDisplay: date.toLocaleString(),
+                        resultDate: date.toString(),
+                        note: 'Time is in calendar timezone, created as local date for correct display'
                     });
                 }
+                
+                // Store wasUTC flag on the date object for debugging
+                date._wasUTC = wasUTC;
                 
                 return date;
             }
@@ -636,10 +647,15 @@ class CalendarCore {
             const month = dateStr.substring(4, 6);
             const day = dateStr.substring(6, 8);
             
-            return new Date(`${year}-${month}-${day}T00:00:00`);
+            const date = new Date(`${year}-${month}-${day}T00:00:00`);
+            date._wasUTC = false; // All-day events are not UTC
+            
+            return date;
         }
         
-        return new Date();
+        const fallbackDate = new Date();
+        fallbackDate._wasUTC = false;
+        return fallbackDate;
     }
     
     // Get the timezone offset for a specific date (returns the offset string like "-0700" or "-0800")
