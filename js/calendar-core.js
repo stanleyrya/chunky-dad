@@ -572,13 +572,50 @@ class CalendarCore {
                     // UTC time - create date in UTC first
                     date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
                     
-                    // For UTC dates, no conversion is needed - JavaScript will handle display in local timezone
-                    logger.debug('CALENDAR', 'Parsed UTC date', {
-                        utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
-                        isoTime: date.toISOString(),
-                        localDisplay: date.toLocaleString(),
-                        timestamp: date.getTime()
-                    });
+                    // Convert UTC to calendar timezone if we have timezone data
+                    if (this.timezoneData && this.calendarTimezone === this.timezoneData.tzid) {
+                        // Get the appropriate offset (daylight or standard) for this date
+                        const offset = this.getTimezoneOffsetForDate(date);
+                        if (offset !== null) {
+                            // Convert from UTC to calendar timezone
+                            const calendarOffset = this.parseOffsetString(offset);
+                            
+                            // Calculate the local time by applying the offset
+                            const utcTime = date.getTime();
+                            const localTime = utcTime + (calendarOffset * 60 * 1000);
+                            
+                            // Create a new local Date object with the converted time components
+                            const tempDate = new Date(localTime);
+                            
+                            // Extract the converted time components
+                            const localYear = tempDate.getUTCFullYear();
+                            const localMonth = tempDate.getUTCMonth();
+                            const localDay = tempDate.getUTCDate();
+                            const localHour = tempDate.getUTCHours();
+                            const localMinute = tempDate.getUTCMinutes();
+                            const localSecond = tempDate.getUTCSeconds();
+                            
+                            // Create a LOCAL date object (not UTC) with these components
+                            date = new Date(localYear, localMonth, localDay, localHour, localMinute, localSecond);
+                            
+                            logger.debug('CALENDAR', 'Converted UTC to local date using calendar timezone', {
+                                originalUTC: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
+                                calendarTimezone: this.calendarTimezone,
+                                calendarOffset: offset,
+                                offsetMinutes: calendarOffset,
+                                convertedLocal: `${localYear}-${(localMonth + 1).toString().padStart(2, '0')}-${localDay.toString().padStart(2, '0')} ${localHour.toString().padStart(2, '0')}:${localMinute.toString().padStart(2, '0')}`,
+                                resultDate: date.toString(),
+                                resultISO: date.toISOString()
+                            });
+                        }
+                    } else {
+                        // No timezone data available, just use the UTC date as-is
+                        logger.debug('CALENDAR', 'No timezone data for conversion, using UTC date as-is', {
+                            utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
+                            resultDate: date.toString(),
+                            resultISO: date.toISOString()
+                        });
+                    }
                 } else {
                     // Non-UTC time - this is already in the calendar's timezone, just create as local
                     date = new Date(year, month - 1, day, hour, minute, second);
