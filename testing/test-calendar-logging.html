@@ -603,6 +603,63 @@
                     </div>
                 </div>
                 
+                <!-- Timezone Debugging Panel -->
+                <div class="debug-panel">
+                    <h2 class="debug-title">🌍 Timezone Translation Analysis</h2>
+                    <div class="timezone-info" style="margin-bottom: 20px;">
+                        <strong>Your Browser Timezone:</strong> <span id="browser-timezone">Loading...</span><br>
+                        <strong>Calendar Default Timezone:</strong> <span id="calendar-timezone">Loading...</span><br>
+                        <strong>Current Local Time:</strong> <span id="current-time">Loading...</span>
+                    </div>
+                    
+                    <div id="timezone-analysis" style="display: none;">
+                        <h3 style="color: #FFA500; margin-bottom: 15px;">Selected Event Timezone Analysis</h3>
+                        
+                        <div class="event-debugger">
+                            <div class="debug-column">
+                                <h3>📅 Original Time Data</h3>
+                                <div class="raw-data" id="tz-original">
+                                    Select an event to analyze timezone handling...
+                                </div>
+                            </div>
+                            <div class="debug-column">
+                                <h3>🔄 Time Translation Steps</h3>
+                                <div class="processed-data" id="tz-translation">
+                                    Select an event to see translation process...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <h3 style="color: #FFA500; margin-bottom: 15px;">Time Display Comparison</h3>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">UTC Time</div>
+                                    <div class="stat-value" id="tz-utc" style="font-size: 1.2rem;">--</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Calendar Timezone</div>
+                                    <div class="stat-value" id="tz-calendar" style="font-size: 1.2rem;">--</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Your Local Time</div>
+                                    <div class="stat-value" id="tz-local" style="font-size: 1.2rem;">--</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Display Time</div>
+                                    <div class="stat-value" id="tz-display" style="font-size: 1.2rem;">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <h3 style="color: #FFA500; margin-bottom: 15px;">Timezone Test Cases</h3>
+                            <button class="debug-btn" id="test-timezone-conversion">🧪 Run Timezone Tests</button>
+                            <div id="timezone-test-results" style="margin-top: 15px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Processing Log -->
                 <div class="debug-panel">
                     <div class="debug-header">
@@ -734,10 +791,17 @@
             parseICalData(icalText) {
                 this.rawCalendarData = icalText;
                 const startTime = performance.now();
+                
+                // Store reference to calendar core for timezone analysis
+                this.calendarCore = this;
+                
                 const result = super.parseICalData(icalText);
                 const parseTime = performance.now() - startTime;
                 
                 document.getElementById('parse-time').textContent = `${parseTime.toFixed(2)}ms`;
+                
+                // Update calendar timezone display
+                this.updateCalendarTimezone();
                 
                 return result;
             }
@@ -835,6 +899,225 @@
                 
                 this.selectedEvent = event;
                 this.displayEventComparison();
+                this.analyzeEventTimezone();
+            }
+            
+            analyzeEventTimezone() {
+                if (!this.selectedEvent) return;
+                
+                // Show timezone analysis section
+                document.getElementById('timezone-analysis').style.display = 'block';
+                
+                // Get raw event data
+                const rawEvent = this.findRawEvent(this.selectedEvent);
+                
+                // Extract time information from raw data
+                let originalTimeData = 'No raw event data found';
+                let dtStartMatch = null;
+                let dtEndMatch = null;
+                
+                if (rawEvent) {
+                    // Extract DTSTART and DTEND
+                    dtStartMatch = rawEvent.match(/DTSTART(?:;[^:]+)?:(.+)/);
+                    dtEndMatch = rawEvent.match(/DTEND(?:;[^:]+)?:(.+)/);
+                    
+                    originalTimeData = `Raw iCal Time Data:\n`;
+                    originalTimeData += `DTSTART: ${dtStartMatch ? dtStartMatch[0] : 'Not found'}\n`;
+                    originalTimeData += `DTEND: ${dtEndMatch ? dtEndMatch[0] : 'Not found'}\n\n`;
+                    
+                    // Check for timezone info
+                    const tzidMatch = rawEvent.match(/DTSTART;TZID=([^:]+):/);
+                    if (tzidMatch) {
+                        originalTimeData += `Event Timezone: ${tzidMatch[1]}\n`;
+                    } else if (dtStartMatch && dtStartMatch[1].endsWith('Z')) {
+                        originalTimeData += `Event Timezone: UTC (Z suffix)\n`;
+                    } else {
+                        originalTimeData += `Event Timezone: Floating (no timezone specified)\n`;
+                    }
+                    
+                    originalTimeData += `\nCalendar Default TZ: ${this.calendarCore.calendarTimezone || 'Not specified'}\n`;
+                    originalTimeData += `Was UTC: ${this.selectedEvent.wasUTC ? 'Yes' : 'No'}`;
+                }
+                
+                document.getElementById('tz-original').textContent = originalTimeData;
+                
+                // Show translation steps
+                this.displayTimezoneTranslation();
+                
+                // Update time displays
+                this.updateTimeDisplays();
+            }
+            
+            displayTimezoneTranslation() {
+                if (!this.selectedEvent || !this.selectedEvent.startDate) {
+                    document.getElementById('tz-translation').textContent = 'No date information available';
+                    return;
+                }
+                
+                const event = this.selectedEvent;
+                const startDate = new Date(event.startDate);
+                
+                let translationSteps = `Time Translation Process:\n\n`;
+                
+                // Step 1: Original parsing
+                translationSteps += `1. Original Parse:\n`;
+                translationSteps += `   Raw value: ${event.startDate}\n`;
+                translationSteps += `   ISO String: ${startDate.toISOString()}\n`;
+                translationSteps += `   Timestamp: ${startDate.getTime()}\n\n`;
+                
+                // Step 2: Timezone detection
+                translationSteps += `2. Timezone Detection:\n`;
+                translationSteps += `   Was UTC: ${event.wasUTC ? 'Yes' : 'No'}\n`;
+                translationSteps += `   Event TZ: ${event.startTimezone || 'None'}\n`;
+                translationSteps += `   Calendar TZ: ${event.calendarTimezone || 'None'}\n`;
+                translationSteps += `   Display TZ: ${event.wasUTC && event.calendarTimezone ? event.calendarTimezone : 'User local'}\n\n`;
+                
+                // Step 3: Display formatting
+                translationSteps += `3. Display Formatting:\n`;
+                translationSteps += `   Method: ${event.wasUTC && event.calendarTimezone ? 'formatTimeInTimezone()' : 'getTimeRange()'}\n`;
+                translationSteps += `   Day: ${event.day}\n`;
+                translationSteps += `   Time: ${event.time}\n\n`;
+                
+                // Step 4: Browser handling
+                translationSteps += `4. Browser Information:\n`;
+                translationSteps += `   User TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n`;
+                translationSteps += `   Local offset: ${startDate.getTimezoneOffset()} minutes\n`;
+                
+                document.getElementById('tz-translation').innerHTML = `<pre style="margin: 0; color: #ccc;">${this.escapeHtml(translationSteps)}</pre>`;
+            }
+            
+            updateTimeDisplays() {
+                if (!this.selectedEvent || !this.selectedEvent.startDate) {
+                    ['tz-utc', 'tz-calendar', 'tz-local', 'tz-display'].forEach(id => {
+                        document.getElementById(id).textContent = '--';
+                    });
+                    return;
+                }
+                
+                const event = this.selectedEvent;
+                const startDate = new Date(event.startDate);
+                
+                // UTC time
+                document.getElementById('tz-utc').textContent = startDate.toISOString();
+                
+                // Calendar timezone time
+                if (event.calendarTimezone) {
+                    try {
+                        const formatter = new Intl.DateTimeFormat('en-US', {
+                            timeZone: event.calendarTimezone,
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+                        document.getElementById('tz-calendar').textContent = formatter.format(startDate);
+                    } catch (e) {
+                        document.getElementById('tz-calendar').textContent = 'Invalid timezone';
+                    }
+                } else {
+                    document.getElementById('tz-calendar').textContent = 'No calendar TZ';
+                }
+                
+                // Local time
+                document.getElementById('tz-local').textContent = startDate.toLocaleString();
+                
+                // Display time (what the user sees)
+                document.getElementById('tz-display').textContent = `${event.day} ${event.time}`;
+            }
+            
+            setupTimezoneInfo() {
+                // Update browser timezone
+                const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                document.getElementById('browser-timezone').textContent = browserTz;
+                
+                // Update current time
+                const updateCurrentTime = () => {
+                    document.getElementById('current-time').textContent = new Date().toLocaleString();
+                };
+                updateCurrentTime();
+                setInterval(updateCurrentTime, 1000);
+                
+                // Calendar timezone will be updated when data loads
+            }
+            
+            updateCalendarTimezone() {
+                const calendarTz = this.calendarCore?.calendarTimezone || 'Not specified';
+                document.getElementById('calendar-timezone').textContent = calendarTz;
+            }
+            
+            runTimezoneTests() {
+                const resultsDiv = document.getElementById('timezone-test-results');
+                resultsDiv.innerHTML = '<h4>Running timezone conversion tests...</h4>';
+                
+                // Test cases
+                const testCases = [
+                    {
+                        name: 'UTC Event (Z suffix)',
+                        icalDate: '20250817T050000Z',
+                        expectedBehavior: 'Should display in calendar timezone'
+                    },
+                    {
+                        name: 'Timezone-specific Event',
+                        icalDate: 'TZID=America/Los_Angeles:20250817T220000',
+                        expectedBehavior: 'Should display in specified timezone'
+                    },
+                    {
+                        name: 'Floating Time Event',
+                        icalDate: '20250817T190000',
+                        expectedBehavior: 'Should display in user local timezone'
+                    }
+                ];
+                
+                let results = '<div style="margin-top: 15px;">';
+                
+                testCases.forEach(test => {
+                    // Create a mock event
+                    const mockEvent = {
+                        start: this.calendarCore.parseICalDate(test.icalDate),
+                        wasUTC: test.icalDate.endsWith('Z')
+                    };
+                    
+                    // Extract timezone if present
+                    const tzMatch = test.icalDate.match(/TZID=([^:]+):/);
+                    if (tzMatch) {
+                        mockEvent.startTimezone = tzMatch[1];
+                    }
+                    
+                    // Get formatted times
+                    const localTime = mockEvent.start.toLocaleString();
+                    let calendarTime = 'N/A';
+                    
+                    if (this.calendarCore.calendarTimezone) {
+                        try {
+                            const formatter = new Intl.DateTimeFormat('en-US', {
+                                timeZone: this.calendarCore.calendarTimezone,
+                                dateStyle: 'short',
+                                timeStyle: 'short'
+                            });
+                            calendarTime = formatter.format(mockEvent.start);
+                        } catch (e) {
+                            calendarTime = 'Error formatting';
+                        }
+                    }
+                    
+                    results += `
+                        <div style="background: #0d0d0d; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
+                            <h5 style="color: #FFA500; margin-bottom: 10px;">${test.name}</h5>
+                            <div style="font-family: monospace; font-size: 0.9em;">
+                                <div>Input: ${test.icalDate}</div>
+                                <div>Parsed: ${mockEvent.start.toISOString()}</div>
+                                <div>Local Display: ${localTime}</div>
+                                <div>Calendar TZ Display: ${calendarTime}</div>
+                                <div style="color: #999; margin-top: 5px;">Expected: ${test.expectedBehavior}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                results += '</div>';
+                resultsDiv.innerHTML = results;
             }
             
             displayEventComparison() {
@@ -1108,6 +1391,10 @@
                     this.testRecurrenceRules();
                 });
                 
+                document.getElementById('test-timezone-conversion').addEventListener('click', () => {
+                    this.runTimezoneTests();
+                });
+                
                 document.getElementById('clear-logs').addEventListener('click', (e) => {
                     e.preventDefault();
                     this.debugLogs = [];
@@ -1325,6 +1612,7 @@
                 // Set up UI
                 this.setupCityQuickSwitch();
                 this.setupEventHandlers();
+                this.setupTimezoneInfo();
                 
                 // Load calendar data
                 try {
