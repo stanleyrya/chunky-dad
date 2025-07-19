@@ -4,20 +4,15 @@ class CalendarCore {
         this.eventsData = null;
         this.allEvents = [];
         this.locationCache = new Map();
-        this.defaultTimezone = null; // Store default timezone for the city
         logger.componentInit('CALENDAR', 'Calendar core initialized');
     }
 
     // Parse iCal data and extract events
-    parseICalData(icalText, defaultTimezone = null) {
+    parseICalData(icalText) {
         logger.time('CALENDAR', 'iCal parsing');
         logger.info('CALENDAR', 'Starting iCal parsing', {
-            textLength: icalText.length,
-            defaultTimezone: defaultTimezone || 'None specified'
+            textLength: icalText.length
         });
-        
-        // Store the default timezone for use in date parsing
-        this.defaultTimezone = defaultTimezone;
         
         // Log the beginning of the calendar file for debugging
         const filePreview = icalText.substring(0, 500);
@@ -476,32 +471,18 @@ class CalendarCore {
                     
                     return utcDate;
                 } else {
-                    // No timezone specified - use default timezone if available
-                    if (this.defaultTimezone) {
-                        // For now, we'll assume the time is in the city's local timezone
-                        // and create the date accordingly
-                        const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
-                        
-                        logger.debug('CALENDAR', 'Parsed date with default timezone', {
-                            originalDate: icalDate,
-                            defaultTimezone: this.defaultTimezone,
-                            parsedDate: date.toISOString(),
-                            localString: date.toString()
-                        });
-                        
-                        return date;
-                    } else {
-                        // No timezone info at all - assume local time
-                        const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
-                        
-                        logger.warn('CALENDAR', 'Parsed date without timezone info', {
-                            originalDate: icalDate,
-                            parsedDate: date.toISOString(),
-                            localString: date.toString()
-                        });
-                        
-                        return date;
-                    }
+                    // No timezone specified - always parse in user's local timezone
+                    // This ensures consistency with how we handle TZID dates
+                    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                    
+                    logger.debug('CALENDAR', 'Parsed date without timezone (as local)', {
+                        originalDate: icalDate,
+                        parsedDate: date.toISOString(),
+                        localString: date.toString(),
+                        note: 'Parsed in user local timezone for consistency'
+                    });
+                    
+                    return date;
                 }
             }
         } else if (icalDate.length === 8) {
