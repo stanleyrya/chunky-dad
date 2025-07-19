@@ -651,7 +651,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 });
             }
             
-            const events = this.parseICalData(icalText);
+            const events = this.parseICalData(icalText, cityConfig.defaultTimezone);
             
             // Store all events for filtering
             this.allEvents = events;

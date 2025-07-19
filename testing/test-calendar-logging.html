@@ -561,6 +561,10 @@
                             <div class="stat-value" id="parse-time">0ms</div>
                             <div class="stat-label">Parse Time</div>
                         </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="default-timezone">N/A</div>
+                            <div class="stat-label">Default Timezone</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -734,10 +738,24 @@
             parseICalData(icalText) {
                 this.rawCalendarData = icalText;
                 const startTime = performance.now();
-                const result = super.parseICalData(icalText);
+                
+                // Get the default timezone from current city config
+                const defaultTimezone = this.currentCityConfig?.defaultTimezone || null;
+                
+                // Pass the default timezone to the parent parseICalData method
+                const result = super.parseICalData(icalText, defaultTimezone);
                 const parseTime = performance.now() - startTime;
                 
                 document.getElementById('parse-time').textContent = `${parseTime.toFixed(2)}ms`;
+                document.getElementById('default-timezone').textContent = defaultTimezone || 'N/A';
+                
+                // Log timezone information for debugging
+                if (defaultTimezone) {
+                    logger.info('DEBUGGER', `Parsing calendar with default timezone: ${defaultTimezone}`, {
+                        city: this.currentCityConfig.name,
+                        timezone: defaultTimezone
+                    });
+                }
                 
                 return result;
             }
@@ -776,6 +794,10 @@
                 document.getElementById('total-events').textContent = allEvents.length;
                 document.getElementById('recurring-events').textContent = recurringEvents;
                 document.getElementById('unique-venues').textContent = venues.size;
+                
+                // Update timezone display
+                const timezone = this.currentCityConfig?.defaultTimezone || 'N/A';
+                document.getElementById('default-timezone').textContent = timezone;
             }
             
             displayEventList() {
