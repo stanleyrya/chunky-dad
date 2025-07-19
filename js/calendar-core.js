@@ -254,10 +254,6 @@ class CalendarCore {
                 const dateMatch = line.match(/DTSTART:(.+)/);
                 if (dateMatch) {
                     currentEvent.start = this.parseICalDate(dateMatch[1]);
-                    // Track if this was a UTC time
-                    if (dateMatch[1].endsWith('Z')) {
-                        currentEvent.wasUTC = true;
-                    }
                 }
             }
         } else if (line.startsWith('DTEND')) {
@@ -305,26 +301,10 @@ class CalendarCore {
     // Parse individual event data
     parseEventData(calendarEvent) {
         try {
-            // Determine the effective timezone for time display
-            const displayTimezone = calendarEvent.startTimezone || this.calendarTimezone || null;
-            
-            // Format time using the appropriate timezone
-            let timeString;
-            let dayString;
-            if (calendarEvent.wasUTC && displayTimezone) {
-                // For UTC events, format in the calendar's timezone
-                timeString = this.getTimeRangeInTimezone(calendarEvent.start, calendarEvent.end, displayTimezone);
-                dayString = this.getDayFromDateInTimezone(calendarEvent.start, displayTimezone);
-            } else {
-                // For non-UTC events, use regular formatting
-                timeString = this.getTimeRange(calendarEvent.start, calendarEvent.end);
-                dayString = this.getDayFromDate(calendarEvent.start);
-            }
-            
             const eventData = {
                 name: calendarEvent.title,
-                day: dayString,
-                time: timeString,
+                day: this.getDayFromDate(calendarEvent.start),
+                time: this.getTimeRange(calendarEvent.start, calendarEvent.end),
                 eventType: this.getEventType(calendarEvent.recurrence),
                 recurring: !!calendarEvent.recurrence,
                 recurrence: calendarEvent.recurrence,
@@ -332,13 +312,11 @@ class CalendarCore {
                 startDate: calendarEvent.start,
                 endDate: calendarEvent.end,
                 unprocessedDescription: calendarEvent.description || null, // Store raw description for debugging
-                // Store timezone information if available
+                // Store timezone information if available (for debugging)
                 startTimezone: calendarEvent.startTimezone || null,
                 endTimezone: calendarEvent.endTimezone || null,
                 // Store calendar default timezone as fallback
-                calendarTimezone: this.calendarTimezone || null,
-                // Store whether this event was originally in UTC
-                wasUTC: calendarEvent.wasUTC || false
+                calendarTimezone: this.calendarTimezone || null
             };
 
             // Parse description for additional data
@@ -529,55 +507,6 @@ class CalendarCore {
         return days[date.getDay()];
     }
 
-    // Get day of week in a specific timezone
-    getDayFromDateInTimezone(date, timezone) {
-        if (!date) return 'TBD';
-        
-        try {
-            const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: timezone,
-                weekday: 'long'
-            });
-            
-            return formatter.format(date);
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to get day in timezone', {
-                timezone,
-                error: error.message
-            });
-            // Fallback to local timezone
-            return this.getDayFromDate(date);
-        }
-    }
-
-    // Format time in a specific timezone
-    formatTimeInTimezone(date, timezone) {
-        if (!date) return '';
-        
-        try {
-            const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: timezone,
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-            
-            return formatter.format(date);
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to format time in timezone', {
-                timezone,
-                error: error.message
-            });
-            // Fallback to local timezone formatting
-            const hours = date.getHours();
-            const minutes = date.getMinutes();
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours % 12 || 12;
-            const displayMinutes = minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : '';
-            return `${displayHours}${displayMinutes}${ampm}`;
-        }
-    }
-
     getTimeRange(startDate, endDate) {
         if (!startDate) return 'TBD';
         
@@ -595,20 +524,6 @@ class CalendarCore {
         if (endDate) {
             const endTime = formatTime(endDate);
                             return `${startTime}-${endTime}`;
-        }
-        
-        return startTime;
-    }
-
-    // Get time range formatted in a specific timezone
-    getTimeRangeInTimezone(startDate, endDate, timezone) {
-        if (!startDate) return 'TBD';
-        
-        const startTime = this.formatTimeInTimezone(startDate, timezone);
-        
-        if (endDate) {
-            const endTime = this.formatTimeInTimezone(endDate, timezone);
-            return `${startTime}-${endTime}`;
         }
         
         return startTime;
@@ -644,40 +559,44 @@ class CalendarCore {
             const cleanDate = dateStr.replace(/[TZ]/g, '');
             
             if (cleanDate.length >= 8) {
-                const year = cleanDate.substring(0, 4);
-                const month = cleanDate.substring(4, 6);
-                const day = cleanDate.substring(6, 8);
-                const hour = cleanDate.substring(8, 10) || '00';
-                const minute = cleanDate.substring(10, 12) || '00';
-                const second = cleanDate.substring(12, 14) || '00';
+                const year = parseInt(cleanDate.substring(0, 4));
+                const month = parseInt(cleanDate.substring(4, 6));
+                const day = parseInt(cleanDate.substring(6, 8));
+                const hour = parseInt(cleanDate.substring(8, 10) || '00');
+                const minute = parseInt(cleanDate.substring(10, 12) || '00');
+                const second = parseInt(cleanDate.substring(12, 14) || '00');
                 
                 let date;
+                
                 if (isUTC) {
                     // UTC time - create date in UTC
-                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
-                    
-                    // Log that this is a UTC time that will be converted during display
-                    if (this.calendarTimezone) {
-                        logger.debug('CALENDAR', 'UTC time will be displayed in calendar timezone', {
-                            utcTime: date.toISOString(),
-                            calendarTimezone: this.calendarTimezone
-                        });
-                    }
-                } else if (timezone && this.timezoneData && this.timezoneData.tzid === timezone) {
-                    // We have timezone data for this specific timezone
-                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
-                    // Apply timezone offset if needed
-                    date = this.applyTimezoneOffset(date, year, month, day);
-                } else if (!timezone && this.calendarTimezone) {
-                    // No specific timezone, use calendar's default timezone
-                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
-                    logger.debug('CALENDAR', 'Using calendar default timezone for date', {
-                        date: dateStr,
-                        calendarTimezone: this.calendarTimezone
-                    });
+                    date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
                 } else {
-                    // Local time
-                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                    // Create date in local time initially
+                    date = new Date(year, month - 1, day, hour, minute, second);
+                    
+                    // If we have timezone data and this matches the calendar timezone, adjust for the offset
+                    if (this.timezoneData && (timezone === this.timezoneData.tzid || (!timezone && this.calendarTimezone === this.timezoneData.tzid))) {
+                        // Get the appropriate offset (daylight or standard) for this date
+                        const offset = this.getTimezoneOffsetForDate(date);
+                        if (offset !== null) {
+                            // Convert from calendar timezone to local by applying the offset difference
+                            const localOffset = date.getTimezoneOffset(); // in minutes, negative for timezones ahead of UTC
+                            const calendarOffset = this.parseOffsetString(offset); // in minutes, negative for timezones ahead of UTC
+                            const offsetDiff = calendarOffset - localOffset;
+                            
+                            // Adjust the date by the offset difference
+                            date = new Date(date.getTime() - (offsetDiff * 60 * 1000));
+                            
+                            logger.debug('CALENDAR', 'Applied timezone offset', {
+                                originalTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                                timezone: timezone || this.calendarTimezone,
+                                calendarOffset: offset,
+                                localOffset: localOffset,
+                                adjustedTime: date.toLocaleString()
+                            });
+                        }
+                    }
                 }
                 
                 return date;
@@ -694,27 +613,32 @@ class CalendarCore {
         return new Date();
     }
     
-    // Apply timezone offset based on timezone data
-    applyTimezoneOffset(date, year, month, day) {
-        if (!this.timezoneData) return date;
+    // Get the timezone offset for a specific date (returns the offset string like "-0700" or "-0800")
+    getTimezoneOffsetForDate(date) {
+        if (!this.timezoneData) return null;
         
         // Determine if we're in daylight or standard time
         const isDaylight = this.isInDaylightTime(date);
         const timezoneSection = isDaylight ? this.timezoneData.daylight : this.timezoneData.standard;
         
-        if (!timezoneSection) return date;
-        
-        // Log timezone application
-        logger.debug('CALENDAR', 'Applying timezone offset', {
-            date: date.toISOString(),
-            isDaylight,
-            offset: timezoneSection.offsetTo,
-            timezoneName: timezoneSection.name
-        });
-        
-        return date;
+        return timezoneSection ? timezoneSection.offsetTo : null;
     }
     
+    // Parse offset string (e.g., "-0700") to minutes
+    parseOffsetString(offsetStr) {
+        if (!offsetStr) return 0;
+        
+        const match = offsetStr.match(/^([+-])(\d{2})(\d{2})$/);
+        if (!match) return 0;
+        
+        const sign = match[1] === '+' ? 1 : -1;
+        const hours = parseInt(match[2]);
+        const minutes = parseInt(match[3]);
+        
+        // Return offset in minutes (negative for timezones ahead of UTC, matching JavaScript convention)
+        return -(sign * (hours * 60 + minutes));
+    }
+
     // Check if a date is in daylight saving time based on VTIMEZONE data
     isInDaylightTime(date) {
         if (!this.timezoneData || !this.timezoneData.daylight) return false;
@@ -785,18 +709,37 @@ class CalendarCore {
         const targetDayOfWeek = dayCodeToDayNumber[dayCode];
         if (targetDayOfWeek === undefined) return null;
         
-        // Use the existing method from the class
-        const calculatedDate = this.calculateByDayOccurrence(year, month - 1, occurrence, targetDayOfWeek);
+        // Calculate the date
+        const firstDay = new Date(year, month - 1, 1);
+        const firstDayOfWeek = firstDay.getDay();
+        
+        let targetDate;
+        if (occurrence > 0) {
+            // Positive occurrence (1st, 2nd, 3rd, etc.)
+            let daysUntilTarget = (targetDayOfWeek - firstDayOfWeek + 7) % 7;
+            if (daysUntilTarget === 0 && occurrence > 1) daysUntilTarget = 7;
+            
+            targetDate = new Date(year, month - 1, 1 + daysUntilTarget + (occurrence - 1) * 7);
+        } else {
+            // Negative occurrence (last, second-to-last, etc.)
+            const lastDay = new Date(year, month, 0);
+            const lastDayOfWeek = lastDay.getDay();
+            
+            let daysFromEnd = (lastDayOfWeek - targetDayOfWeek + 7) % 7;
+            if (daysFromEnd === 0 && occurrence < -1) daysFromEnd = 7;
+            
+            targetDate = new Date(year, month - 1, lastDay.getDate() - daysFromEnd + (occurrence + 1) * 7);
+        }
         
         // Add time component from DTSTART if available
-        if (calculatedDate && this.timezoneData.daylight && this.timezoneData.daylight.dtstart) {
+        if (this.timezoneData.daylight && this.timezoneData.daylight.dtstart) {
             const timeMatch = this.timezoneData.daylight.dtstart.match(/T(\d{2})(\d{2})(\d{2})/);
             if (timeMatch) {
-                calculatedDate.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), parseInt(timeMatch[3]));
+                targetDate.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), parseInt(timeMatch[3]));
             }
         }
         
-        return calculatedDate;
+        return targetDate;
     }
 
     // Date range utility methods
