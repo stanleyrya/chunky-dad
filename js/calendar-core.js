@@ -572,13 +572,31 @@ class CalendarCore {
                     // UTC time - create date in UTC first
                     date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
                     
-                    // UTC times (ending with Z) are already in UTC and should not be converted
-                    // The JavaScript Date object will automatically display them in the user's local timezone
-                    logger.debug('CALENDAR', 'Parsed UTC time', {
-                        utcString: dateStr,
-                        utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
-                        localDisplay: date.toLocaleString()
-                    });
+                    // Convert UTC to calendar timezone if we have timezone data
+                    if (this.timezoneData && this.calendarTimezone === this.timezoneData.tzid) {
+                        // Get the appropriate offset (daylight or standard) for this date
+                        const offset = this.getTimezoneOffsetForDate(date);
+                        if (offset !== null) {
+                            // Convert from UTC to calendar timezone
+                            // parseOffsetString now returns the actual offset in minutes
+                            // For PDT (-0700): returns -420 minutes
+                            // For EST (-0500): returns -300 minutes
+                            const calendarOffset = this.parseOffsetString(offset);
+                            
+                            // To convert from UTC to local time, we add the offset
+                            // Example: 5:00 AM UTC + (-420 minutes) = 5:00 - 7:00 = 10:00 PM previous day PDT
+                            date = new Date(date.getTime() + (calendarOffset * 60 * 1000));
+                            
+                            logger.debug('CALENDAR', 'Converted UTC to calendar timezone', {
+                                utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
+                                calendarTimezone: this.calendarTimezone,
+                                calendarOffset: offset,
+                                offsetMinutes: calendarOffset,
+                                localTime: date.toLocaleString(),
+                                isoTime: date.toISOString()
+                            });
+                        }
+                    }
                 } else {
                     // Non-UTC time - this is already in the calendar's timezone, just create as local
                     date = new Date(year, month - 1, day, hour, minute, second);
@@ -627,8 +645,10 @@ class CalendarCore {
         const hours = parseInt(match[2]);
         const minutes = parseInt(match[3]);
         
-        // Return offset in minutes (negative for timezones ahead of UTC, matching JavaScript convention)
-        return -(sign * (hours * 60 + minutes));
+        // Return offset in minutes
+        // For -0700: returns -420 (7 hours behind UTC)
+        // For +0530: returns +330 (5.5 hours ahead of UTC)
+        return sign * (hours * 60 + minutes);
     }
 
     // Check if a date is in daylight saving time based on VTIMEZONE data
