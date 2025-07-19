@@ -4,6 +4,8 @@ class CalendarCore {
         this.eventsData = null;
         this.allEvents = [];
         this.locationCache = new Map();
+        this.calendarTimezone = null; // Store calendar's default timezone
+        this.timezoneData = null; // Store detailed timezone information
         logger.componentInit('CALENDAR', 'Calendar core initialized');
     }
 
@@ -31,6 +33,21 @@ class CalendarCore {
                 calendarName: calendarNameMatch ? calendarNameMatch[1].trim() : 'Not specified',
                 timezone: calendarTimezoneMatch ? calendarTimezoneMatch[1].trim() : 'Not specified',
                 version: versionMatch ? versionMatch[1].trim() : 'Not specified'
+            });
+            
+            // Store the calendar's default timezone
+            if (calendarTimezoneMatch) {
+                this.calendarTimezone = calendarTimezoneMatch[1].trim();
+            }
+        }
+        
+        // Extract and parse VTIMEZONE data
+        this.timezoneData = this.parseVTimezone(icalText);
+        if (this.timezoneData) {
+            logger.info('CALENDAR', 'Timezone data extracted', {
+                tzid: this.timezoneData.tzid,
+                hasDaylight: !!this.timezoneData.daylight,
+                hasStandard: !!this.timezoneData.standard
             });
         }
         
@@ -133,6 +150,86 @@ class CalendarCore {
         return events;
     }
 
+    // Parse VTIMEZONE data from iCal text
+    parseVTimezone(icalText) {
+        const vtimezoneMatch = icalText.match(/BEGIN:VTIMEZONE[\s\S]*?END:VTIMEZONE/);
+        if (!vtimezoneMatch) {
+            logger.debug('CALENDAR', 'No VTIMEZONE data found in calendar');
+            return null;
+        }
+        
+        const vtimezoneText = vtimezoneMatch[0];
+        const timezoneData = {
+            tzid: null,
+            location: null,
+            daylight: null,
+            standard: null
+        };
+        
+        // Extract TZID
+        const tzidMatch = vtimezoneText.match(/TZID:(.+)/);
+        if (tzidMatch) {
+            timezoneData.tzid = tzidMatch[1].trim();
+        }
+        
+        // Extract X-LIC-LOCATION
+        const locationMatch = vtimezoneText.match(/X-LIC-LOCATION:(.+)/);
+        if (locationMatch) {
+            timezoneData.location = locationMatch[1].trim();
+        }
+        
+        // Extract DAYLIGHT section
+        const daylightMatch = vtimezoneText.match(/BEGIN:DAYLIGHT[\s\S]*?END:DAYLIGHT/);
+        if (daylightMatch) {
+            timezoneData.daylight = this.parseTimezoneSection(daylightMatch[0]);
+        }
+        
+        // Extract STANDARD section
+        const standardMatch = vtimezoneText.match(/BEGIN:STANDARD[\s\S]*?END:STANDARD/);
+        if (standardMatch) {
+            timezoneData.standard = this.parseTimezoneSection(standardMatch[0]);
+        }
+        
+        return timezoneData;
+    }
+    
+    // Parse individual timezone section (DAYLIGHT or STANDARD)
+    parseTimezoneSection(sectionText) {
+        const section = {};
+        
+        // Extract timezone offset from
+        const offsetFromMatch = sectionText.match(/TZOFFSETFROM:(.+)/);
+        if (offsetFromMatch) {
+            section.offsetFrom = offsetFromMatch[1].trim();
+        }
+        
+        // Extract timezone offset to
+        const offsetToMatch = sectionText.match(/TZOFFSETTO:(.+)/);
+        if (offsetToMatch) {
+            section.offsetTo = offsetToMatch[1].trim();
+        }
+        
+        // Extract timezone name
+        const nameMatch = sectionText.match(/TZNAME:(.+)/);
+        if (nameMatch) {
+            section.name = nameMatch[1].trim();
+        }
+        
+        // Extract start date
+        const startMatch = sectionText.match(/DTSTART:(.+)/);
+        if (startMatch) {
+            section.dtstart = startMatch[1].trim();
+        }
+        
+        // Extract recurrence rule
+        const rruleMatch = sectionText.match(/RRULE:(.+)/);
+        if (rruleMatch) {
+            section.rrule = rruleMatch[1].trim();
+        }
+        
+        return section;
+    }
+
     parseEventLine(line, currentEvent) {
         let parsed = true;
         
@@ -143,14 +240,37 @@ class CalendarCore {
         } else if (line.startsWith('LOCATION:')) {
             currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';');
         } else if (line.startsWith('DTSTART')) {
-            const dateMatch = line.match(/DTSTART[^:]*:(.+)/);
-            if (dateMatch) {
-                currentEvent.start = this.parseICalDate(dateMatch[1]);
+            // Handle DTSTART with potential timezone information
+            // Examples: DTSTART:20240315T190000Z or DTSTART;TZID=America/New_York:20240315T190000
+            if (line.includes(';TZID=')) {
+                // Has timezone parameter
+                const match = line.match(/DTSTART;TZID=([^:]+):(.+)/);
+                if (match) {
+                    currentEvent.startTimezone = match[1];
+                    currentEvent.start = this.parseICalDate(`TZID=${match[1]}:${match[2]}`);
+                }
+            } else {
+                // No timezone parameter
+                const dateMatch = line.match(/DTSTART:(.+)/);
+                if (dateMatch) {
+                    currentEvent.start = this.parseICalDate(dateMatch[1]);
+                }
             }
         } else if (line.startsWith('DTEND')) {
-            const dateMatch = line.match(/DTEND[^:]*:(.+)/);
-            if (dateMatch) {
-                currentEvent.end = this.parseICalDate(dateMatch[1]);
+            // Handle DTEND with potential timezone information
+            if (line.includes(';TZID=')) {
+                // Has timezone parameter
+                const match = line.match(/DTEND;TZID=([^:]+):(.+)/);
+                if (match) {
+                    currentEvent.endTimezone = match[1];
+                    currentEvent.end = this.parseICalDate(`TZID=${match[1]}:${match[2]}`);
+                }
+            } else {
+                // No timezone parameter
+                const dateMatch = line.match(/DTEND:(.+)/);
+                if (dateMatch) {
+                    currentEvent.end = this.parseICalDate(dateMatch[1]);
+                }
             }
         } else if (line.startsWith('RRULE:')) {
             currentEvent.recurrence = line.substring(6);
@@ -191,7 +311,12 @@ class CalendarCore {
                 coordinates: calendarEvent.location,
                 startDate: calendarEvent.start,
                 endDate: calendarEvent.end,
-                unprocessedDescription: calendarEvent.description || null // Store raw description for debugging
+                unprocessedDescription: calendarEvent.description || null, // Store raw description for debugging
+                // Store timezone information if available
+                startTimezone: calendarEvent.startTimezone || null,
+                endTimezone: calendarEvent.endTimezone || null,
+                // Store calendar default timezone as fallback
+                calendarTimezone: this.calendarTimezone || null
             };
 
             // Parse description for additional data
@@ -231,6 +356,16 @@ class CalendarCore {
             }
 
             eventData.slug = this.generateSlug(eventData.name);
+
+            // Log timezone usage for debugging
+            if (eventData.startTimezone || eventData.calendarTimezone) {
+                logger.debug('CALENDAR', 'Event timezone information', {
+                    eventName: eventData.name,
+                    eventTimezone: eventData.startTimezone,
+                    calendarDefaultTimezone: eventData.calendarTimezone,
+                    usingTimezone: eventData.startTimezone || eventData.calendarTimezone
+                });
+            }
 
             return eventData;
         } catch (error) {
@@ -405,9 +540,24 @@ class CalendarCore {
     parseICalDate(icalDate) {
         if (!icalDate) return new Date();
         
-        if (icalDate.includes('T')) {
+        // Check if the date has timezone information
+        let timezone = null;
+        let dateStr = icalDate;
+        
+        // Check for TZID parameter (e.g., TZID=America/New_York:20240315T190000)
+        if (icalDate.includes('TZID=')) {
+            const tzMatch = icalDate.match(/TZID=([^:]+):(.+)/);
+            if (tzMatch) {
+                timezone = tzMatch[1];
+                dateStr = tzMatch[2];
+            }
+        }
+        
+        if (dateStr.includes('T')) {
             // DateTime format: YYYYMMDDTHHMMSS[Z]
-            const cleanDate = icalDate.replace(/[TZ]/g, '');
+            const isUTC = dateStr.endsWith('Z');
+            const cleanDate = dateStr.replace(/[TZ]/g, '');
+            
             if (cleanDate.length >= 8) {
                 const year = cleanDate.substring(0, 4);
                 const month = cleanDate.substring(4, 6);
@@ -416,18 +566,144 @@ class CalendarCore {
                 const minute = cleanDate.substring(10, 12) || '00';
                 const second = cleanDate.substring(12, 14) || '00';
                 
-                return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                let date;
+                if (isUTC) {
+                    // UTC time - create date in UTC
+                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+                } else if (timezone && this.timezoneData && this.timezoneData.tzid === timezone) {
+                    // We have timezone data for this specific timezone
+                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                    // Apply timezone offset if needed
+                    date = this.applyTimezoneOffset(date, year, month, day);
+                } else if (!timezone && this.calendarTimezone) {
+                    // No specific timezone, use calendar's default timezone
+                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                    logger.debug('CALENDAR', 'Using calendar default timezone for date', {
+                        date: dateStr,
+                        calendarTimezone: this.calendarTimezone
+                    });
+                } else {
+                    // Local time
+                    date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                }
+                
+                return date;
             }
-        } else if (icalDate.length === 8) {
+        } else if (dateStr.length === 8) {
             // Date only format: YYYYMMDD (all-day event)
-            const year = icalDate.substring(0, 4);
-            const month = icalDate.substring(4, 6);
-            const day = icalDate.substring(6, 8);
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
             
             return new Date(`${year}-${month}-${day}T00:00:00`);
         }
         
         return new Date();
+    }
+    
+    // Apply timezone offset based on timezone data
+    applyTimezoneOffset(date, year, month, day) {
+        if (!this.timezoneData) return date;
+        
+        // Determine if we're in daylight or standard time
+        const isDaylight = this.isInDaylightTime(date);
+        const timezoneSection = isDaylight ? this.timezoneData.daylight : this.timezoneData.standard;
+        
+        if (!timezoneSection) return date;
+        
+        // Log timezone application
+        logger.debug('CALENDAR', 'Applying timezone offset', {
+            date: date.toISOString(),
+            isDaylight,
+            offset: timezoneSection.offsetTo,
+            timezoneName: timezoneSection.name
+        });
+        
+        return date;
+    }
+    
+    // Check if a date is in daylight saving time based on VTIMEZONE data
+    isInDaylightTime(date) {
+        if (!this.timezoneData || !this.timezoneData.daylight) return false;
+        
+        const daylight = this.timezoneData.daylight;
+        if (!daylight.rrule) return false;
+        
+        // Parse the RRULE to determine daylight saving rules
+        // Example: FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+        const rules = {};
+        daylight.rrule.split(';').forEach(rule => {
+            const [key, value] = rule.split('=');
+            rules[key] = value;
+        });
+        
+        if (rules.FREQ !== 'YEARLY') return false;
+        
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1; // JavaScript months are 0-based
+        
+        // Check if we have the necessary rules
+        if (!rules.BYMONTH || !rules.BYDAY) return false;
+        
+        // Calculate daylight start date
+        const daylightStartMonth = parseInt(rules.BYMONTH);
+        const daylightStartDate = this.calculateByDayDate(year, daylightStartMonth, rules.BYDAY);
+        
+        // Calculate standard start date (from standard section)
+        if (!this.timezoneData.standard || !this.timezoneData.standard.rrule) return false;
+        
+        const standardRules = {};
+        this.timezoneData.standard.rrule.split(';').forEach(rule => {
+            const [key, value] = rule.split('=');
+            standardRules[key] = value;
+        });
+        
+        const standardStartMonth = parseInt(standardRules.BYMONTH);
+        const standardStartDate = this.calculateByDayDate(year, standardStartMonth, standardRules.BYDAY);
+        
+        // Check if date falls within daylight saving time
+        if (daylightStartDate && standardStartDate) {
+            if (daylightStartMonth < standardStartMonth) {
+                // Northern hemisphere (daylight in middle of year)
+                return date >= daylightStartDate && date < standardStartDate;
+            } else {
+                // Southern hemisphere (daylight at start/end of year)
+                return date >= daylightStartDate || date < standardStartDate;
+            }
+        }
+        
+        return false;
+    }
+    
+    // Calculate the specific date for a BYDAY rule (e.g., 2SU = second Sunday)
+    calculateByDayDate(year, month, bydayRule) {
+        // Parse BYDAY rule (e.g., "2SU" = second Sunday, "-1SU" = last Sunday)
+        const match = bydayRule.match(/^(-?\d+)([A-Z]{2})$/);
+        if (!match) return null;
+        
+        const occurrence = parseInt(match[1]);
+        const dayCode = match[2];
+        
+        // Convert day code to day number
+        const dayCodeToDayNumber = {
+            'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
+        };
+        
+        const targetDayOfWeek = dayCodeToDayNumber[dayCode];
+        if (targetDayOfWeek === undefined) return null;
+        
+        // Use the existing method from the class
+        const calculatedDate = this.calculateByDayOccurrence(year, month - 1, occurrence, targetDayOfWeek);
+        
+        // Add time component from DTSTART if available
+        if (calculatedDate && this.timezoneData.daylight && this.timezoneData.daylight.dtstart) {
+            const timeMatch = this.timezoneData.daylight.dtstart.match(/T(\d{2})(\d{2})(\d{2})/);
+            if (timeMatch) {
+                calculatedDate.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), parseInt(timeMatch[3]));
+            }
+        }
+        
+        return calculatedDate;
     }
 
     // Date range utility methods
@@ -543,6 +819,67 @@ class CalendarCore {
             logger.componentError('CALENDAR', 'Failed to load calendar data', error);
             throw error;
         }
+    }
+
+    // Get the effective timezone for an event
+    getEventTimezone(event) {
+        // Priority order:
+        // 1. Event-specific timezone (from DTSTART;TZID=...)
+        // 2. Calendar default timezone (from X-WR-TIMEZONE)
+        // 3. System default (browser timezone)
+        
+        if (event.startTimezone) {
+            return {
+                tzid: event.startTimezone,
+                source: 'event',
+                data: this.timezoneData && this.timezoneData.tzid === event.startTimezone ? this.timezoneData : null
+            };
+        }
+        
+        if (event.calendarTimezone || this.calendarTimezone) {
+            const timezone = event.calendarTimezone || this.calendarTimezone;
+            return {
+                tzid: timezone,
+                source: 'calendar',
+                data: this.timezoneData && this.timezoneData.tzid === timezone ? this.timezoneData : null
+            };
+        }
+        
+        // Fallback to browser timezone
+        return {
+            tzid: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            source: 'system',
+            data: null
+        };
+    }
+    
+    // Get timezone offset for a specific date
+    getTimezoneOffset(date, timezoneInfo) {
+        if (!timezoneInfo || !timezoneInfo.data) {
+            // Use standard JavaScript timezone handling
+            return date.getTimezoneOffset();
+        }
+        
+        const tzData = timezoneInfo.data;
+        const isDaylight = this.isInDaylightTime(date);
+        const section = isDaylight ? tzData.daylight : tzData.standard;
+        
+        if (!section || !section.offsetTo) {
+            return date.getTimezoneOffset();
+        }
+        
+        // Parse offset string (e.g., "-0500" or "-0400")
+        const offsetMatch = section.offsetTo.match(/^([+-])(\d{2})(\d{2})$/);
+        if (!offsetMatch) {
+            return date.getTimezoneOffset();
+        }
+        
+        const sign = offsetMatch[1] === '+' ? 1 : -1;
+        const hours = parseInt(offsetMatch[2]);
+        const minutes = parseInt(offsetMatch[3]);
+        
+        // Return offset in minutes (negative for timezones ahead of UTC)
+        return -(sign * (hours * 60 + minutes));
     }
 }
 
