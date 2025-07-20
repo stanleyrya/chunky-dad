@@ -104,12 +104,15 @@
         /* Instagram embed styles */
         .instagram-embed-wrapper {
             position: relative;
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .instagram-embed-container {
             width: 100%;
-            min-height: 300px;
-            background: var(--background-light, #1a1a1a);
+            min-height: 400px;
+            background: #1a1a1a;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -118,10 +121,34 @@
             border-radius: 8px;
         }
         
+        .instagram-embed-container::before {
+            content: "Loading Instagram...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 0.9rem;
+            z-index: 1;
+        }
+        
+        .instagram-embed-container.loaded::before {
+            display: none;
+        }
+        
+        .instagram-embed-container.error::before {
+            content: "Failed to load Instagram";
+            color: #ff6b6b;
+        }
+        
         .instagram-embed-container iframe {
             width: 100% !important;
             height: auto !important;
-            min-height: 300px;
+            min-height: 400px;
+            background: white;
+            border: none;
+            position: relative;
+            z-index: 2;
         }
         
         .instagram-embed-container .instagram-media {
@@ -129,6 +156,20 @@
             width: 100% !important;
             max-width: 100% !important;
             background: white !important;
+            min-width: 326px !important;
+        }
+        
+        /* Instagram specific iframe fixes */
+        .instagram-embed-container blockquote.instagram-media {
+            background: white !important;
+            border: 0 !important;
+            border-radius: 3px !important;
+            box-shadow: 0 0 1px 0 rgba(0,0,0,0.5), 0 1px 10px 0 rgba(0,0,0,0.15) !important;
+            margin: 1px !important;
+            max-width: 540px !important;
+            min-width: 326px !important;
+            padding: 0 !important;
+            width: calc(100% - 2px) !important;
         }
         
         .data-column {
@@ -754,12 +795,38 @@
                     
                     setTimeout(() => {
                         if (window.instgrm && window.instgrm.Embeds) {
+                            // Mark containers and add observers
+                            const containers = document.querySelectorAll('.instagram-embed-container');
+                            containers.forEach(container => {
+                                const observer = new MutationObserver((mutations) => {
+                                    const iframe = container.querySelector('iframe');
+                                    if (iframe) {
+                                        container.classList.add('loaded');
+                                        observer.disconnect();
+                                    }
+                                });
+                                observer.observe(container, { childList: true, subtree: true });
+                                
+                                // Timeout for failed loads
+                                setTimeout(() => {
+                                    if (!container.classList.contains('loaded')) {
+                                        container.classList.add('error');
+                                        const username = container.querySelector('a')?.href?.match(/instagram\.com\/([^/]+)/)?.[1] || 'unknown';
+                                        testLogger.logToViewer('warn', `Instagram embed timeout for @${username}`);
+                                    }
+                                }, 10000);
+                            });
+                            
                             window.instgrm.Embeds.process();
-                            testLogger.logToViewer('success', 'Instagram embeds processed');
+                            testLogger.logToViewer('success', 'Instagram embeds processed', {
+                                containerCount: containers.length
+                            });
                             
                             // Check if embeds were actually created
-                            const embeds = document.querySelectorAll('.instagram-media-rendered');
-                            testLogger.logToViewer('info', `Found ${embeds.length} rendered Instagram embeds`);
+                            setTimeout(() => {
+                                const embeds = document.querySelectorAll('.instagram-media-rendered');
+                                testLogger.logToViewer('info', `Found ${embeds.length} rendered Instagram embeds`);
+                            }, 1000);
                         } else {
                             testLogger.logToViewer('warning', 'Instagram API not available after script load');
                         }
@@ -772,12 +839,38 @@
                 testLogger.logToViewer('info', 'Instagram API already loaded, processing embeds');
                 setTimeout(() => {
                     if (window.instgrm && window.instgrm.Embeds) {
+                        // Mark containers and add observers for already loaded script
+                        const containers = document.querySelectorAll('.instagram-embed-container');
+                        containers.forEach(container => {
+                            const observer = new MutationObserver((mutations) => {
+                                const iframe = container.querySelector('iframe');
+                                if (iframe) {
+                                    container.classList.add('loaded');
+                                    observer.disconnect();
+                                }
+                            });
+                            observer.observe(container, { childList: true, subtree: true });
+                            
+                            // Timeout for failed loads
+                            setTimeout(() => {
+                                if (!container.classList.contains('loaded')) {
+                                    container.classList.add('error');
+                                    const username = container.querySelector('a')?.href?.match(/instagram\.com\/([^/]+)/)?.[1] || 'unknown';
+                                    testLogger.logToViewer('warn', `Instagram embed timeout for @${username}`);
+                                }
+                            }, 10000);
+                        });
+                        
                         window.instgrm.Embeds.process();
-                        testLogger.logToViewer('info', 'Instagram embeds reprocessed');
+                        testLogger.logToViewer('info', 'Instagram embeds reprocessed', {
+                            containerCount: containers.length
+                        });
                         
                         // Check rendered embeds
-                        const embeds = document.querySelectorAll('.instagram-media-rendered');
-                        testLogger.logToViewer('info', `Found ${embeds.length} rendered Instagram embeds after reprocess`);
+                        setTimeout(() => {
+                            const embeds = document.querySelectorAll('.instagram-media-rendered');
+                            testLogger.logToViewer('info', `Found ${embeds.length} rendered Instagram embeds after reprocess`);
+                        }, 1000);
                     }
                 }, 100);
             }
