@@ -810,18 +810,7 @@ header {
     flex-wrap: nowrap;
 }
 
-/* Subtle swipe indicator for mobile */
-@media (max-width: 768px) {
-    .calendar-controls::after {
-        content: '← →';
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        opacity: 0.5;
-        margin-left: 0.5rem;
-        pointer-events: none;
-        font-weight: 300;
-    }
-}
+
 
 .view-toggle {
     display: flex;
@@ -1992,10 +1981,10 @@ footer {
     }
 
     .calendar-day.week-view .day-header {
-        margin-bottom: 0.3rem;
         padding-bottom: 0.2rem;
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .calendar-day.week-view .day-meta {
@@ -2076,17 +2065,32 @@ footer {
         min-height: 50px;
     }
 
+    .calendar-day.month-day {
+        position: relative;
+    }
+
     .calendar-day.month-day .day-header {
-        padding: 1px 0;
+        position: absolute;
+        top: 0.2rem;
+        left: 0.2rem;
+        padding: 0;
+        margin: 0;
+        border: none;
+        background: none;
+        z-index: 1;
     }
 
     .calendar-day.month-day .day-number {
         font-size: 0.7rem;
+        font-weight: 600;
+        line-height: 1;
+        margin: 0;
     }
 
     .calendar-day.month-day .day-events {
-        padding: 1px 0;
+        padding: 1.2rem 0.2rem 0.2rem 0.2rem;
         gap: 0.5px;
+        height: 100%;
     }
 
     .event-item.month-event {
@@ -2366,10 +2370,9 @@ footer {
     }
 
     .calendar-day.week-view .day-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.1rem;
-        margin-bottom: 0.2rem;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.3rem;
         padding-bottom: 0.1rem;
     }
 
@@ -2468,11 +2471,12 @@ footer {
     }
 
     .calendar-day.month-day .day-header {
-        padding: 2px 0;
+        top: 0.15rem;
+        left: 0.15rem;
     }
 
     .calendar-day.month-day .day-number {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
 
     .calendar-day.month-day .day-indicator {
@@ -2481,7 +2485,7 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 0;
+        padding: 1rem 0.15rem 0.15rem 0.15rem;
         gap: 1px;
     }
 
@@ -2772,8 +2776,10 @@ footer {
     }
 
     .calendar-day.week-view .day-header {
-        margin-bottom: 0.1rem;
         padding-bottom: 0.05rem;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.2rem;
     }
 
     .calendar-day.week-view h3 {
@@ -2822,7 +2828,8 @@ footer {
     }
 
     .calendar-day.month-day .day-header {
-        padding: 1px 0;
+        top: 0.1rem;
+        left: 0.1rem;
     }
 }
 
@@ -2877,7 +2884,7 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 0;
+        padding: 0.9rem 0.1rem 0.1rem 0.1rem;
         gap: 0;
     }
 
