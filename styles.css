@@ -499,83 +499,7 @@ header {
     color: var(--text-primary);
 }
 
-.cities-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.city-card {
-    background: var(--background-primary);
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 8px 25px var(--shadow-light);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    will-change: transform;
-}
-
-.city-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 35px var(--shadow-medium);
-}
-
-.city-image {
-    background: var(--gradient-primary);
-    height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-    color: var(--white);
-}
-
-.city-info {
-    padding: 2rem;
-}
-
-.city-info h3 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
-}
-
-.city-info p {
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-}
-
-.city-highlights {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.highlight {
-    background: var(--background-secondary);
-    color: var(--primary-color);
-    padding: 0.3rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-/* Coming Soon City Card */
-.city-card.coming-soon {
-    background: var(--gradient-light);
-    cursor: default;
-}
-
-.city-card.coming-soon:hover {
-    transform: none;
-    box-shadow: 0 8px 25px var(--shadow-light);
-}
-
-.city-card.coming-soon .city-image {
-    background: var(--gradient-success);
-}
+/* Old city card styles removed - using compact layout instead */
 
 /* Compact Layout Styles */
 .compact-section {
@@ -781,97 +705,9 @@ header {
     color: var(--text-secondary);
 }
 
-/* Businesses Section */
-.businesses {
-    padding: 80px 0;
-    background: var(--background-light);
-}
-
-.businesses h2 {
-    text-align: center;
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-}
-
-
-
-/* Business Highlight Section */
-.business-highlight {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-    align-items: center;
-    margin-top: 2rem;
-}
-
-.business-cta {
-    text-align: left;
-}
-
-.business-cta h3 {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-}
-
-.business-cta p {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
-    margin-bottom: 2rem;
-    line-height: 1.8;
-}
-
-.business-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-}
-
-.stat-card {
-    background: var(--background-primary);
-    padding: 2rem 1rem;
-    border-radius: 15px;
-    text-align: center;
-    box-shadow: 0 5px 20px var(--shadow-light);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px var(--shadow-medium);
-}
-
-.stat-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.stat-card h4 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
-}
-
-.stat-card p {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
+/* Old businesses section styles removed - using compact layout instead */
 
 @media (max-width: 768px) {
-    .business-highlight {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-    
-    .business-cta {
-        text-align: center;
-    }
-    
-    .business-stats {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
     /* Compact layout responsive */
     .two-column-layout {
         grid-template-columns: 1fr;
@@ -2150,10 +1986,6 @@ footer {
         flex-direction: column;
     }
 
-    .cities-grid {
-        grid-template-columns: 1fr;
-    }
-
     .events-grid {
         grid-template-columns: 1fr;
     }
@@ -2512,7 +2344,6 @@ footer {
 
     .cities h2,
     .events h2,
-    .businesses h2,
     .contact h2 {
         font-size: 2rem;
     }
@@ -2907,10 +2738,6 @@ footer {
 
 /* Extra aggressive spacing reduction for iPhone and very small screens */
 @media (max-width: 480px) {
-    .cities-grid {
-        grid-template-columns: 1fr;
-    }
-    
     .events-grid {
         grid-template-columns: 1fr;
     }
@@ -3119,22 +2946,9 @@ footer {
 
 
 
-.city-card,
 .event-card,
 .category-card {
     animation: fadeInUp 0.6s ease-out;
-}
-
-.city-card:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.city-card:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-.city-card:nth-child(4) {
-    animation-delay: 0.6s;
 }
 
 .event-card:nth-child(2) {
