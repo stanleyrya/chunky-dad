@@ -59,59 +59,72 @@
             transform: translateX(-5px);
         }
 
-        .test-categories {
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2rem;
+            opacity: 0.7;
+        }
+
+        .test-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
             margin-bottom: 50px;
         }
 
-        .category {
+        .test-card {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
             border-radius: 15px;
-            padding: 25px;
+            padding: 20px;
             border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .category h2 {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: #4ecdc4;
-        }
-
-        .test-links {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .test-link {
-            display: block;
-            padding: 12px 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #fff;
-            text-decoration: none;
             transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .test-card:hover {
+            background: rgba(78, 205, 196, 0.1);
+            border-color: #4ecdc4;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(78, 205, 196, 0.3);
+        }
+
+        .test-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #4ecdc4;
+            word-break: break-word;
+        }
+
+        .test-card .file-info {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-bottom: 10px;
+        }
+
+        .test-card .description {
             font-size: 0.9rem;
+            opacity: 0.8;
+            line-height: 1.4;
         }
 
-        .test-link:hover {
-            background: rgba(78, 205, 196, 0.1);
-            border-color: #4ecdc4;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.2);
+        .category-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
         }
 
-        .featured {
-            background: rgba(78, 205, 196, 0.1);
-            border-color: #4ecdc4;
-        }
-
-        .featured:hover {
-            background: rgba(78, 205, 196, 0.2);
+        .error {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 50px 0;
         }
 
         @media (max-width: 768px) {
@@ -119,7 +132,7 @@
                 font-size: 2rem;
             }
             
-            .test-categories {
+            .test-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -131,49 +144,152 @@
         
         <div class="header">
             <h1>🧪 Testing Tools</h1>
-            <p>Professional development and testing utilities for chunky.dad</p>
+            <p>Development and testing utilities for chunky.dad</p>
+            <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 10px;">
+                To update file list: run <code>node generate-file-list.js</code> in testing directory
+            </p>
         </div>
 
-        <div class="test-categories">
-            <div class="category">
-                <h2>🎨 Style Testing</h2>
-                <div class="test-links">
-                    <a href="ultimate-style-tester.html" class="test-link featured">Ultimate Style Tester</a>
-                    <a href="style-tester.html" class="test-link">Style Tester (Legacy)</a>
-                    <a href="style-test.html" class="test-link">Style Test</a>
-                </div>
-            </div>
-
-            <div class="category">
-                <h2>📅 Calendar Testing</h2>
-                <div class="test-links">
-                    <a href="swipe-calendar-test.html" class="test-link featured">Swipe Calendar Test</a>
-                    <a href="test-calendar-logging.html" class="test-link">Calendar Logging Test</a>
-                </div>
-            </div>
-
-            <div class="category">
-                <h2>🎪 Event Display Tests</h2>
-                <div class="test-links">
-                    <a href="event-test-index.html" class="test-link">Event Test Index</a>
-                    <a href="event-test-1-carousel.html" class="test-link">Carousel View</a>
-                    <a href="event-test-2-timeline.html" class="test-link">Timeline View</a>
-                    <a href="event-test-3-map.html" class="test-link">Map View</a>
-                    <a href="event-test-4-masonry.html" class="test-link">Masonry View</a>
-                    <a href="event-test-5-heatmap.html" class="test-link">Heatmap View</a>
-                </div>
-            </div>
-
-            <div class="category">
-                <h2>🔧 Development Tools</h2>
-                <div class="test-links">
-                    <a href="god-mode.html" class="test-link">God Mode</a>
-                    <a href="header-experiment.html" class="test-link">Header Experiment</a>
-                    <a href="header-test.html" class="test-link">Header Test</a>
-                    <a href="test-google-sheets-loader.html" class="test-link featured">Google Sheets Loader Test</a>
-                </div>
-            </div>
+        <div id="content">
+            <div class="loading">Loading test files...</div>
         </div>
     </div>
+
+    <script>
+        // File descriptions and icons based on filename patterns
+        const fileDescriptions = {
+            'ultimate-style-tester': { icon: '🎨', desc: 'Comprehensive style testing tool with live preview' },
+            'style-test': { icon: '🎭', desc: 'UI element showcase with all components and event display variations' },
+            'event-test-index': { icon: '📋', desc: 'Index of all event display test variations' },
+            'event-test-1-carousel': { icon: '🎠', desc: 'Event carousel display test' },
+            'event-test-2-timeline': { icon: '📅', desc: 'Timeline view for events' },
+            'event-test-3-map': { icon: '🗺️', desc: 'Map-based event display' },
+            'event-test-4-masonry': { icon: '🧱', desc: 'Masonry grid layout for events' },
+            'event-test-5-heatmap': { icon: '🔥', desc: 'Event density heatmap visualization' },
+            'event-test-6-ticker': { icon: '📜', desc: 'Scrolling ticker display for events' },
+            'event-test-7-circular': { icon: '⭕', desc: 'Circular/radial event display' },
+            'event-test-8-kanban': { icon: '📊', desc: 'Kanban board style event organization' },
+            'event-test-9-bubbles': { icon: '🫧', desc: 'Bubble chart event visualization' },
+            'event-test-10-flipcards': { icon: '🃏', desc: 'Flip card event display' },
+            'event-test-11-weekview': { icon: '📆', desc: 'Week view calendar display' },
+            'event-test-12-swipe-tiles': { icon: '👆', desc: 'Swipeable tile event display' },
+            'test-calendar-logging': { icon: '📝', desc: 'Calendar system logging and debugging' },
+            'test-google-sheets-loader': { icon: '📊', desc: 'Google Sheets data loader testing' },
+            'cover-field-test': { icon: '🖼️', desc: 'Cover field functionality test' }
+        };
+
+        // Function to get file info
+        function getFileInfo(filename) {
+            const baseName = filename.replace('.html', '');
+            const info = fileDescriptions[baseName] || { icon: '📄', desc: 'Test file' };
+            return {
+                ...info,
+                displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+            };
+        }
+
+        // Function to format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return Math.round(bytes / 1024) + ' KB';
+            else return Math.round(bytes / 1048576) + ' MB';
+        }
+
+        // Load test files from JSON
+        async function loadTestFiles() {
+            try {
+                // Try to load from the generated JSON file first
+                const response = await fetch('file-list.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    displayFiles(data.files);
+                } else {
+                    // Fallback to checking known files
+                    const testFiles = [];
+                    const potentialFiles = [
+                        'ultimate-style-tester.html',
+                        'event-test-index.html',
+                        'event-test-1-carousel.html',
+                        'event-test-2-timeline.html',
+                        'event-test-3-map.html',
+                        'event-test-4-masonry.html',
+                        'event-test-5-heatmap.html',
+                        'event-test-6-ticker.html',
+                        'event-test-7-circular.html',
+                        'event-test-8-kanban.html',
+                        'event-test-9-bubbles.html',
+                        'event-test-10-flipcards.html',
+                        'event-test-11-weekview.html',
+                        'event-test-12-swipe-tiles.html',
+                        'test-calendar-logging.html',
+                        'test-google-sheets-loader.html',
+                        'cover-field-test.html'
+                    ];
+
+                    // Check which files exist
+                    for (const file of potentialFiles) {
+                        try {
+                            const response = await fetch(file, { method: 'HEAD' });
+                            if (response.ok) {
+                                testFiles.push({
+                                    name: file,
+                                    size: parseInt(response.headers.get('content-length') || '0')
+                                });
+                            }
+                        } catch (e) {
+                            // File doesn't exist or can't be accessed
+                        }
+                    }
+
+                    displayFiles(testFiles);
+                }
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <div class="error">
+                        <h3>Error loading test files</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display the files in a grid
+        function displayFiles(files) {
+            if (files.length === 0) {
+                document.getElementById('content').innerHTML = `
+                    <div class="error">
+                        <h3>No test files found</h3>
+                        <p>Make sure test files are present in the testing directory.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'test-grid';
+
+            files.forEach(file => {
+                if (file.name === 'index.html') return; // Skip index.html itself
+
+                const fileInfo = getFileInfo(file.name);
+                const card = document.createElement('a');
+                card.href = file.name;
+                card.className = 'test-card';
+                card.innerHTML = `
+                    <span class="category-icon">${fileInfo.icon}</span>
+                    <h3>${fileInfo.displayName}</h3>
+                    <div class="file-info">${file.name} • ${formatFileSize(file.size)}</div>
+                    <div class="description">${fileInfo.desc}</div>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('content').innerHTML = '';
+            document.getElementById('content').appendChild(grid);
+        }
+
+        // Load files when page loads
+        loadTestFiles();
+    </script>
 </body>
 </html>
