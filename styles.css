@@ -812,6 +812,19 @@ header {
     flex-wrap: nowrap;
 }
 
+/* Subtle swipe indicator for mobile */
+@media (max-width: 768px) {
+    .calendar-controls::after {
+        content: '← →';
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        opacity: 0.5;
+        margin-left: 0.5rem;
+        pointer-events: none;
+        font-weight: 300;
+    }
+}
+
 .view-toggle {
     display: flex;
     background: var(--background-primary);
@@ -984,27 +997,7 @@ header {
     /* transition: transform 0.1s ease-out, opacity 0.1s ease-out, background-color 0.1s ease-out; */
 }
 
-/* Clean swipe hint for mobile */
-@media (max-width: 768px) {
-    .calendar-header::after {
-        content: '💡 Swipe to navigate';
-        position: absolute;
-        top: 100%;
-        right: 0;
-        font-size: 0.7rem;
-        color: var(--text-secondary);
-        opacity: 0.6;
-        pointer-events: none;
-        z-index: 1;
-        margin-top: 0.5rem;
-        font-weight: 400;
-        transition: opacity 0.3s ease;
-    }
-    
-    .calendar-header.swipe-hint-hidden::after {
-        opacity: 0;
-    }
-}
+
 
 .calendar-day {
     background: var(--background-primary);
@@ -3578,7 +3571,6 @@ footer {
     }
 
     .weekly-calendar .container {
-        padding: 0;
     }
 
     /* Show city name on larger screens */
