@@ -1,3 +1,27 @@
+// Global error handlers
+window.addEventListener('unhandledrejection', function(event) {
+    logger.error('SYSTEM', 'Unhandled promise rejection', {
+        reason: event.reason,
+        promise: event.promise,
+        message: event.reason?.message || 'Unknown error',
+        stack: event.reason?.stack || 'No stack trace'
+    });
+    
+    // Prevent the default browser behavior (console error)
+    event.preventDefault();
+});
+
+window.addEventListener('error', function(event) {
+    logger.error('SYSTEM', 'Global error', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error,
+        stack: event.error?.stack
+    });
+});
+
 // Main Application Module - Coordinates all other modules and handles initialization
 class ChunkyDadApp {
     constructor() {
