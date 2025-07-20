@@ -450,51 +450,81 @@ class DynamicCalendarLoader extends CalendarCore {
         return shortName;
     }
 
-    // Smart hyphenation system - automatically uses hyphenated version when text doesn't fit
+    // Smart nickname system - automatically handles hyphenated nicknames intelligently
     getSmartEventName(event, containerWidth = null) {
         const originalName = event.name;
-        const hyphenatedName = event.hyphenatedName || event.nickName; // Support both property names
+        const nickname = event.shortName;
         
-        // If no hyphenated version provided, fall back to original logic
-        if (!hyphenatedName) {
-            return event.shortName || (originalName.length > 20 ? originalName.substring(0, 17) + '...' : originalName);
+        // If no nickname provided, fall back to original logic
+        if (!nickname) {
+            return originalName.length > 20 ? originalName.substring(0, 17) + '...' : originalName;
         }
         
-        // If container width is provided, calculate which version fits better
-        if (containerWidth) {
-            const originalWidth = this.calculateTextWidth(originalName);
-            const hyphenatedWidth = this.calculateTextWidth(hyphenatedName);
-            
-            logger.debug('CALENDAR', 'Smart hyphenation calculation', {
-                originalName,
-                hyphenatedName,
-                originalWidth,
-                hyphenatedWidth,
-                containerWidth,
-                useHyphenated: originalWidth > containerWidth && hyphenatedWidth <= containerWidth
-            });
-            
-            // Use hyphenated version if original doesn't fit but hyphenated does
-            if (originalWidth > containerWidth && hyphenatedWidth <= containerWidth) {
-                return hyphenatedName;
-            }
-            
-            // Use original if it fits
-            if (originalWidth <= containerWidth) {
-                return originalName;
-            }
-        }
+        // Check if nickname contains hyphens (potential for smart hyphenation)
+        const hasHyphens = nickname.includes('-');
         
-        // Fallback: use character length heuristic for mobile screens
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-            // On mobile, prefer hyphenated version if original is long
-            if (originalName.length > 12 && hyphenatedName.length <= originalName.length) {
-                return hyphenatedName;
+        if (hasHyphens) {
+            // Create unhyphenated version by removing hyphens
+            const unhyphenatedNickname = nickname.replace(/-/g, '');
+            
+            // If container width is provided, calculate which version fits better
+            if (containerWidth) {
+                const originalWidth = this.calculateTextWidth(originalName);
+                const unhyphenatedWidth = this.calculateTextWidth(unhyphenatedNickname);
+                const hyphenatedWidth = this.calculateTextWidth(nickname);
+                
+                logger.debug('CALENDAR', 'Smart hyphenation with nickname', {
+                    originalName,
+                    nickname,
+                    unhyphenatedNickname,
+                    originalWidth: originalWidth.toFixed(1),
+                    unhyphenatedWidth: unhyphenatedWidth.toFixed(1),
+                    hyphenatedWidth: hyphenatedWidth.toFixed(1),
+                    containerWidth,
+                    decision: this.getHyphenationDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth)
+                });
+                
+                // Decision logic:
+                // 1. If original name fits, use it
+                // 2. If original doesn't fit but unhyphenated nickname does, use unhyphenated
+                // 3. If neither original nor unhyphenated fit, use hyphenated nickname
+                if (originalWidth <= containerWidth) {
+                    return originalName;
+                } else if (unhyphenatedWidth <= containerWidth) {
+                    return unhyphenatedNickname;
+                } else {
+                    return nickname; // Use hyphenated version
+                }
             }
+            
+            // Mobile heuristic: prefer unhyphenated if original is long, hyphenated if very constrained
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                if (originalName.length > 15) {
+                    // For very long names, try unhyphenated first
+                    return unhyphenatedNickname.length <= 12 ? unhyphenatedNickname : nickname;
+                } else if (originalName.length > 10) {
+                    // For moderately long names, use unhyphenated if it's shorter
+                    return unhyphenatedNickname;
+                }
+            }
+            
+            return originalName;
+        } else {
+            // Regular nickname without hyphens - use existing logic
+            return nickname;
         }
-        
-        return originalName;
+    }
+
+    // Helper method to determine hyphenation decision for logging
+    getHyphenationDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth) {
+        if (originalWidth <= containerWidth) {
+            return 'use original (fits)';
+        } else if (unhyphenatedWidth <= containerWidth) {
+            return 'use unhyphenated nickname (fits better)';
+        } else {
+            return 'use hyphenated nickname (best option)';
+        }
     }
 
     // Calculate approximate text width in pixels

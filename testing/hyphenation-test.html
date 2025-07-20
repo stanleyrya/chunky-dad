@@ -67,16 +67,16 @@
 </head>
 <body>
     <div class="test-container">
-        <h1>Smart Hyphenation System Test</h1>
-        <p>This demonstrates automatic hyphenation of event names based on available space.</p>
+        <h1>Smart Nickname Hyphenation Test</h1>
+        <p>This demonstrates automatic hyphenation handling using existing nickname fields.</p>
         
         <div class="test-section">
             <h2>Test Events</h2>
-            <p>These events have hyphenated nicknames that will be used automatically when space is limited:</p>
+            <p>These events have hyphenated nicknames. The system automatically removes hyphens when there's space, keeps them when needed:</p>
             
             <div class="test-event">
                 <h3>Event: Rockstrap Party</h3>
-                <p><strong>Hyphenated:</strong> Rock-strap Party</p>
+                <p><strong>Nickname:</strong> Rock-strap (hyphenated) → Rockstrap (unhyphenated when space allows)</p>
                 <div class="demo-controls">
                     <button onclick="testWidth('rockstrap', 100)" class="width-btn">100px</button>
                     <button onclick="testWidth('rockstrap', 150)" class="width-btn">150px</button>
@@ -94,7 +94,7 @@
             
             <div class="test-event">
                 <h3>Event: Bear Weekend Festival</h3>
-                <p><strong>Hyphenated:</strong> Bear Week-end Festival</p>
+                <p><strong>Nickname:</strong> Bear Week-end (hyphenated) → Bear Weekend (unhyphenated when space allows)</p>
                 <div class="demo-controls">
                     <button onclick="testWidth('bearweekend', 100)" class="width-btn">100px</button>
                     <button onclick="testWidth('bearweekend', 150)" class="width-btn">150px</button>
@@ -112,7 +112,7 @@
             
             <div class="test-event">
                 <h3>Event: Underwear Night</h3>
-                <p><strong>Hyphenated:</strong> Under-wear Night</p>
+                <p><strong>Nickname:</strong> Under-wear (hyphenated) → Underwear (unhyphenated when space allows)</p>
                 <div class="demo-controls">
                     <button onclick="testWidth('underwear', 100)" class="width-btn">100px</button>
                     <button onclick="testWidth('underwear', 150)" class="width-btn">150px</button>
@@ -132,11 +132,17 @@
         <div class="test-section">
             <h2>How It Works</h2>
             <ol>
-                <li><strong>Define hyphenated nicknames:</strong> In your event data, include a <code>hyphenated</code> or <code>hyphenatedName</code> field</li>
-                <li><strong>Automatic detection:</strong> The system calculates text width and container space</li>
-                <li><strong>Smart switching:</strong> Uses hyphenated version only when original doesn't fit but hyphenated does</li>
-                <li><strong>Mobile optimization:</strong> On mobile screens, prefers shorter hyphenated versions</li>
-                <li><strong>Fallback support:</strong> Works with existing shortName system if no hyphenated version provided</li>
+                <li><strong>Use existing nickname field:</strong> Include hyphens in your <code>nickname</code> or <code>shortName</code> field</li>
+                <li><strong>Automatic detection:</strong> The system detects hyphens and creates an unhyphenated version</li>
+                <li><strong>Smart decision making:</strong> 
+                    <ul>
+                        <li>If original name fits → use original</li>
+                        <li>If original doesn't fit but unhyphenated nickname does → use unhyphenated</li>
+                        <li>If neither fits → use hyphenated nickname</li>
+                    </ul>
+                </li>
+                <li><strong>Mobile optimization:</strong> On mobile screens, intelligently chooses based on length</li>
+                <li><strong>No breaking changes:</strong> Works with existing nickname system, regular nicknames work as before</li>
             </ol>
         </div>
         
@@ -144,27 +150,27 @@
             <h2>Usage in Calendar Data</h2>
             <pre><code>SUMMARY:Rockstrap Party
 DESCRIPTION:Bar: The Bear Den
-Hyphenated: Rock-strap Party
+Nickname: Rock-strap
 Cover: $15
 Website: https://example.com</code></pre>
-            <p>The system will automatically use "Rock-strap Party" when the full name doesn't fit in the available space.</p>
+            <p>The system will automatically use "Rockstrap" when there's space, "Rock-strap" when space is tight, and fall back to "Rockstrap Party" when there's plenty of room.</p>
         </div>
     </div>
 
     <script>
-        // Test data with hyphenated versions
+        // Test data with hyphenated nicknames
         const testEvents = {
             rockstrap: {
                 name: 'Rockstrap Party',
-                hyphenatedName: 'Rock-strap Party'
+                shortName: 'Rock-strap'
             },
             bearweekend: {
                 name: 'Bear Weekend Festival',
-                hyphenatedName: 'Bear Week-end Festival'
+                shortName: 'Bear Week-end'
             },
             underwear: {
                 name: 'Underwear Night',
-                hyphenatedName: 'Under-wear Night'
+                shortName: 'Under-wear'
             }
         };
 
@@ -185,49 +191,76 @@ Website: https://example.com</code></pre>
             return width;
         }
 
-        // Smart hyphenation logic
+        // Smart nickname hyphenation logic (matches the main system)
         function getSmartEventName(event, containerWidth = null) {
             const originalName = event.name;
-            const hyphenatedName = event.hyphenatedName;
+            const nickname = event.shortName;
             
-            if (!hyphenatedName) {
+            if (!nickname) {
+                return originalName.length > 20 ? originalName.substring(0, 17) + '...' : originalName;
+            }
+            
+            // Check if nickname contains hyphens
+            const hasHyphens = nickname.includes('-');
+            
+            if (hasHyphens) {
+                // Create unhyphenated version by removing hyphens
+                const unhyphenatedNickname = nickname.replace(/-/g, '');
+                
+                if (containerWidth && containerWidth !== 'auto') {
+                    const originalWidth = calculateTextWidth(originalName);
+                    const unhyphenatedWidth = calculateTextWidth(unhyphenatedNickname);
+                    const hyphenatedWidth = calculateTextWidth(nickname);
+                    
+                    console.log('Smart nickname hyphenation:', {
+                        originalName,
+                        nickname,
+                        unhyphenatedNickname,
+                        originalWidth: originalWidth.toFixed(1),
+                        unhyphenatedWidth: unhyphenatedWidth.toFixed(1),
+                        hyphenatedWidth: hyphenatedWidth.toFixed(1),
+                        containerWidth,
+                        decision: getDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth)
+                    });
+                    
+                    // Decision logic:
+                    // 1. If original name fits, use it
+                    // 2. If original doesn't fit but unhyphenated nickname does, use unhyphenated
+                    // 3. If neither original nor unhyphenated fit, use hyphenated nickname
+                    if (originalWidth <= containerWidth) {
+                        return originalName;
+                    } else if (unhyphenatedWidth <= containerWidth) {
+                        return unhyphenatedNickname;
+                    } else {
+                        return nickname; // Use hyphenated version
+                    }
+                }
+                
+                // Mobile heuristic
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    if (originalName.length > 15) {
+                        return unhyphenatedNickname.length <= 12 ? unhyphenatedNickname : nickname;
+                    } else if (originalName.length > 10) {
+                        return unhyphenatedNickname;
+                    }
+                }
+                
                 return originalName;
+            } else {
+                // Regular nickname without hyphens
+                return nickname;
             }
-            
-            if (containerWidth && containerWidth !== 'auto') {
-                const originalWidth = calculateTextWidth(originalName);
-                const hyphenatedWidth = calculateTextWidth(hyphenatedName);
-                
-                console.log('Smart hyphenation:', {
-                    originalName,
-                    hyphenatedName,
-                    originalWidth: originalWidth.toFixed(1),
-                    hyphenatedWidth: hyphenatedWidth.toFixed(1),
-                    containerWidth,
-                    useHyphenated: originalWidth > containerWidth && hyphenatedWidth <= containerWidth
-                });
-                
-                // Use hyphenated version if original doesn't fit but hyphenated does
-                if (originalWidth > containerWidth && hyphenatedWidth <= containerWidth) {
-                    return hyphenatedName;
-                }
-                
-                // Use original if it fits
-                if (originalWidth <= containerWidth) {
-                    return originalName;
-                }
-                
-                // If neither fits, use hyphenated as it's likely shorter
-                return hyphenatedName;
+        }
+
+        function getDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth) {
+            if (originalWidth <= containerWidth) {
+                return 'use original (fits)';
+            } else if (unhyphenatedWidth <= containerWidth) {
+                return 'use unhyphenated nickname (fits better)';
+            } else {
+                return 'use hyphenated nickname (best option)';
             }
-            
-            // Mobile heuristic: prefer hyphenated if original is long
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile && originalName.length > 12) {
-                return hyphenatedName;
-            }
-            
-            return originalName;
         }
 
         function testWidth(eventKey, width) {
@@ -254,12 +287,15 @@ Website: https://example.com</code></pre>
             
             // Add visual indicator
             const originalWidth = calculateTextWidth(event.name);
-            const hyphenatedWidth = calculateTextWidth(event.hyphenatedName);
+            const nickname = event.shortName;
+            const unhyphenatedNickname = nickname ? nickname.replace(/-/g, '') : '';
             const containerWidth = width === 'auto' ? 250 : width;
             
             let indicator = '';
-            if (smartName === event.hyphenatedName) {
-                indicator = ' ✂️'; // Scissors emoji to indicate hyphenation was used
+            if (smartName === nickname && nickname.includes('-')) {
+                indicator = ' ✂️'; // Scissors emoji to indicate hyphenation was kept
+            } else if (smartName === unhyphenatedNickname) {
+                indicator = ' 🔗'; // Link emoji to indicate hyphens were removed
             } else if (originalWidth > containerWidth) {
                 indicator = ' ⚠️'; // Warning that text might overflow
             }
