@@ -577,6 +577,139 @@ header {
     background: var(--gradient-success);
 }
 
+/* Compact Layout Styles */
+.compact-section {
+    padding: 3rem 0;
+}
+
+.two-column-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.cities-column,
+.merchants-column {
+    background: var(--background-primary);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 4px 15px var(--shadow-light);
+}
+
+.cities-column h2,
+.merchants-column h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+/* Compact Cities Grid */
+.compact-cities-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.compact-city-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--background-secondary);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.compact-city-card:hover {
+    background: var(--gradient-light);
+    transform: translateX(5px);
+}
+
+.city-emoji {
+    font-size: 2rem;
+    width: 50px;
+    text-align: center;
+}
+
+.city-details h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.city-tag {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.compact-city-card.coming-soon {
+    opacity: 0.7;
+    cursor: default;
+}
+
+.compact-city-card.coming-soon:hover {
+    transform: none;
+    background: var(--background-secondary);
+}
+
+/* Compact Merchants List */
+.compact-merchants-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.merchant-category {
+    padding: 1.2rem;
+    background: var(--background-secondary);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.merchant-category:hover {
+    background: var(--gradient-light);
+}
+
+.merchant-category h4 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1rem;
+    color: var(--primary-color);
+}
+
+.merchant-category p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.directory-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: var(--gradient-primary);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-align: center;
+    width: 100%;
+}
+
+.directory-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px var(--shadow-medium);
+}
+
 /* Events Section */
 .events {
     padding: 0;
@@ -737,6 +870,17 @@ header {
     
     .business-stats {
         grid-template-columns: repeat(3, 1fr);
+    }
+    
+    /* Compact layout responsive */
+    .two-column-layout {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .cities-column,
+    .merchants-column {
+        padding: 1.5rem;
     }
 }
 
@@ -4307,7 +4451,3 @@ footer {
         font-size: 0.95rem;
     }
 }
-
-
-
-
