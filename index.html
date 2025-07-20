@@ -44,143 +44,99 @@
             </div>
         </section>
 
-        <section id="cities" class="cities">
+        <section id="cities" class="cities compact-section">
             <div class="container">
-                <h2>🏙️ Available City Guides</h2>
-                <p class="section-subtitle">Click any city to explore bear bars, events, and local hotspots</p>
-                <div class="cities-grid">
-                    <div class="city-card" onclick="location.href='city.html?city=new-york'">
-                        <div class="city-image">🗽</div>
-                        <div class="city-info">
-                            <h3>New York City</h3>
-                            <p>The ultimate bear playground with weekly events and legendary venues</p>
-                            <div class="city-highlights">
-                                <span class="highlight">Bear Happy Hour</span>
-                                <span class="highlight">Eagle NYC</span>
-                                <span class="highlight">Live Calendar</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="city-card" onclick="location.href='city.html?city=seattle'">
-                        <div class="city-image">🌲</div>
-                        <div class="city-info">
-                            <h3>Seattle</h3>
-                            <p>Emerald City bears unite with Pacific Northwest charm and events</p>
-                            <div class="city-highlights">
-                                <span class="highlight">Diesel</span>
-                                <span class="highlight">Bear Night</span>
-                                <span class="highlight">Live Calendar</span>
+                <div class="two-column-layout">
+                    <div class="cities-column">
+                        <h2>🏙️ City Guides</h2>
+                        <p class="section-subtitle">Quick access to bear scenes</p>
+                        <div class="compact-cities-grid">
+                            <a href="city.html?city=new-york" class="compact-city-card">
+                                <span class="city-emoji">🗽</span>
+                                <div class="city-details">
+                                    <h4>New York</h4>
+                                    <span class="city-tag">Eagle • Bear Happy Hour</span>
+                                </div>
+                            </a>
+                            
+                            <a href="city.html?city=seattle" class="compact-city-card">
+                                <span class="city-emoji">🌲</span>
+                                <div class="city-details">
+                                    <h4>Seattle</h4>
+                                    <span class="city-tag">Diesel • Bear Night</span>
+                                </div>
+                            </a>
+
+                            <a href="city.html?city=los-angeles" class="compact-city-card">
+                                <span class="city-emoji">🌴</span>
+                                <div class="city-details">
+                                    <h4>Los Angeles</h4>
+                                    <span class="city-tag">WeHo Bears • Beach</span>
+                                </div>
+                            </a>
+
+                            <a href="city.html?city=toronto" class="compact-city-card">
+                                <span class="city-emoji">🍁</span>
+                                <div class="city-details">
+                                    <h4>Toronto</h4>
+                                    <span class="city-tag">Black Eagle • Events</span>
+                                </div>
+                            </a>
+
+                            <a href="city.html?city=london" class="compact-city-card">
+                                <span class="city-emoji">🇬🇧</span>
+                                <div class="city-details">
+                                    <h4>London</h4>
+                                    <span class="city-tag">XXL • King's Cross</span>
+                                </div>
+                            </a>
+
+                            <a href="city.html?city=chicago" class="compact-city-card">
+                                <span class="city-emoji">🏙️</span>
+                                <div class="city-details">
+                                    <h4>Chicago</h4>
+                                    <span class="city-tag">Touché • Bear Pride</span>
+                                </div>
+                            </a>
+
+                            <a href="city.html?city=berlin" class="compact-city-card">
+                                <span class="city-emoji">🇩🇪</span>
+                                <div class="city-details">
+                                    <h4>Berlin</h4>
+                                    <span class="city-tag">Woof • Lab.oratory</span>
+                                </div>
+                            </a>
+
+                            <div class="compact-city-card coming-soon">
+                                <span class="city-emoji">🌍</span>
+                                <div class="city-details">
+                                    <h4>More Soon</h4>
+                                    <span class="city-tag">Request a city</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="city-card" onclick="location.href='city.html?city=los-angeles'">
-                        <div class="city-image">🌴</div>
-                        <div class="city-info">
-                            <h3>Los Angeles</h3>
-                            <p>West Coast bear vibes with year-round sunshine and hot scenes</p>
-                            <div class="city-highlights">
-                                <span class="highlight">WeHo Bears</span>
-                                <span class="highlight">Beach Events</span>
-                                <span class="highlight">Live Calendar</span>
+                    <div class="merchants-column">
+                        <h2>🏪 Bear Merchants</h2>
+                        <p class="section-subtitle">Support bear businesses</p>
+                        <div class="compact-merchants-list">
+                            <div class="merchant-category">
+                                <h4>🎨 Artists & Creators</h4>
+                                <p>Talented bear artists worldwide</p>
+                            </div>
+                            <div class="merchant-category">
+                                <h4>🛍️ Shops & Services</h4>
+                                <p>Bear-owned businesses</p>
+                            </div>
+                            <div class="merchant-category">
+                                <h4>☕ Cafes & Restaurants</h4>
+                                <p>Bear-friendly dining</p>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="city-card" onclick="location.href='city.html?city=toronto'">
-                        <div class="city-image">🍁</div>
-                        <div class="city-info">
-                            <h3>Toronto</h3>
-                            <p>Great White North bears with friendly vibes and active community</p>
-                            <div class="city-highlights">
-                                <span class="highlight">Black Eagle</span>
-                                <span class="highlight">Bear Events</span>
-                                <span class="highlight">Live Calendar</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="city-card" onclick="location.href='city.html?city=london'">
-                        <div class="city-image">🇬🇧</div>
-                        <div class="city-info">
-                            <h3>London</h3>
-                            <p>British bears welcome you to pubs, clubs, and proper bear culture</p>
-                            <div class="city-highlights">
-                                <span class="highlight">XXL London</span>
-                                <span class="highlight">King's Cross</span>
-                                <span class="highlight">Live Calendar</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="city-card" onclick="location.href='city.html?city=chicago'">
-                        <div class="city-image">🏙️</div>
-                        <div class="city-info">
-                            <h3>Chicago</h3>
-                            <p>Windy City bears with Midwest charm and legendary bear bars</p>
-                            <div class="city-highlights">
-                                <span class="highlight">Touché</span>
-                                <span class="highlight">Bear Pride</span>
-                                <span class="highlight">Live Calendar</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="city-card" onclick="location.href='city.html?city=berlin'">
-                        <div class="city-image">🇩🇪</div>
-                        <div class="city-info">
-                            <h3>Berlin</h3>
-                            <p>European bear capital with legendary nightlife and fetish scene</p>
-                            <div class="city-highlights">
-                                <span class="highlight">Woof Berlin</span>
-                                <span class="highlight">Lab.oratory</span>
-                                <span class="highlight">Live Calendar</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="city-card coming-soon">
-                        <div class="city-image">🌍</div>
-                        <div class="city-info">
-                            <h3>More Cities Coming!</h3>
-                            <p>We're adding new bear destinations regularly. Got a suggestion?</p>
-                            <div class="city-highlights">
-                                <span class="highlight">Request a City</span>
-                                <span class="highlight">Contact Us</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="businesses" class="businesses">
-            <div class="container">
-                <h2>🏪 Bear Artists & Businesses</h2>
-                <p class="section-subtitle">Support our community - discover bear-owned businesses and talented artists!</p>
-                <div class="business-highlight">
-                    <div class="business-cta">
-                        <h3>Explore the Bear Directory</h3>
-                        <p>Find bear artists, businesses, shops, and services from around the world. From leather crafters to cafe owners, support your bear family!</p>
-                        <a href="bear-directory.html" class="cta-button primary">Browse Directory 🐻</a>
-                    </div>
-                    <div class="business-stats">
-                        <div class="stat-card">
-                            <div class="stat-icon">🎨</div>
-                            <h4>Artists</h4>
-                            <p>Talented bear creators</p>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🛍️</div>
-                            <h4>Businesses</h4>
-                            <p>Bear-owned shops</p>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🌍</div>
-                            <h4>Global</h4>
-                            <p>Worldwide community</p>
-                        </div>
+                        <a href="bear-directory.html" class="directory-link">
+                            Browse Full Directory →
+                        </a>
                     </div>
                 </div>
             </div>
