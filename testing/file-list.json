@@ -1,11 +1,6 @@
 {
-  "generated": "2025-07-20T04:36:43.303Z",
+  "generated": "2025-07-20T04:45:44.774Z",
   "files": [
-    {
-      "name": "cover-field-test.html",
-      "size": 4873,
-      "modified": "2025-07-20T04:31:54.078Z"
-    },
     {
       "name": "event-test-1-carousel.html",
       "size": 10739,
@@ -72,6 +67,16 @@
       "modified": "2025-07-20T04:31:54.078Z"
     },
     {
+      "name": "style-test-restored.html",
+      "size": 0,
+      "modified": "2025-07-20T04:41:48.508Z"
+    },
+    {
+      "name": "style-test.html",
+      "size": 25869,
+      "modified": "2025-07-20T04:45:21.668Z"
+    },
+    {
       "name": "test-calendar-logging.html",
       "size": 67703,
       "modified": "2025-07-20T04:31:54.078Z"
@@ -83,8 +88,8 @@
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 110390,
-      "modified": "2025-07-20T04:31:54.078Z"
+      "size": 110547,
+      "modified": "2025-07-20T04:45:38.800Z"
     }
   ]
 }

@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chunky.dad - Style Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Custom Properties */
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #ff6b6b;
+            --accent-color: #764ba2;
+            --success-color: #4ecdc4;
+            --warning-color: #ffd700;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --background-light: #f8f9ff;
+            --border-light: #e8f2ff;
+        }
+
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9ff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .style-section {
+            margin-bottom: 60px;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        .subsection {
+            margin-bottom: 30px;
+        }
+
+        .subsection-title {
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+        }
+
+        /* Typography Styles */
+        .typography-demo h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .typography-demo h2 { font-size: 2rem; margin-bottom: 10px; }
+        .typography-demo h3 { font-size: 1.5rem; margin-bottom: 10px; }
+        .typography-demo h4 { font-size: 1.2rem; margin-bottom: 10px; }
+        .typography-demo h5 { font-size: 1rem; margin-bottom: 10px; }
+        .typography-demo h6 { font-size: 0.9rem; margin-bottom: 10px; }
+
+        /* Button Styles */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: #333;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        /* Grid Layout */
+        .grid-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .grid-item {
+            background: var(--background-light);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid var(--border-light);
+        }
+
+        /* Color Swatches */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .color-swatch {
+            height: 100px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            transition: transform 0.3s;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.05);
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1565c0;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #e65100;
+        }
+
+        .alert-danger {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+
+        /* Progress Bars */
+        .progress {
+            height: 20px;
+            background: var(--border-light);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 20px;
+            margin: 2px;
+        }
+
+        .badge-primary { background: var(--primary-color); color: white; }
+        .badge-secondary { background: var(--secondary-color); color: white; }
+        .badge-success { background: var(--success-color); color: white; }
+        .badge-warning { background: var(--warning-color); color: #333; }
+
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .table th {
+            background: var(--background-light);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table tr:hover {
+            background: var(--background-light);
+        }
+
+        /* Event Display Styles */
+        .event-displays {
+            margin-top: 40px;
+        }
+
+        .event-display-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .event-preview {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .event-preview:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .event-preview h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .event-preview p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .event-preview .view-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .event-preview .view-btn:hover {
+            background: #5a67d8;
+        }
+
+        /* Navigation */
+        .nav-demo {
+            background: var(--primary-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .nav-demo a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin: 0 5px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .nav-demo a:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Back to Top */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary-color);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .back-to-top:hover {
+            background: #5a67d8;
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 40px;">
+            🎨 chunky.dad Style Test
+        </h1>
+
+        <!-- Typography Section -->
+        <section class="style-section">
+            <h2 class="section-title">Typography</h2>
+            <div class="typography-demo">
+                <h1>Heading 1 - The Quick Brown Fox</h1>
+                <h2>Heading 2 - Jumps Over The Lazy Dog</h2>
+                <h3>Heading 3 - Pack My Box With Five Dozen</h3>
+                <h4>Heading 4 - Liquor Jugs</h4>
+                <h5>Heading 5 - The Five Boxing Wizards</h5>
+                <h6>Heading 6 - Jump Quickly</h6>
+                <p>This is a regular paragraph with <strong>bold text</strong>, <em>italic text</em>, and <a href="#">links</a>. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <blockquote style="border-left: 4px solid var(--primary-color); padding-left: 20px; margin: 20px 0; font-style: italic;">
+                    "Design is not just what it looks like and feels like. Design is how it works." - Steve Jobs
+                </blockquote>
+            </div>
+        </section>
+
+        <!-- Colors Section -->
+        <section class="style-section">
+            <h2 class="section-title">Color Palette</h2>
+            <div class="color-grid">
+                <div class="color-swatch" style="background: var(--primary-color);">Primary</div>
+                <div class="color-swatch" style="background: var(--secondary-color);">Secondary</div>
+                <div class="color-swatch" style="background: var(--accent-color);">Accent</div>
+                <div class="color-swatch" style="background: var(--success-color);">Success</div>
+                <div class="color-swatch" style="background: var(--warning-color); color: #333;">Warning</div>
+                <div class="color-swatch" style="background: #f44336;">Danger</div>
+            </div>
+        </section>
+
+        <!-- Buttons Section -->
+        <section class="style-section">
+            <h2 class="section-title">Buttons</h2>
+            <div class="subsection">
+                <h3 class="subsection-title">Solid Buttons</h3>
+                <button class="btn btn-primary">Primary Button</button>
+                <button class="btn btn-secondary">Secondary Button</button>
+                <button class="btn btn-success">Success Button</button>
+                <button class="btn btn-warning">Warning Button</button>
+            </div>
+            <div class="subsection">
+                <h3 class="subsection-title">Outline Buttons</h3>
+                <button class="btn btn-outline">Outline Primary</button>
+                <button class="btn btn-outline" style="border-color: var(--secondary-color); color: var(--secondary-color);">Outline Secondary</button>
+            </div>
+        </section>
+
+        <!-- Forms Section -->
+        <section class="style-section">
+            <h2 class="section-title">Form Elements</h2>
+            <form>
+                <div class="form-group">
+                    <label class="form-label" for="text-input">Text Input</label>
+                    <input type="text" class="form-control" id="text-input" placeholder="Enter text here...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="email-input">Email Input</label>
+                    <input type="email" class="form-control" id="email-input" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="select-input">Select Dropdown</label>
+                    <select class="form-control" id="select-input">
+                        <option>Option 1</option>
+                        <option>Option 2</option>
+                        <option>Option 3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="textarea-input">Textarea</label>
+                    <textarea class="form-control" id="textarea-input" rows="4" placeholder="Enter your message..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox"> Checkbox Option
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="radio" name="radio-group"> Radio Option 1
+                    </label>
+                    <label class="form-label">
+                        <input type="radio" name="radio-group"> Radio Option 2
+                    </label>
+                </div>
+            </form>
+        </section>
+
+        <!-- Cards Section -->
+        <section class="style-section">
+            <h2 class="section-title">Cards</h2>
+            <div class="grid-demo">
+                <div class="card">
+                    <h3 class="card-title">Card Title</h3>
+                    <p>This is a basic card with some content. Cards are great for organizing information.</p>
+                    <button class="btn btn-primary">Action</button>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Another Card</h3>
+                    <p>Cards can contain any type of content including buttons, images, and more.</p>
+                    <button class="btn btn-outline">Learn More</button>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Third Card</h3>
+                    <p>Use cards to create consistent layouts across your application.</p>
+                    <button class="btn btn-secondary">Explore</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alerts Section -->
+        <section class="style-section">
+            <h2 class="section-title">Alerts & Notifications</h2>
+            <div class="alert alert-info">
+                <strong>Info!</strong> This is an informational alert message.
+            </div>
+            <div class="alert alert-success">
+                <strong>Success!</strong> Your operation completed successfully.
+            </div>
+            <div class="alert alert-warning">
+                <strong>Warning!</strong> Please review this important information.
+            </div>
+            <div class="alert alert-danger">
+                <strong>Error!</strong> Something went wrong. Please try again.
+            </div>
+        </section>
+
+        <!-- Progress Bars Section -->
+        <section class="style-section">
+            <h2 class="section-title">Progress Bars</h2>
+            <div class="progress">
+                <div class="progress-bar" style="width: 25%;">25%</div>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" style="width: 50%; background: var(--secondary-color);">50%</div>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" style="width: 75%; background: var(--success-color);">75%</div>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" style="width: 90%; background: var(--warning-color); color: #333;">90%</div>
+            </div>
+        </section>
+
+        <!-- Badges Section -->
+        <section class="style-section">
+            <h2 class="section-title">Badges & Tags</h2>
+            <div>
+                <span class="badge badge-primary">Primary</span>
+                <span class="badge badge-secondary">Secondary</span>
+                <span class="badge badge-success">Success</span>
+                <span class="badge badge-warning">Warning</span>
+                <span class="badge" style="background: #f44336; color: white;">Danger</span>
+                <span class="badge" style="background: #9c27b0; color: white;">Purple</span>
+                <span class="badge" style="background: #00bcd4; color: white;">Cyan</span>
+            </div>
+        </section>
+
+        <!-- Tables Section -->
+        <section class="style-section">
+            <h2 class="section-title">Tables</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Location</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Bear Week</td>
+                        <td>Provincetown</td>
+                        <td>July 2024</td>
+                        <td><span class="badge badge-success">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>Lazy Bear Weekend</td>
+                        <td>Guerneville</td>
+                        <td>August 2024</td>
+                        <td><span class="badge badge-primary">Upcoming</span></td>
+                    </tr>
+                    <tr>
+                        <td>Southern Decadence</td>
+                        <td>New Orleans</td>
+                        <td>September 2024</td>
+                        <td><span class="badge badge-warning">Planning</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Navigation Demo -->
+        <section class="style-section">
+            <h2 class="section-title">Navigation</h2>
+            <nav class="nav-demo">
+                <a href="#">Home</a>
+                <a href="#">Events</a>
+                <a href="#">Cities</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+            </nav>
+        </section>
+
+        <!-- Event Displays Section -->
+        <section class="style-section event-displays">
+            <h2 class="section-title">Event Display Variations</h2>
+            <p style="margin-bottom: 30px; color: var(--text-secondary);">
+                Explore different ways to display event information. Each variation offers a unique user experience.
+            </p>
+            
+            <div class="event-display-grid">
+                <div class="event-preview">
+                    <h4>🎠 Carousel View</h4>
+                    <p>Swipeable carousel display with smooth transitions between events.</p>
+                    <a href="event-test-1-carousel.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📅 Timeline View</h4>
+                    <p>Chronological timeline showing events in sequential order.</p>
+                    <a href="event-test-2-timeline.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🗺️ Map View</h4>
+                    <p>Interactive map showing event locations with markers.</p>
+                    <a href="event-test-3-map.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🧱 Masonry Grid</h4>
+                    <p>Pinterest-style masonry layout for dynamic event cards.</p>
+                    <a href="event-test-4-masonry.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🔥 Heatmap View</h4>
+                    <p>Visual heatmap showing event density and popularity.</p>
+                    <a href="event-test-5-heatmap.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📜 Ticker Display</h4>
+                    <p>Scrolling ticker showing upcoming events in real-time.</p>
+                    <a href="event-test-6-ticker.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>⭕ Circular Layout</h4>
+                    <p>Radial display with events arranged in a circle.</p>
+                    <a href="event-test-7-circular.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📊 Kanban Board</h4>
+                    <p>Organize events in columns by status or category.</p>
+                    <a href="event-test-8-kanban.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🫧 Bubble Chart</h4>
+                    <p>Interactive bubbles representing events by size/importance.</p>
+                    <a href="event-test-9-bubbles.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🃏 Flip Cards</h4>
+                    <p>3D flip animation revealing event details on hover.</p>
+                    <a href="event-test-10-flipcards.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📆 Week View</h4>
+                    <p>Traditional calendar week view with event blocks.</p>
+                    <a href="event-test-11-weekview.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>👆 Swipe Tiles</h4>
+                    <p>Touch-friendly swipeable tiles for mobile devices.</p>
+                    <a href="event-test-12-swipe-tiles.html" class="view-btn">View Demo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Grid Layouts -->
+        <section class="style-section">
+            <h2 class="section-title">Grid Layouts</h2>
+            <div class="grid-demo">
+                <div class="grid-item">Grid Item 1</div>
+                <div class="grid-item">Grid Item 2</div>
+                <div class="grid-item">Grid Item 3</div>
+                <div class="grid-item">Grid Item 4</div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Back to Top Button -->
+    <a href="#" class="back-to-top">↑</a>
+
+    <script>
+        // Smooth scroll for back to top
+        document.querySelector('.back-to-top').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Add some interactivity to buttons
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('Button clicked:', this.textContent);
+            });
+        });
+
+        // Add hover effect to event previews
+        document.querySelectorAll('.event-preview').forEach(preview => {
+            preview.addEventListener('click', function(e) {
+                if (!e.target.classList.contains('view-btn')) {
+                    const link = this.querySelector('.view-btn');
+                    if (link) window.location.href = link.href;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
