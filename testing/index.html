@@ -145,9 +145,6 @@
         <div class="header">
             <h1>🧪 Testing Tools</h1>
             <p>Development and testing utilities for chunky.dad</p>
-            <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 10px;">
-                To update file list: run <code>node generate-file-list.js</code> in testing directory
-            </p>
         </div>
 
         <div id="content">
@@ -159,7 +156,7 @@
         // File descriptions and icons based on filename patterns
         const fileDescriptions = {
             'ultimate-style-tester': { icon: '🎨', desc: 'Comprehensive style testing tool with live preview' },
-            'style-test': { icon: '🎭', desc: 'UI element showcase with all components and event display variations' },
+            'style-test': { icon: '🎭', desc: 'UI component showcase with all event display variations' },
             'event-test-index': { icon: '📋', desc: 'Index of all event display test variations' },
             'event-test-1-carousel': { icon: '🎠', desc: 'Event carousel display test' },
             'event-test-2-timeline': { icon: '📅', desc: 'Timeline view for events' },
@@ -188,61 +185,49 @@
             };
         }
 
-        // Function to format file size
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            else if (bytes < 1048576) return Math.round(bytes / 1024) + ' KB';
-            else return Math.round(bytes / 1048576) + ' MB';
-        }
-
-        // Load test files from JSON
+        // Load test files by checking known files
         async function loadTestFiles() {
             try {
-                // Try to load from the generated JSON file first
-                const response = await fetch('file-list.json');
-                if (response.ok) {
-                    const data = await response.json();
-                    displayFiles(data.files);
-                } else {
-                    // Fallback to checking known files
-                    const testFiles = [];
-                    const potentialFiles = [
-                        'ultimate-style-tester.html',
-                        'event-test-index.html',
-                        'event-test-1-carousel.html',
-                        'event-test-2-timeline.html',
-                        'event-test-3-map.html',
-                        'event-test-4-masonry.html',
-                        'event-test-5-heatmap.html',
-                        'event-test-6-ticker.html',
-                        'event-test-7-circular.html',
-                        'event-test-8-kanban.html',
-                        'event-test-9-bubbles.html',
-                        'event-test-10-flipcards.html',
-                        'event-test-11-weekview.html',
-                        'event-test-12-swipe-tiles.html',
-                        'test-calendar-logging.html',
-                        'test-google-sheets-loader.html',
-                        'cover-field-test.html'
-                    ];
+                // List of all known test files
+                const knownTestFiles = [
+                    'ultimate-style-tester.html',
+                    'style-test.html',
+                    'event-test-index.html',
+                    'event-test-1-carousel.html',
+                    'event-test-2-timeline.html',
+                    'event-test-3-map.html',
+                    'event-test-4-masonry.html',
+                    'event-test-5-heatmap.html',
+                    'event-test-6-ticker.html',
+                    'event-test-7-circular.html',
+                    'event-test-8-kanban.html',
+                    'event-test-9-bubbles.html',
+                    'event-test-10-flipcards.html',
+                    'event-test-11-weekview.html',
+                    'event-test-12-swipe-tiles.html',
+                    'test-calendar-logging.html',
+                    'test-google-sheets-loader.html',
+                    'cover-field-test.html'
+                ];
 
-                    // Check which files exist
-                    for (const file of potentialFiles) {
-                        try {
-                            const response = await fetch(file, { method: 'HEAD' });
-                            if (response.ok) {
-                                testFiles.push({
-                                    name: file,
-                                    size: parseInt(response.headers.get('content-length') || '0')
-                                });
-                            }
-                        } catch (e) {
-                            // File doesn't exist or can't be accessed
+                const testFiles = [];
+
+                // Check which files exist by trying to fetch them
+                for (const file of knownTestFiles) {
+                    try {
+                        const response = await fetch(file, { method: 'HEAD' });
+                        if (response.ok) {
+                            testFiles.push({
+                                name: file,
+                                exists: true
+                            });
                         }
+                    } catch (e) {
+                        // File doesn't exist or can't be accessed, skip it
                     }
-
-                    displayFiles(testFiles);
                 }
+
+                displayFiles(testFiles);
             } catch (error) {
                 document.getElementById('content').innerHTML = `
                     <div class="error">
@@ -255,7 +240,9 @@
 
         // Display the files in a grid
         function displayFiles(files) {
-            if (files.length === 0) {
+            const existingFiles = files.filter(f => f.exists);
+            
+            if (existingFiles.length === 0) {
                 document.getElementById('content').innerHTML = `
                     <div class="error">
                         <h3>No test files found</h3>
@@ -268,9 +255,7 @@
             const grid = document.createElement('div');
             grid.className = 'test-grid';
 
-            files.forEach(file => {
-                if (file.name === 'index.html') return; // Skip index.html itself
-
+            existingFiles.forEach(file => {
                 const fileInfo = getFileInfo(file.name);
                 const card = document.createElement('a');
                 card.href = file.name;
@@ -278,7 +263,7 @@
                 card.innerHTML = `
                     <span class="category-icon">${fileInfo.icon}</span>
                     <h3>${fileInfo.displayName}</h3>
-                    <div class="file-info">${file.name} • ${formatFileSize(file.size)}</div>
+                    <div class="file-info">${file.name}</div>
                     <div class="description">${fileInfo.desc}</div>
                 `;
                 grid.appendChild(card);

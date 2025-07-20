@@ -397,6 +397,24 @@ class BearDirectory {
                             if (iframe) {
                                 container.classList.add('loaded');
                                 observer.disconnect();
+                                
+                                // Check if iframe loaded with error (private profile, etc)
+                                iframe.addEventListener('load', () => {
+                                    try {
+                                        // Check if the iframe contains error indicators
+                                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                        const bodyText = iframeDoc.body.innerText || '';
+                                        
+                                        if (bodyText.includes('private') || bodyText.includes('unavailable')) {
+                                            container.classList.add('private-profile');
+                                            const username = container.dataset.instagramUser;
+                                            logger.info('DIRECTORY', `Instagram profile @${username} appears to be private or restricted`);
+                                        }
+                                    } catch (e) {
+                                        // Cross-origin restrictions prevent checking iframe content
+                                        // This is expected for Instagram embeds
+                                    }
+                                });
                             }
                         });
                         observer.observe(container, { childList: true, subtree: true });
@@ -406,7 +424,16 @@ class BearDirectory {
                             if (!container.classList.contains('loaded')) {
                                 container.classList.add('error');
                                 const username = container.dataset.instagramUser;
-                                logger.warn('DIRECTORY', `Instagram embed timeout for @${username}`);
+                                logger.warn('DIRECTORY', `Instagram embed timeout for @${username} - may be throttled or blocked`, {
+                                    username: username,
+                                    retryCount: retryCount,
+                                    possibleReasons: [
+                                        'Instagram API rate limiting',
+                                        'Private or restricted profile',
+                                        'Network connectivity issues',
+                                        'Ad blocker interference'
+                                    ]
+                                });
                             }
                         }, 10000); // 10 second timeout
                     });
