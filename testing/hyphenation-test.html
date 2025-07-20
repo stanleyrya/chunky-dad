@@ -184,22 +184,7 @@ Website: https://example.com</code></pre>
             }
         };
 
-        // Simple text width calculation (approximation)
-        function calculateTextWidth(text) {
-            const tempElement = document.createElement('span');
-            tempElement.style.visibility = 'hidden';
-            tempElement.style.position = 'absolute';
-            tempElement.style.fontSize = 'var(--event-name-font-size)';
-            tempElement.style.fontWeight = 'var(--event-name-font-weight)';
-            tempElement.style.fontFamily = getComputedStyle(document.body).fontFamily;
-            tempElement.textContent = text;
-            
-            document.body.appendChild(tempElement);
-            const width = tempElement.getBoundingClientRect().width;
-            document.body.removeChild(tempElement);
-            
-            return width;
-        }
+
 
         // Smart nickname hyphenation logic (matches the main system)
         function getSmartEventName(event) {
