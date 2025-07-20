@@ -35,6 +35,9 @@ class BearDirectory {
     init() {
         logger.componentInit('DIRECTORY', 'Initializing BearDirectory');
         
+        // Initialize DOM elements first
+        this.initializeElements();
+        
         // Load data
         this.loadGoogleSheetsData();
         
@@ -46,6 +49,18 @@ class BearDirectory {
         
         // Load Instagram embed script
         this.loadInstagramEmbed();
+    }
+    
+    initializeElements() {
+        // Get DOM element references
+        this.elements.grid = document.getElementById('directoryGrid');
+        this.elements.searchInput = document.getElementById('searchInput');
+        this.elements.sortSelect = document.getElementById('sortSelect');
+        this.elements.filterButtons = document.querySelectorAll('.filter-btn');
+        this.elements.loadingIndicator = document.getElementById('loadingIndicator');
+        this.elements.errorMessage = document.getElementById('errorMessage');
+        
+        logger.componentInit('DIRECTORY', 'DOM elements initialized');
     }
     
     initMap() {
@@ -91,7 +106,9 @@ class BearDirectory {
             });
             
             // Hide loading indicator and display data
-            this.elements.loadingIndicator.style.display = 'none';
+            if (this.elements.loadingIndicator) {
+                this.elements.loadingIndicator.style.display = 'none';
+            }
             this.displayDirectory();
             this.updateMap();
             
@@ -339,25 +356,31 @@ class BearDirectory {
     
     setupEventListeners() {
         // Search functionality
-        this.elements.searchInput.addEventListener('input', (e) => {
-            this.handleSearch(e.target.value);
-        });
+        if (this.elements.searchInput) {
+            this.elements.searchInput.addEventListener('input', (e) => {
+                this.handleSearch(e.target.value);
+            });
+        }
         
         // Sort functionality
-        this.elements.sortSelect.addEventListener('change', (e) => {
-            this.handleSort(e.target.value);
-        });
+        if (this.elements.sortSelect) {
+            this.elements.sortSelect.addEventListener('change', (e) => {
+                this.handleSort(e.target.value);
+            });
+        }
         
         // Filter buttons
-        this.elements.filterButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                this.handleFilter(e.target.dataset.filter);
-                
-                // Update active state
-                this.elements.filterButtons.forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
+        if (this.elements.filterButtons && this.elements.filterButtons.length > 0) {
+            this.elements.filterButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    this.handleFilter(e.target.dataset.filter);
+                    
+                    // Update active state
+                    this.elements.filterButtons.forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
             });
-        });
+        }
         
         // Display mode buttons
         const displayModeButtons = document.querySelectorAll('.display-mode-btn');
@@ -577,8 +600,12 @@ class BearDirectory {
     }
     
     showError() {
-        this.elements.loadingIndicator.style.display = 'none';
-        this.elements.errorMessage.style.display = 'block';
+        if (this.elements.loadingIndicator) {
+            this.elements.loadingIndicator.style.display = 'none';
+        }
+        if (this.elements.errorMessage) {
+            this.elements.errorMessage.style.display = 'block';
+        }
         
         logger.componentError('DIRECTORY', 'Error state displayed');
     }
