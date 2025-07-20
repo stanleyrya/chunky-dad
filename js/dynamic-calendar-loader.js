@@ -679,10 +679,10 @@ class DynamicCalendarLoader extends CalendarCore {
             eventsContainer.innerHTML = errorMessage;
         }
         
-        // Clear the calendar grid to avoid showing duplicate errors
+        // Clear the calendar grid - no need for duplicate error messages
         const calendarGrid = document.querySelector('.calendar-grid');
         if (calendarGrid) {
-            calendarGrid.innerHTML = '<div class="loading-message">📅 Calendar unavailable</div>';
+            calendarGrid.innerHTML = '';
         }
     }
 
