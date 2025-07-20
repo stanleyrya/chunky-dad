@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hyphenation Test - Chunky Dad</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+        }
+        
+        .test-event {
+            background: var(--background-light);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            border: 1px solid var(--border-lighter);
+        }
+        
+        .width-simulator {
+            border: 2px dashed var(--primary-color);
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            overflow: hidden;
+        }
+        
+        .width-100 { width: 100px; }
+        .width-150 { width: 150px; }
+        .width-200 { width: 200px; }
+        .width-250 { width: 250px; }
+        
+        .demo-controls {
+            margin: 1rem 0;
+        }
+        
+        .demo-controls button {
+            margin: 0.25rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--primary-color);
+            background: var(--background-primary);
+            color: var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .demo-controls button:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .demo-controls button.active {
+            background: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Smart Nickname Hyphenation Test</h1>
+        <p>This demonstrates automatic hyphenation handling using existing nickname fields.</p>
+        
+        <div class="test-section">
+            <h2>Test Events</h2>
+            <p>These events have hyphenated nicknames. The system automatically removes hyphens when there's space, keeps them when needed:</p>
+            
+            <div class="test-event">
+                <h3>Event: Rockstrap Party</h3>
+                <p><strong>Nickname:</strong> Rock-strap (hyphenated) → Rockstrap (unhyphenated when space allows)</p>
+                <div class="demo-controls">
+                    <button onclick="testWidth('rockstrap', 100)" class="width-btn">100px</button>
+                    <button onclick="testWidth('rockstrap', 150)" class="width-btn">150px</button>
+                    <button onclick="testWidth('rockstrap', 200)" class="width-btn">200px</button>
+                    <button onclick="testWidth('rockstrap', 250)" class="width-btn">250px</button>
+                    <button onclick="testWidth('rockstrap', 'auto')" class="width-btn active">Auto</button>
+                </div>
+                <div id="rockstrap-demo" class="width-simulator width-250">
+                    <div class="event-item">
+                        <div class="event-name">Rockstrap Party</div>
+                        <div class="event-name-mobile" id="rockstrap-mobile">Rockstrap Party</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-event">
+                <h3>Event: Bear Weekend Festival</h3>
+                <p><strong>Nickname:</strong> Bear Week-end (hyphenated) → Bear Weekend (unhyphenated when space allows)</p>
+                <div class="demo-controls">
+                    <button onclick="testWidth('bearweekend', 100)" class="width-btn">100px</button>
+                    <button onclick="testWidth('bearweekend', 150)" class="width-btn">150px</button>
+                    <button onclick="testWidth('bearweekend', 200)" class="width-btn">200px</button>
+                    <button onclick="testWidth('bearweekend', 250)" class="width-btn">250px</button>
+                    <button onclick="testWidth('bearweekend', 'auto')" class="width-btn active">Auto</button>
+                </div>
+                <div id="bearweekend-demo" class="width-simulator width-250">
+                    <div class="event-item">
+                        <div class="event-name">Bear Weekend Festival</div>
+                        <div class="event-name-mobile" id="bearweekend-mobile">Bear Weekend Festival</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-event">
+                <h3>Event: Underwear Night</h3>
+                <p><strong>Nickname:</strong> Under-wear (hyphenated) → Underwear (unhyphenated when space allows)</p>
+                <div class="demo-controls">
+                    <button onclick="testWidth('underwear', 100)" class="width-btn">100px</button>
+                    <button onclick="testWidth('underwear', 150)" class="width-btn">150px</button>
+                    <button onclick="testWidth('underwear', 200)" class="width-btn">200px</button>
+                    <button onclick="testWidth('underwear', 250)" class="width-btn">250px</button>
+                    <button onclick="testWidth('underwear', 'auto')" class="width-btn active">Auto</button>
+                </div>
+                <div id="underwear-demo" class="width-simulator width-250">
+                    <div class="event-item">
+                        <div class="event-name">Underwear Night</div>
+                        <div class="event-name-mobile" id="underwear-mobile">Underwear Night</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>How It Works</h2>
+            <ol>
+                <li><strong>Use existing nickname field:</strong> Include hyphens in your <code>nickname</code> or <code>shortName</code> field</li>
+                <li><strong>Automatic detection:</strong> The system detects hyphens and creates an unhyphenated version</li>
+                <li><strong>Smart decision making:</strong> 
+                    <ul>
+                        <li>If original name fits → use original</li>
+                        <li>If original doesn't fit but unhyphenated nickname does → use unhyphenated</li>
+                        <li>If neither fits → use hyphenated nickname</li>
+                    </ul>
+                </li>
+                <li><strong>Mobile optimization:</strong> On mobile screens, intelligently chooses based on length</li>
+                <li><strong>No breaking changes:</strong> Works with existing nickname system, regular nicknames work as before</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>Usage in Calendar Data</h2>
+            <pre><code>SUMMARY:Rockstrap Party
+DESCRIPTION:Bar: The Bear Den
+Nickname: Rock-strap
+Cover: $15
+Website: https://example.com</code></pre>
+            <p>The system will automatically use "Rockstrap" when there's space, "Rock-strap" when space is tight, and fall back to "Rockstrap Party" when there's plenty of room.</p>
+        </div>
+    </div>
+
+    <script>
+        // Test data with hyphenated nicknames
+        const testEvents = {
+            rockstrap: {
+                name: 'Rockstrap Party',
+                shortName: 'Rock-strap'
+            },
+            bearweekend: {
+                name: 'Bear Weekend Festival',
+                shortName: 'Bear Week-end'
+            },
+            underwear: {
+                name: 'Underwear Night',
+                shortName: 'Under-wear'
+            }
+        };
+
+        // Simple text width calculation (approximation)
+        function calculateTextWidth(text) {
+            const tempElement = document.createElement('span');
+            tempElement.style.visibility = 'hidden';
+            tempElement.style.position = 'absolute';
+            tempElement.style.fontSize = 'var(--event-name-font-size)';
+            tempElement.style.fontWeight = 'var(--event-name-font-weight)';
+            tempElement.style.fontFamily = getComputedStyle(document.body).fontFamily;
+            tempElement.textContent = text;
+            
+            document.body.appendChild(tempElement);
+            const width = tempElement.getBoundingClientRect().width;
+            document.body.removeChild(tempElement);
+            
+            return width;
+        }
+
+        // Smart nickname hyphenation logic (matches the main system)
+        function getSmartEventName(event, containerWidth = null) {
+            const originalName = event.name;
+            const nickname = event.shortName;
+            
+            if (!nickname) {
+                return originalName.length > 20 ? originalName.substring(0, 17) + '...' : originalName;
+            }
+            
+            // Check if nickname contains hyphens
+            const hasHyphens = nickname.includes('-');
+            
+            if (hasHyphens) {
+                // Create unhyphenated version by removing hyphens
+                const unhyphenatedNickname = nickname.replace(/-/g, '');
+                
+                if (containerWidth && containerWidth !== 'auto') {
+                    const originalWidth = calculateTextWidth(originalName);
+                    const unhyphenatedWidth = calculateTextWidth(unhyphenatedNickname);
+                    const hyphenatedWidth = calculateTextWidth(nickname);
+                    
+                    console.log('Smart nickname hyphenation:', {
+                        originalName,
+                        nickname,
+                        unhyphenatedNickname,
+                        originalWidth: originalWidth.toFixed(1),
+                        unhyphenatedWidth: unhyphenatedWidth.toFixed(1),
+                        hyphenatedWidth: hyphenatedWidth.toFixed(1),
+                        containerWidth,
+                        decision: getDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth)
+                    });
+                    
+                    // Decision logic:
+                    // 1. If original name fits, use it
+                    // 2. If original doesn't fit but unhyphenated nickname does, use unhyphenated
+                    // 3. If neither original nor unhyphenated fit, use hyphenated nickname
+                    if (originalWidth <= containerWidth) {
+                        return originalName;
+                    } else if (unhyphenatedWidth <= containerWidth) {
+                        return unhyphenatedNickname;
+                    } else {
+                        return nickname; // Use hyphenated version
+                    }
+                }
+                
+                // Mobile heuristic
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    if (originalName.length > 15) {
+                        return unhyphenatedNickname.length <= 12 ? unhyphenatedNickname : nickname;
+                    } else if (originalName.length > 10) {
+                        return unhyphenatedNickname;
+                    }
+                }
+                
+                return originalName;
+            } else {
+                // Regular nickname without hyphens
+                return nickname;
+            }
+        }
+
+        function getDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth) {
+            if (originalWidth <= containerWidth) {
+                return 'use original (fits)';
+            } else if (unhyphenatedWidth <= containerWidth) {
+                return 'use unhyphenated nickname (fits better)';
+            } else {
+                return 'use hyphenated nickname (best option)';
+            }
+        }
+
+        function testWidth(eventKey, width) {
+            const event = testEvents[eventKey];
+            const demo = document.getElementById(`${eventKey}-demo`);
+            const mobileElement = document.getElementById(`${eventKey}-mobile`);
+            
+            // Update container width
+            if (width === 'auto') {
+                demo.className = 'width-simulator width-250';
+            } else {
+                demo.className = 'width-simulator';
+                demo.style.width = width + 'px';
+            }
+            
+            // Update button states
+            const buttons = demo.parentElement.querySelectorAll('.width-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target?.classList.add('active');
+            
+            // Calculate and display smart name
+            const smartName = getSmartEventName(event, width === 'auto' ? null : width);
+            mobileElement.textContent = smartName;
+            
+            // Add visual indicator
+            const originalWidth = calculateTextWidth(event.name);
+            const nickname = event.shortName;
+            const unhyphenatedNickname = nickname ? nickname.replace(/-/g, '') : '';
+            const containerWidth = width === 'auto' ? 250 : width;
+            
+            let indicator = '';
+            if (smartName === nickname && nickname.includes('-')) {
+                indicator = ' ✂️'; // Scissors emoji to indicate hyphenation was kept
+            } else if (smartName === unhyphenatedNickname) {
+                indicator = ' 🔗'; // Link emoji to indicate hyphens were removed
+            } else if (originalWidth > containerWidth) {
+                indicator = ' ⚠️'; // Warning that text might overflow
+            }
+            
+            mobileElement.textContent = smartName + indicator;
+        }
+
+        // Initialize demos
+        window.addEventListener('load', () => {
+            Object.keys(testEvents).forEach(key => {
+                testWidth(key, 'auto');
+            });
+        });
+    </script>
+</body>
+</html>
