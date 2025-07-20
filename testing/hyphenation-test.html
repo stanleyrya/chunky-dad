@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hyphenation Test - Chunky Dad</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+        }
+        
+        .test-event {
+            background: var(--background-light);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            border: 1px solid var(--border-lighter);
+        }
+        
+        .width-simulator {
+            border: 2px dashed var(--primary-color);
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            overflow: hidden;
+        }
+        
+        .width-100 { width: 100px; }
+        .width-150 { width: 150px; }
+        .width-200 { width: 200px; }
+        .width-250 { width: 250px; }
+        
+        .demo-controls {
+            margin: 1rem 0;
+        }
+        
+        .demo-controls button {
+            margin: 0.25rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--primary-color);
+            background: var(--background-primary);
+            color: var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .demo-controls button:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .demo-controls button.active {
+            background: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Smart Hyphenation System Test</h1>
+        <p>This demonstrates automatic hyphenation of event names based on available space.</p>
+        
+        <div class="test-section">
+            <h2>Test Events</h2>
+            <p>These events have hyphenated nicknames that will be used automatically when space is limited:</p>
+            
+            <div class="test-event">
+                <h3>Event: Rockstrap Party</h3>
+                <p><strong>Hyphenated:</strong> Rock-strap Party</p>
+                <div class="demo-controls">
+                    <button onclick="testWidth('rockstrap', 100)" class="width-btn">100px</button>
+                    <button onclick="testWidth('rockstrap', 150)" class="width-btn">150px</button>
+                    <button onclick="testWidth('rockstrap', 200)" class="width-btn">200px</button>
+                    <button onclick="testWidth('rockstrap', 250)" class="width-btn">250px</button>
+                    <button onclick="testWidth('rockstrap', 'auto')" class="width-btn active">Auto</button>
+                </div>
+                <div id="rockstrap-demo" class="width-simulator width-250">
+                    <div class="event-item">
+                        <div class="event-name">Rockstrap Party</div>
+                        <div class="event-name-mobile" id="rockstrap-mobile">Rockstrap Party</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-event">
+                <h3>Event: Bear Weekend Festival</h3>
+                <p><strong>Hyphenated:</strong> Bear Week-end Festival</p>
+                <div class="demo-controls">
+                    <button onclick="testWidth('bearweekend', 100)" class="width-btn">100px</button>
+                    <button onclick="testWidth('bearweekend', 150)" class="width-btn">150px</button>
+                    <button onclick="testWidth('bearweekend', 200)" class="width-btn">200px</button>
+                    <button onclick="testWidth('bearweekend', 250)" class="width-btn">250px</button>
+                    <button onclick="testWidth('bearweekend', 'auto')" class="width-btn active">Auto</button>
+                </div>
+                <div id="bearweekend-demo" class="width-simulator width-250">
+                    <div class="event-item">
+                        <div class="event-name">Bear Weekend Festival</div>
+                        <div class="event-name-mobile" id="bearweekend-mobile">Bear Weekend Festival</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-event">
+                <h3>Event: Underwear Night</h3>
+                <p><strong>Hyphenated:</strong> Under-wear Night</p>
+                <div class="demo-controls">
+                    <button onclick="testWidth('underwear', 100)" class="width-btn">100px</button>
+                    <button onclick="testWidth('underwear', 150)" class="width-btn">150px</button>
+                    <button onclick="testWidth('underwear', 200)" class="width-btn">200px</button>
+                    <button onclick="testWidth('underwear', 250)" class="width-btn">250px</button>
+                    <button onclick="testWidth('underwear', 'auto')" class="width-btn active">Auto</button>
+                </div>
+                <div id="underwear-demo" class="width-simulator width-250">
+                    <div class="event-item">
+                        <div class="event-name">Underwear Night</div>
+                        <div class="event-name-mobile" id="underwear-mobile">Underwear Night</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>How It Works</h2>
+            <ol>
+                <li><strong>Define hyphenated nicknames:</strong> In your event data, include a <code>hyphenated</code> or <code>hyphenatedName</code> field</li>
+                <li><strong>Automatic detection:</strong> The system calculates text width and container space</li>
+                <li><strong>Smart switching:</strong> Uses hyphenated version only when original doesn't fit but hyphenated does</li>
+                <li><strong>Mobile optimization:</strong> On mobile screens, prefers shorter hyphenated versions</li>
+                <li><strong>Fallback support:</strong> Works with existing shortName system if no hyphenated version provided</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>Usage in Calendar Data</h2>
+            <pre><code>SUMMARY:Rockstrap Party
+DESCRIPTION:Bar: The Bear Den
+Hyphenated: Rock-strap Party
+Cover: $15
+Website: https://example.com</code></pre>
+            <p>The system will automatically use "Rock-strap Party" when the full name doesn't fit in the available space.</p>
+        </div>
+    </div>
+
+    <script>
+        // Test data with hyphenated versions
+        const testEvents = {
+            rockstrap: {
+                name: 'Rockstrap Party',
+                hyphenatedName: 'Rock-strap Party'
+            },
+            bearweekend: {
+                name: 'Bear Weekend Festival',
+                hyphenatedName: 'Bear Week-end Festival'
+            },
+            underwear: {
+                name: 'Underwear Night',
+                hyphenatedName: 'Under-wear Night'
+            }
+        };
+
+        // Simple text width calculation (approximation)
+        function calculateTextWidth(text) {
+            const tempElement = document.createElement('span');
+            tempElement.style.visibility = 'hidden';
+            tempElement.style.position = 'absolute';
+            tempElement.style.fontSize = 'var(--event-name-font-size)';
+            tempElement.style.fontWeight = 'var(--event-name-font-weight)';
+            tempElement.style.fontFamily = getComputedStyle(document.body).fontFamily;
+            tempElement.textContent = text;
+            
+            document.body.appendChild(tempElement);
+            const width = tempElement.getBoundingClientRect().width;
+            document.body.removeChild(tempElement);
+            
+            return width;
+        }
+
+        // Smart hyphenation logic
+        function getSmartEventName(event, containerWidth = null) {
+            const originalName = event.name;
+            const hyphenatedName = event.hyphenatedName;
+            
+            if (!hyphenatedName) {
+                return originalName;
+            }
+            
+            if (containerWidth && containerWidth !== 'auto') {
+                const originalWidth = calculateTextWidth(originalName);
+                const hyphenatedWidth = calculateTextWidth(hyphenatedName);
+                
+                console.log('Smart hyphenation:', {
+                    originalName,
+                    hyphenatedName,
+                    originalWidth: originalWidth.toFixed(1),
+                    hyphenatedWidth: hyphenatedWidth.toFixed(1),
+                    containerWidth,
+                    useHyphenated: originalWidth > containerWidth && hyphenatedWidth <= containerWidth
+                });
+                
+                // Use hyphenated version if original doesn't fit but hyphenated does
+                if (originalWidth > containerWidth && hyphenatedWidth <= containerWidth) {
+                    return hyphenatedName;
+                }
+                
+                // Use original if it fits
+                if (originalWidth <= containerWidth) {
+                    return originalName;
+                }
+                
+                // If neither fits, use hyphenated as it's likely shorter
+                return hyphenatedName;
+            }
+            
+            // Mobile heuristic: prefer hyphenated if original is long
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile && originalName.length > 12) {
+                return hyphenatedName;
+            }
+            
+            return originalName;
+        }
+
+        function testWidth(eventKey, width) {
+            const event = testEvents[eventKey];
+            const demo = document.getElementById(`${eventKey}-demo`);
+            const mobileElement = document.getElementById(`${eventKey}-mobile`);
+            
+            // Update container width
+            if (width === 'auto') {
+                demo.className = 'width-simulator width-250';
+            } else {
+                demo.className = 'width-simulator';
+                demo.style.width = width + 'px';
+            }
+            
+            // Update button states
+            const buttons = demo.parentElement.querySelectorAll('.width-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target?.classList.add('active');
+            
+            // Calculate and display smart name
+            const smartName = getSmartEventName(event, width === 'auto' ? null : width);
+            mobileElement.textContent = smartName;
+            
+            // Add visual indicator
+            const originalWidth = calculateTextWidth(event.name);
+            const hyphenatedWidth = calculateTextWidth(event.hyphenatedName);
+            const containerWidth = width === 'auto' ? 250 : width;
+            
+            let indicator = '';
+            if (smartName === event.hyphenatedName) {
+                indicator = ' ✂️'; // Scissors emoji to indicate hyphenation was used
+            } else if (originalWidth > containerWidth) {
+                indicator = ' ⚠️'; // Warning that text might overflow
+            }
+            
+            mobileElement.textContent = smartName + indicator;
+        }
+
+        // Initialize demos
+        window.addEventListener('load', () => {
+            Object.keys(testEvents).forEach(key => {
+                testWidth(key, 'auto');
+            });
+        });
+    </script>
+</body>
+</html>

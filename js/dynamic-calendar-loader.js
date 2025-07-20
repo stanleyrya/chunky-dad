@@ -450,6 +450,80 @@ class DynamicCalendarLoader extends CalendarCore {
         return shortName;
     }
 
+    // Smart hyphenation system - automatically uses hyphenated version when text doesn't fit
+    getSmartEventName(event, containerWidth = null) {
+        const originalName = event.name;
+        const hyphenatedName = event.hyphenatedName || event.nickName; // Support both property names
+        
+        // If no hyphenated version provided, fall back to original logic
+        if (!hyphenatedName) {
+            return event.shortName || (originalName.length > 20 ? originalName.substring(0, 17) + '...' : originalName);
+        }
+        
+        // If container width is provided, calculate which version fits better
+        if (containerWidth) {
+            const originalWidth = this.calculateTextWidth(originalName);
+            const hyphenatedWidth = this.calculateTextWidth(hyphenatedName);
+            
+            logger.debug('CALENDAR', 'Smart hyphenation calculation', {
+                originalName,
+                hyphenatedName,
+                originalWidth,
+                hyphenatedWidth,
+                containerWidth,
+                useHyphenated: originalWidth > containerWidth && hyphenatedWidth <= containerWidth
+            });
+            
+            // Use hyphenated version if original doesn't fit but hyphenated does
+            if (originalWidth > containerWidth && hyphenatedWidth <= containerWidth) {
+                return hyphenatedName;
+            }
+            
+            // Use original if it fits
+            if (originalWidth <= containerWidth) {
+                return originalName;
+            }
+        }
+        
+        // Fallback: use character length heuristic for mobile screens
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            // On mobile, prefer hyphenated version if original is long
+            if (originalName.length > 12 && hyphenatedName.length <= originalName.length) {
+                return hyphenatedName;
+            }
+        }
+        
+        return originalName;
+    }
+
+    // Calculate approximate text width in pixels
+    calculateTextWidth(text) {
+        if (!text) return 0;
+        
+        // Create a temporary element to measure text width
+        const tempElement = document.createElement('span');
+        tempElement.style.visibility = 'hidden';
+        tempElement.style.position = 'absolute';
+        tempElement.style.whiteSpace = 'nowrap';
+        
+        // Get CSS custom properties from root
+        const rootStyles = getComputedStyle(document.documentElement);
+        const fontSize = rootStyles.getPropertyValue('--event-name-font-size').trim() || '0.75rem';
+        const fontWeight = rootStyles.getPropertyValue('--event-name-font-weight').trim() || '600';
+        
+        tempElement.style.fontSize = fontSize;
+        tempElement.style.fontWeight = fontWeight;
+        tempElement.style.fontFamily = getComputedStyle(document.body).fontFamily;
+        tempElement.textContent = text;
+        
+        document.body.appendChild(tempElement);
+        const width = tempElement.getBoundingClientRect().width;
+        document.body.removeChild(tempElement);
+        
+        return width;
+    }
+
     // Format time for mobile display with simplified format (4a-5p)
     formatTimeForMobile(timeString) {
         if (!timeString) return '';
@@ -975,14 +1049,14 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
-                    // Mobile-friendly shortened versions
-                    const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
+                    // Smart hyphenation for mobile display
+                    const smartName = this.getSmartEventName(event);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${shortName}</div>
+                            <div class="event-name-mobile">${smartName}</div>
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -1081,13 +1155,13 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    const shortName = event.shortName || (event.name.length > 20 ? event.name.substring(0, 17) + '...' : event.name);
+                    const smartName = this.getSmartEventName(event);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${shortName}</div>
+                            <div class="event-name-mobile">${smartName}</div>
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>

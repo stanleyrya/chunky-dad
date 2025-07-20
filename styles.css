@@ -37,6 +37,11 @@
     --color-busy: #f59e0b;
     --color-away: #f97316;
     
+    /* Font Size Variables for Event Names */
+    --event-name-font-size: 0.75rem;
+    --event-name-font-weight: 600;
+    --event-name-line-height: 1.2;
+    
     /* Additional Color Variables for Gradients */
     --color-danger: #ff6b6b;
     --color-danger-dark: #ee5a24;
@@ -3617,8 +3622,9 @@ footer {
   }
   .event-name-mobile {
     display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--event-name-font-size);
+    font-weight: var(--event-name-font-weight);
+    line-height: var(--event-name-line-height);
     margin-bottom: 0.1rem;
     word-wrap: normal;
     overflow-wrap: normal;
