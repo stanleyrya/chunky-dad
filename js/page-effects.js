@@ -36,8 +36,9 @@ class PageEffectsManager {
             window.addEventListener('scroll', () => {
                 const scrollY = window.scrollY;
                 if (scrollY > 100) {
-                    this.header.style.background = 'rgba(102, 126, 234, 0.95)';
-                    this.header.style.backdropFilter = 'blur(10px)';
+                    // Keep the original gradient background instead of purple
+                    this.header.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    this.header.style.backdropFilter = 'none';
                 } else {
                     this.header.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                     this.header.style.backdropFilter = 'none';
