@@ -503,30 +503,31 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             }
             
-            // Mobile heuristic: prefer unhyphenated if original is long, hyphenated if very constrained
+            // Mobile heuristic: be very aggressive about hyphenation due to limited space
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
-                if (originalName.length > 12) {
-                    // For very long names, try unhyphenated first
-                    const result = unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
+                if (originalName.length > 10) {
+                    // For long names, only use unhyphenated if it's very short
+                    const result = unhyphenatedNickname.length <= 5 ? unhyphenatedNickname : nickname;
                     logger.debug('CALENDAR', 'Mobile hyphenation decision (long name)', {
                         originalName,
                         nickname,
                         unhyphenatedNickname,
                         result,
-                        reason: unhyphenatedNickname.length <= 10 ? 'unhyphenated fits' : 'using hyphenated'
+                        reason: unhyphenatedNickname.length <= 5 ? 'unhyphenated fits' : 'using hyphenated'
                     });
                     return result;
-                } else if (originalName.length > 8) {
-                    // For moderately long names, use unhyphenated if it's shorter
+                } else if (originalName.length > 6) {
+                    // For moderately long names, use unhyphenated if it's very short
+                    const result = unhyphenatedNickname.length <= 6 ? unhyphenatedNickname : nickname;
                     logger.debug('CALENDAR', 'Mobile hyphenation decision (moderate name)', {
                         originalName,
                         nickname,
                         unhyphenatedNickname,
-                        result: unhyphenatedNickname,
-                        reason: 'using unhyphenated for moderate length'
+                        result,
+                        reason: unhyphenatedNickname.length <= 6 ? 'unhyphenated fits' : 'using hyphenated'
                     });
-                    return unhyphenatedNickname;
+                    return result;
                 }
             }
             
