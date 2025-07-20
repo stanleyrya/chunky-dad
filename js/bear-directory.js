@@ -78,6 +78,11 @@ class BearDirectory {
         
         try {
             const response = await fetch(this.sheetUrl);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const text = await response.text();
             
             // Parse Google Sheets JSON response
@@ -98,7 +103,11 @@ class BearDirectory {
             this.updateMap();
             
         } catch (error) {
-            logger.componentError('DIRECTORY', 'Failed to load Google Sheets data', error);
+            logger.componentError('DIRECTORY', 'Failed to load Google Sheets data', {
+                error: error.message,
+                stack: error.stack,
+                url: this.sheetUrl
+            });
             this.showError();
         }
     }
@@ -148,14 +157,7 @@ class BearDirectory {
         
         // Reload Instagram embeds after DOM updates
         setTimeout(() => {
-            if (window.instgrm && window.instgrm.Embeds) {
-                window.instgrm.Embeds.process();
-                logger.componentLoad('DIRECTORY', 'Instagram embeds processed after display update');
-            } else {
-                logger.warn('DIRECTORY', 'Instagram embed script not yet loaded');
-                // Try loading it again
-                this.loadInstagramEmbed();
-            }
+            this.processInstagramEmbeds();
         }, 200);
         
         logger.timeEnd('DIRECTORY', 'displayDirectory');
@@ -171,7 +173,11 @@ class BearDirectory {
         
         // Create Instagram embed or placeholder
         const instagramContent = item.instagram ? 
-            `<div class="instagram-embed-container">
+            `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
+                <div class="instagram-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading @${item.instagram}</p>
+                </div>
                 <blockquote class="instagram-media" 
                     data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
                     data-instgrm-version="14"
@@ -336,26 +342,35 @@ class BearDirectory {
     }
     
     loadInstagramEmbed() {
-        // Load Instagram embed script
+        // Load Instagram embed script with retry logic
         if (!this.instagramEmbedScript) {
             this.instagramEmbedScript = document.createElement('script');
             this.instagramEmbedScript.async = true;
+            this.instagramEmbedScript.defer = true;
             this.instagramEmbedScript.src = 'https://www.instagram.com/embed.js';
             
-            // Add error handling
+            // Add error handling with retry
             this.instagramEmbedScript.onerror = (error) => {
-                logger.componentError('DIRECTORY', 'Failed to load Instagram embed script', error);
+                logger.componentError('DIRECTORY', 'Failed to load Instagram embed script', {
+                    error: error,
+                    src: this.instagramEmbedScript.src
+                });
+                
+                // Retry once after a delay
+                if (!this.instagramRetried) {
+                    this.instagramRetried = true;
+                    setTimeout(() => {
+                        logger.info('DIRECTORY', 'Retrying Instagram script load');
+                        this.instagramEmbedScript = null;
+                        this.loadInstagramEmbed();
+                    }, 2000);
+                }
             };
             
             this.instagramEmbedScript.onload = () => {
                 logger.componentLoad('DIRECTORY', 'Instagram embed script loaded successfully');
-                // Process embeds after script loads
-                if (window.instgrm && window.instgrm.Embeds) {
-                    setTimeout(() => {
-                        window.instgrm.Embeds.process();
-                        logger.componentLoad('DIRECTORY', 'Instagram embeds processed');
-                    }, 100);
-                }
+                // Process embeds after script loads with multiple retries
+                this.processInstagramEmbeds();
             };
             
             document.body.appendChild(this.instagramEmbedScript);
@@ -363,11 +378,71 @@ class BearDirectory {
             logger.componentInit('DIRECTORY', 'Loading Instagram embed script');
         } else if (window.instgrm && window.instgrm.Embeds) {
             // If script already loaded, just process embeds
-            setTimeout(() => {
-                window.instgrm.Embeds.process();
-                logger.componentLoad('DIRECTORY', 'Instagram embeds reprocessed');
-            }, 100);
+            this.processInstagramEmbeds();
         }
+    }
+    
+    processInstagramEmbeds(retryCount = 0) {
+        const maxRetries = 3;
+        
+        setTimeout(() => {
+            try {
+                if (window.instgrm && window.instgrm.Embeds) {
+                    // Mark containers as processing
+                    const containers = document.querySelectorAll('.instagram-embed-container');
+                    containers.forEach(container => {
+                        // Add loaded class when iframe appears
+                        const observer = new MutationObserver((mutations) => {
+                            const iframe = container.querySelector('iframe');
+                            if (iframe) {
+                                container.classList.add('loaded');
+                                observer.disconnect();
+                            }
+                        });
+                        observer.observe(container, { childList: true, subtree: true });
+                        
+                        // Timeout for failed loads
+                        setTimeout(() => {
+                            if (!container.classList.contains('loaded')) {
+                                container.classList.add('error');
+                                const username = container.dataset.instagramUser;
+                                logger.warn('DIRECTORY', `Instagram embed timeout for @${username}`);
+                            }
+                        }, 10000); // 10 second timeout
+                    });
+                    
+                    window.instgrm.Embeds.process();
+                    logger.componentLoad('DIRECTORY', 'Instagram embeds processed', {
+                        retryCount: retryCount,
+                        embedCount: containers.length
+                    });
+                } else if (retryCount < maxRetries) {
+                    logger.warn('DIRECTORY', `Instagram not ready, retrying (${retryCount + 1}/${maxRetries})`);
+                    this.processInstagramEmbeds(retryCount + 1);
+                } else {
+                    logger.error('DIRECTORY', 'Instagram embeds failed to process after retries');
+                    // Mark all as error
+                    document.querySelectorAll('.instagram-embed-container').forEach(container => {
+                        container.classList.add('error');
+                    });
+                }
+            } catch (error) {
+                logger.componentError('DIRECTORY', 'Error processing Instagram embeds', {
+                    error: error.message,
+                    stack: error.stack,
+                    retryCount: retryCount
+                });
+                
+                if (retryCount < maxRetries) {
+                    this.processInstagramEmbeds(retryCount + 1);
+                } else {
+                    // Mark all as error
+                    document.querySelectorAll('.instagram-embed-container').forEach(container => {
+                        container.classList.add('error');
+                    });
+                }
+            }
+        }, 500 * (retryCount + 1)); // Exponential backoff
     }
     
     showError() {
