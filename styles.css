@@ -562,9 +562,8 @@ header {
     transform: translateX(5px);
 }
 
-.compact-city-card .city-emoji {
+.city-emoji {
     font-size: 2rem;
-    width: 50px;
     text-align: center;
 }
 
