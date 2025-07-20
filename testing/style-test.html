@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>chunky.dad - Style Test</title>
+    <title>chunky.dad - UI Component Showcase</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* CSS Custom Properties */
@@ -40,7 +40,26 @@
             padding: 20px;
         }
 
-        .style-section {
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .section {
             margin-bottom: 60px;
             padding: 30px;
             background: white;
@@ -48,658 +67,661 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
-        .section-title {
-            font-size: 2rem;
-            color: var(--primary-color);
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--border-light);
-        }
-
-        .subsection {
-            margin-bottom: 30px;
-        }
-
-        .subsection-title {
-            font-size: 1.3rem;
-            color: var(--text-primary);
-            margin-bottom: 15px;
-        }
-
-        /* Typography Styles */
-        .typography-demo h1 { font-size: 2.5rem; margin-bottom: 10px; }
-        .typography-demo h2 { font-size: 2rem; margin-bottom: 10px; }
-        .typography-demo h3 { font-size: 1.5rem; margin-bottom: 10px; }
-        .typography-demo h4 { font-size: 1.2rem; margin-bottom: 10px; }
-        .typography-demo h5 { font-size: 1rem; margin-bottom: 10px; }
-        .typography-demo h6 { font-size: 0.9rem; margin-bottom: 10px; }
-
-        /* Button Styles */
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            margin: 5px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--secondary-color);
-            color: white;
-        }
-
-        .btn-success {
-            background: var(--success-color);
-            color: white;
-        }
-
-        .btn-warning {
-            background: var(--warning-color);
-            color: #333;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 2px solid var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .btn-outline:hover {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        /* Form Elements */
-        .form-group {
+        .section h2 {
+            font-size: 1.8rem;
             margin-bottom: 20px;
+            color: var(--primary-color);
         }
 
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
+        .section h3 {
+            font-size: 1.3rem;
+            margin: 30px 0 15px;
             color: var(--text-primary);
         }
 
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid var(--border-light);
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        /* Cards */
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-        }
-
-        .card-title {
-            font-size: 1.3rem;
-            margin-bottom: 10px;
-            color: var(--primary-color);
-        }
-
-        /* Grid Layout */
-        .grid-demo {
+        /* Event Display Variations */
+        .event-displays {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 40px;
         }
 
-        .grid-item {
+        .event-display {
+            padding: 20px;
             background: var(--background-light);
+            border-radius: 10px;
+            border: 1px solid var(--border-light);
+        }
+
+        .event-display h4 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        /* Carousel Style */
+        .carousel-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.3s ease;
+        }
+
+        .carousel-item {
+            flex: 0 0 300px;
+            margin-right: 20px;
             padding: 20px;
+            background: var(--background-light);
             border-radius: 8px;
-            text-align: center;
-            border: 2px solid var(--border-light);
         }
 
-        /* Color Swatches */
-        .color-grid {
+        /* Timeline Style */
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -31px;
+            top: 25px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            border: 3px solid white;
+        }
+
+        /* Map Style */
+        .map-container {
+            height: 400px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        /* Masonry Grid */
+        .masonry-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            grid-auto-rows: auto;
         }
 
-        .color-swatch {
-            height: 100px;
+        .masonry-item {
+            background: white;
             border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .masonry-item.tall {
+            grid-row: span 2;
+        }
+
+        /* Heatmap Style */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 3px;
+            background: var(--background-light);
+        }
+
+        .heatmap-cell.level-1 { background: rgba(102, 126, 234, 0.2); }
+        .heatmap-cell.level-2 { background: rgba(102, 126, 234, 0.4); }
+        .heatmap-cell.level-3 { background: rgba(102, 126, 234, 0.6); }
+        .heatmap-cell.level-4 { background: rgba(102, 126, 234, 0.8); }
+        .heatmap-cell.level-5 { background: rgba(102, 126, 234, 1); }
+
+        /* Ticker Style */
+        .ticker-container {
+            overflow: hidden;
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 0;
+            border-radius: 8px;
+        }
+
+        .ticker-content {
+            display: flex;
+            animation: ticker 20s linear infinite;
+        }
+
+        .ticker-item {
+            padding: 0 50px;
+            white-space: nowrap;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Circular Display */
+        .circular-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+        }
+
+        .circular-item {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: var(--primary-color);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: 500;
-            transition: transform 0.3s;
+            font-weight: 600;
         }
 
-        .color-swatch:hover {
-            transform: scale(1.05);
+        /* Kanban Board */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
         }
 
-        /* Alerts */
-        .alert {
-            padding: 15px 20px;
-            margin-bottom: 15px;
+        .kanban-column {
+            background: var(--background-light);
             border-radius: 8px;
-            border-left: 4px solid;
+            padding: 15px;
         }
 
-        .alert-info {
-            background: #e3f2fd;
-            border-color: #2196f3;
-            color: #1565c0;
+        .kanban-header {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-color);
         }
 
-        .alert-success {
-            background: #e8f5e9;
-            border-color: #4caf50;
-            color: #2e7d32;
+        .kanban-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        .alert-warning {
-            background: #fff3e0;
-            border-color: #ff9800;
-            color: #e65100;
-        }
-
-        .alert-danger {
-            background: #ffebee;
-            border-color: #f44336;
-            color: #c62828;
-        }
-
-        /* Progress Bars */
-        .progress {
-            height: 20px;
-            background: var(--border-light);
+        /* Bubble Chart */
+        .bubble-container {
+            position: relative;
+            height: 400px;
+            background: var(--background-light);
             border-radius: 10px;
             overflow: hidden;
-            margin-bottom: 15px;
         }
 
-        .progress-bar {
-            height: 100%;
-            background: var(--primary-color);
-            transition: width 0.3s ease;
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 0.8rem;
+            font-weight: 600;
         }
 
-        /* Badges */
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
+        /* Flip Cards */
+        .flipcard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .flipcard {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            perspective: 1000px;
+        }
+
+        .flipcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .flipcard:hover .flipcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flipcard-front, .flipcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .flipcard-front {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .flipcard-back {
+            background: var(--secondary-color);
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        /* Week View */
+        .weekview-container {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .weekview-header {
+            font-weight: 600;
+            text-align: center;
+            padding: 10px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+        }
+
+        .weekview-time {
+            text-align: right;
+            padding-right: 10px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .weekview-cell {
+            background: var(--background-light);
+            border-radius: 5px;
+            min-height: 60px;
+            position: relative;
+        }
+
+        .weekview-event {
+            position: absolute;
+            background: var(--primary-color);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
             font-size: 0.8rem;
-            font-weight: 500;
-            border-radius: 20px;
             margin: 2px;
         }
 
-        .badge-primary { background: var(--primary-color); color: white; }
-        .badge-secondary { background: var(--secondary-color); color: white; }
-        .badge-success { background: var(--success-color); color: white; }
-        .badge-warning { background: var(--warning-color); color: #333; }
-
-        /* Tables */
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
+        /* Swipe Tiles */
+        .swipe-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
 
-        .table th,
-        .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-light);
+        .swipe-container::-webkit-scrollbar {
+            display: none;
         }
 
-        .table th {
-            background: var(--background-light);
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .table tr:hover {
-            background: var(--background-light);
-        }
-
-        /* Event Display Styles */
-        .event-displays {
-            margin-top: 40px;
-        }
-
-        .event-display-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        .swipe-track {
+            display: flex;
             gap: 20px;
-            margin-bottom: 30px;
+            padding: 10px 0;
         }
 
-        .event-preview {
+        .swipe-tile {
+            flex: 0 0 250px;
             background: white;
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
+            transition: transform 0.3s ease;
         }
 
-        .event-preview:hover {
+        .swipe-tile:hover {
             transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
         }
 
-        .event-preview h4 {
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
-
-        .event-preview p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-        }
-
-        .event-preview .view-btn {
-            display: inline-block;
-            padding: 8px 16px;
-            background: var(--primary-color);
-            color: white;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: background 0.3s;
-        }
-
-        .event-preview .view-btn:hover {
-            background: #5a67d8;
-        }
-
-        /* Navigation */
-        .nav-demo {
-            background: var(--primary-color);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .nav-demo a {
-            color: white;
-            text-decoration: none;
-            padding: 10px 15px;
-            margin: 0 5px;
-            border-radius: 6px;
-            transition: background 0.3s;
-        }
-
-        .nav-demo a:hover {
-            background: rgba(255,255,255,0.1);
-        }
-
-        /* Back to Top */
+        /* Back to Top Button */
         .back-to-top {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background: var(--primary-color);
-            color: white;
             width: 50px;
             height: 50px;
+            background: var(--primary-color);
+            color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transition: all 0.3s;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
         }
 
         .back-to-top:hover {
-            background: #5a67d8;
+            background: var(--accent-color);
             transform: translateY(-3px);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 40px;">
-            🎨 chunky.dad Style Test
-        </h1>
+        <div class="header">
+            <h1>UI Component Showcase</h1>
+            <p>All UI components and event display variations for chunky.dad</p>
+        </div>
 
-        <!-- Typography Section -->
-        <section class="style-section">
-            <h2 class="section-title">Typography</h2>
-            <div class="typography-demo">
-                <h1>Heading 1 - The Quick Brown Fox</h1>
-                <h2>Heading 2 - Jumps Over The Lazy Dog</h2>
-                <h3>Heading 3 - Pack My Box With Five Dozen</h3>
-                <h4>Heading 4 - Liquor Jugs</h4>
-                <h5>Heading 5 - The Five Boxing Wizards</h5>
-                <h6>Heading 6 - Jump Quickly</h6>
-                <p>This is a regular paragraph with <strong>bold text</strong>, <em>italic text</em>, and <a href="#">links</a>. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-                <blockquote style="border-left: 4px solid var(--primary-color); padding-left: 20px; margin: 20px 0; font-style: italic;">
-                    "Design is not just what it looks like and feels like. Design is how it works." - Steve Jobs
-                </blockquote>
-            </div>
-        </section>
+        <div class="section">
+            <h2>Event Display Variations</h2>
+            <p>Different ways to display event data, each optimized for specific use cases.</p>
 
-        <!-- Colors Section -->
-        <section class="style-section">
-            <h2 class="section-title">Color Palette</h2>
-            <div class="color-grid">
-                <div class="color-swatch" style="background: var(--primary-color);">Primary</div>
-                <div class="color-swatch" style="background: var(--secondary-color);">Secondary</div>
-                <div class="color-swatch" style="background: var(--accent-color);">Accent</div>
-                <div class="color-swatch" style="background: var(--success-color);">Success</div>
-                <div class="color-swatch" style="background: var(--warning-color); color: #333;">Warning</div>
-                <div class="color-swatch" style="background: #f44336;">Danger</div>
-            </div>
-        </section>
+            <div class="event-displays">
+                <!-- Carousel -->
+                <div class="event-display">
+                    <h4>1. Carousel Display</h4>
+                    <div class="carousel-container">
+                        <div class="carousel-track">
+                            <div class="carousel-item">
+                                <h5>Event 1</h5>
+                                <p>Swipeable carousel for featured events</p>
+                            </div>
+                            <div class="carousel-item">
+                                <h5>Event 2</h5>
+                                <p>Great for highlighting important events</p>
+                            </div>
+                            <div class="carousel-item">
+                                <h5>Event 3</h5>
+                                <p>Mobile-friendly horizontal scrolling</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Buttons Section -->
-        <section class="style-section">
-            <h2 class="section-title">Buttons</h2>
-            <div class="subsection">
-                <h3 class="subsection-title">Solid Buttons</h3>
-                <button class="btn btn-primary">Primary Button</button>
-                <button class="btn btn-secondary">Secondary Button</button>
-                <button class="btn btn-success">Success Button</button>
-                <button class="btn btn-warning">Warning Button</button>
-            </div>
-            <div class="subsection">
-                <h3 class="subsection-title">Outline Buttons</h3>
-                <button class="btn btn-outline">Outline Primary</button>
-                <button class="btn btn-outline" style="border-color: var(--secondary-color); color: var(--secondary-color);">Outline Secondary</button>
-            </div>
-        </section>
+                <!-- Timeline -->
+                <div class="event-display">
+                    <h4>2. Timeline Display</h4>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <h5>Today</h5>
+                            <p>Bear Happy Hour at The Eagle</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h5>Tomorrow</h5>
+                            <p>Woof! Weekend Kickoff Party</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h5>This Weekend</h5>
+                            <p>Bear Pool Party & BBQ</p>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Forms Section -->
-        <section class="style-section">
-            <h2 class="section-title">Form Elements</h2>
-            <form>
-                <div class="form-group">
-                    <label class="form-label" for="text-input">Text Input</label>
-                    <input type="text" class="form-control" id="text-input" placeholder="Enter text here...">
+                <!-- Map -->
+                <div class="event-display">
+                    <h4>3. Map Display</h4>
+                    <div class="map-container">
+                        <div class="map-placeholder">
+                            🗺️ Interactive map showing event locations
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="email-input">Email Input</label>
-                    <input type="email" class="form-control" id="email-input" placeholder="email@example.com">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="select-input">Select Dropdown</label>
-                    <select class="form-control" id="select-input">
-                        <option>Option 1</option>
-                        <option>Option 2</option>
-                        <option>Option 3</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="textarea-input">Textarea</label>
-                    <textarea class="form-control" id="textarea-input" rows="4" placeholder="Enter your message..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">
-                        <input type="checkbox"> Checkbox Option
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">
-                        <input type="radio" name="radio-group"> Radio Option 1
-                    </label>
-                    <label class="form-label">
-                        <input type="radio" name="radio-group"> Radio Option 2
-                    </label>
-                </div>
-            </form>
-        </section>
 
-        <!-- Cards Section -->
-        <section class="style-section">
-            <h2 class="section-title">Cards</h2>
-            <div class="grid-demo">
-                <div class="card">
-                    <h3 class="card-title">Card Title</h3>
-                    <p>This is a basic card with some content. Cards are great for organizing information.</p>
-                    <button class="btn btn-primary">Action</button>
+                <!-- Masonry -->
+                <div class="event-display">
+                    <h4>4. Masonry Grid</h4>
+                    <div class="masonry-grid">
+                        <div class="masonry-item">
+                            <h5>Small Event</h5>
+                            <p>Quick meetup</p>
+                        </div>
+                        <div class="masonry-item tall">
+                            <h5>Featured Event</h5>
+                            <p>Major weekend party with multiple DJs and special guests</p>
+                        </div>
+                        <div class="masonry-item">
+                            <h5>Regular Event</h5>
+                            <p>Weekly gathering</p>
+                        </div>
+                        <div class="masonry-item">
+                            <h5>Special Event</h5>
+                            <p>Monthly social</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card">
-                    <h3 class="card-title">Another Card</h3>
-                    <p>Cards can contain any type of content including buttons, images, and more.</p>
-                    <button class="btn btn-outline">Learn More</button>
-                </div>
-                <div class="card">
-                    <h3 class="card-title">Third Card</h3>
-                    <p>Use cards to create consistent layouts across your application.</p>
-                    <button class="btn btn-secondary">Explore</button>
-                </div>
-            </div>
-        </section>
 
-        <!-- Alerts Section -->
-        <section class="style-section">
-            <h2 class="section-title">Alerts & Notifications</h2>
-            <div class="alert alert-info">
-                <strong>Info!</strong> This is an informational alert message.
-            </div>
-            <div class="alert alert-success">
-                <strong>Success!</strong> Your operation completed successfully.
-            </div>
-            <div class="alert alert-warning">
-                <strong>Warning!</strong> Please review this important information.
-            </div>
-            <div class="alert alert-danger">
-                <strong>Error!</strong> Something went wrong. Please try again.
-            </div>
-        </section>
+                <!-- Heatmap -->
+                <div class="event-display">
+                    <h4>5. Event Density Heatmap</h4>
+                    <div class="heatmap-grid">
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-1"></div>
+                    </div>
+                    <p style="text-align: center; margin-top: 10px; color: var(--text-secondary);">
+                        Shows event frequency by day/time
+                    </p>
+                </div>
 
-        <!-- Progress Bars Section -->
-        <section class="style-section">
-            <h2 class="section-title">Progress Bars</h2>
-            <div class="progress">
-                <div class="progress-bar" style="width: 25%;">25%</div>
-            </div>
-            <div class="progress">
-                <div class="progress-bar" style="width: 50%; background: var(--secondary-color);">50%</div>
-            </div>
-            <div class="progress">
-                <div class="progress-bar" style="width: 75%; background: var(--success-color);">75%</div>
-            </div>
-            <div class="progress">
-                <div class="progress-bar" style="width: 90%; background: var(--warning-color); color: #333;">90%</div>
-            </div>
-        </section>
+                <!-- Ticker -->
+                <div class="event-display">
+                    <h4>6. News Ticker</h4>
+                    <div class="ticker-container">
+                        <div class="ticker-content">
+                            <span class="ticker-item">🐻 Bear Happy Hour Tonight</span>
+                            <span class="ticker-item">🎉 Weekend Pool Party</span>
+                            <span class="ticker-item">🍺 New Bear Bar Opening</span>
+                            <span class="ticker-item">🏳️‍🌈 Pride Events This Month</span>
+                            <span class="ticker-item">🐻 Bear Happy Hour Tonight</span>
+                            <span class="ticker-item">🎉 Weekend Pool Party</span>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Badges Section -->
-        <section class="style-section">
-            <h2 class="section-title">Badges & Tags</h2>
-            <div>
-                <span class="badge badge-primary">Primary</span>
-                <span class="badge badge-secondary">Secondary</span>
-                <span class="badge badge-success">Success</span>
-                <span class="badge badge-warning">Warning</span>
-                <span class="badge" style="background: #f44336; color: white;">Danger</span>
-                <span class="badge" style="background: #9c27b0; color: white;">Purple</span>
-                <span class="badge" style="background: #00bcd4; color: white;">Cyan</span>
+                <!-- Circular -->
+                <div class="event-display">
+                    <h4>7. Circular/Radial Display</h4>
+                    <div class="circular-container">
+                        <div class="circular-item" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">Hub</div>
+                        <div class="circular-item" style="top: 10%; left: 50%; transform: translateX(-50%);">1</div>
+                        <div class="circular-item" style="top: 30%; right: 10%;">2</div>
+                        <div class="circular-item" style="bottom: 30%; right: 10%;">3</div>
+                        <div class="circular-item" style="bottom: 10%; left: 50%; transform: translateX(-50%);">4</div>
+                        <div class="circular-item" style="bottom: 30%; left: 10%;">5</div>
+                        <div class="circular-item" style="top: 30%; left: 10%;">6</div>
+                    </div>
+                </div>
+
+                <!-- Kanban -->
+                <div class="event-display">
+                    <h4>8. Kanban Board</h4>
+                    <div class="kanban-board">
+                        <div class="kanban-column">
+                            <div class="kanban-header">This Week</div>
+                            <div class="kanban-card">Bear Happy Hour</div>
+                            <div class="kanban-card">Trivia Night</div>
+                        </div>
+                        <div class="kanban-column">
+                            <div class="kanban-header">Next Week</div>
+                            <div class="kanban-card">Pool Party</div>
+                            <div class="kanban-card">Game Night</div>
+                            <div class="kanban-card">Karaoke</div>
+                        </div>
+                        <div class="kanban-column">
+                            <div class="kanban-header">Coming Soon</div>
+                            <div class="kanban-card">Pride Festival</div>
+                            <div class="kanban-card">Bear Run</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bubbles -->
+                <div class="event-display">
+                    <h4>9. Bubble Chart</h4>
+                    <div class="bubble-container">
+                        <div class="bubble" style="width: 120px; height: 120px; top: 20%; left: 20%;">Major Event</div>
+                        <div class="bubble" style="width: 80px; height: 80px; top: 50%; left: 50%;">Regular</div>
+                        <div class="bubble" style="width: 60px; height: 60px; top: 70%; left: 30%;">Small</div>
+                        <div class="bubble" style="width: 100px; height: 100px; top: 30%; right: 20%;">Popular</div>
+                    </div>
+                </div>
+
+                <!-- Flip Cards -->
+                <div class="event-display">
+                    <h4>10. Flip Cards</h4>
+                    <div class="flipcard-grid">
+                        <div class="flipcard">
+                            <div class="flipcard-inner">
+                                <div class="flipcard-front">
+                                    <h5>Bear Happy Hour</h5>
+                                </div>
+                                <div class="flipcard-back">
+                                    <p>Every Friday 6-9PM at The Eagle</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flipcard">
+                            <div class="flipcard-inner">
+                                <div class="flipcard-front">
+                                    <h5>Pool Party</h5>
+                                </div>
+                                <div class="flipcard-back">
+                                    <p>Saturday 2PM - Bring swimwear!</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flipcard">
+                            <div class="flipcard-inner">
+                                <div class="flipcard-front">
+                                    <h5>Game Night</h5>
+                                </div>
+                                <div class="flipcard-back">
+                                    <p>Sunday 7PM - Board games & beer</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week View -->
+                <div class="event-display">
+                    <h4>11. Week View Calendar</h4>
+                    <div class="weekview-container">
+                        <div></div>
+                        <div class="weekview-header">Mon</div>
+                        <div class="weekview-header">Tue</div>
+                        <div class="weekview-header">Wed</div>
+                        <div class="weekview-header">Thu</div>
+                        <div class="weekview-header">Fri</div>
+                        <div class="weekview-header">Sat</div>
+                        <div class="weekview-header">Sun</div>
+                        
+                        <div class="weekview-time">6 PM</div>
+                        <div class="weekview-cell"></div>
+                        <div class="weekview-cell">
+                            <div class="weekview-event">Trivia</div>
+                        </div>
+                        <div class="weekview-cell"></div>
+                        <div class="weekview-cell"></div>
+                        <div class="weekview-cell">
+                            <div class="weekview-event">Happy Hour</div>
+                        </div>
+                        <div class="weekview-cell">
+                            <div class="weekview-event">Pool Party</div>
+                        </div>
+                        <div class="weekview-cell"></div>
+                    </div>
+                </div>
+
+                <!-- Swipe Tiles -->
+                <div class="event-display">
+                    <h4>12. Swipeable Tiles</h4>
+                    <div class="swipe-container">
+                        <div class="swipe-track">
+                            <div class="swipe-tile">
+                                <h5>Tonight</h5>
+                                <p>Bear Happy Hour</p>
+                                <small>6 PM at The Eagle</small>
+                            </div>
+                            <div class="swipe-tile">
+                                <h5>Tomorrow</h5>
+                                <p>Pool Party</p>
+                                <small>2 PM - BYOB</small>
+                            </div>
+                            <div class="swipe-tile">
+                                <h5>Saturday</h5>
+                                <p>Dance Party</p>
+                                <small>10 PM - Late</small>
+                            </div>
+                            <div class="swipe-tile">
+                                <h5>Sunday</h5>
+                                <p>Brunch</p>
+                                <small>11 AM - 3 PM</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
-
-        <!-- Tables Section -->
-        <section class="style-section">
-            <h2 class="section-title">Tables</h2>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Location</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Bear Week</td>
-                        <td>Provincetown</td>
-                        <td>July 2024</td>
-                        <td><span class="badge badge-success">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td>Lazy Bear Weekend</td>
-                        <td>Guerneville</td>
-                        <td>August 2024</td>
-                        <td><span class="badge badge-primary">Upcoming</span></td>
-                    </tr>
-                    <tr>
-                        <td>Southern Decadence</td>
-                        <td>New Orleans</td>
-                        <td>September 2024</td>
-                        <td><span class="badge badge-warning">Planning</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <!-- Navigation Demo -->
-        <section class="style-section">
-            <h2 class="section-title">Navigation</h2>
-            <nav class="nav-demo">
-                <a href="#">Home</a>
-                <a href="#">Events</a>
-                <a href="#">Cities</a>
-                <a href="#">About</a>
-                <a href="#">Contact</a>
-            </nav>
-        </section>
-
-        <!-- Event Displays Section -->
-        <section class="style-section event-displays">
-            <h2 class="section-title">Event Display Variations</h2>
-            <p style="margin-bottom: 30px; color: var(--text-secondary);">
-                Explore different ways to display event information. Each variation offers a unique user experience.
-            </p>
-            
-            <div class="event-display-grid">
-                <div class="event-preview">
-                    <h4>🎠 Carousel View</h4>
-                    <p>Swipeable carousel display with smooth transitions between events.</p>
-                    <a href="event-test-1-carousel.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>📅 Timeline View</h4>
-                    <p>Chronological timeline showing events in sequential order.</p>
-                    <a href="event-test-2-timeline.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>🗺️ Map View</h4>
-                    <p>Interactive map showing event locations with markers.</p>
-                    <a href="event-test-3-map.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>🧱 Masonry Grid</h4>
-                    <p>Pinterest-style masonry layout for dynamic event cards.</p>
-                    <a href="event-test-4-masonry.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>🔥 Heatmap View</h4>
-                    <p>Visual heatmap showing event density and popularity.</p>
-                    <a href="event-test-5-heatmap.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>📜 Ticker Display</h4>
-                    <p>Scrolling ticker showing upcoming events in real-time.</p>
-                    <a href="event-test-6-ticker.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>⭕ Circular Layout</h4>
-                    <p>Radial display with events arranged in a circle.</p>
-                    <a href="event-test-7-circular.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>📊 Kanban Board</h4>
-                    <p>Organize events in columns by status or category.</p>
-                    <a href="event-test-8-kanban.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>🫧 Bubble Chart</h4>
-                    <p>Interactive bubbles representing events by size/importance.</p>
-                    <a href="event-test-9-bubbles.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>🃏 Flip Cards</h4>
-                    <p>3D flip animation revealing event details on hover.</p>
-                    <a href="event-test-10-flipcards.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>📆 Week View</h4>
-                    <p>Traditional calendar week view with event blocks.</p>
-                    <a href="event-test-11-weekview.html" class="view-btn">View Demo</a>
-                </div>
-                
-                <div class="event-preview">
-                    <h4>👆 Swipe Tiles</h4>
-                    <p>Touch-friendly swipeable tiles for mobile devices.</p>
-                    <a href="event-test-12-swipe-tiles.html" class="view-btn">View Demo</a>
-                </div>
-            </div>
-        </section>
-
-        <!-- Grid Layouts -->
-        <section class="style-section">
-            <h2 class="section-title">Grid Layouts</h2>
-            <div class="grid-demo">
-                <div class="grid-item">Grid Item 1</div>
-                <div class="grid-item">Grid Item 2</div>
-                <div class="grid-item">Grid Item 3</div>
-                <div class="grid-item">Grid Item 4</div>
-            </div>
-        </section>
+        </div>
     </div>
 
     <!-- Back to Top Button -->
@@ -712,21 +734,28 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        // Add some interactivity to buttons
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                console.log('Button clicked:', this.textContent);
-            });
-        });
+        // Carousel functionality
+        const carousel = document.querySelector('.carousel-track');
+        let currentIndex = 0;
+        
+        setInterval(() => {
+            currentIndex = (currentIndex + 1) % 3;
+            carousel.style.transform = `translateX(-${currentIndex * 320}px)`;
+        }, 3000);
 
-        // Add hover effect to event previews
-        document.querySelectorAll('.event-preview').forEach(preview => {
-            preview.addEventListener('click', function(e) {
-                if (!e.target.classList.contains('view-btn')) {
-                    const link = this.querySelector('.view-btn');
-                    if (link) window.location.href = link.href;
-                }
-            });
+        // Circular display positioning
+        const circularItems = document.querySelectorAll('.circular-item:not(:first-child)');
+        const radius = 120;
+        const centerX = 150;
+        const centerY = 150;
+        
+        circularItems.forEach((item, index) => {
+            const angle = (index * 60) * Math.PI / 180;
+            const x = centerX + radius * Math.cos(angle - Math.PI / 2);
+            const y = centerY + radius * Math.sin(angle - Math.PI / 2);
+            item.style.left = x + 'px';
+            item.style.top = y + 'px';
+            item.style.transform = 'translate(-50%, -50%)';
         });
     </script>
 </body>
