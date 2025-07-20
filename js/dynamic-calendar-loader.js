@@ -451,7 +451,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Smart nickname system - automatically handles hyphenated nicknames intelligently
-    getSmartEventName(event, containerWidth = null) {
+    getSmartEventName(event) {
         const originalName = event.name;
         const nickname = event.shortName;
         
@@ -464,51 +464,61 @@ class DynamicCalendarLoader extends CalendarCore {
         const hasHyphens = nickname.includes('-');
         
         if (hasHyphens) {
+            logger.debug('CALENDAR', 'Processing hyphenated nickname', {
+                originalName,
+                nickname,
+                hasHyphens
+            });
+            
             // Create unhyphenated version by removing hyphens
             const unhyphenatedNickname = nickname.replace(/-/g, '');
             
-            // If container width is provided, calculate which version fits better
-            if (containerWidth) {
-                const originalWidth = this.calculateTextWidth(originalName);
-                const unhyphenatedWidth = this.calculateTextWidth(unhyphenatedNickname);
-                const hyphenatedWidth = this.calculateTextWidth(nickname);
-                
-                logger.debug('CALENDAR', 'Smart hyphenation with nickname', {
+            // Mobile heuristic: be very aggressive about hyphenation due to limited space
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                if (originalName.length > 10) {
+                    // For long names, only use unhyphenated if it's very short
+                    const result = unhyphenatedNickname.length <= 5 ? unhyphenatedNickname : nickname;
+                    logger.debug('CALENDAR', 'Mobile hyphenation decision (long name)', {
+                        originalName,
+                        nickname,
+                        unhyphenatedNickname,
+                        result,
+                        reason: unhyphenatedNickname.length <= 5 ? 'unhyphenated fits' : 'using hyphenated'
+                    });
+                    return result;
+                } else if (originalName.length > 6) {
+                    // For moderately long names, use unhyphenated if it's very short
+                    const result = unhyphenatedNickname.length <= 6 ? unhyphenatedNickname : nickname;
+                    logger.debug('CALENDAR', 'Mobile hyphenation decision (moderate name)', {
+                        originalName,
+                        nickname,
+                        unhyphenatedNickname,
+                        result,
+                        reason: unhyphenatedNickname.length <= 6 ? 'unhyphenated fits' : 'using hyphenated'
+                    });
+                    return result;
+                }
+            }
+            
+            // Desktop heuristic: be more conservative but still use hyphenation for long names
+            if (originalName.length > 10) {
+                const result = unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
+                logger.debug('CALENDAR', 'Desktop hyphenation decision', {
                     originalName,
                     nickname,
                     unhyphenatedNickname,
-                    originalWidth: originalWidth.toFixed(1),
-                    unhyphenatedWidth: unhyphenatedWidth.toFixed(1),
-                    hyphenatedWidth: hyphenatedWidth.toFixed(1),
-                    containerWidth,
-                    decision: this.getHyphenationDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth)
+                    result,
+                    reason: unhyphenatedNickname.length <= 10 ? 'unhyphenated fits' : 'using hyphenated'
                 });
-                
-                // Decision logic:
-                // 1. If original name fits, use it
-                // 2. If original doesn't fit but unhyphenated nickname does, use unhyphenated
-                // 3. If neither original nor unhyphenated fit, use hyphenated nickname
-                if (originalWidth <= containerWidth) {
-                    return originalName;
-                } else if (unhyphenatedWidth <= containerWidth) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Use hyphenated version
-                }
+                return result;
             }
             
-            // Mobile heuristic: prefer unhyphenated if original is long, hyphenated if very constrained
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                if (originalName.length > 15) {
-                    // For very long names, try unhyphenated first
-                    return unhyphenatedNickname.length <= 12 ? unhyphenatedNickname : nickname;
-                } else if (originalName.length > 10) {
-                    // For moderately long names, use unhyphenated if it's shorter
-                    return unhyphenatedNickname;
-                }
-            }
-            
+            logger.debug('CALENDAR', 'Using original name (no hyphenation needed)', {
+                originalName,
+                nickname,
+                reason: 'original name is short enough'
+            });
             return originalName;
         } else {
             // Regular nickname without hyphens - use existing logic
@@ -516,43 +526,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Helper method to determine hyphenation decision for logging
-    getHyphenationDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth) {
-        if (originalWidth <= containerWidth) {
-            return 'use original (fits)';
-        } else if (unhyphenatedWidth <= containerWidth) {
-            return 'use unhyphenated nickname (fits better)';
-        } else {
-            return 'use hyphenated nickname (best option)';
-        }
-    }
 
-    // Calculate approximate text width in pixels
-    calculateTextWidth(text) {
-        if (!text) return 0;
-        
-        // Create a temporary element to measure text width
-        const tempElement = document.createElement('span');
-        tempElement.style.visibility = 'hidden';
-        tempElement.style.position = 'absolute';
-        tempElement.style.whiteSpace = 'nowrap';
-        
-        // Get CSS custom properties from root
-        const rootStyles = getComputedStyle(document.documentElement);
-        const fontSize = rootStyles.getPropertyValue('--event-name-font-size').trim() || '0.75rem';
-        const fontWeight = rootStyles.getPropertyValue('--event-name-font-weight').trim() || '600';
-        
-        tempElement.style.fontSize = fontSize;
-        tempElement.style.fontWeight = fontWeight;
-        tempElement.style.fontFamily = getComputedStyle(document.body).fontFamily;
-        tempElement.textContent = text;
-        
-        document.body.appendChild(tempElement);
-        const width = tempElement.getBoundingClientRect().width;
-        document.body.removeChild(tempElement);
-        
-        return width;
-    }
 
     // Format time for mobile display with simplified format (4a-5p)
     formatTimeForMobile(timeString) {
