@@ -298,9 +298,9 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     hideSwipeHint() {
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (calendarGrid) {
-            calendarGrid.style.setProperty('--swipe-hint-opacity', '0');
+        const calendarHeader = document.querySelector('.calendar-header');
+        if (calendarHeader) {
+            calendarHeader.classList.add('swipe-hint-hidden');
         }
     }
 
@@ -437,8 +437,8 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate short name from bar name or event name
     generateShortName(barName, eventName) {
-        // Prefer bar name if available, otherwise use event name
-        const sourceName = barName || eventName;
+        // Prefer event name if available, otherwise use bar name
+        const sourceName = eventName || barName;
         if (!sourceName) return '';
         
         // Remove common words and abbreviate while preserving original casing

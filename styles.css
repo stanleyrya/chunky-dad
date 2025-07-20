@@ -984,36 +984,25 @@ header {
     /* transition: transform 0.1s ease-out, opacity 0.1s ease-out, background-color 0.1s ease-out; */
 }
 
-/* Swipe indicator for mobile */
+/* Clean swipe hint for mobile */
 @media (max-width: 768px) {
-    .calendar-grid {
-        --swipe-hint-opacity: 0.7;
-    }
-    
-    .calendar-grid::before {
-        content: '← Swipe to navigate →';
+    .calendar-header::after {
+        content: '💡 Swipe to navigate';
         position: absolute;
-        top: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.8rem;
+        top: 100%;
+        right: 0;
+        font-size: 0.7rem;
         color: var(--text-secondary);
-        opacity: var(--swipe-hint-opacity);
+        opacity: 0.6;
         pointer-events: none;
         z-index: 1;
-        animation: swipeHint 2s ease-in-out infinite;
+        margin-top: 0.5rem;
+        font-weight: 400;
         transition: opacity 0.3s ease;
     }
     
-    @keyframes swipeHint {
-        0%, 100% {
-            opacity: calc(var(--swipe-hint-opacity) * 0.4);
-            transform: translateX(-50%) translateY(0);
-        }
-        50% {
-            opacity: var(--swipe-hint-opacity);
-            transform: translateX(-50%) translateY(-2px);
-        }
+    .calendar-header.swipe-hint-hidden::after {
+        opacity: 0;
     }
 }
 
