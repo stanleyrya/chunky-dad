@@ -166,6 +166,9 @@ class BearDirectory {
             this.processInstagramEmbeds();
         }, 200);
         
+        // Set up iframe timeouts
+        this.setupIframeTimeouts();
+        
         logger.timeEnd('DIRECTORY', 'displayDirectory');
         logger.componentLoad('DIRECTORY', 'Directory displayed', { 
             displayedItems: this.filteredData.length 
@@ -187,37 +190,49 @@ class BearDirectory {
             // Use Instagram embedding
             displayContent = this.createInstagramContent(item);
         } else if (displayType === 'shop' && item.shop) {
-            // Show shop iframe or preview
+            // Show shop iframe or preview with better error handling
             displayContent = `
-                <div class="shop-preview-container">
+                <div class="shop-preview-container" data-url="${item.shop}">
                     <div class="shop-preview-header">
                         <span class="shop-icon">🛍️</span>
                         <span>Shop Preview</span>
                     </div>
-                    <iframe src="${item.shop}" 
-                            class="shop-preview-iframe" 
-                            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                            loading="lazy"
-                            onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'shop-preview-error\\'>Unable to preview shop<br><a href=\\'${item.shop}\\' target=\\'_blank\\'>Visit Shop →</a></div>'">
-                    </iframe>
+                    <div class="iframe-wrapper">
+                        <iframe src="${item.shop}" 
+                                class="shop-preview-iframe" 
+                                loading="lazy"
+                                onload="window.bearDirectory.handleIframeLoad(this)"
+                                onerror="window.bearDirectory.handleIframeError(this, 'shop')">
+                        </iframe>
+                        <div class="iframe-loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading shop preview...</p>
+                        </div>
+                    </div>
                     <a href="${item.shop}" target="_blank" class="shop-preview-link">
                         Visit Shop →
                     </a>
                 </div>`;
         } else if ((displayType === 'web' || displayType === 'website') && item.website) {
-            // Show website iframe or preview
+            // Show website iframe or preview with better error handling
             displayContent = `
-                <div class="website-preview-container">
+                <div class="website-preview-container" data-url="${item.website}">
                     <div class="website-preview-header">
                         <span class="website-icon">🌐</span>
                         <span>Website Preview</span>
                     </div>
-                    <iframe src="${item.website}" 
-                            class="website-preview-iframe" 
-                            sandbox="allow-same-origin allow-scripts allow-popups"
-                            loading="lazy"
-                            onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'website-preview-error\\'>Unable to preview website<br><a href=\\'${item.website}\\' target=\\'_blank\\'>Visit Site →</a></div>'">
-                    </iframe>
+                    <div class="iframe-wrapper">
+                        <iframe src="${item.website}" 
+                                class="website-preview-iframe" 
+                                loading="lazy"
+                                onload="window.bearDirectory.handleIframeLoad(this)"
+                                onerror="window.bearDirectory.handleIframeError(this, 'website')">
+                        </iframe>
+                        <div class="iframe-loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading website preview...</p>
+                        </div>
+                    </div>
                     <a href="${item.website}" target="_blank" class="website-preview-link">
                         Visit Website →
                     </a>
@@ -559,6 +574,99 @@ class BearDirectory {
                 }
             }
         }, 500 * (retryCount + 1)); // Exponential backoff
+    }
+    
+    handleIframeLoad(iframe) {
+        // Hide loading spinner when iframe loads successfully
+        const wrapper = iframe.closest('.iframe-wrapper');
+        if (wrapper) {
+            const loadingEl = wrapper.querySelector('.iframe-loading');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+        }
+        
+        // Check if iframe actually loaded content
+        try {
+            // Try to access iframe content to verify it loaded
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!iframeDoc || iframeDoc.body.innerHTML.length === 0) {
+                // Empty iframe, treat as error
+                this.handleIframeError(iframe, iframe.closest('.shop-preview-container') ? 'shop' : 'website');
+            } else {
+                logger.debug('DIRECTORY', 'Iframe loaded successfully', { 
+                    src: iframe.src 
+                });
+            }
+        } catch (e) {
+            // Cross-origin error - iframe loaded but we can't access it
+            // This is actually OK - the iframe is showing content
+            logger.debug('DIRECTORY', 'Iframe loaded (cross-origin)', { 
+                src: iframe.src 
+            });
+        }
+    }
+    
+    handleIframeError(iframe, type) {
+        const container = iframe.closest(`.${type}-preview-container`);
+        if (!container) return;
+        
+        const url = container.dataset.url;
+        logger.warn('DIRECTORY', `Failed to load ${type} iframe`, { 
+            url: url,
+            reason: 'Likely blocked by X-Frame-Options or CSP'
+        });
+        
+        // Replace iframe with error message and direct link
+        const wrapper = iframe.closest('.iframe-wrapper');
+        if (wrapper) {
+            wrapper.innerHTML = `
+                <div class="${type}-preview-error">
+                    <div class="preview-error-icon">🚫</div>
+                    <p>Preview not available</p>
+                    <p class="preview-error-reason">This ${type} cannot be embedded</p>
+                    <a href="${url}" target="_blank" class="preview-error-link">
+                        Open ${type === 'shop' ? 'Shop' : 'Website'} →
+                    </a>
+                </div>
+            `;
+        }
+    }
+    
+    setupIframeTimeouts() {
+        // Set timeouts for all iframes to handle cases where neither load nor error fires
+        const iframes = document.querySelectorAll('.shop-preview-iframe, .website-preview-iframe');
+        
+        iframes.forEach(iframe => {
+            // Store timeout ID on the iframe element
+            iframe.iframeTimeout = setTimeout(() => {
+                // Check if iframe is still in loading state (loading spinner visible)
+                const wrapper = iframe.closest('.iframe-wrapper');
+                const loadingEl = wrapper ? wrapper.querySelector('.iframe-loading') : null;
+                
+                if (loadingEl && loadingEl.style.display !== 'none') {
+                    // Still loading after timeout, treat as error
+                    logger.warn('DIRECTORY', 'Iframe load timeout', { src: iframe.src });
+                    this.handleIframeError(iframe, iframe.classList.contains('shop-preview-iframe') ? 'shop' : 'website');
+                }
+            }, 10000); // 10 second timeout
+            
+            // Clear timeout if iframe loads or errors before timeout
+            const originalOnload = iframe.onload;
+            const originalOnerror = iframe.onerror;
+            
+            iframe.onload = function(event) {
+                clearTimeout(this.iframeTimeout);
+                if (originalOnload) originalOnload.call(this, event);
+            };
+            
+            iframe.onerror = function(event) {
+                clearTimeout(this.iframeTimeout);
+                if (originalOnerror) originalOnerror.call(this, event);
+            };
+        });
+        
+        logger.debug('DIRECTORY', 'Iframe timeouts set', { count: iframes.length });
     }
     
     showError() {
