@@ -146,10 +146,17 @@ class BearDirectory {
             this.elements.grid.appendChild(tile);
         });
         
-        // Reload Instagram embeds
-        if (window.instgrm) {
-            window.instgrm.Embeds.process();
-        }
+        // Reload Instagram embeds after DOM updates
+        setTimeout(() => {
+            if (window.instgrm && window.instgrm.Embeds) {
+                window.instgrm.Embeds.process();
+                logger.componentLoad('DIRECTORY', 'Instagram embeds processed after display update');
+            } else {
+                logger.warn('DIRECTORY', 'Instagram embed script not yet loaded');
+                // Try loading it again
+                this.loadInstagramEmbed();
+            }
+        }, 200);
         
         logger.timeEnd('DIRECTORY', 'displayDirectory');
         logger.componentLoad('DIRECTORY', 'Directory displayed', { 
@@ -169,6 +176,13 @@ class BearDirectory {
                     data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
                     data-instgrm-version="14"
                     style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
+                    <div style="padding:16px;">
+                        <a href="https://www.instagram.com/${item.instagram}/" 
+                           style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
+                           target="_blank">
+                            View on Instagram
+                        </a>
+                    </div>
                 </blockquote>
             </div>` :
             `<div class="tile-placeholder">
@@ -326,10 +340,33 @@ class BearDirectory {
         if (!this.instagramEmbedScript) {
             this.instagramEmbedScript = document.createElement('script');
             this.instagramEmbedScript.async = true;
-            this.instagramEmbedScript.src = '//www.instagram.com/embed.js';
+            this.instagramEmbedScript.src = 'https://www.instagram.com/embed.js';
+            
+            // Add error handling
+            this.instagramEmbedScript.onerror = (error) => {
+                logger.componentError('DIRECTORY', 'Failed to load Instagram embed script', error);
+            };
+            
+            this.instagramEmbedScript.onload = () => {
+                logger.componentLoad('DIRECTORY', 'Instagram embed script loaded successfully');
+                // Process embeds after script loads
+                if (window.instgrm && window.instgrm.Embeds) {
+                    setTimeout(() => {
+                        window.instgrm.Embeds.process();
+                        logger.componentLoad('DIRECTORY', 'Instagram embeds processed');
+                    }, 100);
+                }
+            };
+            
             document.body.appendChild(this.instagramEmbedScript);
             
-            logger.componentLoad('DIRECTORY', 'Instagram embed script loaded');
+            logger.componentInit('DIRECTORY', 'Loading Instagram embed script');
+        } else if (window.instgrm && window.instgrm.Embeds) {
+            // If script already loaded, just process embeds
+            setTimeout(() => {
+                window.instgrm.Embeds.process();
+                logger.componentLoad('DIRECTORY', 'Instagram embeds reprocessed');
+            }, 100);
         }
     }
     
