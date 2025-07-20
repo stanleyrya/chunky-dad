@@ -475,26 +475,7 @@ header {
     box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
 }
 
-.hero-image {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0 2rem;
-}
 
-.placeholder-image {
-    width: 200px;
-    height: 200px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 4rem;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-}
 
 /* Section Styles */
 .section-subtitle {
@@ -680,53 +661,7 @@ header {
     color: var(--text-primary);
 }
 
-.business-categories {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 2rem;
-    width: 100%;
-    box-sizing: border-box;
-}
 
-.category-card {
-    background: var(--background-primary);
-    padding: 2rem;
-    border-radius: 15px;
-    text-align: center;
-    box-shadow: 0 5px 20px var(--shadow-light);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    will-change: transform;
-}
-
-.category-card:hover {
-    transform: translateY(-5px);
-}
-
-.category-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-
-.category-card h3 {
-    font-size: 1.3rem;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-}
-
-.category-card p {
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-}
-
-.coming-soon {
-    background: var(--gradient-success);
-    color: var(--white);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
 
 /* Business Highlight Section */
 .business-highlight {
@@ -1676,36 +1611,7 @@ header {
     font-style: italic;
 }
 
-.contact-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background: var(--background-primary);
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 3px 10px var(--shadow-light);
-}
 
-.contact-icon {
-    font-size: 2rem;
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--gradient-primary);
-    border-radius: 50%;
-    color: var(--text-inverse);
-}
-
-.contact-item h3 {
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.contact-item p {
-    color: var(--text-secondary);
-}
 
 .contact-form {
     background: var(--background-primary);
@@ -2040,21 +1946,7 @@ footer {
     text-align: center;
 }
 
-.social-links {
-    margin-top: 1rem;
-}
 
-.social-links a {
-    color: var(--white);
-    text-decoration: none;
-    margin: 0 1rem;
-    font-size: 1.5rem;
-    transition: opacity 0.3s ease;
-}
-
-.social-links a:hover {
-    opacity: 0.7;
-}
 
 /* Mobile-first responsive design for calendar views */
 
