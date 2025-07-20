@@ -7,8 +7,8 @@ window.addEventListener('unhandledrejection', function(event) {
         stack: event.reason?.stack || 'No stack trace'
     });
     
-    // Prevent the default browser behavior (console error)
-    event.preventDefault();
+    // Don't prevent default - let errors show in console
+    // event.preventDefault();
 });
 
 window.addEventListener('error', function(event) {
