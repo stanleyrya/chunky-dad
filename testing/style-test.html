@@ -48,183 +48,84 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
-        .style-section h2 {
-            color: var(--primary-color);
-            margin-bottom: 30px;
+        .section-title {
             font-size: 2rem;
-            border-bottom: 3px solid var(--primary-color);
-            padding-bottom: 10px;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-light);
         }
 
-        .style-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
+        .subsection {
             margin-bottom: 30px;
         }
 
-        .style-item {
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #eee;
-            transition: all 0.3s ease;
-        }
-
-        .style-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        }
-
-        .style-item h3 {
+        .subsection-title {
+            font-size: 1.3rem;
+            color: var(--text-primary);
             margin-bottom: 15px;
-            color: var(--accent-color);
-            font-size: 1.2rem;
         }
 
-        /* 1. GRADIENT BUTTONS */
-        .gradient-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
+        /* Typography Styles */
+        .typography-demo h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .typography-demo h2 { font-size: 2rem; margin-bottom: 10px; }
+        .typography-demo h3 { font-size: 1.5rem; margin-bottom: 10px; }
+        .typography-demo h4 { font-size: 1.2rem; margin-bottom: 10px; }
+        .typography-demo h5 { font-size: 1rem; margin-bottom: 10px; }
+        .typography-demo h6 { font-size: 0.9rem; margin-bottom: 10px; }
 
-        .btn-gradient-primary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
+        /* Button Styles */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 5px;
             border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-gradient-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-gradient-secondary {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
-        }
-
-        .btn-gradient-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
-        }
-
-        /* 2. OUTLINE BUTTONS */
-        .outline-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .btn-outline-primary {
-            background: transparent;
-            color: var(--primary-color);
-            border: 2px solid var(--primary-color);
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-outline-primary:hover {
-            background: var(--primary-color);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .btn-outline-secondary {
-            background: transparent;
-            color: var(--secondary-color);
-            border: 2px solid var(--secondary-color);
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-outline-secondary:hover {
-            background: var(--secondary-color);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        /* 3. PILL BUTTONS */
-        .pill-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .btn-pill {
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 50px;
+            border-radius: 8px;
+            font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 0.9rem;
+            text-decoration: none;
         }
 
-        .btn-pill:hover {
+        .btn-primary {
             background: var(--primary-color);
-            transform: scale(1.05);
-        }
-
-        /* 4. CARD STYLES */
-        .card-modern {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            border: 1px solid #f0f0f0;
-        }
-
-        .card-modern:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-
-        .card-glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 25px;
             color: white;
         }
 
-        .card-bordered {
-            background: white;
-            border: 3px solid var(--primary-color);
-            border-radius: 10px;
-            padding: 25px;
-            transition: all 0.3s ease;
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
         }
 
-        .card-bordered:hover {
-            border-color: var(--accent-color);
-            transform: scale(1.02);
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
         }
 
-        /* 5. FORM STYLES */
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: #333;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Form Elements */
         .form-group {
             margin-bottom: 20px;
         }
@@ -232,976 +133,599 @@
         .form-label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
+            font-weight: 500;
             color: var(--text-primary);
         }
 
-        .input-modern {
+        .form-control {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
+            padding: 12px;
+            border: 2px solid var(--border-light);
             border-radius: 8px;
             font-size: 1rem;
-            transition: all 0.3s ease;
-            background: white;
+            transition: border-color 0.3s;
         }
 
-        .input-modern:focus {
+        .form-control:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .input-rounded {
-            width: 100%;
-            padding: 12px 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .input-rounded:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
-        }
-
-        .input-floating {
-            position: relative;
-            width: 100%;
-        }
-
-        .input-floating input {
-            width: 100%;
-            padding: 16px 16px 8px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+        /* Cards */
+        .card {
             background: white;
-        }
-
-        .input-floating label {
-            position: absolute;
-            left: 16px;
-            top: 16px;
-            color: #999;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
-            pointer-events: none;
         }
 
-        .input-floating input:focus + label,
-        .input-floating input:not(:placeholder-shown) + label {
-            top: 8px;
-            font-size: 0.8rem;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
             color: var(--primary-color);
         }
 
-        .input-floating input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        /* 6. NAVIGATION STYLES */
-        .nav-modern {
-            background: white;
-            padding: 15px 25px;
-            border-radius: 50px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            display: flex;
+        /* Grid Layout */
+        .grid-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-            align-items: center;
+            margin-bottom: 30px;
         }
 
-        .nav-modern a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            padding: 8px 16px;
-            border-radius: 20px;
-            transition: all 0.3s ease;
+        .grid-item {
+            background: var(--background-light);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid var(--border-light);
         }
 
-        .nav-modern a:hover,
-        .nav-modern a.active {
-            background: var(--primary-color);
-            color: white;
+        /* Color Swatches */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
         }
 
-        .nav-tabs {
+        .color-swatch {
+            height: 100px;
+            border-radius: 8px;
             display: flex;
-            border-bottom: 2px solid #e0e0e0;
-            gap: 0;
-        }
-
-        .nav-tabs a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            padding: 12px 24px;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s ease;
+            align-items: center;
+            justify-content: center;
+            color: white;
             font-weight: 500;
+            transition: transform 0.3s;
         }
 
-        .nav-tabs a:hover,
-        .nav-tabs a.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
+        .color-swatch:hover {
+            transform: scale(1.05);
         }
 
-        /* 7. BADGE STYLES */
-        .badge-primary {
-            background: var(--primary-color);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .badge-secondary {
-            background: var(--secondary-color);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .badge-outline {
-            background: transparent;
-            color: var(--accent-color);
-            border: 1px solid var(--accent-color);
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .badge-pill {
-            background: var(--success-color);
-            color: white;
-            padding: 6px 16px;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        /* 8. ALERT STYLES */
-        .alert-success {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-            color: white;
-            padding: 16px 20px;
-            border-radius: 10px;
-            border-left: 4px solid #2ecc71;
+        /* Alerts */
+        .alert {
+            padding: 15px 20px;
             margin-bottom: 15px;
-        }
-
-        .alert-warning {
-            background: linear-gradient(45deg, #ffd700, #f39c12);
-            color: white;
-            padding: 16px 20px;
-            border-radius: 10px;
-            border-left: 4px solid #e67e22;
-            margin-bottom: 15px;
-        }
-
-        .alert-error {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            padding: 16px 20px;
-            border-radius: 10px;
-            border-left: 4px solid #e74c3c;
-            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
         }
 
         .alert-info {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 16px 20px;
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1565c0;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #e65100;
+        }
+
+        .alert-danger {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+
+        /* Progress Bars */
+        .progress {
+            height: 20px;
+            background: var(--border-light);
             border-radius: 10px;
-            border-left: 4px solid #3498db;
+            overflow: hidden;
             margin-bottom: 15px;
         }
 
-        /* 9. PROGRESS BARS */
         .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        .progress-fill {
             height: 100%;
-            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-fill.success {
-            background: linear-gradient(45deg, var(--success-color), #2ecc71);
-        }
-
-        .progress-fill.warning {
-            background: linear-gradient(45deg, var(--warning-color), #f39c12);
-        }
-
-        /* 10. TOGGLE SWITCHES */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .toggle-slider {
-            background-color: var(--primary-color);
-        }
-
-        input:checked + .toggle-slider:before {
-            transform: translateX(26px);
-        }
-
-        /* 11. LOADING SPINNERS */
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .spinner-dots {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        }
-
-        .spinner-dot {
-            width: 12px;
-            height: 12px;
             background: var(--primary-color);
-            border-radius: 50%;
-            animation: bounce 1.4s ease-in-out infinite both;
-        }
-
-        .spinner-dot:nth-child(1) { animation-delay: -0.32s; }
-        .spinner-dot:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        /* 12. MODAL STYLES */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
+            transition: width 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* 13. TOOLTIP STYLES */
-        .tooltip {
-            position: relative;
-            display: inline-block;
-        }
-
-        .tooltip .tooltip-text {
-            visibility: hidden;
-            width: 200px;
-            background-color: #333;
             color: white;
-            text-align: center;
-            border-radius: 6px;
-            padding: 8px 12px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -100px;
-            opacity: 0;
-            transition: opacity 0.3s;
+            font-size: 0.8rem;
         }
 
-        .tooltip .tooltip-text::after {
-            content: "";
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: #333 transparent transparent transparent;
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 20px;
+            margin: 2px;
         }
 
-        .tooltip:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
+        .badge-primary { background: var(--primary-color); color: white; }
+        .badge-secondary { background: var(--secondary-color); color: white; }
+        .badge-success { background: var(--success-color); color: white; }
+        .badge-warning { background: var(--warning-color); color: #333; }
 
-        /* 14. BREADCRUMB STYLES */
-        .breadcrumb {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
             margin-bottom: 20px;
         }
 
-        .breadcrumb a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: color 0.3s ease;
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
         }
 
-        .breadcrumb a:hover {
-            color: var(--primary-color);
-        }
-
-        .breadcrumb .separator {
-            color: var(--text-secondary);
-        }
-
-        .breadcrumb .current {
-            color: var(--primary-color);
+        .table th {
+            background: var(--background-light);
             font-weight: 600;
-        }
-
-        /* 15. PAGINATION STYLES */
-        .pagination {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .pagination a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            padding: 8px 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .pagination a:hover,
-        .pagination a.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .pagination .prev,
-        .pagination .next {
-            background: var(--accent-color);
-            color: white;
-            border-color: var(--accent-color);
-        }
-
-        /* 16. SEARCH BAR STYLES */
-        .search-container {
-            position: relative;
-            max-width: 400px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 45px 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .search-button {
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .search-button:hover {
-            background: var(--accent-color);
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        /* 17. DROPDOWN STYLES */
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
-        .dropdown-button {
-            background: white;
             color: var(--text-primary);
-            padding: 12px 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
         }
 
-        .dropdown-button:hover {
-            border-color: var(--primary-color);
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background: white;
-            min-width: 200px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            border-radius: 8px;
-            z-index: 1;
-            overflow: hidden;
-        }
-
-        .dropdown-content a {
-            color: var(--text-primary);
-            padding: 12px 20px;
-            text-decoration: none;
-            display: block;
-            transition: background 0.3s ease;
-        }
-
-        .dropdown-content a:hover {
+        .table tr:hover {
             background: var(--background-light);
         }
 
-        .dropdown:hover .dropdown-content {
-            display: block;
+        /* Event Display Styles */
+        .event-displays {
+            margin-top: 40px;
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .style-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .gradient-buttons,
-            .outline-buttons,
-            .pill-buttons {
-                flex-direction: column;
-            }
-            
-            .nav-modern {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .nav-tabs {
-                flex-direction: column;
-            }
+        .event-display-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .event-preview {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .event-preview:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .event-preview h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .event-preview p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .event-preview .view-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .event-preview .view-btn:hover {
+            background: #5a67d8;
+        }
+
+        /* Navigation */
+        .nav-demo {
+            background: var(--primary-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .nav-demo a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin: 0 5px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .nav-demo a:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Back to Top */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary-color);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .back-to-top:hover {
+            background: #5a67d8;
+            transform: translateY(-3px);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 40px; font-size: 3rem;">
-                            🐻 chunky.dad Style Test
+        <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 40px;">
+            🎨 chunky.dad Style Test
         </h1>
 
-        <!-- 1. GRADIENT BUTTONS -->
-        <div class="style-section">
-            <h2>1. Gradient Buttons</h2>
-            <div class="style-item">
-                <h3>Primary & Secondary Gradient Buttons</h3>
-                <div class="gradient-buttons">
-                    <button class="btn-gradient-primary">Primary Action</button>
-                    <button class="btn-gradient-secondary">Secondary Action</button>
-                    <button class="btn-gradient-primary">Explore Cities</button>
-                    <button class="btn-gradient-secondary">View Events</button>
-                </div>
+        <!-- Typography Section -->
+        <section class="style-section">
+            <h2 class="section-title">Typography</h2>
+            <div class="typography-demo">
+                <h1>Heading 1 - The Quick Brown Fox</h1>
+                <h2>Heading 2 - Jumps Over The Lazy Dog</h2>
+                <h3>Heading 3 - Pack My Box With Five Dozen</h3>
+                <h4>Heading 4 - Liquor Jugs</h4>
+                <h5>Heading 5 - The Five Boxing Wizards</h5>
+                <h6>Heading 6 - Jump Quickly</h6>
+                <p>This is a regular paragraph with <strong>bold text</strong>, <em>italic text</em>, and <a href="#">links</a>. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <blockquote style="border-left: 4px solid var(--primary-color); padding-left: 20px; margin: 20px 0; font-style: italic;">
+                    "Design is not just what it looks like and feels like. Design is how it works." - Steve Jobs
+                </blockquote>
             </div>
-        </div>
+        </section>
 
-        <!-- 2. OUTLINE BUTTONS -->
-        <div class="style-section">
-            <h2>2. Outline Buttons</h2>
-            <div class="style-item">
-                <h3>Outline Style Buttons</h3>
-                <div class="outline-buttons">
-                    <button class="btn-outline-primary">Primary Outline</button>
-                    <button class="btn-outline-secondary">Secondary Outline</button>
-                    <button class="btn-outline-primary">Learn More</button>
-                    <button class="btn-outline-secondary">Contact Us</button>
-                </div>
+        <!-- Colors Section -->
+        <section class="style-section">
+            <h2 class="section-title">Color Palette</h2>
+            <div class="color-grid">
+                <div class="color-swatch" style="background: var(--primary-color);">Primary</div>
+                <div class="color-swatch" style="background: var(--secondary-color);">Secondary</div>
+                <div class="color-swatch" style="background: var(--accent-color);">Accent</div>
+                <div class="color-swatch" style="background: var(--success-color);">Success</div>
+                <div class="color-swatch" style="background: var(--warning-color); color: #333;">Warning</div>
+                <div class="color-swatch" style="background: #f44336;">Danger</div>
             </div>
-        </div>
+        </section>
 
-        <!-- 3. PILL BUTTONS -->
-        <div class="style-section">
-            <h2>3. Pill Buttons</h2>
-            <div class="style-item">
-                <h3>Small Pill Style Buttons</h3>
-                <div class="pill-buttons">
-                    <button class="btn-pill">Tag 1</button>
-                    <button class="btn-pill">Tag 2</button>
-                    <button class="btn-pill">Category</button>
-                    <button class="btn-pill">Filter</button>
-                    <button class="btn-pill">Sort</button>
-                </div>
+        <!-- Buttons Section -->
+        <section class="style-section">
+            <h2 class="section-title">Buttons</h2>
+            <div class="subsection">
+                <h3 class="subsection-title">Solid Buttons</h3>
+                <button class="btn btn-primary">Primary Button</button>
+                <button class="btn btn-secondary">Secondary Button</button>
+                <button class="btn btn-success">Success Button</button>
+                <button class="btn btn-warning">Warning Button</button>
             </div>
-        </div>
+            <div class="subsection">
+                <h3 class="subsection-title">Outline Buttons</h3>
+                <button class="btn btn-outline">Outline Primary</button>
+                <button class="btn btn-outline" style="border-color: var(--secondary-color); color: var(--secondary-color);">Outline Secondary</button>
+            </div>
+        </section>
 
-        <!-- 4. CARD STYLES -->
-        <div class="style-section">
-            <h2>4. Card Styles</h2>
-            <div class="style-grid">
-                <div class="style-item">
-                    <h3>Modern Card</h3>
-                    <div class="card-modern">
-                        <h4>San Francisco</h4>
-                        <p>Discover the best bear bars and events in the Bay Area.</p>
-                        <div style="margin-top: 15px;">
-                            <span class="badge-primary">Popular</span>
-                            <span class="badge-secondary">Events</span>
-                        </div>
-                    </div>
+        <!-- Forms Section -->
+        <section class="style-section">
+            <h2 class="section-title">Form Elements</h2>
+            <form>
+                <div class="form-group">
+                    <label class="form-label" for="text-input">Text Input</label>
+                    <input type="text" class="form-control" id="text-input" placeholder="Enter text here...">
                 </div>
-                <div class="style-item">
-                    <h3>Glass Card</h3>
-                    <div class="card-glass" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));">
-                        <h4>New York City</h4>
-                        <p>Experience the vibrant bear scene in the Big Apple.</p>
-                        <div style="margin-top: 15px;">
-                            <span class="badge-primary">Trending</span>
-                            <span class="badge-secondary">Nightlife</span>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label" for="email-input">Email Input</label>
+                    <input type="email" class="form-control" id="email-input" placeholder="email@example.com">
                 </div>
-                <div class="style-item">
-                    <h3>Bordered Card</h3>
-                    <div class="card-bordered">
-                        <h4>Los Angeles</h4>
-                        <p>Sun, surf, and bear culture in Southern California.</p>
-                        <div style="margin-top: 15px;">
-                            <span class="badge-outline">Beach</span>
-                            <span class="badge-pill">Outdoors</span>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label" for="select-input">Select Dropdown</label>
+                    <select class="form-control" id="select-input">
+                        <option>Option 1</option>
+                        <option>Option 2</option>
+                        <option>Option 3</option>
+                    </select>
                 </div>
-            </div>
-        </div>
+                <div class="form-group">
+                    <label class="form-label" for="textarea-input">Textarea</label>
+                    <textarea class="form-control" id="textarea-input" rows="4" placeholder="Enter your message..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox"> Checkbox Option
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="radio" name="radio-group"> Radio Option 1
+                    </label>
+                    <label class="form-label">
+                        <input type="radio" name="radio-group"> Radio Option 2
+                    </label>
+                </div>
+            </form>
+        </section>
 
-        <!-- 5. FORM STYLES -->
-        <div class="style-section">
-            <h2>5. Form Styles</h2>
-            <div class="style-grid">
-                <div class="style-item">
-                    <h3>Modern Input</h3>
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="input-modern" placeholder="Enter your email">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="input-modern" placeholder="Enter your password">
-                    </div>
+        <!-- Cards Section -->
+        <section class="style-section">
+            <h2 class="section-title">Cards</h2>
+            <div class="grid-demo">
+                <div class="card">
+                    <h3 class="card-title">Card Title</h3>
+                    <p>This is a basic card with some content. Cards are great for organizing information.</p>
+                    <button class="btn btn-primary">Action</button>
                 </div>
-                <div class="style-item">
-                    <h3>Rounded Input</h3>
-                    <div class="form-group">
-                        <label class="form-label">Search</label>
-                        <input type="text" class="input-rounded" placeholder="Search events...">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Location</label>
-                        <input type="text" class="input-rounded" placeholder="Enter city name">
-                    </div>
+                <div class="card">
+                    <h3 class="card-title">Another Card</h3>
+                    <p>Cards can contain any type of content including buttons, images, and more.</p>
+                    <button class="btn btn-outline">Learn More</button>
                 </div>
-                <div class="style-item">
-                    <h3>Floating Label</h3>
-                    <div class="form-group">
-                        <div class="input-floating">
-                            <input type="text" id="name" placeholder=" ">
-                            <label for="name">Full Name</label>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="input-floating">
-                            <input type="tel" id="phone" placeholder=" ">
-                            <label for="phone">Phone Number</label>
-                        </div>
-                    </div>
+                <div class="card">
+                    <h3 class="card-title">Third Card</h3>
+                    <p>Use cards to create consistent layouts across your application.</p>
+                    <button class="btn btn-secondary">Explore</button>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- 6. NAVIGATION STYLES -->
-        <div class="style-section">
-            <h2>6. Navigation Styles</h2>
-            <div class="style-grid">
-                <div class="style-item">
-                    <h3>Modern Navigation</h3>
-                    <div class="nav-modern">
-                        <a href="#" class="active">Home</a>
-                        <a href="#">Cities</a>
-                        <a href="#">Events</a>
-                        <a href="#">Businesses</a>
-                        <a href="#">Contact</a>
-                    </div>
-                </div>
-                <div class="style-item">
-                    <h3>Tab Navigation</h3>
-                    <div class="nav-tabs">
-                        <a href="#" class="active">Overview</a>
-                        <a href="#">Events</a>
-                        <a href="#">Venues</a>
-                        <a href="#">Photos</a>
-                    </div>
-                </div>
+        <!-- Alerts Section -->
+        <section class="style-section">
+            <h2 class="section-title">Alerts & Notifications</h2>
+            <div class="alert alert-info">
+                <strong>Info!</strong> This is an informational alert message.
             </div>
-        </div>
+            <div class="alert alert-success">
+                <strong>Success!</strong> Your operation completed successfully.
+            </div>
+            <div class="alert alert-warning">
+                <strong>Warning!</strong> Please review this important information.
+            </div>
+            <div class="alert alert-danger">
+                <strong>Error!</strong> Something went wrong. Please try again.
+            </div>
+        </section>
 
-        <!-- 7. BADGE STYLES -->
-        <div class="style-section">
-            <h2>7. Badge Styles</h2>
-            <div class="style-item">
-                <h3>Different Badge Types</h3>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
-                    <span class="badge-primary">Primary</span>
-                    <span class="badge-secondary">Secondary</span>
-                    <span class="badge-outline">Outline</span>
-                    <span class="badge-pill">Pill Style</span>
-                    <span class="badge-primary">Popular</span>
-                    <span class="badge-secondary">New</span>
-                </div>
+        <!-- Progress Bars Section -->
+        <section class="style-section">
+            <h2 class="section-title">Progress Bars</h2>
+            <div class="progress">
+                <div class="progress-bar" style="width: 25%;">25%</div>
             </div>
-        </div>
+            <div class="progress">
+                <div class="progress-bar" style="width: 50%; background: var(--secondary-color);">50%</div>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" style="width: 75%; background: var(--success-color);">75%</div>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" style="width: 90%; background: var(--warning-color); color: #333;">90%</div>
+            </div>
+        </section>
 
-        <!-- 8. ALERT STYLES -->
-        <div class="style-section">
-            <h2>8. Alert Styles</h2>
-            <div class="style-item">
-                <h3>Alert Messages</h3>
-                <div class="alert-success">
-                    <strong>Success!</strong> Your event has been successfully created.
-                </div>
-                <div class="alert-warning">
-                    <strong>Warning!</strong> This event is happening tomorrow.
-                </div>
-                <div class="alert-error">
-                    <strong>Error!</strong> Unable to load event data.
-                </div>
-                <div class="alert-info">
-                    <strong>Info!</strong> New events have been added to your city.
-                </div>
+        <!-- Badges Section -->
+        <section class="style-section">
+            <h2 class="section-title">Badges & Tags</h2>
+            <div>
+                <span class="badge badge-primary">Primary</span>
+                <span class="badge badge-secondary">Secondary</span>
+                <span class="badge badge-success">Success</span>
+                <span class="badge badge-warning">Warning</span>
+                <span class="badge" style="background: #f44336; color: white;">Danger</span>
+                <span class="badge" style="background: #9c27b0; color: white;">Purple</span>
+                <span class="badge" style="background: #00bcd4; color: white;">Cyan</span>
             </div>
-        </div>
+        </section>
 
-        <!-- 9. PROGRESS BARS -->
-        <div class="style-section">
-            <h2>9. Progress Bars</h2>
-            <div class="style-item">
-                <h3>Progress Indicators</h3>
-                <div style="margin-bottom: 20px;">
-                    <label>Loading Events (75%)</label>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 75%;"></div>
-                    </div>
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <label>Profile Complete (90%)</label>
-                    <div class="progress-bar">
-                        <div class="progress-fill success" style="width: 90%;"></div>
-                    </div>
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <label>Upload Progress (45%)</label>
-                    <div class="progress-bar">
-                        <div class="progress-fill warning" style="width: 45%;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Tables Section -->
+        <section class="style-section">
+            <h2 class="section-title">Tables</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Location</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Bear Week</td>
+                        <td>Provincetown</td>
+                        <td>July 2024</td>
+                        <td><span class="badge badge-success">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>Lazy Bear Weekend</td>
+                        <td>Guerneville</td>
+                        <td>August 2024</td>
+                        <td><span class="badge badge-primary">Upcoming</span></td>
+                    </tr>
+                    <tr>
+                        <td>Southern Decadence</td>
+                        <td>New Orleans</td>
+                        <td>September 2024</td>
+                        <td><span class="badge badge-warning">Planning</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-        <!-- 10. TOGGLE SWITCHES -->
-        <div class="style-section">
-            <h2>10. Toggle Switches</h2>
-            <div class="style-item">
-                <h3>Toggle Controls</h3>
-                <div style="display: flex; gap: 30px; align-items: center; flex-wrap: wrap;">
-                    <div>
-                        <label>Notifications</label>
-                        <div class="toggle-switch">
-                            <input type="checkbox" checked>
-                            <span class="toggle-slider"></span>
-                        </div>
-                    </div>
-                    <div>
-                        <label>Dark Mode</label>
-                        <div class="toggle-switch">
-                            <input type="checkbox">
-                            <span class="toggle-slider"></span>
-                        </div>
-                    </div>
-                    <div>
-                        <label>Auto-save</label>
-                        <div class="toggle-switch">
-                            <input type="checkbox" checked>
-                            <span class="toggle-slider"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Navigation Demo -->
+        <section class="style-section">
+            <h2 class="section-title">Navigation</h2>
+            <nav class="nav-demo">
+                <a href="#">Home</a>
+                <a href="#">Events</a>
+                <a href="#">Cities</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+            </nav>
+        </section>
 
-        <!-- 11. LOADING SPINNERS -->
-        <div class="style-section">
-            <h2>11. Loading Spinners</h2>
-            <div class="style-item">
-                <h3>Loading Indicators</h3>
-                <div style="display: flex; gap: 40px; align-items: center; flex-wrap: wrap;">
-                    <div>
-                        <label>Circular Spinner</label>
-                        <div class="spinner"></div>
-                    </div>
-                    <div>
-                        <label>Dot Spinner</label>
-                        <div class="spinner-dots">
-                            <div class="spinner-dot"></div>
-                            <div class="spinner-dot"></div>
-                            <div class="spinner-dot"></div>
-                        </div>
-                    </div>
+        <!-- Event Displays Section -->
+        <section class="style-section event-displays">
+            <h2 class="section-title">Event Display Variations</h2>
+            <p style="margin-bottom: 30px; color: var(--text-secondary);">
+                Explore different ways to display event information. Each variation offers a unique user experience.
+            </p>
+            
+            <div class="event-display-grid">
+                <div class="event-preview">
+                    <h4>🎠 Carousel View</h4>
+                    <p>Swipeable carousel display with smooth transitions between events.</p>
+                    <a href="event-test-1-carousel.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📅 Timeline View</h4>
+                    <p>Chronological timeline showing events in sequential order.</p>
+                    <a href="event-test-2-timeline.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🗺️ Map View</h4>
+                    <p>Interactive map showing event locations with markers.</p>
+                    <a href="event-test-3-map.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🧱 Masonry Grid</h4>
+                    <p>Pinterest-style masonry layout for dynamic event cards.</p>
+                    <a href="event-test-4-masonry.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🔥 Heatmap View</h4>
+                    <p>Visual heatmap showing event density and popularity.</p>
+                    <a href="event-test-5-heatmap.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📜 Ticker Display</h4>
+                    <p>Scrolling ticker showing upcoming events in real-time.</p>
+                    <a href="event-test-6-ticker.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>⭕ Circular Layout</h4>
+                    <p>Radial display with events arranged in a circle.</p>
+                    <a href="event-test-7-circular.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📊 Kanban Board</h4>
+                    <p>Organize events in columns by status or category.</p>
+                    <a href="event-test-8-kanban.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🫧 Bubble Chart</h4>
+                    <p>Interactive bubbles representing events by size/importance.</p>
+                    <a href="event-test-9-bubbles.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>🃏 Flip Cards</h4>
+                    <p>3D flip animation revealing event details on hover.</p>
+                    <a href="event-test-10-flipcards.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>📆 Week View</h4>
+                    <p>Traditional calendar week view with event blocks.</p>
+                    <a href="event-test-11-weekview.html" class="view-btn">View Demo</a>
+                </div>
+                
+                <div class="event-preview">
+                    <h4>👆 Swipe Tiles</h4>
+                    <p>Touch-friendly swipeable tiles for mobile devices.</p>
+                    <a href="event-test-12-swipe-tiles.html" class="view-btn">View Demo</a>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- 12. MODAL STYLES -->
-        <div class="style-section">
-            <h2>12. Modal Styles</h2>
-            <div class="style-item">
-                <h3>Modal Dialog</h3>
-                <button class="btn-gradient-primary" onclick="showModal()">Open Modal</button>
-                <div id="modal" class="modal-overlay" style="display: none;">
-                    <div class="modal-content">
-                        <h3>Event Details</h3>
-                        <p>This is a sample modal dialog for displaying event information.</p>
-                        <div style="margin-top: 20px;">
-                            <button class="btn-gradient-primary" onclick="hideModal()">Close</button>
-                        </div>
-                    </div>
-                </div>
+        <!-- Grid Layouts -->
+        <section class="style-section">
+            <h2 class="section-title">Grid Layouts</h2>
+            <div class="grid-demo">
+                <div class="grid-item">Grid Item 1</div>
+                <div class="grid-item">Grid Item 2</div>
+                <div class="grid-item">Grid Item 3</div>
+                <div class="grid-item">Grid Item 4</div>
             </div>
-        </div>
-
-        <!-- 13. TOOLTIP STYLES -->
-        <div class="style-section">
-            <h2>13. Tooltip Styles</h2>
-            <div class="style-item">
-                <h3>Tooltips</h3>
-                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                    <div class="tooltip">
-                        <button class="btn-outline-primary">Hover for info</button>
-                        <span class="tooltip-text">This is a helpful tooltip message</span>
-                    </div>
-                    <div class="tooltip">
-                        <span class="badge-primary">?</span>
-                        <span class="tooltip-text">Click here for more information about this feature</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 14. BREADCRUMB STYLES -->
-        <div class="style-section">
-            <h2>14. Breadcrumb Styles</h2>
-            <div class="style-item">
-                <h3>Navigation Breadcrumbs</h3>
-                <div class="breadcrumb">
-                    <a href="#">Home</a>
-                    <span class="separator">/</span>
-                    <a href="#">Cities</a>
-                    <span class="separator">/</span>
-                    <a href="#">San Francisco</a>
-                    <span class="separator">/</span>
-                    <span class="current">Events</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- 15. PAGINATION STYLES -->
-        <div class="style-section">
-            <h2>15. Pagination Styles</h2>
-            <div class="style-item">
-                <h3>Page Navigation</h3>
-                <div class="pagination">
-                    <a href="#" class="prev">← Previous</a>
-                    <a href="#">1</a>
-                    <a href="#" class="active">2</a>
-                    <a href="#">3</a>
-                    <a href="#">4</a>
-                    <a href="#">5</a>
-                    <a href="#" class="next">Next →</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- 16. SEARCH BAR STYLES -->
-        <div class="style-section">
-            <h2>16. Search Bar Styles</h2>
-            <div class="style-item">
-                <h3>Search Interface</h3>
-                <div class="search-container">
-                    <input type="text" class="search-input" placeholder="Search events, cities, or venues...">
-                    <button class="search-button">🔍</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 17. DROPDOWN STYLES -->
-        <div class="style-section">
-            <h2>17. Dropdown Styles</h2>
-            <div class="style-item">
-                <h3>Dropdown Menus</h3>
-                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                    <div class="dropdown">
-                        <button class="dropdown-button">Select City ▼</button>
-                        <div class="dropdown-content">
-                            <a href="#">San Francisco</a>
-                            <a href="#">New York City</a>
-                            <a href="#">Los Angeles</a>
-                            <a href="#">Chicago</a>
-                            <a href="#">Miami</a>
-                        </div>
-                    </div>
-                    <div class="dropdown">
-                        <button class="dropdown-button">Filter Events ▼</button>
-                        <div class="dropdown-content">
-                            <a href="#">All Events</a>
-                            <a href="#">Tonight</a>
-                            <a href="#">This Weekend</a>
-                            <a href="#">Next Week</a>
-                            <a href="#">This Month</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </section>
     </div>
 
+    <!-- Back to Top Button -->
+    <a href="#" class="back-to-top">↑</a>
+
     <script>
-        function showModal() {
-            document.getElementById('modal').style.display = 'flex';
-        }
-
-        function hideModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
-
-        // Close modal when clicking outside
-        document.getElementById('modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideModal();
-            }
+        // Smooth scroll for back to top
+        document.querySelector('.back-to-top').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        // Add some interactive effects
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add hover effects to cards
-            const cards = document.querySelectorAll('.card-modern, .card-bordered');
-            cards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-8px) scale(1.02)';
-                });
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0) scale(1)';
-                });
+        // Add some interactivity to buttons
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('Button clicked:', this.textContent);
             });
+        });
 
-            // Add click effects to buttons
-            const buttons = document.querySelectorAll('button');
-            buttons.forEach(button => {
-                button.addEventListener('click', function() {
-                    this.style.transform = 'scale(0.95)';
-                    setTimeout(() => {
-                        this.style.transform = '';
-                    }, 150);
-                });
+        // Add hover effect to event previews
+        document.querySelectorAll('.event-preview').forEach(preview => {
+            preview.addEventListener('click', function(e) {
+                if (!e.target.classList.contains('view-btn')) {
+                    const link = this.querySelector('.view-btn');
+                    if (link) window.location.href = link.href;
+                }
             });
         });
     </script>
