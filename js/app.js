@@ -4,17 +4,20 @@ class ChunkyDadApp {
         this.isMainPage = this.checkIfMainPage();
         this.isCityPage = this.checkIfCityPage();
         this.isTestPage = this.checkIfTestPage();
+        this.isDirectoryPage = this.checkIfDirectoryPage();
         
         // Initialize modules
         this.navigationManager = null;
         this.pageEffectsManager = null;
         this.formsManager = null;
         this.calendarLoader = null;
+        this.bearDirectory = null;
         
         logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
             isCityPage: this.isCityPage,
             isTestPage: this.isTestPage,
+            isDirectoryPage: this.isDirectoryPage,
             pathname: window.location.pathname
         });
         
@@ -35,6 +38,10 @@ class ChunkyDadApp {
         return window.location.pathname.includes('test-calendar-logging.html');
     }
 
+    checkIfDirectoryPage() {
+        return window.location.pathname.includes('bear-directory.html');
+    }
+
     async init() {
         try {
             // Always initialize core modules
@@ -43,6 +50,10 @@ class ChunkyDadApp {
             // Initialize page-specific modules
             if (this.isCityPage || this.isTestPage) {
                 await this.initializeCityPageModules();
+            }
+            
+            if (this.isDirectoryPage) {
+                await this.initializeDirectoryPageModules();
             }
             
             logger.componentLoad('SYSTEM', 'chunky.dad App initialization complete');
@@ -92,6 +103,24 @@ class ChunkyDadApp {
         }
     }
 
+    async initializeDirectoryPageModules() {
+        logger.info('SYSTEM', 'Initializing directory page modules');
+        
+        try {
+            // Initialize bear directory
+            if (window.bearDirectory) {
+                this.bearDirectory = window.bearDirectory;
+                await this.bearDirectory.init();
+            } else {
+                logger.warn('SYSTEM', 'BearDirectory not available');
+            }
+            
+            logger.componentLoad('SYSTEM', 'Directory page modules initialized');
+        } catch (error) {
+            logger.componentError('SYSTEM', 'Directory page module initialization failed', error);
+        }
+    }
+
     // Public methods for manual module access
     getNavigationManager() {
         return this.navigationManager;
@@ -107,6 +136,10 @@ class ChunkyDadApp {
 
     getCalendarLoader() {
         return this.calendarLoader;
+    }
+
+    getBearDirectory() {
+        return this.bearDirectory;
     }
 
     // Global function for scrolling (backward compatibility)

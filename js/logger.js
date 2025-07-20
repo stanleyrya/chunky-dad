@@ -13,7 +13,8 @@ class ChunkyLogger {
             'NAV': '#D32F2F',        // Red
             'CITY': '#00796B',       // Teal
             'EVENT': '#5D4037',      // Brown
-            'SYSTEM': '#424242'      // Grey
+            'SYSTEM': '#424242',     // Grey
+            'DIRECTORY': '#E91E63'   // Pink
         };
         
         this.levels = {
