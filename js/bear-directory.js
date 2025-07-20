@@ -130,8 +130,14 @@ class BearDirectory {
                 type: cells[4]?.v || '',
                 googleMaps: cells[5]?.v || '',
                 coordinates: cells[6]?.v || '',
-                city: cells[7]?.v || ''
+                city: cells[7]?.v || '',
+                display: cells[8]?.v || '' // New Display field
             };
+            
+            // Clean Instagram username - remove @ symbol and trim
+            if (item.instagram) {
+                item.instagram = item.instagram.replace('@', '').trim();
+            }
             
             // Only add if name exists
             if (item.name) {
@@ -170,7 +176,83 @@ class BearDirectory {
         const tile = document.createElement('div');
         tile.className = 'directory-tile';
         tile.setAttribute('data-type', item.type.toLowerCase());
+        tile.setAttribute('data-instagram-mode', this.instagramDisplayMode);
         
+        // Determine display content based on Display field
+        let displayContent = '';
+        const displayType = (item.display || '').toLowerCase();
+        
+        // Handle display based on the Display field value
+        if (displayType === 'instagram' && item.instagram) {
+            // Use Instagram embedding
+            displayContent = this.createInstagramContent(item);
+        } else if (displayType === 'shop' && item.shop) {
+            // Show shop iframe or preview
+            displayContent = `
+                <div class="shop-preview-container">
+                    <div class="shop-preview-header">
+                        <span class="shop-icon">🛍️</span>
+                        <span>Shop Preview</span>
+                    </div>
+                    <iframe src="${item.shop}" 
+                            class="shop-preview-iframe" 
+                            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                            loading="lazy"
+                            onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'shop-preview-error\\'>Unable to preview shop<br><a href=\\'${item.shop}\\' target=\\'_blank\\'>Visit Shop →</a></div>'">
+                    </iframe>
+                    <a href="${item.shop}" target="_blank" class="shop-preview-link">
+                        Visit Shop →
+                    </a>
+                </div>`;
+        } else if ((displayType === 'web' || displayType === 'website') && item.website) {
+            // Show website iframe or preview
+            displayContent = `
+                <div class="website-preview-container">
+                    <div class="website-preview-header">
+                        <span class="website-icon">🌐</span>
+                        <span>Website Preview</span>
+                    </div>
+                    <iframe src="${item.website}" 
+                            class="website-preview-iframe" 
+                            sandbox="allow-same-origin allow-scripts allow-popups"
+                            loading="lazy"
+                            onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'website-preview-error\\'>Unable to preview website<br><a href=\\'${item.website}\\' target=\\'_blank\\'>Visit Site →</a></div>'">
+                    </iframe>
+                    <a href="${item.website}" target="_blank" class="website-preview-link">
+                        Visit Website →
+                    </a>
+                </div>`;
+        } else if (item.instagram) {
+            // Default to Instagram if available and no display type specified
+            displayContent = this.createInstagramContent(item);
+        } else {
+            // No specific display content - show placeholder
+            displayContent = `
+                <div class="tile-placeholder">
+                    <div class="bear-icon">🐻</div>
+                </div>`;
+        }
+        
+        // Build tile content
+        tile.innerHTML = `
+            ${displayContent}
+            <div class="tile-content">
+                <h3 class="tile-name">${item.name}</h3>
+                ${item.city ? `<p class="tile-city">📍 ${item.city}</p>` : ''}
+                <p class="tile-type">${this.getTypeIcon(item.type)} ${item.type}</p>
+                <div class="tile-links">
+                    ${item.shop ? `<a href="${item.shop}" target="_blank" rel="noopener" class="tile-link">Shop</a>` : ''}
+                    ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link">Website</a>` : ''}
+                    ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link">Instagram</a>` : ''}
+                    ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link">Map</a>` : ''}
+                </div>
+            </div>
+        `;
+        
+        return tile;
+    }
+    
+    createInstagramContent(item) {
         // Create Instagram embed or placeholder
         const instagramContent = item.instagram ? 
             `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
@@ -194,24 +276,8 @@ class BearDirectory {
             `<div class="tile-placeholder">
                 <div class="bear-icon">🐻</div>
             </div>`;
-        
-        // Build tile content
-        tile.innerHTML = `
-            ${instagramContent}
-            <div class="tile-content">
-                <h3 class="tile-name">${item.name}</h3>
-                ${item.city ? `<p class="tile-city">📍 ${item.city}</p>` : ''}
-                <p class="tile-type">${this.getTypeIcon(item.type)} ${item.type}</p>
-                <div class="tile-links">
-                    ${item.shop ? `<a href="${item.shop}" target="_blank" rel="noopener" class="tile-link">Shop</a>` : ''}
-                    ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link">Website</a>` : ''}
-                    ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link">Instagram</a>` : ''}
-                    ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link">Map</a>` : ''}
-                </div>
-            </div>
-        `;
-        
-        return tile;
+            
+        return instagramContent;
     }
     
     getTypeIcon(type) {
@@ -388,58 +454,71 @@ class BearDirectory {
         setTimeout(() => {
             try {
                 if (window.instgrm && window.instgrm.Embeds) {
-                    // Mark containers as processing
+                    // Get all Instagram embed containers
                     const containers = document.querySelectorAll('.instagram-embed-container');
+                    
+                    // Process embeds
+                    window.instgrm.Embeds.process();
+                    
+                    // Set up observers for each container to detect when embeds load
                     containers.forEach(container => {
-                        // Add loaded class when iframe appears
+                        if (container.classList.contains('loaded') || container.classList.contains('error')) {
+                            return; // Skip already processed containers
+                        }
+                        
+                        // Create observer to watch for iframe insertion
                         const observer = new MutationObserver((mutations) => {
                             const iframe = container.querySelector('iframe');
                             if (iframe) {
+                                // Instagram embed loaded successfully
                                 container.classList.add('loaded');
+                                container.classList.remove('loading');
                                 observer.disconnect();
                                 
-                                // Check if iframe loaded with error (private profile, etc)
-                                iframe.addEventListener('load', () => {
-                                    try {
-                                        // Check if the iframe contains error indicators
-                                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                                        const bodyText = iframeDoc.body.innerText || '';
-                                        
-                                        if (bodyText.includes('private') || bodyText.includes('unavailable')) {
-                                            container.classList.add('private-profile');
-                                            const username = container.dataset.instagramUser;
-                                            logger.info('DIRECTORY', `Instagram profile @${username} appears to be private or restricted`);
-                                        }
-                                    } catch (e) {
-                                        // Cross-origin restrictions prevent checking iframe content
-                                        // This is expected for Instagram embeds
-                                    }
-                                });
+                                // Ensure loading spinner is hidden
+                                const loadingEl = container.querySelector('.instagram-loading');
+                                if (loadingEl) {
+                                    loadingEl.style.display = 'none';
+                                }
+                                
+                                logger.debug('DIRECTORY', `Instagram embed loaded for @${container.dataset.instagramUser}`);
                             }
                         });
-                        observer.observe(container, { childList: true, subtree: true });
                         
-                        // Timeout for failed loads
+                        // Start observing
+                        observer.observe(container, { 
+                            childList: true, 
+                            subtree: true 
+                        });
+                        
+                        // Set timeout for this specific embed
                         setTimeout(() => {
-                            if (!container.classList.contains('loaded')) {
+                            if (!container.classList.contains('loaded') && !container.classList.contains('error')) {
+                                observer.disconnect();
                                 container.classList.add('error');
+                                container.classList.remove('loading');
+                                
+                                // Hide loading spinner
+                                const loadingEl = container.querySelector('.instagram-loading');
+                                if (loadingEl) {
+                                    loadingEl.style.display = 'none';
+                                }
+                                
                                 const username = container.dataset.instagramUser;
-                                logger.warn('DIRECTORY', `Instagram embed timeout for @${username} - may be throttled or blocked`, {
-                                    username: username,
-                                    retryCount: retryCount,
-                                    possibleReasons: [
-                                        'Instagram API rate limiting',
-                                        'Private or restricted profile',
-                                        'Network connectivity issues',
-                                        'Ad blocker interference'
-                                    ]
-                                });
+                                logger.warn('DIRECTORY', `Instagram embed timeout for @${username}`);
+                                
+                                // Show error message
+                                container.innerHTML = `
+                                    <div class="instagram-error">
+                                        <p>Unable to load Instagram feed</p>
+                                        <a href="https://instagram.com/${username}" target="_blank">View on Instagram →</a>
+                                    </div>
+                                `;
                             }
-                        }, 10000); // 10 second timeout
+                        }, 8000); // 8 second timeout per embed
                     });
                     
-                    window.instgrm.Embeds.process();
-                    logger.componentLoad('DIRECTORY', 'Instagram embeds processed', {
+                    logger.componentLoad('DIRECTORY', 'Instagram embeds processing started', {
                         retryCount: retryCount,
                         embedCount: containers.length
                     });
@@ -448,9 +527,14 @@ class BearDirectory {
                     this.processInstagramEmbeds(retryCount + 1);
                 } else {
                     logger.error('DIRECTORY', 'Instagram embeds failed to process after retries');
-                    // Mark all as error
+                    // Mark all as error and hide loading spinners
                     document.querySelectorAll('.instagram-embed-container').forEach(container => {
                         container.classList.add('error');
+                        container.classList.remove('loading');
+                        const loadingEl = container.querySelector('.instagram-loading');
+                        if (loadingEl) {
+                            loadingEl.style.display = 'none';
+                        }
                     });
                 }
             } catch (error) {
@@ -463,9 +547,14 @@ class BearDirectory {
                 if (retryCount < maxRetries) {
                     this.processInstagramEmbeds(retryCount + 1);
                 } else {
-                    // Mark all as error
+                    // Mark all as error and hide loading spinners
                     document.querySelectorAll('.instagram-embed-container').forEach(container => {
                         container.classList.add('error');
+                        container.classList.remove('loading');
+                        const loadingEl = container.querySelector('.instagram-loading');
+                        if (loadingEl) {
+                            loadingEl.style.display = 'none';
+                        }
                     });
                 }
             }
