@@ -265,9 +265,6 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Hide swipe hint after first successful swipe
-        this.hideSwipeHint();
-        
         // Determine swipe direction based on distance or velocity
         const shouldNavigate = Math.abs(deltaX) > this.swipeThreshold || 
                               Math.abs(this.swipeVelocity) > 0.3; // Lower velocity threshold for better responsiveness
@@ -289,13 +286,6 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             // Reset visual feedback for insufficient swipe
             this.resetSwipeVisualFeedback();
-        }
-    }
-
-    hideSwipeHint() {
-        const calendarHeader = document.querySelector('.calendar-header');
-        if (calendarHeader) {
-            calendarHeader.classList.add('swipe-hint-hidden');
         }
     }
 

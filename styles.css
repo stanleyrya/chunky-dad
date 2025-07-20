@@ -752,8 +752,6 @@ header {
     position: relative;
 }
 
-/* Removed .weekly-calendar::before background */
-
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -993,11 +991,7 @@ header {
     user-select: none; /* Prevent text selection during swipes */
     position: relative; /* Ensure proper positioning for swipe animations */
     will-change: transform, opacity, background-color; /* Optimize for animations */
-    /* Transition removed to allow JavaScript to control animations */
-    /* transition: transform 0.1s ease-out, opacity 0.1s ease-out, background-color 0.1s ease-out; */
 }
-
-
 
 .calendar-day {
     background: var(--background-primary);
@@ -3568,9 +3562,6 @@ footer {
     .daily-events {
         padding: 0.3rem 0;
         gap: 0.2rem;
-    }
-
-    .weekly-calendar .container {
     }
 
     /* Show city name on larger screens */
