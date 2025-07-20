@@ -3798,6 +3798,22 @@ footer {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Instagram embed iframe styles */
+.instagram-embed-container iframe {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 300px;
+}
+
+/* Instagram blockquote styles */
+.instagram-embed-container .instagram-media {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 .tile-placeholder {

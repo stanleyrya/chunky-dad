@@ -10,7 +10,6 @@ class HeaderManager {
     init() {
         this.logger.componentInit('HEADER', 'Initializing header manager');
         this.setupHeader();
-        this.setupCitySelector();
         this.setupDebugOptions();
     }
 
