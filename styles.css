@@ -1981,7 +1981,6 @@ footer {
     }
 
     .calendar-day.week-view .day-header {
-        margin-bottom: 0;
         padding-bottom: 0.2rem;
         flex-direction: row;
         align-items: center;
@@ -2374,7 +2373,6 @@ footer {
         flex-direction: row;
         align-items: center;
         gap: 0.3rem;
-        margin-bottom: 0;
         padding-bottom: 0.1rem;
     }
 
@@ -2778,7 +2776,6 @@ footer {
     }
 
     .calendar-day.week-view .day-header {
-        margin-bottom: 0;
         padding-bottom: 0.05rem;
         flex-direction: row;
         align-items: center;
