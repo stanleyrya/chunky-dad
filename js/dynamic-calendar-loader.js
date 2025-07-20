@@ -464,6 +464,12 @@ class DynamicCalendarLoader extends CalendarCore {
         const hasHyphens = nickname.includes('-');
         
         if (hasHyphens) {
+            logger.debug('CALENDAR', 'Processing hyphenated nickname', {
+                originalName,
+                nickname,
+                hasHyphens,
+                containerWidth: containerWidth || 'not provided'
+            });
             // Create unhyphenated version by removing hyphens
             const unhyphenatedNickname = nickname.replace(/-/g, '');
             
@@ -500,15 +506,48 @@ class DynamicCalendarLoader extends CalendarCore {
             // Mobile heuristic: prefer unhyphenated if original is long, hyphenated if very constrained
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
-                if (originalName.length > 15) {
+                if (originalName.length > 12) {
                     // For very long names, try unhyphenated first
-                    return unhyphenatedNickname.length <= 12 ? unhyphenatedNickname : nickname;
-                } else if (originalName.length > 10) {
+                    const result = unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
+                    logger.debug('CALENDAR', 'Mobile hyphenation decision (long name)', {
+                        originalName,
+                        nickname,
+                        unhyphenatedNickname,
+                        result,
+                        reason: unhyphenatedNickname.length <= 10 ? 'unhyphenated fits' : 'using hyphenated'
+                    });
+                    return result;
+                } else if (originalName.length > 8) {
                     // For moderately long names, use unhyphenated if it's shorter
+                    logger.debug('CALENDAR', 'Mobile hyphenation decision (moderate name)', {
+                        originalName,
+                        nickname,
+                        unhyphenatedNickname,
+                        result: unhyphenatedNickname,
+                        reason: 'using unhyphenated for moderate length'
+                    });
                     return unhyphenatedNickname;
                 }
             }
             
+            // Desktop heuristic: be more conservative but still use hyphenation for long names
+            if (originalName.length > 10) {
+                const result = unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
+                logger.debug('CALENDAR', 'Desktop hyphenation decision', {
+                    originalName,
+                    nickname,
+                    unhyphenatedNickname,
+                    result,
+                    reason: unhyphenatedNickname.length <= 10 ? 'unhyphenated fits' : 'using hyphenated'
+                });
+                return result;
+            }
+            
+            logger.debug('CALENDAR', 'Using original name (no hyphenation needed)', {
+                originalName,
+                nickname,
+                reason: 'original name is short enough'
+            });
             return originalName;
         } else {
             // Regular nickname without hyphens - use existing logic

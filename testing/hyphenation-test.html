@@ -141,7 +141,17 @@
                         <li>If neither fits → use hyphenated nickname</li>
                     </ul>
                 </li>
-                <li><strong>Mobile optimization:</strong> On mobile screens, intelligently chooses based on length</li>
+                <li><strong>Mobile optimization:</strong> On mobile screens (≤768px), uses length-based heuristics:
+                    <ul>
+                        <li>Names >12 chars: use unhyphenated if ≤10 chars, otherwise hyphenated</li>
+                        <li>Names >8 chars: use unhyphenated</li>
+                    </ul>
+                </li>
+                <li><strong>Desktop optimization:</strong> On desktop screens, uses conservative heuristics:
+                    <ul>
+                        <li>Names >10 chars: use unhyphenated if ≤10 chars, otherwise hyphenated</li>
+                    </ul>
+                </li>
                 <li><strong>No breaking changes:</strong> Works with existing nickname system, regular nicknames work as before</li>
             </ol>
         </div>
@@ -239,11 +249,16 @@ Website: https://example.com</code></pre>
                 // Mobile heuristic
                 const isMobile = window.innerWidth <= 768;
                 if (isMobile) {
-                    if (originalName.length > 15) {
-                        return unhyphenatedNickname.length <= 12 ? unhyphenatedNickname : nickname;
-                    } else if (originalName.length > 10) {
+                    if (originalName.length > 12) {
+                        return unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
+                    } else if (originalName.length > 8) {
                         return unhyphenatedNickname;
                     }
+                }
+                
+                // Desktop heuristic: be more conservative but still use hyphenation for long names
+                if (originalName.length > 10) {
+                    return unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
                 }
                 
                 return originalName;
