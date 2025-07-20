@@ -21,7 +21,6 @@ class PageEffectsManager {
     init() {
         logger.componentInit('PAGE', 'Page effects manager initializing');
         this.injectDynamicStyles();
-        this.setupHeaderEffects();
         this.setupParallaxEffects();
         this.setupIntersectionObserver();
         this.setupInteractiveElements();
@@ -29,29 +28,7 @@ class PageEffectsManager {
         logger.componentLoad('PAGE', 'Page effects manager initialized');
     }
 
-    setupHeaderEffects() {
-        if (this.isMainPage && this.header) {
-            logger.componentInit('PAGE', 'Main page header scroll effects');
-            
-            window.addEventListener('scroll', () => {
-                const scrollY = window.scrollY;
-                if (scrollY > 100) {
-                    this.header.style.background = 'rgba(102, 126, 234, 0.95)';
-                    this.header.style.backdropFilter = 'blur(10px)';
-                } else {
-                    this.header.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                    this.header.style.backdropFilter = 'none';
-                }
-            });
-            
-            logger.componentLoad('PAGE', 'Header scroll effects enabled');
-        } else {
-            logger.debug('PAGE', 'Header scroll effects not applied', {
-                isMainPage: this.isMainPage,
-                headerExists: !!this.header
-            });
-        }
-    }
+
 
     setupParallaxEffects() {
         if (this.heroImage) {
