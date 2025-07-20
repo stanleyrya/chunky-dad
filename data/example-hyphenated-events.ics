@@ -1,0 +1,28 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Chunky Dad//Hyphenation Example//EN
+BEGIN:VEVENT
+UID:rockstrap-example@chunky.dad
+DTSTART:20240315T200000Z
+DTEND:20240315T230000Z
+SUMMARY:Rockstrap Party
+DESCRIPTION:Bar: The Bear Den\nNickname: Rock-strap\nCover: $15\nWebsite: https://example.com
+LOCATION:40.7128,-74.0060
+END:VEVENT
+BEGIN:VEVENT
+UID:underwear-example@chunky.dad
+DTSTART:20240316T210000Z
+DTEND:20240317T020000Z
+SUMMARY:Underwear Night
+DESCRIPTION:Bar: Leather & Lace\nNickname: Under-wear\nCover: $10\nInfo: Wear your favorite underwear!
+LOCATION:40.7589,-73.9851
+END:VEVENT
+BEGIN:VEVENT
+UID:bearweekend-example@chunky.dad
+DTSTART:20240320T120000Z
+DTEND:20240322T180000Z
+SUMMARY:Bear Weekend Festival
+DESCRIPTION:Bar: Multiple Venues\nNickname: Bear Week-end\nCover: $50 weekend pass\nWebsite: https://bearweekend.example.com
+LOCATION:40.7505,-73.9934
+END:VEVENT
+END:VCALENDAR
