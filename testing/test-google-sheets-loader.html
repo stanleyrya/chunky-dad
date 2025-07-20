@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
           crossorigin=""/>
+    <!-- Logger -->
+    <script src="../js/logger.js"></script>
     <style>
         /* Testing-specific styles */
         body {
@@ -419,7 +421,6 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="../js/logger.js"></script>
     <script src="../js/navigation.js"></script>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
@@ -548,11 +549,17 @@
                     city: cells[7]?.v || ''
                 };
                 
+                // Clean Instagram username - remove @ symbol and trim
+                if (item.instagram) {
+                    item.instagram = item.instagram.replace('@', '').trim();
+                }
+                
                 if (item.name) {
                     data.push(item);
                     testLogger.logToViewer('info', `Processed: ${item.name}`, { 
                         type: item.type, 
                         hasInstagram: !!item.instagram,
+                        instagram: item.instagram,
                         hasLocation: !!item.coordinates 
                     });
                 }
@@ -725,33 +732,53 @@
                 script.src = 'https://www.instagram.com/embed.js';
                 
                 script.onerror = (error) => {
-                    testLogger.logToViewer('error', 'Failed to load Instagram embed script', error);
-                    // Retry with protocol
-                    setTimeout(() => {
-                        const retryScript = document.createElement('script');
-                        retryScript.async = true;
-                        retryScript.src = 'https://www.instagram.com/embed.js';
-                        document.body.appendChild(retryScript);
-                        testLogger.logToViewer('info', 'Retrying Instagram script load with https protocol');
-                    }, 1000);
+                    testLogger.logToViewer('error', 'Failed to load Instagram embed script', {
+                        error: error.toString(),
+                        src: script.src,
+                        message: 'Instagram script failed to load - may be blocked by ad blocker or network issues'
+                    });
+                    
+                    // Log to main logger as well
+                    if (window.logger) {
+                        logger.componentError('INSTAGRAM', 'Failed to load Instagram embed script', error);
+                    }
                 };
                 
                 script.onload = () => {
                     testLogger.logToViewer('success', 'Instagram embed script loaded successfully');
+                    
+                    // Log to main logger
+                    if (window.logger) {
+                        logger.componentLoad('INSTAGRAM', 'Instagram embed script loaded');
+                    }
+                    
                     setTimeout(() => {
                         if (window.instgrm && window.instgrm.Embeds) {
                             window.instgrm.Embeds.process();
                             testLogger.logToViewer('success', 'Instagram embeds processed');
+                            
+                            // Check if embeds were actually created
+                            const embeds = document.querySelectorAll('.instagram-media-rendered');
+                            testLogger.logToViewer('info', `Found ${embeds.length} rendered Instagram embeds`);
+                        } else {
+                            testLogger.logToViewer('warning', 'Instagram API not available after script load');
                         }
-                    }, 100);
+                    }, 500); // Increased timeout for better reliability
                 };
                 
                 document.body.appendChild(script);
-                testLogger.logToViewer('info', 'Loading Instagram embed script');
+                testLogger.logToViewer('info', 'Loading Instagram embed script from: ' + script.src);
             } else {
+                testLogger.logToViewer('info', 'Instagram API already loaded, processing embeds');
                 setTimeout(() => {
-                    window.instgrm.Embeds.process();
-                    testLogger.logToViewer('info', 'Instagram embeds reprocessed');
+                    if (window.instgrm && window.instgrm.Embeds) {
+                        window.instgrm.Embeds.process();
+                        testLogger.logToViewer('info', 'Instagram embeds reprocessed');
+                        
+                        // Check rendered embeds
+                        const embeds = document.querySelectorAll('.instagram-media-rendered');
+                        testLogger.logToViewer('info', `Found ${embeds.length} rendered Instagram embeds after reprocess`);
+                    }
                 }, 100);
             }
         }
