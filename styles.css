@@ -3830,6 +3830,40 @@ footer {
     opacity: 0.3;
 }
 
+/* Instagram loading state */
+.instagram-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 1;
+}
+
+.instagram-loading p {
+    margin-top: 10px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.instagram-embed-container.loaded .instagram-loading {
+    display: none;
+}
+
+.instagram-embed-container.error .instagram-loading {
+    display: none;
+}
+
+.instagram-embed-container.error::after {
+    content: "Failed to load Instagram";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--error-color);
+    font-size: 0.9rem;
+}
+
 .tile-content {
     padding: 1.5rem;
 }

@@ -99,6 +99,36 @@
             margin-top: 20px;
         }
         
+        /* Instagram embed styles */
+        .instagram-embed-wrapper {
+            position: relative;
+        }
+        
+        .instagram-embed-container {
+            width: 100%;
+            min-height: 300px;
+            background: var(--background-light, #1a1a1a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        
+        .instagram-embed-container iframe {
+            width: 100% !important;
+            height: auto !important;
+            min-height: 300px;
+        }
+        
+        .instagram-embed-container .instagram-media {
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            background: white !important;
+        }
+        
         .data-column {
             background: #0d0d0d;
             padding: 15px;
@@ -554,9 +584,12 @@
             testLogger.logToViewer('info', 'Statistics updated', stats);
         }
 
-        // Test Instagram embeds
-        function testInstagramEmbed() {
-            testLogger.logToViewer('info', 'Testing Instagram embeds');
+        // Test Instagram embeds with different display options
+        let currentInstagramMode = 'full'; // full, media-only, grid
+        
+        function testInstagramEmbed(mode = 'full') {
+            currentInstagramMode = mode || currentInstagramMode;
+            testLogger.logToViewer('info', `Testing Instagram embeds in ${currentInstagramMode} mode`);
             
             const container = document.getElementById('instagramTest');
             container.innerHTML = '';
@@ -569,31 +602,157 @@
                 return;
             }
             
-            itemsWithInstagram.forEach(item => {
+            // Add mode selector buttons
+            const modeSelector = document.createElement('div');
+            modeSelector.style.cssText = 'margin-bottom: 20px; display: flex; gap: 10px;';
+            modeSelector.innerHTML = `
+                <button class="test-btn ${currentInstagramMode === 'full' ? 'active' : ''}" onclick="testInstagramEmbed('full')">Full Feed</button>
+                <button class="test-btn ${currentInstagramMode === 'media-only' ? 'active' : ''}" onclick="testInstagramEmbed('media-only')">Media Only</button>
+                <button class="test-btn ${currentInstagramMode === 'grid' ? 'active' : ''}" onclick="testInstagramEmbed('grid')">Grid View</button>
+                <button class="test-btn ${currentInstagramMode === 'compact' ? 'active' : ''}" onclick="testInstagramEmbed('compact')">Compact</button>
+            `;
+            container.appendChild(modeSelector);
+            
+            const contentContainer = document.createElement('div');
+            contentContainer.style.cssText = getContainerStyle(currentInstagramMode);
+            container.appendChild(contentContainer);
+            
+            itemsWithInstagram.forEach((item, index) => {
                 const embedDiv = document.createElement('div');
-                embedDiv.innerHTML = `
-                    <h4 style="color: #FFA500; margin-bottom: 10px;">${item.name}</h4>
-                    <blockquote class="instagram-media" 
-                        data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
-                        data-instgrm-version="14">
-                    </blockquote>
-                `;
-                container.appendChild(embedDiv);
+                embedDiv.className = 'instagram-embed-wrapper';
+                embedDiv.style.cssText = getEmbedStyle(currentInstagramMode);
+                
+                let embedContent = '';
+                
+                switch(currentInstagramMode) {
+                    case 'full':
+                        embedContent = `
+                            <h4 style="color: #FFA500; margin-bottom: 10px;">${item.name}</h4>
+                            <div class="instagram-embed-container">
+                                <blockquote class="instagram-media" 
+                                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
+                                    data-instgrm-version="14"
+                                    data-instgrm-captioned>
+                                </blockquote>
+                            </div>
+                        `;
+                        break;
+                    
+                    case 'media-only':
+                        embedContent = `
+                            <h4 style="color: #FFA500; margin-bottom: 10px;">${item.name}</h4>
+                            <div class="instagram-embed-container">
+                                <blockquote class="instagram-media" 
+                                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
+                                    data-instgrm-version="14"
+                                    data-instgrm-captioned="false">
+                                </blockquote>
+                            </div>
+                        `;
+                        break;
+                    
+                    case 'grid':
+                        embedContent = `
+                            <div class="instagram-embed-container" style="aspect-ratio: 1;">
+                                <blockquote class="instagram-media" 
+                                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
+                                    data-instgrm-version="14"
+                                    data-instgrm-captioned="false"
+                                    style="max-width: 100%;">
+                                </blockquote>
+                            </div>
+                            <p style="color: #FFA500; margin-top: 10px; text-align: center; font-size: 0.9rem;">${item.name}</p>
+                        `;
+                        break;
+                    
+                    case 'compact':
+                        embedContent = `
+                            <div style="display: flex; align-items: center; gap: 15px; padding: 15px; background: #222; border-radius: 8px;">
+                                <div style="flex: 0 0 100px;">
+                                    <img src="https://www.instagram.com/${item.instagram}/media/?size=t" 
+                                         style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;"
+                                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%2250%25%22 x=%2250%25%22 text-anchor=%22middle%22 font-size=%2240%22>🐻</text></svg>'">
+                                </div>
+                                <div style="flex: 1;">
+                                    <h4 style="color: #FFA500; margin: 0;">${item.name}</h4>
+                                    <a href="https://instagram.com/${item.instagram}" target="_blank" style="color: #888; text-decoration: none;">@${item.instagram}</a>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                }
+                
+                embedDiv.innerHTML = embedContent;
+                contentContainer.appendChild(embedDiv);
+                
                 testLogger.logToViewer('info', `Added Instagram embed for ${item.name}`, { 
-                    username: item.instagram 
+                    username: item.instagram,
+                    mode: currentInstagramMode
                 });
             });
             
-            // Load Instagram embed script
+            // Load Instagram embed script with better error handling
+            loadInstagramScript();
+        }
+        
+        function getContainerStyle(mode) {
+            switch(mode) {
+                case 'grid':
+                    return 'display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;';
+                case 'compact':
+                    return 'display: flex; flex-direction: column; gap: 10px;';
+                default:
+                    return 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;';
+            }
+        }
+        
+        function getEmbedStyle(mode) {
+            switch(mode) {
+                case 'grid':
+                    return 'background: #1a1a1a; border-radius: 8px; overflow: hidden;';
+                case 'compact':
+                    return '';
+                default:
+                    return '';
+            }
+        }
+        
+        function loadInstagramScript() {
             if (!window.instgrm) {
                 const script = document.createElement('script');
                 script.async = true;
-                script.src = '//www.instagram.com/embed.js';
+                script.defer = true;
+                script.src = 'https://www.instagram.com/embed.js';
+                
+                script.onerror = (error) => {
+                    testLogger.logToViewer('error', 'Failed to load Instagram embed script', error);
+                    // Retry with protocol
+                    setTimeout(() => {
+                        const retryScript = document.createElement('script');
+                        retryScript.async = true;
+                        retryScript.src = 'https://www.instagram.com/embed.js';
+                        document.body.appendChild(retryScript);
+                        testLogger.logToViewer('info', 'Retrying Instagram script load with https protocol');
+                    }, 1000);
+                };
+                
+                script.onload = () => {
+                    testLogger.logToViewer('success', 'Instagram embed script loaded successfully');
+                    setTimeout(() => {
+                        if (window.instgrm && window.instgrm.Embeds) {
+                            window.instgrm.Embeds.process();
+                            testLogger.logToViewer('success', 'Instagram embeds processed');
+                        }
+                    }, 100);
+                };
+                
                 document.body.appendChild(script);
-                testLogger.logToViewer('info', 'Instagram embed script loaded');
+                testLogger.logToViewer('info', 'Loading Instagram embed script');
             } else {
-                window.instgrm.Embeds.process();
-                testLogger.logToViewer('info', 'Instagram embeds processed');
+                setTimeout(() => {
+                    window.instgrm.Embeds.process();
+                    testLogger.logToViewer('info', 'Instagram embeds reprocessed');
+                }, 100);
             }
         }
 
