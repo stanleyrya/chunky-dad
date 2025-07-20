@@ -18,9 +18,7 @@
                 <ul class="nav-menu">
                     <li><a href="#home">Home</a></li>
                     <li><a href="#cities">Cities</a></li>
-                    <li><a href="#events">Events</a></li>
                     <li><a href="bear-directory.html">Directory</a></li>
-                    <li><a href="#businesses">Businesses</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>
                 <div class="hamburger">
@@ -33,24 +31,23 @@
     </header>
 
     <main>
-        <section id="home" class="hero">
-            <div class="hero-content">
-                <h2>Your Bear Travel HQ</h2>
-                <p>The ultimate guide for gay bears on the go - from city hotspots to epic bear events worldwide!</p>
-                <div class="hero-buttons">
-                    <button class="cta-button primary" onclick="scrollToSection('cities')">Explore Cities</button>
-                    <button class="cta-button secondary" onclick="scrollToSection('events')">Bear Events</button>
+        <section id="home" class="hero compact-hero">
+            <div class="container">
+                <div class="hero-content-compact">
+                    <h2>Your Bear Travel HQ</h2>
+                    <p>Quick guides to the best bear scenes worldwide - bars, events, and bear-owned businesses!</p>
+                    <div class="hero-buttons">
+                        <button class="cta-button primary" onclick="scrollToSection('cities')">Explore Cities</button>
+                        <a href="bear-directory.html" class="cta-button secondary">Bear Directory</a>
+                    </div>
                 </div>
-            </div>
-            <div class="hero-image">
-                <div class="placeholder-image">�</div>
             </div>
         </section>
 
         <section id="cities" class="cities">
             <div class="container">
-                <h2>🏙️ Popular Bear Destinations</h2>
-                <p class="section-subtitle">Quick and dirty guides to the best bear scenes worldwide</p>
+                <h2>🏙️ Available City Guides</h2>
+                <p class="section-subtitle">Click any city to explore bear bars, events, and local hotspots</p>
                 <div class="cities-grid">
                     <div class="city-card" onclick="location.href='city.html?city=new-york'">
                         <div class="city-image">🗽</div>
@@ -60,7 +57,7 @@
                             <div class="city-highlights">
                                 <span class="highlight">Bear Happy Hour</span>
                                 <span class="highlight">Eagle NYC</span>
-                                <span class="highlight">4+ Weekly Events</span>
+                                <span class="highlight">Live Calendar</span>
                             </div>
                         </div>
                     </div>
@@ -71,96 +68,87 @@
                             <h3>Seattle</h3>
                             <p>Emerald City bears unite with Pacific Northwest charm and events</p>
                             <div class="city-highlights">
-                                <span class="highlight">New Events</span>
-                                <span class="highlight">Bear Scene</span>
-                                <span class="highlight">Available Now</span>
+                                <span class="highlight">Diesel</span>
+                                <span class="highlight">Bear Night</span>
+                                <span class="highlight">Live Calendar</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="city-card" onclick="location.href='city.html?city=los-angeles'">
-                        <div class="city-image">�</div>
+                        <div class="city-image">🌴</div>
                         <div class="city-info">
                             <h3>Los Angeles</h3>
                             <p>West Coast bear vibes with year-round sunshine and hot scenes</p>
                             <div class="city-highlights">
                                 <span class="highlight">WeHo Bears</span>
                                 <span class="highlight">Beach Events</span>
-                                <span class="highlight">Coming Soon</span>
+                                <span class="highlight">Live Calendar</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="city-card">
-                        <div class="city-image">🏖️</div>
+                    <div class="city-card" onclick="location.href='city.html?city=toronto'">
+                        <div class="city-image">🍁</div>
                         <div class="city-info">
-                            <h3>Sitges</h3>
-                            <p>European bear paradise with epic beach parties and Bear Week</p>
+                            <h3>Toronto</h3>
+                            <p>Great White North bears with friendly vibes and active community</p>
                             <div class="city-highlights">
-                                <span class="highlight">Bear Week</span>
-                                <span class="highlight">Beach Bars</span>
-                                <span class="highlight">Coming Soon</span>
+                                <span class="highlight">Black Eagle</span>
+                                <span class="highlight">Bear Events</span>
+                                <span class="highlight">Live Calendar</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="city-card">
-                        <div class="city-image">🌮</div>
+                    <div class="city-card" onclick="location.href='city.html?city=london'">
+                        <div class="city-image">🇬🇧</div>
                         <div class="city-info">
-                            <h3>Puerto Vallarta</h3>
-                            <p>Mexican bear heaven with Beef Dip and year-round events</p>
+                            <h3>London</h3>
+                            <p>British bears welcome you to pubs, clubs, and proper bear culture</p>
                             <div class="city-highlights">
-                                <span class="highlight">Beef Dip</span>
-                                <span class="highlight">Gay Beach</span>
-                                <span class="highlight">Coming Soon</span>
+                                <span class="highlight">XXL London</span>
+                                <span class="highlight">King's Cross</span>
+                                <span class="highlight">Live Calendar</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </section>
 
-        <section id="events" class="events">
-            <div class="container">
-                <h2>🎉 Major Bear Events</h2>
-                <p class="section-subtitle">Don't miss these legendary gatherings</p>
-                <div class="events-grid">
-                    <div class="event-card">
-                        <div class="event-header">
-                            <div class="event-icon">🥩</div>
-                            <div class="event-date">March 2024</div>
-                        </div>
-                        <h3>Puerto Vallarta Beef Dip</h3>
-                        <p>The annual bear invasion of PV with pool parties, beach events, and unforgettable nights</p>
-                        <div class="event-details">
-                            <span>📅 March 15-22, 2024</span>
-                            <span>📍 Puerto Vallarta, Mexico</span>
+                    <div class="city-card" onclick="location.href='city.html?city=chicago'">
+                        <div class="city-image">🏙️</div>
+                        <div class="city-info">
+                            <h3>Chicago</h3>
+                            <p>Windy City bears with Midwest charm and legendary bear bars</p>
+                            <div class="city-highlights">
+                                <span class="highlight">Touché</span>
+                                <span class="highlight">Bear Pride</span>
+                                <span class="highlight">Live Calendar</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="event-card">
-                        <div class="event-header">
-                            <div class="event-icon">🏖️</div>
-                            <div class="event-date">September 2024</div>
-                        </div>
-                        <h3>Sitges Bear Week</h3>
-                        <p>European bears take over this Spanish beach town for a week of sun, parties, and brotherhood</p>
-                        <div class="event-details">
-                            <span>📅 September 8-15, 2024</span>
-                            <span>📍 Sitges, Spain</span>
+                    <div class="city-card" onclick="location.href='city.html?city=berlin'">
+                        <div class="city-image">🇩🇪</div>
+                        <div class="city-info">
+                            <h3>Berlin</h3>
+                            <p>European bear capital with legendary nightlife and fetish scene</p>
+                            <div class="city-highlights">
+                                <span class="highlight">Woof Berlin</span>
+                                <span class="highlight">Lab.oratory</span>
+                                <span class="highlight">Live Calendar</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="event-card">
-                        <div class="event-header">
-                            <div class="event-icon">🌈</div>
-                            <div class="event-date">June 2024</div>
-                        </div>
-                        <h3>NYC Pride Bears</h3>
-                        <p>Join the bear contingent for NYC Pride with special events and bear-centric celebrations</p>
-                        <div class="event-details">
-                            <span>📅 June 2024</span>
-                            <span>📍 New York City</span>
+                    <div class="city-card coming-soon">
+                        <div class="city-image">🌍</div>
+                        <div class="city-info">
+                            <h3>More Cities Coming!</h3>
+                            <p>We're adding new bear destinations regularly. Got a suggestion?</p>
+                            <div class="city-highlights">
+                                <span class="highlight">Request a City</span>
+                                <span class="highlight">Contact Us</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -169,35 +157,30 @@
 
         <section id="businesses" class="businesses">
             <div class="container">
-                <h2>🏪 Bear-Owned Businesses</h2>
-                <p class="section-subtitle">Support our community - shop bear!</p>
-                <div class="business-categories">
-                    <div class="category-card">
-                        <div class="category-icon">🍻</div>
-                        <h3>Bars & Venues</h3>
-                        <p>Bear-friendly watering holes and party spots</p>
-                        <span class="coming-soon">Coming Soon</span>
+                <h2>🏪 Bear Artists & Businesses</h2>
+                <p class="section-subtitle">Support our community - discover bear-owned businesses and talented artists!</p>
+                <div class="business-highlight">
+                    <div class="business-cta">
+                        <h3>Explore the Bear Directory</h3>
+                        <p>Find bear artists, businesses, shops, and services from around the world. From leather crafters to cafe owners, support your bear family!</p>
+                        <a href="bear-directory.html" class="cta-button primary">Browse Directory 🐻</a>
                     </div>
-
-                    <div class="category-card">
-                        <div class="category-icon">🛍️</div>
-                        <h3>Online Shops</h3>
-                        <p>Bear gear, clothing, and lifestyle products</p>
-                        <span class="coming-soon">Coming Soon</span>
-                    </div>
-
-                    <div class="category-card">
-                        <div class="category-icon">�</div>
-                        <h3>Accommodations</h3>
-                        <p>Bear-owned and bear-friendly places to stay</p>
-                        <span class="coming-soon">Coming Soon</span>
-                    </div>
-
-                    <div class="category-card">
-                        <div class="category-icon">✂️</div>
-                        <h3>Services</h3>
-                        <p>Professional services by and for the bear community</p>
-                        <span class="coming-soon">Coming Soon</span>
+                    <div class="business-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">🎨</div>
+                            <h4>Artists</h4>
+                            <p>Talented bear creators</p>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🛍️</div>
+                            <h4>Businesses</h4>
+                            <p>Bear-owned shops</p>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🌍</div>
+                            <h4>Global</h4>
+                            <p>Worldwide community</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -205,28 +188,19 @@
 
         <section id="contact" class="contact">
             <div class="container">
-                <h2>Got Bear Intel?</h2>
+                <h2>Share Bear Intel 📧</h2>
                 <div class="contact-content">
                     <div class="contact-info">
-                        <div class="contact-item">
-                            <div class="contact-icon">📧</div>
-                            <div>
-                                <h3>Submit Info</h3>
-                                <p>Know about a hot bear event or business? Drop us a line!</p>
+                        <h3>Help us grow the bear travel guide!</h3>
+                        <p>Know about a great bear bar, event, or business? We want to hear about it!</p>
+                        <div class="sample-submissions">
+                            <div class="sample-card">
+                                <h4>Example: NYC Bear Bar</h4>
+                                <p>"The Eagle NYC has Bear Happy Hour every Friday 6-9pm with drink specials and a great crowd!"</p>
                             </div>
-                        </div>
-                        <div class="contact-item">
-                            <div class="contact-icon">�</div>
-                            <div>
-                                <h3>Join the Pack</h3>
-                                <p>Help us build the ultimate bear travel resource</p>
-                            </div>
-                        </div>
-                        <div class="contact-item">
-                            <div class="contact-icon">🌐</div>
-                            <div>
-                                <h3>Website</h3>
-                                <p>chunky.dad</p>
+                            <div class="sample-card">
+                                <h4>Example: Bear Business</h4>
+                                <p>"Check out Bear Leather Co in Seattle - amazing custom gear made by bears for bears!"</p>
                             </div>
                         </div>
                     </div>
@@ -234,14 +208,15 @@
                         <input type="text" placeholder="Your Name" required>
                         <input type="email" placeholder="Your Email" required>
                         <select required>
-                            <option value="">What kind of info are you sharing?</option>
-                            <option value="event">Bear Event</option>
+                            <option value="">What are you sharing?</option>
+                            <option value="event">Bear Event or Bar Night</option>
                             <option value="business">Bear-Owned Business</option>
-                            <option value="venue">Bar/Venue</option>
-                            <option value="other">Other</option>
+                            <option value="venue">Bar or Venue Info</option>
+                            <option value="city">New City Suggestion</option>
+                            <option value="other">Other Bear Intel</option>
                         </select>
-                        <textarea placeholder="Tell us all the juicy details..." rows="5" required></textarea>
-                        <button type="submit">Send Email 📧</button>
+                        <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="5" required></textarea>
+                        <button type="submit">Send Bear Intel 🐻</button>
                     </form>
                 </div>
             </div>
@@ -251,11 +226,6 @@
     <footer>
         <div class="container">
             <p>&copy; 2024 chunky.dad. Made with 🐻 for the bear community.</p>
-            <div class="social-links">
-                <a href="#" title="Instagram">�</a>
-                <a href="#" title="Twitter">🐦</a>
-                <a href="#" title="Facebook">�</a>
-            </div>
         </div>
     </footer>
 
