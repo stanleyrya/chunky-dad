@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Display Modes Test</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            background: var(--background-light);
+        }
+        .test-section {
+            margin-bottom: 3rem;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .mode-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .mode-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Instagram Display Modes Test</h1>
+    
+    <div class="test-section">
+        <h2 class="mode-title">Full Mode (Default)</h2>
+        <p class="mode-description">Shows the full Instagram embed with recent posts</p>
+        <div class="test-grid">
+            <div class="directory-tile" data-instagram-mode="full">
+                <div class="instagram-embed-container" data-instagram-user="bearworldmag">
+                    <div class="instagram-loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading @bearworldmag</p>
+                    </div>
+                    <blockquote class="instagram-media" 
+                        data-instgrm-permalink="https://www.instagram.com/bearworldmag/" 
+                        data-instgrm-version="14">
+                        <div style="padding:16px;">
+                            <a href="https://www.instagram.com/bearworldmag/" target="_blank">
+                                View on Instagram
+                            </a>
+                        </div>
+                    </blockquote>
+                </div>
+                <div class="tile-content">
+                    <h3 class="tile-name">Bear World Magazine</h3>
+                    <p class="tile-city">📍 Global</p>
+                    <p class="tile-type">🎨 Art</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="mode-title">Profile Mode</h2>
+        <p class="mode-description">Shows only the profile picture and username</p>
+        <div class="test-grid">
+            <div class="directory-tile" data-instagram-mode="profile">
+                <div class="instagram-profile-container" data-instagram-user="bearworldmag">
+                    <div class="instagram-profile-image">
+                        <img src="https://unavatar.io/instagram/bearworldmag" 
+                             alt="@bearworldmag" 
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%23e1e1e1%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22%3E🐻%3C/text%3E%3C/svg%3E'">
+                    </div>
+                    <a href="https://instagram.com/bearworldmag" target="_blank" class="instagram-username">
+                        @bearworldmag
+                    </a>
+                </div>
+                <div class="tile-content">
+                    <h3 class="tile-name">Bear World Magazine</h3>
+                    <p class="tile-city">📍 Global</p>
+                    <p class="tile-type">🎨 Art</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="mode-title">Compact Mode</h2>
+        <p class="mode-description">Minimal view with small profile image and username</p>
+        <div class="test-grid">
+            <div class="directory-tile" data-instagram-mode="compact">
+                <div class="instagram-compact-container" data-instagram-user="bearworldmag">
+                    <img src="https://unavatar.io/instagram/bearworldmag" 
+                         alt="@bearworldmag" 
+                         class="instagram-compact-image"
+                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%23e1e1e1%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22%3E🐻%3C/text%3E%3C/svg%3E'">
+                    <a href="https://instagram.com/bearworldmag" target="_blank" class="instagram-compact-link">
+                        <span class="instagram-icon">📷</span>
+                        <span>@bearworldmag</span>
+                    </a>
+                </div>
+                <div class="tile-content">
+                    <h3 class="tile-name">Bear World Magazine</h3>
+                    <p class="tile-city">📍 Global</p>
+                    <p class="tile-type">🎨 Art</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="mode-title">Restricted Profile with Website Preview</h2>
+        <p class="mode-description">When Instagram profile is restricted, shows website preview instead</p>
+        <div class="test-grid">
+            <div class="directory-tile">
+                <div class="website-preview-container">
+                    <div class="website-preview-header">
+                        <span class="website-icon">🌐</span>
+                        <span>Website Preview</span>
+                    </div>
+                    <iframe src="https://example.com" 
+                            class="website-preview-iframe" 
+                            sandbox="allow-same-origin allow-scripts"
+                            loading="lazy">
+                    </iframe>
+                    <a href="https://example.com" target="_blank" class="website-preview-link">
+                        Visit Website →
+                    </a>
+                </div>
+                <div class="tile-content">
+                    <h3 class="tile-name">Example Business</h3>
+                    <p class="tile-city">📍 San Francisco</p>
+                    <p class="tile-type">🏪 Business</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="mode-title">No Instagram Profile</h2>
+        <p class="mode-description">Default placeholder when no Instagram is available</p>
+        <div class="test-grid">
+            <div class="directory-tile">
+                <div class="tile-placeholder">
+                    <div class="bear-icon">🐻</div>
+                </div>
+                <div class="tile-content">
+                    <h3 class="tile-name">Local Bear Shop</h3>
+                    <p class="tile-city">📍 Portland</p>
+                    <p class="tile-type">🏪 Business</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instagram embed script -->
+    <script async src="https://www.instagram.com/embed.js"></script>
+</body>
+</html>
