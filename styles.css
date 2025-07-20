@@ -1214,6 +1214,11 @@ header {
     .calendar-day.week-view .event-venue {
         display: none;
     }
+    
+    /* Hide day-indicator in month view on tablets and mobile */
+    .calendar-day.month-day .day-indicator {
+        display: none;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1976,11 +1981,11 @@ footer {
 
     .calendar-day.week-view {
         min-height: 100px;
-        padding: 0.3rem;
         border-radius: 8px;
     }
 
     .calendar-day.week-view .day-header {
+        padding: 0.3rem;
         padding-bottom: 0.2rem;
         flex-direction: row;
         align-items: center;
@@ -1989,12 +1994,13 @@ footer {
 
     .calendar-day.week-view .day-meta {
         gap: 0.2rem;
-        margin-top: 0.1rem;
+        display: flex;
+        align-items: center;
     }
 
     .calendar-day.week-view h3 {
         font-size: 0.9rem;
-        margin-bottom: 0.1rem;
+        margin: 0;
     }
 
     .calendar-day.week-view .day-date {
@@ -2365,11 +2371,11 @@ footer {
 
     .calendar-day.week-view {
         min-height: auto;
-        padding: 0.2rem;
         border-radius: 6px;
     }
 
     .calendar-day.week-view .day-header {
+        padding: 0.2rem;
         flex-direction: row;
         align-items: center;
         gap: 0.3rem;
@@ -2378,7 +2384,7 @@ footer {
 
     .calendar-day.week-view h3 {
         font-size: 0.8rem;
-        margin-bottom: 0;
+        margin: 0;
     }
 
     .calendar-day.week-view .day-date {
@@ -2772,10 +2778,10 @@ footer {
 
     .calendar-day.week-view {
         min-height: auto;
-        padding: 0.2rem;
     }
 
     .calendar-day.week-view .day-header {
+        padding: 0.2rem;
         padding-bottom: 0.05rem;
         flex-direction: row;
         align-items: center;
@@ -2784,6 +2790,7 @@ footer {
 
     .calendar-day.week-view h3 {
         font-size: 0.7rem;
+        margin: 0;
     }
 
     .calendar-day.week-view .day-date {
