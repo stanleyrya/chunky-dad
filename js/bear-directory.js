@@ -26,33 +26,13 @@ class BearDirectory {
         // Instagram embed configuration
         this.instagramEmbedScript = null;
         
-        // Display mode for Instagram tiles
-        this.instagramDisplayMode = 'full'; // Options: 'full', 'image', 'profile', 'compact'
-        
         logger.componentInit('DIRECTORY', 'BearDirectory initialized');
     }
     
-    init() {
-        logger.componentInit('DIRECTORY', 'Initializing BearDirectory');
+    async init() {
+        logger.time('DIRECTORY', 'initialization');
         
-        // Initialize DOM elements first
-        this.initializeElements();
-        
-        // Load data
-        this.loadGoogleSheetsData();
-        
-        // Set up event listeners
-        this.setupEventListeners();
-        
-        // Initialize map
-        this.initMap();
-        
-        // Load Instagram embed script
-        this.loadInstagramEmbed();
-    }
-    
-    initializeElements() {
-        // Get DOM element references
+        // Get DOM elements
         this.elements.grid = document.getElementById('directoryGrid');
         this.elements.searchInput = document.getElementById('searchInput');
         this.elements.sortSelect = document.getElementById('sortSelect');
@@ -60,7 +40,19 @@ class BearDirectory {
         this.elements.loadingIndicator = document.getElementById('loadingIndicator');
         this.elements.errorMessage = document.getElementById('errorMessage');
         
-        logger.componentInit('DIRECTORY', 'DOM elements initialized');
+        // Initialize map
+        this.initMap();
+        
+        // Load data from Google Sheets
+        await this.loadGoogleSheetsData();
+        
+        // Set up event listeners
+        this.setupEventListeners();
+        
+        // Load Instagram embed script
+        this.loadInstagramEmbed();
+        
+        logger.timeEnd('DIRECTORY', 'initialization');
     }
     
     initMap() {
@@ -106,9 +98,7 @@ class BearDirectory {
             });
             
             // Hide loading indicator and display data
-            if (this.elements.loadingIndicator) {
-                this.elements.loadingIndicator.style.display = 'none';
-            }
+            this.elements.loadingIndicator.style.display = 'none';
             this.displayDirectory();
             this.updateMap();
             
@@ -140,8 +130,7 @@ class BearDirectory {
                 type: cells[4]?.v || '',
                 googleMaps: cells[5]?.v || '',
                 coordinates: cells[6]?.v || '',
-                city: cells[7]?.v || '',
-                isRestricted: false // New field for restricted profiles
+                city: cells[7]?.v || ''
             };
             
             // Only add if name exists
@@ -181,111 +170,30 @@ class BearDirectory {
         const tile = document.createElement('div');
         tile.className = 'directory-tile';
         tile.setAttribute('data-type', item.type.toLowerCase());
-        tile.setAttribute('data-instagram-mode', this.instagramDisplayMode);
         
-        // Create Instagram content based on display mode
-        let instagramContent = '';
-        
-        if (item.instagram) {
-            switch (this.instagramDisplayMode) {
-                case 'image':
-                    // Show just recent posts as images
-                    instagramContent = `
-                        <div class="instagram-image-container" data-instagram-user="${item.instagram}">
-                            <div class="instagram-loading">
-                                <div class="loading-spinner"></div>
-                                <p>Loading images...</p>
-                            </div>
-                            <div class="instagram-images-grid">
-                                <!-- Images will be loaded via Instagram API -->
-                            </div>
-                            <a href="https://instagram.com/${item.instagram}" target="_blank" class="instagram-overlay">
-                                <span>@${item.instagram}</span>
-                            </a>
-                        </div>`;
-                    break;
-                    
-                case 'profile':
-                    // Show just the profile picture
-                    instagramContent = `
-                        <div class="instagram-profile-container" data-instagram-user="${item.instagram}">
-                            <div class="instagram-profile-image">
-                                <img src="https://unavatar.io/instagram/${item.instagram}" 
-                                     alt="@${item.instagram}" 
-                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%23e1e1e1%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22%3E🐻%3C/text%3E%3C/svg%3E'">
-                            </div>
-                            <a href="https://instagram.com/${item.instagram}" target="_blank" class="instagram-username">
-                                @${item.instagram}
-                            </a>
-                        </div>`;
-                    break;
-                    
-                case 'compact':
-                    // Compact view with small profile image and username
-                    instagramContent = `
-                        <div class="instagram-compact-container" data-instagram-user="${item.instagram}">
-                            <img src="https://unavatar.io/instagram/${item.instagram}" 
-                                 alt="@${item.instagram}" 
-                                 class="instagram-compact-image"
-                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%23e1e1e1%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22%3E🐻%3C/text%3E%3C/svg%3E'">
-                            <a href="https://instagram.com/${item.instagram}" target="_blank" class="instagram-compact-link">
-                                <span class="instagram-icon">📷</span>
-                                <span>@${item.instagram}</span>
-                            </a>
-                        </div>`;
-                    break;
-                    
-                case 'full':
-                default:
-                    // Full Instagram embed
-                    instagramContent = `
-                        <div class="instagram-embed-container" data-instagram-user="${item.instagram}">
-                            <div class="instagram-loading">
-                                <div class="loading-spinner"></div>
-                                <p>Loading @${item.instagram}</p>
-                            </div>
-                            <blockquote class="instagram-media" 
-                                data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
-                                data-instgrm-version="14"
-                                style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
-                                <div style="padding:16px;">
-                                    <a href="https://www.instagram.com/${item.instagram}/" 
-                                       style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
-                                       target="_blank">
-                                        View on Instagram
-                                    </a>
-                                </div>
-                            </blockquote>
-                        </div>`;
-                    break;
-            }
-        } else {
-            // No Instagram - show placeholder
-            instagramContent = `
-                <div class="tile-placeholder">
-                    <div class="bear-icon">🐻</div>
-                </div>`;
-        }
-        
-        // For restricted profiles, show website content if available
-        if (item.isRestricted && item.website && this.instagramDisplayMode !== 'compact') {
-            instagramContent = `
-                <div class="website-preview-container">
-                    <div class="website-preview-header">
-                        <span class="website-icon">🌐</span>
-                        <span>Website Preview</span>
+        // Create Instagram embed or placeholder
+        const instagramContent = item.instagram ? 
+            `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
+                <div class="instagram-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading @${item.instagram}</p>
+                </div>
+                <blockquote class="instagram-media" 
+                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
+                    data-instgrm-version="14"
+                    style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
+                    <div style="padding:16px;">
+                        <a href="https://www.instagram.com/${item.instagram}/" 
+                           style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
+                           target="_blank">
+                            View on Instagram
+                        </a>
                     </div>
-                    <iframe src="${item.website}" 
-                            class="website-preview-iframe" 
-                            sandbox="allow-same-origin allow-scripts"
-                            loading="lazy"
-                            onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'website-preview-error\\'>Unable to preview website<br><a href=\\'${item.website}\\' target=\\'_blank\\'>Visit Site →</a></div>'">
-                    </iframe>
-                    <a href="${item.website}" target="_blank" class="website-preview-link">
-                        Visit Website →
-                    </a>
-                </div>`;
-        }
+                </blockquote>
+            </div>` :
+            `<div class="tile-placeholder">
+                <div class="bear-icon">🐻</div>
+            </div>`;
         
         // Build tile content
         tile.innerHTML = `
@@ -356,46 +264,23 @@ class BearDirectory {
     
     setupEventListeners() {
         // Search functionality
-        if (this.elements.searchInput) {
-            this.elements.searchInput.addEventListener('input', (e) => {
-                this.handleSearch(e.target.value);
-            });
-        }
+        this.elements.searchInput.addEventListener('input', (e) => {
+            this.handleSearch(e.target.value);
+        });
         
         // Sort functionality
-        if (this.elements.sortSelect) {
-            this.elements.sortSelect.addEventListener('change', (e) => {
-                this.handleSort(e.target.value);
-            });
-        }
+        this.elements.sortSelect.addEventListener('change', (e) => {
+            this.handleSort(e.target.value);
+        });
         
         // Filter buttons
-        if (this.elements.filterButtons && this.elements.filterButtons.length > 0) {
-            this.elements.filterButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    this.handleFilter(e.target.dataset.filter);
-                    
-                    // Update active state
-                    this.elements.filterButtons.forEach(btn => btn.classList.remove('active'));
-                    e.target.classList.add('active');
-                });
-            });
-        }
-        
-        // Display mode buttons
-        const displayModeButtons = document.querySelectorAll('.display-mode-btn');
-        displayModeButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const mode = e.currentTarget.dataset.mode;
+        this.elements.filterButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                this.handleFilter(e.target.dataset.filter);
                 
                 // Update active state
-                displayModeButtons.forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                
-                // Change display mode
-                this.setInstagramDisplayMode(mode);
-                
-                logger.userInteraction('DIRECTORY', `Display mode changed to: ${mode}`);
+                this.elements.filterButtons.forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
             });
         });
         
@@ -500,124 +385,98 @@ class BearDirectory {
     processInstagramEmbeds(retryCount = 0) {
         const maxRetries = 3;
         
-        try {
-            // Check if Instagram script is loaded
-            if (window.instgrm && window.instgrm.Embeds) {
-                window.instgrm.Embeds.process();
-                
-                // Check for restricted profiles after processing
-                setTimeout(() => {
+        setTimeout(() => {
+            try {
+                if (window.instgrm && window.instgrm.Embeds) {
+                    // Mark containers as processing
                     const containers = document.querySelectorAll('.instagram-embed-container');
                     containers.forEach(container => {
-                        const iframe = container.querySelector('iframe');
-                        const blockquote = container.querySelector('blockquote');
-                        
-                        // If no iframe was created and blockquote still exists, profile might be restricted
-                        if (!iframe && blockquote) {
-                            const username = container.dataset.instagramUser;
-                            const tile = container.closest('.directory-tile');
-                            const item = this.allItems.find(i => i.instagram === username);
-                            
-                            if (item && item.website) {
-                                logger.info('DIRECTORY', `Instagram profile @${username} appears to be restricted, showing website preview`);
+                        // Add loaded class when iframe appears
+                        const observer = new MutationObserver((mutations) => {
+                            const iframe = container.querySelector('iframe');
+                            if (iframe) {
+                                container.classList.add('loaded');
+                                observer.disconnect();
                                 
-                                // Mark as restricted and re-render tile
-                                item.isRestricted = true;
-                                const newTile = this.createTile(item);
-                                tile.replaceWith(newTile);
-                            } else {
-                                logger.info('DIRECTORY', `Instagram profile @${username} appears to be restricted, no website available`);
-                                container.classList.add('error');
-                                container.innerHTML = `
-                                    <div class="instagram-error">
-                                        <p>This profile is private or restricted</p>
-                                        <a href="https://instagram.com/${username}" target="_blank">View on Instagram →</a>
-                                    </div>
-                                `;
-                            }
-                        } else if (iframe) {
-                            // Successfully loaded
-                            container.classList.add('loaded');
-                            
-                            // This is expected for Instagram embeds
-                            const styles = iframe.getAttribute('style');
-                            if (styles && !styles.includes('height')) {
-                                iframe.style.height = 'auto';
-                                iframe.style.minHeight = '300px';
-                            }
-                        }
-                    });
-                    
-                    // Handle timeout for remaining embeds
-                    setTimeout(() => {
-                        containers.forEach(container => {
-                            if (!container.classList.contains('loaded') && !container.classList.contains('error')) {
-                                const username = container.dataset.instagramUser;
-                                logger.warn('DIRECTORY', `Instagram embed timeout for @${username} - may be throttled or blocked`, {
-                                    retryCount,
-                                    possibleReasons: [
-                                        'Network issues',
-                                        'Instagram API rate limiting',
-                                        'Ad blocker interference',
-                                        'CORS restrictions'
-                                    ]
+                                // Check if iframe loaded with error (private profile, etc)
+                                iframe.addEventListener('load', () => {
+                                    try {
+                                        // Check if the iframe contains error indicators
+                                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                        const bodyText = iframeDoc.body.innerText || '';
+                                        
+                                        if (bodyText.includes('private') || bodyText.includes('unavailable')) {
+                                            container.classList.add('private-profile');
+                                            const username = container.dataset.instagramUser;
+                                            logger.info('DIRECTORY', `Instagram profile @${username} appears to be private or restricted`);
+                                        }
+                                    } catch (e) {
+                                        // Cross-origin restrictions prevent checking iframe content
+                                        // This is expected for Instagram embeds
+                                    }
                                 });
-                                container.classList.add('error');
                             }
                         });
-                    }, 5000);
-                }, 1000);
+                        observer.observe(container, { childList: true, subtree: true });
+                        
+                        // Timeout for failed loads
+                        setTimeout(() => {
+                            if (!container.classList.contains('loaded')) {
+                                container.classList.add('error');
+                                const username = container.dataset.instagramUser;
+                                logger.warn('DIRECTORY', `Instagram embed timeout for @${username} - may be throttled or blocked`, {
+                                    username: username,
+                                    retryCount: retryCount,
+                                    possibleReasons: [
+                                        'Instagram API rate limiting',
+                                        'Private or restricted profile',
+                                        'Network connectivity issues',
+                                        'Ad blocker interference'
+                                    ]
+                                });
+                            }
+                        }, 10000); // 10 second timeout
+                    });
+                    
+                    window.instgrm.Embeds.process();
+                    logger.componentLoad('DIRECTORY', 'Instagram embeds processed', {
+                        retryCount: retryCount,
+                        embedCount: containers.length
+                    });
+                } else if (retryCount < maxRetries) {
+                    logger.warn('DIRECTORY', `Instagram not ready, retrying (${retryCount + 1}/${maxRetries})`);
+                    this.processInstagramEmbeds(retryCount + 1);
+                } else {
+                    logger.error('DIRECTORY', 'Instagram embeds failed to process after retries');
+                    // Mark all as error
+                    document.querySelectorAll('.instagram-embed-container').forEach(container => {
+                        container.classList.add('error');
+                    });
+                }
+            } catch (error) {
+                logger.componentError('DIRECTORY', 'Error processing Instagram embeds', {
+                    error: error.message,
+                    stack: error.stack,
+                    retryCount: retryCount
+                });
                 
-                logger.componentLoad('DIRECTORY', 'Instagram embeds processed', {
-                    embedCount: document.querySelectorAll('.instagram-embed-container').length
-                });
-            } else if (retryCount < maxRetries) {
-                // Instagram not ready, retry
-                logger.warn('DIRECTORY', `Instagram not ready, retrying (${retryCount + 1}/${maxRetries})`);
-                setTimeout(() => this.processInstagramEmbeds(retryCount + 1), 1000);
-            } else {
-                logger.error('DIRECTORY', 'Instagram embeds failed to process after retries');
-                // Mark all as error
-                document.querySelectorAll('.instagram-embed-container').forEach(container => {
-                    container.classList.add('error');
-                });
+                if (retryCount < maxRetries) {
+                    this.processInstagramEmbeds(retryCount + 1);
+                } else {
+                    // Mark all as error
+                    document.querySelectorAll('.instagram-embed-container').forEach(container => {
+                        container.classList.add('error');
+                    });
+                }
             }
-        } catch (error) {
-            logger.componentError('DIRECTORY', 'Error processing Instagram embeds', {
-                error: error.message,
-                stack: error.stack
-            });
-            
-            if (retryCount < maxRetries) {
-                setTimeout(() => this.processInstagramEmbeds(retryCount + 1), 1000);
-            } else {
-                // Mark all as error
-                document.querySelectorAll('.instagram-embed-container').forEach(container => {
-                    container.classList.add('error');
-                });
-            }
-        }
+        }, 500 * (retryCount + 1)); // Exponential backoff
     }
     
     showError() {
-        if (this.elements.loadingIndicator) {
-            this.elements.loadingIndicator.style.display = 'none';
-        }
-        if (this.elements.errorMessage) {
-            this.elements.errorMessage.style.display = 'block';
-        }
+        this.elements.loadingIndicator.style.display = 'none';
+        this.elements.errorMessage.style.display = 'block';
         
         logger.componentError('DIRECTORY', 'Error state displayed');
-    }
-
-    // Add method to change display mode
-    setInstagramDisplayMode(mode) {
-        const validModes = ['full', 'image', 'profile', 'compact'];
-        if (validModes.includes(mode)) {
-            this.instagramDisplayMode = mode;
-            logger.info('DIRECTORY', `Instagram display mode changed to: ${mode}`);
-            this.displayDirectory(); // Re-render with new mode
-        }
     }
 }
 
