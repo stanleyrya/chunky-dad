@@ -161,11 +161,7 @@ class DynamicCalendarLoader extends CalendarCore {
         calendarGrid.style.transform = `translateX(${translateX}px) scale(${scale}) rotateY(${rotation}deg)`;
         calendarGrid.style.opacity = opacity;
         
-        // Add subtle background color change to indicate swipe progress
-        const backgroundColor = deltaX > 0 ? 
-            `rgba(255, 193, 7, ${progress * 0.1})` : // Yellow tint for right swipe
-            `rgba(13, 110, 253, ${progress * 0.1})`;  // Blue tint for left swipe
-        calendarGrid.style.backgroundColor = backgroundColor;
+        // Keep the same styling without background color changes
         
         // Add subtle shadow effect for depth
         const shadowBlur = Math.min(progress * 20, 10);
@@ -225,11 +221,10 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Reset transform, opacity, background, scale, rotation, and shadow with smooth transition
-        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out';
+        // Reset transform, opacity, scale, rotation, and shadow with smooth transition
+        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, box-shadow 0.2s ease-out';
         calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
         calendarGrid.style.opacity = '1';
-        calendarGrid.style.backgroundColor = '';
         calendarGrid.style.boxShadow = '';
         
         // Remove transition after animation completes
@@ -270,9 +265,6 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Hide swipe hint after first successful swipe
-        this.hideSwipeHint();
-        
         // Determine swipe direction based on distance or velocity
         const shouldNavigate = Math.abs(deltaX) > this.swipeThreshold || 
                               Math.abs(this.swipeVelocity) > 0.3; // Lower velocity threshold for better responsiveness
@@ -294,13 +286,6 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             // Reset visual feedback for insufficient swipe
             this.resetSwipeVisualFeedback();
-        }
-    }
-
-    hideSwipeHint() {
-        const calendarHeader = document.querySelector('.calendar-header');
-        if (calendarHeader) {
-            calendarHeader.classList.add('swipe-hint-hidden');
         }
     }
 
@@ -678,7 +663,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Show calendar error
+    // Show calendar error - only in the events container for cleaner display
     showCalendarError() {
         const errorMessage = `
             <div class="error-message">
@@ -688,9 +673,17 @@ class DynamicCalendarLoader extends CalendarCore {
             </div>
         `;
         
-        document.querySelectorAll('.calendar-grid, .events-list').forEach(el => {
-            if (el) el.innerHTML = errorMessage;
-        });
+        // Only show error in the events container to avoid duplication
+        const eventsContainer = document.querySelector('.events-list');
+        if (eventsContainer) {
+            eventsContainer.innerHTML = errorMessage;
+        }
+        
+        // Clear the calendar grid to avoid showing duplicate errors
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.innerHTML = '<div class="loading-message">📅 Calendar unavailable</div>';
+        }
     }
 
 

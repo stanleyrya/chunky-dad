@@ -752,8 +752,6 @@ header {
     position: relative;
 }
 
-/* Removed .weekly-calendar::before background */
-
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -810,6 +808,19 @@ header {
     align-items: center;
     gap: 1rem;
     flex-wrap: nowrap;
+}
+
+/* Subtle swipe indicator for mobile */
+@media (max-width: 768px) {
+    .calendar-controls::after {
+        content: '← →';
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        opacity: 0.5;
+        margin-left: 0.5rem;
+        pointer-events: none;
+        font-weight: 300;
+    }
 }
 
 .view-toggle {
@@ -980,30 +991,6 @@ header {
     user-select: none; /* Prevent text selection during swipes */
     position: relative; /* Ensure proper positioning for swipe animations */
     will-change: transform, opacity, background-color; /* Optimize for animations */
-    /* Transition removed to allow JavaScript to control animations */
-    /* transition: transform 0.1s ease-out, opacity 0.1s ease-out, background-color 0.1s ease-out; */
-}
-
-/* Clean swipe hint for mobile */
-@media (max-width: 768px) {
-    .calendar-header::after {
-        content: '💡 Swipe to navigate';
-        position: absolute;
-        top: 100%;
-        right: 0;
-        font-size: 0.7rem;
-        color: var(--text-secondary);
-        opacity: 0.6;
-        pointer-events: none;
-        z-index: 1;
-        margin-top: 0.5rem;
-        font-weight: 400;
-        transition: opacity 0.3s ease;
-    }
-    
-    .calendar-header.swipe-hint-hidden::after {
-        opacity: 0;
-    }
 }
 
 .calendar-day {
@@ -3575,10 +3562,6 @@ footer {
     .daily-events {
         padding: 0.3rem 0;
         gap: 0.2rem;
-    }
-
-    .weekly-calendar .container {
-        padding: 0;
     }
 
     /* Show city name on larger screens */
