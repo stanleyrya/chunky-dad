@@ -451,7 +451,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Smart nickname system - automatically handles hyphenated nicknames intelligently
-    getSmartEventName(event, containerWidth = null) {
+    getSmartEventName(event) {
         const originalName = event.name;
         const nickname = event.shortName;
         
@@ -467,41 +467,11 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('CALENDAR', 'Processing hyphenated nickname', {
                 originalName,
                 nickname,
-                hasHyphens,
-                containerWidth: containerWidth || 'not provided'
+                hasHyphens
             });
+            
             // Create unhyphenated version by removing hyphens
             const unhyphenatedNickname = nickname.replace(/-/g, '');
-            
-            // If container width is provided, calculate which version fits better
-            if (containerWidth) {
-                const originalWidth = this.calculateTextWidth(originalName);
-                const unhyphenatedWidth = this.calculateTextWidth(unhyphenatedNickname);
-                const hyphenatedWidth = this.calculateTextWidth(nickname);
-                
-                logger.debug('CALENDAR', 'Smart hyphenation with nickname', {
-                    originalName,
-                    nickname,
-                    unhyphenatedNickname,
-                    originalWidth: originalWidth.toFixed(1),
-                    unhyphenatedWidth: unhyphenatedWidth.toFixed(1),
-                    hyphenatedWidth: hyphenatedWidth.toFixed(1),
-                    containerWidth,
-                    decision: this.getHyphenationDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth)
-                });
-                
-                // Decision logic:
-                // 1. If original name fits, use it
-                // 2. If original doesn't fit but unhyphenated nickname does, use unhyphenated
-                // 3. If neither original nor unhyphenated fit, use hyphenated nickname
-                if (originalWidth <= containerWidth) {
-                    return originalName;
-                } else if (unhyphenatedWidth <= containerWidth) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Use hyphenated version
-                }
-            }
             
             // Mobile heuristic: be very aggressive about hyphenation due to limited space
             const isMobile = window.innerWidth <= 768;
@@ -556,43 +526,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Helper method to determine hyphenation decision for logging
-    getHyphenationDecision(originalWidth, unhyphenatedWidth, hyphenatedWidth, containerWidth) {
-        if (originalWidth <= containerWidth) {
-            return 'use original (fits)';
-        } else if (unhyphenatedWidth <= containerWidth) {
-            return 'use unhyphenated nickname (fits better)';
-        } else {
-            return 'use hyphenated nickname (best option)';
-        }
-    }
 
-    // Calculate approximate text width in pixels
-    calculateTextWidth(text) {
-        if (!text) return 0;
-        
-        // Create a temporary element to measure text width
-        const tempElement = document.createElement('span');
-        tempElement.style.visibility = 'hidden';
-        tempElement.style.position = 'absolute';
-        tempElement.style.whiteSpace = 'nowrap';
-        
-        // Get CSS custom properties from root
-        const rootStyles = getComputedStyle(document.documentElement);
-        const fontSize = rootStyles.getPropertyValue('--event-name-font-size').trim() || '0.75rem';
-        const fontWeight = rootStyles.getPropertyValue('--event-name-font-weight').trim() || '600';
-        
-        tempElement.style.fontSize = fontSize;
-        tempElement.style.fontWeight = fontWeight;
-        tempElement.style.fontFamily = getComputedStyle(document.body).fontFamily;
-        tempElement.textContent = text;
-        
-        document.body.appendChild(tempElement);
-        const width = tempElement.getBoundingClientRect().width;
-        document.body.removeChild(tempElement);
-        
-        return width;
-    }
 
     // Format time for mobile display with simplified format (4a-5p)
     formatTimeForMobile(timeString) {
