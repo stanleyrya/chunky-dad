@@ -518,10 +518,78 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     getSmartEventName(event, elementOrWidth = null) {
-        return DynamicCalendarLoader.formatEventNickname(event, elementOrWidth);
+        // Get the nickname/shortname
+        const nickname = event.shortName || event.nickname || '';
+        const fullName = event.name || '';
+        
+        // If no nickname, return the full name
+        if (!nickname) return fullName;
+        
+        // Create unhyphenated version
+        const unhyphenatedNickname = nickname.replace(/-/g, '');
+        
+        // Determine available width
+        let maxWidthPx = null;
+        if (elementOrWidth) {
+            if (typeof elementOrWidth === 'number') {
+                maxWidthPx = elementOrWidth;
+            } else if (typeof elementOrWidth === 'string') {
+                const el = document.querySelector(elementOrWidth);
+                if (el) maxWidthPx = el.offsetWidth || el.getBoundingClientRect().width;
+            } else if (elementOrWidth instanceof Element) {
+                maxWidthPx = elementOrWidth.offsetWidth || elementOrWidth.getBoundingClientRect().width;
+            }
+        }
+        
+        // If no width info, use window width
+        if (!maxWidthPx && typeof window !== 'undefined') {
+            maxWidthPx = window.innerWidth <= 768 ? 120 : 250;
+        }
+        
+        // Estimate characters that fit (rough estimate: ~8-10px per character)
+        const charsPerLine = Math.floor((maxWidthPx || 120) / 8);
+        
+        // Determine if we're on mobile based on width
+        const isMobile = maxWidthPx <= 150 || (typeof window !== 'undefined' && window.innerWidth <= 768);
+        
+        // Smart hyphenation logic based on the test page description
+        if (isMobile) {
+            // Mobile: aggressive hyphenation for limited space
+            if (fullName.length > 10) {
+                // Names >10 chars: use unhyphenated if ≤5 chars, otherwise hyphenated
+                if (unhyphenatedNickname.length <= 5) {
+                    return unhyphenatedNickname;
+                } else {
+                    return nickname; // Keep hyphenated
+                }
+            } else if (fullName.length > 6) {
+                // Names >6 chars: use unhyphenated if ≤6 chars, otherwise hyphenated
+                if (unhyphenatedNickname.length <= 6) {
+                    return unhyphenatedNickname;
+                } else {
+                    return nickname; // Keep hyphenated
+                }
+            }
+        } else {
+            // Desktop: conservative hyphenation with more space
+            if (fullName.length > 10) {
+                // Names >10 chars: use unhyphenated if ≤10 chars, otherwise hyphenated
+                if (unhyphenatedNickname.length <= 10) {
+                    return unhyphenatedNickname;
+                } else {
+                    return nickname; // Keep hyphenated
+                }
+            }
+        }
+        
+        // For shorter names or if unhyphenated fits, use unhyphenated
+        if (unhyphenatedNickname.length <= charsPerLine) {
+            return unhyphenatedNickname;
+        }
+        
+        // Otherwise keep the hyphenated version
+        return nickname;
     }
-
-
 
     // Format time for mobile display with simplified format (4a-5p)
     formatTimeForMobile(timeString) {
