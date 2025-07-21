@@ -49,11 +49,11 @@
     --color-success-dark: #059669;
     
     /* Solid Color Alternatives for Gradients */
-    --solid-primary: var(--primary-color);
-    --solid-secondary: var(--secondary-color);
-    --solid-success: var(--success-color);
-    --solid-warning: var(--background-light);
-    --solid-light: var(--background-light);
+    --solid-primary: var(--accent-color);
+    --solid-secondary: var(--color-danger-dark);
+    --solid-success: var(--primary-color);
+    --solid-warning: var(--background-primary);
+    --solid-light: var(--background-primary);
     --solid-error: var(--background-light);
     
     /* Gradients */
@@ -66,12 +66,12 @@
     --gradient-error: linear-gradient(135deg, var(--background-light) 0%, var(--background-light) 100%);
     
     /* Shadows */
-    --shadow-light: rgba(0, 0, 0, 0.1);
-    --shadow-medium: rgba(0, 0, 0, 0.15);
-    --shadow-heavy: rgba(0, 0, 0, 0.25);
-    --shadow-primary: rgba(102, 126, 234, 0.3);
-    --shadow-success: rgba(78, 205, 196, 0.3);
-    --shadow-error: rgba(220, 38, 38, 0.3);
+    --shadow-light: none;
+    --shadow-medium: none;
+    --shadow-heavy: none;
+    --shadow-primary: none;
+    --shadow-success: none;
+    --shadow-error: none;
 }
 
 /* Reset and Base Styles */
