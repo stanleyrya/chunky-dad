@@ -450,72 +450,7 @@ class DynamicCalendarLoader extends CalendarCore {
         return shortName;
     }
 
-    /**
-     * Formats a nickname/shortname for calendar display.
-     * - If elementOrWidth is a DOM element or selector, measures its width for maxWidthPx.
-     * - Otherwise, uses the provided maxWidthPx or fallback logic.
-     * @param {Object} event - The event object with shortName, name, or bar.
-     * @param {number|Element|string} [elementOrWidth] - DOM element, selector, or width in px.
-     * @returns {string} - Formatted nickname for display (max 3 lines).
-     */
-    static formatEventNickname(event, elementOrWidth = null) {
-        let maxWidthPx = null;
-        if (elementOrWidth) {
-            if (typeof elementOrWidth === 'number') {
-                maxWidthPx = elementOrWidth;
-            } else if (typeof elementOrWidth === 'string') {
-                const el = document.querySelector(elementOrWidth);
-                if (el) maxWidthPx = el.offsetWidth || el.getBoundingClientRect().width;
-            } else if (elementOrWidth instanceof Element) {
-                maxWidthPx = elementOrWidth.offsetWidth || elementOrWidth.getBoundingClientRect().width;
-            }
-        }
-        let base = event.shortName || event.name || event.bar || '';
-        if (!base) return '';
-        base = base.replace(/\\-/g, '-');
-        const forcedBreak = '/-';
-        const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (typeof window !== 'undefined' && window.innerWidth <= 400 ? 8 : 14);
-        let parts = base.split(forcedBreak);
-        let lines = [];
-        for (let part of parts) {
-            let hyphenated = part.split('-');
-            let currentLine = '';
-            for (let i = 0; i < hyphenated.length; i++) {
-                let word = hyphenated[i];
-                if ((currentLine + (currentLine ? '-' : '') + word).length > maxCharsPerLine) {
-                    if (currentLine) {
-                        lines.push(currentLine + '-');
-                    }
-                    currentLine = word;
-                    if (lines.length === 3) break;
-                } else {
-                    currentLine += (currentLine ? '-' : '') + word;
-                }
-            }
-            if (currentLine && lines.length < 3) lines.push(currentLine);
-            if (lines.length >= 3) break;
-        }
-        if (lines.length < 3 && lines.join('').length < base.replace(/\/-/g, '').length) {
-            let fallback = base.split(' ');
-            let currentLine = '';
-            for (let i = 0; i < fallback.length; i++) {
-                let word = fallback[i];
-                if ((currentLine + (currentLine ? ' ' : '') + word).length > maxCharsPerLine) {
-                    if (currentLine) lines.push(currentLine);
-                    currentLine = word;
-                    if (lines.length === 3) break;
-                } else {
-                    currentLine += (currentLine ? ' ' : '') + word;
-                }
-            }
-            if (currentLine && lines.length < 3) lines.push(currentLine);
-        }
-        if (lines.length > 3) {
-            lines = lines.slice(0, 3);
-            lines[2] = lines[2].replace(/\s+$/, '') + '...';
-        }
-        return lines.join('\n');
-    }
+
 
     getSmartEventName(event, elementOrWidth = null) {
         // Get the nickname/shortname
