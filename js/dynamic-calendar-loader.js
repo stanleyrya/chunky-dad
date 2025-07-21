@@ -450,15 +450,20 @@ class DynamicCalendarLoader extends CalendarCore {
         return shortName;
     }
 
-    /**
-     * Formats a nickname/shortname for calendar display.
-     * - If elementOrWidth is a DOM element or selector, measures its width for maxWidthPx.
-     * - Otherwise, uses the provided maxWidthPx or fallback logic.
-     * @param {Object} event - The event object with shortName, name, or bar.
-     * @param {number|Element|string} [elementOrWidth] - DOM element, selector, or width in px.
-     * @returns {string} - Formatted nickname for display (max 3 lines).
-     */
-    static formatEventNickname(event, elementOrWidth = null) {
+
+
+    getSmartEventName(event, elementOrWidth = null) {
+        // Get the nickname/shortname
+        const nickname = event.shortName || event.nickname || '';
+        const fullName = event.name || '';
+        
+        // If no nickname, return the full name
+        if (!nickname) return fullName;
+        
+        // Create unhyphenated version
+        const unhyphenatedNickname = nickname.replace(/-/g, '');
+        
+        // Determine available width
         let maxWidthPx = null;
         if (elementOrWidth) {
             if (typeof elementOrWidth === 'number') {
@@ -470,58 +475,56 @@ class DynamicCalendarLoader extends CalendarCore {
                 maxWidthPx = elementOrWidth.offsetWidth || elementOrWidth.getBoundingClientRect().width;
             }
         }
-        let base = event.shortName || event.name || event.bar || '';
-        if (!base) return '';
-        base = base.replace(/\\-/g, '-');
-        const forcedBreak = '/-';
-        const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (typeof window !== 'undefined' && window.innerWidth <= 400 ? 8 : 14);
-        let parts = base.split(forcedBreak);
-        let lines = [];
-        for (let part of parts) {
-            let hyphenated = part.split('-');
-            let currentLine = '';
-            for (let i = 0; i < hyphenated.length; i++) {
-                let word = hyphenated[i];
-                if ((currentLine + (currentLine ? '-' : '') + word).length > maxCharsPerLine) {
-                    if (currentLine) {
-                        lines.push(currentLine + '-');
-                    }
-                    currentLine = word;
-                    if (lines.length === 3) break;
+        
+        // If no width info, use window width
+        if (!maxWidthPx && typeof window !== 'undefined') {
+            maxWidthPx = window.innerWidth <= 768 ? 120 : 250;
+        }
+        
+        // Estimate characters that fit (rough estimate: ~8-10px per character)
+        const charsPerLine = Math.floor((maxWidthPx || 120) / 8);
+        
+        // Determine if we're on mobile based on width
+        const isMobile = maxWidthPx <= 150 || (typeof window !== 'undefined' && window.innerWidth <= 768);
+        
+        // Smart hyphenation logic based on the test page description
+        if (isMobile) {
+            // Mobile: aggressive hyphenation for limited space
+            if (fullName.length > 10) {
+                // Names >10 chars: use unhyphenated if ≤5 chars, otherwise hyphenated
+                if (unhyphenatedNickname.length <= 5) {
+                    return unhyphenatedNickname;
                 } else {
-                    currentLine += (currentLine ? '-' : '') + word;
+                    return nickname; // Keep hyphenated
+                }
+            } else if (fullName.length > 6) {
+                // Names >6 chars: use unhyphenated if ≤6 chars, otherwise hyphenated
+                if (unhyphenatedNickname.length <= 6) {
+                    return unhyphenatedNickname;
+                } else {
+                    return nickname; // Keep hyphenated
                 }
             }
-            if (currentLine && lines.length < 3) lines.push(currentLine);
-            if (lines.length >= 3) break;
-        }
-        if (lines.length < 3 && lines.join('').length < base.replace(/\/-/g, '').length) {
-            let fallback = base.split(' ');
-            let currentLine = '';
-            for (let i = 0; i < fallback.length; i++) {
-                let word = fallback[i];
-                if ((currentLine + (currentLine ? ' ' : '') + word).length > maxCharsPerLine) {
-                    if (currentLine) lines.push(currentLine);
-                    currentLine = word;
-                    if (lines.length === 3) break;
+        } else {
+            // Desktop: conservative hyphenation with more space
+            if (fullName.length > 10) {
+                // Names >10 chars: use unhyphenated if ≤10 chars, otherwise hyphenated
+                if (unhyphenatedNickname.length <= 10) {
+                    return unhyphenatedNickname;
                 } else {
-                    currentLine += (currentLine ? ' ' : '') + word;
+                    return nickname; // Keep hyphenated
                 }
             }
-            if (currentLine && lines.length < 3) lines.push(currentLine);
         }
-        if (lines.length > 3) {
-            lines = lines.slice(0, 3);
-            lines[2] = lines[2].replace(/\s+$/, '') + '...';
+        
+        // For shorter names or if unhyphenated fits, use unhyphenated
+        if (unhyphenatedNickname.length <= charsPerLine) {
+            return unhyphenatedNickname;
         }
-        return lines.join('\n');
+        
+        // Otherwise keep the hyphenated version
+        return nickname;
     }
-
-    getSmartEventName(event, elementOrWidth = null) {
-        return DynamicCalendarLoader.formatEventNickname(event, elementOrWidth);
-    }
-
-
 
     // Format time for mobile display with simplified format (4a-5p)
     formatTimeForMobile(timeString) {
@@ -1049,7 +1052,10 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
                     // Smart hyphenation for mobile display
-                    const smartName = this.getSmartEventName(event);
+                    // Pass estimated width based on view type
+                    const isMobile = window.innerWidth <= 768;
+                    const estimatedWidth = isMobile ? 120 : 200; // Approximate event container width
+                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
@@ -1154,7 +1160,10 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    const smartName = this.getSmartEventName(event);
+                    // Month view has smaller event containers
+                    const isMobile = window.innerWidth <= 768;
+                    const estimatedWidth = isMobile ? 100 : 150; // Smaller containers in month view
+                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `

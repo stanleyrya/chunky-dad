@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Hyphenation Test - Chunky Dad</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Test-specific styles only - using styles.css for common elements */
+        body {
+            padding-top: 80px; /* Account for fixed header */
+        }
+        
         .test-container {
             max-width: 800px;
             margin: 2rem auto;
@@ -18,21 +23,37 @@
             padding: 1.5rem;
             border: 1px solid var(--border-light);
             border-radius: 8px;
+            background: var(--background-primary);
         }
         
         .test-event {
             background: var(--background-light);
-            padding: 1rem;
+            padding: 1.5rem;
             margin: 1rem 0;
-            border-radius: 6px;
+            border-radius: 8px;
             border: 1px solid var(--border-lighter);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
         
         .width-simulator {
             border: 2px dashed var(--primary-color);
-            padding: 0.5rem;
-            margin: 0.5rem 0;
+            padding: 1rem;
+            margin: 1rem 0;
             overflow: hidden;
+            background: white;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        
+        .width-simulator::before {
+            content: attr(data-width);
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 0.75rem;
+            color: var(--primary-color);
+            opacity: 0.7;
         }
         
         .width-100 { width: 100px; }
@@ -40,32 +61,146 @@
         .width-200 { width: 200px; }
         .width-250 { width: 250px; }
         
+        /* Override event-name-mobile to ensure it's visible in test */
+        .width-simulator .event-name {
+            display: none !important;
+        }
+        
+        .width-simulator .event-name-mobile {
+            display: block !important;
+            font-size: 1.1rem;
+        }
+        
         .demo-controls {
             margin: 1rem 0;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
         
         .demo-controls button {
-            margin: 0.25rem;
             padding: 0.5rem 1rem;
             border: 1px solid var(--primary-color);
             background: var(--background-primary);
             color: var(--primary-color);
             border-radius: 4px;
             cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
         
         .demo-controls button:hover {
             background: var(--primary-color);
             color: white;
+            transform: translateY(-1px);
         }
         
         .demo-controls button.active {
             background: var(--primary-color);
             color: white;
         }
+        
+        .playground-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .playground-inputs label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .playground-inputs input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        #playground-output {
+            background: white;
+            border: 2px solid var(--border-light);
+            padding: 1.5rem;
+            min-height: 3rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        
+        #playground-output.changed {
+            animation: highlight 0.5s ease;
+        }
+        
+        @keyframes highlight {
+            0% { background: var(--primary-light); }
+            100% { background: white; }
+        }
+        
+        .result-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--background-light);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Test results table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 2px solid var(--border-light);
+            background: var(--background-light);
+        }
+        
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-lighter);
+        }
+        
+        tr:nth-child(even) {
+            background: var(--background-light);
+        }
     </style>
 </head>
 <body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html">🐻 chunky.dad</a></h1>
+                </div>
+                
+                <ul class="nav-menu">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../index.html#cities">Cities</a></li>
+                    <li><a href="../index.html#events">Events</a></li>
+                    <li><a href="../index.html#businesses">Businesses</a></li>
+                    <li><a href="../index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
     <div class="test-container">
         <h1>Smart Nickname Hyphenation Test</h1>
         <p>This demonstrates automatic hyphenation handling using existing nickname fields.</p>
@@ -130,6 +265,13 @@
         </div>
         
         <div class="test-section">
+            <h2>Comprehensive Test Suite</h2>
+            <p>Testing various nickname lengths and hyphenation scenarios:</p>
+            
+            <div id="test-suite-results"></div>
+        </div>
+        
+        <div class="test-section">
             <h2>How It Works</h2>
             <ol>
                 <li><strong>Use existing nickname field:</strong> Include hyphens in your <code>nickname</code> or <code>shortName</code> field</li>
@@ -184,12 +326,20 @@ Website: https://example.com</code></pre>
             }
         };
 
-
+        // Create an instance of DynamicCalendarLoader to use its methods
+        let calendarLoader;
+        
+        // Initialize the calendar loader when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            calendarLoader = new DynamicCalendarLoader();
+        });
 
         // Smart nickname hyphenation logic (matches the main system)
-        // Replaced with call to main system's function
         function getSmartEventName(event, elementOrWidth = null) {
-            return window.DynamicCalendarLoader.formatEventNickname(event, elementOrWidth);
+            if (!calendarLoader) {
+                calendarLoader = new DynamicCalendarLoader();
+            }
+            return calendarLoader.getSmartEventName(event, elementOrWidth);
         }
 
         // Playground for dynamic testing
@@ -199,47 +349,81 @@ Website: https://example.com</code></pre>
             const bar = document.getElementById('playground-bar').value;
             const width = parseInt(document.getElementById('playground-width').value, 10) || 200;
             const event = { name, shortName, bar };
-            // Use the width of the output pre element if available
+            
+            // Update the output with animation
+            const output = document.getElementById('playground-output');
+            output.classList.remove('changed');
+            
             setTimeout(() => {
-                const output = document.getElementById('playground-output');
-                const measuredWidth = output.offsetWidth || output.getBoundingClientRect().width || width;
-                const smartName = getSmartEventName(event, measuredWidth);
+                const smartName = getSmartEventName(event, width);
                 output.textContent = smartName;
-            }, 0);
+                output.classList.add('changed');
+                
+                // Update result info
+                const resultInfo = document.getElementById('playground-result-info');
+                const unhyphenated = shortName.replace(/-/g, '');
+                let resultType = 'Using full name';
+                if (smartName === shortName && shortName.includes('-')) {
+                    resultType = 'Using hyphenated nickname';
+                } else if (smartName === unhyphenated) {
+                    resultType = 'Using unhyphenated nickname';
+                }
+                
+                resultInfo.innerHTML = `
+                    <strong>Result:</strong> ${resultType}<br>
+                    <strong>Width:</strong> ${width}px<br>
+                    <strong>Characters:</strong> ${smartName.length}
+                `;
+            }, 10);
         }
 
         function testWidth(eventKey, width) {
             const event = testEvents[eventKey];
             const demo = document.getElementById(`${eventKey}-demo`);
             const mobileElement = document.getElementById(`${eventKey}-mobile`);
-            // Update container width
+            
+            // Update container width and data attribute
             if (width === 'auto') {
                 demo.className = 'width-simulator width-250';
                 demo.style.width = '';
+                demo.setAttribute('data-width', 'Auto (250px)');
             } else {
                 demo.className = 'width-simulator';
                 demo.style.width = width + 'px';
+                demo.setAttribute('data-width', width + 'px');
             }
+            
             // Update button states
             const buttons = demo.parentElement.querySelectorAll('.width-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            event.target?.classList.add('active');
-            // Calculate and display smart name using the actual width of the .event-name-mobile div
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                // Check if this button matches the selected width
+                if (width === 'auto' && btn.textContent === 'Auto') {
+                    btn.classList.add('active');
+                } else if (width !== 'auto' && btn.textContent === width + 'px') {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Calculate and display smart name using the actual width
             setTimeout(() => {
-                const measuredWidth = mobileElement.offsetWidth || mobileElement.getBoundingClientRect().width || 120;
-                const smartName = getSmartEventName(event, measuredWidth);
+                const containerWidth = demo.offsetWidth || parseInt(demo.style.width) || 250;
+                const smartName = getSmartEventName(event, containerWidth);
                 mobileElement.textContent = smartName;
+                
                 // Add visual indicator
                 const nickname = event.shortName;
                 const unhyphenatedNickname = nickname ? nickname.replace(/-/g, '') : '';
                 let indicator = '';
                 if (smartName === nickname && nickname.includes('-')) {
-                    indicator = ' ✂️';
+                    indicator = ' ✂️'; // Using hyphenated version
                 } else if (smartName === unhyphenatedNickname) {
-                    indicator = ' 🔗';
+                    indicator = ' 🔗'; // Using unhyphenated version
+                } else if (smartName === event.name) {
+                    indicator = ' 📝'; // Using full name
                 }
                 mobileElement.textContent = smartName + indicator;
-            }, 0);
+            }, 10);
         }
 
         // Initialize demos
@@ -252,31 +436,105 @@ Website: https://example.com</code></pre>
             ['playground-name','playground-short','playground-bar','playground-width'].forEach(id => {
                 document.getElementById(id).addEventListener('input', updatePlayground);
             });
+            
+            // Run comprehensive test suite
+            runTestSuite();
         });
+        
+        // Comprehensive test suite
+        function runTestSuite() {
+            const testCases = [
+                // Short names
+                { name: 'Bear Night', shortName: 'B-N', expectedMobile: 'BN', expectedDesktop: 'BN' },
+                { name: 'Woof Weekend', shortName: 'W-W', expectedMobile: 'WW', expectedDesktop: 'WW' },
+                
+                // Medium names
+                { name: 'Leather Party', shortName: 'Leath-er', expectedMobile: 'Leath-er', expectedDesktop: 'Leather' },
+                { name: 'Bear Weekend', shortName: 'Bear-Week', expectedMobile: 'Bear-Week', expectedDesktop: 'BearWeek' },
+                
+                // Long names
+                { name: 'International Bear Weekend', shortName: 'Inter-Bear-Week', expectedMobile: 'Inter-Bear-Week', expectedDesktop: 'Inter-Bear-Week' },
+                { name: 'Rockstrap Anniversary Party', shortName: 'Rock-strap-Party', expectedMobile: 'Rock-strap-Party', expectedDesktop: 'Rock-strap-Party' },
+                
+                // Edge cases
+                { name: 'Test', shortName: 'T-e-s-t', expectedMobile: 'Test', expectedDesktop: 'Test' },
+                { name: 'SuperLongEventNameThatGoesOnForever', shortName: 'Super-Long', expectedMobile: 'Super-Long', expectedDesktop: 'SuperLong' }
+            ];
+            
+            const resultsContainer = document.getElementById('test-suite-results');
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Event Name</th>
+                            <th>Nickname</th>
+                            <th>Mobile (120px)</th>
+                            <th>Desktop (250px)</th>
+                            <th style="text-align: center;">Pass</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            testCases.forEach((testCase, index) => {
+                const mobileResult = getSmartEventName(testCase, 120);
+                const desktopResult = getSmartEventName(testCase, 250);
+                const mobilePass = mobileResult === testCase.expectedMobile;
+                const desktopPass = desktopResult === testCase.expectedDesktop;
+                const allPass = mobilePass && desktopPass;
+                
+                html += `
+                    <tr>
+                        <td>${testCase.name}</td>
+                        <td style="font-family: monospace;">${testCase.shortName}</td>
+                        <td style="font-family: monospace;">
+                            ${mobileResult}
+                            ${!mobilePass ? `<br><small style="color: red;">Expected: ${testCase.expectedMobile}</small>` : ''}
+                        </td>
+                        <td style="font-family: monospace;">
+                            ${desktopResult}
+                            ${!desktopPass ? `<br><small style="color: red;">Expected: ${testCase.expectedDesktop}</small>` : ''}
+                        </td>
+                        <td style="text-align: center;">
+                            ${allPass ? '✅' : '❌'}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            resultsContainer.innerHTML = html;
+        }
     </script>
     <div class="test-section">
         <h2>Playground: Try Your Own</h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+        <div class="playground-inputs">
             <div>
-                <label>Event Name<br><input id="playground-name" type="text" value="Rock-Strap Party Hardy" style="width:180px"></label>
+                <label>Event Name</label>
+                <input id="playground-name" type="text" value="Rock-Strap Party Hardy">
             </div>
             <div>
-                <label>Nickname/Short<br><input id="playground-short" type="text" value="Rock-Strap" style="width:120px"></label>
+                <label>Nickname/Short</label>
+                <input id="playground-short" type="text" value="Rock-Strap">
             </div>
             <div>
-                <label>Bar<br><input id="playground-bar" type="text" value="Bear Bar" style="width:120px"></label>
+                <label>Bar</label>
+                <input id="playground-bar" type="text" value="Bear Bar">
             </div>
             <div>
-                <label>Width (px)<br><input id="playground-width" type="number" value="120" min="40" max="400" style="width:70px"></label>
-            </div>
-            <div>
-                <button onclick="updatePlayground()">Test</button>
+                <label>Width (px)</label>
+                <input id="playground-width" type="number" value="120" min="40" max="400">
             </div>
         </div>
-        <div style="margin-top:1rem;">
-            <strong>Result (multi-line):</strong>
-            <pre id="playground-output" style="background:#f8f8f8; border:1px solid #ccc; padding:1em; min-height:2em; font-size:1.1em;"></pre>
+        <div style="margin-top:1.5rem;">
+            <strong>Result:</strong>
+            <div id="playground-output">Rock-Strap</div>
         </div>
+        <div id="playground-result-info" class="result-info"></div>
     </div>
     
     <!-- Load required JavaScript files -->
