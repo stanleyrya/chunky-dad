@@ -187,43 +187,9 @@ Website: https://example.com</code></pre>
 
 
         // Smart nickname hyphenation logic (matches the main system)
-        function getSmartEventName(event, maxWidthPx = null) {
-            let base = event.shortName || event.name || event.bar || '';
-            if (!base) return '';
-            base = base.replace(/\\-/g, '-');
-            const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (window.innerWidth <= 400 ? 8 : 14);
-            // Try unhyphenated version first (remove all hyphens)
-            let unhyphenated = base.replace(/-/g, '');
-            if (unhyphenated.length <= maxCharsPerLine * 3) {
-                let lines = [];
-                for (let i = 0; i < unhyphenated.length; i += maxCharsPerLine) {
-                    lines.push(unhyphenated.slice(i, i + maxCharsPerLine));
-                    if (lines.length === 3) break;
-                }
-                if (unhyphenated.length > maxCharsPerLine * 3) {
-                    lines[2] = lines[2].replace(/\s+$/, '') + '...';
-                }
-                return lines.join('\n');
-            }
-            // If it doesn't fit, use hyphenated version and split for lines
-            let hyphenParts = base.split('-');
-            let lines = [];
-            let currentLine = '';
-            for (let i = 0; i < hyphenParts.length; i++) {
-                let part = hyphenParts[i].trim();
-                if ((currentLine + (currentLine ? '-' : '') + part).length > maxCharsPerLine) {
-                    if (currentLine) lines.push(currentLine);
-                    currentLine = part;
-                    if (lines.length === 3) break;
-                } else {
-                    currentLine += (currentLine ? '-' : '') + part;
-                }
-            }
-            if (currentLine && lines.length < 3) lines.push(currentLine);
-            if (lines.length === 3 && hyphenParts.length > 3) {
-                lines[2] = lines[2].replace(/\s+$/, '') + '...';
-            }
-            return lines.join('\n');
+        // Replaced with call to main system's function
+        function getSmartEventName(event, elementOrWidth = null) {
+            return window.DynamicCalendarLoader.formatEventNickname(event, elementOrWidth);
         }
 
         // Playground for dynamic testing
@@ -233,44 +199,47 @@ Website: https://example.com</code></pre>
             const bar = document.getElementById('playground-bar').value;
             const width = parseInt(document.getElementById('playground-width').value, 10) || 200;
             const event = { name, shortName, bar };
-            const smartName = getSmartEventName(event, width);
-            document.getElementById('playground-output').textContent = smartName;
+            // Use the width of the output pre element if available
+            setTimeout(() => {
+                const output = document.getElementById('playground-output');
+                const measuredWidth = output.offsetWidth || output.getBoundingClientRect().width || width;
+                const smartName = getSmartEventName(event, measuredWidth);
+                output.textContent = smartName;
+            }, 0);
         }
 
         function testWidth(eventKey, width) {
             const event = testEvents[eventKey];
             const demo = document.getElementById(`${eventKey}-demo`);
             const mobileElement = document.getElementById(`${eventKey}-mobile`);
-            
             // Update container width
             if (width === 'auto') {
                 demo.className = 'width-simulator width-250';
+                demo.style.width = '';
             } else {
                 demo.className = 'width-simulator';
                 demo.style.width = width + 'px';
             }
-            
             // Update button states
             const buttons = demo.parentElement.querySelectorAll('.width-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
             event.target?.classList.add('active');
-            
-            // Calculate and display smart name
-            const smartName = getSmartEventName(event);
-            mobileElement.textContent = smartName;
-            
-            // Add visual indicator
-            const nickname = event.shortName;
-            const unhyphenatedNickname = nickname ? nickname.replace(/-/g, '') : '';
-            
-            let indicator = '';
-            if (smartName === nickname && nickname.includes('-')) {
-                indicator = ' ✂️'; // Scissors emoji to indicate hyphenation was kept
-            } else if (smartName === unhyphenatedNickname) {
-                indicator = ' 🔗'; // Link emoji to indicate hyphens were removed
-            }
-            
-            mobileElement.textContent = smartName + indicator;
+            // Calculate and display smart name using the actual width of the .event-name-mobile div
+            setTimeout(() => {
+                const measuredWidth = mobileElement.offsetWidth || mobileElement.getBoundingClientRect().width || 120;
+                const smartName = getSmartEventName(event, measuredWidth);
+                mobileElement.textContent = smartName;
+                // Add visual indicator
+                const nickname = event.shortName;
+                const unhyphenatedNickname = nickname ? nickname.replace(/-/g, '') : '';
+                let indicator = '';
+                if (smartName === nickname && nickname.includes('-')) {
+                    indicator = ' ✂️';
+                } else if (smartName === unhyphenatedNickname) {
+                    indicator = ' 🔗';
+                }
+                mobileElement.textContent = smartName + indicator;
+            }, 0);
         }
 
         // Initialize demos
