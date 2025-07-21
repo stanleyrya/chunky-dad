@@ -187,43 +187,9 @@ Website: https://example.com</code></pre>
 
 
         // Smart nickname hyphenation logic (matches the main system)
+        // Replaced with call to main system's function
         function getSmartEventName(event, maxWidthPx = null) {
-            let base = event.shortName || event.name || event.bar || '';
-            if (!base) return '';
-            base = base.replace(/\\-/g, '-');
-            const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (window.innerWidth <= 400 ? 8 : 14);
-            // Try unhyphenated version first (remove all hyphens)
-            let unhyphenated = base.replace(/-/g, '');
-            if (unhyphenated.length <= maxCharsPerLine * 3) {
-                let lines = [];
-                for (let i = 0; i < unhyphenated.length; i += maxCharsPerLine) {
-                    lines.push(unhyphenated.slice(i, i + maxCharsPerLine));
-                    if (lines.length === 3) break;
-                }
-                if (unhyphenated.length > maxCharsPerLine * 3) {
-                    lines[2] = lines[2].replace(/\s+$/, '') + '...';
-                }
-                return lines.join('\n');
-            }
-            // If it doesn't fit, use hyphenated version and split for lines
-            let hyphenParts = base.split('-');
-            let lines = [];
-            let currentLine = '';
-            for (let i = 0; i < hyphenParts.length; i++) {
-                let part = hyphenParts[i].trim();
-                if ((currentLine + (currentLine ? '-' : '') + part).length > maxCharsPerLine) {
-                    if (currentLine) lines.push(currentLine);
-                    currentLine = part;
-                    if (lines.length === 3) break;
-                } else {
-                    currentLine += (currentLine ? '-' : '') + part;
-                }
-            }
-            if (currentLine && lines.length < 3) lines.push(currentLine);
-            if (lines.length === 3 && hyphenParts.length > 3) {
-                lines[2] = lines[2].replace(/\s+$/, '') + '...';
-            }
-            return lines.join('\n');
+            return window.DynamicCalendarLoader.formatEventNickname(event, maxWidthPx);
         }
 
         // Playground for dynamic testing

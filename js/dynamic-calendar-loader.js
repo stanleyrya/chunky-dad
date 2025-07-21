@@ -450,48 +450,77 @@ class DynamicCalendarLoader extends CalendarCore {
         return shortName;
     }
 
-    // More dynamic smart nickname/short display logic
-    getSmartEventName(event, maxWidthPx = null) {
-        // (A) Start with nickname if available, else event name, else bar
+    /**
+     * Formats a nickname/shortname for calendar display.
+     * - Limits output to 3 lines.
+     * - Breaks long nicknames using '-' for optional breaks and '/-' for forced breaks.
+     * - Keeps hyphens visible at the end of the line if a break occurs.
+     * - If no breaks are specified, falls back to splitting on spaces.
+     * - Limits each line to maxCharsPerLine (calculated from width).
+     * @param {Object} event - The event object with shortName, name, or bar.
+     * @param {number} [maxWidthPx] - The width in pixels to determine max chars per line.
+     * @returns {string} - Formatted nickname for display (max 3 lines).
+     */
+    static formatEventNickname(event, maxWidthPx = null) {
         let base = event.shortName || event.name || event.bar || '';
         if (!base) return '';
         // Always convert '\-' to '-' (escaped hyphens)
         base = base.replace(/\\-/g, '-');
+        // Forced break: /-
+        const forcedBreak = '/-';
         // We'll simulate width by character count if maxWidthPx is not provided
-        const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (window.innerWidth <= 400 ? 8 : 14);
-        // Try unhyphenated version first (remove all hyphens)
-        let unhyphenated = base.replace(/-/g, '');
-        if (unhyphenated.length <= maxCharsPerLine * 3) {
-            // It fits in three lines or less, so show as one line (or split if needed)
-            let lines = [];
-            for (let i = 0; i < unhyphenated.length; i += maxCharsPerLine) {
-                lines.push(unhyphenated.slice(i, i + maxCharsPerLine));
-                if (lines.length === 3) break;
-            }
-            if (unhyphenated.length > maxCharsPerLine * 3) {
-                lines[2] = lines[2].replace(/\s+$/, '') + '...';
-            }
-            return lines.join('\n');
-        }
-        // If it doesn't fit, use hyphenated version and split for lines
-        let hyphenParts = base.split('-');
+        const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (typeof window !== 'undefined' && window.innerWidth <= 400 ? 8 : 14);
+        // 1. Forced breaks first
+        let parts = base.split(forcedBreak);
         let lines = [];
-        let currentLine = '';
-        for (let i = 0; i < hyphenParts.length; i++) {
-            let part = hyphenParts[i].trim();
-            if ((currentLine + (currentLine ? '-' : '') + part).length > maxCharsPerLine) {
-                if (currentLine) lines.push(currentLine);
-                currentLine = part;
-                if (lines.length === 3) break;
-            } else {
-                currentLine += (currentLine ? '-' : '') + part;
+        for (let part of parts) {
+            // 2. Optional breaks next (hyphens)
+            let hyphenated = part.split('-');
+            let currentLine = '';
+            for (let i = 0; i < hyphenated.length; i++) {
+                let word = hyphenated[i];
+                // If adding this word would exceed the line, break
+                if ((currentLine + (currentLine ? '-' : '') + word).length > maxCharsPerLine) {
+                    if (currentLine) {
+                        // If breaking at a hyphen, keep hyphen at end
+                        lines.push(currentLine + '-');
+                    }
+                    currentLine = word;
+                    if (lines.length === 3) break;
+                } else {
+                    currentLine += (currentLine ? '-' : '') + word;
+                }
             }
+            if (currentLine && lines.length < 3) lines.push(currentLine);
+            if (lines.length >= 3) break;
         }
-        if (currentLine && lines.length < 3) lines.push(currentLine);
-        if (lines.length === 3 && hyphenParts.length > 3) {
+        // 3. If still not enough lines, or no breaks, fall back to splitting on spaces
+        if (lines.length < 3 && lines.join('').length < base.replace(/\/-/g, '').length) {
+            let fallback = base.split(' ');
+            let currentLine = '';
+            for (let i = 0; i < fallback.length; i++) {
+                let word = fallback[i];
+                if ((currentLine + (currentLine ? ' ' : '') + word).length > maxCharsPerLine) {
+                    if (currentLine) lines.push(currentLine);
+                    currentLine = word;
+                    if (lines.length === 3) break;
+                } else {
+                    currentLine += (currentLine ? ' ' : '') + word;
+                }
+            }
+            if (currentLine && lines.length < 3) lines.push(currentLine);
+        }
+        // 4. Truncate if too long
+        if (lines.length > 3) {
+            lines = lines.slice(0, 3);
             lines[2] = lines[2].replace(/\s+$/, '') + '...';
         }
         return lines.join('\n');
+    }
+
+    // Replace getSmartEventName to use the new function
+    getSmartEventName(event, maxWidthPx = null) {
+        return DynamicCalendarLoader.formatEventNickname(event, maxWidthPx);
     }
 
 
@@ -1678,4 +1707,6 @@ function showMyLocation() {
 }
 
 // Export class for use in app.js - no auto-initialization
-window.DynamicCalendarLoader = DynamicCalendarLoader;
+if (typeof window !== 'undefined') {
+    window.DynamicCalendarLoader = DynamicCalendarLoader;
+}
