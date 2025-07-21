@@ -457,55 +457,39 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!base) return '';
         // Always convert '\-' to '-' (escaped hyphens)
         base = base.replace(/\\-/g, '-');
-        // (B) If a word will fit horizontally, remove any '-' and show it all
-        // (C) If a word won't fit, keep the '-' if they were added in
-        // Try to show three lines max, splitting on spaces and hyphens
         // We'll simulate width by character count if maxWidthPx is not provided
-        // (real width calc would require DOM, so we use heuristics)
         const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (window.innerWidth <= 400 ? 8 : 14);
-        // Split on spaces and hyphens
-        let parts = base.split(/[-\s]+/);
-        // Remove empty
-        parts = parts.filter(Boolean);
-        // Try to fit as many as possible in three lines
+        // Try unhyphenated version first (remove all hyphens)
+        let unhyphenated = base.replace(/-/g, '');
+        if (unhyphenated.length <= maxCharsPerLine * 3) {
+            // It fits in three lines or less, so show as one line (or split if needed)
+            let lines = [];
+            for (let i = 0; i < unhyphenated.length; i += maxCharsPerLine) {
+                lines.push(unhyphenated.slice(i, i + maxCharsPerLine));
+                if (lines.length === 3) break;
+            }
+            if (unhyphenated.length > maxCharsPerLine * 3) {
+                lines[2] = lines[2].replace(/\s+$/, '') + '...';
+            }
+            return lines.join('\n');
+        }
+        // If it doesn't fit, use hyphenated version and split for lines
+        let hyphenParts = base.split('-');
         let lines = [];
         let currentLine = '';
-        for (let i = 0; i < parts.length; i++) {
-            let part = parts[i];
-            // If adding this part would overflow the line, start a new line
-            if ((currentLine + (currentLine ? ' ' : '') + part).length > maxCharsPerLine) {
+        for (let i = 0; i < hyphenParts.length; i++) {
+            let part = hyphenParts[i].trim();
+            if ((currentLine + (currentLine ? '-' : '') + part).length > maxCharsPerLine) {
                 if (currentLine) lines.push(currentLine);
                 currentLine = part;
                 if (lines.length === 3) break;
             } else {
-                currentLine += (currentLine ? ' ' : '') + part;
+                currentLine += (currentLine ? '-' : '') + part;
             }
         }
         if (currentLine && lines.length < 3) lines.push(currentLine);
-        // If we couldn't fit all, add ellipsis
-        if (lines.length === 3 && parts.length > 3) {
+        if (lines.length === 3 && hyphenParts.length > 3) {
             lines[2] = lines[2].replace(/\s+$/, '') + '...';
-        }
-        // If the original had hyphens and we had to break, keep hyphens in the output
-        if (base.includes('-') && lines.length > 1) {
-            // Re-split with hyphens for more faithful output
-            let hyphenParts = base.split('-');
-            lines = [];
-            currentLine = '';
-            for (let i = 0; i < hyphenParts.length; i++) {
-                let part = hyphenParts[i].trim();
-                if ((currentLine + (currentLine ? '-' : '') + part).length > maxCharsPerLine) {
-                    if (currentLine) lines.push(currentLine);
-                    currentLine = part;
-                    if (lines.length === 3) break;
-                } else {
-                    currentLine += (currentLine ? '-' : '') + part;
-                }
-            }
-            if (currentLine && lines.length < 3) lines.push(currentLine);
-            if (lines.length === 3 && hyphenParts.length > 3) {
-                lines[2] = lines[2].replace(/\s+$/, '') + '...';
-            }
         }
         return lines.join('\n');
     }
