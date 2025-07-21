@@ -450,80 +450,64 @@ class DynamicCalendarLoader extends CalendarCore {
         return shortName;
     }
 
-    // Smart nickname system - automatically handles hyphenated nicknames intelligently
-    getSmartEventName(event) {
-        const originalName = event.name;
-        const nickname = event.shortName;
-        
-        // If no nickname provided, fall back to original logic
-        if (!nickname) {
-            return originalName.length > 20 ? originalName.substring(0, 17) + '...' : originalName;
+    // More dynamic smart nickname/short display logic
+    getSmartEventName(event, maxWidthPx = null) {
+        // (A) Start with nickname if available, else event name, else bar
+        let base = event.shortName || event.name || event.bar || '';
+        if (!base) return '';
+        // Always convert '\-' to '-' (escaped hyphens)
+        base = base.replace(/\\-/g, '-');
+        // (B) If a word will fit horizontally, remove any '-' and show it all
+        // (C) If a word won't fit, keep the '-' if they were added in
+        // Try to show three lines max, splitting on spaces and hyphens
+        // We'll simulate width by character count if maxWidthPx is not provided
+        // (real width calc would require DOM, so we use heuristics)
+        const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (window.innerWidth <= 400 ? 8 : 14);
+        // Split on spaces and hyphens
+        let parts = base.split(/[-\s]+/);
+        // Remove empty
+        parts = parts.filter(Boolean);
+        // Try to fit as many as possible in three lines
+        let lines = [];
+        let currentLine = '';
+        for (let i = 0; i < parts.length; i++) {
+            let part = parts[i];
+            // If adding this part would overflow the line, start a new line
+            if ((currentLine + (currentLine ? ' ' : '') + part).length > maxCharsPerLine) {
+                if (currentLine) lines.push(currentLine);
+                currentLine = part;
+                if (lines.length === 3) break;
+            } else {
+                currentLine += (currentLine ? ' ' : '') + part;
+            }
         }
-        
-        // Check if nickname contains hyphens (potential for smart hyphenation)
-        const hasHyphens = nickname.includes('-');
-        
-        if (hasHyphens) {
-            logger.debug('CALENDAR', 'Processing hyphenated nickname', {
-                originalName,
-                nickname,
-                hasHyphens
-            });
-            
-            // Create unhyphenated version by removing hyphens
-            const unhyphenatedNickname = nickname.replace(/-/g, '');
-            
-            // Mobile heuristic: be very aggressive about hyphenation due to limited space
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                if (originalName.length > 10) {
-                    // For long names, only use unhyphenated if it's very short
-                    const result = unhyphenatedNickname.length <= 5 ? unhyphenatedNickname : nickname;
-                    logger.debug('CALENDAR', 'Mobile hyphenation decision (long name)', {
-                        originalName,
-                        nickname,
-                        unhyphenatedNickname,
-                        result,
-                        reason: unhyphenatedNickname.length <= 5 ? 'unhyphenated fits' : 'using hyphenated'
-                    });
-                    return result;
-                } else if (originalName.length > 6) {
-                    // For moderately long names, use unhyphenated if it's very short
-                    const result = unhyphenatedNickname.length <= 6 ? unhyphenatedNickname : nickname;
-                    logger.debug('CALENDAR', 'Mobile hyphenation decision (moderate name)', {
-                        originalName,
-                        nickname,
-                        unhyphenatedNickname,
-                        result,
-                        reason: unhyphenatedNickname.length <= 6 ? 'unhyphenated fits' : 'using hyphenated'
-                    });
-                    return result;
+        if (currentLine && lines.length < 3) lines.push(currentLine);
+        // If we couldn't fit all, add ellipsis
+        if (lines.length === 3 && parts.length > 3) {
+            lines[2] = lines[2].replace(/\s+$/, '') + '...';
+        }
+        // If the original had hyphens and we had to break, keep hyphens in the output
+        if (base.includes('-') && lines.length > 1) {
+            // Re-split with hyphens for more faithful output
+            let hyphenParts = base.split('-');
+            lines = [];
+            currentLine = '';
+            for (let i = 0; i < hyphenParts.length; i++) {
+                let part = hyphenParts[i].trim();
+                if ((currentLine + (currentLine ? '-' : '') + part).length > maxCharsPerLine) {
+                    if (currentLine) lines.push(currentLine);
+                    currentLine = part;
+                    if (lines.length === 3) break;
+                } else {
+                    currentLine += (currentLine ? '-' : '') + part;
                 }
             }
-            
-            // Desktop heuristic: be more conservative but still use hyphenation for long names
-            if (originalName.length > 10) {
-                const result = unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
-                logger.debug('CALENDAR', 'Desktop hyphenation decision', {
-                    originalName,
-                    nickname,
-                    unhyphenatedNickname,
-                    result,
-                    reason: unhyphenatedNickname.length <= 10 ? 'unhyphenated fits' : 'using hyphenated'
-                });
-                return result;
+            if (currentLine && lines.length < 3) lines.push(currentLine);
+            if (lines.length === 3 && hyphenParts.length > 3) {
+                lines[2] = lines[2].replace(/\s+$/, '') + '...';
             }
-            
-            logger.debug('CALENDAR', 'Using original name (no hyphenation needed)', {
-                originalName,
-                nickname,
-                reason: 'original name is short enough'
-            });
-            return originalName;
-        } else {
-            // Regular nickname without hyphens - use existing logic
-            return nickname;
         }
+        return lines.join('\n');
     }
 
 

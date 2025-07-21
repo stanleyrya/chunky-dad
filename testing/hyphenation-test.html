@@ -187,43 +187,74 @@ Website: https://example.com</code></pre>
 
 
         // Smart nickname hyphenation logic (matches the main system)
-        function getSmartEventName(event) {
-            const originalName = event.name;
-            const nickname = event.shortName;
-            
-            if (!nickname) {
-                return originalName.length > 20 ? originalName.substring(0, 17) + '...' : originalName;
+        function getSmartEventName(event, maxWidthPx = null) {
+            // (A) Start with nickname if available, else event name, else bar
+            let base = event.shortName || event.name || event.bar || '';
+            if (!base) return '';
+            // Always convert '\-' to '-' (escaped hyphens)
+            base = base.replace(/\\-/g, '-');
+            // (B) If a word will fit horizontally, remove any '-' and show it all
+            // (C) If a word won't fit, keep the '-' if they were added in
+            // Try to show three lines max, splitting on spaces and hyphens
+            // We'll simulate width by character count if maxWidthPx is not provided
+            // (real width calc would require DOM, so we use heuristics)
+            const maxCharsPerLine = maxWidthPx ? Math.floor(maxWidthPx / 10) : (window.innerWidth <= 400 ? 8 : 14);
+            // Split on spaces and hyphens
+            let parts = base.split(/[-\s]+/);
+            // Remove empty
+            parts = parts.filter(Boolean);
+            // Try to fit as many as possible in three lines
+            let lines = [];
+            let currentLine = '';
+            for (let i = 0; i < parts.length; i++) {
+                let part = parts[i];
+                // If adding this part would overflow the line, start a new line
+                if ((currentLine + (currentLine ? ' ' : '') + part).length > maxCharsPerLine) {
+                    if (currentLine) lines.push(currentLine);
+                    currentLine = part;
+                    if (lines.length === 3) break;
+                } else {
+                    currentLine += (currentLine ? ' ' : '') + part;
+                }
             }
-            
-            // Check if nickname contains hyphens
-            const hasHyphens = nickname.includes('-');
-            
-            if (hasHyphens) {
-                // Create unhyphenated version by removing hyphens
-                const unhyphenatedNickname = nickname.replace(/-/g, '');
-                
-                // Mobile heuristic: be very aggressive about hyphenation due to limited space
-                const isMobile = window.innerWidth <= 768;
-                if (isMobile) {
-                    if (originalName.length > 10) {
-                        // For long names, only use unhyphenated if it's very short
-                        return unhyphenatedNickname.length <= 5 ? unhyphenatedNickname : nickname;
-                    } else if (originalName.length > 6) {
-                        // For moderately long names, use unhyphenated if it's very short
-                        return unhyphenatedNickname.length <= 6 ? unhyphenatedNickname : nickname;
+            if (currentLine && lines.length < 3) lines.push(currentLine);
+            // If we couldn't fit all, add ellipsis
+            if (lines.length === 3 && parts.length > 3) {
+                lines[2] = lines[2].replace(/\s+$/, '') + '...';
+            }
+            // If the original had hyphens and we had to break, keep hyphens in the output
+            if (base.includes('-') && lines.length > 1) {
+                // Re-split with hyphens for more faithful output
+                let hyphenParts = base.split('-');
+                lines = [];
+                currentLine = '';
+                for (let i = 0; i < hyphenParts.length; i++) {
+                    let part = hyphenParts[i].trim();
+                    if ((currentLine + (currentLine ? '-' : '') + part).length > maxCharsPerLine) {
+                        if (currentLine) lines.push(currentLine);
+                        currentLine = part;
+                        if (lines.length === 3) break;
+                    } else {
+                        currentLine += (currentLine ? '-' : '') + part;
                     }
                 }
-                
-                // Desktop heuristic: be more conservative but still use hyphenation for long names
-                if (originalName.length > 10) {
-                    return unhyphenatedNickname.length <= 10 ? unhyphenatedNickname : nickname;
+                if (currentLine && lines.length < 3) lines.push(currentLine);
+                if (lines.length === 3 && hyphenParts.length > 3) {
+                    lines[2] = lines[2].replace(/\s+$/, '') + '...';
                 }
-                
-                return originalName;
-            } else {
-                // Regular nickname without hyphens
-                return nickname;
             }
+            return lines.join('\n');
+        }
+
+        // Playground for dynamic testing
+        function updatePlayground() {
+            const name = document.getElementById('playground-name').value;
+            const shortName = document.getElementById('playground-short').value;
+            const bar = document.getElementById('playground-bar').value;
+            const width = parseInt(document.getElementById('playground-width').value, 10) || 200;
+            const event = { name, shortName, bar };
+            const smartName = getSmartEventName(event, width);
+            document.getElementById('playground-output').textContent = smartName;
         }
 
         function testWidth(eventKey, width) {
@@ -267,7 +298,36 @@ Website: https://example.com</code></pre>
             Object.keys(testEvents).forEach(key => {
                 testWidth(key, 'auto');
             });
+            updatePlayground();
+            // Add listeners for playground
+            ['playground-name','playground-short','playground-bar','playground-width'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updatePlayground);
+            });
         });
     </script>
+    <div class="test-section">
+        <h2>Playground: Try Your Own</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+            <div>
+                <label>Event Name<br><input id="playground-name" type="text" value="Rock-Strap Party Hardy" style="width:180px"></label>
+            </div>
+            <div>
+                <label>Nickname/Short<br><input id="playground-short" type="text" value="Rock-Strap" style="width:120px"></label>
+            </div>
+            <div>
+                <label>Bar<br><input id="playground-bar" type="text" value="Bear Bar" style="width:120px"></label>
+            </div>
+            <div>
+                <label>Width (px)<br><input id="playground-width" type="number" value="120" min="40" max="400" style="width:70px"></label>
+            </div>
+            <div>
+                <button onclick="updatePlayground()">Test</button>
+            </div>
+        </div>
+        <div style="margin-top:1rem;">
+            <strong>Result (multi-line):</strong>
+            <pre id="playground-output" style="background:#f8f8f8; border:1px solid #ccc; padding:1em; min-height:2em; font-size:1.1em;"></pre>
+        </div>
+    </div>
 </body>
 </html>
