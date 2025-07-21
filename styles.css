@@ -49,11 +49,11 @@
     --color-success-dark: #059669;
     
     /* Solid Color Alternatives for Gradients */
-    --solid-primary: var(--accent-color);
-    --solid-secondary: var(--color-danger-dark);
-    --solid-success: var(--primary-color);
-    --solid-warning: var(--background-primary);
-    --solid-light: var(--background-primary);
+    --solid-primary: var(--primary-color);
+    --solid-secondary: var(--secondary-color);
+    --solid-success: var(--success-color);
+    --solid-warning: var(--background-light);
+    --solid-light: var(--background-light);
     --solid-error: var(--background-light);
     
     /* Gradients */
