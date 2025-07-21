@@ -1052,7 +1052,10 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
                     // Smart hyphenation for mobile display
-                    const smartName = this.getSmartEventName(event);
+                    // Pass estimated width based on view type
+                    const isMobile = window.innerWidth <= 768;
+                    const estimatedWidth = isMobile ? 120 : 200; // Approximate event container width
+                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
@@ -1157,7 +1160,10 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    const smartName = this.getSmartEventName(event);
+                    // Month view has smaller event containers
+                    const isMobile = window.innerWidth <= 768;
+                    const estimatedWidth = isMobile ? 100 : 150; // Smaller containers in month view
+                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
