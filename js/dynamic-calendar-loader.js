@@ -412,7 +412,8 @@ class DynamicCalendarLoader extends CalendarCore {
         if (eventData) {
             eventData.citySlug = this.currentCity;
             
-            // Add short-name if not provided, generate from bar name or event name
+            // Only generate short-name if not provided by user
+            // This prevents double-trimming when user has already provided a shortName
             if (!eventData.shortName) {
                 eventData.shortName = this.generateShortName(eventData.bar, eventData.name);
             }
@@ -426,28 +427,20 @@ class DynamicCalendarLoader extends CalendarCore {
         const sourceName = eventName || barName;
         if (!sourceName) return '';
         
-        // Remove common words and abbreviate while preserving original casing
+        // Remove common words while preserving original casing
+        // Let the per-line logic handle all length trimming to avoid double-trimming
         const stopWords = ['the', 'and', 'or', 'at', 'in', 'on', 'with', 'for', 'of', 'to', 'a', 'an'];
         const words = sourceName.split(' ');
         const filteredWords = words.filter(word => !stopWords.includes(word.toLowerCase()));
         
-        // Take first 2-3 meaningful words and abbreviate if too long
-        const shortWords = filteredWords.slice(0, 3);
-        let shortName = shortWords.join(' ');
-        
-        // If still too long, try abbreviating
-        if (shortName.length > 15) {
-            shortName = shortWords.map(word => 
-                word.length > 6 ? word.substring(0, 6) + '.' : word
-            ).join(' ');
+        // If we filtered out all words (e.g., "The"), use the original
+        if (filteredWords.length === 0) {
+            return sourceName;
         }
         
-        // If still too long, just take first word
-        if (shortName.length > 15) {
-            shortName = filteredWords[0] || sourceName.split(' ')[0];
-        }
-        
-        return shortName;
+        // Return the filtered name without aggressive length trimming
+        // The getSmartEventNameForBreakpoint() function will handle per-screen trimming
+        return filteredWords.join(' ');
     }
 
 
