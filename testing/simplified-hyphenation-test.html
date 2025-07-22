@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified Hyphenation Test - Chunky Dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 80px;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .test-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            background: var(--background-primary);
+        }
+        
+        .breakpoint-demo {
+            margin: 2rem 0;
+        }
+        
+        .breakpoint-row {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 1rem;
+            align-items: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        
+        .breakpoint-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .examples-grid {
+            display: grid;
+            gap: 0.5rem;
+        }
+        
+        .example-item {
+            display: grid;
+            grid-template-columns: 200px 150px 150px;
+            gap: 1rem;
+            align-items: center;
+            padding: 0.5rem;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .original {
+            color: #666;
+        }
+        
+        .shortname {
+            font-family: monospace;
+            color: #333;
+        }
+        
+        .result {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .char-limit-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        .logic-box {
+            background: #f0f8ff;
+            border: 1px solid #4285f4;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .logic-box h4 {
+            margin-top: 0;
+            color: #4285f4;
+        }
+        
+        .logic-box ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        .test-grid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .test-case {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 1rem;
+        }
+        
+        .test-case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .test-case-title {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .test-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .test-result {
+            padding: 0.5rem;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .test-result-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .test-result-value {
+            font-family: monospace;
+            color: #333;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html">🐻 chunky.dad</a></h1>
+                </div>
+                
+                <ul class="nav-menu">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../index.html#cities">Cities</a></li>
+                    <li><a href="../index.html#events">Events</a></li>
+                    <li><a href="../index.html#businesses">Businesses</a></li>
+                    <li><a href="../index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <div class="test-container">
+        <h1>🎯 Simplified Hyphenation Logic</h1>
+        <p>This page demonstrates the new simplified event name display logic with hardcoded character limits per breakpoint.</p>
+        
+        <div class="test-section">
+            <h2>📏 Character Limits by Breakpoint</h2>
+            <div class="breakpoint-demo">
+                <div class="breakpoint-row">
+                    <div class="breakpoint-label">
+                        Super Small<br>
+                        <small>&lt; 375px</small>
+                    </div>
+                    <div>
+                        <span class="char-limit-badge">5 characters</span>
+                        <div class="examples-grid">
+                            <div class="example-item">
+                                <span class="original">Bear Night</span>
+                                <span class="shortname">B-N</span>
+                                <span class="result">→ BN</span>
+                            </div>
+                            <div class="example-item">
+                                <span class="original">Rockstrap Party</span>
+                                <span class="shortname">Rock-strap</span>
+                                <span class="result">→ Rock-…</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="breakpoint-row">
+                    <div class="breakpoint-label">
+                        Small<br>
+                        <small>375-768px</small>
+                    </div>
+                    <div>
+                        <span class="char-limit-badge">8 characters</span>
+                        <div class="examples-grid">
+                            <div class="example-item">
+                                <span class="original">Bear Night</span>
+                                <span class="shortname">Bear-Nite</span>
+                                <span class="result">→ BearNite</span>
+                            </div>
+                            <div class="example-item">
+                                <span class="original">Rockstrap Party</span>
+                                <span class="shortname">Rock-strap</span>
+                                <span class="result">→ Rock-st…</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="breakpoint-row">
+                    <div class="breakpoint-label">
+                        Medium<br>
+                        <small>768-1024px</small>
+                    </div>
+                    <div>
+                        <span class="char-limit-badge">12 characters</span>
+                        <div class="examples-grid">
+                            <div class="example-item">
+                                <span class="original">Bear Weekend</span>
+                                <span class="shortname">Bear-Weekend</span>
+                                <span class="result">→ Bear-Weekend</span>
+                            </div>
+                            <div class="example-item">
+                                <span class="original">Underwear Night</span>
+                                <span class="shortname">Under-wear</span>
+                                <span class="result">→ Underwear</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="breakpoint-row">
+                    <div class="breakpoint-label">
+                        Large<br>
+                        <small>&gt; 1024px</small>
+                    </div>
+                    <div>
+                        <span class="char-limit-badge">20 characters</span>
+                        <div class="examples-grid">
+                            <div class="example-item">
+                                <span class="original">International Bear Weekend</span>
+                                <span class="shortname">Inter-Bear-Weekend</span>
+                                <span class="result">→ InterBearWeekend</span>
+                            </div>
+                            <div class="example-item">
+                                <span class="original">Rockstrap Anniversary Party</span>
+                                <span class="shortname">Rock-strap-Anniversary</span>
+                                <span class="result">→ Rock-strap-Annivers…</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔧 Simplified Logic</h2>
+            <div class="logic-box">
+                <h4>Processing Rules:</h4>
+                <ol>
+                    <li>Get the character limit for the current screen size</li>
+                    <li>Remove hyphens from shortname (except escaped <code>\-</code>)</li>
+                    <li>If unhyphenated version fits → use it</li>
+                    <li>Else if hyphenated version fits → use it</li>
+                    <li>Else truncate hyphenated version with ellipsis (…)</li>
+                </ol>
+            </div>
+            
+            <p><strong>Benefits:</strong></p>
+            <ul>
+                <li>✅ Simple, predictable behavior</li>
+                <li>✅ No complex width calculations</li>
+                <li>✅ Easy to test and debug</li>
+                <li>✅ Consistent across all views</li>
+                <li>✅ Respects escaped hyphens <code>\-</code></li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 Test Cases</h2>
+            <div class="test-grid" id="test-cases">
+                <!-- Test cases will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 Usage in Calendar Data</h2>
+            <p>Simply include hyphens in your shortname/nickname field:</p>
+            <pre><code>SUMMARY:Rockstrap Party
+DESCRIPTION:Bar: The Bear Den
+Nickname: Rock-strap
+Cover: $15</code></pre>
+            
+            <p>To force a hyphen to always appear (e.g., in compound words), escape it:</p>
+            <pre><code>SUMMARY:Co-op Bear Night
+DESCRIPTION:Bar: The Co-op
+Nickname: Co\-op Bears</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // Test cases
+        const testCases = [
+            {
+                name: "Bear Night",
+                shortName: "B-N",
+                expected: {
+                    xs: "BN",
+                    sm: "BN",
+                    md: "BN",
+                    lg: "BN"
+                }
+            },
+            {
+                name: "Rockstrap Party",
+                shortName: "Rock-strap",
+                expected: {
+                    xs: "Rock-…",
+                    sm: "Rock-st…",
+                    md: "Rockstrap",
+                    lg: "Rockstrap"
+                }
+            },
+            {
+                name: "Underwear Night",
+                shortName: "Under-wear",
+                expected: {
+                    xs: "Under…",
+                    sm: "Under-w…",
+                    md: "Underwear",
+                    lg: "Underwear"
+                }
+            },
+            {
+                name: "Bear Weekend Festival",
+                shortName: "Bear-Week-end",
+                expected: {
+                    xs: "Bear-…",
+                    sm: "Bear-We…",
+                    md: "Bear-Week-e…",
+                    lg: "BearWeekend"
+                }
+            },
+            {
+                name: "Co-op Night",
+                shortName: "Co\\-op",
+                expected: {
+                    xs: "Co\\-op",
+                    sm: "Co\\-op",
+                    md: "Co\\-op",
+                    lg: "Co\\-op"
+                }
+            },
+            {
+                name: "International Bear Weekend",
+                shortName: "Inter-Bear-Week",
+                expected: {
+                    xs: "Inter…",
+                    sm: "Inter-B…",
+                    md: "Inter-Bear-…",
+                    lg: "InterBearWeek"
+                }
+            }
+        ];
+        
+        // Simplified logic matching the updated dynamic-calendar-loader.js
+        function getSimplifiedName(shortName, screenWidth) {
+            if (!shortName) return '';
+            
+            const charLimits = {
+                xs: 5,
+                sm: 8,
+                md: 12,
+                lg: 20
+            };
+            
+            let charLimit;
+            if (screenWidth < 375) {
+                charLimit = charLimits.xs;
+            } else if (screenWidth < 768) {
+                charLimit = charLimits.sm;
+            } else if (screenWidth < 1024) {
+                charLimit = charLimits.md;
+            } else {
+                charLimit = charLimits.lg;
+            }
+            
+            // Process the shortname - remove hyphens except escaped ones
+            const processedShortName = shortName.replace(/(?<!\\)-/g, '');
+            
+            // If processed name fits within limit, use it
+            if (processedShortName.length <= charLimit) {
+                return processedShortName;
+            }
+            
+            // If original hyphenated name fits, use it
+            if (shortName.length <= charLimit) {
+                return shortName;
+            }
+            
+            // If neither fits, truncate with ellipsis
+            return shortName.substring(0, charLimit - 1) + '…';
+        }
+        
+        // Render test cases
+        function renderTestCases() {
+            const container = document.getElementById('test-cases');
+            
+            testCases.forEach((testCase, index) => {
+                const results = {
+                    xs: getSimplifiedName(testCase.shortName, 320),
+                    sm: getSimplifiedName(testCase.shortName, 400),
+                    md: getSimplifiedName(testCase.shortName, 800),
+                    lg: getSimplifiedName(testCase.shortName, 1200)
+                };
+                
+                const allPass = Object.keys(results).every(key => 
+                    results[key] === testCase.expected[key]
+                );
+                
+                const html = `
+                    <div class="test-case">
+                        <div class="test-case-header">
+                            <div class="test-case-title">${testCase.name}</div>
+                            <div>${allPass ? '✅ Pass' : '❌ Fail'}</div>
+                        </div>
+                        <div><strong>Shortname:</strong> <code>${testCase.shortName}</code></div>
+                        <div class="test-results">
+                            <div class="test-result">
+                                <div class="test-result-label">XS (320px):</div>
+                                <div class="test-result-value">${results.xs} ${results.xs === testCase.expected.xs ? '✓' : '✗ (expected: ' + testCase.expected.xs + ')'}</div>
+                            </div>
+                            <div class="test-result">
+                                <div class="test-result-label">SM (400px):</div>
+                                <div class="test-result-value">${results.sm} ${results.sm === testCase.expected.sm ? '✓' : '✗ (expected: ' + testCase.expected.sm + ')'}</div>
+                            </div>
+                            <div class="test-result">
+                                <div class="test-result-label">MD (800px):</div>
+                                <div class="test-result-value">${results.md} ${results.md === testCase.expected.md ? '✓' : '✗ (expected: ' + testCase.expected.md + ')'}</div>
+                            </div>
+                            <div class="test-result">
+                                <div class="test-result-label">LG (1200px):</div>
+                                <div class="test-result-value">${results.lg} ${results.lg === testCase.expected.lg ? '✓' : '✗ (expected: ' + testCase.expected.lg + ')'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML += html;
+            });
+        }
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            renderTestCases();
+        });
+    </script>
+</body>
+</html>
