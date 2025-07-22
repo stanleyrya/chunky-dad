@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-line Breakpoint Test - Chunky Dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 80px;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            background: var(--background-primary);
+        }
+        
+        .multiline-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .demo-box {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+        }
+        
+        .demo-label {
+            position: absolute;
+            top: -12px;
+            left: 12px;
+            background: white;
+            padding: 0 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .demo-content {
+            margin-top: 0.5rem;
+        }
+        
+        .event-display {
+            background: #f5f5f5;
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            font-size: 1.1rem;
+            line-height: 1.4;
+            word-break: break-word;
+            hyphens: manual;
+        }
+        
+        .char-info {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 0.25rem;
+        }
+        
+        .width-control {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f0f8ff;
+            border: 1px solid #4285f4;
+            border-radius: 8px;
+        }
+        
+        .width-slider {
+            width: 100%;
+            margin: 1rem 0;
+        }
+        
+        .width-display {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4285f4;
+        }
+        
+        .line-rules {
+            background: #fff9e6;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .line-rules h4 {
+            margin-top: 0;
+            color: #f57c00;
+        }
+        
+        .test-event {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        
+        .test-event-header {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .test-variants {
+            display: grid;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .variant {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 1rem;
+            align-items: start;
+            padding: 0.5rem;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .variant-label {
+            font-size: 0.85rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .variant-text {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.3;
+            word-break: break-word;
+            hyphens: manual;
+        }
+        
+        /* Simulate different container widths */
+        .width-xs { max-width: 80px; }
+        .width-sm { max-width: 120px; }
+        .width-md { max-width: 180px; }
+        .width-lg { max-width: 300px; }
+        
+        .width-xs .variant-text,
+        .width-sm .variant-text,
+        .width-md .variant-text,
+        .width-lg .variant-text {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html">🐻 chunky.dad</a></h1>
+                </div>
+                
+                <ul class="nav-menu">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../index.html#cities">Cities</a></li>
+                    <li><a href="../index.html#events">Events</a></li>
+                    <li><a href="../index.html#businesses">Businesses</a></li>
+                    <li><a href="../index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <div class="test-container">
+        <h1>📐 Multi-line Text Handling</h1>
+        <p>Testing how event names wrap across multiple lines with the simplified character limits.</p>
+        
+        <div class="test-section">
+            <h2>🎯 Character Limits & Line Breaking</h2>
+            
+            <div class="line-rules">
+                <h4>Multi-line Rules:</h4>
+                <ul>
+                    <li><strong>Max 3 lines</strong> for any event name</li>
+                    <li>Break at character limit per line based on screen size</li>
+                    <li>Use hyphenation when a word exceeds the line limit</li>
+                    <li>Remove hyphenation if the word fits without it</li>
+                    <li>Preserve escaped hyphens <code>\-</code> always</li>
+                </ul>
+            </div>
+            
+            <div class="multiline-demo">
+                <div class="demo-box width-xs">
+                    <div class="demo-label">XS: 5 chars/line</div>
+                    <div class="demo-content">
+                        <div class="event-display">Rock-<br>strap</div>
+                        <div class="char-info">2 lines used</div>
+                        
+                        <div class="event-display">Inter<br>Bear<br>Week</div>
+                        <div class="char-info">3 lines (max)</div>
+                    </div>
+                </div>
+                
+                <div class="demo-box width-sm">
+                    <div class="demo-label">SM: 8 chars/line</div>
+                    <div class="demo-content">
+                        <div class="event-display">Rockstrap</div>
+                        <div class="char-info">1 line (no hyphen needed)</div>
+                        
+                        <div class="event-display">Inter-<br>national<br>Bear</div>
+                        <div class="char-info">3 lines with hyphenation</div>
+                    </div>
+                </div>
+                
+                <div class="demo-box width-md">
+                    <div class="demo-label">MD: 12 chars/line</div>
+                    <div class="demo-content">
+                        <div class="event-display">Underwear<br>Night</div>
+                        <div class="char-info">2 lines</div>
+                        
+                        <div class="event-display">International<br>Bear Weekend</div>
+                        <div class="char-info">2 lines</div>
+                    </div>
+                </div>
+                
+                <div class="demo-box width-lg">
+                    <div class="demo-label">LG: 20 chars/line</div>
+                    <div class="demo-content">
+                        <div class="event-display">Rockstrap Anniversary<br>Party</div>
+                        <div class="char-info">2 lines</div>
+                        
+                        <div class="event-display">International Bear<br>Weekend Festival</div>
+                        <div class="char-info">2 lines</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 Test Cases with Multi-line Support</h2>
+            
+            <div class="test-event">
+                <div class="test-event-header">Long Event Name: "International Bear Weekend Festival"</div>
+                <div class="test-event-header">Shortname: "Inter-Bear-Week-Fest"</div>
+                <div class="test-variants">
+                    <div class="variant">
+                        <div class="variant-label">XS (5 chars)</div>
+                        <div class="variant-text width-xs">Inter<br>Bear<br>Week</div>
+                    </div>
+                    <div class="variant">
+                        <div class="variant-label">SM (8 chars)</div>
+                        <div class="variant-text width-sm">InterBear<br>WeekFest</div>
+                    </div>
+                    <div class="variant">
+                        <div class="variant-label">MD (12 chars)</div>
+                        <div class="variant-text width-md">InterBearWeek<br>Fest</div>
+                    </div>
+                    <div class="variant">
+                        <div class="variant-label">LG (20 chars)</div>
+                        <div class="variant-text width-lg">InterBearWeekFest</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-event">
+                <div class="test-event-header">With Escaped Hyphen: "Co-op Bear Night"</div>
+                <div class="test-event-header">Shortname: "Co\-op-Bears"</div>
+                <div class="test-variants">
+                    <div class="variant">
+                        <div class="variant-label">XS (5 chars)</div>
+                        <div class="variant-text width-xs">Co-op<br>Bears</div>
+                    </div>
+                    <div class="variant">
+                        <div class="variant-label">SM (8 chars)</div>
+                        <div class="variant-text width-sm">Co-op<br>Bears</div>
+                    </div>
+                    <div class="variant">
+                        <div class="variant-label">MD (12 chars)</div>
+                        <div class="variant-text width-md">Co-opBears</div>
+                    </div>
+                    <div class="variant">
+                        <div class="variant-label">LG (20 chars)</div>
+                        <div class="variant-text width-lg">Co-opBears</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>💡 Implementation Notes</h2>
+            
+            <h3>Enhanced Algorithm:</h3>
+            <ol>
+                <li>Get character limit for current screen size</li>
+                <li>Split shortname into words (preserving escaped hyphens)</li>
+                <li>For each word:
+                    <ul>
+                        <li>If word fits on current line → add it</li>
+                        <li>If word is too long → try removing hyphens</li>
+                        <li>If still too long → hyphenate at character limit</li>
+                        <li>If at line 3 and more words remain → add ellipsis</li>
+                    </ul>
+                </li>
+                <li>Join lines with <code>&lt;br&gt;</code> tags for display</li>
+            </ol>
+            
+            <h3>CSS Considerations:</h3>
+            <pre><code>.event-name-mobile {
+    word-break: break-word;
+    hyphens: manual;
+    max-height: calc(1.3em * 3); /* 3 lines max */
+    overflow: hidden;
+    line-height: 1.3;
+}</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced multi-line logic
+        function getMultilineEventName(shortName, charLimit, maxLines = 3) {
+            if (!shortName) return '';
+            
+            // First try the simple single-line approach
+            const processedShortName = shortName.replace(/(?<!\\)-/g, '');
+            if (processedShortName.length <= charLimit) {
+                return processedShortName;
+            }
+            
+            // Multi-line logic
+            const words = shortName.split(/\s+/);
+            const lines = [];
+            let currentLine = '';
+            
+            for (let i = 0; i < words.length && lines.length < maxLines; i++) {
+                const word = words[i];
+                const processedWord = word.replace(/(?<!\\)-/g, '');
+                
+                // Check if word fits on current line
+                const testLine = currentLine ? `${currentLine} ${processedWord}` : processedWord;
+                
+                if (testLine.length <= charLimit) {
+                    currentLine = testLine;
+                } else if (!currentLine) {
+                    // Word is too long for a single line
+                    if (processedWord.length <= charLimit) {
+                        lines.push(processedWord);
+                    } else if (word.length <= charLimit) {
+                        // Try with hyphens
+                        lines.push(word);
+                    } else {
+                        // Truncate
+                        lines.push(word.substring(0, charLimit - 1) + '…');
+                    }
+                } else {
+                    // Start new line
+                    lines.push(currentLine);
+                    currentLine = processedWord;
+                }
+            }
+            
+            // Add remaining content
+            if (currentLine && lines.length < maxLines) {
+                lines.push(currentLine);
+            } else if (currentLine && lines.length === maxLines - 1) {
+                // Last line - might need ellipsis
+                if (currentLine.length > charLimit - 1) {
+                    lines.push(currentLine.substring(0, charLimit - 1) + '…');
+                } else {
+                    lines.push(currentLine + '…');
+                }
+            }
+            
+            return lines.join('<br>');
+        }
+        
+        // Test the multi-line logic
+        console.log('Testing multi-line logic:');
+        console.log('XS (5 chars):', getMultilineEventName('Inter-Bear-Week-Fest', 5));
+        console.log('SM (8 chars):', getMultilineEventName('Inter-Bear-Week-Fest', 8));
+        console.log('MD (12 chars):', getMultilineEventName('Inter-Bear-Week-Fest', 12));
+        console.log('LG (20 chars):', getMultilineEventName('Inter-Bear-Week-Fest', 20));
+    </script>
+</body>
+</html>

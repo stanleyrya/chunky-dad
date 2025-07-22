@@ -452,78 +452,72 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
 
-    getSmartEventName(event, elementOrWidth = null) {
+    getSmartEventNameForBreakpoint(event, breakpoint) {
         // Get the nickname/shortname
-        const nickname = event.shortName || event.nickname || '';
+        const shortName = event.shortName || event.nickname || '';
         const fullName = event.name || '';
         
-        // If no nickname, return the full name
-        if (!nickname) return fullName;
+        // If no shortname, return the full name
+        if (!shortName) return fullName;
         
-        // Create unhyphenated version
-        const unhyphenatedNickname = nickname.replace(/-/g, '');
+        // Hardcoded character limits per breakpoint
+        const charLimits = {
+            xs: 5,   // < 375px - super small screens
+            sm: 8,   // 375-768px - phones
+            md: 12,  // 768-1024px - tablets
+            lg: 20   // > 1024px - desktop
+        };
         
-        // Determine available width
-        let maxWidthPx = null;
-        if (elementOrWidth) {
-            if (typeof elementOrWidth === 'number') {
-                maxWidthPx = elementOrWidth;
-            } else if (typeof elementOrWidth === 'string') {
-                const el = document.querySelector(elementOrWidth);
-                if (el) maxWidthPx = el.offsetWidth || el.getBoundingClientRect().width;
-            } else if (elementOrWidth instanceof Element) {
-                maxWidthPx = elementOrWidth.offsetWidth || elementOrWidth.getBoundingClientRect().width;
-            }
+        // Get character limit for the specified breakpoint
+        const charLimit = charLimits[breakpoint] || charLimits.lg;
+        
+        // Process the shortname - remove hyphens except escaped ones (\-)
+        const processedShortName = shortName.replace(/(?<!\\)-/g, '');
+        
+        // If processed name fits within limit, use it
+        if (processedShortName.length <= charLimit) {
+            return processedShortName;
         }
         
-        // If no width info, use window width
-        if (!maxWidthPx && typeof window !== 'undefined') {
-            maxWidthPx = window.innerWidth <= 768 ? 120 : 250;
+        // If original hyphenated name fits, use it
+        if (shortName.length <= charLimit) {
+            return shortName;
         }
         
-        // Estimate characters that fit (rough estimate: ~8-10px per character)
-        const charsPerLine = Math.floor((maxWidthPx || 120) / 8);
-        
-        // Determine if we're on mobile based on width
-        const isMobile = maxWidthPx <= 150 || (typeof window !== 'undefined' && window.innerWidth <= 768);
-        
-        // Smart hyphenation logic based on the test page description
-        if (isMobile) {
-            // Mobile: aggressive hyphenation for limited space
-            if (fullName.length > 10) {
-                // Names >10 chars: use unhyphenated if ≤5 chars, otherwise hyphenated
-                if (unhyphenatedNickname.length <= 5) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Keep hyphenated
-                }
-            } else if (fullName.length > 6) {
-                // Names >6 chars: use unhyphenated if ≤6 chars, otherwise hyphenated
-                if (unhyphenatedNickname.length <= 6) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Keep hyphenated
-                }
-            }
-        } else {
-            // Desktop: conservative hyphenation with more space
-            if (fullName.length > 10) {
-                // Names >10 chars: use unhyphenated if ≤10 chars, otherwise hyphenated
-                if (unhyphenatedNickname.length <= 10) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Keep hyphenated
-                }
-            }
+        // If neither fits, truncate the hyphenated version with ellipsis
+        // This ensures we show as much info as possible
+        if (shortName.length > charLimit) {
+            return shortName.substring(0, charLimit - 1) + '…';
         }
         
-        // For shorter names or if unhyphenated fits, use unhyphenated
-        if (unhyphenatedNickname.length <= charsPerLine) {
-            return unhyphenatedNickname;
+        // Fallback to processed name
+        return processedShortName;
+    }
+    
+    // Generate all breakpoint versions of the event name
+    generateEventNameElements(event) {
+        const fullName = event.name || '';
+        const hasShortName = !!(event.shortName || event.nickname);
+        
+        // If no shortname, just return the full name for all breakpoints
+        if (!hasShortName) {
+            return `
+                <div class="event-name">${fullName}</div>
+            `;
         }
         
-        // Otherwise keep the hyphenated version
-        return nickname;
+        // Generate different versions for each breakpoint
+        const xsName = this.getSmartEventNameForBreakpoint(event, 'xs');
+        const smName = this.getSmartEventNameForBreakpoint(event, 'sm');
+        const mdName = this.getSmartEventNameForBreakpoint(event, 'md');
+        const lgName = this.getSmartEventNameForBreakpoint(event, 'lg');
+        
+        return `
+            <div class="event-name event-name-xs">${xsName}</div>
+            <div class="event-name event-name-sm">${smName}</div>
+            <div class="event-name event-name-md">${mdName}</div>
+            <div class="event-name event-name-lg">${lgName}</div>
+        `;
     }
 
     // Format time for mobile display with simplified format (4a-5p)
@@ -1051,17 +1045,11 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
-                    // Smart hyphenation for mobile display
-                    // Pass estimated width based on view type
-                    const isMobile = window.innerWidth <= 768;
-                    const estimatedWidth = isMobile ? 120 : 200; // Approximate event container width
-                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${smartName}</div>
+                            ${this.generateEventNameElements(event)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -1160,16 +1148,11 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    // Month view has smaller event containers
-                    const isMobile = window.innerWidth <= 768;
-                    const estimatedWidth = isMobile ? 100 : 150; // Smaller containers in month view
-                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${smartName}</div>
+                        <div class="event-item month-event" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                            ${this.generateEventNameElements(event)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
