@@ -7,7 +7,8 @@
     "start": "python3 -m http.server 8000",
     "serve": "python3 -m http.server 8000",
     "dev": "python3 -m http.server 8000",
-    "update-test-index": "cd testing && node generate-file-list.js"
+    "update-test-index": "cd testing && node generate-file-list.js",
+    "update-test-manifest": "cd testing && node generate-manifest.js"
   },
   "keywords": [
     "static",

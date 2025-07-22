@@ -285,70 +285,72 @@
             try {
                 let testFiles = [];
                 
-                // First try to parse directory listing
-                const parsedFiles = await parseDirectoryListing();
-                
-                if (parsedFiles && parsedFiles.length > 0) {
-                    testFiles = parsedFiles;
-                } else {
-                    // Fallback: probe for known files and common patterns
-                    const knownPatterns = [
-                        'ultimate-style-tester.html',
-                        'style-test.html',
-                        'event-test-index.html',
-                        'test-calendar-logging.html',
-                        'test-google-sheets-loader.html',
-                        'test-display-modes.html',
-                        'breakpoint-test.html',
-                        'css-breakpoint-test.html',
-                        'multiline-breakpoint-test.html',
-                        'hyphenation-test.html',
-                        'simplified-hyphenation-test.html'
-                    ];
-                    
-                    // Add event test files (1-20)
-                    for (let i = 1; i <= 20; i++) {
-                        knownPatterns.push(`event-test-${i}-*.html`);
+                // First try to load manifest.json
+                try {
+                    const manifestResponse = await fetch('manifest.json');
+                    if (manifestResponse.ok) {
+                        const manifest = await manifestResponse.json();
+                        testFiles = manifest.files.filter(f => f.name !== 'index.html');
+                        console.log('Loaded files from manifest.json');
                     }
+                } catch (e) {
+                    console.log('Could not load manifest.json, trying directory listing');
+                }
+                
+                // If no manifest, try to parse directory listing
+                if (testFiles.length === 0) {
+                    const parsedFiles = await parseDirectoryListing();
                     
-                    // Check each known file
-                    for (const pattern of knownPatterns) {
-                        if (pattern.includes('*')) {
-                            // For patterns, try common names
-                            const basePattern = pattern.replace('*.html', '');
-                            const commonNames = ['carousel', 'timeline', 'map', 'masonry', 'heatmap', 
-                                               'ticker', 'circular', 'kanban', 'bubbles', 'flipcards',
-                                               'weekview', 'swipe-tiles'];
-                            for (const name of commonNames) {
-                                const filename = basePattern + name + '.html';
-                                try {
-                                    const response = await fetch(filename, { method: 'HEAD' });
-                                    if (response.ok) {
-                                        testFiles.push({
-                                            name: filename,
-                                            exists: true
-                                        });
-                                    }
-                                } catch (e) {
-                                    // File doesn't exist
-                                }
-                            }
-                        } else {
+                    if (parsedFiles && parsedFiles.length > 0) {
+                        testFiles = parsedFiles;
+                    } else {
+                        // Fallback: probe for all files we know exist
+                        const allKnownFiles = [
+                            'ultimate-style-tester.html',
+                            'style-test.html',
+                            'event-test-index.html',
+                            'event-test-1-carousel.html',
+                            'event-test-2-timeline.html',
+                            'event-test-3-map.html',
+                            'event-test-4-masonry.html',
+                            'event-test-5-heatmap.html',
+                            'event-test-6-ticker.html',
+                            'event-test-7-circular.html',
+                            'event-test-8-kanban.html',
+                            'event-test-9-bubbles.html',
+                            'event-test-10-flipcards.html',
+                            'event-test-11-weekview.html',
+                            'event-test-12-swipe-tiles.html',
+                            'test-calendar-logging.html',
+                            'test-google-sheets-loader.html',
+                            'test-display-modes.html',
+                            'breakpoint-test.html',
+                            'css-breakpoint-test.html',
+                            'multiline-breakpoint-test.html',
+                            'hyphenation-test.html',
+                            'simplified-hyphenation-test.html'
+                        ];
+                        
+                        // Check all files in parallel for better performance
+                        const fileChecks = allKnownFiles.map(async (filename) => {
                             try {
-                                const response = await fetch(pattern, { method: 'HEAD' });
+                                const response = await fetch(filename, { method: 'HEAD' });
                                 if (response.ok) {
-                                    // Try to get file size
                                     const contentLength = response.headers.get('content-length');
-                                    testFiles.push({
-                                        name: pattern,
+                                    return {
+                                        name: filename,
                                         exists: true,
                                         size: contentLength ? parseInt(contentLength) : null
-                                    });
+                                    };
                                 }
                             } catch (e) {
                                 // File doesn't exist
                             }
-                        }
+                            return null;
+                        });
+                        
+                        const results = await Promise.all(fileChecks);
+                        testFiles = results.filter(f => f !== null);
                     }
                 }
 
