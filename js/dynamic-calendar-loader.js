@@ -497,11 +497,50 @@ class DynamicCalendarLoader extends CalendarCore {
                 // If the current line has content, save it and start a new line
                 if (currentLine) {
                     lines.push(currentLine);
-                    currentLine = word;
-                } else {
-                    // If even a single word is too long, truncate it
-                    lines.push(word.substring(0, charLimitPerLine - 1) + '…');
                     currentLine = '';
+                }
+            }
+            
+            // Check if the word itself is too long for a line
+            if (word.length > charLimitPerLine) {
+                // First try to split at hyphens in the original word (before hyphen removal)
+                const originalWord = shortName.split(' ').find(orig => orig.replace(/(?<!\\)-/g, '') === word);
+                if (originalWord && originalWord.includes('-') && !originalWord.includes('\\-')) {
+                    const hyphenParts = originalWord.split('-').filter(part => part.length > 0);
+                    let tempLine = currentLine;
+                    
+                    for (let i = 0; i < hyphenParts.length; i++) {
+                        const part = hyphenParts[i];
+                        const isLastPart = i === hyphenParts.length - 1;
+                        const partWithHyphen = isLastPart ? part : part + '-';
+                        
+                        if (tempLine && (tempLine + ' ' + partWithHyphen).length > charLimitPerLine) {
+                            lines.push(tempLine);
+                            tempLine = partWithHyphen;
+                        } else {
+                            tempLine = tempLine ? tempLine + ' ' + partWithHyphen : partWithHyphen;
+                        }
+                        
+                        // If even a single hyphen part is too long, truncate it
+                        if (partWithHyphen.length > charLimitPerLine) {
+                            if (tempLine === partWithHyphen) {
+                                lines.push(partWithHyphen.substring(0, charLimitPerLine - 1) + '…');
+                                tempLine = '';
+                            }
+                            break;
+                        }
+                    }
+                    currentLine = tempLine;
+                } else {
+                    // If no hyphens to split on, truncate the word
+                    const truncatedWord = word.substring(0, charLimitPerLine - 1) + '…';
+                    if (currentLine) {
+                        lines.push(currentLine);
+                        lines.push(truncatedWord);
+                        currentLine = '';
+                    } else {
+                        lines.push(truncatedWord);
+                    }
                 }
             } else {
                 // Add the word to the current line
