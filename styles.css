@@ -411,28 +411,36 @@ header {
     min-height: 100vh;
 }
 
-/* Compact Hero Section */
-.hero.compact-hero {
+/* Ultra Compact Hero Section */
+.hero.ultra-compact-hero {
     min-height: auto;
-    padding: 60px 0 40px;
+    padding: 40px 0 30px;
+    background: var(--gradient-primary);
 }
 
-.hero-content-compact {
+.hero-content-ultra-compact {
     text-align: center;
-    max-width: 800px;
+    max-width: 700px;
     margin: 0 auto;
 }
 
-.hero-content-compact h2 {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+.hero-content-ultra-compact h2 {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
     font-weight: 700;
 }
 
-.hero-content-compact p {
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
+.hero-content-ultra-compact p {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
     opacity: 0.9;
+}
+
+.hero-buttons-compact {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .hero-content {
@@ -514,136 +522,350 @@ header {
 
 /* Old city card styles removed - using compact layout instead */
 
-/* Compact Layout Styles */
-.compact-section {
-    padding: 3rem 0;
+/* Tabbed Section Layout */
+.tabbed-section {
+    padding: 2rem 0;
+    background: var(--background-light);
 }
 
-.two-column-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-    align-items: start;
+.section-header {
+    text-align: center;
+    margin-bottom: 2rem;
 }
 
-.cities-column,
-.merchants-column {
-    background: var(--background-primary);
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 4px 15px var(--shadow-light);
-}
-
-.cities-column h2,
-.merchants-column h2 {
-    font-size: 1.8rem;
+.section-header h2 {
+    font-size: 2.2rem;
     margin-bottom: 0.5rem;
+    color: var(--text-primary);
 }
 
-.section-subtitle {
+.section-header p {
+    font-size: 1rem;
     color: var(--text-secondary);
-    margin-bottom: 1.5rem;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    background: var(--background-primary);
+    border: 2px solid var(--border-light);
+    color: var(--text-secondary);
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
     font-size: 0.95rem;
 }
 
-/* Compact Cities Grid */
-.compact-cities-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+.tab-btn.active {
+    background: var(--solid-primary);
+    color: var(--text-inverse);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px var(--shadow-primary);
 }
 
-.compact-city-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
+.tab-btn:hover:not(.active) {
     background: var(--background-secondary);
-    border-radius: 12px;
-    text-decoration: none;
-    transition: all 0.2s ease;
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    animation: fadeInUp 0.4s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Modern City Cards */
+.cities-carousel-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.cities-carousel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem 0;
+}
+
+.city-card-modern {
+    background: var(--background-primary);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px var(--shadow-light);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
 }
 
-.compact-city-card:hover {
-    background: var(--solid-light);
-    transform: translateX(5px);
+.city-card-modern:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px var(--shadow-medium);
 }
 
-.city-emoji {
-    font-size: 2rem;
-    text-align: center;
+.city-card-modern.coming-soon {
+    opacity: 0.7;
 }
 
-.city-details h4 {
-    margin: 0;
-    font-size: 1.1rem;
+.city-card-modern.coming-soon:hover {
+    transform: translateY(-2px);
+}
+
+.city-card-header {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    background: var(--background-secondary);
+    position: relative;
+}
+
+.city-emoji-large {
+    font-size: 3rem;
+    margin-right: 1rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.city-info {
+    flex: 1;
+}
+
+.city-info h3 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1.3rem;
     color: var(--text-primary);
     font-weight: 600;
 }
 
-.city-tag {
-    font-size: 0.85rem;
+.city-highlight {
+    font-size: 0.9rem;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
-.compact-city-card.coming-soon {
-    opacity: 0.7;
-    cursor: default;
-}
-
-.compact-city-card.coming-soon:hover {
-    transform: none;
-    background: var(--background-secondary);
-}
-
-/* Compact Merchants List */
-.compact-merchants-list {
+.city-expand-btn {
+    width: 32px;
+    height: 32px;
+    background: var(--solid-primary);
+    color: var(--text-inverse);
+    border-radius: 50%;
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.city-card-modern:hover .city-expand-btn {
+    transform: rotate(45deg);
+    background: var(--solid-secondary);
+}
+
+.city-card-details {
+    padding: 1.5rem;
+    background: var(--background-primary);
+    display: none;
+    animation: slideDown 0.3s ease;
+}
+
+.city-card-details.show {
+    display: block;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.city-stats {
+    display: flex;
+    gap: 2rem;
     margin-bottom: 1.5rem;
 }
 
-.merchant-category {
-    padding: 1.2rem;
-    background: var(--background-secondary);
-    border-radius: 12px;
-    transition: all 0.2s ease;
+.stat-item {
+    text-align: center;
 }
 
-.merchant-category:hover {
-    background: var(--solid-light);
-}
-
-.merchant-category h4 {
-    margin: 0 0 0.3rem 0;
-    font-size: 1rem;
+.stat-number {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
     color: var(--primary-color);
+    line-height: 1;
 }
 
-.merchant-category p {
-    margin: 0;
-    font-size: 0.85rem;
+.stat-label {
+    font-size: 0.8rem;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
-.directory-link {
+.city-action-btn {
     display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background: var(--solid-primary);
-    color: var(--white);
+    background: var(--gradient-primary);
+    color: var(--text-inverse);
     text-decoration: none;
+    padding: 0.75rem 1.5rem;
     border-radius: 25px;
     font-weight: 600;
+    font-size: 0.95rem;
     transition: all 0.3s ease;
-    text-align: center;
     width: 100%;
+    text-align: center;
 }
 
-.directory-link:hover {
+.city-action-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px var(--shadow-medium);
+    box-shadow: 0 6px 20px var(--shadow-primary);
+}
+
+/* Modern Merchants Grid */
+.merchants-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.merchant-card-modern {
+    background: var(--background-primary);
+    padding: 2rem;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 4px 20px var(--shadow-light);
+    transition: all 0.3s ease;
+}
+
+.merchant-card-modern:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px var(--shadow-medium);
+}
+
+.merchant-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.merchant-card-modern h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.merchant-card-modern p {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.merchant-stats {
+    background: var(--background-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    display: inline-block;
+}
+
+.tab-action-center {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.directory-link-modern {
+    display: inline-block;
+    background: var(--gradient-primary);
+    color: var(--text-inverse);
+    text-decoration: none;
+    padding: 1rem 2rem;
+    border-radius: 30px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.directory-link-modern:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px var(--shadow-primary);
+}
+
+/* Events Preview Grid */
+.events-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.event-preview-card {
+    background: var(--background-primary);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px var(--shadow-light);
+    transition: all 0.3s ease;
+}
+
+.event-preview-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px var(--shadow-medium);
+}
+
+.event-preview-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.event-icon {
+    font-size: 2.5rem;
+    margin-right: 1rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.event-preview-info h4 {
+    margin: 0 0 0.2rem 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.event-frequency {
+    background: var(--solid-secondary);
+    color: var(--text-inverse);
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.event-preview-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
 }
 
 /* Events Section */
@@ -720,15 +942,130 @@ header {
 /* Old businesses section styles removed - using compact layout instead */
 
 @media (max-width: 768px) {
-    /* Compact layout responsive */
-    .two-column-layout {
-        grid-template-columns: 1fr;
-        gap: 2rem;
+    /* Ultra compact hero mobile */
+    .hero.ultra-compact-hero {
+        padding: 30px 0 20px;
     }
     
-    .cities-column,
-    .merchants-column {
+    .hero-content-ultra-compact h2 {
+        font-size: 1.8rem;
+    }
+    
+    .hero-content-ultra-compact p {
+        font-size: 0.9rem;
+        padding: 0 1rem;
+    }
+    
+    .hero-buttons-compact {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .hero-buttons-compact .cta-button {
+        width: 90%;
+        max-width: 250px;
+    }
+    
+    /* Tabbed section mobile */
+    .tabbed-section {
+        padding: 1.5rem 0;
+    }
+    
+    .section-header h2 {
+        font-size: 1.8rem;
+    }
+    
+    .tab-navigation {
+        gap: 0.3rem;
+    }
+    
+    .tab-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    /* City cards mobile */
+    .cities-carousel {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 0.5rem 0;
+    }
+    
+    .city-card-header {
+        padding: 1rem;
+    }
+    
+    .city-emoji-large {
+        font-size: 2.5rem;
+    }
+    
+    .city-info h3 {
+        font-size: 1.1rem;
+    }
+    
+    .city-highlight {
+        font-size: 0.8rem;
+    }
+    
+    .city-card-details {
+        padding: 1rem;
+    }
+    
+    .city-stats {
+        gap: 1.5rem;
+        justify-content: center;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    /* Merchants mobile */
+    .merchants-grid-modern {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .merchant-card-modern {
         padding: 1.5rem;
+    }
+    
+    .merchant-icon {
+        font-size: 2.5rem;
+    }
+    
+    /* Events preview mobile */
+    .events-preview-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .event-preview-card {
+        padding: 1rem;
+    }
+    
+    .event-icon {
+        font-size: 2rem;
+    }
+    
+    /* Compact contact mobile */
+    .contact-layout-compact {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .contact-header-compact h2 {
+        font-size: 1.8rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .contact-form-compact {
+        padding: 1rem;
     }
 }
 
@@ -1573,6 +1910,108 @@ header {
     font-style: italic;
 }
 
+/* Compact Contact Section */
+.compact-contact {
+    padding: 50px 0;
+}
+
+.contact-header-compact {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.contact-header-compact h2 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.contact-header-compact p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.contact-layout-compact {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+    align-items: start;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.contact-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.example-item {
+    background: var(--background-primary);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px var(--shadow-light);
+    border-left: 3px solid var(--primary-color);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.example-item strong {
+    color: var(--primary-color);
+}
+
+.contact-form-compact {
+    background: var(--background-primary);
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px var(--shadow-light);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.contact-form-compact input,
+.contact-form-compact textarea,
+.contact-form-compact select {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 2px solid var(--border-light);
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+    transition: border-color 0.3s ease;
+}
+
+.contact-form-compact input:focus,
+.contact-form-compact textarea:focus,
+.contact-form-compact select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.contact-form-compact button {
+    background: var(--solid-secondary);
+    color: var(--text-inverse);
+    border: none;
+    padding: 12px 24px;
+    width: 100%;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.contact-form-compact button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
 
 
 .contact-form {
@@ -2334,6 +2773,55 @@ footer {
     .events h2,
     .contact h2 {
         font-size: 2rem;
+    }
+    
+    /* Ultra compact hero small screens */
+    .hero.ultra-compact-hero {
+        padding: 25px 0 15px;
+    }
+    
+    .hero-content-ultra-compact h2 {
+        font-size: 1.6rem;
+    }
+    
+    .hero-content-ultra-compact p {
+        font-size: 0.85rem;
+    }
+    
+    /* Tabbed section small screens */
+    .section-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .tab-btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    
+    /* City cards small screens */
+    .city-emoji-large {
+        font-size: 2.2rem;
+    }
+    
+    .city-info h3 {
+        font-size: 1rem;
+    }
+    
+    .city-highlight {
+        font-size: 0.75rem;
+    }
+    
+    .stat-number {
+        font-size: 1.3rem;
+    }
+    
+    .stat-label {
+        font-size: 0.7rem;
+    }
+    
+    /* Contact form small screens */
+    .contact-header-compact h2 {
+        font-size: 1.6rem;
     }
 
     .nav-container {
