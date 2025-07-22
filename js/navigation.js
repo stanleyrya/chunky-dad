@@ -11,6 +11,8 @@ class NavigationManager {
         this.setupMobileMenu();
         this.setupSmoothScrolling();
         this.setupNavLinks();
+        this.setupTabs();
+        this.setupCityCards();
         logger.componentLoad('NAV', 'Navigation manager initialized');
     }
 
@@ -83,6 +85,99 @@ class NavigationManager {
         } else {
             logger.warn('NAV', `Section not found: ${sectionId}`);
         }
+    }
+
+    setupTabs() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        if (tabButtons.length === 0) {
+            logger.debug('NAV', 'No tab buttons found, skipping tab setup');
+            return;
+        }
+
+        logger.componentInit('NAV', 'Setting up tab navigation', {
+            tabCount: tabButtons.length
+        });
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.getAttribute('data-tab');
+                logger.userInteraction('NAV', `Tab clicked: ${targetTab}`);
+                
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                const targetContent = document.getElementById(`${targetTab}-tab`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                    logger.debug('NAV', `Switched to tab: ${targetTab}`);
+                } else {
+                    logger.warn('NAV', `Tab content not found: ${targetTab}-tab`);
+                }
+            });
+        });
+
+        logger.componentLoad('NAV', 'Tab navigation setup complete');
+    }
+
+    setupCityCards() {
+        const cityCards = document.querySelectorAll('.city-card-modern');
+        
+        if (cityCards.length === 0) {
+            logger.debug('NAV', 'No city cards found, skipping city card setup');
+            return;
+        }
+
+        logger.componentInit('NAV', 'Setting up city card interactions', {
+            cardCount: cityCards.length
+        });
+
+        cityCards.forEach(card => {
+            const expandBtn = card.querySelector('.city-expand-btn');
+            const details = card.querySelector('.city-card-details');
+            
+            if (expandBtn && details) {
+                // Initially hide details
+                details.style.display = 'none';
+                
+                card.addEventListener('click', (e) => {
+                    // Don't trigger if clicking the action button
+                    if (e.target.classList.contains('city-action-btn')) {
+                        return;
+                    }
+                    
+                    const cityName = card.getAttribute('data-city') || 'unknown';
+                    logger.userInteraction('NAV', `City card clicked: ${cityName}`);
+                    
+                    const isExpanded = details.style.display !== 'none';
+                    
+                    // Close all other cards first
+                    cityCards.forEach(otherCard => {
+                        const otherDetails = otherCard.querySelector('.city-card-details');
+                        const otherExpandBtn = otherCard.querySelector('.city-expand-btn');
+                        if (otherDetails && otherExpandBtn) {
+                            otherDetails.style.display = 'none';
+                            otherExpandBtn.textContent = '+';
+                            otherExpandBtn.style.transform = 'rotate(0deg)';
+                        }
+                    });
+                    
+                    // Toggle current card
+                    if (!isExpanded) {
+                        details.style.display = 'block';
+                        expandBtn.textContent = '−';
+                        expandBtn.style.transform = 'rotate(45deg)';
+                        logger.debug('NAV', `City card expanded: ${cityName}`);
+                    }
+                });
+            }
+        });
+
+        logger.componentLoad('NAV', 'City card interactions setup complete');
     }
 }
 
