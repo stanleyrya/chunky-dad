@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Abbreviation Test - Per Line Character Limits</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            background: var(--background-primary);
+        }
+        
+        .breakpoint-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .breakpoint-test {
+            border: 2px solid var(--primary-color);
+            padding: 1rem;
+            border-radius: 6px;
+            background: white;
+        }
+        
+        .breakpoint-test h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary-color);
+        }
+        
+        .event-display {
+            background: var(--background-light);
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            line-height: 1.2;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .char-count {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        
+        .test-info {
+            background: #f0f0f0;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        
+        code {
+            background: #e0e0e0;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Event Abbreviation Test - Per Line Character Limits</h1>
+        
+        <div class="test-info">
+            <h3>Character Limits Per Line:</h3>
+            <ul>
+                <li><strong>XS (< 375px):</strong> 5 characters per line</li>
+                <li><strong>SM (375-768px):</strong> 8 characters per line</li>
+                <li><strong>MD (768-1024px):</strong> 12 characters per line</li>
+                <li><strong>LG (> 1024px):</strong> 20 characters per line</li>
+            </ul>
+            <p><strong>Note:</strong> The new logic should wrap text to multiple lines based on these per-line limits, not trim the entire name to these character counts.</p>
+        </div>
+        
+        <div id="test-results"></div>
+    </div>
+
+    <script src="../js/logger.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+    <script>
+        // Test events with various shortNames
+        const testEvents = [
+            {
+                name: 'Rockstrap Anniversary Party',
+                shortName: 'Rock-strap Party',
+                description: 'Two-word event with hyphen'
+            },
+            {
+                name: 'International Bear Weekend Festival',
+                shortName: 'International Bear Weekend',
+                description: 'Three-word event, should wrap to multiple lines'
+            },
+            {
+                name: 'Pride Festival Opening Night Celebration',
+                shortName: 'Pride Opening Night',
+                description: 'Three-word event with medium length'
+            },
+            {
+                name: 'Leather and Fetish Party',
+                shortName: 'Leather Fetish Party',
+                description: 'Three-word event'
+            },
+            {
+                name: 'Super Long Event Name That Goes On Forever',
+                shortName: 'Super Long Event Name Forever',
+                description: 'Five-word event, should be truncated with ellipsis'
+            },
+            {
+                name: 'Short Event',
+                shortName: 'Short',
+                description: 'Single short word'
+            },
+            {
+                name: 'Bear Night',
+                shortName: 'Bear-Night',
+                description: 'Hyphenated two-word event'
+            },
+            {
+                name: 'Underwear Party at The Eagle',
+                shortName: 'Under-wear Party',
+                description: 'Hyphenated word that should be processed'
+            }
+        ];
+
+        // Initialize calendar loader
+        const calendarLoader = new DynamicCalendarLoader();
+        
+        // Function to count lines in text
+        function countLines(text) {
+            // This is a rough estimate based on word breaks
+            const words = text.split(' ');
+            return words.length;
+        }
+        
+        // Function to display test results
+        function displayTestResults() {
+            const resultsContainer = document.getElementById('test-results');
+            
+            testEvents.forEach((event, index) => {
+                const section = document.createElement('div');
+                section.className = 'test-section';
+                
+                section.innerHTML = `
+                    <h3>Event ${index + 1}: ${event.name}</h3>
+                    <p><strong>Short Name:</strong> <code>${event.shortName}</code></p>
+                    <p><em>${event.description}</em></p>
+                    
+                    <div class="breakpoint-grid">
+                        ${['xs', 'sm', 'md', 'lg'].map(breakpoint => {
+                            const result = calendarLoader.getSmartEventNameForBreakpoint(event, breakpoint);
+                            const charLimit = { xs: 5, sm: 8, md: 12, lg: 20 }[breakpoint];
+                            
+                            return `
+                                <div class="breakpoint-test">
+                                    <h4>${breakpoint.toUpperCase()} (${charLimit} chars/line)</h4>
+                                    <div class="event-display">${result}</div>
+                                    <div class="char-count">
+                                        Total: ${result.length} chars<br>
+                                        ${result.includes('…') ? 'Truncated with ellipsis' : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(section);
+            });
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            displayTestResults();
+        });
+    </script>
+</body>
+</html>

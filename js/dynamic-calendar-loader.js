@@ -460,38 +460,78 @@ class DynamicCalendarLoader extends CalendarCore {
         // If no shortname, return the full name
         if (!shortName) return fullName;
         
-        // Hardcoded character limits per breakpoint
-        const charLimits = {
+        // Character limits PER LINE for each breakpoint
+        const charLimitsPerLine = {
             xs: 5,   // < 375px - super small screens
             sm: 8,   // 375-768px - phones
             md: 12,  // 768-1024px - tablets
             lg: 20   // > 1024px - desktop
         };
         
-        // Get character limit for the specified breakpoint
-        const charLimit = charLimits[breakpoint] || charLimits.lg;
+        // Get character limit per line for the specified breakpoint
+        const charLimitPerLine = charLimitsPerLine[breakpoint] || charLimitsPerLine.lg;
         
         // Process the shortname - remove hyphens except escaped ones (\-)
         const processedShortName = shortName.replace(/(?<!\\)-/g, '');
         
-        // If processed name fits within limit, use it
-        if (processedShortName.length <= charLimit) {
+        // Split the name into words
+        const words = processedShortName.split(' ').filter(word => word.length > 0);
+        
+        // If the entire name fits on one line, return it
+        if (processedShortName.length <= charLimitPerLine) {
             return processedShortName;
         }
         
-        // If original hyphenated name fits, use it
-        if (shortName.length <= charLimit) {
+        // Try to fit the original hyphenated name on one line
+        if (shortName.length <= charLimitPerLine) {
             return shortName;
         }
         
-        // If neither fits, truncate the hyphenated version with ellipsis
-        // This ensures we show as much info as possible
-        if (shortName.length > charLimit) {
-            return shortName.substring(0, charLimit - 1) + '…';
+        // Build lines that respect the character limit per line
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            // If adding this word would exceed the limit
+            if (currentLine && (currentLine + ' ' + word).length > charLimitPerLine) {
+                // If the current line has content, save it and start a new line
+                if (currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    // If even a single word is too long, truncate it
+                    lines.push(word.substring(0, charLimitPerLine - 1) + '…');
+                    currentLine = '';
+                }
+            } else {
+                // Add the word to the current line
+                currentLine = currentLine ? currentLine + ' ' + word : word;
+            }
         }
         
-        // Fallback to processed name
-        return processedShortName;
+        // Add the last line if it has content
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+        
+        // Join lines with line breaks (HTML will handle the display)
+        // Limit to 2-3 lines maximum to prevent overflow
+        const maxLines = breakpoint === 'xs' || breakpoint === 'sm' ? 2 : 3;
+        const displayLines = lines.slice(0, maxLines);
+        
+        // If we had to cut lines, add ellipsis to the last line
+        if (lines.length > maxLines && displayLines.length > 0) {
+            const lastLine = displayLines[displayLines.length - 1];
+            if (lastLine.length >= charLimitPerLine - 1) {
+                // Truncate the last line to make room for ellipsis
+                displayLines[displayLines.length - 1] = lastLine.substring(0, charLimitPerLine - 1) + '…';
+            } else {
+                displayLines[displayLines.length - 1] = lastLine + '…';
+            }
+        }
+        
+        // Return the multi-line name as a single string (CSS will handle wrapping)
+        return displayLines.join(' ');
     }
     
     // Generate all breakpoint versions of the event name
