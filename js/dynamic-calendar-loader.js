@@ -460,8 +460,8 @@ class DynamicCalendarLoader extends CalendarCore {
         // If no shortname, return the full name
         if (!shortName) return fullName;
         
-        // Character limits PER LINE for each breakpoint
-        const charLimitsPerLine = {
+        // Character limits PER LINE for each breakpoint (can be overridden by testing interface)
+        const charLimitsPerLine = this.characterLimits || {
             xs: 5,   // < 375px - super small screens
             sm: 8,   // 375-768px - phones
             md: 12,  // 768-1024px - tablets
@@ -1671,6 +1671,53 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             this.updatePageContent(data.cityConfig, data.events);
         }
+    }
+
+    // Update character limits (for testing functionality)
+    updateCharacterLimits(newLimits) {
+        logger.info('CALENDAR', 'Character limits updated from test interface', newLimits);
+        
+        // Store the new character limits
+        this.characterLimits = newLimits;
+        
+        // Force a refresh of the calendar display to apply new limits
+        if (this.allEvents && this.allEvents.length > 0) {
+            this.updateCalendarDisplay();
+        }
+    }
+    
+    // Add test event (for testing functionality)
+    addTestEvent(testEventData) {
+        logger.info('CALENDAR', 'Test event added from test interface', testEventData);
+        
+        if (!this.allEvents) {
+            this.allEvents = [];
+        }
+        
+        // Create a test event object that matches our event structure
+        const testEvent = {
+            name: testEventData.name,
+            shortName: testEventData.shortName,
+            bar: testEventData.venue,
+            time: testEventData.time,
+            day: 'Today',
+            startDate: new Date(),
+            slug: 'test-event-' + Date.now(),
+            recurring: false,
+            coordinates: null,
+            cover: 'Test Event',
+            tea: 'This is a test event for character limit testing',
+            links: []
+        };
+        
+        // Remove any existing test events
+        this.allEvents = this.allEvents.filter(event => !event.slug.startsWith('test-event-'));
+        
+        // Add the new test event
+        this.allEvents.unshift(testEvent);
+        
+        // Refresh the display
+        this.updateCalendarDisplay();
     }
 
     // Initialize
