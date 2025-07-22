@@ -36,6 +36,7 @@ class ChunkyDadApp {
         this.formsManager = null;
         this.calendarLoader = null;
         this.bearDirectory = null;
+        this.debugOverlay = null;
         
         logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
@@ -101,7 +102,21 @@ class ChunkyDadApp {
         // Make formsManager globally accessible for modal interactions
         window.formsManager = this.formsManager;
         
+        // Initialize debug overlay if debug parameter is present
+        this.initializeDebugOverlay();
+        
         logger.componentLoad('SYSTEM', 'Core modules initialized');
+    }
+
+    initializeDebugOverlay() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldShow = urlParams.get('debug') === 'true' || urlParams.has('debug');
+        
+        if (shouldShow && window.DebugOverlay) {
+            this.debugOverlay = new window.DebugOverlay();
+            window.debugOverlay = this.debugOverlay; // Make globally accessible
+            logger.componentInit('SYSTEM', 'Debug overlay initialized in app');
+        }
     }
 
     async initializeCityPageModules() {
@@ -164,6 +179,10 @@ class ChunkyDadApp {
 
     getBearDirectory() {
         return this.bearDirectory;
+    }
+
+    getDebugOverlay() {
+        return this.debugOverlay;
     }
 
     // Global function for scrolling (backward compatibility)
