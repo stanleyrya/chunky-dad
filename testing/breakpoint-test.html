@@ -10,10 +10,11 @@
         body {
             padding-top: 80px;
             font-family: 'Poppins', sans-serif;
+            background: #f5f5f5;
         }
         
         .test-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 2rem auto;
             padding: 2rem;
         }
@@ -22,113 +23,96 @@
             position: relative;
             margin: 2rem 0;
             border: 2px solid #ddd;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            background: #f5f5f5;
+            background: white;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
         
         .iframe-controls {
-            background: #333;
+            background: linear-gradient(135deg, #333 0%, #444 100%);
             color: white;
-            padding: 1rem;
+            padding: 1.5rem;
             display: flex;
             gap: 1rem;
             align-items: center;
             flex-wrap: wrap;
+            border-bottom: 1px solid #555;
         }
         
         .iframe-controls button {
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.25rem;
             background: #555;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            font-weight: 500;
+            font-size: 0.9rem;
         }
         
         .iframe-controls button:hover {
             background: #666;
+            transform: translateY(-1px);
         }
         
         .iframe-controls button.active {
             background: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
         }
         
         .size-display {
             margin-left: auto;
-            font-size: 0.9rem;
-            opacity: 0.8;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            background: rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+        }
+        
+        .iframe-wrapper {
+            position: relative;
+            margin: 0 auto;
+            background: white;
+            transition: all 0.3s ease;
+            overflow: hidden;
         }
         
         #city-iframe {
             width: 100%;
-            height: 600px;
+            height: 800px;
             border: none;
             background: white;
-            transition: width 0.3s ease;
+            display: block;
         }
         
-        .character-test {
+        .config-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
             margin: 2rem 0;
-            padding: 1.5rem;
+        }
+        
+        .config-panel {
+            padding: 2rem;
             background: white;
             border: 1px solid #ddd;
-            border-radius: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
         }
         
-        .char-grid {
-            display: grid;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        
-        .char-row {
-            display: grid;
-            grid-template-columns: 100px 1fr 80px;
-            gap: 1rem;
-            align-items: center;
-            padding: 0.5rem;
-            background: #f9f9f9;
-            border-radius: 4px;
-        }
-        
-        .char-label {
-            font-weight: 600;
-            color: #666;
-        }
-        
-        .char-preview {
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.1rem;
-            padding: 0.5rem;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-        }
-        
-        .char-count {
-            text-align: center;
-            color: #999;
-            font-size: 0.9rem;
-        }
-        
-        .breakpoint-config {
-            margin: 2rem 0;
-            padding: 1.5rem;
-            background: #f0f8ff;
-            border: 1px solid #4285f4;
-            border-radius: 8px;
+        .config-panel h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
         }
         
         .config-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem;
         }
         
         .config-item {
@@ -139,154 +123,207 @@
         
         .config-item label {
             font-weight: 600;
-            color: #333;
+            color: #444;
+            font-size: 0.9rem;
         }
         
-        .config-item input {
-            padding: 0.5rem;
+        .config-item input, .config-item select {
+            padding: 0.75rem;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        
+        .config-item input:focus, .config-item select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+        }
+        
+        .update-btn {
+            margin-top: 1.5rem;
+            padding: 0.75rem 2rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        
+        .update-btn:hover {
+            background: #3367d6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
         }
         
         .test-results {
             margin-top: 2rem;
-            padding: 1rem;
-            background: #f9f9f9;
-            border-radius: 8px;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .test-results h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
         }
         
         .result-item {
-            padding: 0.5rem;
-            margin: 0.5rem 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s;
+        }
+        
+        .result-item:hover {
+            background: #f0f0f0;
+            transform: translateX(4px);
         }
         
         .result-name {
-            font-weight: 500;
+            font-weight: 600;
+            color: #333;
         }
         
         .result-output {
-            font-family: monospace;
+            font-family: 'Monaco', 'Menlo', monospace;
             color: #666;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
         }
         
-        /* Responsive iframe wrapper */
-        .iframe-wrapper {
-            position: relative;
-            width: 100%;
-            margin: 0 auto;
-            background: white;
+        .event-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .fake-size-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 193, 7, 0.9);
+            color: #333;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .config-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .iframe-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .size-display {
+                margin-left: 0;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <div class="nav-container">
-                <div class="logo">
-                    <h1><a href="../index.html">🐻 chunky.dad</a></h1>
-                </div>
-                
-                <ul class="nav-menu">
-                    <li><a href="../index.html">Home</a></li>
-                    <li><a href="../index.html#cities">Cities</a></li>
-                    <li><a href="../index.html#events">Events</a></li>
-                    <li><a href="../index.html#businesses">Businesses</a></li>
-                    <li><a href="../index.html#contact">Contact</a></li>
-                </ul>
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </div>
-        </nav>
-    </header>
-    
     <div class="test-container">
-        <h1>🎯 Breakpoint Character Limit Testing</h1>
-        <p>This tool helps determine the optimal character limits for event names at different screen sizes.</p>
+        <h1>🎯 Enhanced Breakpoint Testing Tool</h1>
+        <p>Test character limits and event display across different screen sizes with fake viewport simulation.</p>
         
-        <div class="breakpoint-config">
-            <h2>📏 Configure Character Limits</h2>
-            <div class="config-grid">
-                <div class="config-item">
-                    <label>Super Small (&lt;375px)</label>
-                    <input type="number" id="chars-xs" value="5" min="3" max="20">
+        <div class="config-section">
+            <div class="config-panel">
+                <h2>📏 Character Limits</h2>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label>Super Small (&lt;375px)</label>
+                        <input type="number" id="chars-xs" value="5" min="3" max="20">
+                    </div>
+                    <div class="config-item">
+                        <label>Small (375-768px)</label>
+                        <input type="number" id="chars-sm" value="8" min="5" max="25">
+                    </div>
+                    <div class="config-item">
+                        <label>Medium (768-1024px)</label>
+                        <input type="number" id="chars-md" value="12" min="8" max="30">
+                    </div>
+                    <div class="config-item">
+                        <label>Large (&gt;1024px)</label>
+                        <input type="number" id="chars-lg" value="20" min="12" max="40">
+                    </div>
                 </div>
-                <div class="config-item">
-                    <label>Small (375-768px)</label>
-                    <input type="number" id="chars-sm" value="8" min="5" max="25">
-                </div>
-                <div class="config-item">
-                    <label>Medium (768-1024px)</label>
-                    <input type="number" id="chars-md" value="12" min="8" max="30">
-                </div>
-                <div class="config-item">
-                    <label>Large (&gt;1024px)</label>
-                    <input type="number" id="chars-lg" value="20" min="12" max="40">
-                </div>
+                <button class="update-btn" onclick="updateCharacterLimits()">Apply Character Limits</button>
             </div>
-            <button onclick="updateCharacterLimits()" style="margin-top: 1rem; padding: 0.5rem 1.5rem; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Limits</button>
-        </div>
-        
-        <div class="character-test">
-            <h2>📝 Character Count Visualization</h2>
-            <p>See how many characters fit at different lengths:</p>
-            <div class="char-grid">
-                <div class="char-row">
-                    <div class="char-label">5 chars:</div>
-                    <div class="char-preview">ABCDE</div>
-                    <div class="char-count">5</div>
+            
+            <div class="config-panel">
+                <h2>🎪 Test Event Settings</h2>
+                <div class="event-controls">
+                    <div class="config-item">
+                        <label>Event Name</label>
+                        <input type="text" id="event-name" value="Bear Night at The Eagle">
+                    </div>
+                    <div class="config-item">
+                        <label>Short Name</label>
+                        <input type="text" id="event-short-name" value="Bear-Night">
+                    </div>
+                    <div class="config-item">
+                        <label>Venue</label>
+                        <input type="text" id="event-venue" value="The Eagle NYC">
+                    </div>
+                    <div class="config-item">
+                        <label>Time</label>
+                        <input type="text" id="event-time" value="9PM-2AM">
+                    </div>
                 </div>
-                <div class="char-row">
-                    <div class="char-label">8 chars:</div>
-                    <div class="char-preview">ABCDEFGH</div>
-                    <div class="char-count">8</div>
-                </div>
-                <div class="char-row">
-                    <div class="char-label">12 chars:</div>
-                    <div class="char-preview">ABCDEFGHIJKL</div>
-                    <div class="char-count">12</div>
-                </div>
-                <div class="char-row">
-                    <div class="char-label">20 chars:</div>
-                    <div class="char-preview">ABCDEFGHIJKLMNOPQRST</div>
-                    <div class="char-count">20</div>
-                </div>
+                <button class="update-btn" onclick="updateTestEvent()">Add Test Event to Calendar</button>
             </div>
         </div>
         
         <div class="iframe-container">
             <div class="iframe-controls">
-                <button onclick="setIframeWidth(320)" data-width="320">iPhone SE (320px)</button>
-                <button onclick="setIframeWidth(375)" data-width="375">iPhone 12 (375px)</button>
-                <button onclick="setIframeWidth(414)" data-width="414">iPhone Plus (414px)</button>
-                <button onclick="setIframeWidth(768)" data-width="768">iPad (768px)</button>
-                <button onclick="setIframeWidth(1024)" data-width="1024">iPad Pro (1024px)</button>
-                <button onclick="setIframeWidth('100%')" data-width="100%" class="active">Desktop (100%)</button>
-                <div class="size-display">Current: <span id="current-size">100%</span></div>
+                <button onclick="setIframeWidth(320, true)" data-width="320">📱 iPhone SE (320px)</button>
+                <button onclick="setIframeWidth(375, true)" data-width="375">📱 iPhone 12 (375px)</button>
+                <button onclick="setIframeWidth(414, true)" data-width="414">📱 iPhone Plus (414px)</button>
+                <button onclick="setIframeWidth(768, true)" data-width="768">📱 iPad (768px)</button>
+                <button onclick="setIframeWidth(1024, true)" data-width="1024">💻 iPad Pro (1024px)</button>
+                <button onclick="setIframeWidth(1200, false)" data-width="1200" class="active">🖥️ Desktop (1200px)</button>
+                <button onclick="setIframeWidth(1400, false)" data-width="1400">🖥️ Large (1400px)</button>
+                <div class="size-display">Current: <span id="current-size">1200px (Real)</span></div>
             </div>
             <div class="iframe-wrapper">
+                <div class="fake-size-indicator" id="fake-size-indicator">Fake Size: 320px</div>
                 <iframe id="city-iframe" src="../city.html?city=new-york"></iframe>
             </div>
         </div>
         
         <div class="test-results">
             <h2>🧪 Test Results</h2>
-            <p>Testing various event names with the current character limits:</p>
+            <p>Testing event names with current character limits and settings:</p>
             <div id="test-output"></div>
         </div>
     </div>
 
     <script>
-        // Character limits configuration
+        // Character limits configuration that matches dynamic-calendar-loader.js
         let charLimits = {
             xs: 5,   // < 375px
             sm: 8,   // 375-768px
@@ -294,9 +331,16 @@
             lg: 20   // > 1024px
         };
         
-        // Test event names
-        const testEvents = [
-            { name: "Bear Night", shortName: "Bear-Night" },
+        // Test event configuration
+        let testEvent = {
+            name: "Bear Night at The Eagle",
+            shortName: "Bear-Night",
+            venue: "The Eagle NYC",
+            time: "9PM-2AM"
+        };
+        
+        // Additional test events
+        const additionalTestEvents = [
             { name: "Rockstrap Party", shortName: "Rock-strap" },
             { name: "Underwear Night", shortName: "Under-wear" },
             { name: "Bear Weekend Festival", shortName: "Bear-Week-end" },
@@ -306,7 +350,7 @@
             { name: "The Eagle NYC Bear Night", shortName: "Eagle-Bear" }
         ];
         
-        // Get character limit based on width
+        // Get character limit based on width (matches dynamic-calendar-loader logic)
         function getCharLimit(width) {
             if (typeof width === 'string') width = window.innerWidth;
             
@@ -316,29 +360,37 @@
             return charLimits.lg;
         }
         
-        // Simplified name processing logic
-        function getSimplifiedEventName(event, width) {
-            const charLimit = getCharLimit(width);
+        // Process event name (matches dynamic-calendar-loader logic)
+        function getSmartEventNameForBreakpoint(event, breakpoint) {
             const shortName = event.shortName || event.nickname || '';
             const fullName = event.name || '';
             
             if (!shortName) return fullName;
             
-            // Remove all hyphens except escaped ones
+            const charLimitsPerLine = {
+                xs: charLimits.xs,
+                sm: charLimits.sm,
+                md: charLimits.md,
+                lg: charLimits.lg
+            };
+            
+            const charLimitPerLine = charLimitsPerLine[breakpoint] || charLimitsPerLine.lg;
+            
+            // Process the shortname - remove hyphens except escaped ones
             const processedShortName = shortName.replace(/(?<!\\)-/g, '');
             
             // If processed name fits within limit, use it
-            if (processedShortName.length <= charLimit) {
+            if (processedShortName.length <= charLimitPerLine) {
                 return processedShortName;
             }
             
             // If original hyphenated name fits, use it
-            if (shortName.length <= charLimit) {
+            if (shortName.length <= charLimitPerLine) {
                 return shortName;
             }
             
             // Otherwise, truncate with ellipsis
-            return shortName.substring(0, charLimit - 1) + '…';
+            return shortName.substring(0, charLimitPerLine - 1) + '…';
         }
         
         // Update character limits from inputs
@@ -350,18 +402,62 @@
             
             runTests();
             
-            // Update iframe if it's loaded
+            // Send updated limits to iframe
+            sendCharacterLimitsToIframe();
+            
+            console.log('Character limits updated:', charLimits);
+        }
+        
+        // Update test event from inputs
+        function updateTestEvent() {
+            testEvent.name = document.getElementById('event-name').value || testEvent.name;
+            testEvent.shortName = document.getElementById('event-short-name').value || testEvent.shortName;
+            testEvent.venue = document.getElementById('event-venue').value || testEvent.venue;
+            testEvent.time = document.getElementById('event-time').value || testEvent.time;
+            
+            runTests();
+            
+            // Send test event to iframe
+            sendTestEventToIframe();
+            
+            console.log('Test event updated:', testEvent);
+        }
+        
+        // Send character limits to iframe
+        function sendCharacterLimitsToIframe() {
             const iframe = document.getElementById('city-iframe');
             if (iframe && iframe.contentWindow) {
-                // We'll implement this communication later
-                console.log('Character limits updated:', charLimits);
+                try {
+                    iframe.contentWindow.postMessage({
+                        type: 'updateCharacterLimits',
+                        data: charLimits
+                    }, '*');
+                } catch (e) {
+                    console.log('Could not send character limits to iframe (cross-origin)');
+                }
             }
         }
         
-        // Set iframe width
-        function setIframeWidth(width) {
+        // Send test event to iframe
+        function sendTestEventToIframe() {
+            const iframe = document.getElementById('city-iframe');
+            if (iframe && iframe.contentWindow) {
+                try {
+                    iframe.contentWindow.postMessage({
+                        type: 'addTestEvent',
+                        data: testEvent
+                    }, '*');
+                } catch (e) {
+                    console.log('Could not send test event to iframe (cross-origin)');
+                }
+            }
+        }
+        
+        // Set iframe width with fake viewport option
+        function setIframeWidth(width, fakeViewport = false) {
             const iframe = document.getElementById('city-iframe');
             const wrapper = document.querySelector('.iframe-wrapper');
+            const fakeIndicator = document.getElementById('fake-size-indicator');
             
             // Update button states
             document.querySelectorAll('.iframe-controls button').forEach(btn => {
@@ -371,12 +467,55 @@
                 }
             });
             
-            if (width === '100%') {
-                wrapper.style.width = '100%';
-                document.getElementById('current-size').textContent = '100%';
-            } else {
+            if (fakeViewport) {
+                // Show fake size indicator
+                fakeIndicator.style.display = 'block';
+                fakeIndicator.textContent = `Fake Size: ${width}px`;
+                
+                // Set wrapper to the fake width but scale it down to fit
+                const maxWidth = Math.min(1200, window.innerWidth - 100);
+                const scale = Math.min(1, maxWidth / width);
+                
                 wrapper.style.width = width + 'px';
-                document.getElementById('current-size').textContent = width + 'px';
+                wrapper.style.transform = `scale(${scale})`;
+                wrapper.style.transformOrigin = 'top center';
+                wrapper.style.height = (800 / scale) + 'px'; // Adjust height to account for scale
+                
+                document.getElementById('current-size').textContent = `${width}px (Fake, ${Math.round(scale * 100)}% scale)`;
+                
+                // Send fake viewport size to iframe
+                setTimeout(() => {
+                    try {
+                        iframe.contentWindow.postMessage({
+                            type: 'setFakeViewport',
+                            data: { width: width, height: 800 }
+                        }, '*');
+                    } catch (e) {
+                        console.log('Could not send fake viewport to iframe (cross-origin)');
+                    }
+                }, 100);
+            } else {
+                // Hide fake size indicator
+                fakeIndicator.style.display = 'none';
+                
+                // Set real width
+                wrapper.style.width = width + 'px';
+                wrapper.style.transform = 'none';
+                wrapper.style.transformOrigin = 'top center';
+                wrapper.style.height = '800px';
+                
+                document.getElementById('current-size').textContent = `${width}px (Real)`;
+                
+                // Clear fake viewport
+                setTimeout(() => {
+                    try {
+                        iframe.contentWindow.postMessage({
+                            type: 'clearFakeViewport'
+                        }, '*');
+                    } catch (e) {
+                        console.log('Could not clear fake viewport from iframe (cross-origin)');
+                    }
+                }, 100);
             }
             
             runTests();
@@ -385,14 +524,23 @@
         // Run tests with current settings
         function runTests() {
             const output = document.getElementById('test-output');
-            const currentWidth = document.querySelector('.iframe-wrapper').style.width || '100%';
-            const widthPx = currentWidth === '100%' ? window.innerWidth : parseInt(currentWidth);
-            const charLimit = getCharLimit(widthPx);
+            const currentWidth = parseInt(document.querySelector('.iframe-wrapper').style.width) || 1200;
+            const charLimit = getCharLimit(currentWidth);
             
-            let html = `<p><strong>Current width:</strong> ${currentWidth} | <strong>Character limit:</strong> ${charLimit}</p>`;
+            let html = `<p><strong>Testing Width:</strong> ${currentWidth}px | <strong>Character Limit:</strong> ${charLimit}</p>`;
             
-            testEvents.forEach(event => {
-                const result = getSimplifiedEventName(event, widthPx);
+            // Test the custom event first
+            const testResult = getSmartEventNameForBreakpoint(testEvent, getBreakpointFromWidth(currentWidth));
+            html += `
+                <div class="result-item" style="border-left: 4px solid var(--primary-color);">
+                    <div class="result-name">🎪 ${testEvent.name}</div>
+                    <div class="result-output">${testEvent.shortName} → ${testResult}</div>
+                </div>
+            `;
+            
+            // Test additional events
+            additionalTestEvents.forEach(event => {
+                const result = getSmartEventNameForBreakpoint(event, getBreakpointFromWidth(currentWidth));
                 html += `
                     <div class="result-item">
                         <div class="result-name">${event.name}</div>
@@ -404,22 +552,46 @@
             output.innerHTML = html;
         }
         
+        // Get breakpoint name from width
+        function getBreakpointFromWidth(width) {
+            if (width < 375) return 'xs';
+            if (width < 768) return 'sm';
+            if (width < 1024) return 'md';
+            return 'lg';
+        }
+        
         // Initialize on load
         window.addEventListener('load', () => {
             runTests();
             
-            // Update character limit inputs
-            document.getElementById('chars-xs').value = charLimits.xs;
-            document.getElementById('chars-sm').value = charLimits.sm;
-            document.getElementById('chars-md').value = charLimits.md;
-            document.getElementById('chars-lg').value = charLimits.lg;
+            // Initialize iframe after a short delay
+            setTimeout(() => {
+                sendCharacterLimitsToIframe();
+                sendTestEventToIframe();
+            }, 1000);
         });
         
         // Handle window resize
         window.addEventListener('resize', () => {
-            if (document.querySelector('.iframe-wrapper').style.width === '100%' || 
-                !document.querySelector('.iframe-wrapper').style.width) {
-                runTests();
+            // Recalculate scaling for fake viewports
+            const wrapper = document.querySelector('.iframe-wrapper');
+            const currentWidth = parseInt(wrapper.style.width) || 1200;
+            const fakeIndicator = document.getElementById('fake-size-indicator');
+            
+            if (fakeIndicator.style.display === 'block') {
+                const maxWidth = Math.min(1200, window.innerWidth - 100);
+                const scale = Math.min(1, maxWidth / currentWidth);
+                wrapper.style.transform = `scale(${scale})`;
+                wrapper.style.height = (800 / scale) + 'px';
+            }
+        });
+        
+        // Listen for messages from iframe
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'iframeReady') {
+                console.log('Iframe is ready, sending initial data');
+                sendCharacterLimitsToIframe();
+                sendTestEventToIframe();
             }
         });
     </script>
