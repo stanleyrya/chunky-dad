@@ -515,8 +515,8 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         // Join lines with line breaks (HTML will handle the display)
-        // Limit to 2-3 lines maximum to prevent overflow
-        const maxLines = breakpoint === 'xs' || breakpoint === 'sm' ? 2 : 3;
+        // Limit to 3 lines maximum for all breakpoints
+        const maxLines = 3;
         const displayLines = lines.slice(0, maxLines);
         
         // If we had to cut lines, add ellipsis to the last line

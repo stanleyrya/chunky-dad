@@ -1155,11 +1155,8 @@ header {
 .event-name {
     font-weight: 600;
     margin-bottom: 0.2rem;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: manual;
-    white-space: normal;
-    line-height: 1.2;
+    word-wrap: normal;
+    overflow-wrap: normal;
 }
 
 .event-time {
@@ -3627,11 +3624,8 @@ footer {
   font-weight: var(--event-name-font-weight);
   line-height: var(--event-name-line-height);
   margin-bottom: 0.1rem;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: manual;
-  white-space: normal;
-  max-width: 100%;
+  word-wrap: normal;
+  overflow-wrap: normal;
 }
 
 /* Show appropriate event name based on screen size */

@@ -88,7 +88,7 @@
                 <li><strong>MD (768-1024px):</strong> 12 characters per line</li>
                 <li><strong>LG (> 1024px):</strong> 20 characters per line</li>
             </ul>
-            <p><strong>Note:</strong> The new logic should wrap text to multiple lines based on these per-line limits, not trim the entire name to these character counts.</p>
+            <p><strong>Note:</strong> The logic wraps text to multiple lines (max 3 lines for all breakpoints) based on these per-line limits. CSS word-wrap is set to 'normal' for standard wrapping behavior.</p>
         </div>
         
         <div id="test-results"></div>
