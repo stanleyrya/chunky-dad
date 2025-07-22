@@ -89,7 +89,7 @@
         
         .config-section {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 2rem;
             margin: 2rem 0;
         }
@@ -228,6 +228,12 @@
             display: none;
         }
         
+        @media (max-width: 1200px) {
+            .config-section {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
         @media (max-width: 768px) {
             .config-section {
                 grid-template-columns: 1fr;
@@ -248,7 +254,7 @@
 <body>
     <div class="test-container">
         <h1>🎯 Enhanced Breakpoint Testing Tool</h1>
-        <p>Test character limits and event display across different screen sizes with fake viewport simulation.</p>
+        <p>Test character limits and event display across different screen sizes with fake viewport simulation and manual width control. Perfect for debugging hyphenation issues like "Rock-strap" appearing when it doesn't need to wrap to the next line.</p>
         
         <div class="config-section">
             <div class="config-panel">
@@ -272,6 +278,40 @@
                     </div>
                 </div>
                 <button class="update-btn" onclick="updateCharacterLimits()">Apply Character Limits</button>
+            </div>
+
+            <div class="config-panel">
+                <h2>📐 Manual Width Control</h2>
+                <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">
+                    Perfect for debugging hyphenation issues like "Rock-strap" - test exact widths to find where unnecessary hyphens appear.
+                </p>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label>Width (px)</label>
+                        <input type="range" id="width-slider" min="280" max="1600" value="1200" oninput="updateManualWidth()">
+                    </div>
+                    <div class="config-item">
+                        <label>Exact Width</label>
+                        <input type="number" id="width-input" min="280" max="1600" value="1200" onchange="updateManualWidth()">
+                    </div>
+                    <div class="config-item">
+                        <label>Viewport Mode</label>
+                        <select id="viewport-mode" onchange="updateManualWidth()">
+                            <option value="real">Real Size</option>
+                            <option value="fake">Fake Viewport (Scaled)</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label>Quick Tests</label>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" onclick="testWidth(350)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">350px</button>
+                            <button type="button" onclick="testWidth(400)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">400px</button>
+                            <button type="button" onclick="testWidth(500)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">500px</button>
+                            <button type="button" onclick="testWidth(600)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">600px</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="update-btn" onclick="updateManualWidth()">Apply Manual Width</button>
             </div>
             
             <div class="config-panel">
@@ -347,8 +387,49 @@
             { name: "International Bear Weekend", shortName: "Inter-Bear-Week" },
             { name: "Leather & Lace Party", shortName: "Leath-Lace" },
             { name: "Woof!", shortName: "Woof" },
-            { name: "The Eagle NYC Bear Night", shortName: "Eagle-Bear" }
+            { name: "The Eagle NYC Bear Night", shortName: "Eagle-Bear" },
+            // Additional test cases for debugging hyphenation issues
+            { name: "Rock-strap Night", shortName: "Rock-strap" },
+            { name: "Pre-Game Party", shortName: "Pre-Game" },
+            { name: "Post-Work Drinks", shortName: "Post-Work" },
+            { name: "Mid-Week Mixer", shortName: "Mid-Week" },
+            { name: "After-Hours Event", shortName: "After-Hours" },
+            { name: "Co-Ed Sports Night", shortName: "Co-Ed" },
+            { name: "Ex-Military Meetup", shortName: "Ex-Military" },
+            { name: "Non-Stop Dancing", shortName: "Non-Stop" }
         ];
+        
+        // Manual width control functions
+        function updateManualWidth() {
+            const slider = document.getElementById('width-slider');
+            const input = document.getElementById('width-input');
+            const modeSelect = document.getElementById('viewport-mode');
+            
+            // Sync slider and input values
+            const width = parseInt(input.value) || parseInt(slider.value);
+            slider.value = width;
+            input.value = width;
+            
+            const isFakeViewport = modeSelect.value === 'fake';
+            
+            // Clear active states from preset buttons
+            document.querySelectorAll('.iframe-controls button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Apply the width
+            setIframeWidth(width, isFakeViewport);
+        }
+        
+        function testWidth(width) {
+            const slider = document.getElementById('width-slider');
+            const input = document.getElementById('width-input');
+            
+            slider.value = width;
+            input.value = width;
+            
+            updateManualWidth();
+        }
         
         // Get character limit based on width (matches dynamic-calendar-loader logic)
         function getCharLimit(width) {
@@ -531,25 +612,41 @@
             
             // Test the custom event first
             const testResult = getSmartEventNameForBreakpoint(testEvent, getBreakpointFromWidth(currentWidth));
+            const isUnnecessaryHyphen = checkUnnecessaryHyphenation(testEvent, testResult, charLimit);
             html += `
                 <div class="result-item" style="border-left: 4px solid var(--primary-color);">
                     <div class="result-name">🎪 ${testEvent.name}</div>
-                    <div class="result-output">${testEvent.shortName} → ${testResult}</div>
+                    <div class="result-output">${testEvent.shortName} → ${testResult} ${isUnnecessaryHyphen ? '⚠️ Unnecessary hyphen?' : ''}</div>
                 </div>
             `;
             
             // Test additional events
             additionalTestEvents.forEach(event => {
                 const result = getSmartEventNameForBreakpoint(event, getBreakpointFromWidth(currentWidth));
+                const isUnnecessary = checkUnnecessaryHyphenation(event, result, charLimit);
+                const warningStyle = isUnnecessary ? 'border-left: 4px solid #ff9800;' : '';
                 html += `
-                    <div class="result-item">
+                    <div class="result-item" style="${warningStyle}">
                         <div class="result-name">${event.name}</div>
-                        <div class="result-output">${event.shortName} → ${result}</div>
+                        <div class="result-output">${event.shortName} → ${result} ${isUnnecessary ? '⚠️ Unnecessary hyphen?' : ''}</div>
                     </div>
                 `;
             });
             
             output.innerHTML = html;
+        }
+        
+        // Check if hyphenation might be unnecessary
+        function checkUnnecessaryHyphenation(event, result, charLimit) {
+            const shortName = event.shortName || '';
+            const processedName = shortName.replace(/(?<!\\)-/g, '');
+            
+            // If the result contains a hyphen but the processed name (without hyphens) would fit
+            if (result.includes('-') && processedName.length <= charLimit) {
+                return true;
+            }
+            
+            return false;
         }
         
         // Get breakpoint name from width
