@@ -454,76 +454,65 @@ class DynamicCalendarLoader extends CalendarCore {
 
     getSmartEventName(event, elementOrWidth = null) {
         // Get the nickname/shortname
-        const nickname = event.shortName || event.nickname || '';
+        const shortName = event.shortName || event.nickname || '';
         const fullName = event.name || '';
         
-        // If no nickname, return the full name
-        if (!nickname) return fullName;
+        // If no shortname, return the full name
+        if (!shortName) return fullName;
         
-        // Create unhyphenated version
-        const unhyphenatedNickname = nickname.replace(/-/g, '');
+        // Hardcoded character limits per breakpoint
+        const charLimits = {
+            xs: 5,   // < 375px - super small screens
+            sm: 8,   // 375-768px - phones
+            md: 12,  // 768-1024px - tablets
+            lg: 20   // > 1024px - desktop
+        };
         
-        // Determine available width
-        let maxWidthPx = null;
+        // Determine screen width
+        let screenWidth = window.innerWidth;
         if (elementOrWidth) {
             if (typeof elementOrWidth === 'number') {
-                maxWidthPx = elementOrWidth;
-            } else if (typeof elementOrWidth === 'string') {
-                const el = document.querySelector(elementOrWidth);
-                if (el) maxWidthPx = el.offsetWidth || el.getBoundingClientRect().width;
-            } else if (elementOrWidth instanceof Element) {
-                maxWidthPx = elementOrWidth.offsetWidth || elementOrWidth.getBoundingClientRect().width;
+                // If a specific width is provided, estimate screen size from it
+                screenWidth = elementOrWidth * 3; // Rough estimate
             }
         }
         
-        // If no width info, use window width
-        if (!maxWidthPx && typeof window !== 'undefined') {
-            maxWidthPx = window.innerWidth <= 768 ? 120 : 250;
-        }
-        
-        // Estimate characters that fit (rough estimate: ~8-10px per character)
-        const charsPerLine = Math.floor((maxWidthPx || 120) / 8);
-        
-        // Determine if we're on mobile based on width
-        const isMobile = maxWidthPx <= 150 || (typeof window !== 'undefined' && window.innerWidth <= 768);
-        
-        // Smart hyphenation logic based on the test page description
-        if (isMobile) {
-            // Mobile: aggressive hyphenation for limited space
-            if (fullName.length > 10) {
-                // Names >10 chars: use unhyphenated if ≤5 chars, otherwise hyphenated
-                if (unhyphenatedNickname.length <= 5) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Keep hyphenated
-                }
-            } else if (fullName.length > 6) {
-                // Names >6 chars: use unhyphenated if ≤6 chars, otherwise hyphenated
-                if (unhyphenatedNickname.length <= 6) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Keep hyphenated
-                }
-            }
+        // Get character limit based on screen width
+        let charLimit;
+        if (screenWidth < 375) {
+            charLimit = charLimits.xs;
+        } else if (screenWidth < 768) {
+            charLimit = charLimits.sm;
+        } else if (screenWidth < 1024) {
+            charLimit = charLimits.md;
         } else {
-            // Desktop: conservative hyphenation with more space
-            if (fullName.length > 10) {
-                // Names >10 chars: use unhyphenated if ≤10 chars, otherwise hyphenated
-                if (unhyphenatedNickname.length <= 10) {
-                    return unhyphenatedNickname;
-                } else {
-                    return nickname; // Keep hyphenated
-                }
-            }
+            charLimit = charLimits.lg;
         }
         
-        // For shorter names or if unhyphenated fits, use unhyphenated
-        if (unhyphenatedNickname.length <= charsPerLine) {
-            return unhyphenatedNickname;
+        // Process the shortname - remove hyphens except escaped ones (\-)
+        const processedShortName = shortName.replace(/(?<!\\)-/g, '');
+        
+        // Max 3 lines logic - for now we'll focus on single line
+        // This can be enhanced later to handle multi-line scenarios
+        
+        // If processed name fits within limit, use it
+        if (processedShortName.length <= charLimit) {
+            return processedShortName;
         }
         
-        // Otherwise keep the hyphenated version
-        return nickname;
+        // If original hyphenated name fits, use it
+        if (shortName.length <= charLimit) {
+            return shortName;
+        }
+        
+        // If neither fits, truncate the hyphenated version with ellipsis
+        // This ensures we show as much info as possible
+        if (shortName.length > charLimit) {
+            return shortName.substring(0, charLimit - 1) + '…';
+        }
+        
+        // Fallback to processed name
+        return processedShortName;
     }
 
     // Format time for mobile display with simplified format (4a-5p)
