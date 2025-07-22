@@ -156,12 +156,17 @@
         <a href="../index.html" class="back-link">← Back to Main Site</a>
         
         <div class="header">
-            <h1>🧪 Testing Tools</h1>
-            <p>Development and testing utilities for chunky.dad</p>
+            <h1>chunky.dad Test Files</h1>
+            <p class="subtitle">Development and testing utilities</p>
         </div>
 
-        <div id="content">
-            <div class="loading">Discovering test files...</div>
+        <div id="debug-info" style="background: #f0f0f0; padding: 10px; margin: 20px 0; border-radius: 5px; font-family: monospace; font-size: 0.9em; display: none;">
+            <strong>Debug Info:</strong>
+            <div id="debug-content"></div>
+        </div>
+        
+        <div id="file-grid" class="file-grid">
+            <div class="loading">Loading test files...</div>
         </div>
     </div>
 
@@ -282,19 +287,32 @@
 
         // Load test files dynamically
         async function loadTestFiles() {
+            const debugInfo = document.getElementById('debug-info');
+            const debugContent = document.getElementById('debug-content');
+            debugInfo.style.display = 'block';
+            
             try {
                 let testFiles = [];
                 
                 // First try to load manifest.json
                 try {
-                    const manifestResponse = await fetch('manifest.json');
+                    // Try with explicit relative path first
+                    const manifestResponse = await fetch('./manifest.json', { cache: 'no-cache' });
+                    console.log('Manifest fetch response:', manifestResponse.status, manifestResponse.statusText);
+                    debugContent.innerHTML += `<div>Manifest fetch: ${manifestResponse.status} ${manifestResponse.statusText}</div>`;
+                    
                     if (manifestResponse.ok) {
                         const manifest = await manifestResponse.json();
                         testFiles = manifest.files.filter(f => f.name !== 'index.html');
-                        console.log('Loaded files from manifest.json');
+                        console.log('Loaded', testFiles.length, 'files from manifest.json');
+                        debugContent.innerHTML += `<div style="color: green;">✓ Loaded ${testFiles.length} files from manifest.json</div>`;
+                    } else {
+                        console.warn('Manifest fetch failed:', manifestResponse.status, manifestResponse.statusText);
+                        debugContent.innerHTML += `<div style="color: orange;">⚠ Manifest fetch failed</div>`;
                     }
                 } catch (e) {
-                    console.log('Could not load manifest.json, trying directory listing');
+                    console.warn('Could not load manifest.json:', e.message);
+                    debugContent.innerHTML += `<div style="color: red;">✗ Error loading manifest: ${e.message}</div>`;
                 }
                 
                 // If no manifest, try to parse directory listing
@@ -303,6 +321,8 @@
                     
                     if (parsedFiles && parsedFiles.length > 0) {
                         testFiles = parsedFiles;
+                        console.log('Loaded', testFiles.length, 'files from directory listing');
+                        debugContent.innerHTML += `<div style="color: green;">✓ Loaded ${testFiles.length} files from directory listing</div>`;
                     } else {
                         // Fallback: probe for all files we know exist
                         const allKnownFiles = [
@@ -328,7 +348,8 @@
                             'css-breakpoint-test.html',
                             'multiline-breakpoint-test.html',
                             'hyphenation-test.html',
-                            'simplified-hyphenation-test.html'
+                            'simplified-hyphenation-test.html',
+                            'test-event-abbreviation.html'
                         ];
                         
                         // Check all files in parallel for better performance
@@ -351,6 +372,7 @@
                         
                         const results = await Promise.all(fileChecks);
                         testFiles = results.filter(f => f !== null);
+                        debugContent.innerHTML += `<div style="color: green;">✓ Loaded ${testFiles.length} files from probe</div>`;
                     }
                 }
 
@@ -359,7 +381,7 @@
                 
                 displayFiles(testFiles);
             } catch (error) {
-                document.getElementById('content').innerHTML = `
+                document.getElementById('file-grid').innerHTML = `
                     <div class="error">
                         <h3>Error loading test files</h3>
                         <p>${error.message}</p>
@@ -370,10 +392,10 @@
 
         // Display the files in a grid
         function displayFiles(files) {
-            const existingFiles = files.filter(f => f.exists);
+            const existingFiles = files.filter(f => f.exists !== false);
             
             if (existingFiles.length === 0) {
-                document.getElementById('content').innerHTML = `
+                document.getElementById('file-grid').innerHTML = `
                     <div class="error">
                         <h3>No test files found</h3>
                         <p>Make sure test files are present in the testing directory.</p>
@@ -382,9 +404,13 @@
                 return;
             }
 
+            const container = document.getElementById('file-grid');
+            container.innerHTML = '';
+            
             const stats = document.createElement('div');
             stats.className = 'stats';
             stats.textContent = `Found ${existingFiles.length} test file${existingFiles.length !== 1 ? 's' : ''}`;
+            container.appendChild(stats);
 
             const grid = document.createElement('div');
             grid.className = 'test-grid';
@@ -404,9 +430,7 @@
                 grid.appendChild(card);
             });
 
-            document.getElementById('content').innerHTML = '';
-            document.getElementById('content').appendChild(stats);
-            document.getElementById('content').appendChild(grid);
+            container.appendChild(grid);
         }
 
         // Load files when page loads
