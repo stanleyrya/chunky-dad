@@ -112,6 +112,12 @@
             line-height: 1.4;
         }
 
+        .test-card .file-size {
+            font-size: 0.75rem;
+            opacity: 0.5;
+            margin-top: 8px;
+        }
+
         .category-icon {
             font-size: 2rem;
             margin-bottom: 10px;
@@ -125,6 +131,13 @@
             border-radius: 10px;
             text-align: center;
             margin: 50px 0;
+        }
+
+        .stats {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+            opacity: 0.7;
         }
 
         @media (max-width: 768px) {
@@ -148,7 +161,7 @@
         </div>
 
         <div id="content">
-            <div class="loading">Loading test files...</div>
+            <div class="loading">Discovering test files...</div>
         </div>
     </div>
 
@@ -172,61 +185,178 @@
             'event-test-12-swipe-tiles': { icon: '👆', desc: 'Swipeable tile event display' },
             'test-calendar-logging': { icon: '📝', desc: 'Calendar system logging and debugging' },
             'test-google-sheets-loader': { icon: '📊', desc: 'Google Sheets data loader testing' },
-            'cover-field-test': { icon: '🖼️', desc: 'Cover field functionality test' }
+            'test-display-modes': { icon: '🖥️', desc: 'Display mode testing and configuration' },
+            'breakpoint-test': { icon: '📐', desc: 'Responsive breakpoint testing' },
+            'css-breakpoint-test': { icon: '🎯', desc: 'CSS media query breakpoint tester' },
+            'multiline-breakpoint-test': { icon: '📏', desc: 'Multi-line responsive breakpoint testing' },
+            'hyphenation-test': { icon: '📝', desc: 'Text hyphenation testing' },
+            'simplified-hyphenation-test': { icon: '✂️', desc: 'Simplified hyphenation algorithm testing' }
         };
 
         // Function to get file info
         function getFileInfo(filename) {
             const baseName = filename.replace('.html', '');
-            const info = fileDescriptions[baseName] || { icon: '📄', desc: 'Test file' };
+            
+            // Check for exact match
+            if (fileDescriptions[baseName]) {
+                return {
+                    ...fileDescriptions[baseName],
+                    displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                };
+            }
+            
+            // Check for pattern matches
+            for (const [pattern, info] of Object.entries(fileDescriptions)) {
+                if (baseName.includes(pattern)) {
+                    return {
+                        ...info,
+                        displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                    };
+                }
+            }
+            
+            // Default
             return {
-                ...info,
+                icon: '📄',
+                desc: 'Test file',
                 displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
             };
         }
 
-        // Load test files by checking known files
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Try to parse directory listing from the server
+        async function parseDirectoryListing() {
+            try {
+                // First, try to fetch the directory itself
+                const response = await fetch('./');
+                const text = await response.text();
+                
+                // Parse HTML directory listing (common format for Apache/nginx)
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                
+                const files = [];
+                
+                // Try to find links in common directory listing formats
+                const links = doc.querySelectorAll('a');
+                for (const link of links) {
+                    const href = link.getAttribute('href');
+                    if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
+                        files.push({
+                            name: href,
+                            displayText: link.textContent.trim(),
+                            exists: true
+                        });
+                    }
+                }
+                
+                // If no files found from links, try table format
+                if (files.length === 0) {
+                    const rows = doc.querySelectorAll('tr');
+                    for (const row of rows) {
+                        const link = row.querySelector('a');
+                        if (link) {
+                            const href = link.getAttribute('href');
+                            if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
+                                files.push({
+                                    name: href,
+                                    exists: true
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                return files;
+            } catch (error) {
+                console.log('Could not parse directory listing:', error);
+                return null;
+            }
+        }
+
+        // Load test files dynamically
         async function loadTestFiles() {
             try {
-                // List of all known test files
-                const knownTestFiles = [
-                    'ultimate-style-tester.html',
-                    'style-test.html',
-                    'event-test-index.html',
-                    'event-test-1-carousel.html',
-                    'event-test-2-timeline.html',
-                    'event-test-3-map.html',
-                    'event-test-4-masonry.html',
-                    'event-test-5-heatmap.html',
-                    'event-test-6-ticker.html',
-                    'event-test-7-circular.html',
-                    'event-test-8-kanban.html',
-                    'event-test-9-bubbles.html',
-                    'event-test-10-flipcards.html',
-                    'event-test-11-weekview.html',
-                    'event-test-12-swipe-tiles.html',
-                    'test-calendar-logging.html',
-                    'test-google-sheets-loader.html',
-                    'cover-field-test.html'
-                ];
-
-                const testFiles = [];
-
-                // Check which files exist by trying to fetch them
-                for (const file of knownTestFiles) {
-                    try {
-                        const response = await fetch(file, { method: 'HEAD' });
-                        if (response.ok) {
-                            testFiles.push({
-                                name: file,
-                                exists: true
-                            });
-                        }
-                    } catch (e) {
-                        // File doesn't exist or can't be accessed, skip it
+                let testFiles = [];
+                
+                // First try to load manifest.json
+                try {
+                    const manifestResponse = await fetch('manifest.json');
+                    if (manifestResponse.ok) {
+                        const manifest = await manifestResponse.json();
+                        testFiles = manifest.files.filter(f => f.name !== 'index.html');
+                        console.log('Loaded files from manifest.json');
+                    }
+                } catch (e) {
+                    console.log('Could not load manifest.json, trying directory listing');
+                }
+                
+                // If no manifest, try to parse directory listing
+                if (testFiles.length === 0) {
+                    const parsedFiles = await parseDirectoryListing();
+                    
+                    if (parsedFiles && parsedFiles.length > 0) {
+                        testFiles = parsedFiles;
+                    } else {
+                        // Fallback: probe for all files we know exist
+                        const allKnownFiles = [
+                            'ultimate-style-tester.html',
+                            'style-test.html',
+                            'event-test-index.html',
+                            'event-test-1-carousel.html',
+                            'event-test-2-timeline.html',
+                            'event-test-3-map.html',
+                            'event-test-4-masonry.html',
+                            'event-test-5-heatmap.html',
+                            'event-test-6-ticker.html',
+                            'event-test-7-circular.html',
+                            'event-test-8-kanban.html',
+                            'event-test-9-bubbles.html',
+                            'event-test-10-flipcards.html',
+                            'event-test-11-weekview.html',
+                            'event-test-12-swipe-tiles.html',
+                            'test-calendar-logging.html',
+                            'test-google-sheets-loader.html',
+                            'test-display-modes.html',
+                            'breakpoint-test.html',
+                            'css-breakpoint-test.html',
+                            'multiline-breakpoint-test.html',
+                            'hyphenation-test.html',
+                            'simplified-hyphenation-test.html'
+                        ];
+                        
+                        // Check all files in parallel for better performance
+                        const fileChecks = allKnownFiles.map(async (filename) => {
+                            try {
+                                const response = await fetch(filename, { method: 'HEAD' });
+                                if (response.ok) {
+                                    const contentLength = response.headers.get('content-length');
+                                    return {
+                                        name: filename,
+                                        exists: true,
+                                        size: contentLength ? parseInt(contentLength) : null
+                                    };
+                                }
+                            } catch (e) {
+                                // File doesn't exist
+                            }
+                            return null;
+                        });
+                        
+                        const results = await Promise.all(fileChecks);
+                        testFiles = results.filter(f => f !== null);
                     }
                 }
 
+                // Sort files alphabetically
+                testFiles.sort((a, b) => a.name.localeCompare(b.name));
+                
                 displayFiles(testFiles);
             } catch (error) {
                 document.getElementById('content').innerHTML = `
@@ -252,6 +382,10 @@
                 return;
             }
 
+            const stats = document.createElement('div');
+            stats.className = 'stats';
+            stats.textContent = `Found ${existingFiles.length} test file${existingFiles.length !== 1 ? 's' : ''}`;
+
             const grid = document.createElement('div');
             grid.className = 'test-grid';
 
@@ -265,11 +399,13 @@
                     <h3>${fileInfo.displayName}</h3>
                     <div class="file-info">${file.name}</div>
                     <div class="description">${fileInfo.desc}</div>
+                    ${file.size ? `<div class="file-size">${formatFileSize(file.size)}</div>` : ''}
                 `;
                 grid.appendChild(card);
             });
 
             document.getElementById('content').innerHTML = '';
+            document.getElementById('content').appendChild(stats);
             document.getElementById('content').appendChild(grid);
         }
 
