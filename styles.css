@@ -4257,3 +4257,149 @@ footer {
         font-size: 0.95rem;
     }
 }
+
+/* ===== DEBUG OVERLAY STYLES ===== */
+
+.debug-overlay {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    z-index: 10000;
+    min-width: 200px;
+    max-width: 300px;
+    border: 1px solid #333;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    user-select: none;
+}
+
+.debug-header {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    padding: 8px 12px;
+    border-radius: 7px 7px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: grab;
+    font-weight: bold;
+}
+
+.debug-header:active {
+    cursor: grabbing;
+}
+
+.debug-title {
+    font-size: 12px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.debug-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.debug-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.debug-content {
+    padding: 12px;
+}
+
+.debug-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.debug-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-row:last-child {
+    border-bottom: none;
+}
+
+.debug-label {
+    color: #ccc;
+    font-weight: normal;
+    min-width: 70px;
+}
+
+.debug-value {
+    color: #fff;
+    font-weight: bold;
+    text-align: right;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Breakpoint-specific colors */
+.debug-breakpoint-xs {
+    color: #ff4444;
+}
+
+.debug-breakpoint-s {
+    color: #ff8800;
+}
+
+.debug-breakpoint-m {
+    color: #ffdd00;
+}
+
+.debug-breakpoint-l {
+    color: #88ff00;
+}
+
+.debug-breakpoint-xl {
+    color: #00ff88;
+}
+
+/* Mobile responsiveness for debug overlay */
+@media (max-width: 480px) {
+    .debug-overlay {
+        min-width: 180px;
+        max-width: 250px;
+        font-size: 10px;
+    }
+    
+    .debug-title {
+        font-size: 11px;
+    }
+    
+    .debug-content {
+        padding: 10px;
+    }
+    
+    .debug-label {
+        min-width: 60px;
+    }
+    
+    .debug-value {
+        max-width: 100px;
+    }
+}
