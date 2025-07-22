@@ -452,7 +452,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
 
-    getSmartEventName(event, elementOrWidth = null) {
+    getSmartEventNameForBreakpoint(event, breakpoint) {
         // Get the nickname/shortname
         const shortName = event.shortName || event.nickname || '';
         const fullName = event.name || '';
@@ -468,32 +468,11 @@ class DynamicCalendarLoader extends CalendarCore {
             lg: 20   // > 1024px - desktop
         };
         
-        // Determine screen width
-        let screenWidth = window.innerWidth;
-        if (elementOrWidth) {
-            if (typeof elementOrWidth === 'number') {
-                // If a specific width is provided, estimate screen size from it
-                screenWidth = elementOrWidth * 3; // Rough estimate
-            }
-        }
-        
-        // Get character limit based on screen width
-        let charLimit;
-        if (screenWidth < 375) {
-            charLimit = charLimits.xs;
-        } else if (screenWidth < 768) {
-            charLimit = charLimits.sm;
-        } else if (screenWidth < 1024) {
-            charLimit = charLimits.md;
-        } else {
-            charLimit = charLimits.lg;
-        }
+        // Get character limit for the specified breakpoint
+        const charLimit = charLimits[breakpoint] || charLimits.lg;
         
         // Process the shortname - remove hyphens except escaped ones (\-)
         const processedShortName = shortName.replace(/(?<!\\)-/g, '');
-        
-        // Max 3 lines logic - for now we'll focus on single line
-        // This can be enhanced later to handle multi-line scenarios
         
         // If processed name fits within limit, use it
         if (processedShortName.length <= charLimit) {
@@ -513,6 +492,32 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Fallback to processed name
         return processedShortName;
+    }
+    
+    // Generate all breakpoint versions of the event name
+    generateEventNameElements(event) {
+        const fullName = event.name || '';
+        const hasShortName = !!(event.shortName || event.nickname);
+        
+        // If no shortname, just return the full name for all breakpoints
+        if (!hasShortName) {
+            return `
+                <div class="event-name">${fullName}</div>
+            `;
+        }
+        
+        // Generate different versions for each breakpoint
+        const xsName = this.getSmartEventNameForBreakpoint(event, 'xs');
+        const smName = this.getSmartEventNameForBreakpoint(event, 'sm');
+        const mdName = this.getSmartEventNameForBreakpoint(event, 'md');
+        const lgName = this.getSmartEventNameForBreakpoint(event, 'lg');
+        
+        return `
+            <div class="event-name event-name-xs">${xsName}</div>
+            <div class="event-name event-name-sm">${smName}</div>
+            <div class="event-name event-name-md">${mdName}</div>
+            <div class="event-name event-name-lg">${lgName}</div>
+        `;
     }
 
     // Format time for mobile display with simplified format (4a-5p)
@@ -1040,17 +1045,11 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
-                    // Smart hyphenation for mobile display
-                    // Pass estimated width based on view type
-                    const isMobile = window.innerWidth <= 768;
-                    const estimatedWidth = isMobile ? 120 : 200; // Approximate event container width
-                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${smartName}</div>
+                            ${this.generateEventNameElements(event)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -1149,16 +1148,11 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    // Month view has smaller event containers
-                    const isMobile = window.innerWidth <= 768;
-                    const estimatedWidth = isMobile ? 100 : 150; // Smaller containers in month view
-                    const smartName = this.getSmartEventName(event, estimatedWidth);
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            <div class="event-name">${event.name}</div>
-                            <div class="event-name-mobile">${smartName}</div>
+                        <div class="event-item month-event" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                            ${this.generateEventNameElements(event)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>

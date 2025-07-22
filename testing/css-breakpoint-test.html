@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Breakpoint Test - Chunky Dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 80px;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            background: var(--background-primary);
+        }
+        
+        .demo-grid {
+            display: grid;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .demo-event {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        
+        .demo-header {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .event-container {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+        }
+        
+        .breakpoint-info {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        /* Test styles to show all breakpoints at once */
+        .show-all-breakpoints .event-name-xs,
+        .show-all-breakpoints .event-name-sm,
+        .show-all-breakpoints .event-name-md,
+        .show-all-breakpoints .event-name-lg {
+            display: block !important;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .show-all-breakpoints .event-name-xs::before {
+            content: "XS: ";
+            color: #999;
+            font-size: 0.8rem;
+        }
+        
+        .show-all-breakpoints .event-name-sm::before {
+            content: "SM: ";
+            color: #999;
+            font-size: 0.8rem;
+        }
+        
+        .show-all-breakpoints .event-name-md::before {
+            content: "MD: ";
+            color: #999;
+            font-size: 0.8rem;
+        }
+        
+        .show-all-breakpoints .event-name-lg::before {
+            content: "LG: ";
+            color: #999;
+            font-size: 0.8rem;
+        }
+        
+        .current-breakpoint {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 1000;
+        }
+        
+        .current-breakpoint-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .current-breakpoint-value {
+            font-size: 1.2rem;
+            color: #4CAF50;
+        }
+        
+        .implementation-note {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .implementation-note h4 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        
+        .responsive-demo {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 2rem 0;
+            resize: horizontal;
+            overflow: auto;
+            min-width: 300px;
+            max-width: 100%;
+        }
+        
+        .resize-hint {
+            text-align: center;
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html">🐻 chunky.dad</a></h1>
+                </div>
+                
+                <ul class="nav-menu">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../index.html#cities">Cities</a></li>
+                    <li><a href="../index.html#events">Events</a></li>
+                    <li><a href="../index.html#businesses">Businesses</a></li>
+                    <li><a href="../index.html#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <div class="current-breakpoint">
+        <div class="current-breakpoint-label">Current Breakpoint:</div>
+        <div class="current-breakpoint-value" id="current-bp">-</div>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem;">
+            Width: <span id="current-width">-</span>px
+        </div>
+    </div>
+    
+    <div class="test-container">
+        <h1>🎨 CSS-Based Breakpoint System</h1>
+        <p>This demonstrates the new CSS-based approach where we generate all breakpoint versions and let CSS show/hide the appropriate one.</p>
+        
+        <div class="test-section">
+            <h2>📱 How It Works</h2>
+            
+            <div class="implementation-note">
+                <h4>Implementation:</h4>
+                <ol>
+                    <li>JavaScript generates 4 versions of each event name (xs, sm, md, lg)</li>
+                    <li>Each version is optimized for its character limit</li>
+                    <li>CSS media queries show only the appropriate version</li>
+                    <li>No JavaScript width detection needed!</li>
+                </ol>
+            </div>
+            
+            <p><strong>Benefits:</strong></p>
+            <ul>
+                <li>✅ Pure CSS responsiveness - no JavaScript calculations</li>
+                <li>✅ Instant response to window resizing</li>
+                <li>✅ Better performance (no DOM measurements)</li>
+                <li>✅ Cleaner separation of concerns</li>
+                <li>✅ Works with CSS container queries (future-proof)</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 All Breakpoints View</h2>
+            <p>This shows all 4 generated versions for each event. In production, only one is visible at a time.</p>
+            
+            <div class="demo-grid show-all-breakpoints">
+                <div class="demo-event">
+                    <div class="demo-header">Event: "Rockstrap Party"</div>
+                    <div class="demo-header">Shortname: "Rock-strap"</div>
+                    <div class="event-container">
+                        <div class="event-item" id="rockstrap-demo">
+                            <!-- This would be generated by generateEventNameElements() -->
+                            <div class="event-name event-name-xs">Rock-…</div>
+                            <div class="event-name event-name-sm">Rock-st…</div>
+                            <div class="event-name event-name-md">Rockstrap</div>
+                            <div class="event-name event-name-lg">Rockstrap</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="demo-event">
+                    <div class="demo-header">Event: "International Bear Weekend"</div>
+                    <div class="demo-header">Shortname: "Inter-Bear-Week"</div>
+                    <div class="event-container">
+                        <div class="event-item">
+                            <div class="event-name event-name-xs">Inter…</div>
+                            <div class="event-name event-name-sm">Inter-B…</div>
+                            <div class="event-name event-name-md">Inter-Bear-…</div>
+                            <div class="event-name event-name-lg">InterBearWeek</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="demo-event">
+                    <div class="demo-header">Event: "Co-op Bear Night"</div>
+                    <div class="demo-header">Shortname: "Co\-op-Bears" (escaped hyphen)</div>
+                    <div class="event-container">
+                        <div class="event-item">
+                            <div class="event-name event-name-xs">Co-op…</div>
+                            <div class="event-name event-name-sm">Co-opBe…</div>
+                            <div class="event-name event-name-md">Co-opBears</div>
+                            <div class="event-name event-name-lg">Co-opBears</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎯 Live Responsive Demo</h2>
+            <p>Resize your browser window to see the event names change based on breakpoints:</p>
+            
+            <div class="responsive-demo">
+                <div class="resize-hint">↔️ Resize your browser window to test breakpoints</div>
+                
+                <div class="demo-grid">
+                    <div class="event-container">
+                        <h4>Rockstrap Party</h4>
+                        <div class="event-item">
+                            <div class="event-name event-name-xs">Rock-…</div>
+                            <div class="event-name event-name-sm">Rock-st…</div>
+                            <div class="event-name event-name-md">Rockstrap</div>
+                            <div class="event-name event-name-lg">Rockstrap</div>
+                            <div class="event-time">9pm-2am</div>
+                            <div class="event-venue">The Eagle</div>
+                        </div>
+                    </div>
+                    
+                    <div class="event-container">
+                        <h4>International Bear Weekend</h4>
+                        <div class="event-item">
+                            <div class="event-name event-name-xs">Inter…</div>
+                            <div class="event-name event-name-sm">Inter-B…</div>
+                            <div class="event-name event-name-md">Inter-Bear-…</div>
+                            <div class="event-name event-name-lg">InterBearWeek</div>
+                            <div class="event-time">All Weekend</div>
+                            <div class="event-venue">Various Venues</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>💻 Code Example</h2>
+            
+            <h3>JavaScript (in dynamic-calendar-loader.js):</h3>
+            <pre><code>generateEventNameElements(event) {
+    const fullName = event.name || '';
+    const hasShortName = !!(event.shortName || event.nickname);
+    
+    if (!hasShortName) {
+        return `&lt;div class="event-name"&gt;${fullName}&lt;/div&gt;`;
+    }
+    
+    // Generate different versions for each breakpoint
+    const xsName = this.getSmartEventNameForBreakpoint(event, 'xs');
+    const smName = this.getSmartEventNameForBreakpoint(event, 'sm');
+    const mdName = this.getSmartEventNameForBreakpoint(event, 'md');
+    const lgName = this.getSmartEventNameForBreakpoint(event, 'lg');
+    
+    return `
+        &lt;div class="event-name event-name-xs"&gt;${xsName}&lt;/div&gt;
+        &lt;div class="event-name event-name-sm"&gt;${smName}&lt;/div&gt;
+        &lt;div class="event-name event-name-md"&gt;${mdName}&lt;/div&gt;
+        &lt;div class="event-name event-name-lg"&gt;${lgName}&lt;/div&gt;
+    `;
+}</code></pre>
+            
+            <h3>CSS (in styles.css):</h3>
+            <pre><code>/* Hide all breakpoint versions by default */
+.event-name-xs, .event-name-sm, .event-name-md, .event-name-lg {
+    display: none;
+}
+
+/* Show appropriate version based on screen size */
+@media (max-width: 374px) {
+    .event-name-xs { display: block; }
+}
+
+@media (min-width: 375px) and (max-width: 767px) {
+    .event-name-sm { display: block; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .event-name-md { display: block; }
+}
+
+@media (min-width: 1024px) {
+    .event-name-lg { display: block; }
+}</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // Update current breakpoint display
+        function updateBreakpointDisplay() {
+            const width = window.innerWidth;
+            let breakpoint = '';
+            
+            if (width < 375) {
+                breakpoint = 'XS';
+            } else if (width < 768) {
+                breakpoint = 'SM';
+            } else if (width < 1024) {
+                breakpoint = 'MD';
+            } else {
+                breakpoint = 'LG';
+            }
+            
+            document.getElementById('current-bp').textContent = breakpoint;
+            document.getElementById('current-width').textContent = width;
+        }
+        
+        // Update on load and resize
+        window.addEventListener('load', updateBreakpointDisplay);
+        window.addEventListener('resize', updateBreakpointDisplay);
+        
+        // Initialize
+        updateBreakpointDisplay();
+    </script>
+</body>
+</html>
