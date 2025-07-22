@@ -2111,17 +2111,7 @@ footer {
         height: 100%;
     }
 
-    .event-item.month-event {
-        padding: 0.3rem;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        margin-bottom: 0.25rem;
-    }
 
-    .event-item.month-event .event-name {
-        font-size: 0.7rem;
-        line-height: 1.2;
-    }
 
     .more-events {
         font-size: 0.55rem;
@@ -2512,16 +2502,7 @@ footer {
         display: none;
     }
 
-    .event-item.month-event {
-        padding: 0.2rem;
-        border-radius: 3px;
-        font-size: 0.65rem;
-    }
 
-    .event-item.month-event .event-name {
-        font-size: 0.65rem;
-        line-height: 1.1;
-    }
 
     .more-events {
         font-size: 0.5rem;
@@ -2907,15 +2888,7 @@ footer {
         gap: 0;
     }
 
-    .event-item.month-event {
-        padding: 0.1rem;
-        font-size: 0.6rem;
-    }
 
-    .event-item.month-event .event-name {
-        font-size: 0.6rem;
-        line-height: 1.0;
-    }
 
     .more-events {
         font-size: 0.45rem;
@@ -3403,9 +3376,7 @@ footer {
     /* Inherits from .calendar-day base styling */
 }
 
-.event-item.month-event {
-    /* Inherits from .event-item base styling */
-}
+
 
 .more-events {
     font-size: 0.75rem;
