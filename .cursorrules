@@ -32,8 +32,17 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 │   ├── dynamic-calendar-loader.js # Calendar UI and interactions
 │   └── app.js          # Main application coordinator
 ├── data/               # JSON data files
+├── testing/            # Test files and utilities
+│   ├── index.html      # Dynamic test file browser
+│   ├── manifest.json   # Auto-generated list of test files
+│   └── generate-manifest.js # Script to update manifest
 └── README.md
 ```
+
+## Testing Directory
+- **Auto-updating manifest**: When adding new HTML files to testing/, run `npm run update-test-manifest`
+- **Git hooks**: Run `npm run setup-hooks` to enable automatic manifest updates on commit
+- **GitHub Actions**: Manifest is automatically updated when pushing changes to test files
 
 ## Current Patterns
 - Modular JavaScript architecture with clear separation of concerns
