@@ -922,11 +922,9 @@ header {
     margin-bottom: 1rem;
     position: relative;
     z-index: 2;
-}
-
-/* Tighter spacing for week view */
-.calendar-grid.week-view-grid {
-    gap: 0.5rem;
+    touch-action: pan-y;
+    user-select: none;
+    will-change: transform, opacity, background-color;
 }
 
 .calendar-grid.fade-in {
@@ -942,56 +940,6 @@ header {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* Swipe animations - Disabled in favor of JavaScript-controlled animations */
-/* These CSS animations were conflicting with the JavaScript swipe implementation */
-/*
-.calendar-grid.swipe-left {
-    animation: swipeLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.calendar-grid.swipe-right {
-    animation: swipeRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes swipeLeft {
-    0% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    50% {
-        transform: translateX(-20px);
-        opacity: 0.7;
-    }
-    100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes swipeRight {
-    0% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    50% {
-        transform: translateX(20px);
-        opacity: 0.7;
-    }
-    100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-*/
-
-/* Touch feedback for calendar grid */
-.calendar-grid {
-    touch-action: pan-y; /* Allow vertical scrolling, handle horizontal swipes ourselves */
-    user-select: none; /* Prevent text selection during swipes */
-    position: relative; /* Ensure proper positioning for swipe animations */
-    will-change: transform, opacity, background-color; /* Optimize for animations */
 }
 
 .calendar-day {
@@ -1189,12 +1137,7 @@ header {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* Mobile optimizations for unified calendar */
 @media (max-width: 768px) {
-    .calendar-grid.week-view-grid {
-        gap: 0.25rem;
-    }
-    
     .calendar-day {
         padding: 0.5rem;
         min-height: 100px;
@@ -1234,9 +1177,6 @@ header {
 }
 
 @media (max-width: 480px) {
-    .calendar-grid {
-        gap: 0.2rem;
-    }
     
     .calendar-day {
         padding: 0.4rem;
@@ -1983,7 +1923,6 @@ footer {
     /* Enhanced Week View Mobile - Show full info on tablets */
     .calendar-grid.week-view-grid {
         grid-template-columns: 1fr;
-        gap: 0.5rem;
     }
 
     /* Remove container padding */
@@ -2075,7 +2014,6 @@ footer {
 
     /* Month View Mobile Improvements - Optimized for "above the fold" */
     .calendar-grid.month-view-grid {
-        gap: 0;
         grid-template-rows: auto repeat(6, minmax(45px, auto));
     }
 
@@ -2361,11 +2299,6 @@ footer {
         font-size: 0.6rem;
     }
 
-    /* Mobile-first week view - show minimal information */
-    .calendar-grid.week-view-grid {
-        gap: 0;
-    }
-
     /* Remove container padding for small screens */
     .weekly-calendar .container {
         padding: 0;
@@ -2467,11 +2400,6 @@ footer {
     .today-marker {
         font-size: 0.45rem;
         padding: 0.1rem 0.2rem;
-    }
-
-    /* Month View for very small screens */
-    .calendar-grid.month-view-grid {
-        gap: 1px;
     }
 
     .calendar-day.month-day {
@@ -2818,9 +2746,7 @@ footer {
         padding: 0;
     }
 
-    .calendar-grid.week-view-grid {
-        gap: 0;
-    }
+
 
     /* Month view for very small iPhones */
     .calendar-day.month-day {
@@ -3290,11 +3216,8 @@ footer {
 
 /* For larger tablets, show both but make buttons smaller */
 @media (min-width: 769px) and (max-width: 1024px) {
-
-    /* Enhanced Week View for tablets - show full information */
     .calendar-grid.week-view-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 0.8rem;
     }
 
     .calendar-day.week-view {
@@ -3539,11 +3462,6 @@ footer {
     .event-item.enhanced .event-name-mobile,
     .event-item.enhanced .event-venue-mobile {
         display: none !important;
-    }
-
-    /* Enhanced spacing for desktop */
-    .calendar-grid.week-view-grid {
-        gap: 1rem;
     }
 
     .calendar-day.week-view {
