@@ -4380,4 +4380,8 @@ footer {
     }
 }
 
+/* Hidden class for loading states */
+.hidden {
+    display: none !important;
+}
 

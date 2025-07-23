@@ -1208,19 +1208,19 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Generate calendar events (enhanced for week/month/calendar view)
-    generateCalendarEvents(events, showEvents = true) {
+    generateCalendarEvents(events, hideEvents = false) {
         const { start, end } = this.getCurrentPeriodBounds();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         if (this.currentView === 'week') {
-            return this.generateWeekView(events, start, end, today, showEvents);
+            return this.generateWeekView(events, start, end, today, hideEvents);
         } else {
-            return this.generateMonthView(events, start, end, today, showEvents);
+            return this.generateMonthView(events, start, end, today, hideEvents);
         }
     }
 
-    generateWeekView(events, start, end, today, showEvents = true) {
+    generateWeekView(events, start, end, today, hideEvents = false) {
         const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = [];
         
@@ -1234,11 +1234,11 @@ class DynamicCalendarLoader extends CalendarCore {
             eventCount: events.length,
             weekStart: start.toISOString().split('T')[0],
             weekEnd: end.toISOString().split('T')[0],
-            showEvents
+            hideEvents
         });
 
         return days.map(day => {
-            const dayEvents = showEvents ? events.filter(event => {
+            const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
                 if (event.recurring) {
@@ -1251,14 +1251,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 dayDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
-            }) : [];
+            });
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
@@ -1288,7 +1288,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }).join('');
     }
 
-    generateMonthView(events, start, end, today, showEvents = true) {
+    generateMonthView(events, start, end, today, hideEvents = false) {
         // Add day headers first
         const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const headerHtml = dayHeaders.map(day => `
@@ -1328,11 +1328,11 @@ class DynamicCalendarLoader extends CalendarCore {
             calendarEnd: calendarEnd.toISOString().split('T')[0],
             weeksNeeded: weeksNeeded,
             totalDays: days.length,
-            showEvents
+            hideEvents
         });
 
         const daysHtml = days.map(day => {
-            const dayEvents = showEvents ? events.filter(event => {
+            const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
                 if (event.recurring) {
@@ -1345,7 +1345,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 dayDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
-            }) : [];
+            });
 
             const isToday = day.getTime() === today.getTime();
             const isCurrentMonth = day.getMonth() === start.getMonth();
@@ -1362,13 +1362,13 @@ class DynamicCalendarLoader extends CalendarCore {
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
-                }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
+                }).join('') + (additionalEventsCount > 0 ? `<div class="more-events${hideEvents ? ' hidden' : ''}">+${additionalEventsCount}</div>` : '')
                 : '';
 
             return `
@@ -1527,14 +1527,15 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Update calendar display with filtered events
-    updateCalendarDisplay() {
+    updateCalendarDisplay(hideEvents = false) {
         logger.time('CALENDAR', 'Calendar display update');
         const filteredEvents = this.getFilteredEvents();
         
         logger.debug('CALENDAR', `Updating calendar display`, {
             view: this.currentView,
             eventCount: filteredEvents.length,
-            city: this.currentCity
+            city: this.currentCity,
+            hideEvents
         });
         
         // Update calendar title
@@ -1553,7 +1554,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Update calendar grid
         const calendarGrid = document.querySelector('.calendar-grid');
         if (calendarGrid) {
-            calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents);
+            calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
             this.attachCalendarInteractions();
             
             // Update grid layout based on view
@@ -1588,16 +1589,17 @@ class DynamicCalendarLoader extends CalendarCore {
         const eventsSection = document.querySelector('.events');
         if (eventsList && eventsSection) {
             eventsSection.style.display = 'block';
-            if (filteredEvents?.length > 0) {
+            if (filteredEvents?.length > 0 && !hideEvents) {
                 eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
-            } else {
+            } else if (!hideEvents) {
                 eventsList.innerHTML = '';
             }
+            // If hideEvents is true, don't touch the events list (keep existing loading message)
         }
         
         // Update map (show for both week and month views)
         const mapSection = document.querySelector('.events-map-section');
-        if (mapSection) {
+        if (mapSection && !hideEvents) {
             mapSection.style.display = 'block';
             this.initializeMap(this.currentCityConfig, filteredEvents);
         }
@@ -1606,7 +1608,8 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.performance('CALENDAR', `Calendar display updated successfully`, {
             view: this.currentView,
             eventsDisplayed: filteredEvents.length,
-            city: this.currentCity
+            city: this.currentCity,
+            hideEvents
         });
     }
 
@@ -1705,7 +1708,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
     // Update page content for city
-    updatePageContent(cityConfig, events) {
+    updatePageContent(cityConfig, events, hideEvents = false) {
         // Store city config for later use
         this.currentCityConfig = cityConfig;
         
@@ -1738,6 +1741,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 `Complete gay bear guide to ${cityConfig.name} - events, bars, and the hottest bear scene`
             );
         }
+        
+        // Update calendar display with hideEvents parameter
+        this.updateCalendarDisplay(hideEvents);
     }
 
     // Attach calendar interactions
@@ -1796,8 +1802,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Show empty calendar structure immediately (existing loading message will show in events section)
-        this.showEmptyCalendarStructure();
+        // Show calendar structure immediately with events hidden (existing loading message will show)
+        this.updatePageContent(this.currentCityConfig, [], true); // hideEvents = true
         
         // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
@@ -1805,58 +1811,10 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
                 eventCount: data.events.length
             });
-            this.updatePageContent(data.cityConfig, data.events);
+            this.updatePageContent(data.cityConfig, data.events); // hideEvents = false (default)
         }
     }
 
-    // Show empty calendar structure so we can measure from it
-    showEmptyCalendarStructure() {
-        // Set up calendar controls and show empty calendar structure
-        this.setupCalendarControls();
-        
-        // Show empty calendar grid (no events) so we can measure from it
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (calendarGrid) {
-            calendarGrid.innerHTML = this.generateCalendarEvents([], false); // Empty events, don't show events
-            
-            // Update grid layout based on view
-            if (this.currentView === 'month') {
-                calendarGrid.className = 'calendar-grid month-view-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                
-                // Calculate the optimal number of rows based on the actual content
-                const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
-                const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
-                const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
-                const totalRows = headerRows + dayRows;
-                
-                calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
-            } else {
-                calendarGrid.className = 'calendar-grid week-view-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                calendarGrid.style.gridTemplateRows = 'auto';
-                calendarGrid.style.minHeight = 'auto';
-            }
-        }
-        
-        // Update calendar title
-        const calendarTitle = document.getElementById('calendar-title');
-        if (calendarTitle) {
-            calendarTitle.textContent = `What's the vibe?`;
-        }
-        
-        // Show current date range
-        const dateRange = document.getElementById('date-range');
-        if (dateRange) {
-            const { start, end } = this.getCurrentPeriodBounds();
-            dateRange.textContent = this.formatDateRange(start, end);
-        }
-    }
-
-
-
-
-    
     // Update characters per pixel ratio (for new dynamic system)
     updateCharsPerPixel(newRatio) {
         logger.info('CALENDAR', 'Characters per pixel ratio updated from test interface', newRatio);
