@@ -546,55 +546,113 @@ header {
     font-size: 0.95rem;
 }
 
-/* Compact Cities Grid */
-.compact-cities-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+/* City Bubbles Layout */
+.city-bubbles-container {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1rem 0;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
 }
 
-.compact-city-card {
+.city-bubbles-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.city-bubbles-scroll {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 1rem;
-    padding: 1rem;
-    background: var(--background-secondary);
-    border-radius: 12px;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    cursor: pointer;
+    align-items: center;
+    justify-content: flex-start;
+    animation: bubbleFloat 20s linear infinite;
+    min-width: 100%;
 }
 
-.compact-city-card:hover {
+@keyframes bubbleFloat {
+    0% {
+        transform: translateX(0) translateY(0);
+    }
+    25% {
+        transform: translateX(-5px) translateY(-2px);
+    }
+    50% {
+        transform: translateX(-8px) translateY(2px);
+    }
+    75% {
+        transform: translateX(-3px) translateY(-1px);
+    }
+    100% {
+        transform: translateX(0) translateY(0);
+    }
+}
+
+.city-bubble {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: var(--background-secondary);
+    border-radius: 50%;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    box-shadow: 0 4px 12px var(--shadow-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.city-bubble:hover {
+    transform: translateY(-8px) scale(1.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     background: var(--solid-light);
-    transform: translateX(5px);
+}
+
+.city-bubble:nth-child(3n+1) {
+    margin-top: 0.5rem;
+}
+
+.city-bubble:nth-child(3n+2) {
+    margin-bottom: 0.8rem;
+}
+
+.city-bubble:nth-child(3n) {
+    margin-top: 1.2rem;
 }
 
 .city-emoji {
-    font-size: 2rem;
-    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 0.2rem;
+    transition: transform 0.3s ease;
 }
 
-.city-details h4 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: var(--text-primary);
+.city-bubble:hover .city-emoji {
+    transform: scale(1.2);
+}
+
+.city-name {
+    font-size: 0.7rem;
     font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1;
 }
 
-.city-tag {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.compact-city-card.coming-soon {
-    opacity: 0.7;
+.city-bubble.coming-soon {
+    opacity: 0.6;
     cursor: default;
 }
 
-.compact-city-card.coming-soon:hover {
+.city-bubble.coming-soon:hover {
     transform: none;
     background: var(--background-secondary);
+}
+
+.city-bubble.coming-soon .city-emoji {
+    transform: none;
 }
 
 /* Compact Merchants List */
@@ -729,6 +787,60 @@ header {
     .cities-column,
     .merchants-column {
         padding: 1.5rem;
+    }
+
+    /* City bubbles mobile responsive */
+    .city-bubbles-container {
+        overflow-x: auto;
+        padding: 1rem 0.5rem;
+        position: relative;
+    }
+
+    .city-bubbles-container {
+        --scroll-indicator-opacity: 0.6;
+    }
+
+    .city-bubbles-container::after {
+        content: "→";
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+        font-size: 1.2rem;
+        opacity: var(--scroll-indicator-opacity);
+        pointer-events: none;
+        background: linear-gradient(90deg, transparent, var(--background-primary) 50%);
+        padding-left: 1rem;
+        transition: opacity 0.3s ease;
+    }
+
+    .city-bubbles-scroll {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        animation: none; /* Disable animation on mobile for performance */
+        min-width: max-content;
+        padding-bottom: 0.5rem;
+    }
+
+    .city-bubble {
+        width: 70px;
+        height: 70px;
+        flex-shrink: 0;
+    }
+
+    .city-bubble:nth-child(odd),
+    .city-bubble:nth-child(even) {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .city-emoji {
+        font-size: 1.5rem;
+    }
+
+    .city-name {
+        font-size: 0.65rem;
     }
 }
 
@@ -1917,7 +2029,8 @@ footer {
     }
 
     .contact-content {
-        flex-direction: column;
+        grid-template-columns: 1fr;
+        gap: 2rem;
     }
 
     /* Enhanced Week View Mobile - Show full info on tablets */
