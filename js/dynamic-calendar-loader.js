@@ -25,6 +25,9 @@ class DynamicCalendarLoader extends CalendarCore {
         this.lastTouchTime = 0;
         this.lastTouchX = 0;
         
+        // Set up message listener for testing interface
+        this.setupMessageListener();
+        
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
 
@@ -453,16 +456,34 @@ class DynamicCalendarLoader extends CalendarCore {
         // If no shortname, return the full name
         if (!shortName) return fullName;
         
-        // Character limits PER LINE for each breakpoint (can be overridden by testing interface)
-        const charLimitsPerLine = this.characterLimits || {
-            xs: 5,   // < 375px - super small screens
-            sm: 8,   // 375-768px - phones
-            md: 12,  // 768-1024px - tablets
-            lg: 20   // > 1024px - desktop
+        // Dynamic character calculation based on actual pixel measurements
+        // Characters per pixel ratios (can be adjusted via testing interface)
+        const charsPerPixelRatios = this.charsPerPixelRatios || {
+            xs: 0.08,   // ~12.5 pixels per character for very small screens
+            sm: 0.09,   // ~11.1 pixels per character for phones
+            md: 0.10,   // ~10 pixels per character for tablets  
+            lg: 0.11    // ~9.1 pixels per character for desktop
         };
         
-        // Get character limit per line for the specified breakpoint
-        const charLimitPerLine = charLimitsPerLine[breakpoint] || charLimitsPerLine.lg;
+        // Get the ratio for this breakpoint
+        const charsPerPixel = charsPerPixelRatios[breakpoint] || charsPerPixelRatios.lg;
+        
+        // Try to get actual div width first
+        let availableWidth = this.getEventDivWidth(breakpoint);
+        
+        // If we can't get the div width, fall back to estimated widths based on breakpoint
+        if (!availableWidth) {
+            const estimatedWidths = {
+                xs: 280,  // Typical phone width minus padding
+                sm: 320,  // Larger phone width minus padding
+                md: 200,  // Tablet in grid layout
+                lg: 180   // Desktop in grid layout
+            };
+            availableWidth = estimatedWidths[breakpoint] || estimatedWidths.lg;
+        }
+        
+        // Calculate how many characters can fit on one line
+        const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         
         // Process the shortname - remove hyphens except escaped ones (\-)
         const processedShortName = shortName.replace(/(?<!\\)-/g, '');
@@ -564,6 +585,49 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Return the multi-line name as a single string (CSS will handle wrapping)
         return displayLines.join(' ');
+    }
+
+    // Get the actual width of an event div for dynamic calculation
+    getEventDivWidth(breakpoint) {
+        try {
+            // First try to get an actual event item width
+            const eventItem = document.querySelector('.event-item');
+            if (eventItem) {
+                const width = eventItem.getBoundingClientRect().width;
+                if (width > 0) {
+                    logger.debug('CALENDAR', `Got event div width: ${width}px for breakpoint ${breakpoint}`);
+                    return width;
+                }
+            }
+            
+            // If no event item, try to get day-header width as fallback
+            const dayHeader = document.querySelector('.day-header');
+            if (dayHeader) {
+                const width = dayHeader.getBoundingClientRect().width;
+                if (width > 0) {
+                    logger.debug('CALENDAR', `Using day-header width as fallback: ${width}px for breakpoint ${breakpoint}`);
+                    return width;
+                }
+            }
+            
+            // If still no width, try calendar-day width
+            const calendarDay = document.querySelector('.calendar-day');
+            if (calendarDay) {
+                const rect = calendarDay.getBoundingClientRect();
+                // Subtract padding (0.75rem = ~12px on each side)
+                const width = rect.width - 24;
+                if (width > 0) {
+                    logger.debug('CALENDAR', `Using calendar-day width minus padding: ${width}px for breakpoint ${breakpoint}`);
+                    return width;
+                }
+            }
+            
+            logger.warn('CALENDAR', `Could not determine div width for breakpoint ${breakpoint}, using fallback`);
+            return null;
+        } catch (error) {
+            logger.error('CALENDAR', 'Error getting event div width', error);
+            return null;
+        }
     }
     
     // Generate all breakpoint versions of the event name
@@ -1666,17 +1730,53 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Update character limits (for testing functionality)
+    // Update character limits (for testing functionality) - now supports both old and new systems
     updateCharacterLimits(newLimits) {
         logger.info('CALENDAR', 'Character limits updated from test interface', newLimits);
         
-        // Store the new character limits
+        // Store the new character limits (legacy support)
         this.characterLimits = newLimits;
+    }
+    
+    // Update characters per pixel ratios (for new dynamic system)
+    updateCharsPerPixelRatios(newRatios) {
+        logger.info('CALENDAR', 'Characters per pixel ratios updated from test interface', newRatios);
+        
+        // Store the new ratios
+        this.charsPerPixelRatios = newRatios;
         
         // Force a refresh of the calendar display to apply new limits
         if (this.allEvents && this.allEvents.length > 0) {
             this.updateCalendarDisplay();
         }
+    }
+    
+    // Set up message listener for testing interface communication
+    setupMessageListener() {
+        window.addEventListener('message', (event) => {
+            try {
+                if (event.data && event.data.type) {
+                    switch (event.data.type) {
+                        case 'updateCharacterLimits':
+                            this.updateCharacterLimits(event.data.data);
+                            break;
+                        case 'updatePixelRatios':
+                            this.updateCharsPerPixelRatios(event.data.data);
+                            break;
+                        case 'addTestEvent':
+                            // Handle test event addition if needed
+                            logger.info('CALENDAR', 'Test event received from testing interface', event.data.data);
+                            break;
+                        default:
+                            logger.debug('CALENDAR', 'Unknown message type from testing interface', event.data.type);
+                    }
+                }
+            } catch (error) {
+                logger.error('CALENDAR', 'Error handling message from testing interface', error);
+            }
+        });
+        
+        logger.debug('CALENDAR', 'Message listener set up for testing interface communication');
     }
     
     // Add test event (for testing functionality)

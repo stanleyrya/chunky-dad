@@ -127,6 +127,40 @@
             font-size: 0.9rem;
         }
         
+        .config-toggle {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .config-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .config-toggle input[type="radio"] {
+            margin: 0;
+        }
+        
+        .config-section h3 {
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .config-item small {
+            display: block;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+        
         .config-item input, .config-item select {
             padding: 0.75rem;
             border: 1px solid #ddd;
@@ -258,26 +292,67 @@
         
         <div class="config-section">
             <div class="config-panel">
-                <h2>📏 Character Limits</h2>
-                <div class="config-grid">
-                    <div class="config-item">
-                        <label>Super Small (&lt;375px)</label>
-                        <input type="number" id="chars-xs" value="5" min="3" max="20">
-                    </div>
-                    <div class="config-item">
-                        <label>Small (375-768px)</label>
-                        <input type="number" id="chars-sm" value="8" min="5" max="25">
-                    </div>
-                    <div class="config-item">
-                        <label>Medium (768-1024px)</label>
-                        <input type="number" id="chars-md" value="12" min="8" max="30">
-                    </div>
-                    <div class="config-item">
-                        <label>Large (&gt;1024px)</label>
-                        <input type="number" id="chars-lg" value="20" min="12" max="40">
-                    </div>
+                <h2>📏 Dynamic Character Calculation</h2>
+                <div class="config-toggle">
+                    <label>
+                        <input type="radio" name="calc-mode" value="dynamic" checked onchange="toggleCalculationMode()">
+                        Dynamic (Characters per Pixel)
+                    </label>
+                    <label>
+                        <input type="radio" name="calc-mode" value="fixed" onchange="toggleCalculationMode()">
+                        Fixed Character Limits (Legacy)
+                    </label>
                 </div>
-                <button class="update-btn" onclick="updateCharacterLimits()">Apply Character Limits</button>
+                
+                <div id="dynamic-config" class="config-section">
+                    <h3>Characters per Pixel Ratios</h3>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>Super Small (&lt;375px)</label>
+                            <input type="number" id="ratio-xs" value="0.08" step="0.01" min="0.05" max="0.15">
+                            <small>~12.5px per char</small>
+                        </div>
+                        <div class="config-item">
+                            <label>Small (375-768px)</label>
+                            <input type="number" id="ratio-sm" value="0.09" step="0.01" min="0.05" max="0.15">
+                            <small>~11.1px per char</small>
+                        </div>
+                        <div class="config-item">
+                            <label>Medium (768-1024px)</label>
+                            <input type="number" id="ratio-md" value="0.10" step="0.01" min="0.05" max="0.15">
+                            <small>~10px per char</small>
+                        </div>
+                        <div class="config-item">
+                            <label>Large (&gt;1024px)</label>
+                            <input type="number" id="ratio-lg" value="0.11" step="0.01" min="0.05" max="0.15">
+                            <small>~9.1px per char</small>
+                        </div>
+                    </div>
+                    <button class="update-btn" onclick="updatePixelRatios()">Apply Pixel Ratios</button>
+                </div>
+                
+                <div id="fixed-config" class="config-section" style="display: none;">
+                    <h3>Fixed Character Limits</h3>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>Super Small (&lt;375px)</label>
+                            <input type="number" id="chars-xs" value="5" min="3" max="20">
+                        </div>
+                        <div class="config-item">
+                            <label>Small (375-768px)</label>
+                            <input type="number" id="chars-sm" value="8" min="5" max="25">
+                        </div>
+                        <div class="config-item">
+                            <label>Medium (768-1024px)</label>
+                            <input type="number" id="chars-md" value="12" min="8" max="30">
+                        </div>
+                        <div class="config-item">
+                            <label>Large (&gt;1024px)</label>
+                            <input type="number" id="chars-lg" value="20" min="12" max="40">
+                        </div>
+                    </div>
+                    <button class="update-btn" onclick="updateCharacterLimits()">Apply Character Limits</button>
+                </div>
             </div>
 
             <div class="config-panel">
@@ -371,6 +446,17 @@
             lg: 20   // > 1024px
         };
         
+        // Characters per pixel ratios for dynamic calculation
+        let charsPerPixelRatios = {
+            xs: 0.08,   // ~12.5 pixels per character for very small screens
+            sm: 0.09,   // ~11.1 pixels per character for phones
+            md: 0.10,   // ~10 pixels per character for tablets  
+            lg: 0.11    // ~9.1 pixels per character for desktop
+        };
+        
+        // Current calculation mode
+        let calculationMode = 'dynamic';
+        
         // Test event configuration
         let testEvent = {
             name: "Bear Night at The Eagle",
@@ -435,10 +521,18 @@
         function getCharLimit(width) {
             if (typeof width === 'string') width = window.innerWidth;
             
-            if (width < 375) return charLimits.xs;
-            if (width < 768) return charLimits.sm;
-            if (width < 1024) return charLimits.md;
-            return charLimits.lg;
+            const breakpoint = getBreakpointFromWidth(width);
+            
+            if (calculationMode === 'dynamic') {
+                const charsPerPixel = charsPerPixelRatios[breakpoint];
+                const estimatedWidth = getEstimatedWidth(breakpoint);
+                return Math.floor(estimatedWidth * charsPerPixel);
+            } else {
+                if (width < 375) return charLimits.xs;
+                if (width < 768) return charLimits.sm;
+                if (width < 1024) return charLimits.md;
+                return charLimits.lg;
+            }
         }
         
         // Process event name (matches dynamic-calendar-loader logic)
@@ -448,14 +542,23 @@
             
             if (!shortName) return fullName;
             
-            const charLimitsPerLine = {
-                xs: charLimits.xs,
-                sm: charLimits.sm,
-                md: charLimits.md,
-                lg: charLimits.lg
-            };
+            let charLimitPerLine;
             
-            const charLimitPerLine = charLimitsPerLine[breakpoint] || charLimitsPerLine.lg;
+            if (calculationMode === 'dynamic') {
+                // Dynamic calculation based on pixel measurements
+                const charsPerPixel = charsPerPixelRatios[breakpoint] || charsPerPixelRatios.lg;
+                const availableWidth = getEstimatedWidth(breakpoint);
+                charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
+            } else {
+                // Fixed character limits
+                const charLimitsPerLine = {
+                    xs: charLimits.xs,
+                    sm: charLimits.sm,
+                    md: charLimits.md,
+                    lg: charLimits.lg
+                };
+                charLimitPerLine = charLimitsPerLine[breakpoint] || charLimitsPerLine.lg;
+            }
             
             // Process the shortname - remove hyphens except escaped ones
             const processedShortName = shortName.replace(/(?<!\\)-/g, '');
@@ -472,6 +575,52 @@
             
             // Otherwise, truncate with ellipsis
             return shortName.substring(0, charLimitPerLine - 1) + '…';
+        }
+        
+        // Toggle between calculation modes
+        function toggleCalculationMode() {
+            const mode = document.querySelector('input[name="calc-mode"]:checked').value;
+            calculationMode = mode;
+            
+            const dynamicConfig = document.getElementById('dynamic-config');
+            const fixedConfig = document.getElementById('fixed-config');
+            
+            if (mode === 'dynamic') {
+                dynamicConfig.style.display = 'block';
+                fixedConfig.style.display = 'none';
+            } else {
+                dynamicConfig.style.display = 'none';
+                fixedConfig.style.display = 'block';
+            }
+            
+            runTests();
+            console.log('Calculation mode changed to:', mode);
+        }
+        
+        // Get estimated width for breakpoint
+        function getEstimatedWidth(breakpoint) {
+            const estimatedWidths = {
+                xs: 280,  // Typical phone width minus padding
+                sm: 320,  // Larger phone width minus padding
+                md: 200,  // Tablet in grid layout
+                lg: 180   // Desktop in grid layout
+            };
+            return estimatedWidths[breakpoint] || estimatedWidths.lg;
+        }
+        
+        // Update characters per pixel ratios
+        function updatePixelRatios() {
+            charsPerPixelRatios.xs = parseFloat(document.getElementById('ratio-xs').value) || 0.08;
+            charsPerPixelRatios.sm = parseFloat(document.getElementById('ratio-sm').value) || 0.09;
+            charsPerPixelRatios.md = parseFloat(document.getElementById('ratio-md').value) || 0.10;
+            charsPerPixelRatios.lg = parseFloat(document.getElementById('ratio-lg').value) || 0.11;
+            
+            runTests();
+            
+            // Send updated ratios to iframe
+            sendPixelRatiosToIframe();
+            
+            console.log('Pixel ratios updated:', charsPerPixelRatios);
         }
         
         // Update character limits from inputs
@@ -515,6 +664,21 @@
                     }, '*');
                 } catch (e) {
                     console.log('Could not send character limits to iframe (cross-origin)');
+                }
+            }
+        }
+        
+        // Send pixel ratios to iframe
+        function sendPixelRatiosToIframe() {
+            const iframe = document.getElementById('city-iframe');
+            if (iframe && iframe.contentWindow) {
+                try {
+                    iframe.contentWindow.postMessage({
+                        type: 'updatePixelRatios',
+                        data: charsPerPixelRatios
+                    }, '*');
+                } catch (e) {
+                    console.log('Could not send pixel ratios to iframe (cross-origin)');
                 }
             }
         }
@@ -606,9 +770,26 @@
         function runTests() {
             const output = document.getElementById('test-output');
             const currentWidth = parseInt(document.querySelector('.iframe-wrapper').style.width) || 1200;
-            const charLimit = getCharLimit(currentWidth);
+            const breakpoint = getBreakpointFromWidth(currentWidth);
             
-            let html = `<p><strong>Testing Width:</strong> ${currentWidth}px | <strong>Character Limit:</strong> ${charLimit}</p>`;
+            let charLimit;
+            let calculationInfo;
+            
+            if (calculationMode === 'dynamic') {
+                const charsPerPixel = charsPerPixelRatios[breakpoint];
+                const estimatedWidth = getEstimatedWidth(breakpoint);
+                charLimit = Math.floor(estimatedWidth * charsPerPixel);
+                calculationInfo = `${estimatedWidth}px × ${charsPerPixel} chars/px = ${charLimit} chars`;
+            } else {
+                charLimit = getCharLimit(currentWidth);
+                calculationInfo = `Fixed limit: ${charLimit} chars`;
+            }
+            
+            let html = `
+                <p><strong>Testing Width:</strong> ${currentWidth}px (${breakpoint.toUpperCase()}) | 
+                <strong>Mode:</strong> ${calculationMode} | 
+                <strong>Calculation:</strong> ${calculationInfo}</p>
+            `;
             
             // Test the custom event first
             const testResult = getSmartEventNameForBreakpoint(testEvent, getBreakpointFromWidth(currentWidth));
@@ -664,6 +845,7 @@
             // Initialize iframe after a short delay
             setTimeout(() => {
                 sendCharacterLimitsToIframe();
+                sendPixelRatiosToIframe();
                 sendTestEventToIframe();
             }, 1000);
         });
@@ -688,6 +870,7 @@
             if (event.data && event.data.type === 'iframeReady') {
                 console.log('Iframe is ready, sending initial data');
                 sendCharacterLimitsToIframe();
+                sendPixelRatiosToIframe();
                 sendTestEventToIframe();
             }
         });
