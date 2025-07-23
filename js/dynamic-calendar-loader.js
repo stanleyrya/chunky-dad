@@ -1208,19 +1208,19 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Generate calendar events (enhanced for week/month/calendar view)
-    generateCalendarEvents(events) {
+    generateCalendarEvents(events, showEvents = true) {
         const { start, end } = this.getCurrentPeriodBounds();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         if (this.currentView === 'week') {
-            return this.generateWeekView(events, start, end, today);
+            return this.generateWeekView(events, start, end, today, showEvents);
         } else {
-            return this.generateMonthView(events, start, end, today);
+            return this.generateMonthView(events, start, end, today, showEvents);
         }
     }
 
-    generateWeekView(events, start, end, today) {
+    generateWeekView(events, start, end, today, showEvents = true) {
         const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = [];
         
@@ -1233,11 +1233,12 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', `Generating week view with mobile-optimized event display`, {
             eventCount: events.length,
             weekStart: start.toISOString().split('T')[0],
-            weekEnd: end.toISOString().split('T')[0]
+            weekEnd: end.toISOString().split('T')[0],
+            showEvents
         });
 
         return days.map(day => {
-            const dayEvents = events.filter(event => {
+            const dayEvents = showEvents ? events.filter(event => {
                 if (!event.startDate) return false;
                 
                 if (event.recurring) {
@@ -1250,7 +1251,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 dayDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
-            });
+            }) : [];
 
             const eventsHtml = dayEvents.length > 0 
                 ? dayEvents.map(event => {
@@ -1287,7 +1288,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }).join('');
     }
 
-    generateMonthView(events, start, end, today) {
+    generateMonthView(events, start, end, today, showEvents = true) {
         // Add day headers first
         const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const headerHtml = dayHeaders.map(day => `
@@ -1326,11 +1327,12 @@ class DynamicCalendarLoader extends CalendarCore {
             calendarStart: calendarStart.toISOString().split('T')[0],
             calendarEnd: calendarEnd.toISOString().split('T')[0],
             weeksNeeded: weeksNeeded,
-            totalDays: days.length
+            totalDays: days.length,
+            showEvents
         });
 
         const daysHtml = days.map(day => {
-            const dayEvents = events.filter(event => {
+            const dayEvents = showEvents ? events.filter(event => {
                 if (!event.startDate) return false;
                 
                 if (event.recurring) {
@@ -1343,7 +1345,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 dayDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
-            });
+            }) : [];
 
             const isToday = day.getTime() === today.getTime();
             const isCurrentMonth = day.getMonth() === start.getMonth();
@@ -1787,13 +1789,15 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // STEP 1: Immediately display empty calendar with current view
-        this.updatePageContent(this.currentCityConfig, []);
-        
         if (!hasCityCalendar(this.currentCity)) {
             logger.info('CITY', `City ${this.currentCity} doesn't have calendar configured yet`);
+            // Show empty calendar when no events are configured
+            this.updatePageContent(this.currentCityConfig, []);
             return;
         }
+        
+        // STEP 1: Show loading message while we load events
+        this.showLoadingMessage();
         
         // STEP 2: Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
@@ -1802,6 +1806,55 @@ class DynamicCalendarLoader extends CalendarCore {
                 eventCount: data.events.length
             });
             this.updatePageContent(data.cityConfig, data.events);
+        }
+    }
+
+    // Show loading message in events section
+    showLoadingMessage() {
+        const eventsList = document.querySelector('.events-list');
+        if (eventsList) {
+            eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
+        }
+        
+        // Set up calendar controls and show empty calendar structure
+        this.setupCalendarControls();
+        
+        // Show empty calendar grid (no events) so we can measure from it
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.innerHTML = this.generateCalendarEvents([], false); // Empty events, don't show events
+            
+            // Update grid layout based on view
+            if (this.currentView === 'month') {
+                calendarGrid.className = 'calendar-grid month-view-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                
+                // Calculate the optimal number of rows based on the actual content
+                const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
+                const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
+                const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
+                const totalRows = headerRows + dayRows;
+                
+                calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
+            } else {
+                calendarGrid.className = 'calendar-grid week-view-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                calendarGrid.style.gridTemplateRows = 'auto';
+                calendarGrid.style.minHeight = 'auto';
+            }
+        }
+        
+        // Update calendar title
+        const calendarTitle = document.getElementById('calendar-title');
+        if (calendarTitle) {
+            calendarTitle.textContent = `What's the vibe?`;
+        }
+        
+        // Show current date range
+        const dateRange = document.getElementById('date-range');
+        if (dateRange) {
+            const { start, end } = this.getCurrentPeriodBounds();
+            dateRange.textContent = this.formatDateRange(start, end);
         }
     }
 

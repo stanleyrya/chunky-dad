@@ -2992,6 +2992,16 @@ footer {
     color: white;
 }
 
+/* Loading Message Styles */
+.loading-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-size: 18px;
+    background: var(--background-lighter);
+    border-radius: 8px;
+}
+
 .no-events-message {
     text-align: center;
     padding: 40px 20px;
