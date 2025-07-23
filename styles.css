@@ -4273,6 +4273,42 @@ footer {
     color: #00ff88;
 }
 
+/* Debug control buttons */
+.debug-controls {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.debug-btn {
+    background: linear-gradient(135deg, #444, #555);
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 10px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.debug-btn:hover {
+    background: linear-gradient(135deg, #555, #666);
+    border-color: #777;
+    transform: translateY(-1px);
+}
+
+.debug-btn:active {
+    transform: translateY(0);
+    background: linear-gradient(135deg, #333, #444);
+}
+
 /* Mobile responsiveness for debug overlay */
 @media (max-width: 480px) {
     .debug-overlay {
@@ -4307,6 +4343,12 @@ footer {
         width: 24px;
         height: 24px;
         font-size: 18px; /* Larger touch target */
+    }
+    
+    .debug-btn {
+        padding: 8px 12px;
+        font-size: 9px;
+        min-height: 32px; /* Larger touch target */
     }
 }
 
