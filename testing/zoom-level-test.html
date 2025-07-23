@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Level Test - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .zoom-info {
+            display: grid;
+            gap: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .zoom-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .zoom-info-label {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .zoom-info-value {
+            color: var(--text-color);
+        }
+        
+        .test-calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .test-day {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            min-height: 120px;
+        }
+        
+        .test-event {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            line-height: 1.2;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .update-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .update-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .expected-behavior {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 Zoom Level Detection Test</h1>
+        
+        <div class="instructions">
+            <h3>How to Test:</h3>
+            <ol>
+                <li><strong>Desktop:</strong> Use Ctrl+Plus/Ctrl+Minus to zoom in/out</li>
+                <li><strong>Mobile:</strong> Use pinch gestures to zoom</li>
+                <li>Watch the values below update as you zoom</li>
+                <li>Click "Update Values" if they don't auto-refresh</li>
+            </ol>
+        </div>
+        
+        <div class="expected-behavior">
+            <h4>Expected Behavior:</h4>
+            <ul>
+                <li><strong>Zoom In:</strong> Characters/Line should DECREASE (less text fits)</li>
+                <li><strong>Zoom Out:</strong> Characters/Line should INCREASE (more text fits)</li>
+                <li><strong>Mobile:</strong> Should show ~100% initially, not 200-300%</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>Zoom Detection Values</h3>
+            <div class="zoom-info" id="zoom-info">
+                <!-- Values populated by JavaScript -->
+            </div>
+            <button class="update-btn" onclick="updateZoomInfo()">Update Values</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Calendar Events</h3>
+            <p>These events should get shorter names when zoomed in, longer when zoomed out:</p>
+            <div class="test-calendar" id="test-calendar">
+                <!-- Calendar populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the necessary JavaScript files -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/city-config.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+
+    <script>
+        // Test events with various name lengths
+        const testEvents = [
+            { name: "Bear Happy Hour", shortName: "Bear Happy Hour", bar: "The Eagle" },
+            { name: "Weekly Underwear Party", shortName: "Underwear Party", bar: "Jackhammer" },
+            { name: "Super Long Event Name That Should Get Truncated", shortName: "Super Long Event Name That Should Get Truncated", bar: "Very Long Bar Name Here" },
+            { name: "Short", shortName: "Short", bar: "Bar" },
+            { name: "Medium Length Event", shortName: "Medium Length Event", bar: "Medium Bar" },
+            { name: "Another Really Really Long Event Name", shortName: "Another Really Really Long Event Name", bar: "Another Long Bar Name" },
+            { name: "Test Event", shortName: "Test Event", bar: "Test Bar" }
+        ];
+
+        let calendarLoader;
+
+        function updateZoomInfo() {
+            // Create a temporary calendar loader to test the calculations
+            if (!calendarLoader) {
+                calendarLoader = new DynamicCalendarLoader();
+            }
+
+            // Force recalculation
+            calendarLoader.clearMeasurementCache();
+            
+            const charsPerPixel = calendarLoader.calculateCharsPerPixel();
+            const eventWidth = calendarLoader.getEventTextWidth();
+            const charLimitPerLine = Math.floor(eventWidth * charsPerPixel);
+            
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
+            
+            // Calculate zoom factor using the same logic as the fixed code
+            let zoomFactor = 1;
+            if (visualZoom !== 1) {
+                zoomFactor = visualZoom;
+            } else if (window.screen && window.screen.width && window.innerWidth > 0) {
+                const expectedRatio = window.screen.width / window.innerWidth;
+                const actualRatio = devicePixelRatio;
+                const ratio = actualRatio / expectedRatio;
+                if (ratio > 1.25 || ratio < 0.8) {
+                    zoomFactor = ratio;
+                }
+            }
+
+            const zoomInfoContainer = document.getElementById('zoom-info');
+            zoomInfoContainer.innerHTML = `
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Screen Size:</span>
+                    <span class="zoom-info-value">${window.innerWidth} × ${window.innerHeight}</span>
+                </div>
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Device Pixel Ratio:</span>
+                    <span class="zoom-info-value">${devicePixelRatio.toFixed(2)}</span>
+                </div>
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Visual Zoom Scale:</span>
+                    <span class="zoom-info-value">${visualZoom.toFixed(2)}</span>
+                </div>
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Detected Zoom Factor:</span>
+                    <span class="zoom-info-value">${zoomFactor.toFixed(2)} (${zoomFactor > 1 ? 'zoomed in' : zoomFactor < 1 ? 'zoomed out' : 'normal'})</span>
+                </div>
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Event Text Width:</span>
+                    <span class="zoom-info-value">${eventWidth.toFixed(2)}px</span>
+                </div>
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Chars Per Pixel:</span>
+                    <span class="zoom-info-value">${charsPerPixel.toFixed(4)}</span>
+                </div>
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Characters/Line:</span>
+                    <span class="zoom-info-value">${charLimitPerLine}</span>
+                </div>
+                <div class="zoom-info-row">
+                    <span class="zoom-info-label">Expected Ratio:</span>
+                    <span class="zoom-info-value">${window.screen ? (window.screen.width / window.innerWidth).toFixed(2) : 'N/A'}</span>
+                </div>
+            `;
+
+            // Update test calendar
+            updateTestCalendar(charLimitPerLine);
+        }
+
+        function updateTestCalendar(charLimit) {
+            const calendarContainer = document.getElementById('test-calendar');
+            
+            calendarContainer.innerHTML = testEvents.map((event, index) => {
+                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dayName = dayNames[index] || 'Sun';
+                
+                // Simulate the smart event name generation
+                let displayName = event.shortName;
+                if (displayName.length > charLimit) {
+                    displayName = displayName.substring(0, charLimit - 1) + '…';
+                }
+                
+                return `
+                    <div class="test-day">
+                        <h4>${dayName}</h4>
+                        <div class="test-event">
+                            <div style="font-weight: 600;">${displayName}</div>
+                            <div style="font-size: 0.65rem; opacity: 0.9;">@ ${event.bar}</div>
+                        </div>
+                        <div style="font-size: 0.6rem; color: #666; margin-top: 0.5rem;">
+                            Original: ${event.shortName.length} chars<br>
+                            Display: ${displayName.length} chars<br>
+                            Limit: ${charLimit}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Auto-update on resize/zoom
+        let updateTimeout;
+        function scheduleUpdate() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(updateZoomInfo, 250);
+        }
+
+        window.addEventListener('resize', scheduleUpdate);
+        window.addEventListener('orientationchange', scheduleUpdate);
+        
+        // For mobile pinch zoom
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', scheduleUpdate);
+            window.visualViewport.addEventListener('scroll', scheduleUpdate);
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(updateZoomInfo, 100);
+        });
+    </script>
+</body>
+</html>

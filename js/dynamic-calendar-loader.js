@@ -625,20 +625,40 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
-            // Simple zoom adjustment: account for devicePixelRatio and visual viewport scale
-            const deviceZoom = window.devicePixelRatio || 1;
+            // Zoom adjustment: account for browser zoom and mobile pinch zoom
+            const devicePixelRatio = window.devicePixelRatio || 1;
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
             
-            // Use whichever zoom factor is not 1 (indicating actual zoom)
+            // Detect actual zoom level (not just device pixel ratio)
             let zoomFactor = 1;
+            
+            // Priority 1: Mobile pinch zoom (visualViewport.scale)
             if (visualZoom !== 1) {
-                zoomFactor = visualZoom; // Mobile pinch zoom
-            } else if (deviceZoom !== 1) {
-                zoomFactor = deviceZoom; // Browser zoom or high-DPI display
+                zoomFactor = visualZoom;
+            } 
+            // Priority 2: Browser zoom detection (more complex calculation)
+            else {
+                // Try to detect browser zoom by comparing expected vs actual devicePixelRatio
+                // On most devices, base devicePixelRatio should be close to screen.width / window.innerWidth
+                if (window.screen && window.screen.width && window.innerWidth > 0) {
+                    const expectedRatio = window.screen.width / window.innerWidth;
+                    const actualRatio = devicePixelRatio;
+                    
+                    // If the ratios differ significantly, it might indicate browser zoom
+                    // Use a reasonable threshold to avoid false positives
+                    const ratio = actualRatio / expectedRatio;
+                    if (ratio > 1.25 || ratio < 0.8) {
+                        zoomFactor = ratio;
+                    }
+                }
+                // For most mobile devices, devicePixelRatio reflects display density, not zoom
+                // So we default to 1 unless we can clearly detect zoom
             }
             
-            // Adjust calculation for zoom
-            charsPerPixel = charsPerPixel * zoomFactor;
+            // When zoomed IN (zoomFactor > 1), text appears larger, so FEWER characters fit
+            // When zoomed OUT (zoomFactor < 1), text appears smaller, so MORE characters fit
+            // Therefore, we DIVIDE by zoomFactor, not multiply
+            charsPerPixel = charsPerPixel / zoomFactor;
             
             document.body.removeChild(testElement);
             
@@ -647,9 +667,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
                 charsPerPixel: charsPerPixel.toFixed(4),
-                deviceZoom: deviceZoom.toFixed(2),
+                devicePixelRatio: devicePixelRatio.toFixed(2),
                 visualZoom: visualZoom.toFixed(2),
                 zoomFactor: zoomFactor.toFixed(2),
+                zoomDirection: zoomFactor > 1 ? 'zoomed in' : zoomFactor < 1 ? 'zoomed out' : 'normal',
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
