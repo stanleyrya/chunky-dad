@@ -651,34 +651,28 @@ class DynamicCalendarLoader extends CalendarCore {
             this.charsPerPixel = charsPerPixel;
             return charsPerPixel;
         } catch (error) {
-            logger.warn('CALENDAR', 'Could not calculate chars per pixel, using fallback', error);
-            // Fallback to a reasonable estimate for 0.75rem Poppins
-            const fallback = 0.09;
-            this.charsPerPixel = fallback;
-            return fallback;
+            logger.componentError('CALENDAR', 'Could not calculate chars per pixel', error);
+            throw error; // Don't use fallbacks, fail properly
         }
     }
 
-    // Get the actual width available for event text using a real calendar day
+    // Get the actual width available for event text from the fake event rendered invisibly
     getEventTextWidth() {
         // Check if we already have a cached measurement
         if (this.cachedEventTextWidth) {
             return this.cachedEventTextWidth;
         }
         
-        // Measure from a real calendar day div that's already displayed
-        const calendarDay = document.querySelector('.calendar-day');
+        // Find the fake event that was rendered invisibly for measurement
+        const eventName = document.querySelector('.event-name');
         
-        // Get the width of the day container minus padding
-        const dayRect = calendarDay.getBoundingClientRect();
-        const dayStyles = window.getComputedStyle(calendarDay);
-        const paddingLeft = parseFloat(dayStyles.paddingLeft) || 0;
-        const paddingRight = parseFloat(dayStyles.paddingRight) || 0;
-        const availableWidth = dayRect.width - paddingLeft - paddingRight;
+        // Measure the actual rendered event name width
+        const eventNameRect = eventName.getBoundingClientRect();
+        this.cachedEventTextWidth = eventNameRect.width;
         
-        this.cachedEventTextWidth = availableWidth;
-        logger.info('CALENDAR', `Measured event text width from real day: ${availableWidth}px`);
-        return availableWidth;
+        logger.info('CALENDAR', `Measured actual event text width from fake event: ${this.cachedEventTextWidth}px`);
+        
+        return this.cachedEventTextWidth;
     }
 
     // Clear cached measurements (call when layout changes)
@@ -1823,8 +1817,20 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Show calendar structure first but hidden for measurements, with loading message visible
-        this.updatePageContent(this.currentCityConfig, [], true); // hideEvents = true, structure hidden
+        // Create a fake event for accurate width measurement
+        const fakeEvent = {
+            name: 'Test Event Name For Measurement',
+            shortName: 'Test Event',
+            bar: 'Test Venue',
+            time: '8:00 PM',
+            day: 'Today',
+            startDate: new Date(),
+            slug: 'measurement-test',
+            recurring: false
+        };
+        
+        // Show calendar structure first but hidden for measurements, with fake event for width calculation
+        this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true, structure hidden
         
         // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
@@ -1877,28 +1883,44 @@ class DynamicCalendarLoader extends CalendarCore {
     
     // Set up resize listener to clear measurement cache when layout changes
     setupResizeListener() {
+        let resizeTimeout;
+        
         window.addEventListener('resize', () => {
             const newWidth = window.innerWidth;
             const newBreakpoint = this.getCurrentBreakpoint();
             const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
+            const significantWidthChange = Math.abs(newWidth - this.lastScreenWidth) > 50; // 50px threshold
             
-            if (breakpointChanged) {
+            // Clear measurements on any significant resize, not just breakpoint changes
+            if (breakpointChanged || significantWidthChange) {
+                const oldBreakpoint = this.currentBreakpoint;
+                const oldWidth = this.lastScreenWidth;
+                
                 this.clearMeasurementCache();
                 this.clearEventNameCache();
                 this.lastScreenWidth = newWidth;
                 this.currentBreakpoint = newBreakpoint;
-                logger.debug('CALENDAR', 'Breakpoint changed, caches cleared', {
-                    oldBreakpoint: this.currentBreakpoint,
-                    newBreakpoint: newBreakpoint,
-                    width: newWidth
+                
+                logger.debug('CALENDAR', 'Significant resize detected, caches cleared', {
+                    oldBreakpoint,
+                    newBreakpoint,
+                    oldWidth,
+                    newWidth,
+                    widthChange: newWidth - oldWidth,
+                    breakpointChanged,
+                    significantWidthChange
                 });
                 
-                // Re-render calendar to use new breakpoint calculations
-                this.updateCalendarDisplay();
+                // Debounce the calendar re-render to avoid excessive updates
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    this.updateCalendarDisplay();
+                    logger.debug('CALENDAR', 'Calendar display updated after resize');
+                }, 150); // 150ms debounce
             }
         });
         
-        logger.debug('CALENDAR', 'Resize listener set up for breakpoint change detection');
+        logger.debug('CALENDAR', 'Resize listener set up for all significant size changes');
     }
     
 
