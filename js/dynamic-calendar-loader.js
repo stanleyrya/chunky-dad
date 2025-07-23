@@ -1832,17 +1832,12 @@ class DynamicCalendarLoader extends CalendarCore {
         // Show calendar structure first but hidden for measurements, with fake event for width calculation
         this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true, structure hidden
         
-        // Clear measurement cache to ensure fresh calculations with new DOM structure
-        this.clearMeasurementCache();
-        
         // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
         if (data) {
             logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
                 eventCount: data.events.length
             });
-            // Clear cache again before final render to ensure accurate measurements
-            this.clearMeasurementCache();
             this.updatePageContent(data.cityConfig, data.events); // hideEvents = false (default)
         }
     }
@@ -1898,17 +1893,20 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Clear measurements on any significant resize, not just breakpoint changes
             if (breakpointChanged || significantWidthChange) {
+                const oldBreakpoint = this.currentBreakpoint;
+                const oldWidth = this.lastScreenWidth;
+                
                 this.clearMeasurementCache();
                 this.clearEventNameCache();
                 this.lastScreenWidth = newWidth;
                 this.currentBreakpoint = newBreakpoint;
                 
                 logger.debug('CALENDAR', 'Significant resize detected, caches cleared', {
-                    oldBreakpoint: this.currentBreakpoint,
-                    newBreakpoint: newBreakpoint,
-                    oldWidth: this.lastScreenWidth,
-                    newWidth: newWidth,
-                    widthChange: newWidth - this.lastScreenWidth,
+                    oldBreakpoint,
+                    newBreakpoint,
+                    oldWidth,
+                    newWidth,
+                    widthChange: newWidth - oldWidth,
                     breakpointChanged,
                     significantWidthChange
                 });
