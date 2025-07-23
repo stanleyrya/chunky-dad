@@ -254,18 +254,33 @@ class DebugOverlay {
             eventWidth.textContent = eventWidthInfo;
         }
         
-        // Get zoom level info
+        // Get zoom level info using improved detection
         let zoomInfo = '100%';
         try {
-            // Try Visual Viewport API first (mobile pinch zoom)
-            if (window.visualViewport && window.visualViewport.scale !== undefined && window.visualViewport.scale !== 1) {
-                zoomInfo = `${(window.visualViewport.scale * 100).toFixed(0)}% (pinch)`;
-            } else if (window.devicePixelRatio) {
-                // Use devicePixelRatio for browser zoom detection
-                const baseRatio = window.screen && window.screen.width ? 
-                    Math.round(window.screen.width / window.innerWidth * 100) / 100 : 1;
-                if (Math.abs(window.devicePixelRatio - baseRatio) > 0.1) {
-                    zoomInfo = `${Math.round(window.devicePixelRatio * 100)}% (browser)`;
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
+            
+            // Priority 1: Mobile pinch zoom (visualViewport.scale)
+            if (visualZoom !== 1) {
+                zoomInfo = `${(visualZoom * 100).toFixed(0)}% (pinch)`;
+            } 
+            // Priority 2: Browser zoom detection
+            else {
+                // Try to detect browser zoom by comparing expected vs actual devicePixelRatio
+                if (window.screen && window.screen.width && window.innerWidth > 0) {
+                    const expectedRatio = window.screen.width / window.innerWidth;
+                    const actualRatio = devicePixelRatio;
+                    const ratio = actualRatio / expectedRatio;
+                    
+                    if (ratio > 1.25 || ratio < 0.8) {
+                        zoomInfo = `${Math.round(ratio * 100)}% (browser)`;
+                    } else {
+                        // Show device info when no zoom detected
+                        zoomInfo = `100% (DPR: ${devicePixelRatio.toFixed(1)})`;
+                    }
+                } else {
+                    // Show device info when screen data unavailable
+                    zoomInfo = `100% (DPR: ${devicePixelRatio.toFixed(1)})`;
                 }
             }
         } catch (e) {
