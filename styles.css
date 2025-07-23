@@ -918,7 +918,7 @@ header {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
+    gap: 0;
     margin-bottom: 1rem;
     position: relative;
     z-index: 2;
@@ -1186,9 +1186,6 @@ header {
 
 /* Mobile optimizations for unified calendar */
 @media (max-width: 768px) {
-    .calendar-grid {
-        gap: 0;
-    }
     
     .calendar-day {
         padding: 0.5rem;
@@ -1229,9 +1226,6 @@ header {
 }
 
 @media (max-width: 480px) {
-    .calendar-grid {
-        gap: 0;
-    }
     
     .calendar-day {
         padding: 0.4rem;
@@ -3277,9 +3271,6 @@ footer {
 @media (min-width: 769px) and (max-width: 1024px) {
 
     /* Enhanced Calendar Views for tablets - show full information */
-    .calendar-grid {
-        gap: 0.8rem;
-    }
     
     .calendar-grid.week-view-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -3530,9 +3521,6 @@ footer {
     }
 
     /* Enhanced spacing for desktop */
-    .calendar-grid {
-        gap: 1rem;
-    }
 
     .calendar-day.week-view {
         min-height: 200px;
