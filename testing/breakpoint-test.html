@@ -532,14 +532,20 @@
                     visibility: hidden;
                     white-space: nowrap;
                     font-family: 'Poppins', sans-serif;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                    line-height: 1.2;
+                    font-size: var(--event-name-font-size);
+                    font-weight: var(--event-name-font-weight);
+                    line-height: var(--event-name-line-height);
                 `;
                 
                 // Use a representative string of average characters
                 testElement.textContent = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
                 document.body.appendChild(testElement);
+                
+                // Get computed styles to verify what we're actually using
+                const computedStyles = window.getComputedStyle(testElement);
+                const actualFontSize = computedStyles.fontSize;
+                const actualFontWeight = computedStyles.fontWeight;
+                const actualFontFamily = computedStyles.fontFamily;
                 
                 const width = testElement.getBoundingClientRect().width;
                 const charCount = testElement.textContent.length;
@@ -548,7 +554,31 @@
                 
                 document.body.removeChild(testElement);
                 
-                console.log(`Font metrics calculated: ${pixelsPerChar.toFixed(2)}px per char, ${calculatedRatio.toFixed(4)} chars per px`);
+                console.log('Font measurement details:', {
+                    width: width.toFixed(2),
+                    charCount,
+                    pixelsPerChar: pixelsPerChar.toFixed(2),
+                    calculatedRatio: calculatedRatio.toFixed(4),
+                    actualFontSize,
+                    actualFontWeight,
+                    actualFontFamily,
+                    screenWidth: window.innerWidth
+                });
+                
+                // Show detailed info for debugging
+                const expectedCharsAt280px = Math.floor(280 * calculatedRatio);
+                alert(`Font Calculation Results:
+Screen Width: ${window.innerWidth}px
+Font: ${actualFontSize} ${actualFontWeight} ${actualFontFamily}
+
+Measurement Results:
+• Total Width: ${width.toFixed(2)}px for ${charCount} characters
+• Pixels per Character: ${pixelsPerChar.toFixed(2)}px
+• Characters per Pixel: ${calculatedRatio.toFixed(4)}
+
+For 280px available width (320px screen - padding):
+• Expected Characters: ${expectedCharsAt280px} chars
+• This should fit ~${Math.floor(expectedCharsAt280px/4)}-${Math.floor(expectedCharsAt280px/5)} words of 4-5 characters each`);
                 
                 setPixelRatio(calculatedRatio);
             } catch (error) {
@@ -692,10 +722,23 @@
             // Test the custom event first
             const testResult = getSmartEventNameForBreakpoint(testEvent, getBreakpointFromWidth(currentWidth));
             const isUnnecessaryHyphen = checkUnnecessaryHyphenation(testEvent, testResult, charLimit);
+            
+            // Special debugging for 320px width
+            let debugInfo = '';
+            if (currentWidth === 320) {
+                const processedName = testEvent.shortName.replace(/(?<!\\)-/g, '');
+                debugInfo = `<br><small style="color: #666;">
+                    Debug 320px: Original="${testEvent.shortName}" (${testEvent.shortName.length}), 
+                    Processed="${processedName}" (${processedName.length}), 
+                    Char limit=${charLimit}, 
+                    Expected ~4-5 chars but got ${testResult.length}
+                </small>`;
+            }
+            
             html += `
                 <div class="result-item" style="border-left: 4px solid var(--primary-color);">
                     <div class="result-name">🎪 ${testEvent.name}</div>
-                    <div class="result-output">${testEvent.shortName} → ${testResult} ${isUnnecessaryHyphen ? '⚠️ Unnecessary hyphen?' : ''}</div>
+                    <div class="result-output">${testEvent.shortName} → ${testResult} ${isUnnecessaryHyphen ? '⚠️ Unnecessary hyphen?' : ''}${debugInfo}</div>
                 </div>
             `;
             

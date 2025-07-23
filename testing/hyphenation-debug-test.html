@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyphenation Debug Test - 320px Issue</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            padding: 2rem;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .debug-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        
+        .test-event {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .result {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 Hyphenation Debug Test - 320px Issue</h1>
+        <p>This test specifically debugs the hyphenation issue at 320px width where words aren't being hyphenated properly.</p>
+        
+        <div class="debug-section">
+            <h2>Step 1: Font Measurement</h2>
+            <button onclick="measureFont()">Measure Font Metrics</button>
+            <div id="font-results"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 2: Width Calculation</h2>
+            <button onclick="calculateWidths()">Calculate Available Widths</button>
+            <div id="width-results"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 3: Character Limit Test</h2>
+            <button onclick="testCharacterLimits()">Test Character Limits</button>
+            <div id="char-limit-results"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 4: Hyphenation Logic Test</h2>
+            <button onclick="testHyphenationLogic()">Test Hyphenation Logic</button>
+            <div id="hyphenation-results"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 5: Real Event Tests</h2>
+            <button onclick="testRealEvents()">Test Real Event Names</button>
+            <div id="real-event-results"></div>
+        </div>
+    </div>
+
+    <script>
+        let charsPerPixel = 0.09; // Default fallback
+        let availableWidth320 = 280; // Estimated available width at 320px
+        
+        // Test events that should be hyphenated at 320px
+        const testEvents = [
+            { name: 'Bear Happy Hour', shortName: 'Bear-Happy' },
+            { name: 'Leather Night', shortName: 'Leather-Night' },
+            { name: 'Rock-strap Party', shortName: 'Rock-strap' },
+            { name: 'Woof Pack Meetup', shortName: 'Woof-Pack' },
+            { name: 'Sunday Funday', shortName: 'Sunday-Funday' },
+            { name: 'Thirsty Thursday', shortName: 'Thirsty-Thursday' }
+        ];
+        
+        function measureFont() {
+            const results = document.getElementById('font-results');
+            results.innerHTML = '<p>Measuring font metrics...</p>';
+            
+            try {
+                const testElement = document.createElement('div');
+                testElement.style.cssText = `
+                    position: absolute;
+                    visibility: hidden;
+                    white-space: nowrap;
+                    font-family: 'Poppins', sans-serif;
+                    font-size: var(--event-name-font-size);
+                    font-weight: var(--event-name-font-weight);
+                    line-height: var(--event-name-line-height);
+                `;
+                
+                testElement.textContent = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
+                document.body.appendChild(testElement);
+                
+                const computedStyles = window.getComputedStyle(testElement);
+                const width = testElement.getBoundingClientRect().width;
+                const charCount = testElement.textContent.length;
+                const pixelsPerChar = width / charCount;
+                charsPerPixel = 1 / pixelsPerChar;
+                
+                document.body.removeChild(testElement);
+                
+                results.innerHTML = `
+                    <div class="result success">
+                        <strong>Font Measurement Results:</strong><br>
+                        Font Size: ${computedStyles.fontSize}<br>
+                        Font Weight: ${computedStyles.fontWeight}<br>
+                        Font Family: ${computedStyles.fontFamily}<br>
+                        <br>
+                        <strong>Character Metrics:</strong><br>
+                        Total Width: ${width.toFixed(2)}px for ${charCount} characters<br>
+                        Pixels per Character: ${pixelsPerChar.toFixed(2)}px<br>
+                        Characters per Pixel: ${charsPerPixel.toFixed(4)}<br>
+                    </div>
+                `;
+            } catch (error) {
+                results.innerHTML = `<div class="result error">Font measurement failed: ${error.message}</div>`;
+            }
+        }
+        
+        function calculateWidths() {
+            const results = document.getElementById('width-results');
+            
+            // Simulate different screen widths and their available space
+            const screenWidths = [320, 375, 414, 768];
+            let html = '<strong>Available Width Calculations:</strong><br><br>';
+            
+            screenWidths.forEach(screenWidth => {
+                // Estimate available width (screen width minus padding/margins)
+                let availableWidth;
+                if (screenWidth <= 375) {
+                    availableWidth = screenWidth - 40; // 20px padding each side
+                } else if (screenWidth <= 768) {
+                    availableWidth = screenWidth - 60; // More padding on larger screens
+                } else {
+                    availableWidth = 200; // Grid layout on desktop
+                }
+                
+                const charLimit = Math.floor(availableWidth * charsPerPixel);
+                
+                html += `
+                    <div class="result">
+                        Screen: ${screenWidth}px → Available: ${availableWidth}px → Char Limit: ${charLimit}<br>
+                        Expected words (4-5 chars): ${Math.floor(charLimit/5)}-${Math.floor(charLimit/4)} words
+                    </div>
+                `;
+                
+                if (screenWidth === 320) {
+                    availableWidth320 = availableWidth;
+                }
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        function testCharacterLimits() {
+            const results = document.getElementById('char-limit-results');
+            const charLimit = Math.floor(availableWidth320 * charsPerPixel);
+            
+            let html = `<strong>Character Limit Test for 320px:</strong><br>
+                       Available Width: ${availableWidth320}px<br>
+                       Character Limit: ${charLimit}<br><br>`;
+            
+            // Test various string lengths
+            const testStrings = [
+                'Bear', 'Bear-Happy', 'Bear-Happy-Hour', 'Rock-strap', 'Woof-Pack',
+                'A', 'AB', 'ABC', 'ABCD', 'ABCDE', 'ABCDEF', 'ABCDEFG', 'ABCDEFGH'
+            ];
+            
+            testStrings.forEach(str => {
+                const fits = str.length <= charLimit;
+                const className = fits ? 'success' : 'error';
+                html += `<div class="result ${className}">"${str}" (${str.length} chars) - ${fits ? 'FITS' : 'TOO LONG'}</div>`;
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        function testHyphenationLogic() {
+            const results = document.getElementById('hyphenation-results');
+            const charLimit = Math.floor(availableWidth320 * charsPerPixel);
+            
+            let html = `<strong>Hyphenation Logic Test:</strong><br>
+                       Character Limit: ${charLimit}<br><br>`;
+            
+            testEvents.forEach(event => {
+                const result = simulateHyphenation(event, charLimit);
+                html += `
+                    <div class="test-event">
+                        <strong>${event.name}</strong><br>
+                        Short Name: "${event.shortName}" (${event.shortName.length} chars)<br>
+                        Result: "${result.output}" (${result.output.length} chars)<br>
+                        Status: <span class="result ${result.success ? 'success' : 'error'}">${result.message}</span>
+                    </div>
+                `;
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        function simulateHyphenation(event, charLimitPerLine) {
+            const shortName = event.shortName || '';
+            
+            // Process the shortname - remove hyphens except escaped ones
+            const processedShortName = shortName.replace(/(?<!\\)-/g, '');
+            
+            // If the entire name fits on one line, return it
+            if (processedShortName.length <= charLimitPerLine) {
+                return {
+                    output: processedShortName,
+                    success: true,
+                    message: `Fits without hyphens (${processedShortName.length} <= ${charLimitPerLine})`
+                };
+            }
+            
+            // Try to fit the original hyphenated name on one line
+            if (shortName.length <= charLimitPerLine) {
+                return {
+                    output: shortName,
+                    success: true,
+                    message: `Fits with hyphens (${shortName.length} <= ${charLimitPerLine})`
+                };
+            }
+            
+            // For very small character limits, just truncate
+            if (charLimitPerLine <= 6) {
+                const truncated = shortName.substring(0, charLimitPerLine - 1) + '…';
+                return {
+                    output: truncated,
+                    success: false,
+                    message: `Truncated due to very small limit (${charLimitPerLine} <= 6)`
+                };
+            }
+            
+            // Otherwise, truncate with ellipsis
+            const truncated = shortName.substring(0, charLimitPerLine - 1) + '…';
+            return {
+                output: truncated,
+                success: false,
+                message: `Truncated because too long (${shortName.length} > ${charLimitPerLine})`
+            };
+        }
+        
+        function testRealEvents() {
+            const results = document.getElementById('real-event-results');
+            const charLimit = Math.floor(availableWidth320 * charsPerPixel);
+            
+            let html = `<strong>Real Event Test Results:</strong><br>
+                       Expected: At 320px width, we should see ~4-5 character words<br>
+                       Character Limit: ${charLimit}<br><br>`;
+            
+            testEvents.forEach(event => {
+                const result = simulateHyphenation(event, charLimit);
+                const expectedLength = 4; // Expected ~4-5 characters at 320px
+                const actualLength = result.output.replace('…', '').length;
+                const meetsExpectation = actualLength >= expectedLength && actualLength <= expectedLength + 2;
+                
+                html += `
+                    <div class="test-event">
+                        <strong>${event.name}</strong><br>
+                        Input: "${event.shortName}" → Output: "${result.output}"<br>
+                        Length: ${actualLength} chars (expected ~${expectedLength}-${expectedLength + 1})<br>
+                        <span class="result ${meetsExpectation ? 'success' : 'error'}">
+                            ${meetsExpectation ? '✅ Meets expectation' : '❌ Does not meet expectation'}
+                        </span><br>
+                        Logic: ${result.message}
+                    </div>
+                `;
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        // Auto-run font measurement on page load
+        window.addEventListener('load', () => {
+            measureFont();
+        });
+    </script>
+</body>
+</html>

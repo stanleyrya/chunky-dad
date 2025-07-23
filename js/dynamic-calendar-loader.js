@@ -28,6 +28,11 @@ class DynamicCalendarLoader extends CalendarCore {
         // Set up message listener for testing interface
         this.setupMessageListener();
         
+        // Cache for event names - only recalculate on screen size change
+        this.cachedEventNames = new Map();
+        this.lastScreenWidth = window.innerWidth;
+        this.currentBreakpoint = this.getCurrentBreakpoint();
+        
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
         
@@ -469,10 +474,12 @@ class DynamicCalendarLoader extends CalendarCore {
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         
         logger.debug('CALENDAR', `Dynamic char calculation for ${breakpoint}`, {
-            availableWidth,
-            charsPerPixel,
+            availableWidth: availableWidth.toFixed(2),
+            charsPerPixel: charsPerPixel.toFixed(4),
             charLimitPerLine,
-            eventName: shortName
+            eventName: shortName,
+            shortNameLength: shortName.length,
+            screenWidth: window.innerWidth
         });
         
         // Process the shortname - remove hyphens except escaped ones (\-)
@@ -483,12 +490,23 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If the entire name fits on one line, return it
         if (processedShortName.length <= charLimitPerLine) {
+            logger.debug('CALENDAR', `Event name fits without hyphens: "${processedShortName}" (${processedShortName.length} <= ${charLimitPerLine})`);
             return processedShortName;
         }
         
         // Try to fit the original hyphenated name on one line
         if (shortName.length <= charLimitPerLine) {
+            logger.debug('CALENDAR', `Event name fits with hyphens: "${shortName}" (${shortName.length} <= ${charLimitPerLine})`);
             return shortName;
+        }
+        
+        logger.debug('CALENDAR', `Event name too long, needs truncation/hyphenation: "${shortName}" (${shortName.length} > ${charLimitPerLine})`);
+        
+        // For very small character limits, just truncate aggressively
+        if (charLimitPerLine <= 6) {
+            const truncated = shortName.substring(0, charLimitPerLine - 1) + '…';
+            logger.debug('CALENDAR', `Very small char limit, truncating: "${truncated}"`);
+            return truncated;
         }
         
         // Build lines that respect the character limit per line
@@ -601,13 +619,23 @@ class DynamicCalendarLoader extends CalendarCore {
             const pixelsPerChar = width / charCount;
             const charsPerPixel = 1 / pixelsPerChar;
             
+            // Get the computed styles to verify what we're actually using
+            const computedStyles = window.getComputedStyle(testElement);
+            const actualFontSize = computedStyles.fontSize;
+            const actualFontWeight = computedStyles.fontWeight;
+            const actualFontFamily = computedStyles.fontFamily;
+            
             document.body.removeChild(testElement);
             
             logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char)`, {
-                width,
+                width: width.toFixed(2),
                 charCount,
-                pixelsPerChar,
-                charsPerPixel
+                pixelsPerChar: pixelsPerChar.toFixed(2),
+                charsPerPixel: charsPerPixel.toFixed(4),
+                actualFontSize,
+                actualFontWeight,
+                actualFontFamily,
+                screenWidth: window.innerWidth
             });
             
             // Cache the result
@@ -680,32 +708,54 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', 'Measurement cache cleared');
     }
 
+    // Clear cached event names (call when screen size changes)
+    clearEventNameCache() {
+        this.cachedEventNames.clear();
+        logger.debug('CALENDAR', 'Event name cache cleared');
+    }
+
+    // Get current breakpoint based on screen width
+    getCurrentBreakpoint() {
+        const width = window.innerWidth;
+        if (width <= 374) return 'xs';
+        if (width <= 767) return 'sm'; 
+        if (width <= 1023) return 'md';
+        return 'lg';
+    }
+
 
     
-    // Generate all breakpoint versions of the event name
+    // Generate event name element for current breakpoint only
     generateEventNameElements(event) {
         const fullName = event.name || '';
         const hasShortName = !!(event.shortName || event.nickname);
         
-        // If no shortname, just return the full name for all breakpoints
+        // If no shortname, just return the full name
         if (!hasShortName) {
-            return `
-                <div class="event-name">${fullName}</div>
-            `;
+            return `<div class="event-name">${fullName}</div>`;
         }
         
-        // Generate different versions for each breakpoint
-        const xsName = this.getSmartEventNameForBreakpoint(event, 'xs');
-        const smName = this.getSmartEventNameForBreakpoint(event, 'sm');
-        const mdName = this.getSmartEventNameForBreakpoint(event, 'md');
-        const lgName = this.getSmartEventNameForBreakpoint(event, 'lg');
+        // Create a cache key for this event + current breakpoint
+        const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}-${this.currentBreakpoint}`;
         
-        return `
-            <div class="event-name event-name-xs">${xsName}</div>
-            <div class="event-name event-name-sm">${smName}</div>
-            <div class="event-name event-name-md">${mdName}</div>
-            <div class="event-name event-name-lg">${lgName}</div>
-        `;
+        // Check if we have cached name for this event at current breakpoint
+        if (this.cachedEventNames.has(eventKey)) {
+            const cachedName = this.cachedEventNames.get(eventKey);
+            logger.debug('CALENDAR', 'Using cached event name', { eventKey, breakpoint: this.currentBreakpoint });
+            return `<div class="event-name">${cachedName}</div>`;
+        }
+        
+        // Calculate name for current breakpoint only
+        logger.debug('CALENDAR', 'Calculating event name for current breakpoint', { 
+            eventKey, 
+            breakpoint: this.currentBreakpoint 
+        });
+        const eventName = this.getSmartEventNameForBreakpoint(event, this.currentBreakpoint);
+        
+        // Cache the result
+        this.cachedEventNames.set(eventKey, eventName);
+        
+        return `<div class="event-name">${eventName}</div>`;
     }
 
     // Format time for mobile display with simplified format (4a-5p)
@@ -1826,11 +1876,27 @@ class DynamicCalendarLoader extends CalendarCore {
     // Set up resize listener to clear measurement cache when layout changes
     setupResizeListener() {
         window.addEventListener('resize', () => {
-            this.clearMeasurementCache();
-            logger.debug('CALENDAR', 'Window resized, measurement cache cleared');
+            const newWidth = window.innerWidth;
+            const newBreakpoint = this.getCurrentBreakpoint();
+            const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
+            
+            if (breakpointChanged) {
+                this.clearMeasurementCache();
+                this.clearEventNameCache();
+                this.lastScreenWidth = newWidth;
+                this.currentBreakpoint = newBreakpoint;
+                logger.debug('CALENDAR', 'Breakpoint changed, caches cleared', {
+                    oldBreakpoint: this.currentBreakpoint,
+                    newBreakpoint: newBreakpoint,
+                    width: newWidth
+                });
+                
+                // Re-render calendar to use new breakpoint calculations
+                this.updateCalendarDisplay();
+            }
         });
         
-        logger.debug('CALENDAR', 'Resize listener set up for measurement cache management');
+        logger.debug('CALENDAR', 'Resize listener set up for breakpoint change detection');
     }
     
     // Add test event (for testing functionality)
