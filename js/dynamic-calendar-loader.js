@@ -28,6 +28,10 @@ class DynamicCalendarLoader extends CalendarCore {
         // Set up message listener for testing interface
         this.setupMessageListener();
         
+        // Cache for breakpoint-specific event names - only recalculate on screen size change
+        this.cachedEventNames = new Map();
+        this.lastScreenWidth = window.innerWidth;
+        
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
         
@@ -469,10 +473,12 @@ class DynamicCalendarLoader extends CalendarCore {
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         
         logger.debug('CALENDAR', `Dynamic char calculation for ${breakpoint}`, {
-            availableWidth,
-            charsPerPixel,
+            availableWidth: availableWidth.toFixed(2),
+            charsPerPixel: charsPerPixel.toFixed(4),
             charLimitPerLine,
-            eventName: shortName
+            eventName: shortName,
+            shortNameLength: shortName.length,
+            screenWidth: window.innerWidth
         });
         
         // Process the shortname - remove hyphens except escaped ones (\-)
@@ -483,12 +489,23 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If the entire name fits on one line, return it
         if (processedShortName.length <= charLimitPerLine) {
+            logger.debug('CALENDAR', `Event name fits without hyphens: "${processedShortName}" (${processedShortName.length} <= ${charLimitPerLine})`);
             return processedShortName;
         }
         
         // Try to fit the original hyphenated name on one line
         if (shortName.length <= charLimitPerLine) {
+            logger.debug('CALENDAR', `Event name fits with hyphens: "${shortName}" (${shortName.length} <= ${charLimitPerLine})`);
             return shortName;
+        }
+        
+        logger.debug('CALENDAR', `Event name too long, needs truncation/hyphenation: "${shortName}" (${shortName.length} > ${charLimitPerLine})`);
+        
+        // For very small character limits, just truncate aggressively
+        if (charLimitPerLine <= 6) {
+            const truncated = shortName.substring(0, charLimitPerLine - 1) + '…';
+            logger.debug('CALENDAR', `Very small char limit, truncating: "${truncated}"`);
+            return truncated;
         }
         
         // Build lines that respect the character limit per line
@@ -601,13 +618,23 @@ class DynamicCalendarLoader extends CalendarCore {
             const pixelsPerChar = width / charCount;
             const charsPerPixel = 1 / pixelsPerChar;
             
+            // Get the computed styles to verify what we're actually using
+            const computedStyles = window.getComputedStyle(testElement);
+            const actualFontSize = computedStyles.fontSize;
+            const actualFontWeight = computedStyles.fontWeight;
+            const actualFontFamily = computedStyles.fontFamily;
+            
             document.body.removeChild(testElement);
             
             logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char)`, {
-                width,
+                width: width.toFixed(2),
                 charCount,
-                pixelsPerChar,
-                charsPerPixel
+                pixelsPerChar: pixelsPerChar.toFixed(2),
+                charsPerPixel: charsPerPixel.toFixed(4),
+                actualFontSize,
+                actualFontWeight,
+                actualFontFamily,
+                screenWidth: window.innerWidth
             });
             
             // Cache the result
@@ -680,6 +707,12 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', 'Measurement cache cleared');
     }
 
+    // Clear cached event names (call when screen size changes)
+    clearEventNameCache() {
+        this.cachedEventNames.clear();
+        logger.debug('CALENDAR', 'Event name cache cleared');
+    }
+
 
     
     // Generate all breakpoint versions of the event name
@@ -694,11 +727,35 @@ class DynamicCalendarLoader extends CalendarCore {
             `;
         }
         
+        // Create a cache key for this event
+        const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}`;
+        
+        // Check if we have cached breakpoint names for this event
+        if (this.cachedEventNames.has(eventKey)) {
+            const cached = this.cachedEventNames.get(eventKey);
+            logger.debug('CALENDAR', 'Using cached event names', { eventKey });
+            return `
+                <div class="event-name event-name-xs">${cached.xs}</div>
+                <div class="event-name event-name-sm">${cached.sm}</div>
+                <div class="event-name event-name-md">${cached.md}</div>
+                <div class="event-name event-name-lg">${cached.lg}</div>
+            `;
+        }
+        
         // Generate different versions for each breakpoint
+        logger.debug('CALENDAR', 'Calculating new event names for breakpoints', { eventKey });
         const xsName = this.getSmartEventNameForBreakpoint(event, 'xs');
         const smName = this.getSmartEventNameForBreakpoint(event, 'sm');
         const mdName = this.getSmartEventNameForBreakpoint(event, 'md');
         const lgName = this.getSmartEventNameForBreakpoint(event, 'lg');
+        
+        // Cache the results
+        this.cachedEventNames.set(eventKey, {
+            xs: xsName,
+            sm: smName,
+            md: mdName,
+            lg: lgName
+        });
         
         return `
             <div class="event-name event-name-xs">${xsName}</div>
@@ -1826,8 +1883,18 @@ class DynamicCalendarLoader extends CalendarCore {
     // Set up resize listener to clear measurement cache when layout changes
     setupResizeListener() {
         window.addEventListener('resize', () => {
-            this.clearMeasurementCache();
-            logger.debug('CALENDAR', 'Window resized, measurement cache cleared');
+            const newWidth = window.innerWidth;
+            const widthChanged = Math.abs(newWidth - this.lastScreenWidth) > 10; // Only clear if significant change
+            
+            if (widthChanged) {
+                this.clearMeasurementCache();
+                this.clearEventNameCache();
+                this.lastScreenWidth = newWidth;
+                logger.debug('CALENDAR', 'Window resized significantly, caches cleared', {
+                    oldWidth: this.lastScreenWidth,
+                    newWidth: newWidth
+                });
+            }
         });
         
         logger.debug('CALENDAR', 'Resize listener set up for measurement cache management');
