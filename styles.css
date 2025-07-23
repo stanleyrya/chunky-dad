@@ -4361,6 +4361,12 @@ footer {
         min-width: 180px;
         max-width: 250px;
         font-size: 10px;
+        touch-action: none; /* Prevent browser gestures while dragging */
+    }
+    
+    .debug-header {
+        padding: 12px 15px; /* Larger touch target */
+        touch-action: none;
     }
     
     .debug-title {
@@ -4377,6 +4383,12 @@ footer {
     
     .debug-value {
         max-width: 100px;
+    }
+    
+    .debug-close {
+        width: 24px;
+        height: 24px;
+        font-size: 18px; /* Larger touch target */
     }
 }
 

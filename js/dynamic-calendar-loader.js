@@ -617,7 +617,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const width = testElement.getBoundingClientRect().width;
             const charCount = testElement.textContent.length;
             const pixelsPerChar = width / charCount;
-            const charsPerPixel = 1 / pixelsPerChar;
+            let charsPerPixel = 1 / pixelsPerChar;
             
             // Get the computed styles to verify what we're actually using
             const computedStyles = window.getComputedStyle(testElement);
@@ -625,13 +625,31 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
+            // Simple zoom adjustment: account for devicePixelRatio and visual viewport scale
+            const deviceZoom = window.devicePixelRatio || 1;
+            const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
+            
+            // Use whichever zoom factor is not 1 (indicating actual zoom)
+            let zoomFactor = 1;
+            if (visualZoom !== 1) {
+                zoomFactor = visualZoom; // Mobile pinch zoom
+            } else if (deviceZoom !== 1) {
+                zoomFactor = deviceZoom; // Browser zoom or high-DPI display
+            }
+            
+            // Adjust calculation for zoom
+            charsPerPixel = charsPerPixel * zoomFactor;
+            
             document.body.removeChild(testElement);
             
-            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char)`, {
+            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${zoomFactor.toFixed(2)})`, {
                 width: width.toFixed(2),
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
                 charsPerPixel: charsPerPixel.toFixed(4),
+                deviceZoom: deviceZoom.toFixed(2),
+                visualZoom: visualZoom.toFixed(2),
+                zoomFactor: zoomFactor.toFixed(2),
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
@@ -1895,6 +1913,8 @@ class DynamicCalendarLoader extends CalendarCore {
         
         logger.debug('CALENDAR', 'Resize listener set up for breakpoint change detection');
     }
+    
+
     
     // Add test event (for testing functionality)
     addTestEvent(testEventData) {
