@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Resize Fixes Test - Chunky Dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 80px;
+            font-family: 'Poppins', sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .test-info {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .test-info h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .test-info ul {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .resize-controls {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .resize-controls h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .resize-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .resize-btn {
+            padding: 0.75rem 1.25rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .resize-btn:hover {
+            background: #0056b3;
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            border-left: 4px solid #007bff;
+        }
+        
+        .calendar-test-container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        /* Simulate different screen sizes */
+        .size-mobile { max-width: 375px; }
+        .size-tablet { max-width: 768px; }
+        .size-desktop { max-width: 1200px; }
+        .size-wide { max-width: 1600px; }
+    </style>
+</head>
+<body>
+    <!-- Navigation (simplified) -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-brand">chunky.dad</a>
+        </div>
+    </nav>
+
+    <div class="test-container">
+        <div class="test-info">
+            <h2>📏 Calendar Resize Fixes Test</h2>
+            <p>This test demonstrates the fixes for the dynamic calendar loader character/pixel calculation issues:</p>
+            <ul>
+                <li><strong>Issue 1 Fixed:</strong> Character per pixel math now measures actual event text width instead of calendar day container</li>
+                <li><strong>Issue 2 Fixed:</strong> Resize detection now triggers on all significant width changes (>50px), not just breakpoint changes</li>
+                <li><strong>Improvement:</strong> Added debouncing to prevent excessive recalculations</li>
+            </ul>
+            <p><strong>Test Instructions:</strong> Use the buttons below to simulate different screen sizes and watch how the event names adapt correctly.</p>
+        </div>
+
+        <div class="resize-controls">
+            <h3>🔧 Simulate Screen Sizes</h3>
+            <div class="resize-buttons">
+                <button class="resize-btn" onclick="setContainerSize('mobile')">📱 Mobile (375px)</button>
+                <button class="resize-btn" onclick="setContainerSize('tablet')">📟 Tablet (768px)</button>
+                <button class="resize-btn" onclick="setContainerSize('desktop')">💻 Desktop (1200px)</button>
+                <button class="resize-btn" onclick="setContainerSize('wide')">🖥️ Wide (1600px)</button>
+                <button class="resize-btn" onclick="triggerResize()">🔄 Trigger Resize Event</button>
+            </div>
+            <div class="debug-info" id="debug-info">
+                Ready to test...
+            </div>
+        </div>
+
+        <div class="calendar-test-container" id="calendar-container">
+            <!-- City page content will be loaded here -->
+            <div class="city-page">
+                <!-- Calendar Section -->
+                <section class="weekly-calendar">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button id="prev-period" class="nav-btn">‹</button>
+                            <div class="calendar-title-section">
+                                <h2 id="calendar-title">What's the vibe?</h2>
+                                <div id="date-range" class="date-range">Loading...</div>
+                            </div>
+                            <button id="next-period" class="nav-btn">›</button>
+                        </div>
+                        <div class="view-controls">
+                            <button class="view-btn active" data-view="week">Week</button>
+                            <button class="view-btn" data-view="month">Month</button>
+                            <button id="today-btn" class="today-btn">Today</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid"></div>
+                </section>
+
+                <!-- Events List -->
+                <section class="events">
+                    <div class="events-list">
+                        <div class="loading-message">📅 Getting events...</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/city-config.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+
+    <script>
+        let calendarLoader;
+        let currentSize = 'desktop';
+
+        // Initialize the calendar loader
+        async function initTest() {
+            try {
+                // Set up URL parameters for New York
+                const url = new URL(window.location);
+                url.searchParams.set('city', 'new-york');
+                window.history.replaceState({}, '', url);
+
+                calendarLoader = new DynamicCalendarLoader();
+                await calendarLoader.init();
+                
+                updateDebugInfo('Calendar loader initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize calendar loader:', error);
+                updateDebugInfo('Error: ' + error.message);
+            }
+        }
+
+        // Set container size to simulate different screen sizes
+        function setContainerSize(size) {
+            const container = document.getElementById('calendar-container');
+            
+            // Remove all size classes
+            container.classList.remove('size-mobile', 'size-tablet', 'size-desktop', 'size-wide');
+            
+            // Add new size class
+            container.classList.add(`size-${size}`);
+            currentSize = size;
+            
+            updateDebugInfo(`Container resized to ${size}`);
+            
+            // Trigger a resize event after a short delay to let CSS apply
+            setTimeout(() => {
+                triggerResize();
+            }, 100);
+        }
+
+        // Manually trigger a resize event
+        function triggerResize() {
+            const oldWidth = window.innerWidth;
+            
+            // Dispatch resize event
+            window.dispatchEvent(new Event('resize'));
+            
+            // Get measurement info if calendar loader exists
+            if (calendarLoader) {
+                const charsPerPixel = calendarLoader.charsPerPixel || 'not calculated';
+                const eventTextWidth = calendarLoader.cachedEventTextWidth || 'not cached';
+                const currentBreakpoint = calendarLoader.getCurrentBreakpoint();
+                
+                updateDebugInfo(`Resize triggered!
+Screen Width: ${window.innerWidth}px
+Container Size: ${currentSize}
+Current Breakpoint: ${currentBreakpoint}
+Chars Per Pixel: ${charsPerPixel}
+Event Text Width: ${eventTextWidth}px
+Time: ${new Date().toLocaleTimeString()}`);
+            } else {
+                updateDebugInfo(`Resize event triggered at ${new Date().toLocaleTimeString()}`);
+            }
+        }
+
+        // Update debug information
+        function updateDebugInfo(message) {
+            const debugInfo = document.getElementById('debug-info');
+            debugInfo.textContent = message;
+        }
+
+        // Monitor for measurement cache changes
+        if (window.logger) {
+            const originalDebug = logger.debug;
+            logger.debug = function(component, message, data) {
+                if (component === 'CALENDAR' && (message.includes('cache cleared') || message.includes('resize'))) {
+                    updateDebugInfo(`[${component}] ${message} - ${JSON.stringify(data || {})}`);
+                }
+                return originalDebug.call(this, component, message, data);
+            };
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initTest);
+    </script>
+</body>
+</html>
