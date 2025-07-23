@@ -108,9 +108,10 @@
             <h2>📏 Calendar Resize Fixes Test</h2>
             <p>This test demonstrates the fixes for the dynamic calendar loader character/pixel calculation issues:</p>
             <ul>
-                <li><strong>Issue 1 Fixed:</strong> Character per pixel math now measures actual event text width instead of calendar day container</li>
+                <li><strong>Issue 1 Fixed:</strong> Character per pixel math now uses fake event in invisible calendar for accurate measurement</li>
                 <li><strong>Issue 2 Fixed:</strong> Resize detection now triggers on all significant width changes (>50px), not just breakpoint changes</li>
-                <li><strong>Improvement:</strong> Added debouncing to prevent excessive recalculations</li>
+                <li><strong>Improvement:</strong> Removed all fallback logic - system fails properly instead of using estimates</li>
+                <li><strong>Simplification:</strong> Uses existing invisible calendar infrastructure instead of manual DOM manipulation</li>
             </ul>
             <p><strong>Test Instructions:</strong> Use the buttons below to simulate different screen sizes and watch how the event names adapt correctly.</p>
         </div>
