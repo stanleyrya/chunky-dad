@@ -2926,6 +2926,8 @@ footer {
     font-size: 18px;
     background: var(--background-lighter);
     border-radius: 8px;
+    position: relative;
+    z-index: 10;
 }
 
 .no-events-message {
