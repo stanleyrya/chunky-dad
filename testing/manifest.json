@@ -1,50 +1,49 @@
 {
-  "generated": "2025-07-23T03:29:42.285Z",
-  "files": [
+  "testFiles": [
     {
       "name": "breakpoint-test.html",
-      "size": 34162,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Breakpoint Test",
+      "description": "Test responsive breakpoints and layouts"
     },
     {
       "name": "hyphenation-debug-test.html",
-      "size": 20295,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Hyphenation Debug Test",
+      "description": "Test event name hyphenation and truncation"
     },
     {
       "name": "index.html",
-      "size": 18216,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Test File Browser",
+      "description": "Browse and navigate all test files"
     },
     {
       "name": "style-test.html",
-      "size": 26192,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Style Test",
+      "description": "Test CSS styles and components"
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 67746,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Calendar Logging Test",
+      "description": "Test calendar functionality with detailed logging"
     },
     {
       "name": "test-display-modes.html",
-      "size": 10729,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Display Modes Test",
+      "description": "Test different display modes and views"
     },
     {
       "name": "test-google-sheets-loader.html",
-      "size": 40202,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Google Sheets Loader Test",
+      "description": "Test Google Sheets integration"
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 110803,
-      "modified": "2025-07-23T03:21:09.279Z"
+      "title": "Ultimate Style Tester",
+      "description": "Comprehensive style and component testing"
     },
     {
       "name": "zoom-level-test.html",
-      "size": 11174,
-      "modified": "2025-07-23T03:29:38.674Z"
+      "title": "Zoom Level Test",
+      "description": "Test zoom level detection and character calculation fixes"
     }
   ]
 }
