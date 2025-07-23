@@ -28,9 +28,10 @@ class DynamicCalendarLoader extends CalendarCore {
         // Set up message listener for testing interface
         this.setupMessageListener();
         
-        // Cache for breakpoint-specific event names - only recalculate on screen size change
+        // Cache for event names - only recalculate on screen size change
         this.cachedEventNames = new Map();
         this.lastScreenWidth = window.innerWidth;
+        this.currentBreakpoint = this.getCurrentBreakpoint();
         
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
@@ -713,56 +714,48 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', 'Event name cache cleared');
     }
 
+    // Get current breakpoint based on screen width
+    getCurrentBreakpoint() {
+        const width = window.innerWidth;
+        if (width <= 374) return 'xs';
+        if (width <= 767) return 'sm'; 
+        if (width <= 1023) return 'md';
+        return 'lg';
+    }
+
 
     
-    // Generate all breakpoint versions of the event name
+    // Generate event name element for current breakpoint only
     generateEventNameElements(event) {
         const fullName = event.name || '';
         const hasShortName = !!(event.shortName || event.nickname);
         
-        // If no shortname, just return the full name for all breakpoints
+        // If no shortname, just return the full name
         if (!hasShortName) {
-            return `
-                <div class="event-name">${fullName}</div>
-            `;
+            return `<div class="event-name">${fullName}</div>`;
         }
         
-        // Create a cache key for this event
-        const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}`;
+        // Create a cache key for this event + current breakpoint
+        const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}-${this.currentBreakpoint}`;
         
-        // Check if we have cached breakpoint names for this event
+        // Check if we have cached name for this event at current breakpoint
         if (this.cachedEventNames.has(eventKey)) {
-            const cached = this.cachedEventNames.get(eventKey);
-            logger.debug('CALENDAR', 'Using cached event names', { eventKey });
-            return `
-                <div class="event-name event-name-xs">${cached.xs}</div>
-                <div class="event-name event-name-sm">${cached.sm}</div>
-                <div class="event-name event-name-md">${cached.md}</div>
-                <div class="event-name event-name-lg">${cached.lg}</div>
-            `;
+            const cachedName = this.cachedEventNames.get(eventKey);
+            logger.debug('CALENDAR', 'Using cached event name', { eventKey, breakpoint: this.currentBreakpoint });
+            return `<div class="event-name">${cachedName}</div>`;
         }
         
-        // Generate different versions for each breakpoint
-        logger.debug('CALENDAR', 'Calculating new event names for breakpoints', { eventKey });
-        const xsName = this.getSmartEventNameForBreakpoint(event, 'xs');
-        const smName = this.getSmartEventNameForBreakpoint(event, 'sm');
-        const mdName = this.getSmartEventNameForBreakpoint(event, 'md');
-        const lgName = this.getSmartEventNameForBreakpoint(event, 'lg');
-        
-        // Cache the results
-        this.cachedEventNames.set(eventKey, {
-            xs: xsName,
-            sm: smName,
-            md: mdName,
-            lg: lgName
+        // Calculate name for current breakpoint only
+        logger.debug('CALENDAR', 'Calculating event name for current breakpoint', { 
+            eventKey, 
+            breakpoint: this.currentBreakpoint 
         });
+        const eventName = this.getSmartEventNameForBreakpoint(event, this.currentBreakpoint);
         
-        return `
-            <div class="event-name event-name-xs">${xsName}</div>
-            <div class="event-name event-name-sm">${smName}</div>
-            <div class="event-name event-name-md">${mdName}</div>
-            <div class="event-name event-name-lg">${lgName}</div>
-        `;
+        // Cache the result
+        this.cachedEventNames.set(eventKey, eventName);
+        
+        return `<div class="event-name">${eventName}</div>`;
     }
 
     // Format time for mobile display with simplified format (4a-5p)
@@ -1884,20 +1877,26 @@ class DynamicCalendarLoader extends CalendarCore {
     setupResizeListener() {
         window.addEventListener('resize', () => {
             const newWidth = window.innerWidth;
-            const widthChanged = Math.abs(newWidth - this.lastScreenWidth) > 10; // Only clear if significant change
+            const newBreakpoint = this.getCurrentBreakpoint();
+            const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
             
-            if (widthChanged) {
+            if (breakpointChanged) {
                 this.clearMeasurementCache();
                 this.clearEventNameCache();
                 this.lastScreenWidth = newWidth;
-                logger.debug('CALENDAR', 'Window resized significantly, caches cleared', {
-                    oldWidth: this.lastScreenWidth,
-                    newWidth: newWidth
+                this.currentBreakpoint = newBreakpoint;
+                logger.debug('CALENDAR', 'Breakpoint changed, caches cleared', {
+                    oldBreakpoint: this.currentBreakpoint,
+                    newBreakpoint: newBreakpoint,
+                    width: newWidth
                 });
+                
+                // Re-render calendar to use new breakpoint calculations
+                this.updateCalendarDisplay();
             }
         });
         
-        logger.debug('CALENDAR', 'Resize listener set up for measurement cache management');
+        logger.debug('CALENDAR', 'Resize listener set up for breakpoint change detection');
     }
     
     // Add test event (for testing functionality)
