@@ -135,7 +135,10 @@ class DebugOverlay {
     drag(e) {
         if (!this.isDragging) return;
         
-        e.preventDefault();
+        // Only call preventDefault if it's available (Event object, not Touch object)
+        if (e.preventDefault && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
         
         let newX = e.clientX - this.dragOffset.x;
         let newY = e.clientY - this.dragOffset.y;
