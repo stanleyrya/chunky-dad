@@ -625,31 +625,23 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
-            // Simple zoom adjustment: account for devicePixelRatio and visual viewport scale
-            const deviceZoom = window.devicePixelRatio || 1;
+            // Simple zoom adjustment: use visual viewport scale for zoom detection
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
             
-            // Use whichever zoom factor is not 1 (indicating actual zoom)
-            let zoomFactor = 1;
-            if (visualZoom !== 1) {
-                zoomFactor = visualZoom; // Mobile pinch zoom
-            } else if (deviceZoom !== 1) {
-                zoomFactor = deviceZoom; // Browser zoom or high-DPI display
-            }
-            
-            // Adjust calculation for zoom
-            charsPerPixel = charsPerPixel * zoomFactor;
+            // When zoomed IN (visualZoom > 1), text appears larger, so FEWER characters fit
+            // When zoomed OUT (visualZoom < 1), text appears smaller, so MORE characters fit
+            // Therefore, we DIVIDE by zoom level, not multiply
+            charsPerPixel = charsPerPixel / visualZoom;
             
             document.body.removeChild(testElement);
             
-            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${zoomFactor.toFixed(2)})`, {
+            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
                 width: width.toFixed(2),
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
                 charsPerPixel: charsPerPixel.toFixed(4),
-                deviceZoom: deviceZoom.toFixed(2),
                 visualZoom: visualZoom.toFixed(2),
-                zoomFactor: zoomFactor.toFixed(2),
+                zoomDirection: visualZoom > 1 ? 'zoomed in' : visualZoom < 1 ? 'zoomed out' : 'normal',
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
