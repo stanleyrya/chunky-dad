@@ -14,6 +14,10 @@ class DebugOverlay {
         this.logUpdateFrequency = 5000; // Only log updates every 5 seconds
         this.lastLogTime = 0;
         
+        // View state management
+        this.viewState = 'compact'; // 'compact', 'full', 'minimized'
+        this.isMobile = window.innerWidth <= 480;
+        
         // Breakpoint definitions matching the CSS
         this.breakpoints = {
             xs: { min: 0, max: 374, name: 'XS' },
@@ -44,21 +48,32 @@ class DebugOverlay {
     createOverlay() {
         this.overlay = document.createElement('div');
         this.overlay.className = 'debug-overlay';
+        
+        // Start in compact mode on mobile, full mode on desktop
+        this.viewState = this.isMobile ? 'compact' : 'full';
+        
         this.overlay.innerHTML = `
             <div class="debug-header">
                 <span class="debug-title">🐻 DEBUG</span>
-                <button class="debug-close" aria-label="Close debug overlay">×</button>
+                <div class="debug-header-controls">
+                    <button class="debug-toggle" aria-label="Toggle debug view" title="Toggle view">⌃</button>
+                    <button class="debug-minimize" aria-label="Minimize debug overlay" title="Minimize">-</button>
+                    <button class="debug-close" aria-label="Close debug overlay" title="Close">×</button>
+                </div>
             </div>
             <div class="debug-content">
-                <div class="debug-info">
-                    <div class="debug-row">
-                        <span class="debug-label">Screen:</span>
+                <!-- Essential info (always visible in compact mode) -->
+                <div class="debug-info debug-essential">
+                    <div class="debug-row debug-compact-row">
+                        <span class="debug-label">Size:</span>
                         <span class="debug-value" id="debug-screen-size">-</span>
-                    </div>
-                    <div class="debug-row">
-                        <span class="debug-label">Breakpoint:</span>
+                        <span class="debug-label">BP:</span>
                         <span class="debug-value" id="debug-breakpoint">-</span>
                     </div>
+                </div>
+                
+                <!-- Extended info (hidden in compact mode) -->
+                <div class="debug-info debug-extended">
                     <div class="debug-row">
                         <span class="debug-label">Viewport:</span>
                         <span class="debug-value" id="debug-viewport">-</span>
@@ -80,7 +95,7 @@ class DebugOverlay {
                         <span class="debug-value" id="debug-event-width">-</span>
                     </div>
                     <div class="debug-row">
-                        <span class="debug-label">Zoom Level:</span>
+                        <span class="debug-label">Zoom:</span>
                         <span class="debug-value" id="debug-zoom-level">-</span>
                     </div>
                     <div class="debug-row">
@@ -96,6 +111,8 @@ class DebugOverlay {
                         <span class="debug-value" id="debug-memory">-</span>
                     </div>
                 </div>
+                
+                <!-- Controls (hidden in compact mode) -->
                 <div class="debug-controls">
                     <button id="debug-clear-console" class="debug-btn">Clear Console</button>
                     <button id="debug-export-logs" class="debug-btn">Export Logs</button>
@@ -108,19 +125,41 @@ class DebugOverlay {
         this.overlay.style.left = `${this.position.x}px`;
         this.overlay.style.top = `${this.position.y}px`;
         
+        // Set initial view state
+        this.updateViewState();
+        
         document.body.appendChild(this.overlay);
         this.updateDebugInfo();
     }
     
     attachEventListeners() {
-        // Close button
+        // Header control buttons
         const closeBtn = this.overlay.querySelector('.debug-close');
-        closeBtn.addEventListener('click', () => this.hide());
+        const toggleBtn = this.overlay.querySelector('.debug-toggle');
+        const minimizeBtn = this.overlay.querySelector('.debug-minimize');
         
-        // Make draggable
+        closeBtn.addEventListener('click', () => this.hide());
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent drag start
+            this.toggleView();
+        });
+        minimizeBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent drag start
+            this.minimizeToggle();
+        });
+        
+        // Make draggable (but not on control buttons)
         const header = this.overlay.querySelector('.debug-header');
-        header.addEventListener('mousedown', (e) => this.startDrag(e));
-        header.addEventListener('touchstart', (e) => this.startDrag(e.touches[0]));
+        header.addEventListener('mousedown', (e) => {
+            if (!e.target.matches('.debug-close, .debug-toggle, .debug-minimize')) {
+                this.startDrag(e);
+            }
+        });
+        header.addEventListener('touchstart', (e) => {
+            if (!e.target.matches('.debug-close, .debug-toggle, .debug-minimize')) {
+                this.startDrag(e.touches[0]);
+            }
+        });
         
         document.addEventListener('mousemove', (e) => this.drag(e));
         document.addEventListener('touchmove', (e) => {
@@ -152,6 +191,21 @@ class DebugOverlay {
         if (toggleUpdatesBtn) {
             toggleUpdatesBtn.addEventListener('click', () => this.toggleUpdates());
         }
+        
+        // Handle window resize to update mobile state
+        window.addEventListener('resize', () => {
+            const wasMobile = this.isMobile;
+            this.isMobile = window.innerWidth <= 480;
+            
+            // If switching between mobile/desktop, adjust view if needed
+            if (wasMobile !== this.isMobile && this.viewState === 'compact') {
+                // Auto-expand to full view on desktop if currently compact
+                if (!this.isMobile) {
+                    this.viewState = 'full';
+                    this.updateViewState();
+                }
+            }
+        });
     }
     
     startDrag(e) {
@@ -473,6 +527,74 @@ class DebugOverlay {
         }
         this.overlay = null;
         logger.componentLoad('SYSTEM', 'Debug overlay destroyed');
+    }
+    
+    // View state management methods
+    updateViewState() {
+        if (!this.overlay) return;
+        
+        // Remove all state classes
+        this.overlay.classList.remove('debug-compact', 'debug-full', 'debug-minimized');
+        
+        // Add current state class
+        this.overlay.classList.add(`debug-${this.viewState}`);
+        
+        // Update toggle button icon
+        const toggleBtn = this.overlay.querySelector('.debug-toggle');
+        if (toggleBtn) {
+            switch (this.viewState) {
+                case 'compact':
+                    toggleBtn.textContent = '⌃';
+                    toggleBtn.title = 'Expand to full view';
+                    break;
+                case 'full':
+                    toggleBtn.textContent = '⌄';
+                    toggleBtn.title = 'Collapse to compact view';
+                    break;
+                case 'minimized':
+                    toggleBtn.textContent = '⌃';
+                    toggleBtn.title = 'Expand debug overlay';
+                    break;
+            }
+        }
+        
+        // Update minimize button
+        const minimizeBtn = this.overlay.querySelector('.debug-minimize');
+        if (minimizeBtn) {
+            if (this.viewState === 'minimized') {
+                minimizeBtn.textContent = '+';
+                minimizeBtn.title = 'Restore debug overlay';
+            } else {
+                minimizeBtn.textContent = '-';
+                minimizeBtn.title = 'Minimize debug overlay';
+            }
+        }
+        
+        logger.userInteraction('SYSTEM', `Debug overlay view changed to: ${this.viewState}`);
+    }
+    
+    toggleView() {
+        if (this.viewState === 'minimized') {
+            // If minimized, restore to previous state (compact on mobile, full on desktop)
+            this.viewState = this.isMobile ? 'compact' : 'full';
+        } else if (this.viewState === 'compact') {
+            this.viewState = 'full';
+        } else {
+            this.viewState = 'compact';
+        }
+        
+        this.updateViewState();
+    }
+    
+    minimizeToggle() {
+        if (this.viewState === 'minimized') {
+            // Restore to previous state
+            this.viewState = this.isMobile ? 'compact' : 'full';
+        } else {
+            this.viewState = 'minimized';
+        }
+        
+        this.updateViewState();
     }
     
     // Utility methods for control buttons
