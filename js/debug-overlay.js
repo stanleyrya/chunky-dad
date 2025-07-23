@@ -10,6 +10,9 @@ class DebugOverlay {
         this.dragOffset = { x: 0, y: 0 };
         this.position = { x: 20, y: 20 }; // Default position
         this.updateInterval = null;
+        this.lastUpdateData = {}; // Cache to prevent unnecessary updates
+        this.logUpdateFrequency = 5000; // Only log updates every 5 seconds
+        this.lastLogTime = 0;
         
         // Breakpoint definitions matching the CSS
         this.breakpoints = {
@@ -22,7 +25,7 @@ class DebugOverlay {
         
         if (this.isVisible) {
             this.init();
-            logger.componentInit('SYSTEM', 'Debug overlay enabled');
+            logger.componentInit('SYSTEM', 'Debug overlay enabled - optimized version');
         }
     }
     
@@ -34,8 +37,8 @@ class DebugOverlay {
     init() {
         this.createOverlay();
         this.attachEventListeners();
-        this.startUpdating();
-        logger.componentLoad('SYSTEM', 'Debug overlay initialized');
+        this.startEventDrivenUpdates(); // Use event-driven updates instead of polling
+        logger.componentLoad('SYSTEM', 'Debug overlay initialized with smart updates');
     }
     
     createOverlay() {
@@ -80,6 +83,23 @@ class DebugOverlay {
                         <span class="debug-label">Zoom Level:</span>
                         <span class="debug-value" id="debug-zoom-level">-</span>
                     </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Performance:</span>
+                        <span class="debug-value" id="debug-performance">-</span>
+                    </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Network:</span>
+                        <span class="debug-value" id="debug-network">-</span>
+                    </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Memory:</span>
+                        <span class="debug-value" id="debug-memory">-</span>
+                    </div>
+                </div>
+                <div class="debug-controls">
+                    <button id="debug-clear-console" class="debug-btn">Clear Console</button>
+                    <button id="debug-export-logs" class="debug-btn">Export Logs</button>
+                    <button id="debug-toggle-updates" class="debug-btn">Pause Updates</button>
                 </div>
             </div>
         `;
@@ -113,11 +133,25 @@ class DebugOverlay {
         document.addEventListener('mouseup', () => this.endDrag());
         document.addEventListener('touchend', () => this.endDrag());
         
-        // Window resize listener
-        window.addEventListener('resize', () => this.updateDebugInfo());
+        // Control buttons
+        const clearConsoleBtn = this.overlay.querySelector('#debug-clear-console');
+        const exportLogsBtn = this.overlay.querySelector('#debug-export-logs');
+        const toggleUpdatesBtn = this.overlay.querySelector('#debug-toggle-updates');
         
-        // URL change listener (for SPAs)
-        window.addEventListener('popstate', () => this.updateDebugInfo());
+        if (clearConsoleBtn) {
+            clearConsoleBtn.addEventListener('click', () => {
+                console.clear();
+                logger.info('SYSTEM', 'Console cleared via debug overlay');
+            });
+        }
+        
+        if (exportLogsBtn) {
+            exportLogsBtn.addEventListener('click', () => this.exportDebugInfo());
+        }
+        
+        if (toggleUpdatesBtn) {
+            toggleUpdatesBtn.addEventListener('click', () => this.toggleUpdates());
+        }
     }
     
     startDrag(e) {
@@ -192,7 +226,7 @@ class DebugOverlay {
         return 'Unknown';
     }
     
-    updateDebugInfo() {
+    updateDebugInfo(shouldLog = true) {
         if (!this.overlay) return;
         
         const screenSize = document.getElementById('debug-screen-size');
@@ -203,6 +237,9 @@ class DebugOverlay {
         const charLimit = document.getElementById('debug-char-limit');
         const eventWidth = document.getElementById('debug-event-width');
         const zoomLevel = document.getElementById('debug-zoom-level');
+        const performance = document.getElementById('debug-performance');
+        const network = document.getElementById('debug-network');
+        const memory = document.getElementById('debug-memory');
         
         const currentBreakpoint = this.getCurrentBreakpoint();
         const currentPageType = this.getPageType();
@@ -268,18 +305,122 @@ class DebugOverlay {
             zoomLevel.textContent = zoomInfo;
         }
         
-        logger.debug('SYSTEM', 'Debug overlay updated', {
+        // Performance information
+        let performanceInfo = '-';
+        try {
+            if (performance.now) {
+                const timing = performance.timing;
+                if (timing && timing.loadEventEnd && timing.navigationStart) {
+                    const loadTime = timing.loadEventEnd - timing.navigationStart;
+                    performanceInfo = loadTime > 0 ? `${loadTime}ms load` : 'Loading...';
+                }
+            }
+        } catch (e) {
+            performanceInfo = 'Unavailable';
+        }
+        
+        if (performance) {
+            performance.textContent = performanceInfo;
+        }
+        
+        // Network information
+        let networkInfo = '-';
+        try {
+            if (navigator.connection) {
+                const conn = navigator.connection;
+                const speed = conn.effectiveType || conn.type || 'unknown';
+                const downlink = conn.downlink ? `${conn.downlink}Mbps` : '';
+                networkInfo = downlink ? `${speed} (${downlink})` : speed;
+            } else if (navigator.onLine !== undefined) {
+                networkInfo = navigator.onLine ? 'Online' : 'Offline';
+            }
+        } catch (e) {
+            networkInfo = 'Unknown';
+        }
+        
+        if (network) {
+            network.textContent = networkInfo;
+        }
+        
+        // Memory information
+        let memoryInfo = '-';
+        try {
+            if (performance.memory) {
+                const mem = performance.memory;
+                const used = Math.round(mem.usedJSHeapSize / 1024 / 1024);
+                const total = Math.round(mem.totalJSHeapSize / 1024 / 1024);
+                memoryInfo = `${used}/${total}MB`;
+            }
+        } catch (e) {
+            memoryInfo = 'Unavailable';
+        }
+        
+        if (memory) {
+            memory.textContent = memoryInfo;
+        }
+        
+        // Smart logging - only log when data changes and respect frequency limits
+        const currentData = {
             screenSize: `${window.innerWidth}×${window.innerHeight}`,
             breakpoint: currentBreakpoint.key,
-            pageType: currentPageType
+            pageType: currentPageType,
+            zoomInfo: zoomInfo
+        };
+        
+        const hasDataChanged = JSON.stringify(currentData) !== JSON.stringify(this.lastUpdateData);
+        const now = Date.now();
+        const shouldLogFrequency = (now - this.lastLogTime) >= this.logUpdateFrequency;
+        
+        if (shouldLog && (hasDataChanged || shouldLogFrequency)) {
+            const logMessage = hasDataChanged ? 'Debug overlay updated - data changed' : 'Debug overlay periodic update';
+            logger.debug('SYSTEM', logMessage, {
+                ...currentData,
+                changed: hasDataChanged,
+                timeSinceLastLog: `${((now - this.lastLogTime) / 1000).toFixed(1)}s`
+            });
+            this.lastLogTime = now;
+        }
+        
+        this.lastUpdateData = currentData;
+    }
+    
+    startEventDrivenUpdates() {
+        // Initial update
+        this.updateDebugInfo();
+        
+        // Event-driven updates for better performance
+        window.addEventListener('resize', () => this.debounceUpdate());
+        window.addEventListener('orientationchange', () => this.debounceUpdate());
+        
+        // Listen for visual viewport changes (mobile zoom)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => this.debounceUpdate());
+            window.visualViewport.addEventListener('scroll', () => this.debounceUpdate());
+        }
+        
+        // Listen for navigation changes
+        window.addEventListener('popstate', () => this.debounceUpdate());
+        
+        // Listen for calendar updates if available
+        document.addEventListener('calendarUpdated', () => this.debounceUpdate());
+        
+        // Fallback polling at much lower frequency (every 10 seconds) for edge cases
+        this.updateInterval = setInterval(() => {
+            this.updateDebugInfo(false); // Don't log frequent fallback updates
+        }, 10000);
+        
+        logger.info('SYSTEM', 'Debug overlay using smart event-driven updates', {
+            events: ['resize', 'orientationchange', 'visualViewport', 'popstate', 'calendarUpdated'],
+            fallbackInterval: '10s'
         });
     }
     
-    startUpdating() {
-        // Update every 500ms to catch dynamic changes
-        this.updateInterval = setInterval(() => {
-            this.updateDebugInfo();
-        }, 500);
+    debounceUpdate() {
+        // Debounce rapid updates (like during resize)
+        clearTimeout(this.debounceTimeout);
+        this.debounceTimeout = setTimeout(() => {
+            this.updateDebugInfo(true);
+        }, 100);
     }
     
     stopUpdating() {
@@ -292,7 +433,7 @@ class DebugOverlay {
     show() {
         if (this.overlay) {
             this.overlay.style.display = 'block';
-            this.startUpdating();
+            this.startEventDrivenUpdates(); // Use event-driven updates instead of polling
             logger.componentLoad('SYSTEM', 'Debug overlay shown');
         }
     }
@@ -323,6 +464,65 @@ class DebugOverlay {
         }
         this.overlay = null;
         logger.componentLoad('SYSTEM', 'Debug overlay destroyed');
+    }
+    
+    // Utility methods for control buttons
+    exportDebugInfo() {
+        const debugData = {
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            screenSize: `${window.innerWidth}×${window.innerHeight}`,
+            viewport: `${window.screen.width}×${window.screen.height}`,
+            breakpoint: this.getCurrentBreakpoint(),
+            pageType: this.getPageType(),
+            performance: window.performance ? {
+                timing: window.performance.timing,
+                memory: window.performance.memory,
+                navigation: window.performance.navigation
+            } : 'Not available',
+            network: navigator.connection ? {
+                effectiveType: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink,
+                rtt: navigator.connection.rtt
+            } : 'Not available'
+        };
+        
+        const dataStr = JSON.stringify(debugData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `debug-info-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        logger.info('SYSTEM', 'Debug information exported', { filename: a.download });
+    }
+    
+    toggleUpdates() {
+        const btn = document.getElementById('debug-toggle-updates');
+        if (!btn) return;
+        
+        if (this.updateInterval) {
+            // Pause updates
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+            btn.textContent = 'Resume Updates';
+            btn.style.backgroundColor = '#f44336';
+            logger.info('SYSTEM', 'Debug overlay updates paused');
+        } else {
+            // Resume updates
+            this.updateInterval = setInterval(() => {
+                this.updateDebugInfo(false);
+            }, 10000);
+            btn.textContent = 'Pause Updates';
+            btn.style.backgroundColor = '';
+            logger.info('SYSTEM', 'Debug overlay updates resumed');
+        }
     }
 }
 
