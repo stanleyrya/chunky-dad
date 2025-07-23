@@ -1914,52 +1914,7 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', 'Resize listener set up for breakpoint change detection');
     }
     
-    // Set up zoom detection to recalculate measurements when zoom changes
-    setupZoomDetection() {
-        // Store initial values for comparison
-        this.lastDevicePixelRatio = window.devicePixelRatio || 1;
-        this.lastVisualViewportScale = window.visualViewport ? window.visualViewport.scale : 1;
-        
-        // Listen for Visual Viewport changes (mobile pinch zoom)
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                const currentScale = window.visualViewport.scale;
-                if (Math.abs(currentScale - this.lastVisualViewportScale) > 0.05) {
-                    logger.debug('CALENDAR', `Visual viewport scale changed: ${(this.lastVisualViewportScale * 100).toFixed(1)}% → ${(currentScale * 100).toFixed(1)}%`);
-                    this.lastVisualViewportScale = currentScale;
-                    this.clearMeasurementCache();
-                    this.clearEventNameCache();
-                    
-                    // Re-render calendar with new zoom calculations
-                    setTimeout(() => {
-                        this.updateCalendarDisplay();
-                    }, 100); // Small delay to let zoom animation settle
-                }
-            });
-        }
-        
-        // Listen for devicePixelRatio changes (browser zoom)
-        const checkZoomChange = () => {
-            const currentDPR = window.devicePixelRatio || 1;
-            if (Math.abs(currentDPR - this.lastDevicePixelRatio) > 0.1) {
-                logger.debug('CALENDAR', `Device pixel ratio changed: ${this.lastDevicePixelRatio.toFixed(2)} → ${currentDPR.toFixed(2)}`);
-                this.lastDevicePixelRatio = currentDPR;
-                this.clearMeasurementCache();
-                this.clearEventNameCache();
-                
-                // Re-render calendar with new zoom calculations
-                this.updateCalendarDisplay();
-            }
-        };
-        
-        // Check for zoom changes on resize (covers most browser zoom cases)
-        window.addEventListener('resize', checkZoomChange);
-        
-        // Also check periodically in case zoom changes don't trigger resize
-        setInterval(checkZoomChange, 1000);
-        
-        logger.debug('CALENDAR', 'Zoom detection set up for font size adjustment');
-    }
+
     
     // Add test event (for testing functionality)
     addTestEvent(testEventData) {
