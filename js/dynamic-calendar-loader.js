@@ -1569,12 +1569,8 @@ class DynamicCalendarLoader extends CalendarCore {
             // Hide the calendar grid visually if hideEvents is true (for measurements)
             if (hideEvents) {
                 calendarGrid.style.visibility = 'hidden';
-                calendarGrid.style.position = 'absolute';
-                calendarGrid.style.top = '-9999px';
             } else {
                 calendarGrid.style.visibility = 'visible';
-                calendarGrid.style.position = 'static';
-                calendarGrid.style.top = 'auto';
             }
             
             this.attachCalendarInteractions();
