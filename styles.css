@@ -924,8 +924,9 @@ header {
     z-index: 2;
 }
 
-/* Tighter spacing for week view */
-.calendar-grid.week-view-grid {
+/* Unified spacing for both calendar views */
+.calendar-grid.week-view-grid,
+.calendar-grid.month-view-grid {
     gap: 0.5rem;
 }
 
@@ -1191,8 +1192,9 @@ header {
 
 /* Mobile optimizations for unified calendar */
 @media (max-width: 768px) {
-    .calendar-grid.week-view-grid {
-        gap: 0.25rem;
+    .calendar-grid.week-view-grid,
+    .calendar-grid.month-view-grid {
+        gap: 0rem;
     }
     
     .calendar-day {
@@ -1985,6 +1987,10 @@ footer {
         grid-template-columns: 1fr;
         gap: 0.5rem;
     }
+    
+    .calendar-grid.month-view-grid {
+        gap: 0.5rem;
+    }
 
     /* Remove container padding */
     .weekly-calendar .container {
@@ -2361,8 +2367,9 @@ footer {
         font-size: 0.6rem;
     }
 
-    /* Mobile-first week view - show minimal information */
-    .calendar-grid.week-view-grid {
+    /* Mobile-first calendar views - show minimal information */
+    .calendar-grid.week-view-grid,
+    .calendar-grid.month-view-grid {
         gap: 0;
     }
 
@@ -2469,9 +2476,10 @@ footer {
         padding: 0.1rem 0.2rem;
     }
 
-    /* Month View for very small screens */
+    /* Calendar views for very small screens */
+    .calendar-grid.week-view-grid,
     .calendar-grid.month-view-grid {
-        gap: 1px;
+        gap: 0;
     }
 
     .calendar-day.month-day {
@@ -2818,7 +2826,8 @@ footer {
         padding: 0;
     }
 
-    .calendar-grid.week-view-grid {
+    .calendar-grid.week-view-grid,
+    .calendar-grid.month-view-grid {
         gap: 0;
     }
 
@@ -3291,9 +3300,13 @@ footer {
 /* For larger tablets, show both but make buttons smaller */
 @media (min-width: 769px) and (max-width: 1024px) {
 
-    /* Enhanced Week View for tablets - show full information */
+    /* Enhanced Calendar Views for tablets - show full information */
     .calendar-grid.week-view-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.8rem;
+    }
+    
+    .calendar-grid.month-view-grid {
         gap: 0.8rem;
     }
 
@@ -3542,7 +3555,8 @@ footer {
     }
 
     /* Enhanced spacing for desktop */
-    .calendar-grid.week-view-grid {
+    .calendar-grid.week-view-grid,
+    .calendar-grid.month-view-grid {
         gap: 1rem;
     }
 
