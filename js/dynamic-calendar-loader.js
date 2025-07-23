@@ -670,12 +670,30 @@ class DynamicCalendarLoader extends CalendarCore {
         // Measure from a real calendar day div that's already displayed
         const calendarDay = document.querySelector('.calendar-day');
         
+        if (!calendarDay) {
+            logger.warn('CALENDAR', 'No calendar day found for width measurement, using fallback');
+            // Fallback: estimate based on screen width and CSS grid
+            const screenWidth = window.innerWidth;
+            const estimatedDayWidth = screenWidth <= 768 ? (screenWidth - 40) / 7 : (Math.min(screenWidth - 80, 1200)) / 7;
+            const estimatedAvailableWidth = Math.max(estimatedDayWidth - 16, 50); // Subtract padding, minimum 50px
+            logger.debug('CALENDAR', `Using estimated width: ${estimatedAvailableWidth}px`);
+            return estimatedAvailableWidth;
+        }
+        
         // Get the width of the day container minus padding
         const dayRect = calendarDay.getBoundingClientRect();
         const dayStyles = window.getComputedStyle(calendarDay);
         const paddingLeft = parseFloat(dayStyles.paddingLeft) || 0;
         const paddingRight = parseFloat(dayStyles.paddingRight) || 0;
         const availableWidth = dayRect.width - paddingLeft - paddingRight;
+        
+        // Sanity check: ensure we have a reasonable width
+        if (availableWidth < 20) {
+            logger.warn('CALENDAR', `Measured width too small (${availableWidth}px), using fallback`);
+            const screenWidth = window.innerWidth;
+            const fallbackWidth = screenWidth <= 768 ? Math.max((screenWidth - 40) / 7 - 16, 50) : Math.max((Math.min(screenWidth - 80, 1200)) / 7 - 16, 80);
+            return fallbackWidth;
+        }
         
         this.cachedEventTextWidth = availableWidth;
         logger.info('CALENDAR', `Measured event text width from real day: ${availableWidth}px`);
@@ -1887,15 +1905,24 @@ class DynamicCalendarLoader extends CalendarCore {
             const newBreakpoint = this.getCurrentBreakpoint();
             const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
             
-            if (breakpointChanged) {
+            // Clear measurement cache on any significant width change (not just breakpoint changes)
+            const oldWidth = this.lastScreenWidth;
+            const widthDifference = Math.abs(newWidth - oldWidth);
+            const significantChange = widthDifference > 20; // Clear cache if width changes by more than 20px
+            
+            if (breakpointChanged || significantChange) {
                 this.clearMeasurementCache();
                 this.clearEventNameCache();
                 this.lastScreenWidth = newWidth;
                 this.currentBreakpoint = newBreakpoint;
-                logger.debug('CALENDAR', 'Breakpoint changed, caches cleared', {
+                logger.debug('CALENDAR', 'Layout changed, caches cleared', {
                     oldBreakpoint: this.currentBreakpoint,
                     newBreakpoint: newBreakpoint,
-                    width: newWidth
+                    oldWidth: oldWidth,
+                    newWidth: newWidth,
+                    widthDifference: widthDifference,
+                    breakpointChanged: breakpointChanged,
+                    significantChange: significantChange
                 });
                 
                 // Re-render calendar to use new breakpoint calculations
@@ -1903,7 +1930,7 @@ class DynamicCalendarLoader extends CalendarCore {
             }
         });
         
-        logger.debug('CALENDAR', 'Resize listener set up for breakpoint change detection');
+        logger.debug('CALENDAR', 'Resize listener set up for breakpoint and significant width change detection');
     }
     
 
