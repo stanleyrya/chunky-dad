@@ -36,9 +36,6 @@ class DynamicCalendarLoader extends CalendarCore {
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
         
-        // Set up zoom detection listeners
-        this.setupZoomDetection();
-        
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
 
@@ -620,7 +617,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const width = testElement.getBoundingClientRect().width;
             const charCount = testElement.textContent.length;
             const pixelsPerChar = width / charCount;
-            const charsPerPixel = 1 / pixelsPerChar;
+            let charsPerPixel = 1 / pixelsPerChar;
             
             // Get the computed styles to verify what we're actually using
             const computedStyles = window.getComputedStyle(testElement);
@@ -628,51 +625,31 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
-            // Detect zoom level to adjust calculations
+            // Simple zoom adjustment: account for devicePixelRatio and visual viewport scale
+            const deviceZoom = window.devicePixelRatio || 1;
+            const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
+            
+            // Use whichever zoom factor is not 1 (indicating actual zoom)
             let zoomFactor = 1;
-            try {
-                // Method 1: Use Visual Viewport API for pinch zoom (mobile)
-                if (window.visualViewport && window.visualViewport.scale !== undefined && window.visualViewport.scale !== 1) {
-                    zoomFactor = window.visualViewport.scale;
-                    logger.debug('CALENDAR', `Pinch zoom detected: ${(zoomFactor * 100).toFixed(1)}%`);
-                } else {
-                    // Method 2: Use devicePixelRatio for browser zoom (works on most browsers)
-                    // Store initial devicePixelRatio if not already stored
-                    if (!this.initialDevicePixelRatio) {
-                        this.initialDevicePixelRatio = window.devicePixelRatio || 1;
-                    }
-                    
-                    const currentDPR = window.devicePixelRatio || 1;
-                    if (Math.abs(currentDPR - this.initialDevicePixelRatio) > 0.1) {
-                        zoomFactor = currentDPR / this.initialDevicePixelRatio;
-                        logger.debug('CALENDAR', `Browser zoom detected via devicePixelRatio: ${(zoomFactor * 100).toFixed(1)}%`);
-                    }
-                    
-                    // Method 3: Fallback - use window dimensions ratio (less reliable)
-                    if (zoomFactor === 1 && window.outerWidth && window.innerWidth) {
-                        const dimensionRatio = window.outerWidth / window.innerWidth;
-                        if (dimensionRatio > 1.1 || dimensionRatio < 0.9) {
-                            zoomFactor = dimensionRatio;
-                            logger.debug('CALENDAR', `Zoom detected via window dimensions: ${(zoomFactor * 100).toFixed(1)}%`);
-                        }
-                    }
-                }
-            } catch (zoomError) {
-                logger.warn('CALENDAR', 'Could not detect zoom level, using default', zoomError);
+            if (visualZoom !== 1) {
+                zoomFactor = visualZoom; // Mobile pinch zoom
+            } else if (deviceZoom !== 1) {
+                zoomFactor = deviceZoom; // Browser zoom or high-DPI display
             }
             
-            // Adjust charsPerPixel based on zoom factor
-            const adjustedCharsPerPixel = charsPerPixel * zoomFactor;
+            // Adjust calculation for zoom
+            charsPerPixel = charsPerPixel * zoomFactor;
             
             document.body.removeChild(testElement);
             
-            logger.info('CALENDAR', `Calculated chars per pixel: ${adjustedCharsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${(zoomFactor * 100).toFixed(1)}%)`, {
+            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${zoomFactor.toFixed(2)})`, {
                 width: width.toFixed(2),
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
                 charsPerPixel: charsPerPixel.toFixed(4),
-                zoomFactor: zoomFactor.toFixed(3),
-                adjustedCharsPerPixel: adjustedCharsPerPixel.toFixed(4),
+                deviceZoom: deviceZoom.toFixed(2),
+                visualZoom: visualZoom.toFixed(2),
+                zoomFactor: zoomFactor.toFixed(2),
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
@@ -680,8 +657,8 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             
             // Cache the result
-            this.charsPerPixel = adjustedCharsPerPixel;
-            return adjustedCharsPerPixel;
+            this.charsPerPixel = charsPerPixel;
+            return charsPerPixel;
         } catch (error) {
             logger.warn('CALENDAR', 'Could not calculate chars per pixel, using fallback', error);
             // Fallback to a reasonable estimate for 0.75rem Poppins
