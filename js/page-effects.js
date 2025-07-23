@@ -24,6 +24,7 @@ class PageEffectsManager {
         this.setupParallaxEffects();
         this.setupIntersectionObserver();
         this.setupInteractiveElements();
+        this.setupCityBubbles();
         this.setupPageLoadEffects();
         logger.componentLoad('PAGE', 'Page effects manager initialized');
     }
@@ -110,6 +111,65 @@ class PageEffectsManager {
                 buttonCount: ctaButtons.length
             });
         }
+    }
+
+    setupCityBubbles() {
+        const bubblesContainer = document.querySelector('.city-bubbles-container');
+        const bubblesScroll = document.querySelector('.city-bubbles-scroll');
+        
+        if (!bubblesContainer || !bubblesScroll) {
+            logger.debug('PAGE', 'City bubbles not found - skipping setup');
+            return;
+        }
+
+        logger.componentInit('PAGE', 'Setting up city bubbles interactions');
+
+        // Add touch/mouse interaction handling
+        let isUserInteracting = false;
+        let autoScrollPaused = false;
+
+        // Pause auto-animation on user interaction
+        const pauseAutoAnimation = () => {
+            if (!autoScrollPaused) {
+                bubblesScroll.style.animationPlayState = 'paused';
+                autoScrollPaused = true;
+                logger.userInteraction('PAGE', 'City bubbles auto-animation paused by user');
+            }
+        };
+
+        // Handle scroll interaction and update scroll indicator
+        bubblesContainer.addEventListener('scroll', () => {
+            pauseAutoAnimation();
+            
+            // Hide scroll indicator when scrolled to the end (mobile only)
+            if (window.innerWidth <= 768) {
+                const isScrolledToEnd = bubblesContainer.scrollLeft + bubblesContainer.clientWidth >= bubblesContainer.scrollWidth - 10;
+                const indicator = bubblesContainer.querySelector('::after');
+                if (isScrolledToEnd) {
+                    bubblesContainer.style.setProperty('--scroll-indicator-opacity', '0');
+                } else {
+                    bubblesContainer.style.setProperty('--scroll-indicator-opacity', '0.6');
+                }
+            }
+        });
+        
+        // Handle touch/mouse interaction
+        bubblesContainer.addEventListener('touchstart', pauseAutoAnimation);
+        bubblesContainer.addEventListener('mousedown', pauseAutoAnimation);
+
+        // Add hover effects for individual bubbles
+        const cityBubbles = document.querySelectorAll('.city-bubble:not(.coming-soon)');
+        cityBubbles.forEach(bubble => {
+            bubble.addEventListener('mouseenter', () => {
+                logger.userInteraction('PAGE', 'City bubble hovered', {
+                    city: bubble.getAttribute('title')
+                });
+            });
+        });
+
+        logger.componentLoad('PAGE', 'City bubbles interactions enabled', {
+            bubbleCount: cityBubbles.length
+        });
     }
 
     setupPageLoadEffects() {
