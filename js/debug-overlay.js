@@ -76,6 +76,10 @@ class DebugOverlay {
                         <span class="debug-label">Event Width:</span>
                         <span class="debug-value" id="debug-event-width">-</span>
                     </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Zoom Level:</span>
+                        <span class="debug-value" id="debug-zoom-level">-</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -100,8 +104,10 @@ class DebugOverlay {
         
         document.addEventListener('mousemove', (e) => this.drag(e));
         document.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // Prevent scrolling while dragging
-            this.drag(e.touches[0]);
+            if (this.isDragging) {
+                e.preventDefault(); // Prevent scrolling while dragging
+                this.drag(e.touches[0]);
+            }
         }, { passive: false });
         
         document.addEventListener('mouseup', () => this.endDrag());
@@ -193,6 +199,7 @@ class DebugOverlay {
         const url = document.getElementById('debug-url');
         const charLimit = document.getElementById('debug-char-limit');
         const eventWidth = document.getElementById('debug-event-width');
+        const zoomLevel = document.getElementById('debug-zoom-level');
         
         const currentBreakpoint = this.getCurrentBreakpoint();
         const currentPageType = this.getPageType();
@@ -242,6 +249,29 @@ class DebugOverlay {
         
         if (eventWidth) {
             eventWidth.textContent = eventWidthInfo;
+        }
+        
+        // Get zoom level info
+        let zoomInfo = '100%';
+        try {
+            // Try Visual Viewport API first (mobile pinch zoom)
+            if (window.visualViewport && window.visualViewport.scale !== undefined && window.visualViewport.scale !== 1) {
+                zoomInfo = `${(window.visualViewport.scale * 100).toFixed(0)}% (pinch)`;
+            } else if (window.devicePixelRatio) {
+                // Use devicePixelRatio for browser zoom detection
+                const baseRatio = window.screen && window.screen.width ? 
+                    Math.round(window.screen.width / window.innerWidth * 100) / 100 : 1;
+                if (Math.abs(window.devicePixelRatio - baseRatio) > 0.1) {
+                    zoomInfo = `${Math.round(window.devicePixelRatio * 100)}% (browser)`;
+                }
+            }
+        } catch (e) {
+            // Fallback if zoom detection fails
+            zoomInfo = 'Unknown';
+        }
+        
+        if (zoomLevel) {
+            zoomLevel.textContent = zoomInfo;
         }
         
         logger.debug('SYSTEM', 'Debug overlay updated', {
@@ -322,12 +352,8 @@ function initializeDebugOverlay() {
     }
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDebugOverlay);
-} else {
-    initializeDebugOverlay();
-}
+// NOTE: Automatic initialization removed to prevent duplication with app.js
+// The debug overlay is now only initialized through app.js to avoid double creation
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
