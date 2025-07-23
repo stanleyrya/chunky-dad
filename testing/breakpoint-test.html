@@ -127,6 +127,15 @@
             font-size: 0.9rem;
         }
         
+
+        
+        .config-item small {
+            display: block;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+        
         .config-item input, .config-item select {
             padding: 0.75rem;
             border: 1px solid #ddd;
@@ -258,26 +267,32 @@
         
         <div class="config-section">
             <div class="config-panel">
-                <h2>📏 Character Limits</h2>
+                <h2>📏 Dynamic Character Calculation</h2>
+                <p style="margin-bottom: 1.5rem; color: #666; font-size: 0.95rem;">
+                    Uses actual font metrics and hidden div measurement to calculate precise character limits based on real available width.
+                </p>
+                
                 <div class="config-grid">
                     <div class="config-item">
-                        <label>Super Small (&lt;375px)</label>
-                        <input type="number" id="chars-xs" value="5" min="3" max="20">
+                        <label>Characters per Pixel</label>
+                        <input type="number" id="chars-per-pixel" value="0.09" step="0.001" min="0.05" max="0.15" onchange="updatePixelRatio()">
+                        <small>Auto-calculated from font metrics</small>
                     </div>
                     <div class="config-item">
-                        <label>Small (375-768px)</label>
-                        <input type="number" id="chars-sm" value="8" min="5" max="25">
+                        <label>Pixels per Character</label>
+                        <input type="number" id="pixels-per-char" readonly style="background: #f5f5f5;">
+                        <small>Calculated automatically</small>
                     </div>
                     <div class="config-item">
-                        <label>Medium (768-1024px)</label>
-                        <input type="number" id="chars-md" value="12" min="8" max="30">
-                    </div>
-                    <div class="config-item">
-                        <label>Large (&gt;1024px)</label>
-                        <input type="number" id="chars-lg" value="20" min="12" max="40">
+                        <label>Quick Adjustments</label>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" onclick="setPixelRatio(0.08)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Tighter</button>
+                            <button type="button" onclick="setPixelRatio(0.09)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Default</button>
+                            <button type="button" onclick="setPixelRatio(0.10)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Looser</button>
+                            <button type="button" onclick="calculateFromFont()" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">Auto-Calc</button>
+                        </div>
                     </div>
                 </div>
-                <button class="update-btn" onclick="updateCharacterLimits()">Apply Character Limits</button>
             </div>
 
             <div class="config-panel">
@@ -363,13 +378,8 @@
     </div>
 
     <script>
-        // Character limits configuration that matches dynamic-calendar-loader.js
-        let charLimits = {
-            xs: 5,   // < 375px
-            sm: 8,   // 375-768px
-            md: 12,  // 768-1024px
-            lg: 20   // > 1024px
-        };
+        // Characters per pixel ratio for dynamic calculation
+        let charsPerPixel = 0.09;   // ~11.1 pixels per character
         
         // Test event configuration
         let testEvent = {
@@ -435,10 +445,9 @@
         function getCharLimit(width) {
             if (typeof width === 'string') width = window.innerWidth;
             
-            if (width < 375) return charLimits.xs;
-            if (width < 768) return charLimits.sm;
-            if (width < 1024) return charLimits.md;
-            return charLimits.lg;
+            const breakpoint = getBreakpointFromWidth(width);
+            const estimatedWidth = getEstimatedWidth(breakpoint);
+            return Math.floor(estimatedWidth * charsPerPixel);
         }
         
         // Process event name (matches dynamic-calendar-loader logic)
@@ -448,14 +457,11 @@
             
             if (!shortName) return fullName;
             
-            const charLimitsPerLine = {
-                xs: charLimits.xs,
-                sm: charLimits.sm,
-                md: charLimits.md,
-                lg: charLimits.lg
-            };
+            let charLimitPerLine;
             
-            const charLimitPerLine = charLimitsPerLine[breakpoint] || charLimitsPerLine.lg;
+            // Dynamic calculation based on pixel measurements
+            const availableWidth = getEstimatedWidth(breakpoint);
+            charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
             
             // Process the shortname - remove hyphens except escaped ones
             const processedShortName = shortName.replace(/(?<!\\)-/g, '');
@@ -474,20 +480,84 @@
             return shortName.substring(0, charLimitPerLine - 1) + '…';
         }
         
-        // Update character limits from inputs
-        function updateCharacterLimits() {
-            charLimits.xs = parseInt(document.getElementById('chars-xs').value) || 5;
-            charLimits.sm = parseInt(document.getElementById('chars-sm').value) || 8;
-            charLimits.md = parseInt(document.getElementById('chars-md').value) || 12;
-            charLimits.lg = parseInt(document.getElementById('chars-lg').value) || 20;
+
+        
+        // Get estimated width for breakpoint
+        function getEstimatedWidth(breakpoint) {
+            const estimatedWidths = {
+                xs: 280,  // Typical phone width minus padding
+                sm: 320,  // Larger phone width minus padding
+                md: 200,  // Tablet in grid layout
+                lg: 180   // Desktop in grid layout
+            };
+            return estimatedWidths[breakpoint] || estimatedWidths.lg;
+        }
+        
+        // Update characters per pixel ratio
+        function updatePixelRatio() {
+            charsPerPixel = parseFloat(document.getElementById('chars-per-pixel').value) || 0.09;
+            
+            // Update the pixels per character display
+            updatePixelsPerCharDisplay();
             
             runTests();
             
-            // Send updated limits to iframe
-            sendCharacterLimitsToIframe();
+            // Send updated ratio to iframe
+            sendPixelRatioToIframe();
             
-            console.log('Character limits updated:', charLimits);
+            console.log('Pixel ratio updated:', charsPerPixel);
         }
+        
+        // Set a specific pixel ratio
+        function setPixelRatio(ratio) {
+            charsPerPixel = ratio;
+            document.getElementById('chars-per-pixel').value = ratio;
+            updatePixelsPerCharDisplay();
+            updatePixelRatio();
+        }
+        
+        // Update the pixels per character display
+        function updatePixelsPerCharDisplay() {
+            const pixelsPerChar = 1 / charsPerPixel;
+            document.getElementById('pixels-per-char').value = pixelsPerChar.toFixed(2);
+        }
+        
+        // Calculate ratio from actual font metrics (similar to dynamic-calendar-loader.js)
+        function calculateFromFont() {
+            try {
+                // Create a temporary element to measure character width
+                const testElement = document.createElement('div');
+                testElement.style.cssText = `
+                    position: absolute;
+                    visibility: hidden;
+                    white-space: nowrap;
+                    font-family: 'Poppins', sans-serif;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    line-height: 1.2;
+                `;
+                
+                // Use a representative string of average characters
+                testElement.textContent = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
+                document.body.appendChild(testElement);
+                
+                const width = testElement.getBoundingClientRect().width;
+                const charCount = testElement.textContent.length;
+                const pixelsPerChar = width / charCount;
+                const calculatedRatio = 1 / pixelsPerChar;
+                
+                document.body.removeChild(testElement);
+                
+                console.log(`Font metrics calculated: ${pixelsPerChar.toFixed(2)}px per char, ${calculatedRatio.toFixed(4)} chars per px`);
+                
+                setPixelRatio(calculatedRatio);
+            } catch (error) {
+                console.warn('Could not calculate from font metrics:', error);
+                setPixelRatio(0.09); // Fallback
+            }
+        }
+        
+
         
         // Update test event from inputs
         function updateTestEvent() {
@@ -504,17 +574,19 @@
             console.log('Test event updated:', testEvent);
         }
         
-        // Send character limits to iframe
-        function sendCharacterLimitsToIframe() {
+
+        
+        // Send pixel ratio to iframe
+        function sendPixelRatioToIframe() {
             const iframe = document.getElementById('city-iframe');
             if (iframe && iframe.contentWindow) {
                 try {
                     iframe.contentWindow.postMessage({
-                        type: 'updateCharacterLimits',
-                        data: charLimits
+                        type: 'updatePixelRatio',
+                        data: charsPerPixel
                     }, '*');
                 } catch (e) {
-                    console.log('Could not send character limits to iframe (cross-origin)');
+                    console.log('Could not send pixel ratio to iframe (cross-origin)');
                 }
             }
         }
@@ -606,9 +678,16 @@
         function runTests() {
             const output = document.getElementById('test-output');
             const currentWidth = parseInt(document.querySelector('.iframe-wrapper').style.width) || 1200;
-            const charLimit = getCharLimit(currentWidth);
+            const breakpoint = getBreakpointFromWidth(currentWidth);
             
-            let html = `<p><strong>Testing Width:</strong> ${currentWidth}px | <strong>Character Limit:</strong> ${charLimit}</p>`;
+            const estimatedWidth = getEstimatedWidth(breakpoint);
+            const charLimit = Math.floor(estimatedWidth * charsPerPixel);
+            const calculationInfo = `${estimatedWidth}px × ${charsPerPixel.toFixed(3)} chars/px = ${charLimit} chars`;
+            
+            let html = `
+                <p><strong>Testing Width:</strong> ${currentWidth}px (${breakpoint.toUpperCase()}) | 
+                <strong>Calculation:</strong> ${calculationInfo}</p>
+            `;
             
             // Test the custom event first
             const testResult = getSmartEventNameForBreakpoint(testEvent, getBreakpointFromWidth(currentWidth));
@@ -659,11 +738,14 @@
         
         // Initialize on load
         window.addEventListener('load', () => {
+            // Initialize the pixels per character display
+            updatePixelsPerCharDisplay();
+            
             runTests();
             
             // Initialize iframe after a short delay
             setTimeout(() => {
-                sendCharacterLimitsToIframe();
+                sendPixelRatioToIframe();
                 sendTestEventToIframe();
             }, 1000);
         });
@@ -687,7 +769,7 @@
         window.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'iframeReady') {
                 console.log('Iframe is ready, sending initial data');
-                sendCharacterLimitsToIframe();
+                sendPixelRatioToIframe();
                 sendTestEventToIframe();
             }
         });
