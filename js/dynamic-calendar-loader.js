@@ -656,31 +656,20 @@ class DynamicCalendarLoader extends CalendarCore {
             
             document.body.removeChild(measurementDiv);
             
-            // Cache the result
-            this.cachedEventTextWidth = availableWidth;
-            
-            logger.info('CALENDAR', `Measured event text width: ${availableWidth}px`);
-            return availableWidth;
+            // Only cache valid measurements (> 50px to avoid 0px during transitions)
+            if (availableWidth > 50) {
+                this.cachedEventTextWidth = availableWidth;
+                logger.info('CALENDAR', `Measured event text width: ${availableWidth}px`);
+                return availableWidth;
+            } else {
+                logger.warn('CALENDAR', `Invalid measurement: ${availableWidth}px, skipping cache`);
+                // Don't cache, just return a reasonable default
+                return 200;
+            }
             
         } catch (error) {
             logger.warn('CALENDAR', 'Could not measure event text width, using fallback', error);
-            
-            // Fallback based on viewport width
-            const viewportWidth = window.innerWidth;
-            let fallbackWidth;
-            
-            if (viewportWidth < 375) {
-                fallbackWidth = 280;  // XS
-            } else if (viewportWidth < 768) {
-                fallbackWidth = 320;  // SM
-            } else if (viewportWidth < 1024) {
-                fallbackWidth = 200;  // MD
-            } else {
-                fallbackWidth = 180;  // LG
-            }
-            
-            logger.info('CALENDAR', `Using fallback event text width: ${fallbackWidth}px for viewport ${viewportWidth}px`);
-            return fallbackWidth;
+            return 200;
         }
     }
 
