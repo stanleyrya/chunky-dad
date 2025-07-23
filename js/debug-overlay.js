@@ -291,20 +291,11 @@ class DebugOverlay {
             eventWidth.textContent = eventWidthInfo;
         }
         
-        // Get zoom level info
+        // Get zoom level info using simple visual viewport detection
         let zoomInfo = '100%';
         try {
-            // Try Visual Viewport API first (mobile pinch zoom)
-            if (window.visualViewport && window.visualViewport.scale !== undefined && window.visualViewport.scale !== 1) {
-                zoomInfo = `${(window.visualViewport.scale * 100).toFixed(0)}% (pinch)`;
-            } else if (window.devicePixelRatio) {
-                // Use devicePixelRatio for browser zoom detection
-                const baseRatio = window.screen && window.screen.width ? 
-                    Math.round(window.screen.width / window.innerWidth * 100) / 100 : 1;
-                if (Math.abs(window.devicePixelRatio - baseRatio) > 0.1) {
-                    zoomInfo = `${Math.round(window.devicePixelRatio * 100)}% (browser)`;
-                }
-            }
+            const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
+            zoomInfo = `${(visualZoom * 100).toFixed(0)}%`;
         } catch (e) {
             // Fallback if zoom detection fails
             zoomInfo = 'Unknown';
