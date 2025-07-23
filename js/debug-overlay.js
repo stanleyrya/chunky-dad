@@ -68,6 +68,14 @@ class DebugOverlay {
                         <span class="debug-label">URL:</span>
                         <span class="debug-value" id="debug-url">-</span>
                     </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Chars/Line:</span>
+                        <span class="debug-value" id="debug-char-limit">-</span>
+                    </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Event Width:</span>
+                        <span class="debug-value" id="debug-event-width">-</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -91,7 +99,10 @@ class DebugOverlay {
         header.addEventListener('touchstart', (e) => this.startDrag(e.touches[0]));
         
         document.addEventListener('mousemove', (e) => this.drag(e));
-        document.addEventListener('touchmove', (e) => this.drag(e.touches[0]));
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Prevent scrolling while dragging
+            this.drag(e.touches[0]);
+        }, { passive: false });
         
         document.addEventListener('mouseup', () => this.endDrag());
         document.addEventListener('touchend', () => this.endDrag());
@@ -180,9 +191,27 @@ class DebugOverlay {
         const viewport = document.getElementById('debug-viewport');
         const pageType = document.getElementById('debug-page-type');
         const url = document.getElementById('debug-url');
+        const charLimit = document.getElementById('debug-char-limit');
+        const eventWidth = document.getElementById('debug-event-width');
         
         const currentBreakpoint = this.getCurrentBreakpoint();
         const currentPageType = this.getPageType();
+        
+        // Get character limit info from calendar loader if available
+        let charLimitInfo = '-';
+        let eventWidthInfo = '-';
+        if (window.calendarLoader) {
+            try {
+                const charsPerPixel = window.calendarLoader.charsPerPixel || window.calendarLoader.calculateCharsPerPixel();
+                const availableWidth = window.calendarLoader.getEventTextWidth();
+                const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
+                
+                charLimitInfo = charLimitPerLine.toString();
+                eventWidthInfo = `${availableWidth.toFixed(0)}px`;
+            } catch (e) {
+                // Ignore errors if calendar loader methods aren't available
+            }
+        }
         
         if (screenSize) {
             screenSize.textContent = `${window.innerWidth} × ${window.innerHeight}`;
@@ -205,6 +234,14 @@ class DebugOverlay {
             const shortUrl = window.location.pathname + window.location.search;
             url.textContent = shortUrl.length > 25 ? shortUrl.substring(0, 25) + '...' : shortUrl;
             url.title = window.location.href; // Full URL on hover
+        }
+        
+        if (charLimit) {
+            charLimit.textContent = charLimitInfo;
+        }
+        
+        if (eventWidth) {
+            eventWidth.textContent = eventWidthInfo;
         }
         
         logger.debug('SYSTEM', 'Debug overlay updated', {
@@ -269,10 +306,16 @@ class DebugOverlay {
 let debugOverlay = null;
 
 function initializeDebugOverlay() {
+    // Prevent double initialization
+    if (debugOverlay) {
+        logger.debug('SYSTEM', 'Debug overlay already initialized, skipping');
+        return;
+    }
+    
     const urlParams = new URLSearchParams(window.location.search);
     const shouldShow = urlParams.get('debug') === 'true' || urlParams.has('debug');
     
-    if (shouldShow && !debugOverlay) {
+    if (shouldShow) {
         debugOverlay = new DebugOverlay();
         window.debugOverlay = debugOverlay; // Make globally accessible
         logger.componentInit('SYSTEM', 'Debug overlay initialized from URL parameter');
