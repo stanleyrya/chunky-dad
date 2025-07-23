@@ -28,6 +28,9 @@ class DynamicCalendarLoader extends CalendarCore {
         // Set up message listener for testing interface
         this.setupMessageListener();
         
+        // Set up window resize listener to clear measurement cache
+        this.setupResizeListener();
+        
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
 
@@ -456,24 +459,11 @@ class DynamicCalendarLoader extends CalendarCore {
         // If no shortname, return the full name
         if (!shortName) return fullName;
         
-        // Calculate characters per pixel based on actual font metrics
-        // Since --event-name-font-size is 0.75rem consistently across all breakpoints,
-        // we can use a single ratio instead of different ones per breakpoint
+        // Get characters per pixel ratio (calculated once and cached)
         const charsPerPixel = this.charsPerPixel || this.calculateCharsPerPixel();
         
-        // Try to get actual div width first
-        let availableWidth = this.getEventDivWidth(breakpoint);
-        
-        // If we can't get the div width, fall back to estimated widths based on breakpoint
-        if (!availableWidth) {
-            const estimatedWidths = {
-                xs: 280,  // Typical phone width minus padding
-                sm: 320,  // Larger phone width minus padding
-                md: 200,  // Tablet in grid layout
-                lg: 180   // Desktop in grid layout
-            };
-            availableWidth = estimatedWidths[breakpoint] || estimatedWidths.lg;
-        }
+        // Get actual available width for event text
+        const availableWidth = this.getEventTextWidth();
         
         // Calculate how many characters can fit on one line
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
@@ -620,56 +610,88 @@ class DynamicCalendarLoader extends CalendarCore {
                 charsPerPixel
             });
             
+            // Cache the result
+            this.charsPerPixel = charsPerPixel;
             return charsPerPixel;
         } catch (error) {
             logger.warn('CALENDAR', 'Could not calculate chars per pixel, using fallback', error);
             // Fallback to a reasonable estimate for 0.75rem Poppins
-            return 0.09; // ~11px per character
+            const fallback = 0.09;
+            this.charsPerPixel = fallback;
+            return fallback;
         }
     }
 
-    // Get the actual width of an event div for dynamic calculation
-    getEventDivWidth(breakpoint) {
+    // Get the actual width available for event text using a hidden measurement div
+    getEventTextWidth() {
         try {
-            // First try to get an actual event item width
-            const eventItem = document.querySelector('.event-item');
-            if (eventItem) {
-                const width = eventItem.getBoundingClientRect().width;
-                if (width > 0) {
-                    logger.debug('CALENDAR', `Got event div width: ${width}px for breakpoint ${breakpoint}`);
-                    return width;
-                }
+            // Check if we already have a cached measurement
+            if (this.cachedEventTextWidth) {
+                return this.cachedEventTextWidth;
             }
             
-            // If no event item, try to get day-header width as fallback
-            const dayHeader = document.querySelector('.day-header');
-            if (dayHeader) {
-                const width = dayHeader.getBoundingClientRect().width;
-                if (width > 0) {
-                    logger.debug('CALENDAR', `Using day-header width as fallback: ${width}px for breakpoint ${breakpoint}`);
-                    return width;
-                }
-            }
+            // Create a hidden measurement div that matches the actual event item structure
+            const measurementDiv = document.createElement('div');
+            measurementDiv.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                top: -9999px;
+                left: -9999px;
+            `;
             
-            // If still no width, try calendar-day width
-            const calendarDay = document.querySelector('.calendar-day');
-            if (calendarDay) {
-                const rect = calendarDay.getBoundingClientRect();
-                // Subtract padding (0.75rem = ~12px on each side)
-                const width = rect.width - 24;
-                if (width > 0) {
-                    logger.debug('CALENDAR', `Using calendar-day width minus padding: ${width}px for breakpoint ${breakpoint}`);
-                    return width;
-                }
-            }
+            // Create the same structure as a real event item
+            measurementDiv.innerHTML = `
+                <div class="calendar-day">
+                    <div class="event-item">
+                        <div class="event-name">Test Event Name</div>
+                    </div>
+                </div>
+            `;
             
-            logger.warn('CALENDAR', `Could not determine div width for breakpoint ${breakpoint}, using fallback`);
-            return null;
+            document.body.appendChild(measurementDiv);
+            
+            // Get the width of the event-name element
+            const eventNameElement = measurementDiv.querySelector('.event-name');
+            const availableWidth = eventNameElement.getBoundingClientRect().width;
+            
+            document.body.removeChild(measurementDiv);
+            
+            // Cache the result
+            this.cachedEventTextWidth = availableWidth;
+            
+            logger.info('CALENDAR', `Measured event text width: ${availableWidth}px`);
+            return availableWidth;
+            
         } catch (error) {
-            logger.error('CALENDAR', 'Error getting event div width', error);
-            return null;
+            logger.warn('CALENDAR', 'Could not measure event text width, using fallback', error);
+            
+            // Fallback based on viewport width
+            const viewportWidth = window.innerWidth;
+            let fallbackWidth;
+            
+            if (viewportWidth < 375) {
+                fallbackWidth = 280;  // XS
+            } else if (viewportWidth < 768) {
+                fallbackWidth = 320;  // SM
+            } else if (viewportWidth < 1024) {
+                fallbackWidth = 200;  // MD
+            } else {
+                fallbackWidth = 180;  // LG
+            }
+            
+            logger.info('CALENDAR', `Using fallback event text width: ${fallbackWidth}px for viewport ${viewportWidth}px`);
+            return fallbackWidth;
         }
     }
+
+    // Clear cached measurements (call when layout changes)
+    clearMeasurementCache() {
+        this.cachedEventTextWidth = null;
+        this.charsPerPixel = null;
+        logger.debug('CALENDAR', 'Measurement cache cleared');
+    }
+
+
     
     // Generate all breakpoint versions of the event name
     generateEventNameElements(event) {
@@ -1771,13 +1793,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Update character limits (for testing functionality) - now supports both old and new systems
-    updateCharacterLimits(newLimits) {
-        logger.info('CALENDAR', 'Character limits updated from test interface', newLimits);
-        
-        // Store the new character limits (legacy support)
-        this.characterLimits = newLimits;
-    }
+
     
     // Update characters per pixel ratio (for new dynamic system)
     updateCharsPerPixel(newRatio) {
@@ -1798,9 +1814,7 @@ class DynamicCalendarLoader extends CalendarCore {
             try {
                 if (event.data && event.data.type) {
                     switch (event.data.type) {
-                        case 'updateCharacterLimits':
-                            this.updateCharacterLimits(event.data.data);
-                            break;
+
                         case 'updatePixelRatio':
                             this.updateCharsPerPixel(event.data.data);
                             break;
@@ -1818,6 +1832,16 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         logger.debug('CALENDAR', 'Message listener set up for testing interface communication');
+    }
+    
+    // Set up resize listener to clear measurement cache when layout changes
+    setupResizeListener() {
+        window.addEventListener('resize', () => {
+            this.clearMeasurementCache();
+            logger.debug('CALENDAR', 'Window resized, measurement cache cleared');
+        });
+        
+        logger.debug('CALENDAR', 'Resize listener set up for measurement cache management');
     }
     
     // Add test event (for testing functionality)
