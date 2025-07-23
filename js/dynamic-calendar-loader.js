@@ -1555,6 +1555,18 @@ class DynamicCalendarLoader extends CalendarCore {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (calendarGrid) {
             calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
+            
+            // Hide the calendar grid visually if hideEvents is true (for measurements)
+            if (hideEvents) {
+                calendarGrid.style.visibility = 'hidden';
+                calendarGrid.style.position = 'absolute';
+                calendarGrid.style.top = '-9999px';
+            } else {
+                calendarGrid.style.visibility = 'visible';
+                calendarGrid.style.position = 'static';
+                calendarGrid.style.top = 'auto';
+            }
+            
             this.attachCalendarInteractions();
             
             // Update grid layout based on view
@@ -1589,12 +1601,16 @@ class DynamicCalendarLoader extends CalendarCore {
         const eventsSection = document.querySelector('.events');
         if (eventsList && eventsSection) {
             eventsSection.style.display = 'block';
-            if (filteredEvents?.length > 0 && !hideEvents) {
+            if (hideEvents) {
+                // Keep existing loading message when hideEvents is true
+                if (!eventsList.querySelector('.loading-message')) {
+                    eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
+                }
+            } else if (filteredEvents?.length > 0) {
                 eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
-            } else if (!hideEvents) {
+            } else {
                 eventsList.innerHTML = '';
             }
-            // If hideEvents is true, don't touch the events list (keep existing loading message)
         }
         
         // Update map (show for both week and month views)
@@ -1802,16 +1818,16 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Load calendar data first, then show everything at once
+        // Show calendar structure first but hidden for measurements, with loading message visible
+        this.updatePageContent(this.currentCityConfig, [], true); // hideEvents = true, structure hidden
+        
+        // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
         if (data) {
             logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
                 eventCount: data.events.length
             });
-            this.updatePageContent(data.cityConfig, data.events); // Show everything at once
-        } else {
-            // Only show structure if data loading failed
-            this.updatePageContent(this.currentCityConfig, []); 
+            this.updatePageContent(data.cityConfig, data.events); // hideEvents = false (default)
         }
     }
 
