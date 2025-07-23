@@ -254,35 +254,11 @@ class DebugOverlay {
             eventWidth.textContent = eventWidthInfo;
         }
         
-        // Get zoom level info using improved detection
+        // Get zoom level info using simple visual viewport detection
         let zoomInfo = '100%';
         try {
-            const devicePixelRatio = window.devicePixelRatio || 1;
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
-            
-            // Priority 1: Mobile pinch zoom (visualViewport.scale)
-            if (visualZoom !== 1) {
-                zoomInfo = `${(visualZoom * 100).toFixed(0)}% (pinch)`;
-            } 
-            // Priority 2: Browser zoom detection
-            else {
-                // Try to detect browser zoom by comparing expected vs actual devicePixelRatio
-                if (window.screen && window.screen.width && window.innerWidth > 0) {
-                    const expectedRatio = window.screen.width / window.innerWidth;
-                    const actualRatio = devicePixelRatio;
-                    const ratio = actualRatio / expectedRatio;
-                    
-                    if (ratio > 1.25 || ratio < 0.8) {
-                        zoomInfo = `${Math.round(ratio * 100)}% (browser)`;
-                    } else {
-                        // Show device info when no zoom detected
-                        zoomInfo = `100% (DPR: ${devicePixelRatio.toFixed(1)})`;
-                    }
-                } else {
-                    // Show device info when screen data unavailable
-                    zoomInfo = `100% (DPR: ${devicePixelRatio.toFixed(1)})`;
-                }
-            }
+            zoomInfo = `${(visualZoom * 100).toFixed(0)}%`;
         } catch (e) {
             // Fallback if zoom detection fails
             zoomInfo = 'Unknown';
