@@ -106,6 +106,12 @@
             <button onclick="testRealEvents()">Test Real Event Names</button>
             <div id="real-event-results"></div>
         </div>
+        
+        <div class="debug-section">
+            <h2>Step 6: Multi-Line Hyphenation Test</h2>
+            <button onclick="testMultiLineHyphenation()">Test Multi-Line Logic</button>
+            <div id="multiline-results"></div>
+        </div>
     </div>
 
     <script>
@@ -250,8 +256,11 @@
         function simulateHyphenation(event, charLimitPerLine) {
             const shortName = event.shortName || '';
             
-            // Process the shortname - remove hyphens except escaped ones
+            // Process the shortname - remove hyphens except escaped ones (\-)
             const processedShortName = shortName.replace(/(?<!\\)-/g, '');
+            
+            // Split the name into words
+            const words = processedShortName.split(' ').filter(word => word.length > 0);
             
             // If the entire name fits on one line, return it
             if (processedShortName.length <= charLimitPerLine) {
@@ -271,22 +280,104 @@
                 };
             }
             
-            // For very small character limits, just truncate
+            // For very small character limits, just truncate aggressively
             if (charLimitPerLine <= 6) {
                 const truncated = shortName.substring(0, charLimitPerLine - 1) + '…';
                 return {
                     output: truncated,
                     success: false,
-                    message: `Truncated due to very small limit (${charLimitPerLine} <= 6)`
+                    message: `Very small char limit, truncating (${charLimitPerLine} <= 6)`
                 };
             }
             
-            // Otherwise, truncate with ellipsis
-            const truncated = shortName.substring(0, charLimitPerLine - 1) + '…';
+            // Build lines that respect the character limit per line
+            const lines = [];
+            let currentLine = '';
+            
+            for (const word of words) {
+                // If adding this word would exceed the limit
+                if (currentLine && (currentLine + ' ' + word).length > charLimitPerLine) {
+                    // If the current line has content, save it and start a new line
+                    if (currentLine) {
+                        lines.push(currentLine);
+                        currentLine = '';
+                    }
+                }
+                
+                // Check if the word itself is too long for a line
+                if (word.length > charLimitPerLine) {
+                    // First try to split at hyphens in the original word (before hyphen removal)
+                    const originalWord = shortName.split(' ').find(orig => orig.replace(/(?<!\\)-/g, '') === word);
+                    if (originalWord && originalWord.includes('-') && !originalWord.includes('\\-')) {
+                        const hyphenParts = originalWord.split('-').filter(part => part.length > 0);
+                        let tempLine = currentLine;
+                        
+                        for (let i = 0; i < hyphenParts.length; i++) {
+                            const part = hyphenParts[i];
+                            const isLastPart = i === hyphenParts.length - 1;
+                            const partWithHyphen = isLastPart ? part : part + '-';
+                            
+                            if (tempLine && (tempLine + ' ' + partWithHyphen).length > charLimitPerLine) {
+                                lines.push(tempLine);
+                                tempLine = partWithHyphen;
+                            } else {
+                                tempLine = tempLine ? tempLine + ' ' + partWithHyphen : partWithHyphen;
+                            }
+                            
+                            // If even a single hyphen part is too long, truncate it
+                            if (partWithHyphen.length > charLimitPerLine) {
+                                if (tempLine === partWithHyphen) {
+                                    lines.push(partWithHyphen.substring(0, charLimitPerLine - 1) + '…');
+                                    tempLine = '';
+                                }
+                                break;
+                            }
+                        }
+                        currentLine = tempLine;
+                    } else {
+                        // If no hyphens to split on, truncate the word
+                        const truncatedWord = word.substring(0, charLimitPerLine - 1) + '…';
+                        if (currentLine) {
+                            lines.push(currentLine);
+                            lines.push(truncatedWord);
+                            currentLine = '';
+                        } else {
+                            lines.push(truncatedWord);
+                        }
+                    }
+                } else {
+                    // Add the word to the current line
+                    currentLine = currentLine ? currentLine + ' ' + word : word;
+                }
+            }
+            
+            // Add the last line if it has content
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            
+            // Join lines with line breaks (HTML will handle the display)
+            // Limit to 3 lines maximum for all breakpoints
+            const maxLines = 3;
+            const displayLines = lines.slice(0, maxLines);
+            
+            // If we had to cut lines, add ellipsis to the last line
+            if (lines.length > maxLines && displayLines.length > 0) {
+                const lastLine = displayLines[displayLines.length - 1];
+                if (lastLine.length >= charLimitPerLine - 1) {
+                    // Truncate the last line to make room for ellipsis
+                    displayLines[displayLines.length - 1] = lastLine.substring(0, charLimitPerLine - 1) + '…';
+                } else {
+                    displayLines[displayLines.length - 1] = lastLine + '…';
+                }
+            }
+            
+            // Return the multi-line name as a single string (CSS will handle wrapping)
+            const result = displayLines.join(' ');
             return {
-                output: truncated,
-                success: false,
-                message: `Truncated because too long (${shortName.length} > ${charLimitPerLine})`
+                output: result,
+                success: result.length <= charLimitPerLine * maxLines,
+                message: `Multi-line processing: ${lines.length} lines → ${displayLines.length} lines (max ${maxLines})`
             };
         }
         
@@ -311,6 +402,45 @@
                         Length: ${actualLength} chars (expected ~${expectedLength}-${expectedLength + 1})<br>
                         <span class="result ${meetsExpectation ? 'success' : 'error'}">
                             ${meetsExpectation ? '✅ Meets expectation' : '❌ Does not meet expectation'}
+                        </span><br>
+                        Logic: ${result.message}
+                    </div>
+                `;
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        function testMultiLineHyphenation() {
+            const results = document.getElementById('multiline-results');
+            const charLimit = Math.floor(availableWidth320 * charsPerPixel);
+            
+            // Test events that should demonstrate multi-line behavior
+            const multiLineEvents = [
+                { name: 'Very Long Bear Event Name', shortName: 'Very-Long-Bear-Event-Name' },
+                { name: 'Super Duper Long Event', shortName: 'Super-Duper-Long-Event' },
+                { name: 'Extremely Long Event Name That Should Wrap', shortName: 'Extremely-Long-Event-Name-That-Should-Wrap' },
+                { name: 'Short Event', shortName: 'Short' },
+                { name: 'Medium Length Event', shortName: 'Medium-Length-Event' }
+            ];
+            
+            let html = `<strong>Multi-Line Hyphenation Test:</strong><br>
+                       Character Limit per Line: ${charLimit}<br>
+                       Testing advanced word-wrapping and hyphenation logic<br><br>`;
+            
+            multiLineEvents.forEach(event => {
+                const result = simulateHyphenation(event, charLimit);
+                const lines = result.output.split(' ').length;
+                const avgLineLength = result.output.length / lines;
+                
+                html += `
+                    <div class="test-event">
+                        <strong>${event.name}</strong><br>
+                        Input: "${event.shortName}" (${event.shortName.length} chars)<br>
+                        Output: "${result.output}" (${result.output.length} chars)<br>
+                        Lines: ~${lines} | Avg chars/line: ${avgLineLength.toFixed(1)}<br>
+                        <span class="result ${result.success ? 'success' : 'error'}">
+                            ${result.success ? '✅ Success' : '⚠️ Needs attention'}
                         </span><br>
                         Logic: ${result.message}
                     </div>

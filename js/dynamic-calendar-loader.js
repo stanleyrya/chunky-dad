@@ -660,6 +660,21 @@ class DynamicCalendarLoader extends CalendarCore {
         // Measure from a real calendar day div that's already displayed
         const calendarDay = document.querySelector('.calendar-day');
         
+        if (!calendarDay) {
+            // Fallback calculation if no calendar day is available yet
+            const screenWidth = window.innerWidth;
+            let estimatedWidth;
+            if (screenWidth <= 375) {
+                estimatedWidth = screenWidth - 40; // 20px padding each side
+            } else if (screenWidth <= 768) {
+                estimatedWidth = (screenWidth - 60) / 7; // 7 days in week view
+            } else {
+                estimatedWidth = 180; // Approximate desktop day width
+            }
+            logger.debug('CALENDAR', `Using estimated event text width: ${estimatedWidth}px (no calendar day found)`);
+            return estimatedWidth;
+        }
+        
         // Get the width of the day container minus padding
         const dayRect = calendarDay.getBoundingClientRect();
         const dayStyles = window.getComputedStyle(calendarDay);
@@ -1802,16 +1817,16 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Show calendar structure immediately with events hidden (existing loading message will show)
-        this.updatePageContent(this.currentCityConfig, [], true); // hideEvents = true
-        
-        // Load calendar data and update normally
+        // Load calendar data first, then show everything at once
         const data = await this.loadCalendarData(this.currentCity);
         if (data) {
             logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
                 eventCount: data.events.length
             });
-            this.updatePageContent(data.cityConfig, data.events); // hideEvents = false (default)
+            this.updatePageContent(data.cityConfig, data.events); // Show everything at once
+        } else {
+            // Only show structure if data loading failed
+            this.updatePageContent(this.currentCityConfig, []); 
         }
     }
 
