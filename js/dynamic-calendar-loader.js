@@ -651,76 +651,27 @@ class DynamicCalendarLoader extends CalendarCore {
             this.charsPerPixel = charsPerPixel;
             return charsPerPixel;
         } catch (error) {
-            logger.warn('CALENDAR', 'Could not calculate chars per pixel, using fallback', error);
-            // Fallback to a reasonable estimate for 0.75rem Poppins
-            const fallback = 0.09;
-            this.charsPerPixel = fallback;
-            return fallback;
+            logger.componentError('CALENDAR', 'Could not calculate chars per pixel', error);
+            throw error; // Don't use fallbacks, fail properly
         }
     }
 
-    // Get the actual width available for event text using a hidden test event
+    // Get the actual width available for event text from the fake event rendered invisibly
     getEventTextWidth() {
         // Check if we already have a cached measurement
         if (this.cachedEventTextWidth) {
             return this.cachedEventTextWidth;
         }
         
-        // Create a hidden test event to measure the actual available text width
-        const calendarDay = document.querySelector('.calendar-day');
-        if (!calendarDay) {
-            logger.warn('CALENDAR', 'No calendar day found for width measurement, using fallback');
-            return 100; // Fallback width
-        }
+        // Find the fake event that was rendered invisibly for measurement
+        const eventName = document.querySelector('.event-name');
         
-        // Create a temporary event item to measure actual event text width
-        const testEvent = document.createElement('div');
-        testEvent.className = 'event-item';
-        testEvent.style.cssText = `
-            position: absolute;
-            visibility: hidden;
-            white-space: nowrap;
-        `;
+        // Measure the actual rendered event name width
+        const eventNameRect = eventName.getBoundingClientRect();
+        this.cachedEventTextWidth = eventNameRect.width;
         
-        const testEventName = document.createElement('div');
-        testEventName.className = 'event-name';
-        testEventName.textContent = 'Test';
-        testEvent.appendChild(testEventName);
+        logger.info('CALENDAR', `Measured actual event text width from fake event: ${this.cachedEventTextWidth}px`);
         
-        // Add to calendar day to get accurate styling
-        calendarDay.appendChild(testEvent);
-        
-        // Measure the actual available width for the event name
-        const eventNameRect = testEventName.getBoundingClientRect();
-        const eventRect = testEvent.getBoundingClientRect();
-        const dayRect = calendarDay.getBoundingClientRect();
-        
-        // Calculate available width: day width minus event padding/margins
-        const dayStyles = window.getComputedStyle(calendarDay);
-        const eventStyles = window.getComputedStyle(testEvent);
-        
-        const dayPaddingLeft = parseFloat(dayStyles.paddingLeft) || 0;
-        const dayPaddingRight = parseFloat(dayStyles.paddingRight) || 0;
-        const eventMarginLeft = parseFloat(eventStyles.marginLeft) || 0;
-        const eventMarginRight = parseFloat(eventStyles.marginRight) || 0;
-        const eventPaddingLeft = parseFloat(eventStyles.paddingLeft) || 0;
-        const eventPaddingRight = parseFloat(eventStyles.paddingRight) || 0;
-        
-        const availableWidth = dayRect.width - dayPaddingLeft - dayPaddingRight - 
-                              eventMarginLeft - eventMarginRight - 
-                              eventPaddingLeft - eventPaddingRight;
-        
-        // Clean up
-        calendarDay.removeChild(testEvent);
-        
-        this.cachedEventTextWidth = Math.max(availableWidth, 20); // Ensure minimum width
-        logger.info('CALENDAR', `Measured actual event text width: ${this.cachedEventTextWidth}px`, {
-            dayWidth: dayRect.width,
-            dayPadding: dayPaddingLeft + dayPaddingRight,
-            eventMargins: eventMarginLeft + eventMarginRight,
-            eventPadding: eventPaddingLeft + eventPaddingRight,
-            finalWidth: this.cachedEventTextWidth
-        });
         return this.cachedEventTextWidth;
     }
 
@@ -1866,8 +1817,20 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Show calendar structure first but hidden for measurements, with loading message visible
-        this.updatePageContent(this.currentCityConfig, [], true); // hideEvents = true, structure hidden
+        // Create a fake event for accurate width measurement
+        const fakeEvent = {
+            name: 'Test Event Name For Measurement',
+            shortName: 'Test Event',
+            bar: 'Test Venue',
+            time: '8:00 PM',
+            day: 'Today',
+            startDate: new Date(),
+            slug: 'measurement-test',
+            recurring: false
+        };
+        
+        // Show calendar structure first but hidden for measurements, with fake event for width calculation
+        this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true, structure hidden
         
         // Clear measurement cache to ensure fresh calculations with new DOM structure
         this.clearMeasurementCache();
