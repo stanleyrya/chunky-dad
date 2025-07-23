@@ -36,6 +36,9 @@ class DynamicCalendarLoader extends CalendarCore {
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
         
+        // Set up zoom detection listeners
+        this.setupZoomDetection();
+        
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
 
@@ -625,13 +628,51 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
+            // Detect zoom level to adjust calculations
+            let zoomFactor = 1;
+            try {
+                // Method 1: Use Visual Viewport API for pinch zoom (mobile)
+                if (window.visualViewport && window.visualViewport.scale !== undefined && window.visualViewport.scale !== 1) {
+                    zoomFactor = window.visualViewport.scale;
+                    logger.debug('CALENDAR', `Pinch zoom detected: ${(zoomFactor * 100).toFixed(1)}%`);
+                } else {
+                    // Method 2: Use devicePixelRatio for browser zoom (works on most browsers)
+                    // Store initial devicePixelRatio if not already stored
+                    if (!this.initialDevicePixelRatio) {
+                        this.initialDevicePixelRatio = window.devicePixelRatio || 1;
+                    }
+                    
+                    const currentDPR = window.devicePixelRatio || 1;
+                    if (Math.abs(currentDPR - this.initialDevicePixelRatio) > 0.1) {
+                        zoomFactor = currentDPR / this.initialDevicePixelRatio;
+                        logger.debug('CALENDAR', `Browser zoom detected via devicePixelRatio: ${(zoomFactor * 100).toFixed(1)}%`);
+                    }
+                    
+                    // Method 3: Fallback - use window dimensions ratio (less reliable)
+                    if (zoomFactor === 1 && window.outerWidth && window.innerWidth) {
+                        const dimensionRatio = window.outerWidth / window.innerWidth;
+                        if (dimensionRatio > 1.1 || dimensionRatio < 0.9) {
+                            zoomFactor = dimensionRatio;
+                            logger.debug('CALENDAR', `Zoom detected via window dimensions: ${(zoomFactor * 100).toFixed(1)}%`);
+                        }
+                    }
+                }
+            } catch (zoomError) {
+                logger.warn('CALENDAR', 'Could not detect zoom level, using default', zoomError);
+            }
+            
+            // Adjust charsPerPixel based on zoom factor
+            const adjustedCharsPerPixel = charsPerPixel * zoomFactor;
+            
             document.body.removeChild(testElement);
             
-            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char)`, {
+            logger.info('CALENDAR', `Calculated chars per pixel: ${adjustedCharsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${(zoomFactor * 100).toFixed(1)}%)`, {
                 width: width.toFixed(2),
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
                 charsPerPixel: charsPerPixel.toFixed(4),
+                zoomFactor: zoomFactor.toFixed(3),
+                adjustedCharsPerPixel: adjustedCharsPerPixel.toFixed(4),
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
@@ -639,8 +680,8 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             
             // Cache the result
-            this.charsPerPixel = charsPerPixel;
-            return charsPerPixel;
+            this.charsPerPixel = adjustedCharsPerPixel;
+            return adjustedCharsPerPixel;
         } catch (error) {
             logger.warn('CALENDAR', 'Could not calculate chars per pixel, using fallback', error);
             // Fallback to a reasonable estimate for 0.75rem Poppins
@@ -1894,6 +1935,53 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         logger.debug('CALENDAR', 'Resize listener set up for breakpoint change detection');
+    }
+    
+    // Set up zoom detection to recalculate measurements when zoom changes
+    setupZoomDetection() {
+        // Store initial values for comparison
+        this.lastDevicePixelRatio = window.devicePixelRatio || 1;
+        this.lastVisualViewportScale = window.visualViewport ? window.visualViewport.scale : 1;
+        
+        // Listen for Visual Viewport changes (mobile pinch zoom)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const currentScale = window.visualViewport.scale;
+                if (Math.abs(currentScale - this.lastVisualViewportScale) > 0.05) {
+                    logger.debug('CALENDAR', `Visual viewport scale changed: ${(this.lastVisualViewportScale * 100).toFixed(1)}% → ${(currentScale * 100).toFixed(1)}%`);
+                    this.lastVisualViewportScale = currentScale;
+                    this.clearMeasurementCache();
+                    this.clearEventNameCache();
+                    
+                    // Re-render calendar with new zoom calculations
+                    setTimeout(() => {
+                        this.updateCalendarDisplay();
+                    }, 100); // Small delay to let zoom animation settle
+                }
+            });
+        }
+        
+        // Listen for devicePixelRatio changes (browser zoom)
+        const checkZoomChange = () => {
+            const currentDPR = window.devicePixelRatio || 1;
+            if (Math.abs(currentDPR - this.lastDevicePixelRatio) > 0.1) {
+                logger.debug('CALENDAR', `Device pixel ratio changed: ${this.lastDevicePixelRatio.toFixed(2)} → ${currentDPR.toFixed(2)}`);
+                this.lastDevicePixelRatio = currentDPR;
+                this.clearMeasurementCache();
+                this.clearEventNameCache();
+                
+                // Re-render calendar with new zoom calculations
+                this.updateCalendarDisplay();
+            }
+        };
+        
+        // Check for zoom changes on resize (covers most browser zoom cases)
+        window.addEventListener('resize', checkZoomChange);
+        
+        // Also check periodically in case zoom changes don't trigger resize
+        setInterval(checkZoomChange, 1000);
+        
+        logger.debug('CALENDAR', 'Zoom detection set up for font size adjustment');
     }
     
     // Add test event (for testing functionality)

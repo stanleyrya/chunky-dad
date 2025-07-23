@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Detection Test - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .zoom-info {
+            background: #f0f8ff;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .zoom-metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .zoom-metric:last-child {
+            border-bottom: none;
+        }
+        
+        .test-text {
+            font-size: var(--event-name-font-size);
+            font-weight: var(--event-name-font-weight);
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            background: #fff;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .update-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .update-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 Zoom Detection Test</h1>
+        
+        <div class="instructions">
+            <h3>Test Instructions:</h3>
+            <ul>
+                <li><strong>Desktop:</strong> Use Ctrl+/- (Windows/Linux) or Cmd+/- (Mac) to zoom</li>
+                <li><strong>Mobile:</strong> Use pinch-to-zoom gesture</li>
+                <li>Watch the values below update as you zoom</li>
+                <li>The hyphenation logic should adjust to maintain proper text fitting</li>
+            </ul>
+        </div>
+        
+        <button class="update-btn" onclick="updateZoomInfo()">Update Zoom Info</button>
+        
+        <div class="zoom-info">
+            <h3>Current Zoom Detection:</h3>
+            <div class="zoom-metric">
+                <span>Visual Viewport Scale:</span>
+                <span id="visual-viewport-scale">-</span>
+            </div>
+            <div class="zoom-metric">
+                <span>Device Pixel Ratio:</span>
+                <span id="device-pixel-ratio">-</span>
+            </div>
+            <div class="zoom-metric">
+                <span>Window Dimensions Ratio:</span>
+                <span id="window-ratio">-</span>
+            </div>
+            <div class="zoom-metric">
+                <span>Screen vs Inner Width:</span>
+                <span id="screen-inner-ratio">-</span>
+            </div>
+            <div class="zoom-metric">
+                <span>Detected Zoom Level:</span>
+                <span id="detected-zoom" style="font-weight: bold; color: #e74c3c;">-</span>
+            </div>
+        </div>
+        
+        <div class="zoom-info">
+            <h3>Font Measurement Test:</h3>
+            <div class="zoom-metric">
+                <span>Characters per Pixel:</span>
+                <span id="chars-per-pixel">-</span>
+            </div>
+            <div class="zoom-metric">
+                <span>Available Text Width:</span>
+                <span id="text-width">-</span>
+            </div>
+            <div class="zoom-metric">
+                <span>Calculated Char Limit:</span>
+                <span id="char-limit">-</span>
+            </div>
+        </div>
+        
+        <div class="test-text" id="sample-text">
+            Sample event name: "Bear Pride Weekend Pool Party"
+        </div>
+        
+        <div class="zoom-info">
+            <h3>Real-time Updates:</h3>
+            <div id="zoom-log" style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                <em>Zoom changes will be logged here...</em>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/logger.js"></script>
+    <script>
+        let initialDevicePixelRatio = window.devicePixelRatio || 1;
+        let lastVisualViewportScale = window.visualViewport ? window.visualViewport.scale : 1;
+        let lastDevicePixelRatio = window.devicePixelRatio || 1;
+        
+        function updateZoomInfo() {
+            // Visual Viewport Scale
+            const visualScale = window.visualViewport ? window.visualViewport.scale : 1;
+            document.getElementById('visual-viewport-scale').textContent = 
+                `${(visualScale * 100).toFixed(1)}%`;
+            
+            // Device Pixel Ratio
+            const dpr = window.devicePixelRatio || 1;
+            document.getElementById('device-pixel-ratio').textContent = 
+                `${dpr.toFixed(2)}`;
+            
+            // Window Dimensions Ratio
+            const windowRatio = window.outerWidth && window.innerWidth ? 
+                (window.outerWidth / window.innerWidth) : 1;
+            document.getElementById('window-ratio').textContent = 
+                `${windowRatio.toFixed(2)}`;
+            
+            // Screen vs Inner Width
+            const screenRatio = window.screen && window.screen.width ? 
+                (window.screen.width / window.innerWidth) : 1;
+            document.getElementById('screen-inner-ratio').textContent = 
+                `${screenRatio.toFixed(2)}`;
+            
+            // Detected Zoom Level (using the same logic as the calendar)
+            let detectedZoom = 1;
+            try {
+                // Method 1: Visual Viewport API (mobile pinch zoom)
+                if (window.visualViewport && window.visualViewport.scale !== undefined && window.visualViewport.scale !== 1) {
+                    detectedZoom = window.visualViewport.scale;
+                } else {
+                    // Method 2: Device Pixel Ratio (browser zoom)
+                    if (Math.abs(dpr - initialDevicePixelRatio) > 0.1) {
+                        detectedZoom = dpr / initialDevicePixelRatio;
+                    } else if (window.outerWidth && window.innerWidth) {
+                        // Method 3: Window dimensions
+                        if (windowRatio > 1.1 || windowRatio < 0.9) {
+                            detectedZoom = windowRatio;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Zoom detection error:', e);
+            }
+            
+            document.getElementById('detected-zoom').textContent = 
+                `${(detectedZoom * 100).toFixed(1)}%`;
+            
+            // Font measurement test
+            measureFontMetrics();
+        }
+        
+        function measureFontMetrics() {
+            try {
+                // Create test element (same as calendar logic)
+                const testElement = document.createElement('div');
+                testElement.style.cssText = `
+                    position: absolute;
+                    visibility: hidden;
+                    white-space: nowrap;
+                    font-family: 'Poppins', sans-serif;
+                    font-size: var(--event-name-font-size);
+                    font-weight: var(--event-name-font-weight);
+                    line-height: var(--event-name-line-height);
+                `;
+                
+                testElement.textContent = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
+                document.body.appendChild(testElement);
+                
+                const width = testElement.getBoundingClientRect().width;
+                const charCount = testElement.textContent.length;
+                const pixelsPerChar = width / charCount;
+                const charsPerPixel = 1 / pixelsPerChar;
+                
+                document.body.removeChild(testElement);
+                
+                // Apply zoom adjustment
+                const dpr = window.devicePixelRatio || 1;
+                let zoomFactor = 1;
+                if (window.visualViewport && window.visualViewport.scale !== 1) {
+                    zoomFactor = window.visualViewport.scale;
+                } else if (Math.abs(dpr - initialDevicePixelRatio) > 0.1) {
+                    zoomFactor = dpr / initialDevicePixelRatio;
+                }
+                
+                const adjustedCharsPerPixel = charsPerPixel * zoomFactor;
+                
+                // Simulate available width (like calendar events)
+                const availableWidth = Math.min(window.innerWidth * 0.8, 300); // Rough estimate
+                const charLimit = Math.floor(availableWidth * adjustedCharsPerPixel);
+                
+                document.getElementById('chars-per-pixel').textContent = 
+                    `${adjustedCharsPerPixel.toFixed(4)} (zoom: ${(zoomFactor * 100).toFixed(1)}%)`;
+                document.getElementById('text-width').textContent = 
+                    `${availableWidth.toFixed(0)}px`;
+                document.getElementById('char-limit').textContent = 
+                    `${charLimit} chars`;
+                
+            } catch (error) {
+                console.error('Font measurement error:', error);
+                document.getElementById('chars-per-pixel').textContent = 'Error';
+                document.getElementById('text-width').textContent = 'Error';
+                document.getElementById('char-limit').textContent = 'Error';
+            }
+        }
+        
+        function logZoomChange(type, oldValue, newValue) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type}: ${oldValue} → ${newValue}`;
+            const logElement = document.getElementById('zoom-log');
+            
+            const div = document.createElement('div');
+            div.textContent = logEntry;
+            div.style.color = '#e74c3c';
+            div.style.marginBottom = '2px';
+            
+            logElement.appendChild(div);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            // Update display
+            updateZoomInfo();
+        }
+        
+        // Set up zoom change detection
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const currentScale = window.visualViewport.scale;
+                if (Math.abs(currentScale - lastVisualViewportScale) > 0.05) {
+                    logZoomChange('Visual Viewport Scale', 
+                        `${(lastVisualViewportScale * 100).toFixed(1)}%`, 
+                        `${(currentScale * 100).toFixed(1)}%`);
+                    lastVisualViewportScale = currentScale;
+                }
+            });
+        }
+        
+        window.addEventListener('resize', () => {
+            const currentDPR = window.devicePixelRatio || 1;
+            if (Math.abs(currentDPR - lastDevicePixelRatio) > 0.1) {
+                logZoomChange('Device Pixel Ratio', 
+                    lastDevicePixelRatio.toFixed(2), 
+                    currentDPR.toFixed(2));
+                lastDevicePixelRatio = currentDPR;
+            }
+        });
+        
+        // Initial update
+        updateZoomInfo();
+        
+        // Periodic updates to catch any missed changes
+        setInterval(updateZoomInfo, 2000);
+    </script>
+</body>
+</html>

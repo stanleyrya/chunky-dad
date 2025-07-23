@@ -1,45 +1,50 @@
 {
-  "generated": "2025-07-23T01:00:00.953Z",
+  "generated": "2025-07-23T03:03:39.991Z",
   "files": [
     {
       "name": "breakpoint-test.html",
       "size": 34162,
-      "modified": "2025-07-23T00:52:37.969Z"
+      "modified": "2025-07-23T03:00:09.604Z"
     },
     {
       "name": "hyphenation-debug-test.html",
-      "size": 13460,
-      "modified": "2025-07-23T00:53:46.909Z"
+      "size": 20295,
+      "modified": "2025-07-23T03:00:09.604Z"
     },
     {
       "name": "index.html",
       "size": 18216,
-      "modified": "2025-07-23T00:54:00.977Z"
+      "modified": "2025-07-23T03:00:09.604Z"
     },
     {
       "name": "style-test.html",
       "size": 26192,
-      "modified": "2025-07-23T00:48:28.448Z"
+      "modified": "2025-07-23T03:00:09.604Z"
     },
     {
       "name": "test-calendar-logging.html",
       "size": 67746,
-      "modified": "2025-07-23T00:48:28.448Z"
+      "modified": "2025-07-23T03:00:09.604Z"
     },
     {
       "name": "test-display-modes.html",
       "size": 10729,
-      "modified": "2025-07-23T00:48:28.448Z"
+      "modified": "2025-07-23T03:00:09.604Z"
     },
     {
       "name": "test-google-sheets-loader.html",
       "size": 40202,
-      "modified": "2025-07-23T00:48:28.448Z"
+      "modified": "2025-07-23T03:00:09.604Z"
     },
     {
       "name": "ultimate-style-tester.html",
       "size": 110803,
-      "modified": "2025-07-23T00:48:28.448Z"
+      "modified": "2025-07-23T03:00:09.604Z"
+    },
+    {
+      "name": "zoom-detection-test.html",
+      "size": 11732,
+      "modified": "2025-07-23T03:03:35.527Z"
     }
   ]
 }
