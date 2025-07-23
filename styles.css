@@ -3585,35 +3585,14 @@ footer {
     }
 }
 
-/* Breakpoint-specific event name display */
-.event-name-xs,
-.event-name-sm,
-.event-name-md,
-.event-name-lg {
-  display: none;
+/* Event name styling - now handled dynamically in JavaScript */
+.event-name {
   font-size: var(--event-name-font-size);
   font-weight: var(--event-name-font-weight);
   line-height: var(--event-name-line-height);
   margin-bottom: 0.1rem;
   word-wrap: normal;
   overflow-wrap: normal;
-}
-
-/* Show appropriate event name based on screen size */
-@media (max-width: 374px) {
-  .event-name-xs { display: block; }
-}
-
-@media (min-width: 375px) and (max-width: 767px) {
-  .event-name-sm { display: block; }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  .event-name-md { display: block; }
-}
-
-@media (min-width: 1024px) {
-  .event-name-lg { display: block; }
 }
 
 /* Legacy mobile-specific rules for compatibility */
@@ -3623,9 +3602,6 @@ footer {
 }
 
 @media (max-width: 768px) {
-  .event-name:not(.event-name-xs):not(.event-name-sm):not(.event-name-md):not(.event-name-lg) {
-    display: none;
-  }
   .event-venue {
     display: none;
   }
