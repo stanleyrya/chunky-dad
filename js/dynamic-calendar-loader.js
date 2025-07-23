@@ -1796,10 +1796,10 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // STEP 1: Show loading message while we load events
-        this.showLoadingMessage();
+        // Show empty calendar structure immediately (existing loading message will show in events section)
+        this.showEmptyCalendarStructure();
         
-        // STEP 2: Load calendar data and update normally
+        // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
         if (data) {
             logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
@@ -1809,13 +1809,8 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Show loading message in events section
-    showLoadingMessage() {
-        const eventsList = document.querySelector('.events-list');
-        if (eventsList) {
-            eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
-        }
-        
+    // Show empty calendar structure so we can measure from it
+    showEmptyCalendarStructure() {
         // Set up calendar controls and show empty calendar structure
         this.setupCalendarControls();
         
