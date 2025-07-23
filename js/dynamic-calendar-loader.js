@@ -650,7 +650,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Get the actual width available for event text using a hidden measurement div
+    // Get the actual width available for event text using real calendar elements
     getEventTextWidth() {
         try {
             // Check if we already have a cached measurement
@@ -658,46 +658,71 @@ class DynamicCalendarLoader extends CalendarCore {
                 return this.cachedEventTextWidth;
             }
             
-            // Create a hidden measurement div that matches the actual event item structure
+            // First try to measure from an existing real event element
+            const realEventElement = document.querySelector('.calendar-day .event-item .event-name');
+            if (realEventElement) {
+                const availableWidth = realEventElement.getBoundingClientRect().width;
+                if (availableWidth > 50) {
+                    this.cachedEventTextWidth = availableWidth;
+                    logger.info('CALENDAR', `Measured event text width from real element: ${availableWidth}px`);
+                    return availableWidth;
+                }
+            }
+            
+            // Fallback: create measurement element that matches actual calendar structure
             const measurementDiv = document.createElement('div');
             measurementDiv.style.cssText = `
                 position: absolute;
                 visibility: hidden;
                 top: -9999px;
                 left: -9999px;
+                width: 100vw;
             `;
             
-            // Create the same structure as a real event item
+            // Create exact structure matching real calendar with proper CSS classes
             measurementDiv.innerHTML = `
-                <div class="calendar-day">
-                    <div class="event-item">
-                        <div class="event-name">Test Event Name</div>
+                <div class="container">
+                    <div class="calendar-grid week-view-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1rem;">
+                        <div class="calendar-day week-view">
+                            <div class="event-item">
+                                <div class="event-name">Test Event Name</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(measurementDiv);
             
-            // Get the width of the event-name element
+            // Get the width of the event-name element in the real structure
             const eventNameElement = measurementDiv.querySelector('.event-name');
             const availableWidth = eventNameElement.getBoundingClientRect().width;
             
             document.body.removeChild(measurementDiv);
             
-            // Only cache valid measurements (> 50px to avoid 0px during transitions)
-            if (availableWidth > 50) {
+            // Only cache valid measurements (> 30px to account for mobile constraints)
+            if (availableWidth > 30) {
                 this.cachedEventTextWidth = availableWidth;
-                logger.info('CALENDAR', `Measured event text width: ${availableWidth}px`);
+                logger.info('CALENDAR', `Measured event text width from test structure: ${availableWidth}px`);
                 return availableWidth;
             } else {
-                logger.warn('CALENDAR', `Invalid measurement: ${availableWidth}px, skipping cache`);
-                // Don't cache, just return a reasonable default
-                return 200;
+                logger.warn('CALENDAR', `Invalid measurement: ${availableWidth}px, using responsive fallback`);
+                // Use responsive fallback based on screen width
+                const screenWidth = window.innerWidth;
+                if (screenWidth <= 374) return 45;  // xs breakpoint
+                if (screenWidth <= 767) return 80;  // sm breakpoint  
+                if (screenWidth <= 1023) return 120; // md breakpoint
+                return 150; // lg breakpoint
             }
             
         } catch (error) {
-            logger.warn('CALENDAR', 'Could not measure event text width, using fallback', error);
-            return 200;
+            logger.warn('CALENDAR', 'Could not measure event text width, using responsive fallback', error);
+            // Use responsive fallback based on screen width
+            const screenWidth = window.innerWidth;
+            if (screenWidth <= 374) return 45;  // xs breakpoint
+            if (screenWidth <= 767) return 80;  // sm breakpoint  
+            if (screenWidth <= 1023) return 120; // md breakpoint
+            return 150; // lg breakpoint
         }
     }
 
@@ -1564,10 +1589,13 @@ class DynamicCalendarLoader extends CalendarCore {
             city: this.currentCity
         });
         
+        // Clear measurement cache when updating display to get fresh measurements
+        this.clearMeasurementCache();
+        
         // Update calendar title
         const calendarTitle = document.getElementById('calendar-title');
         if (calendarTitle) {
-            calendarTitle.textContent = `What's the vibe?`;
+            calendarTitle.textContent = `${this.currentCityConfig?.emoji || '🏙️'} ${this.currentCityConfig?.name || 'Events'}`;
         }
         
         // Update date range
@@ -1618,16 +1646,37 @@ class DynamicCalendarLoader extends CalendarCore {
             if (filteredEvents?.length > 0) {
                 eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
             } else {
-                eventsList.innerHTML = '';
+                eventsList.innerHTML = `
+                    <div class="no-events-state">
+                        <h3>📅 No Events This ${this.currentView === 'week' ? 'Week' : 'Month'}</h3>
+                        <p>Check back soon or try a different date range!</p>
+                        <div class="no-events-actions">
+                            <button onclick="window.calendarLoader.goToToday()" class="today-button">📅 Go to Today</button>
+                            <button onclick="window.calendarLoader.currentView = '${this.currentView === 'week' ? 'month' : 'week'}'; window.calendarLoader.updateCalendarDisplay();" class="view-switch-button">
+                                📊 Switch to ${this.currentView === 'week' ? 'Month' : 'Week'} View
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
         }
         
         // Update map (show for both week and month views)
         const mapSection = document.querySelector('.events-map-section');
         if (mapSection) {
-            mapSection.style.display = 'block';
-            this.initializeMap(this.currentCityConfig, filteredEvents);
+            if (filteredEvents?.length > 0) {
+                mapSection.style.display = 'block';
+                this.initializeMap(this.currentCityConfig, filteredEvents);
+            } else {
+                mapSection.style.display = 'none';
+            }
         }
+        
+        // After events are loaded, re-measure text width for accuracy
+        setTimeout(() => {
+            this.clearMeasurementCache();
+            logger.debug('CALENDAR', 'Re-measuring text width after events loaded');
+        }, 100);
         
         logger.timeEnd('CALENDAR', 'Calendar display update');
         logger.performance('CALENDAR', `Calendar display updated successfully`, {
@@ -1794,7 +1843,7 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', `Attached interactions to ${eventItems.length} calendar items`);
     }
 
-    // Main render function
+    // Main render function - simplified loading approach
     async renderCityPage() {
         this.currentCity = this.getCityFromURL();
         this.currentCityConfig = getCityConfig(this.currentCity);
@@ -1816,20 +1865,195 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
+        // SIMPLIFIED LOADING: First show empty calendar with loading state
+        this.showInitialLoadingState();
+        
         if (!hasCityCalendar(this.currentCity)) {
             logger.info('CITY', `City ${this.currentCity} doesn't have calendar configured yet`);
             this.updatePageContent(this.currentCityConfig, []);
             return;
         }
         
-        // Load calendar data
-        const data = await this.loadCalendarData(this.currentCity);
-        if (data) {
-            logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
-                eventCount: data.events.length
-            });
-            this.updatePageContent(data.cityConfig, data.events);
+        // Load calendar data in background and update when ready
+        try {
+            const data = await this.loadCalendarData(this.currentCity);
+            if (data) {
+                logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
+                    eventCount: data.events.length
+                });
+                this.updatePageContent(data.cityConfig, data.events);
+            }
+        } catch (error) {
+            logger.componentError('CITY', 'Failed to load calendar data', error);
+            this.showLoadingError();
         }
+    }
+
+    // Show initial loading state with empty calendar
+    showInitialLoadingState() {
+        logger.componentInit('CALENDAR', 'Showing initial loading state');
+        
+        // Store city config for display
+        this.currentCityConfig = getCityConfig(this.currentCity);
+        
+        // Initialize empty calendar structure immediately
+        this.setupCalendarControls();
+        
+        // Show empty calendar grid with loading indicator
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.innerHTML = this.generateEmptyCalendarWithLoading();
+        }
+        
+        // Show loading state in events section
+        const eventsList = document.querySelector('.events-list');
+        if (eventsList) {
+            eventsList.innerHTML = `
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <h3>📅 Loading Events...</h3>
+                    <p>Getting the latest bear events for ${this.currentCityConfig?.name || 'this city'}</p>
+                </div>
+            `;
+        }
+        
+        // Hide map initially
+        const mapSection = document.querySelector('.events-map-section');
+        if (mapSection) {
+            mapSection.style.display = 'none';
+        }
+        
+        // Update calendar title and show current city
+        const calendarTitle = document.getElementById('calendar-title');
+        if (calendarTitle) {
+            calendarTitle.textContent = `${this.currentCityConfig?.emoji || '🏙️'} ${this.currentCityConfig?.name || 'Loading...'} Events`;
+        }
+        
+        // Show current date range
+        const dateRange = document.getElementById('date-range');
+        if (dateRange) {
+            const { start, end } = this.getCurrentPeriodBounds();
+            dateRange.textContent = this.formatDateRange(start, end);
+        }
+    }
+
+    // Generate empty calendar structure with loading indicators
+    generateEmptyCalendarWithLoading() {
+        const { start, end } = this.getCurrentPeriodBounds();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (this.currentView === 'week') {
+            return this.generateEmptyWeekView(start, end, today);
+        } else {
+            return this.generateEmptyMonthView(start, end, today);
+        }
+    }
+
+    // Generate empty week view with loading placeholders
+    generateEmptyWeekView(start, end, today) {
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = [];
+        
+        for (let i = 0; i < 7; i++) {
+            const currentDay = new Date(start);
+            currentDay.setDate(start.getDate() + i);
+            days.push(currentDay);
+        }
+
+        return days.map(day => {
+            const isToday = day.getTime() === today.getTime();
+            const currentClass = isToday ? ' current' : '';
+            const dayName = daysOfWeek[day.getDay()];
+
+            return `
+                <div class="calendar-day week-view${currentClass}" data-day="${dayName}" data-date="${day.toISOString().split('T')[0]}">
+                    <div class="day-header">
+                        <h3>${dayName}</h3>
+                        <div class="day-meta">
+                            <div class="day-date">${day.getDate()}</div>
+                        </div>
+                    </div>
+                    <div class="daily-events">
+                        <div class="loading-placeholder">
+                            <div class="loading-dots">⋯</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Generate empty month view with loading placeholders
+    generateEmptyMonthView(start, end, today) {
+        // Add day headers first
+        const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const headerHtml = dayHeaders.map(day => `
+            <div class="calendar-day-header">
+                <h4>${day}</h4>
+            </div>
+        `).join('');
+        
+        // Calculate calendar grid
+        const firstDay = new Date(start);
+        const lastDay = new Date(end);
+        const calendarStart = new Date(firstDay);
+        calendarStart.setDate(firstDay.getDate() - firstDay.getDay());
+        
+        const totalDays = Math.ceil((lastDay.getTime() - calendarStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const weeksNeeded = Math.ceil(totalDays / 7);
+        const calendarEnd = new Date(calendarStart);
+        calendarEnd.setDate(calendarStart.getDate() + (weeksNeeded * 7) - 1);
+        
+        const days = [];
+        const current = new Date(calendarStart);
+        
+        while (current <= calendarEnd) {
+            days.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+
+        const daysHtml = days.map(day => {
+            const isToday = day.getTime() === today.getTime();
+            const isCurrentMonth = day.getMonth() === start.getMonth();
+            const currentClass = isToday ? ' current' : '';
+            const otherMonthClass = isCurrentMonth ? '' : ' other-month';
+
+            return `
+                <div class="calendar-day month-day${currentClass}${otherMonthClass}" data-date="${day.toISOString().split('T')[0]}">
+                    <div class="day-header">
+                        <span class="day-number">${day.getDate()}</span>
+                        ${isToday ? `<span class="day-indicator">Today</span>` : ''}
+                    </div>
+                    <div class="day-events">
+                        ${isCurrentMonth ? `<div class="loading-placeholder"><div class="loading-dots">⋯</div></div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return headerHtml + daysHtml;
+    }
+
+    // Show loading error state
+    showLoadingError() {
+        const eventsList = document.querySelector('.events-list');
+        if (eventsList) {
+            eventsList.innerHTML = `
+                <div class="error-state">
+                    <h3>📅 Trouble Loading Events</h3>
+                    <p>We're having trouble getting the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
+                    <div class="error-actions">
+                        <button onclick="location.reload()" class="retry-button">🔄 Try Again</button>
+                        <p><small>Or check our social media for updates</small></p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Clear loading placeholders from calendar
+        const loadingPlaceholders = document.querySelectorAll('.loading-placeholder');
+        loadingPlaceholders.forEach(placeholder => placeholder.remove());
     }
 
 
@@ -1933,10 +2157,56 @@ class DynamicCalendarLoader extends CalendarCore {
         this.updateCalendarDisplay();
     }
 
+    // Debug method to manually re-measure and log text width
+    debugTextWidthMeasurement() {
+        logger.info('CALENDAR', 'Manual text width measurement debug');
+        
+        // Clear cache and force fresh measurement
+        this.clearMeasurementCache();
+        
+        // Try measuring from real element first
+        const realEventElement = document.querySelector('.calendar-day .event-item .event-name');
+        if (realEventElement) {
+            const realWidth = realEventElement.getBoundingClientRect().width;
+            logger.info('CALENDAR', `Real element width: ${realWidth}px`, {
+                element: realEventElement,
+                computedStyle: window.getComputedStyle(realEventElement),
+                parentWidth: realEventElement.parentElement?.getBoundingClientRect().width
+            });
+        }
+        
+        // Measure using test structure
+        const testWidth = this.getEventTextWidth();
+        logger.info('CALENDAR', `Test structure width: ${testWidth}px`);
+        
+        // Calculate characters per pixel
+        const charsPerPixel = this.calculateCharsPerPixel();
+        logger.info('CALENDAR', `Characters per pixel: ${charsPerPixel.toFixed(4)}`);
+        
+        // Show current breakpoint and screen info
+        logger.info('CALENDAR', 'Current screen info', {
+            screenWidth: window.innerWidth,
+            breakpoint: this.getCurrentBreakpoint(),
+            devicePixelRatio: window.devicePixelRatio
+        });
+        
+        return {
+            realWidth: realEventElement ? realEventElement.getBoundingClientRect().width : null,
+            testWidth,
+            charsPerPixel,
+            screenWidth: window.innerWidth,
+            breakpoint: this.getCurrentBreakpoint()
+        };
+    }
+
     // Initialize
     async init() {
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         await this.renderCityPage();
+        
+        // Make debug method available globally for testing
+        window.debugCalendarWidth = () => this.debugTextWidthMeasurement();
+        logger.debug('CALENDAR', 'Debug method available: window.debugCalendarWidth()');
     }
 }
 
