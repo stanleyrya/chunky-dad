@@ -4183,6 +4183,12 @@ footer {
     font-weight: bold;
 }
 
+.debug-header-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
 .debug-header:active {
     cursor: grabbing;
 }
@@ -4193,25 +4199,35 @@ footer {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.debug-close {
+.debug-close,
+.debug-toggle,
+.debug-minimize {
     background: none;
     border: none;
     color: #fff;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
     padding: 0;
     width: 20px;
     height: 20px;
-    border-radius: 50%;
+    border-radius: 3px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background-color 0.2s;
+    line-height: 1;
 }
 
-.debug-close:hover {
+.debug-close:hover,
+.debug-toggle:hover,
+.debug-minimize:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+.debug-close {
+    font-size: 16px;
+    border-radius: 50%;
 }
 
 .debug-content {
@@ -4250,6 +4266,26 @@ footer {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Compact row layout for essential info */
+.debug-compact-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.debug-compact-row .debug-label {
+    min-width: auto;
+    font-size: 10px;
+}
+
+.debug-compact-row .debug-value {
+    max-width: none;
+    text-align: left;
+    font-size: 10px;
 }
 
 /* Breakpoint-specific colors */
@@ -4309,17 +4345,42 @@ footer {
     background: linear-gradient(135deg, #333, #444);
 }
 
+/* View state management */
+.debug-overlay.debug-compact .debug-extended,
+.debug-overlay.debug-compact .debug-controls {
+    display: none;
+}
+
+.debug-overlay.debug-minimized .debug-content {
+    display: none;
+}
+
+.debug-overlay.debug-minimized {
+    min-width: auto;
+    width: auto;
+}
+
+.debug-overlay.debug-full .debug-essential {
+    display: none;
+}
+
 /* Mobile responsiveness for debug overlay */
 @media (max-width: 480px) {
     .debug-overlay {
-        min-width: 180px;
-        max-width: 250px;
+        min-width: 160px;
+        max-width: 220px;
         font-size: 10px;
         touch-action: none; /* Prevent browser gestures while dragging */
     }
     
+    /* Compact mode is even smaller on mobile */
+    .debug-overlay.debug-compact {
+        min-width: 140px;
+        max-width: 180px;
+    }
+    
     .debug-header {
-        padding: 12px 15px; /* Larger touch target */
+        padding: 10px 12px; /* Larger touch target but more compact */
         touch-action: none;
     }
     
@@ -4328,27 +4389,49 @@ footer {
     }
     
     .debug-content {
-        padding: 10px;
+        padding: 8px;
     }
     
     .debug-label {
-        min-width: 60px;
+        min-width: 50px;
+        font-size: 9px;
     }
     
     .debug-value {
-        max-width: 100px;
+        max-width: 80px;
+        font-size: 9px;
+    }
+    
+    .debug-close,
+    .debug-toggle,
+    .debug-minimize {
+        width: 22px;
+        height: 22px;
+        font-size: 16px; /* Larger touch target */
     }
     
     .debug-close {
-        width: 24px;
-        height: 24px;
-        font-size: 18px; /* Larger touch target */
+        font-size: 18px;
     }
     
     .debug-btn {
-        padding: 8px 12px;
+        padding: 6px 10px;
+        font-size: 8px;
+        min-height: 28px; /* Larger touch target but more compact */
+    }
+    
+    /* Compact row adjustments for mobile */
+    .debug-compact-row {
+        gap: 6px;
+        padding: 2px 0;
+    }
+    
+    .debug-compact-row .debug-label {
         font-size: 9px;
-        min-height: 32px; /* Larger touch target */
+    }
+    
+    .debug-compact-row .debug-value {
+        font-size: 9px;
     }
 }
 
