@@ -922,6 +922,9 @@ header {
     margin-bottom: 1rem;
     position: relative;
     z-index: 2;
+    touch-action: pan-y;
+    user-select: none;
+    will-change: transform, opacity, background-color;
 }
 
 .calendar-grid.fade-in {
@@ -937,56 +940,6 @@ header {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* Swipe animations - Disabled in favor of JavaScript-controlled animations */
-/* These CSS animations were conflicting with the JavaScript swipe implementation */
-/*
-.calendar-grid.swipe-left {
-    animation: swipeLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.calendar-grid.swipe-right {
-    animation: swipeRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes swipeLeft {
-    0% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    50% {
-        transform: translateX(-20px);
-        opacity: 0.7;
-    }
-    100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes swipeRight {
-    0% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    50% {
-        transform: translateX(20px);
-        opacity: 0.7;
-    }
-    100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-*/
-
-/* Touch feedback for calendar grid */
-.calendar-grid {
-    touch-action: pan-y; /* Allow vertical scrolling, handle horizontal swipes ourselves */
-    user-select: none; /* Prevent text selection during swipes */
-    position: relative; /* Ensure proper positioning for swipe animations */
-    will-change: transform, opacity, background-color; /* Optimize for animations */
 }
 
 .calendar-day {
@@ -1184,9 +1137,7 @@ header {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* Mobile optimizations for unified calendar */
 @media (max-width: 768px) {
-    
     .calendar-day {
         padding: 0.5rem;
         min-height: 100px;
@@ -2348,8 +2299,6 @@ footer {
         font-size: 0.6rem;
     }
 
-    /* Mobile-first calendar views - show minimal information */
-
     /* Remove container padding for small screens */
     .weekly-calendar .container {
         padding: 0;
@@ -2452,8 +2401,6 @@ footer {
         font-size: 0.45rem;
         padding: 0.1rem 0.2rem;
     }
-
-    /* Calendar views for very small screens */
 
     .calendar-day.month-day {
         min-height: 50px;
@@ -3269,9 +3216,6 @@ footer {
 
 /* For larger tablets, show both but make buttons smaller */
 @media (min-width: 769px) and (max-width: 1024px) {
-
-    /* Enhanced Calendar Views for tablets - show full information */
-    
     .calendar-grid.week-view-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     }
@@ -3519,8 +3463,6 @@ footer {
     .event-item.enhanced .event-venue-mobile {
         display: none !important;
     }
-
-    /* Enhanced spacing for desktop */
 
     .calendar-day.week-view {
         min-height: 200px;
