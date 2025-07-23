@@ -652,36 +652,24 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Get the actual width available for event text using a real calendar day
     getEventTextWidth() {
-        try {
-            // Check if we already have a cached measurement
-            if (this.cachedEventTextWidth) {
-                return this.cachedEventTextWidth;
-            }
-            
-            // Measure from a real calendar day div that's already displayed
-            const calendarDay = document.querySelector('.calendar-day');
-            if (calendarDay) {
-                // Get the width of the day container minus padding
-                const dayRect = calendarDay.getBoundingClientRect();
-                const dayStyles = window.getComputedStyle(calendarDay);
-                const paddingLeft = parseFloat(dayStyles.paddingLeft) || 0;
-                const paddingRight = parseFloat(dayStyles.paddingRight) || 0;
-                const availableWidth = dayRect.width - paddingLeft - paddingRight;
-                
-                if (availableWidth > 30) {
-                    this.cachedEventTextWidth = availableWidth;
-                    logger.info('CALENDAR', `Measured event text width from real day: ${availableWidth}px`);
-                    return availableWidth;
-                }
-            }
-            
-            logger.warn('CALENDAR', 'Could not measure from real calendar day, using fallback');
-            return 150; // Simple fallback
-            
-        } catch (error) {
-            logger.warn('CALENDAR', 'Could not measure event text width, using fallback', error);
-            return 150;
+        // Check if we already have a cached measurement
+        if (this.cachedEventTextWidth) {
+            return this.cachedEventTextWidth;
         }
+        
+        // Measure from a real calendar day div that's already displayed
+        const calendarDay = document.querySelector('.calendar-day');
+        
+        // Get the width of the day container minus padding
+        const dayRect = calendarDay.getBoundingClientRect();
+        const dayStyles = window.getComputedStyle(calendarDay);
+        const paddingLeft = parseFloat(dayStyles.paddingLeft) || 0;
+        const paddingRight = parseFloat(dayStyles.paddingRight) || 0;
+        const availableWidth = dayRect.width - paddingLeft - paddingRight;
+        
+        this.cachedEventTextWidth = availableWidth;
+        logger.info('CALENDAR', `Measured event text width from real day: ${availableWidth}px`);
+        return availableWidth;
     }
 
     // Clear cached measurements (call when layout changes)
