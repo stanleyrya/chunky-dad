@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Overlay Mobile Test - chunky.dad</title>
+    <meta name="description" content="Testing improved debug overlay with mobile responsiveness and view states">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .mobile-simulator {
+            width: 375px;
+            height: 667px;
+            border: 2px solid #333;
+            border-radius: 20px;
+            margin: 20px auto;
+            overflow: hidden;
+            position: relative;
+            background: #fff;
+        }
+        .mobile-content {
+            padding: 20px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .test-btn:hover {
+            background: #f7931e;
+        }
+        .instructions {
+            background: #e8f4f8;
+            padding: 15px;
+            border-left: 4px solid #ff6b35;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🐻 Debug Overlay Mobile Test</h1>
+        
+        <div class="instructions">
+            <h3>📱 Mobile Debug Overlay Improvements</h3>
+            <p>This page tests the improved debug overlay with:</p>
+            <ul>
+                <li><strong>Compact Mode:</strong> Shows only essential info (size + breakpoint) in a compact layout</li>
+                <li><strong>Full Mode:</strong> Shows all debug information</li>
+                <li><strong>Minimized Mode:</strong> Shows only the header bar</li>
+                <li><strong>Smart Defaults:</strong> Starts compact on mobile, full on desktop</li>
+                <li><strong>Better Touch Targets:</strong> Larger buttons for mobile interaction</li>
+            </ul>
+        </div>
+
+        <div class="test-buttons">
+            <button class="test-btn" onclick="window.location.href = '?debug=true'">Enable Debug Overlay</button>
+            <button class="test-btn" onclick="testViewStates()">Test View States</button>
+            <button class="test-btn" onclick="simulateResize()">Simulate Resize</button>
+            <button class="test-btn" onclick="window.location.href = window.location.pathname">Disable Debug</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 View State Controls</h3>
+            <p>When debug overlay is active, you can:</p>
+            <ul>
+                <li><strong>Toggle View (⌃/⌄):</strong> Switch between compact and full modes</li>
+                <li><strong>Minimize (-):</strong> Collapse to header only</li>
+                <li><strong>Restore (+):</strong> Expand from minimized state</li>
+                <li><strong>Close (×):</strong> Hide the debug overlay</li>
+                <li><strong>Drag:</strong> Move the overlay around (avoid the control buttons)</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>📱 Mobile Testing</h3>
+            <p>Test the mobile experience by:</p>
+            <ol>
+                <li>Enabling the debug overlay above</li>
+                <li>Opening browser dev tools (F12)</li>
+                <li>Switching to mobile device simulation</li>
+                <li>Testing different screen sizes</li>
+                <li>Trying the view state controls</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Key Improvements</h3>
+            <ul>
+                <li><strong>Smaller Default Size:</strong> Compact mode shows only essential info</li>
+                <li><strong>Better Space Usage:</strong> Compact row layout fits more in less space</li>
+                <li><strong>Touch-Friendly:</strong> Larger buttons and better touch targets</li>
+                <li><strong>Smart Behavior:</strong> Auto-adapts to mobile vs desktop</li>
+                <li><strong>Minimizable:</strong> Can be reduced to just the header</li>
+            </ul>
+        </div>
+
+        <div class="mobile-simulator">
+            <div class="mobile-content">
+                <h4>📱 Mobile View Simulation</h4>
+                <p>This simulates a mobile screen. Enable debug overlay to see how it looks on mobile.</p>
+                <p>The debug overlay should start in compact mode here, showing only size and breakpoint info.</p>
+                <div style="height: 300px; background: linear-gradient(45deg, #ff6b35, #f7931e); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; text-align: center;">
+                    <div>
+                        <h3>Sample Content</h3>
+                        <p>This represents your app content</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/debug-overlay.js"></script>
+    <script>
+        // Initialize debug overlay if URL parameter is present
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDebugOverlay();
+        });
+
+        function testViewStates() {
+            if (window.debugOverlay) {
+                alert('Debug overlay is active! Use the ⌃/⌄ and - buttons to test view states.');
+            } else {
+                alert('Enable debug overlay first by clicking "Enable Debug Overlay" button.');
+            }
+        }
+
+        function simulateResize() {
+            // Trigger resize events to test responsive behavior
+            window.dispatchEvent(new Event('resize'));
+            if (window.debugOverlay) {
+                alert('Resize event triggered! Check how the debug overlay responds.');
+            } else {
+                alert('Enable debug overlay first to see resize behavior.');
+            }
+        }
+
+        // Add some sample logging
+        if (window.logger) {
+            logger.info('TEST', 'Debug overlay mobile test page loaded');
+            logger.debug('TEST', 'Testing mobile responsiveness improvements');
+        }
+    </script>
+</body>
+</html>
