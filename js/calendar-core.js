@@ -340,6 +340,7 @@ class CalendarCore {
                     eventData.facebook = additionalData.facebook;
                     eventData.gmaps = additionalData.gmaps;
                     eventData.shortName = additionalData.shortName;
+                    eventData.shorterName = additionalData.shorterName;
                     eventData.links = this.parseLinks(additionalData);
                     
                     if (additionalData.type || additionalData.eventType) {
@@ -386,7 +387,8 @@ class CalendarCore {
             'website': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
             'gmaps': 'gmaps', 'google maps': 'gmaps',
-            'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName'
+            'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
+            'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing
