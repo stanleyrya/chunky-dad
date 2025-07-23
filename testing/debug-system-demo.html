@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug System Demo - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .demo-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .demo-button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .demo-button:hover {
+            background: #e55a2b;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🐻 Debug System Demo</h1>
+        
+        <div class="info-box">
+            <strong>How to activate:</strong> Add <code>?debug=true</code> to any URL to see the debug overlay.
+            <br><br>
+            <strong>Example:</strong> <a href="?debug=true" target="_blank">This page with debug overlay</a>
+        </div>
+
+        <div class="demo-section">
+            <h2>🚀 Performance Improvements</h2>
+            <p>The debug system has been optimized:</p>
+            <ul>
+                <li><strong>Event-driven updates:</strong> Only updates when window resizes, zoom changes, or navigation occurs</li>
+                <li><strong>Smart logging:</strong> Only logs when data actually changes, not every 500ms</li>
+                <li><strong>Reduced frequency:</strong> Fallback polling reduced from 500ms to 10 seconds</li>
+                <li><strong>Debounced updates:</strong> Rapid changes (like resizing) are debounced to prevent spam</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <h2>📊 New Information</h2>
+            <p>The debug overlay now shows additional useful information:</p>
+            <ul>
+                <li><strong>Performance:</strong> Page load time and timing information</li>
+                <li><strong>Network:</strong> Connection type and speed (when available)</li>
+                <li><strong>Memory:</strong> JavaScript heap usage (Chrome only)</li>
+                <li><strong>Zoom Level:</strong> Browser and pinch zoom detection</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎛️ New Controls</h2>
+            <p>Added useful control buttons:</p>
+            <ul>
+                <li><strong>Clear Console:</strong> Quickly clear browser console</li>
+                <li><strong>Export Logs:</strong> Download comprehensive debug information as JSON</li>
+                <li><strong>Pause Updates:</strong> Temporarily stop debug overlay updates</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <h2>🧪 Test the System</h2>
+            <p>Try these actions to see the smart updating in action:</p>
+            <button class="demo-button" onclick="resizeWindow()">Trigger Resize Event</button>
+            <button class="demo-button" onclick="changeURL()">Change URL</button>
+            <button class="demo-button" onclick="simulateLoad()">Simulate Load</button>
+            <button class="demo-button" onclick="testLogging()">Test Logging</button>
+        </div>
+
+        <div class="demo-section">
+            <h2>📈 Benefits</h2>
+            <ul>
+                <li><strong>Reduced CPU usage:</strong> No more constant 500ms polling</li>
+                <li><strong>Cleaner console:</strong> Only logs when data changes</li>
+                <li><strong>Better mobile support:</strong> Touch-friendly controls</li>
+                <li><strong>Export functionality:</strong> Easy debugging data collection</li>
+                <li><strong>More information:</strong> Performance, network, and memory data</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load JavaScript modules -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/debug-overlay.js"></script>
+    <script src="../js/app.js"></script>
+
+    <script>
+        // Demo functions
+        function resizeWindow() {
+            // Simulate a resize event
+            window.dispatchEvent(new Event('resize'));
+            logger.info('SYSTEM', 'Resize event triggered for demo');
+        }
+
+        function changeURL() {
+            // Change URL without navigation
+            const newUrl = window.location.pathname + '?demo=' + Date.now() + (window.location.search.includes('debug') ? '&debug=true' : '');
+            history.pushState({}, '', newUrl);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+            logger.info('SYSTEM', 'URL changed for demo', { newUrl });
+        }
+
+        function simulateLoad() {
+            // Trigger a custom event that the calendar might use
+            document.dispatchEvent(new CustomEvent('calendarUpdated', {
+                detail: { source: 'demo', timestamp: Date.now() }
+            }));
+            logger.info('SYSTEM', 'Calendar update event triggered for demo');
+        }
+
+        function testLogging() {
+            // Test different logging levels
+            logger.debug('SYSTEM', 'Debug message from demo');
+            logger.info('SYSTEM', 'Info message from demo');
+            logger.warn('SYSTEM', 'Warning message from demo');
+            logger.error('SYSTEM', 'Error message from demo (this is just a test)');
+        }
+
+        // Add some demo logging
+        logger.componentInit('SYSTEM', 'Debug system demo page loaded');
+        
+        // Show instructions if debug is not enabled
+        if (!window.location.search.includes('debug')) {
+            setTimeout(() => {
+                alert('💡 Tip: Add ?debug=true to the URL to see the debug overlay in action!');
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
