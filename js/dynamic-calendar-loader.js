@@ -456,17 +456,10 @@ class DynamicCalendarLoader extends CalendarCore {
         // If no shortname, return the full name
         if (!shortName) return fullName;
         
-        // Dynamic character calculation based on actual pixel measurements
-        // Characters per pixel ratios (can be adjusted via testing interface)
-        const charsPerPixelRatios = this.charsPerPixelRatios || {
-            xs: 0.08,   // ~12.5 pixels per character for very small screens
-            sm: 0.09,   // ~11.1 pixels per character for phones
-            md: 0.10,   // ~10 pixels per character for tablets  
-            lg: 0.11    // ~9.1 pixels per character for desktop
-        };
-        
-        // Get the ratio for this breakpoint
-        const charsPerPixel = charsPerPixelRatios[breakpoint] || charsPerPixelRatios.lg;
+        // Calculate characters per pixel based on actual font metrics
+        // Since --event-name-font-size is 0.75rem consistently across all breakpoints,
+        // we can use a single ratio instead of different ones per breakpoint
+        const charsPerPixel = this.charsPerPixel || this.calculateCharsPerPixel();
         
         // Try to get actual div width first
         let availableWidth = this.getEventDivWidth(breakpoint);
@@ -484,6 +477,13 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Calculate how many characters can fit on one line
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
+        
+        logger.debug('CALENDAR', `Dynamic char calculation for ${breakpoint}`, {
+            availableWidth,
+            charsPerPixel,
+            charLimitPerLine,
+            eventName: shortName
+        });
         
         // Process the shortname - remove hyphens except escaped ones (\-)
         const processedShortName = shortName.replace(/(?<!\\)-/g, '');
@@ -585,6 +585,47 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Return the multi-line name as a single string (CSS will handle wrapping)
         return displayLines.join(' ');
+    }
+
+    // Calculate characters per pixel based on actual font metrics
+    calculateCharsPerPixel() {
+        try {
+            // Create a temporary element to measure character width
+            const testElement = document.createElement('div');
+            testElement.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: nowrap;
+                font-family: 'Poppins', sans-serif;
+                font-size: var(--event-name-font-size);
+                font-weight: var(--event-name-font-weight);
+                line-height: var(--event-name-line-height);
+            `;
+            
+            // Use a representative string of average characters
+            testElement.textContent = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
+            document.body.appendChild(testElement);
+            
+            const width = testElement.getBoundingClientRect().width;
+            const charCount = testElement.textContent.length;
+            const pixelsPerChar = width / charCount;
+            const charsPerPixel = 1 / pixelsPerChar;
+            
+            document.body.removeChild(testElement);
+            
+            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char)`, {
+                width,
+                charCount,
+                pixelsPerChar,
+                charsPerPixel
+            });
+            
+            return charsPerPixel;
+        } catch (error) {
+            logger.warn('CALENDAR', 'Could not calculate chars per pixel, using fallback', error);
+            // Fallback to a reasonable estimate for 0.75rem Poppins
+            return 0.09; // ~11px per character
+        }
     }
 
     // Get the actual width of an event div for dynamic calculation
@@ -1738,14 +1779,14 @@ class DynamicCalendarLoader extends CalendarCore {
         this.characterLimits = newLimits;
     }
     
-    // Update characters per pixel ratios (for new dynamic system)
-    updateCharsPerPixelRatios(newRatios) {
-        logger.info('CALENDAR', 'Characters per pixel ratios updated from test interface', newRatios);
+    // Update characters per pixel ratio (for new dynamic system)
+    updateCharsPerPixel(newRatio) {
+        logger.info('CALENDAR', 'Characters per pixel ratio updated from test interface', newRatio);
         
-        // Store the new ratios
-        this.charsPerPixelRatios = newRatios;
+        // Store the new single ratio
+        this.charsPerPixel = newRatio;
         
-        // Force a refresh of the calendar display to apply new limits
+        // Force a refresh of the calendar display to apply new ratio
         if (this.allEvents && this.allEvents.length > 0) {
             this.updateCalendarDisplay();
         }
@@ -1760,8 +1801,8 @@ class DynamicCalendarLoader extends CalendarCore {
                         case 'updateCharacterLimits':
                             this.updateCharacterLimits(event.data.data);
                             break;
-                        case 'updatePixelRatios':
-                            this.updateCharsPerPixelRatios(event.data.data);
+                        case 'updatePixelRatio':
+                            this.updateCharsPerPixel(event.data.data);
                             break;
                         case 'addTestEvent':
                             // Handle test event addition if needed
