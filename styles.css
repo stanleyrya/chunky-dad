@@ -4379,3 +4379,9 @@ footer {
         max-width: 100px;
     }
 }
+
+/* Hidden class for loading states */
+.hidden {
+    display: none !important;
+}
+
