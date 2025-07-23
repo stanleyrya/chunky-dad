@@ -502,11 +502,19 @@ class DynamicCalendarLoader extends CalendarCore {
         
         logger.debug('CALENDAR', `Event name too long, needs truncation/hyphenation: "${shortName}" (${shortName.length} > ${charLimitPerLine})`);
         
-        // For very small character limits, just truncate aggressively
+        // For very small character limits, try to use shorterName if available
         if (charLimitPerLine <= 6) {
-            const truncated = shortName.substring(0, charLimitPerLine - 1) + '…';
-            logger.debug('CALENDAR', `Very small char limit, truncating: "${truncated}"`);
-            return truncated;
+            // Check if event has a shorterName property
+            if (event.shorterName && event.shorterName.trim()) {
+                const shorterName = event.shorterName.trim();
+                if (shorterName.length <= charLimitPerLine) {
+                    logger.debug('CALENDAR', `Very small char limit, using shorterName: "${shorterName}"`);
+                    return shorterName;
+                }
+            }
+            
+            // If no shorterName or it's still too long, use normal logic with ellipsis
+            logger.debug('CALENDAR', `Very small char limit, no suitable shorterName, proceeding with normal logic`);
         }
         
         // Build lines that respect the character limit per line
