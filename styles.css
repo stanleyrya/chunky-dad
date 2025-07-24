@@ -546,46 +546,96 @@ header {
     font-size: 0.95rem;
 }
 
-/* City Bubbles Layout */
+/* City Carousel Layout */
 .city-bubbles-container {
     position: relative;
-    overflow-x: auto;
-    overflow-y: hidden;
     padding: 1rem 0;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    width: 100%;
+    overflow: hidden;
 }
 
-.city-bubbles-container::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+.city-carousel {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
 }
 
-.city-bubbles-scroll {
+.city-carousel-track {
     display: flex;
-    flex-wrap: wrap;
     gap: 1rem;
     align-items: center;
     justify-content: flex-start;
-    animation: bubbleFloat 20s linear infinite;
-    min-width: 100%;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-wrap: wrap;
+    animation: cityCarouselFloat 25s ease-in-out infinite;
 }
 
-@keyframes bubbleFloat {
-    0% {
-        transform: translateX(0) translateY(0);
+@keyframes cityCarouselFloat {
+    0%, 100% {
+        transform: translateX(0);
     }
-    25% {
-        transform: translateX(-5px) translateY(-2px);
+    33% {
+        transform: translateX(-10px);
     }
-    50% {
-        transform: translateX(-8px) translateY(2px);
+    66% {
+        transform: translateX(-20px);
     }
-    75% {
-        transform: translateX(-3px) translateY(-1px);
-    }
-    100% {
-        transform: translateX(0) translateY(0);
-    }
+}
+
+.carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    opacity: 0.4;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dot.active {
+    background: var(--primary-color);
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.dot:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+/* Carousel interaction states */
+.city-carousel-track.swiping {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+}
+
+.city-carousel-track {
+    cursor: grab;
+    cursor: -webkit-grab;
+}
+
+.city-carousel-track.swiping .city-bubble {
+    pointer-events: none;
+}
+
+/* Smooth scroll behavior for better UX */
+.city-carousel {
+    scroll-behavior: smooth;
+}
+
+/* Prevent text selection during drag */
+.city-carousel-track.swiping * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .city-bubble {
@@ -603,6 +653,11 @@ header {
     box-shadow: 0 4px 12px var(--shadow-light);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .city-bubble:hover {
@@ -789,38 +844,30 @@ header {
         padding: 1.5rem;
     }
 
-    /* City bubbles mobile responsive */
+    /* City carousel mobile responsive */
     .city-bubbles-container {
-        overflow-x: auto;
         padding: 1rem 0.5rem;
         position: relative;
     }
 
-    .city-bubbles-container {
-        --scroll-indicator-opacity: 0.6;
+    .city-carousel {
+        overflow: hidden;
+        position: relative;
     }
 
-    .city-bubbles-container::after {
-        content: "→";
-        position: absolute;
-        right: 0.5rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-secondary);
-        font-size: 1.2rem;
-        opacity: var(--scroll-indicator-opacity);
-        pointer-events: none;
-        background: linear-gradient(90deg, transparent, var(--background-primary) 50%);
-        padding-left: 1rem;
-        transition: opacity 0.3s ease;
-    }
-
-    .city-bubbles-scroll {
+    .city-carousel-track {
         flex-wrap: nowrap;
         justify-content: flex-start;
-        animation: none; /* Disable animation on mobile for performance */
+        animation: none; /* Disable auto-animation on mobile for better touch interaction */
         min-width: max-content;
         padding-bottom: 0.5rem;
+        transform: translateX(0);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform; /* Optimize for animations */
+    }
+
+    .city-carousel-track.swiping {
+        transition: none; /* Disable transition during swipe for smoother interaction */
     }
 
     .city-bubble {
@@ -833,6 +880,30 @@ header {
     .city-bubble:nth-child(even) {
         margin-top: 0;
         margin-bottom: 0;
+    }
+
+    .carousel-dots {
+        display: flex;
+        justify-content: center;
+        margin-top: 0.75rem;
+        padding: 0.5rem;
+    }
+
+    .dot {
+        width: 6px;
+        height: 6px;
+        margin: 0 0.25rem;
+    }
+
+    /* Hide dots on very small screens if there's only one slide */
+    @media (max-width: 480px) {
+        .carousel-dots {
+            margin-top: 0.5rem;
+        }
+        
+        .carousel-dots:has(.dot:only-child) {
+            display: none;
+        }
     }
 
     .city-emoji {
