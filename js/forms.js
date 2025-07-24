@@ -2,19 +2,28 @@
 class FormsManager {
     constructor() {
         this.contactForm = document.querySelector('.contact-form');
-        this.bearIntelForm = document.querySelector('.bear-intel-form');
-        this.bearIntelModal = document.getElementById('bear-intel-modal');
-        this.shareIntelBtn = document.getElementById('share-intel-btn');
-        this.submitInfoBtn = document.getElementById('submit-info-btn');
-        this.modalCloseBtn = document.getElementById('modal-close-btn');
+        this.bearIntelForm = null;
+        this.bearIntelModal = null;
+        this.shareIntelBtn = null;
+        this.submitInfoBtn = null;
+        this.modalCloseBtn = null;
         this.mailtoEmail = 'info@chunky.dad';
+        this.modalSetupComplete = false;
         this.init();
     }
 
     init() {
         logger.componentInit('FORM', 'Forms manager initializing');
         this.setupContactForm();
+        
+        // Listen for components ready event
+        document.addEventListener('componentsReady', () => {
+            this.setupBearIntelModal();
+        });
+        
+        // Also try to set up immediately in case components are already loaded
         this.setupBearIntelModal();
+        
         logger.componentLoad('FORM', 'Forms manager initialized');
     }
 
@@ -34,6 +43,19 @@ class FormsManager {
     }
 
     setupBearIntelModal() {
+        // Skip if already set up
+        if (this.modalSetupComplete) {
+            logger.debug('FORM', 'Bear Intel modal already set up - skipping');
+            return;
+        }
+
+        // Refresh element references in case they were just injected
+        this.bearIntelModal = document.getElementById('bear-intel-modal');
+        this.shareIntelBtn = document.getElementById('share-intel-btn');
+        this.submitInfoBtn = document.getElementById('submit-info-btn');
+        this.modalCloseBtn = document.getElementById('modal-close-btn');
+        this.bearIntelForm = document.querySelector('.bear-intel-form');
+
         if (!this.bearIntelModal || !this.shareIntelBtn) {
             logger.debug('FORM', 'Bear Intel modal components not found - skipping setup');
             return;
@@ -81,6 +103,7 @@ class FormsManager {
             });
         }
 
+        this.modalSetupComplete = true;
         logger.componentLoad('FORM', 'Bear Intel modal setup complete');
     }
 

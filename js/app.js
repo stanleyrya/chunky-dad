@@ -31,6 +31,7 @@ class ChunkyDadApp {
         this.isDirectoryPage = this.checkIfDirectoryPage();
         
         // Initialize modules
+        this.componentsManager = null;
         this.navigationManager = null;
         this.pageEffectsManager = null;
         this.formsManager = null;
@@ -89,6 +90,9 @@ class ChunkyDadApp {
 
     initializeCoreModules() {
         logger.info('SYSTEM', 'Initializing core modules');
+        
+        // Components manager injects common UI elements
+        this.componentsManager = new ComponentsManager();
         
         // Navigation is needed on all pages
         this.navigationManager = new NavigationManager();
