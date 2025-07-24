@@ -470,6 +470,14 @@ class DynamicCalendarLoader extends CalendarCore {
         // Get actual available width for event text
         const availableWidth = this.getEventTextWidth();
         
+        // If measurement not ready yet, return full name as fallback
+        if (availableWidth === null) {
+            logger.debug('CALENDAR', `Measurement not ready for ${breakpoint}, using full name`, {
+                eventName: fullName
+            });
+            return fullName;
+        }
+        
         // Calculate how many characters can fit on one line
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         
@@ -666,6 +674,12 @@ class DynamicCalendarLoader extends CalendarCore {
         // Find the fake event that was rendered invisibly for measurement
         const eventName = document.querySelector('.event-name');
         
+        // If the element doesn't exist yet, we can't measure - return null to indicate measurement not ready
+        if (!eventName) {
+            logger.debug('CALENDAR', 'Event name element not found for measurement - DOM not ready yet');
+            return null;
+        }
+        
         // Measure the actual rendered event name width
         const eventNameRect = eventName.getBoundingClientRect();
         this.cachedEventTextWidth = eventNameRect.width;
@@ -700,9 +714,14 @@ class DynamicCalendarLoader extends CalendarCore {
 
     
     // Generate event name element for current breakpoint only
-    generateEventNameElements(event) {
+    generateEventNameElements(event, hideEvents = false) {
         const fullName = event.name || '';
         const hasShortName = !!(event.shortName || event.nickname);
+        
+        // If we're in measurement mode (hideEvents), always use full name to avoid measurement loops
+        if (hideEvents) {
+            return `<div class="event-name">${fullName}</div>`;
+        }
         
         // If no shortname, just return the full name
         if (!hasShortName) {
@@ -1262,7 +1281,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     return `
                         <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            ${this.generateEventNameElements(event)}
+                            ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -1366,7 +1385,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     return `
                         <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            ${this.generateEventNameElements(event)}
+                            ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -1831,6 +1850,9 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Show calendar structure first but hidden for measurements, with fake event for width calculation
         this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true, structure hidden
+        
+        // Wait for DOM to be updated before proceeding with measurements
+        await new Promise(resolve => setTimeout(resolve, 0));
         
         // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
