@@ -601,16 +601,11 @@ header {
 .city-compact-grid {
     display: flex;
     gap: 1rem;
-    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    padding: 0.5rem 0 0.5rem 1rem;
     min-width: fit-content;
 }
 
 .city-compact-card {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
-    padding: 1rem 1.5rem;
     text-decoration: none;
     color: var(--text-inverse);
     transition: all 0.3s ease;
@@ -620,11 +615,28 @@ header {
     gap: 0.5rem;
     min-width: 100px;
     text-align: center;
+}
+
+.city-compact-card .city-emoji-box {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
 }
 
 .city-compact-card:hover {
     transform: translateY(-3px);
+}
+
+.city-compact-card:hover .city-emoji-box {
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.4);
     box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
@@ -633,6 +645,7 @@ header {
 .city-compact-card .city-emoji {
     font-size: 2rem;
     filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+    line-height: 1;
 }
 
 .city-compact-card .city-name {
@@ -647,11 +660,17 @@ header {
 .city-compact-card.coming-soon {
     opacity: 0.7;
     cursor: default;
+}
+
+.city-compact-card.coming-soon .city-emoji-box {
     border-style: dashed;
 }
 
 .city-compact-card.coming-soon:hover {
     transform: none;
+}
+
+.city-compact-card.coming-soon:hover .city-emoji-box {
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -794,8 +813,13 @@ header {
     }
     
     .city-compact-card {
-        padding: 0.8rem 1.2rem;
         min-width: 85px;
+    }
+    
+    .city-compact-card .city-emoji-box {
+        width: 70px;
+        height: 70px;
+        padding: 0.8rem;
     }
     
     .city-compact-card .city-emoji {
@@ -805,6 +829,10 @@ header {
     .city-compact-card .city-name {
         font-size: 0.8rem;
         display: block !important; /* Ensure city names are always visible in city cards on mobile */
+    }
+    
+    .city-compact-grid {
+        padding: 0.5rem 0 0.5rem 0.75rem;
     }
     
     .city-grid {

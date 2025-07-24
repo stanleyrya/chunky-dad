@@ -46,6 +46,9 @@ class CityRenderer {
         link.href = `city.html?city=${city.key}`;
         link.className = 'city-compact-card';
 
+        const emojiBox = document.createElement('div');
+        emojiBox.className = 'city-emoji-box';
+
         const emoji = document.createElement('span');
         emoji.className = 'city-emoji';
         emoji.textContent = city.emoji;
@@ -54,7 +57,8 @@ class CityRenderer {
         name.className = 'city-name';
         name.textContent = city.name;
 
-        link.appendChild(emoji);
+        emojiBox.appendChild(emoji);
+        link.appendChild(emojiBox);
         link.appendChild(name);
 
         return link;
@@ -64,6 +68,9 @@ class CityRenderer {
         const card = document.createElement('div');
         card.className = 'city-compact-card coming-soon';
 
+        const emojiBox = document.createElement('div');
+        emojiBox.className = 'city-emoji-box';
+
         const emoji = document.createElement('span');
         emoji.className = 'city-emoji';
         emoji.textContent = '🌍';
@@ -72,7 +79,8 @@ class CityRenderer {
         name.className = 'city-name';
         name.textContent = 'More Cities';
 
-        card.appendChild(emoji);
+        emojiBox.appendChild(emoji);
+        card.appendChild(emojiBox);
         card.appendChild(name);
 
         return card;
