@@ -1608,19 +1608,21 @@ class DynamicCalendarLoader extends CalendarCore {
         if (calendarGrid) {
             calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
             
-            // For measurement mode, make the grid invisible to users but measurable by browser
+            // For measurement mode, make the grid invisible to users but keep same layout constraints
             if (hideEvents) {
-                calendarGrid.style.position = 'absolute';
-                calendarGrid.style.top = '-9999px';
-                calendarGrid.style.left = '-9999px';
-                calendarGrid.style.visibility = 'visible'; // Keep visible for measurement
-                calendarGrid.style.opacity = '0';
+                // Keep the element in its normal position but hide it behind background
+                calendarGrid.style.position = 'relative';
+                calendarGrid.style.zIndex = '-999'; // Behind everything else
+                calendarGrid.style.opacity = '0'; // Invisible to users
+                calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
+                calendarGrid.style.visibility = 'visible'; // Still measurable by JS
             } else {
+                // Reset to normal visibility
                 calendarGrid.style.position = '';
-                calendarGrid.style.top = '';
-                calendarGrid.style.left = '';
-                calendarGrid.style.visibility = 'visible';
+                calendarGrid.style.zIndex = '';
                 calendarGrid.style.opacity = '1';
+                calendarGrid.style.pointerEvents = '';
+                calendarGrid.style.visibility = 'visible';
             }
             
             this.attachCalendarInteractions();
