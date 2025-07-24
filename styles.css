@@ -658,22 +658,35 @@ header {
 }
 
 .city-compact-card.coming-soon {
-    opacity: 0.7;
-    cursor: default;
+    opacity: 0.8;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
 .city-compact-card.coming-soon .city-emoji-box {
     border-style: dashed;
+    border-color: rgba(255, 107, 107, 0.6);
 }
 
 .city-compact-card.coming-soon:hover {
-    transform: none;
+    transform: translateY(-5px);
+    opacity: 1;
 }
 
 .city-compact-card.coming-soon:hover .city-emoji-box {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 107, 107, 0.2);
+    border-color: var(--solid-secondary);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+}
+
+/* Add subtle animation to suggest a city button */
+.city-compact-card.coming-soon .city-emoji {
+    animation: suggestPulse 3s ease-in-out infinite;
+}
+
+@keyframes suggestPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 .city-grid {
@@ -4177,10 +4190,31 @@ footer {
     background: var(--background-light);
 }
 
+.preview-error-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 280px;
+}
+
 .preview-error-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.6;
+}
+
+.preview-error-content h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.preview-domain {
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    font-weight: 500;
+    margin: 0 0 0.5rem 0;
 }
 
 .shop-preview-error p,
@@ -4192,22 +4226,31 @@ footer {
 .preview-error-reason {
     font-size: 0.85rem;
     opacity: 0.7;
+    margin-bottom: 1.25rem;
 }
 
 .preview-error-link {
-    margin-top: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.75rem 1.5rem;
     background: var(--primary-color);
     color: white;
     text-decoration: none;
     border-radius: 25px;
     font-weight: 500;
+    font-size: 0.9rem;
     transition: all 0.3s ease;
+}
+
+.preview-error-link .link-icon {
+    font-size: 1rem;
 }
 
 .preview-error-link:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: var(--solid-secondary);
 }
 
 /* Instagram embed styles */
