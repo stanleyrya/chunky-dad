@@ -1093,6 +1093,11 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Filter events by current period
     getFilteredEvents() {
+        // Handle case where allEvents is not yet loaded
+        if (!this.allEvents || !Array.isArray(this.allEvents)) {
+            return [];
+        }
+        
         const { start, end } = this.getCurrentPeriodBounds();
         
         return this.allEvents.filter(event => {
@@ -1304,7 +1309,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
-                        <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
@@ -1408,13 +1413,13 @@ class DynamicCalendarLoader extends CalendarCore {
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
-                        <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
-                }).join('') + (additionalEventsCount > 0 ? `<div class="more-events${hideEvents ? ' hidden' : ''}">+${additionalEventsCount}</div>` : '')
+                }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
                 : '';
 
             return `
@@ -1603,10 +1608,20 @@ class DynamicCalendarLoader extends CalendarCore {
         if (calendarGrid) {
             calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
             
-            // Hide the calendar grid visually if hideEvents is true (for measurements)
+            // For measurement mode, make the grid invisible to users but keep same layout constraints
             if (hideEvents) {
-                calendarGrid.style.visibility = 'hidden';
+                // Keep the element in its normal position but hide it behind background
+                calendarGrid.style.position = 'relative';
+                calendarGrid.style.zIndex = '-999'; // Behind everything else
+                calendarGrid.style.opacity = '0'; // Invisible to users
+                calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
+                calendarGrid.style.visibility = 'visible'; // Still measurable by JS
             } else {
+                // Reset to normal visibility
+                calendarGrid.style.position = '';
+                calendarGrid.style.zIndex = '';
+                calendarGrid.style.opacity = '1';
+                calendarGrid.style.pointerEvents = '';
                 calendarGrid.style.visibility = 'visible';
             }
             
@@ -1870,9 +1885,9 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // STEP 1: Create a fake event for accurate width measurement
         const fakeEvent = {
-            name: 'Test Event Name For Measurement',
-            shortName: 'Test Event',
-            bar: 'Test Venue',
+            name: 'Sample Event Name For Width Measurement Testing',
+            shortName: 'Sample Event Name',
+            bar: 'Sample Venue Name',
             time: '8:00 PM',
             day: 'Today',
             startDate: new Date(),
@@ -1881,6 +1896,9 @@ class DynamicCalendarLoader extends CalendarCore {
         };
         
         logger.debug('CALENDAR', 'Step 1: Creating calendar structure with fake event (hideEvents: true)');
+        
+        // Set the fake event as allEvents for measurement
+        this.allEvents = [fakeEvent];
         
         // Show calendar structure with fake event but hidden for measurements
         this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true
@@ -1896,29 +1914,15 @@ class DynamicCalendarLoader extends CalendarCore {
             });
         });
         
-        // Try to measure the fake event width multiple times with retries
-        let measurementWidth = null;
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        while (measurementWidth === null && attempts < maxAttempts) {
-            attempts++;
-            measurementWidth = this.getEventTextWidth();
-            
-            if (measurementWidth === null) {
-                logger.debug('CALENDAR', `Measurement attempt ${attempts}/${maxAttempts} failed - DOM not ready yet`);
-                // Wait a bit more and try again
-                await new Promise(resolve => setTimeout(resolve, 50));
-            } else {
-                logger.info('CALENDAR', `Successfully measured event text width on attempt ${attempts}: ${measurementWidth}px`);
-                break;
-            }
-        }
+        // Measure the fake event width - should work reliably now
+        const measurementWidth = this.getEventTextWidth();
         
         if (measurementWidth === null) {
-            logger.warn('CALENDAR', 'Failed to measure event text width after all attempts - using fallback calculation');
+            logger.warn('CALENDAR', 'Failed to measure event text width - using fallback calculation');
             // Force calculate chars per pixel as fallback
             this.calculateCharsPerPixel();
+        } else {
+            logger.info('CALENDAR', `Successfully measured event text width: ${measurementWidth}px`);
         }
         
         // STEP 3: Load calendar data from the API
@@ -1936,8 +1940,7 @@ class DynamicCalendarLoader extends CalendarCore {
         
         logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
             eventCount: data.events.length,
-            measurementWidth: measurementWidth,
-            measurementAttempts: attempts
+            measurementWidth: measurementWidth
         });
     }
 
