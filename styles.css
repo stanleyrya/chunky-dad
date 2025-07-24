@@ -411,7 +411,7 @@ header {
     min-height: 100vh;
 }
 
-/* Compact Hero Section - REMOVED (no longer used) */
+
 
 .hero-content {
     flex: 1;
@@ -490,9 +490,7 @@ header {
     color: var(--text-primary);
 }
 
-/* Old city card styles removed - using compact layout instead */
 
-/* Compact Layout Styles - REMOVED (no longer used) */
 
 .section-subtitle {
     color: var(--text-secondary);
@@ -500,13 +498,7 @@ header {
     font-size: 0.95rem;
 }
 
-/* City Carousel Layout - REMOVED (replaced with simple grid) */
 
-/* Remaining city-bubble styles removed */
-
-/* City bubble styles removed - replaced with city-card grid */
-
-/* Compact Merchants List - REMOVED (replaced with simple bear-art section) */
 
 /* Events Section */
 .events {
@@ -579,9 +571,7 @@ header {
     color: var(--text-secondary);
 }
 
-/* Old businesses section styles removed - using compact layout instead */
 
-/* Mobile responsive styles for removed elements - CLEANED UP */
 
 /* Simplified Cities Section */
 .cities-simple {
@@ -823,17 +813,7 @@ header {
     margin: 0;
 }
 
-/* Removed underline styling for cleaner look
-.calendar-header h2::after {
-    content: '';
-    display: block;
-    width: 80px;
-    height: 4px;
-    background: var(--gradient-primary);
-    margin: 1rem 0 0;
-    border-radius: 2px;
-}
-*/
+
 
 .calendar-controls {
     display: flex;
@@ -1507,7 +1487,7 @@ header {
     margin-bottom: 1.5rem;
 }
 
-/* Sample submissions styles - REMOVED (no longer used) */
+
 
 
 
@@ -1787,7 +1767,7 @@ header {
     box-shadow: none;
 }
 
-/* My Location Circle - using Leaflet's built-in circle instead of custom marker */
+/* My Location Circle */
 
 
 
@@ -2080,7 +2060,7 @@ footer {
 
     .date-navigation {
         order: 1;
-        margin-bottom: 0; /* Removed margin-bottom to fix alignment with other buttons */
+        margin-bottom: 0;
         max-width: none;
         width: auto;
         flex-shrink: 0;
@@ -4110,7 +4090,7 @@ footer {
 
 /* Instagram embed styles */
 
-/* Mobile styles for compact hero - REMOVED (no longer used) */
+
 
 /* ===== DEBUG OVERLAY STYLES ===== */
 
