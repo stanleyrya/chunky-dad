@@ -38,6 +38,7 @@ class ChunkyDadApp {
         this.calendarLoader = null;
         this.bearDirectory = null;
         this.debugOverlay = null;
+        this.cityRenderer = null;
         
         logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
@@ -109,6 +110,11 @@ class ChunkyDadApp {
         // Initialize debug overlay if debug parameter is present
         this.initializeDebugOverlay();
         
+        // Initialize city renderer on main page
+        if (this.isMainPage) {
+            this.initializeCityRenderer();
+        }
+        
         logger.componentLoad('SYSTEM', 'Core modules initialized');
     }
 
@@ -120,6 +126,17 @@ class ChunkyDadApp {
             this.debugOverlay = new window.DebugOverlay();
             window.debugOverlay = this.debugOverlay; // Make globally accessible
             logger.componentInit('SYSTEM', 'Debug overlay initialized in app');
+        }
+    }
+
+    initializeCityRenderer() {
+        if (window.CityRenderer) {
+            this.cityRenderer = new window.CityRenderer();
+            this.cityRenderer.init();
+            window.cityRenderer = this.cityRenderer; // Make globally accessible
+            logger.componentInit('SYSTEM', 'City renderer initialized in app');
+        } else {
+            logger.warn('SYSTEM', 'CityRenderer not available');
         }
     }
 
@@ -187,6 +204,10 @@ class ChunkyDadApp {
 
     getDebugOverlay() {
         return this.debugOverlay;
+    }
+
+    getCityRenderer() {
+        return this.cityRenderer;
     }
 
     // Global function for scrolling (backward compatibility)
