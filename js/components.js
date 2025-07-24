@@ -26,7 +26,7 @@ class ComponentsManager {
 
         const footerHTML = `
             <p>&copy; 2025 chunky.dad</p>
-            <p>All info is community-sourced. If you spot a mistake, <a href="mailto:contact@chunky.dad" style="color: var(--accent); text-decoration: underline;">just let us know!</a></p>
+            <p>All info is community-sourced.</p>
             <button id="share-intel-btn" class="share-intel-footer-btn">Share Bear Intel 📧</button>
         `;
 
@@ -107,14 +107,7 @@ class ComponentsManager {
         `;
     }
 
-    // Method to get footer HTML for pages that need it before JS loads
-    static getFooterHTML() {
-        return `
-            <p>&copy; 2025 chunky.dad</p>
-            <p>All info is community-sourced. If you spot a mistake, <a href="mailto:contact@chunky.dad" style="color: var(--accent); text-decoration: underline;">just let us know!</a></p>
-            <button id="share-intel-btn" class="share-intel-footer-btn">Share Bear Intel 📧</button>
-        `;
-    }
+
 }
 
 // Export for use in other modules
