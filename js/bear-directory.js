@@ -203,7 +203,8 @@ class BearDirectory {
                                 loading="lazy"
                                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                                 onload="window.bearDirectory.handleIframeLoad(this)"
-                                onerror="window.bearDirectory.handleIframeError(this, 'shop')">
+                                onerror="window.bearDirectory.handleIframeError(this, 'shop')"
+                                referrerpolicy="no-referrer-when-downgrade">
                         </iframe>
                         <div class="iframe-loading">
                             <div class="loading-spinner"></div>
@@ -228,7 +229,8 @@ class BearDirectory {
                                 loading="lazy"
                                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                                 onload="window.bearDirectory.handleIframeLoad(this)"
-                                onerror="window.bearDirectory.handleIframeError(this, 'website')">
+                                onerror="window.bearDirectory.handleIframeError(this, 'website')"
+                                referrerpolicy="no-referrer-when-downgrade">
                         </iframe>
                         <div class="iframe-loading">
                             <div class="loading-spinner"></div>
@@ -619,19 +621,33 @@ class BearDirectory {
             reason: 'Likely blocked by X-Frame-Options or CSP'
         });
         
-        // Replace iframe with error message and direct link
+        // Replace iframe with a more attractive error message and preview
         const wrapper = iframe.closest('.iframe-wrapper');
         if (wrapper) {
+            const domain = this.extractDomain(url);
             wrapper.innerHTML = `
                 <div class="${type}-preview-error">
-                    <div class="preview-error-icon">🚫</div>
-                    <p>Preview not available</p>
-                    <p class="preview-error-reason">This ${type} cannot be embedded</p>
-                    <a href="${url}" target="_blank" class="preview-error-link">
-                        Open ${type === 'shop' ? 'Shop' : 'Website'} →
-                    </a>
+                    <div class="preview-error-content">
+                        <div class="preview-error-icon">🔗</div>
+                        <h4>Direct Link Required</h4>
+                        <p class="preview-domain">${domain}</p>
+                        <p class="preview-error-reason">This site doesn't allow previews</p>
+                        <a href="${url}" target="_blank" class="preview-error-link">
+                            <span class="link-icon">${type === 'shop' ? '🛍️' : '🌐'}</span>
+                            Visit ${type === 'shop' ? 'Shop' : 'Website'}
+                        </a>
+                    </div>
                 </div>
             `;
+        }
+    }
+
+    extractDomain(url) {
+        try {
+            const urlObj = new URL(url);
+            return urlObj.hostname.replace('www.', '');
+        } catch (e) {
+            return url;
         }
     }
     
@@ -651,7 +667,7 @@ class BearDirectory {
                     logger.warn('DIRECTORY', 'Iframe load timeout', { src: iframe.src });
                     this.handleIframeError(iframe, iframe.classList.contains('shop-preview-iframe') ? 'shop' : 'website');
                 }
-            }, 10000); // 10 second timeout
+            }, 6000); // 6 second timeout
             
             // Clear timeout if iframe loads or errors before timeout
             const originalOnload = iframe.onload;

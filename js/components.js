@@ -61,7 +61,7 @@ class ComponentsManager {
                                 <option value="event">Bear Event or Bar Night</option>
                                 <option value="business">Bear-Owned Business</option>
                                 <option value="venue">Bar or Venue Info</option>
-                                <option value="city">New City Suggestion</option>
+                                <option value="city">Suggest a New City 🌍</option>
                                 <option value="other">Other Bear Intel</option>
                             </select>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
@@ -95,7 +95,7 @@ class ComponentsManager {
                                 <option value="event">Bear Event or Bar Night</option>
                                 <option value="business">Bear-Owned Business</option>
                                 <option value="venue">Bar or Venue Info</option>
-                                <option value="city">New City Suggestion</option>
+                                <option value="city">Suggest a New City 🌍</option>
                                 <option value="other">Other Bear Intel</option>
                             </select>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
