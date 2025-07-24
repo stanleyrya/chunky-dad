@@ -5,6 +5,11 @@ class DynamicCalendarLoader extends CalendarCore {
         this.currentCity = null;
         this.currentCityConfig = null;
         
+        // Initialization state to prevent multiple inits
+        this.isInitialized = false;
+        this.isInitializing = false;
+        this.controlsSetup = false;
+        
         // View state management - enhanced with new calendar overview
         this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
@@ -917,9 +922,10 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-        logger.apiCall('CALENDAR', `Loading calendar data for ${cityConfig.name}`, {
+        logger.info('CALENDAR', `🌐 Step 3: Starting API call to load calendar data for ${cityConfig.name}`, {
             cityKey,
-            calendarId: cityConfig.calendarId
+            calendarId: cityConfig.calendarId,
+            step: 'Step 3: Loading real calendar data'
         });
         
         try {
@@ -1571,11 +1577,12 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.time('CALENDAR', 'Calendar display update');
         const filteredEvents = this.getFilteredEvents();
         
-        logger.debug('CALENDAR', `Updating calendar display`, {
+        logger.info('CALENDAR', `Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
             view: this.currentView,
             eventCount: filteredEvents.length,
             city: this.currentCity,
-            hideEvents
+            hideEvents,
+            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events'
         });
         
         // Update calendar title
@@ -1667,6 +1674,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Set up calendar controls
     setupCalendarControls() {
+        // Prevent duplicate event listeners
+        if (this.controlsSetup) {
+            logger.debug('CALENDAR', 'Calendar controls already set up, skipping');
+            return;
+        }
+        
         logger.componentInit('CALENDAR', 'Setting up calendar controls');
         
         // View toggle buttons
@@ -1723,8 +1736,7 @@ class DynamicCalendarLoader extends CalendarCore {
             viewButtons: document.querySelectorAll('.view-btn').length
         });
         
-        // Initialize date range display
-        this.updateCalendarDisplay();
+        this.controlsSetup = true;
     }
 
     setupKeyboardHandlers() {
@@ -1854,9 +1866,9 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-
+        logger.info('CALENDAR', 'Starting calendar initialization with proper order of operations');
         
-        // Create a fake event for accurate width measurement
+        // STEP 1: Create a fake event for accurate width measurement
         const fakeEvent = {
             name: 'Test Event Name For Measurement',
             shortName: 'Test Event',
@@ -1868,28 +1880,65 @@ class DynamicCalendarLoader extends CalendarCore {
             recurring: false
         };
         
-        // Show calendar structure first but hidden for measurements, with fake event for width calculation
-        this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true, structure hidden
+        logger.debug('CALENDAR', 'Step 1: Creating calendar structure with fake event (hideEvents: true)');
         
-        // Wait for DOM to be updated before proceeding with measurements
-        await new Promise(resolve => setTimeout(resolve, 0));
+        // Show calendar structure with fake event but hidden for measurements
+        this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true
         
-        // Force measurement to happen now while the fake event is in the DOM
-        const measurementWidth = this.getEventTextWidth();
-        if (measurementWidth === null) {
-            logger.warn('CALENDAR', 'Failed to measure event text width from fake event - measurement infrastructure not ready');
-        } else {
-            logger.info('CALENDAR', `Successfully measured event text width: ${measurementWidth}px before loading real events`);
-        }
+        // STEP 2: Wait for DOM to be fully updated and then measure
+        logger.debug('CALENDAR', 'Step 2: Waiting for DOM to be ready for measurement');
         
-        // Load calendar data and update normally
-        const data = await this.loadCalendarData(this.currentCity);
-        if (data) {
-            logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
-                eventCount: data.events.length
+        // Use requestAnimationFrame to ensure DOM is rendered
+        await new Promise(resolve => {
+            requestAnimationFrame(() => {
+                // Wait one more frame to be absolutely sure
+                requestAnimationFrame(resolve);
             });
-            this.updatePageContent(data.cityConfig, data.events); // hideEvents = false (default)
+        });
+        
+        // Try to measure the fake event width multiple times with retries
+        let measurementWidth = null;
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (measurementWidth === null && attempts < maxAttempts) {
+            attempts++;
+            measurementWidth = this.getEventTextWidth();
+            
+            if (measurementWidth === null) {
+                logger.debug('CALENDAR', `Measurement attempt ${attempts}/${maxAttempts} failed - DOM not ready yet`);
+                // Wait a bit more and try again
+                await new Promise(resolve => setTimeout(resolve, 50));
+            } else {
+                logger.info('CALENDAR', `Successfully measured event text width on attempt ${attempts}: ${measurementWidth}px`);
+                break;
+            }
         }
+        
+        if (measurementWidth === null) {
+            logger.warn('CALENDAR', 'Failed to measure event text width after all attempts - using fallback calculation');
+            // Force calculate chars per pixel as fallback
+            this.calculateCharsPerPixel();
+        }
+        
+        // STEP 3: Load calendar data from the API
+        logger.debug('CALENDAR', 'Step 3: Loading real calendar data');
+        const data = await this.loadCalendarData(this.currentCity);
+        
+        if (!data) {
+            logger.error('CALENDAR', 'Failed to load calendar data');
+            return;
+        }
+        
+        // STEP 4: Display the real events with hideEvents: false
+        logger.debug('CALENDAR', 'Step 4: Displaying real events (hideEvents: false)');
+        this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
+        
+        logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
+            eventCount: data.events.length,
+            measurementWidth: measurementWidth,
+            measurementAttempts: attempts
+        });
     }
 
     // Update characters per pixel ratio (for new dynamic system)
@@ -2034,9 +2083,26 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Initialize
     async init() {
-                  logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
-          await this.renderCityPage();
-      }
+        // Prevent multiple initializations
+        if (this.isInitialized || this.isInitializing) {
+            logger.warn('CALENDAR', 'Calendar already initialized or initializing, skipping duplicate init');
+            return;
+        }
+        
+        this.isInitializing = true;
+        logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
+        
+        try {
+            await this.renderCityPage();
+            this.isInitialized = true;
+            logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Calendar initialization failed', error);
+            throw error;
+        } finally {
+            this.isInitializing = false;
+        }
+    }
 
 }
 
