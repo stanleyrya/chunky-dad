@@ -2,6 +2,11 @@
 class FormsManager {
     constructor() {
         this.contactForm = document.querySelector('.contact-form');
+        this.bearIntelForm = document.querySelector('.bear-intel-form');
+        this.bearIntelModal = document.getElementById('bear-intel-modal');
+        this.shareIntelBtn = document.getElementById('share-intel-btn');
+        this.submitInfoBtn = document.getElementById('submit-info-btn');
+        this.modalCloseBtn = document.getElementById('modal-close-btn');
         this.mailtoEmail = 'info@chunky.dad';
         this.init();
     }
@@ -9,42 +14,126 @@ class FormsManager {
     init() {
         logger.componentInit('FORM', 'Forms manager initializing');
         this.setupContactForm();
+        this.setupBearIntelModal();
         logger.componentLoad('FORM', 'Forms manager initialized');
     }
 
     setupContactForm() {
         if (!this.contactForm) {
-            logger.debug('FORM', 'No contact form found on this page - skipping setup');
+            logger.debug('FORM', 'No legacy contact form found - skipping setup');
             return;
         }
 
-        logger.componentInit('FORM', 'Contact form found and initializing');
+        logger.componentInit('FORM', 'Legacy contact form found and initializing');
         
         this.contactForm.addEventListener('submit', (e) => {
             this.handleContactFormSubmission(e);
         });
         
-        logger.componentLoad('FORM', 'Contact form setup complete');
+        logger.componentLoad('FORM', 'Legacy contact form setup complete');
+    }
+
+    setupBearIntelModal() {
+        if (!this.bearIntelModal || !this.shareIntelBtn) {
+            logger.debug('FORM', 'Bear Intel modal components not found - skipping setup');
+            return;
+        }
+
+        logger.componentInit('FORM', 'Bear Intel modal found and initializing');
+
+        // Open modal when share intel button is clicked
+        this.shareIntelBtn.addEventListener('click', () => {
+            this.openBearIntelModal();
+        });
+
+        // Open modal when submit info button is clicked (city pages)
+        if (this.submitInfoBtn) {
+            this.submitInfoBtn.addEventListener('click', () => {
+                this.openBearIntelModal();
+            });
+        }
+
+        // Close modal when close button is clicked
+        if (this.modalCloseBtn) {
+            this.modalCloseBtn.addEventListener('click', () => {
+                this.closeBearIntelModal();
+            });
+        }
+
+        // Close modal when clicking outside
+        this.bearIntelModal.addEventListener('click', (e) => {
+            if (e.target === this.bearIntelModal) {
+                this.closeBearIntelModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.bearIntelModal.style.display !== 'none') {
+                this.closeBearIntelModal();
+            }
+        });
+
+        // Handle form submission
+        if (this.bearIntelForm) {
+            this.bearIntelForm.addEventListener('submit', (e) => {
+                this.handleBearIntelFormSubmission(e);
+            });
+        }
+
+        logger.componentLoad('FORM', 'Bear Intel modal setup complete');
+    }
+
+    openBearIntelModal() {
+        logger.userInteraction('FORM', 'Bear Intel modal opened');
+        this.bearIntelModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        
+        // Focus on first input
+        const firstInput = this.bearIntelForm.querySelector('input[type="text"]');
+        if (firstInput) {
+            setTimeout(() => firstInput.focus(), 100);
+        }
+    }
+
+    closeBearIntelModal() {
+        logger.userInteraction('FORM', 'Bear Intel modal closed');
+        this.bearIntelModal.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scrolling
     }
 
     handleContactFormSubmission(event) {
         event.preventDefault();
-        logger.userInteraction('FORM', 'Contact form submitted');
+        logger.userInteraction('FORM', 'Legacy contact form submitted');
         
-        const formData = this.collectFormData();
+        const formData = this.collectFormData(this.contactForm);
         
         if (!this.validateFormData(formData)) {
             return;
         }
 
-        this.submitViaEmail(formData);
+        this.submitViaEmail(formData, this.contactForm);
     }
 
-    collectFormData() {
-        const name = this.contactForm.querySelector('input[type="text"]').value;
-        const email = this.contactForm.querySelector('input[type="email"]').value;
-        const message = this.contactForm.querySelector('textarea').value;
-        const category = this.contactForm.querySelector('select').value;
+    handleBearIntelFormSubmission(event) {
+        event.preventDefault();
+        logger.userInteraction('FORM', 'Bear Intel form submitted');
+        
+        const formData = this.collectFormData(this.bearIntelForm);
+        
+        if (!this.validateFormData(formData)) {
+            return;
+        }
+
+        this.submitViaEmail(formData, this.bearIntelForm);
+        this.closeBearIntelModal();
+    }
+
+    collectFormData(form) {
+        const name = form.querySelector('input[type="text"]').value;
+        const email = form.querySelector('input[type="email"]').value;
+        const message = form.querySelector('textarea').value;
+        const category = form.querySelector('select').value;
         
         const formData = { name, email, message, category };
         
@@ -81,7 +170,7 @@ class FormsManager {
         return true;
     }
 
-    submitViaEmail(formData) {
+    submitViaEmail(formData, form) {
         logger.userInteraction('FORM', 'Form submitted via email');
         
         // Create email content
@@ -99,7 +188,7 @@ Sent from chunky.dad contact form`);
         const mailtoUrl = `mailto:${this.mailtoEmail}?subject=${subject}&body=${body}`;
         
         // Reset form
-        this.resetForm();
+        this.resetForm(form);
         
         // Open email client
         window.location.href = mailtoUrl;
@@ -111,11 +200,16 @@ Sent from chunky.dad contact form`);
         });
     }
 
-    resetForm() {
-        if (this.contactForm) {
-            this.contactForm.reset();
+    resetForm(form) {
+        if (form) {
+            form.reset();
             logger.debug('FORM', 'Form reset successfully');
         }
+    }
+
+    // Public method to open modal from other components
+    showBearIntelModal() {
+        this.openBearIntelModal();
     }
 
     // Method to add more form handlers in the future
