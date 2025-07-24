@@ -32,8 +32,48 @@
                 <h2>🏙️ Explore Cities</h2>
                 
                 <div class="city-scroll-container">
-                    <div class="city-compact-grid">
+                    <div class="city-compact-grid" id="city-grid">
                         <!-- Cities will be dynamically rendered by city-renderer.js -->
+                        <!-- Fallback cities in case JavaScript fails -->
+                        <a href="city.html?city=new-york" class="city-compact-card">
+                            <span class="city-emoji">🗽</span>
+                            <span class="city-name">New York</span>
+                        </a>
+                        
+                        <a href="city.html?city=seattle" class="city-compact-card">
+                            <span class="city-emoji">🌲</span>
+                            <span class="city-name">Seattle</span>
+                        </a>
+
+                        <a href="city.html?city=los-angeles" class="city-compact-card">
+                            <span class="city-emoji">🌴</span>
+                            <span class="city-name">Los Angeles</span>
+                        </a>
+
+                        <a href="city.html?city=toronto" class="city-compact-card">
+                            <span class="city-emoji">🍁</span>
+                            <span class="city-name">Toronto</span>
+                        </a>
+
+                        <a href="city.html?city=london" class="city-compact-card">
+                            <span class="city-emoji">🇬🇧</span>
+                            <span class="city-name">London</span>
+                        </a>
+
+                        <a href="city.html?city=chicago" class="city-compact-card">
+                            <span class="city-emoji">🏙️</span>
+                            <span class="city-name">Chicago</span>
+                        </a>
+
+                        <a href="city.html?city=berlin" class="city-compact-card">
+                            <span class="city-emoji">🇩🇪</span>
+                            <span class="city-name">Berlin</span>
+                        </a>
+
+                        <div class="city-compact-card coming-soon">
+                            <span class="city-emoji">🌍</span>
+                            <span class="city-name">More Cities</span>
+                        </div>
                     </div>
                 </div>
             </div>

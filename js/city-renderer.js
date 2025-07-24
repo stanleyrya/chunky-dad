@@ -88,26 +88,7 @@ function initializeCityRenderer() {
     window.cityRenderer = cityRenderer;
 }
 
-// Auto-initialize on main page
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        // Only initialize on main page
-        const isMainPage = window.location.pathname.endsWith('index.html') || 
-                          window.location.pathname === '/' || 
-                          window.location.pathname === '';
-        if (isMainPage) {
-            initializeCityRenderer();
-        }
-    });
-} else {
-    // DOM already loaded
-    const isMainPage = window.location.pathname.endsWith('index.html') || 
-                      window.location.pathname === '/' || 
-                      window.location.pathname === '';
-    if (isMainPage) {
-        initializeCityRenderer();
-    }
-}
+// Don't auto-initialize - let the main app handle initialization
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
