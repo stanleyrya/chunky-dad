@@ -77,6 +77,12 @@ function hasCityCalendar(cityKey) {
     return config && config.calendarId;
 }
 
+// Make functions globally available for browser use
+window.CITY_CONFIG = CITY_CONFIG;
+window.getCityConfig = getCityConfig;
+window.getAvailableCities = getAvailableCities;
+window.hasCityCalendar = hasCityCalendar;
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { CITY_CONFIG, getCityConfig, getAvailableCities, hasCityCalendar };

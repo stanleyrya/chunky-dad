@@ -32,7 +32,9 @@
                 <h2>🏙️ Explore Cities</h2>
                 
                 <div class="city-scroll-container">
-                    <div class="city-compact-grid">
+                    <div class="city-compact-grid" id="city-grid">
+                        <!-- Cities will be dynamically rendered by city-renderer.js -->
+                        <!-- Fallback cities in case JavaScript fails -->
                         <a href="city.html?city=new-york" class="city-compact-card">
                             <span class="city-emoji">🗽</span>
                             <span class="city-name">New York</span>
@@ -99,6 +101,7 @@
     <script src="js/logger.js"></script>
     <script src="js/debug-overlay.js"></script>
     <script src="js/city-config.js"></script>
+    <script src="js/city-renderer.js"></script>
     <script src="js/components.js"></script>
     <script src="js/header-manager.js"></script>
     <script src="js/navigation.js"></script>
