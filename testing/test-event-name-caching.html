@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Name Caching Test</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            font-family: 'Poppins', sans-serif;
+        }
+        .test-event {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Event Name Caching Test</h1>
+        <p>This test verifies that shortName is used instead of fullName when measurement isn't ready.</p>
+        
+        <div id="test-results"></div>
+        
+        <h2>Test Events</h2>
+        <div id="test-events"></div>
+        
+        <!-- Hidden calendar structure for measurement -->
+        <div class="calendar-grid" style="visibility: hidden; position: absolute; top: -9999px;">
+            <div class="event-item">
+                <div class="event-name">Test</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/logger.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+    <script>
+        // Test event data
+        const testEvents = [
+            {
+                name: 'Very Long Event Name That Should Be Shortened',
+                shortName: 'Short Name',
+                bar: 'Test Bar',
+                time: '8:00 PM'
+            },
+            {
+                name: 'Another Really Long Event Name For Testing Purposes',
+                shortName: 'Another Short',
+                nickname: 'Nickname',
+                bar: 'Another Bar',
+                time: '9:00 PM'
+            },
+            {
+                name: 'Event Without Short Name',
+                bar: 'No Short Bar',
+                time: '10:00 PM'
+            }
+        ];
+
+        // Initialize calendar loader
+        const calendar = new DynamicCalendarLoader();
+        
+        // Test function
+        function runTests() {
+            const resultsContainer = document.getElementById('test-results');
+            const eventsContainer = document.getElementById('test-events');
+            
+            let results = [];
+            
+            testEvents.forEach((event, index) => {
+                // Test measurement mode (hideEvents = true)
+                const measurementResult = calendar.generateEventNameElements(event, true);
+                
+                // Test real render mode (hideEvents = false)  
+                const renderResult = calendar.generateEventNameElements(event, false);
+                
+                // Extract the text content from the HTML
+                const measurementText = measurementResult.match(/>([^<]+)</)[1];
+                const renderText = renderResult.match(/>([^<]+)</)[1];
+                
+                // Determine expected behavior
+                const hasShortName = !!(event.shortName || event.nickname);
+                const expectedMeasurement = event.name; // Should always be full name
+                const expectedRender = hasShortName ? (event.shortName || event.nickname) : event.name;
+                
+                // Check results
+                const measurementCorrect = measurementText === expectedMeasurement;
+                const renderCorrect = renderText === expectedRender;
+                
+                results.push({
+                    event: event.name,
+                    measurementCorrect,
+                    renderCorrect,
+                    measurementText,
+                    renderText,
+                    expectedMeasurement,
+                    expectedRender
+                });
+                
+                // Display event
+                eventsContainer.innerHTML += `
+                    <div class="test-event">
+                        <h4>Event ${index + 1}: ${event.name}</h4>
+                        <p><strong>Short Name:</strong> ${event.shortName || event.nickname || 'None'}</p>
+                        <p><strong>Measurement Mode:</strong> "${measurementText}" ${measurementCorrect ? '✅' : '❌'}</p>
+                        <p><strong>Render Mode:</strong> "${renderText}" ${renderCorrect ? '✅' : '❌'}</p>
+                        <p><strong>Expected:</strong> Measurement="${expectedMeasurement}", Render="${expectedRender}"</p>
+                    </div>
+                `;
+            });
+            
+            // Summary
+            const allPassed = results.every(r => r.measurementCorrect && r.renderCorrect);
+            const passedCount = results.filter(r => r.measurementCorrect && r.renderCorrect).length;
+            
+            resultsContainer.innerHTML = `
+                <div class="test-result ${allPassed ? 'success' : 'error'}">
+                    <h3>Test Results: ${passedCount}/${results.length} passed</h3>
+                    <p>${allPassed ? 'All tests passed! 🎉' : 'Some tests failed. Check the details below.'}</p>
+                </div>
+                <div class="test-result info">
+                    <h4>Test Details:</h4>
+                    <ul>
+                        <li><strong>Measurement Mode (hideEvents=true):</strong> Should always use full name</li>
+                        <li><strong>Render Mode (hideEvents=false):</strong> Should use shortName when available, fallback to fullName</li>
+                        <li><strong>Expected Behavior:</strong> No caching during measurement mode</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 100); // Small delay to ensure everything is loaded
+        });
+    </script>
+</body>
+</html>

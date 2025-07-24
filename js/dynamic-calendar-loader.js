@@ -470,12 +470,14 @@ class DynamicCalendarLoader extends CalendarCore {
         // Get actual available width for event text
         const availableWidth = this.getEventTextWidth();
         
-        // If measurement not ready yet, return full name as fallback
+        // If measurement not ready yet, prefer shortName over fullName for real rendering
+        // Only use fullName as fallback during measurement mode (when we need consistent sizing)
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `Measurement not ready for ${breakpoint}, using full name`, {
-                eventName: fullName
+            logger.debug('CALENDAR', `Measurement not ready for ${breakpoint}, using short name instead of full name`, {
+                shortName: shortName,
+                fullName: fullName
             });
-            return fullName;
+            return shortName;
         }
         
         // Calculate how many characters can fit on one line
@@ -720,6 +722,10 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If we're in measurement mode (hideEvents), always use full name to avoid measurement loops
         if (hideEvents) {
+            logger.debug('CALENDAR', 'Measurement mode: using full name without caching', {
+                eventName: fullName,
+                hideEvents: true
+            });
             return `<div class="event-name">${fullName}</div>`;
         }
         
@@ -734,19 +740,31 @@ class DynamicCalendarLoader extends CalendarCore {
         // Check if we have cached name for this event at current breakpoint
         if (this.cachedEventNames.has(eventKey)) {
             const cachedName = this.cachedEventNames.get(eventKey);
-            logger.debug('CALENDAR', 'Using cached event name', { eventKey, breakpoint: this.currentBreakpoint });
+            logger.debug('CALENDAR', 'Using cached event name', { 
+                eventKey, 
+                breakpoint: this.currentBreakpoint, 
+                cachedName: cachedName,
+                hideEvents: false
+            });
             return `<div class="event-name">${cachedName}</div>`;
         }
         
         // Calculate name for current breakpoint only
         logger.debug('CALENDAR', 'Calculating event name for current breakpoint', { 
             eventKey, 
-            breakpoint: this.currentBreakpoint 
+            breakpoint: this.currentBreakpoint,
+            hideEvents: false
         });
         const eventName = this.getSmartEventNameForBreakpoint(event, this.currentBreakpoint);
         
-        // Cache the result
+        // Cache the result for real rendering only (not measurement mode)
         this.cachedEventNames.set(eventKey, eventName);
+        logger.debug('CALENDAR', 'Cached calculated event name', {
+            eventKey,
+            calculatedName: eventName,
+            shortName: event.shortName || event.nickname || '',
+            fullName: fullName
+        });
         
         return `<div class="event-name">${eventName}</div>`;
     }
