@@ -411,29 +411,7 @@ header {
     min-height: 100vh;
 }
 
-/* Compact Hero Section */
-.hero.compact-hero {
-    min-height: auto;
-    padding: 60px 0 40px;
-}
-
-.hero-content-compact {
-    text-align: center;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.hero-content-compact h2 {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    font-weight: 700;
-}
-
-.hero-content-compact p {
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
-    opacity: 0.9;
-}
+/* Compact Hero Section - REMOVED (no longer used) */
 
 .hero-content {
     flex: 1;
@@ -514,31 +492,7 @@ header {
 
 /* Old city card styles removed - using compact layout instead */
 
-/* Compact Layout Styles */
-.compact-section {
-    padding: 3rem 0;
-}
-
-.two-column-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-    align-items: start;
-}
-
-.cities-column,
-.merchants-column {
-    background: var(--background-primary);
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 4px 15px var(--shadow-light);
-}
-
-.cities-column h2,
-.merchants-column h2 {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-}
+/* Compact Layout Styles - REMOVED (no longer used) */
 
 .section-subtitle {
     color: var(--text-secondary);
@@ -546,218 +500,13 @@ header {
     font-size: 0.95rem;
 }
 
-/* City Carousel Layout */
-.city-bubbles-container {
-    position: relative;
-    padding: 1rem 0;
-    width: 100%;
-    overflow: hidden;
-}
+/* City Carousel Layout - REMOVED (replaced with simple grid) */
 
-.city-carousel {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
-}
+/* Remaining city-bubble styles removed */
 
-.city-carousel-track {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    justify-content: flex-start;
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    flex-wrap: wrap;
-    animation: cityCarouselFloat 25s ease-in-out infinite;
-}
+/* City bubble styles removed - replaced with city-card grid */
 
-@keyframes cityCarouselFloat {
-    0%, 100% {
-        transform: translateX(0);
-    }
-    33% {
-        transform: translateX(-10px);
-    }
-    66% {
-        transform: translateX(-20px);
-    }
-}
-
-.carousel-dots {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-.dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--text-secondary);
-    opacity: 0.4;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.dot.active {
-    background: var(--primary-color);
-    opacity: 1;
-    transform: scale(1.2);
-}
-
-.dot:hover {
-    opacity: 0.8;
-    transform: scale(1.1);
-}
-
-/* Carousel interaction states */
-.city-carousel-track.swiping {
-    cursor: grabbing;
-    cursor: -webkit-grabbing;
-}
-
-.city-carousel-track {
-    cursor: grab;
-    cursor: -webkit-grab;
-}
-
-.city-carousel-track.swiping .city-bubble {
-    pointer-events: none;
-}
-
-/* Smooth scroll behavior for better UX */
-.city-carousel {
-    scroll-behavior: smooth;
-}
-
-/* Prevent text selection during drag */
-.city-carousel-track.swiping * {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
-
-.city-bubble {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 80px;
-    height: 80px;
-    background: var(--background-secondary);
-    border-radius: 50%;
-    text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    box-shadow: 0 4px 12px var(--shadow-light);
-    position: relative;
-    overflow: hidden;
-    flex-shrink: 0;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
-
-.city-bubble:hover {
-    transform: translateY(-8px) scale(1.1);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    background: var(--solid-light);
-}
-
-.city-bubble:nth-child(3n+1) {
-    margin-top: 0.5rem;
-}
-
-.city-bubble:nth-child(3n+2) {
-    margin-bottom: 0.8rem;
-}
-
-.city-bubble:nth-child(3n) {
-    margin-top: 1.2rem;
-}
-
-.city-emoji {
-    font-size: 1.8rem;
-    margin-bottom: 0.2rem;
-    transition: transform 0.3s ease;
-}
-
-.city-bubble:hover .city-emoji {
-    transform: scale(1.2);
-}
-
-.city-name {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    text-align: center;
-    line-height: 1;
-}
-
-.city-bubble.coming-soon {
-    opacity: 0.6;
-    cursor: default;
-}
-
-.city-bubble.coming-soon:hover {
-    transform: none;
-    background: var(--background-secondary);
-}
-
-.city-bubble.coming-soon .city-emoji {
-    transform: none;
-}
-
-/* Compact Merchants List */
-.compact-merchants-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.merchant-category {
-    padding: 1.2rem;
-    background: var(--background-secondary);
-    border-radius: 12px;
-    transition: all 0.2s ease;
-}
-
-.merchant-category:hover {
-    background: var(--solid-light);
-}
-
-.merchant-category h4 {
-    margin: 0 0 0.3rem 0;
-    font-size: 1rem;
-    color: var(--primary-color);
-}
-
-.merchant-category p {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.directory-link {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background: var(--solid-primary);
-    color: var(--white);
-    text-decoration: none;
-    border-radius: 25px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    text-align: center;
-    width: 100%;
-}
-
-.directory-link:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px var(--shadow-medium);
-}
+/* Compact Merchants List - REMOVED (replaced with simple bear-art section) */
 
 /* Events Section */
 .events {
@@ -832,88 +581,7 @@ header {
 
 /* Old businesses section styles removed - using compact layout instead */
 
-@media (max-width: 768px) {
-    /* Compact layout responsive */
-    .two-column-layout {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-    
-    .cities-column,
-    .merchants-column {
-        padding: 1.5rem;
-    }
-
-    /* City carousel mobile responsive */
-    .city-bubbles-container {
-        padding: 1rem 0.5rem;
-        position: relative;
-    }
-
-    .city-carousel {
-        overflow: hidden;
-        position: relative;
-    }
-
-    .city-carousel-track {
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        animation: none; /* Disable auto-animation on mobile for better touch interaction */
-        min-width: max-content;
-        padding-bottom: 0.5rem;
-        transform: translateX(0);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        will-change: transform; /* Optimize for animations */
-    }
-
-    .city-carousel-track.swiping {
-        transition: none; /* Disable transition during swipe for smoother interaction */
-    }
-
-    .city-bubble {
-        width: 70px;
-        height: 70px;
-        flex-shrink: 0;
-    }
-
-    .city-bubble:nth-child(odd),
-    .city-bubble:nth-child(even) {
-        margin-top: 0;
-        margin-bottom: 0;
-    }
-
-    .carousel-dots {
-        display: flex;
-        justify-content: center;
-        margin-top: 0.75rem;
-        padding: 0.5rem;
-    }
-
-    .dot {
-        width: 6px;
-        height: 6px;
-        margin: 0 0.25rem;
-    }
-
-    /* Hide dots on very small screens if there's only one slide */
-    @media (max-width: 480px) {
-        .carousel-dots {
-            margin-top: 0.5rem;
-        }
-        
-        .carousel-dots:has(.dot:only-child) {
-            display: none;
-        }
-    }
-
-    .city-emoji {
-        font-size: 1.5rem;
-    }
-
-    .city-name {
-        font-size: 0.65rem;
-    }
-}
+/* Mobile responsive styles for removed elements - CLEANED UP */
 
 /* Simplified Cities Section */
 .cities-simple {
@@ -1839,31 +1507,7 @@ header {
     margin-bottom: 1.5rem;
 }
 
-.sample-submissions {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.sample-card {
-    background: var(--background-primary);
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 3px 10px var(--shadow-light);
-    border-left: 4px solid var(--primary-color);
-}
-
-.sample-card h4 {
-    font-size: 1.1rem;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.sample-card p {
-    font-size: 0.95rem;
-    color: var(--text-secondary);
-    font-style: italic;
-}
+/* Sample submissions styles - REMOVED (no longer used) */
 
 
 
@@ -4466,46 +4110,7 @@ footer {
 
 /* Instagram embed styles */
 
-/* Mobile styles for compact hero */
-@media (max-width: 768px) {
-    .hero.compact-hero {
-        padding: 40px 0 30px;
-    }
-    
-    .hero-content-compact h2 {
-        font-size: 2rem;
-    }
-    
-    .hero-content-compact p {
-        font-size: 1rem;
-        padding: 0 1rem;
-    }
-    
-    .hero-buttons {
-        flex-direction: column;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .hero-buttons .cta-button {
-        width: 90%;
-        max-width: 280px;
-    }
-}
-
-@media (max-width: 480px) {
-    .hero.compact-hero {
-        padding: 30px 0 25px;
-    }
-    
-    .hero-content-compact h2 {
-        font-size: 1.75rem;
-    }
-    
-    .hero-content-compact p {
-        font-size: 0.95rem;
-    }
-}
+/* Mobile styles for compact hero - REMOVED (no longer used) */
 
 /* ===== DEBUG OVERLAY STYLES ===== */
 
