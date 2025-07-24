@@ -114,50 +114,17 @@ class PageEffectsManager {
     }
 
     setupCityBubbles() {
-        const bubblesContainer = document.querySelector('.city-bubbles-container');
-        const bubblesScroll = document.querySelector('.city-bubbles-scroll');
-        
-        if (!bubblesContainer || !bubblesScroll) {
-            logger.debug('PAGE', 'City bubbles not found - skipping setup');
-            return;
+        // Initialize the new city carousel manager
+        if (typeof CityCarouselManager !== 'undefined') {
+            this.cityCarousel = new CityCarouselManager();
+            logger.componentLoad('PAGE', 'Modern city carousel initialized');
+        } else {
+            logger.warn('PAGE', 'CityCarouselManager not available - falling back to basic interactions');
+            this.setupBasicCityBubbles();
         }
+    }
 
-        logger.componentInit('PAGE', 'Setting up city bubbles interactions');
-
-        // Add touch/mouse interaction handling
-        let isUserInteracting = false;
-        let autoScrollPaused = false;
-
-        // Pause auto-animation on user interaction
-        const pauseAutoAnimation = () => {
-            if (!autoScrollPaused) {
-                bubblesScroll.style.animationPlayState = 'paused';
-                autoScrollPaused = true;
-                logger.userInteraction('PAGE', 'City bubbles auto-animation paused by user');
-            }
-        };
-
-        // Handle scroll interaction and update scroll indicator
-        bubblesContainer.addEventListener('scroll', () => {
-            pauseAutoAnimation();
-            
-            // Hide scroll indicator when scrolled to the end (mobile only)
-            if (window.innerWidth <= 768) {
-                const isScrolledToEnd = bubblesContainer.scrollLeft + bubblesContainer.clientWidth >= bubblesContainer.scrollWidth - 10;
-                const indicator = bubblesContainer.querySelector('::after');
-                if (isScrolledToEnd) {
-                    bubblesContainer.style.setProperty('--scroll-indicator-opacity', '0');
-                } else {
-                    bubblesContainer.style.setProperty('--scroll-indicator-opacity', '0.6');
-                }
-            }
-        });
-        
-        // Handle touch/mouse interaction
-        bubblesContainer.addEventListener('touchstart', pauseAutoAnimation);
-        bubblesContainer.addEventListener('mousedown', pauseAutoAnimation);
-
-        // Add hover effects for individual bubbles
+    setupBasicCityBubbles() {
         const cityBubbles = document.querySelectorAll('.city-bubble:not(.coming-soon)');
         cityBubbles.forEach(bubble => {
             bubble.addEventListener('mouseenter', () => {
@@ -167,7 +134,7 @@ class PageEffectsManager {
             });
         });
 
-        logger.componentLoad('PAGE', 'City bubbles interactions enabled', {
+        logger.componentLoad('PAGE', 'Basic city bubble interactions enabled', {
             bubbleCount: cityBubbles.length
         });
     }
