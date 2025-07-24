@@ -16,10 +16,7 @@
                     <h1><a href="index.html">🐻 chunky.dad</a></h1>
                 </div>
                 <ul class="nav-menu">
-                    <li><a href="#home">Home</a></li>
-                    <li><a href="#cities">Cities</a></li>
-                    <li><a href="bear-directory.html">Directory</a></li>
-                    <li><a href="#contact">Contact</a></li>
+                    <!-- Keeping city-picking functionality but removing extra buttons -->
                 </ul>
                 <div class="hamburger">
                     <span></span>
@@ -31,117 +28,95 @@
     </header>
 
     <main>
-        <section id="home" class="hero compact-hero">
+        <!-- Hero Section -->
+        <section id="home" class="hero">
             <div class="container">
-                <div class="hero-content-compact">
+                <div class="hero-content">
                     <h2>Your Bear Travel HQ</h2>
                     <p>Quick guides to the best bear scenes worldwide - bars, events, and bear-owned businesses!</p>
-                    <div class="hero-buttons">
-                        <button class="cta-button primary" onclick="scrollToSection('cities')">Explore Cities</button>
-                        <a href="bear-directory.html" class="cta-button secondary">Bear Directory</a>
-                    </div>
                 </div>
             </div>
         </section>
 
-        <section id="cities" class="cities compact-section">
+        <!-- Cities Section - Simple clickable city list -->
+        <section id="cities" class="cities-simple">
             <div class="container">
-                <div class="two-column-layout">
-                    <div class="cities-column">
-                        <h2>🏙️ City Guides</h2>
-                        <p class="section-subtitle">Quick access to bear scenes worldwide</p>
-                        <div class="city-bubbles-container">
-                            <div class="city-carousel">
-                                <div class="city-carousel-track">
-                                    <a href="city.html?city=new-york" class="city-bubble" title="New York">
-                                        <span class="city-emoji">🗽</span>
-                                        <span class="city-name">NYC</span>
-                                    </a>
-                                    
-                                    <a href="city.html?city=seattle" class="city-bubble" title="Seattle">
-                                        <span class="city-emoji">🌲</span>
-                                        <span class="city-name">Seattle</span>
-                                    </a>
+                <h2>🏙️ Explore Cities</h2>
+                <p class="section-subtitle">Click a city to discover the local bear scene</p>
+                
+                <div class="city-grid">
+                    <a href="city.html?city=new-york" class="city-card">
+                        <span class="city-emoji">🗽</span>
+                        <h3>New York</h3>
+                        <p>The Big Apple's bear scene</p>
+                    </a>
+                    
+                    <a href="city.html?city=seattle" class="city-card">
+                        <span class="city-emoji">🌲</span>
+                        <h3>Seattle</h3>
+                        <p>Pacific Northwest bears</p>
+                    </a>
 
-                                    <a href="city.html?city=los-angeles" class="city-bubble" title="Los Angeles">
-                                        <span class="city-emoji">🌴</span>
-                                        <span class="city-name">LA</span>
-                                    </a>
+                    <a href="city.html?city=los-angeles" class="city-card">
+                        <span class="city-emoji">🌴</span>
+                        <h3>Los Angeles</h3>
+                        <p>West Coast bear culture</p>
+                    </a>
 
-                                    <a href="city.html?city=toronto" class="city-bubble" title="Toronto">
-                                        <span class="city-emoji">🍁</span>
-                                        <span class="city-name">Toronto</span>
-                                    </a>
+                    <a href="city.html?city=toronto" class="city-card">
+                        <span class="city-emoji">🍁</span>
+                        <h3>Toronto</h3>
+                        <p>Canadian bear capital</p>
+                    </a>
 
-                                    <a href="city.html?city=london" class="city-bubble" title="London">
-                                        <span class="city-emoji">🇬🇧</span>
-                                        <span class="city-name">London</span>
-                                    </a>
+                    <a href="city.html?city=london" class="city-card">
+                        <span class="city-emoji">🇬🇧</span>
+                        <h3>London</h3>
+                        <p>UK bear community</p>
+                    </a>
 
-                                    <a href="city.html?city=chicago" class="city-bubble" title="Chicago">
-                                        <span class="city-emoji">🏙️</span>
-                                        <span class="city-name">Chicago</span>
-                                    </a>
+                    <a href="city.html?city=chicago" class="city-card">
+                        <span class="city-emoji">🏙️</span>
+                        <h3>Chicago</h3>
+                        <p>Midwest bear hub</p>
+                    </a>
 
-                                    <a href="city.html?city=berlin" class="city-bubble" title="Berlin">
-                                        <span class="city-emoji">🇩🇪</span>
-                                        <span class="city-name">Berlin</span>
-                                    </a>
+                    <a href="city.html?city=berlin" class="city-card">
+                        <span class="city-emoji">🇩🇪</span>
+                        <h3>Berlin</h3>
+                        <p>European bear scene</p>
+                    </a>
 
-                                    <div class="city-bubble coming-soon" title="More cities coming soon">
-                                        <span class="city-emoji">🌍</span>
-                                        <span class="city-name">More</span>
-                                    </div>
-                                </div>
-                                <div class="carousel-dots">
-                                    <!-- Dots will be generated dynamically by JavaScript -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="merchants-column">
-                        <h2>🏪 Bear Merchants</h2>
-                        <p class="section-subtitle">Support bear businesses</p>
-                        <div class="compact-merchants-list">
-                            <div class="merchant-category">
-                                <h4>🎨 Artists & Creators</h4>
-                                <p>Talented bear artists worldwide</p>
-                            </div>
-                            <div class="merchant-category">
-                                <h4>🛍️ Shops & Services</h4>
-                                <p>Bear-owned businesses</p>
-                            </div>
-                            <div class="merchant-category">
-                                <h4>☕ Cafes & Restaurants</h4>
-                                <p>Bear-friendly dining</p>
-                            </div>
-                        </div>
-                        <a href="bear-directory.html" class="directory-link">
-                            Browse Full Directory →
-                        </a>
+                    <div class="city-card coming-soon">
+                        <span class="city-emoji">🌍</span>
+                        <h3>More Cities</h3>
+                        <p>Coming soon!</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="contact" class="contact">
+        <!-- Bear Art Section - Much smaller and simpler -->
+        <section id="bear-art" class="bear-art-section">
+            <div class="container">
+                <div class="bear-art-content">
+                    <h2>🎨 Bear Art & Businesses</h2>
+                    <p>Discover amazing bear artists and support bear-owned businesses worldwide!</p>
+                    <a href="bear-directory.html" class="bear-art-button">
+                        Browse Bear Directory →
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact/Info Section -->
+        <section id="contact" class="contact-simple">
             <div class="container">
                 <h2>Share Bear Intel 📧</h2>
                 <div class="contact-content">
                     <div class="contact-info">
                         <h3>Help us grow the bear travel guide!</h3>
                         <p>Know about a great bear bar, event, or business? We want to hear about it!</p>
-                        <div class="sample-submissions">
-                            <div class="sample-card">
-                                <h4>Example: NYC Bear Bar</h4>
-                                <p>"The Eagle NYC has Bear Happy Hour every Friday 6-9pm with drink specials and a great crowd!"</p>
-                            </div>
-                            <div class="sample-card">
-                                <h4>Example: Bear Business</h4>
-                                <p>"Check out Bear Leather Co in Seattle - amazing custom gear made by bears for bears!"</p>
-                            </div>
-                        </div>
                     </div>
                     <form class="contact-form">
                         <input type="text" placeholder="Your Name" required>
@@ -154,7 +129,7 @@
                             <option value="city">New City Suggestion</option>
                             <option value="other">Other Bear Intel</option>
                         </select>
-                        <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="5" required></textarea>
+                        <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
                         <button type="submit">Send Bear Intel 🐻</button>
                     </form>
                 </div>
@@ -172,7 +147,6 @@
     <script src="js/logger.js"></script>
     <script src="js/debug-overlay.js"></script>
     <script src="js/city-config.js"></script>
-    <script src="js/city-carousel.js"></script>
     <script src="js/header-manager.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/page-effects.js"></script>
