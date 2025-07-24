@@ -1854,6 +1854,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
+
+        
         // Create a fake event for accurate width measurement
         const fakeEvent = {
             name: 'Test Event Name For Measurement',
@@ -1871,6 +1873,14 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Wait for DOM to be updated before proceeding with measurements
         await new Promise(resolve => setTimeout(resolve, 0));
+        
+        // Force measurement to happen now while the fake event is in the DOM
+        const measurementWidth = this.getEventTextWidth();
+        if (measurementWidth === null) {
+            logger.warn('CALENDAR', 'Failed to measure event text width from fake event - measurement infrastructure not ready');
+        } else {
+            logger.info('CALENDAR', `Successfully measured event text width: ${measurementWidth}px before loading real events`);
+        }
         
         // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
@@ -2024,9 +2034,10 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Initialize
     async init() {
-        logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
-        await this.renderCityPage();
-    }
+                  logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
+          await this.renderCityPage();
+      }
+
 }
 
 // Map interaction function
