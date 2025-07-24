@@ -601,7 +601,7 @@ header {
 .city-compact-grid {
     display: flex;
     gap: 1rem;
-    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    padding: 0.5rem 0 0.5rem 1rem;
     min-width: fit-content;
 }
 
@@ -829,6 +829,10 @@ header {
     .city-compact-card .city-name {
         font-size: 0.8rem;
         display: block !important; /* Ensure city names are always visible in city cards on mobile */
+    }
+    
+    .city-compact-grid {
+        padding: 0.5rem 0 0.5rem 0.75rem;
     }
     
     .city-grid {
