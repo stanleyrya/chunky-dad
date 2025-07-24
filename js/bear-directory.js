@@ -201,6 +201,7 @@ class BearDirectory {
                         <iframe src="${item.shop}" 
                                 class="shop-preview-iframe" 
                                 loading="lazy"
+                                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                                 onload="window.bearDirectory.handleIframeLoad(this)"
                                 onerror="window.bearDirectory.handleIframeError(this, 'shop')">
                         </iframe>
@@ -225,6 +226,7 @@ class BearDirectory {
                         <iframe src="${item.website}" 
                                 class="website-preview-iframe" 
                                 loading="lazy"
+                                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                                 onload="window.bearDirectory.handleIframeLoad(this)"
                                 onerror="window.bearDirectory.handleIframeError(this, 'website')">
                         </iframe>

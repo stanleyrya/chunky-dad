@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iframe Fix Test - Bear Directory</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            background: var(--background-light);
+        }
+        .test-section {
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .test-column {
+            padding: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        .before {
+            border-color: #e53e3e;
+            background: #fff5f5;
+        }
+        .after {
+            border-color: #38a169;
+            background: #f0fff4;
+        }
+        .test-info {
+            background: #e8f4f8;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #b3d9e8;
+        }
+        .console-log {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Iframe Fix Test - Bear Directory</h1>
+    <p>Testing the iframe sandbox fix for the bear directory</p>
+
+    <div class="test-info">
+        <h3>🐛 The Problem</h3>
+        <p>The bear directory page couldn't show iframes of other websites because:</p>
+        <ul>
+            <li>Iframes were created without <code>sandbox</code> attributes</li>
+            <li>Many websites block iframe embedding with X-Frame-Options or CSP</li>
+            <li>The test display modes worked because they included proper sandbox attributes</li>
+        </ul>
+        <h3>✅ The Fix</h3>
+        <p>Added <code>sandbox="allow-same-origin allow-scripts allow-popups allow-forms"</code> to all iframes in bear-directory.js</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Before vs After Comparison</h2>
+        <div class="comparison-grid">
+            <div class="test-column before">
+                <h3>❌ Before (No Sandbox)</h3>
+                <p>Iframe without sandbox attributes - likely to be blocked</p>
+                <div class="directory-tile" style="max-width: 100%;">
+                    <div class="shop-preview-container" data-url="https://example.com">
+                        <div class="shop-preview-header">
+                            <span class="shop-icon">🛍️</span>
+                            <span>Shop Preview (No Sandbox)</span>
+                        </div>
+                        <div class="iframe-wrapper">
+                            <iframe src="https://example.com" 
+                                    class="shop-preview-iframe" 
+                                    loading="lazy"
+                                    onload="logResult('Before', 'Loaded successfully (unexpected)')"
+                                    onerror="logResult('Before', 'Failed to load (expected)')">
+                            </iframe>
+                            <div class="iframe-loading">
+                                <div class="loading-spinner"></div>
+                                <p>Loading preview...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-column after">
+                <h3>✅ After (With Sandbox)</h3>
+                <p>Iframe with sandbox attributes - should work better</p>
+                <div class="directory-tile" style="max-width: 100%;">
+                    <div class="shop-preview-container" data-url="https://example.com">
+                        <div class="shop-preview-header">
+                            <span class="shop-icon">🛍️</span>
+                            <span>Shop Preview (With Sandbox)</span>
+                        </div>
+                        <div class="iframe-wrapper">
+                            <iframe src="https://example.com" 
+                                    class="shop-preview-iframe" 
+                                    loading="lazy"
+                                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                                    onload="logResult('After', 'Loaded successfully!')"
+                                    onerror="logResult('After', 'Failed to load')">
+                            </iframe>
+                            <div class="iframe-loading">
+                                <div class="loading-spinner"></div>
+                                <p>Loading preview...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Testing Real-World URLs</h2>
+        <p>Testing with URLs that are commonly used in bear directories</p>
+        
+        <div class="directory-tile" style="max-width: 400px; margin: 1rem 0;">
+            <div class="website-preview-container" data-url="https://www.etsy.com">
+                <div class="website-preview-header">
+                    <span class="website-icon">🌐</span>
+                    <span>Etsy Shop (Fixed)</span>
+                </div>
+                <div class="iframe-wrapper">
+                    <iframe src="https://www.etsy.com" 
+                            class="website-preview-iframe" 
+                            loading="lazy"
+                            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                            onload="handleIframeLoad(this)"
+                            onerror="handleIframeError(this, 'website')">
+                    </iframe>
+                    <div class="iframe-loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading Etsy preview...</p>
+                    </div>
+                </div>
+                <a href="https://www.etsy.com" target="_blank" class="website-preview-link">
+                    Visit Website →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="console-log" id="consoleLog">
+        === Test Results ===
+        Testing iframe loading with and without sandbox attributes...
+    </div>
+
+    <script>
+        function logResult(testType, message) {
+            const log = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            log.textContent += `\n[${timestamp}] ${testType}: ${message}`;
+            console.log(`${testType}:`, message);
+        }
+
+        function handleIframeLoad(iframe) {
+            const container = iframe.closest('.website-preview-container, .shop-preview-container');
+            const url = container.dataset.url;
+            
+            // Hide loading spinner
+            const wrapper = iframe.closest('.iframe-wrapper');
+            if (wrapper) {
+                const loadingEl = wrapper.querySelector('.iframe-loading');
+                if (loadingEl) {
+                    loadingEl.style.display = 'none';
+                }
+            }
+            
+            logResult('Real-world test', `${url} loaded successfully`);
+        }
+
+        function handleIframeError(iframe, type) {
+            const container = iframe.closest(`.${type}-preview-container`);
+            if (!container) return;
+            
+            const url = container.dataset.url;
+            logResult('Real-world test', `${url} failed to load (blocked by site)`);
+            
+            // Replace iframe with error message
+            const wrapper = iframe.closest('.iframe-wrapper');
+            if (wrapper) {
+                wrapper.innerHTML = `
+                    <div class="${type}-preview-error">
+                        <div class="preview-error-icon">🚫</div>
+                        <p>Preview not available</p>
+                        <p class="preview-error-reason">This ${type} cannot be embedded</p>
+                        <a href="${url}" target="_blank" class="preview-error-link">
+                            Open ${type === 'shop' ? 'Shop' : 'Website'} →
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Set up timeouts for loading spinners
+        setTimeout(() => {
+            document.querySelectorAll('.iframe-loading').forEach(loading => {
+                if (loading.style.display !== 'none') {
+                    loading.style.display = 'none';
+                    logResult('Timeout', 'Loading spinner hidden after 5 seconds');
+                }
+            });
+        }, 5000);
+
+        // Log initial state
+        logResult('Info', 'Page loaded. Comparing iframe behavior...');
+        
+        // Check for iframe blocking after a delay
+        setTimeout(() => {
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach((iframe, i) => {
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (doc) {
+                        logResult('Access check', `Iframe ${i+1}: Content accessible`);
+                    }
+                } catch (e) {
+                    logResult('Access check', `Iframe ${i+1}: Cross-origin (normal) - ${e.message}`);
+                }
+            });
+        }, 3000);
+    </script>
+</body>
+</html>
