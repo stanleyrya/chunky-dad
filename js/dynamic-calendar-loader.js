@@ -714,12 +714,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     
     // Generate event name element for current breakpoint only
-    generateEventNameElements(event) {
+    generateEventNameElements(event, hideEvents = false) {
         const fullName = event.name || '';
         const hasShortName = !!(event.shortName || event.nickname);
         
-        // If we're in measurement mode, always use full name to avoid measurement loops
-        if (this.measurementMode) {
+        // If we're in measurement mode (hideEvents), always use full name to avoid measurement loops
+        if (hideEvents) {
             return `<div class="event-name">${fullName}</div>`;
         }
         
@@ -1281,7 +1281,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     return `
                         <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            ${this.generateEventNameElements(event)}
+                            ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -1385,7 +1385,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     return `
                         <div class="event-item${hideEvents ? ' hidden' : ''}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
-                            ${this.generateEventNameElements(event)}
+                            ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -1848,17 +1848,11 @@ class DynamicCalendarLoader extends CalendarCore {
             recurring: false
         };
         
-        // Set measurement mode flag
-        this.measurementMode = true;
-        
         // Show calendar structure first but hidden for measurements, with fake event for width calculation
         this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true, structure hidden
         
         // Wait for DOM to be updated before proceeding with measurements
         await new Promise(resolve => setTimeout(resolve, 0));
-        
-        // Clear measurement mode flag
-        this.measurementMode = false;
         
         // Load calendar data and update normally
         const data = await this.loadCalendarData(this.currentCity);
