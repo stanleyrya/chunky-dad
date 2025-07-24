@@ -1907,7 +1907,7 @@ class DynamicCalendarLoader extends CalendarCore {
     setupResizeListener() {
         let resizeTimeout;
         
-        window.addEventListener('resize', () => {
+        const handleLayoutChange = (eventType = 'resize') => {
             const newWidth = window.innerWidth;
             const newBreakpoint = this.getCurrentBreakpoint();
             const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
@@ -1923,7 +1923,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.lastScreenWidth = newWidth;
                 this.currentBreakpoint = newBreakpoint;
                 
-                logger.debug('CALENDAR', 'Significant resize detected, caches cleared', {
+                logger.debug('CALENDAR', `Significant layout change detected via ${eventType}`, {
+                    eventType,
                     oldBreakpoint,
                     newBreakpoint,
                     oldWidth,
@@ -1937,12 +1938,34 @@ class DynamicCalendarLoader extends CalendarCore {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     this.updateCalendarDisplay();
-                    logger.debug('CALENDAR', 'Calendar display updated after resize');
+                    logger.debug('CALENDAR', `Calendar display updated after ${eventType}`);
                 }, 150); // 150ms debounce
             }
-        });
+        };
         
-        logger.debug('CALENDAR', 'Resize listener set up for all significant size changes');
+        // Listen to window resize events
+        window.addEventListener('resize', () => handleLayoutChange('resize'));
+        
+        // Listen to orientation changes (important for mobile/tablet)
+        window.addEventListener('orientationchange', () => handleLayoutChange('orientationchange'));
+        
+        // Listen for visual viewport changes (crucial for iPad split screen)
+        if (window.visualViewport) {
+            // Use a separate timeout for visual viewport to handle rapid changes during split screen transitions
+            let visualViewportTimeout;
+            window.visualViewport.addEventListener('resize', () => {
+                clearTimeout(visualViewportTimeout);
+                visualViewportTimeout = setTimeout(() => {
+                    handleLayoutChange('visualViewport.resize');
+                }, 100); // Slightly shorter debounce for visual viewport to be more responsive
+            });
+            // Note: We don't listen to visualViewport scroll as that's just scrolling, not layout change
+        }
+        
+        logger.debug('CALENDAR', 'Layout change listeners set up for comprehensive detection', {
+            events: ['resize', 'orientationchange', 'visualViewport.resize'],
+            hasVisualViewport: !!window.visualViewport
+        });
     }
     
 
