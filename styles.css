@@ -602,14 +602,14 @@ header {
 .city-compact-grid,
 .event-compact-grid {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem;
     padding: 0.5rem 0 0.5rem 10%;
     min-width: fit-content;
     transform: translateX(5%);
 }
 
 .event-compact-grid {
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
 /* Shared Compact Card Base Styles */
@@ -1023,7 +1023,7 @@ header {
     }
     
     .event-compact-grid {
-        gap: 1.2rem;
+        gap: 1rem;
     }
     
     .city-grid {

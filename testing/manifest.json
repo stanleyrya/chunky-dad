@@ -1,5 +1,5 @@
 {
-  "generated": "2025-07-25T20:20:13.966Z",
+  "generated": "2025-07-25T20:27:14.547Z",
   "files": [
     {
       "name": "breakpoint-test.html",
@@ -35,11 +35,6 @@
       "name": "test-google-sheets-loader.html",
       "size": 40202,
       "modified": "2025-07-25T20:15:43.673Z"
-    },
-    {
-      "name": "test-index-improvements.html",
-      "size": 7052,
-      "modified": "2025-07-25T20:20:09.990Z"
     },
     {
       "name": "ultimate-style-tester.html",
