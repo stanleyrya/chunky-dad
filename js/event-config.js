@@ -17,7 +17,7 @@ const BEAR_EVENTS_CONFIG = {
         tagline: 'Mediterranean bear celebration',
         startDate: '2025-09-07',
         endDate: '2025-09-14',
-        location: 'Sitges, Spain',
+        location: 'Sitges',
         calendarId: 'example_sitges@group.calendar.google.com',
         coordinates: { lat: 41.2379, lng: 1.8057 },
         mapZoom: 12
@@ -28,7 +28,7 @@ const BEAR_EVENTS_CONFIG = {
         tagline: 'Windy City street festival',
         startDate: '2025-08-09',
         endDate: '2025-08-10',
-        location: 'Chicago, IL',
+        location: 'Chicago',
         calendarId: 'example_market_days@group.calendar.google.com',
         coordinates: { lat: 41.9534, lng: -87.6491 },
         mapZoom: 12
@@ -39,7 +39,7 @@ const BEAR_EVENTS_CONFIG = {
         tagline: 'Cape Cod bear gathering',
         startDate: '2025-07-13',
         endDate: '2025-07-20',
-        location: 'Provincetown, MA',
+        location: 'Provincetown',
         calendarId: 'example_ptown_bear@group.calendar.google.com',
         coordinates: { lat: 42.0526, lng: -70.1826 },
         mapZoom: 12
@@ -50,7 +50,7 @@ const BEAR_EVENTS_CONFIG = {
         tagline: 'Halloween bear festivities',
         startDate: '2025-10-25',
         endDate: '2025-11-02',
-        location: 'Provincetown, MA',
+        location: 'Provincetown',
         calendarId: 'example_spooky_bear@group.calendar.google.com',
         coordinates: { lat: 42.0526, lng: -70.1826 },
         mapZoom: 12
