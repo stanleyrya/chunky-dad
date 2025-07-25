@@ -26,8 +26,8 @@ Currently available:
 
 Coming soon:
 - Los Angeles
-- Sitges, Spain
-- Puerto Vallarta, Mexico
+- Sitges
+- Puerto Vallarta
 
 ## Project Structure
 
