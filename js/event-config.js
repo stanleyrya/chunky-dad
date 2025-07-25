@@ -59,18 +59,6 @@ const BEAR_EVENTS_CONFIG = {
         coordinates: { lat: 42.0526, lng: -70.1826 },
         mapZoom: 12,
         visible: true
-    },
-    'winter-bear-2024': {
-        name: 'Winter Bear Week',
-        emoji: '❄️',
-        tagline: 'Cozy mountain bears',
-        startDate: '2024-01-15',
-        endDate: '2024-01-22',
-        location: 'Aspen',
-        calendarId: 'example_winter_bear@group.calendar.google.com',
-        coordinates: { lat: 39.1911, lng: -106.8175 },
-        mapZoom: 12,
-        visible: false
     }
 };
 
