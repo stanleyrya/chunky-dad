@@ -575,7 +575,7 @@ header {
 
 /* Compact Cities Section */
 .cities-compact {
-    padding: 40px 0 60px;
+    padding: 60px 0 40px;
     background: var(--solid-primary);
     color: var(--text-inverse);
 }
@@ -603,13 +603,13 @@ header {
 .event-compact-grid {
     display: flex;
     gap: 1rem;
-    padding: 0.5rem 0 0.5rem 25%;
+    padding: 0.5rem 0 0.5rem 10%;
     min-width: fit-content;
-    transform: translateX(12.5%);
+    transform: translateX(5%);
 }
 
 .event-compact-grid {
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
 /* Shared Compact Card Base Styles */
@@ -815,7 +815,7 @@ header {
 .bear-events-compact {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     padding: 3rem 0;
-    margin: 4rem 0;
+    margin: 0;
     position: relative;
     overflow: hidden;
 }
@@ -830,6 +830,17 @@ header {
     background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
                 radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
     pointer-events: none;
+}
+
+/* Add a subtle separator between sections */
+.bear-events-compact::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
 }
 
 .bear-events-compact .container h2 {
@@ -858,46 +869,55 @@ header {
 
 /* Bear Art Section */
 .bear-art-section {
-    padding: 60px 0;
-    background: var(--background-primary);
+    padding: 80px 0;
+    background: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
     text-align: center;
+    position: relative;
+}
+
+.bear-art-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 40%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(255, 107, 107, 0.1) 0%, transparent 50%);
+    pointer-events: none;
 }
 
 .bear-art-content {
     max-width: 600px;
     margin: 0 auto;
     padding: 0 2rem;
+    position: relative;
+    z-index: 1;
 }
 
 .bear-art-content h2 {
-    font-size: 2.2rem;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-}
-
-.bear-art-content p {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
+    font-size: 2.5rem;
     margin-bottom: 2rem;
-    line-height: 1.6;
+    color: var(--text-primary);
+    font-weight: 700;
 }
 
 .bear-art-button {
     display: inline-block;
-    background: var(--solid-secondary);
+    background: var(--gradient-primary);
     color: var(--text-inverse);
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border-radius: 50px;
     text-decoration: none;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1.1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .bear-art-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 /* Contact Simple Section */
@@ -938,7 +958,7 @@ header {
     
     .bear-events-compact {
         padding: 2rem 0;
-        margin: 2rem 0;
+        margin: 0;
     }
     
     .bear-events-compact .container h2 {
@@ -998,8 +1018,8 @@ header {
     /* Grid Mobile Styles */
     .city-compact-grid,
     .event-compact-grid {
-        padding: 0.5rem 0 0.5rem 20%;
-        transform: translateX(10%);
+        padding: 0.5rem 0 0.5rem 8%;
+        transform: translateX(4%);
     }
     
     .event-compact-grid {
@@ -1032,6 +1052,21 @@ header {
     .contact-simple .contact-info {
         padding-right: 0;
         text-align: center;
+    }
+    
+    /* Bear Art Section Mobile */
+    .bear-art-section {
+        padding: 60px 0;
+    }
+    
+    .bear-art-content h2 {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .bear-art-button {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
     }
 }
 

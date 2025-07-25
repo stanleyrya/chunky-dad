@@ -24,8 +24,14 @@ class FormsManager {
         // Also try to set up immediately in case components are already loaded
         this.setupBearIntelModal();
         
-        // Set up more cities button
-        this.setupMoreCitiesButton();
+        // Listen for card rendering events to set up suggestion buttons
+        document.addEventListener('cityCardsReady', () => {
+            this.setupMoreCitiesButton();
+        });
+        
+        document.addEventListener('eventCardsReady', () => {
+            this.setupMoreEventsButton();
+        });
         
         logger.componentLoad('FORM', 'Forms manager initialized');
     }
@@ -125,9 +131,6 @@ class FormsManager {
         });
 
         logger.componentLoad('FORM', 'More cities button setup complete');
-        
-        // Also setup more events button
-        this.setupMoreEventsButton();
     }
 
     setupMoreEventsButton() {
@@ -157,20 +160,6 @@ class FormsManager {
             if (selectElement) {
                 selectElement.value = 'city';
                 logger.debug('FORM', 'City preset applied to modal form');
-            }
-        }, 100);
-    }
-
-    openBearIntelModalWithEventPreset() {
-        // Open the modal first
-        this.openBearIntelModal();
-        
-        // Pre-select "New Event Suggestion" in the dropdown
-        setTimeout(() => {
-            const selectElement = this.bearIntelForm.querySelector('select');
-            if (selectElement) {
-                selectElement.value = 'event';
-                logger.debug('FORM', 'Event preset applied to modal form');
             }
         }, 100);
     }
