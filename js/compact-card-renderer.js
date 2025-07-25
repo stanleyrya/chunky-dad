@@ -41,6 +41,10 @@ class CompactCardRenderer {
         this.container.appendChild(moreCard);
 
         logger.componentLoad(this.type.toUpperCase(), `${this.type}s rendered successfully`, { count: items.length });
+        
+        // Dispatch event to notify that cards are ready
+        const event = new CustomEvent(`${this.type}CardsReady`);
+        document.dispatchEvent(event);
     }
 
     getItems() {
