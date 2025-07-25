@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Index Improvements - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Test-specific styles */
+        .test-info {
+            background: #f0f8ff;
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .test-info h3 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+        .test-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h3>🧪 Testing Index.html Improvements</h3>
+        <p>This page tests the improved centering, button functionality, and visual cohesion of the main index page.</p>
+        <p><strong>What to test:</strong></p>
+        <ul>
+            <li>Cities and events should be centered but not too much in the middle</li>
+            <li>Similar spacing between cities and events sections</li>
+            <li>"Suggest a City" and "More Events" buttons should open the modal</li>
+            <li>Page should look cohesive as one unified design</li>
+        </ul>
+    </div>
+
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html">🐻 chunky.dad</a></h1>
+                </div>
+                <ul class="nav-menu">
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="cities" class="cities-compact">
+            <div class="container">
+                <h2>🏙️ Explore Cities</h2>
+            </div>
+            
+            <div class="city-scroll-container">
+                <div class="city-compact-grid" id="city-grid">
+                    <!-- Cities will be dynamically rendered -->
+                    <a href="../city.html?city=new-york" class="city-compact-card">
+                        <div class="city-emoji-box">
+                            <span class="city-emoji">🗽</span>
+                        </div>
+                        <span class="city-name">New York</span>
+                    </a>
+                    
+                    <a href="../city.html?city=seattle" class="city-compact-card">
+                        <div class="city-emoji-box">
+                            <span class="city-emoji">🌲</span>
+                        </div>
+                        <span class="city-name">Seattle</span>
+                    </a>
+
+                    <a href="../city.html?city=los-angeles" class="city-compact-card">
+                        <div class="city-emoji-box">
+                            <span class="city-emoji">🌴</span>
+                        </div>
+                        <span class="city-name">Los Angeles</span>
+                    </a>
+
+                    <div class="city-compact-card coming-soon" id="more-cities-btn">
+                        <div class="city-emoji-box">
+                            <span class="city-emoji">🌍</span>
+                        </div>
+                        <span class="city-name">Suggest a City</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bear-events" class="bear-events-compact">
+            <div class="container">
+                <h2>🎉 Bear Events</h2>
+            </div>
+            
+            <div class="event-scroll-container">
+                <div class="event-compact-grid" id="event-grid">
+                    <a href="../event.html?event=beef-dip" class="event-compact-card">
+                        <div class="event-emoji-box">
+                            <span class="event-emoji">🌮</span>
+                        </div>
+                        <div class="event-content">
+                            <span class="event-name">Beef Dip</span>
+                            <span class="event-dates">Dec 14 - Dec 21, 2024</span>
+                            <span class="event-location">Puerto Vallarta, Mexico</span>
+                        </div>
+                    </a>
+                    
+                    <a href="../event.html?event=bear-week" class="event-compact-card">
+                        <div class="event-emoji-box">
+                            <span class="event-emoji">🏖️</span>
+                        </div>
+                        <div class="event-content">
+                            <span class="event-name">Bear Week</span>
+                            <span class="event-dates">Sep 8 - Sep 15, 2024</span>
+                            <span class="event-location">Sitges, Spain</span>
+                        </div>
+                    </a>
+
+                    <div class="event-compact-card coming-soon" id="more-events-btn">
+                        <div class="event-emoji-box">
+                            <span class="event-emoji">🎉</span>
+                        </div>
+                        <div class="event-content">
+                            <span class="event-name">More Events</span>
+                            <span class="event-dates">Suggest an Event</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bear-art" class="bear-art-section">
+            <div class="container">
+                <div class="bear-art-content">
+                    <h2>🐻 Bear Businesses</h2>
+                    <a href="../bear-directory.html" class="bear-art-button">
+                        Browse Bear Directory →
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <!-- Footer content will be injected by components.js -->
+        </div>
+    </footer>
+
+    <script src="../js/logger.js"></script>
+    <script src="../js/city-config.js"></script>
+    <script src="../js/event-config.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/navigation.js"></script>
+    <script src="../js/page-effects.js"></script>
+    <script src="../js/forms.js"></script>
+    <script>
+        // Simple test initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize components manager to inject modal
+            new ComponentsManager();
+            
+            // Initialize forms manager to handle button clicks
+            new FormsManager();
+            
+            console.log('Test page initialized - try clicking the suggestion buttons!');
+        });
+    </script>
+</body>
+</html>
