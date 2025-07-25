@@ -610,6 +610,20 @@ header {
 
 .event-compact-grid {
     gap: 1rem;
+    justify-content: center;
+    max-width: calc(100vw - 2rem);
+    margin: 0 auto;
+}
+
+/* When events can fit in viewport, center them */
+@media (min-width: 1400px) {
+    .event-compact-grid {
+        padding: 0.5rem 2rem;
+        transform: none;
+        justify-content: center;
+        width: 100%;
+        max-width: 1200px;
+    }
 }
 
 /* Shared Compact Card Base Styles */
@@ -862,6 +876,12 @@ header {
     padding-bottom: 1rem;
 }
 
+/* Better centering for event scroll container */
+.event-scroll-container {
+    display: flex;
+    justify-content: center;
+}
+
 .city-scroll-container::-webkit-scrollbar,
 .event-scroll-container::-webkit-scrollbar {
     display: none;
@@ -1024,6 +1044,17 @@ header {
     
     .event-compact-grid {
         gap: 1rem;
+        justify-content: flex-start;
+    }
+    
+    /* Better mobile centering for smaller screens */
+    @media (max-width: 768px) {
+        .event-compact-grid {
+            padding: 0.5rem 1rem;
+            transform: none;
+            justify-content: flex-start;
+            overflow-x: auto;
+        }
     }
     
     .city-grid {
