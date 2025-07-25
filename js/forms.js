@@ -125,6 +125,26 @@ class FormsManager {
         });
 
         logger.componentLoad('FORM', 'More cities button setup complete');
+        
+        // Also setup more events button
+        this.setupMoreEventsButton();
+    }
+
+    setupMoreEventsButton() {
+        const moreEventsBtn = document.getElementById('more-events-btn');
+        if (!moreEventsBtn) {
+            logger.debug('FORM', 'More events button not found - skipping setup');
+            return;
+        }
+
+        logger.componentInit('FORM', 'More events button found and initializing');
+
+        moreEventsBtn.addEventListener('click', () => {
+            logger.userInteraction('FORM', 'More events button clicked');
+            this.openBearIntelModalWithEventPreset();
+        });
+
+        logger.componentLoad('FORM', 'More events button setup complete');
     }
 
     openBearIntelModalWithCityPreset() {
@@ -137,6 +157,34 @@ class FormsManager {
             if (selectElement) {
                 selectElement.value = 'city';
                 logger.debug('FORM', 'City preset applied to modal form');
+            }
+        }, 100);
+    }
+
+    openBearIntelModalWithEventPreset() {
+        // Open the modal first
+        this.openBearIntelModal();
+        
+        // Pre-select "New Event Suggestion" in the dropdown
+        setTimeout(() => {
+            const selectElement = this.bearIntelForm.querySelector('select');
+            if (selectElement) {
+                selectElement.value = 'event';
+                logger.debug('FORM', 'Event preset applied to modal form');
+            }
+        }, 100);
+    }
+
+    openBearIntelModalWithEventPreset() {
+        // Open the modal first
+        this.openBearIntelModal();
+        
+        // Pre-select "New Event Suggestion" in the dropdown
+        setTimeout(() => {
+            const selectElement = this.bearIntelForm.querySelector('select');
+            if (selectElement) {
+                selectElement.value = 'event';
+                logger.debug('FORM', 'Event preset applied to modal form');
             }
         }, 100);
     }
