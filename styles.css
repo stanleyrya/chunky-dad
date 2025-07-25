@@ -603,8 +603,9 @@ header {
 .event-compact-grid {
     display: flex;
     gap: 1rem;
-    padding: 0.5rem 0 0.5rem 1rem;
+    padding: 0.5rem 0 0.5rem 50%;
     min-width: fit-content;
+    transform: translateX(-25%);
 }
 
 .event-compact-grid {
@@ -997,7 +998,8 @@ header {
     /* Grid Mobile Styles */
     .city-compact-grid,
     .event-compact-grid {
-        padding: 0.5rem 0 0.5rem 0.75rem;
+        padding: 0.5rem 0 0.5rem 40%;
+        transform: translateX(-20%);
     }
     
     .event-compact-grid {

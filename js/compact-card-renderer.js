@@ -102,6 +102,13 @@ class CompactCardRenderer {
     createMoreCard() {
         const card = document.createElement('div');
         card.className = `${this.type}-compact-card coming-soon`;
+        
+        // Add proper ID for button functionality
+        if (this.type === 'city') {
+            card.id = 'more-cities-btn';
+        } else if (this.type === 'event') {
+            card.id = 'more-events-btn';
+        }
 
         const emojiBox = document.createElement('div');
         emojiBox.className = `${this.type}-emoji-box`;
@@ -116,7 +123,7 @@ class CompactCardRenderer {
         if (this.type === 'city') {
             const name = document.createElement('span');
             name.className = 'city-name';
-            name.textContent = 'More Cities';
+            name.textContent = 'Suggest a City';
             card.appendChild(name);
         } else if (this.type === 'event') {
             const content = document.createElement('div');
