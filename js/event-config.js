@@ -1,7 +1,7 @@
 // Bear Events Configuration - Maps bear events to their data and calendar IDs
 const BEAR_EVENTS_CONFIG = {
-    'puerto-vallarta-beef-dip': {
-        name: 'Puerto Vallarta Beef Dip',
+    'beef-dip': {
+        name: 'Beef Dip',
         emoji: '🌮',
         tagline: 'Mexican bear paradise',
         startDate: '2024-12-14',
@@ -11,8 +11,8 @@ const BEAR_EVENTS_CONFIG = {
         coordinates: { lat: 20.6534, lng: -105.2253 },
         mapZoom: 12
     },
-    'sitges-bear-week': {
-        name: 'Sitges Bear Week',
+    'bear-week': {
+        name: 'Bear Week',
         emoji: '🏖️',
         tagline: 'Mediterranean bear celebration',
         startDate: '2024-09-08',
@@ -22,8 +22,8 @@ const BEAR_EVENTS_CONFIG = {
         coordinates: { lat: 41.2379, lng: 1.8057 },
         mapZoom: 12
     },
-    'chicago-market-days': {
-        name: 'Chicago Market Days',
+    'market-days': {
+        name: 'Market Days',
         emoji: '🎪',
         tagline: 'Windy City street festival',
         startDate: '2024-08-10',
@@ -33,8 +33,8 @@ const BEAR_EVENTS_CONFIG = {
         coordinates: { lat: 41.9534, lng: -87.6491 },
         mapZoom: 12
     },
-    'provincetown-bear-week': {
-        name: 'Provincetown Bear Week',
+    'bear-week-ptown': {
+        name: 'Bear Week',
         emoji: '🦞',
         tagline: 'Cape Cod bear gathering',
         startDate: '2024-07-14',
@@ -44,8 +44,8 @@ const BEAR_EVENTS_CONFIG = {
         coordinates: { lat: 42.0526, lng: -70.1826 },
         mapZoom: 12
     },
-    'provincetown-spooky-bear': {
-        name: 'Provincetown Spooky Bear',
+    'spooky-bear': {
+        name: 'Spooky Bear',
         emoji: '🎃',
         tagline: 'Halloween bear festivities',
         startDate: '2024-10-26',
