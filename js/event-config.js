@@ -4,7 +4,8 @@ const BEAR_EVENTS_CONFIG = {
         name: 'Puerto Vallarta Beef Dip',
         emoji: '🌮',
         tagline: 'Mexican bear paradise',
-        dates: '2024-12-14 to 2024-12-21',
+        startDate: '2024-12-14',
+        endDate: '2024-12-21',
         location: 'Puerto Vallarta, Mexico',
         calendarId: 'example_beef_dip@group.calendar.google.com',
         coordinates: { lat: 20.6534, lng: -105.2253 },
@@ -14,7 +15,8 @@ const BEAR_EVENTS_CONFIG = {
         name: 'Sitges Bear Week',
         emoji: '🏖️',
         tagline: 'Mediterranean bear celebration',
-        dates: '2024-09-08 to 2024-09-15',
+        startDate: '2024-09-08',
+        endDate: '2024-09-15',
         location: 'Sitges, Spain',
         calendarId: 'example_sitges@group.calendar.google.com',
         coordinates: { lat: 41.2379, lng: 1.8057 },
@@ -24,7 +26,8 @@ const BEAR_EVENTS_CONFIG = {
         name: 'Chicago Market Days',
         emoji: '🎪',
         tagline: 'Windy City street festival',
-        dates: '2024-08-10 to 2024-08-11',
+        startDate: '2024-08-10',
+        endDate: '2024-08-11',
         location: 'Chicago, IL',
         calendarId: 'example_market_days@group.calendar.google.com',
         coordinates: { lat: 41.9534, lng: -87.6491 },
@@ -34,7 +37,8 @@ const BEAR_EVENTS_CONFIG = {
         name: 'Provincetown Bear Week',
         emoji: '🦞',
         tagline: 'Cape Cod bear gathering',
-        dates: '2024-07-14 to 2024-07-21',
+        startDate: '2024-07-14',
+        endDate: '2024-07-21',
         location: 'Provincetown, MA',
         calendarId: 'example_ptown_bear@group.calendar.google.com',
         coordinates: { lat: 42.0526, lng: -70.1826 },
@@ -44,7 +48,8 @@ const BEAR_EVENTS_CONFIG = {
         name: 'Provincetown Spooky Bear',
         emoji: '🎃',
         tagline: 'Halloween bear festivities',
-        dates: '2024-10-26 to 2024-11-03',
+        startDate: '2024-10-26',
+        endDate: '2024-11-03',
         location: 'Provincetown, MA',
         calendarId: 'example_spooky_bear@group.calendar.google.com',
         coordinates: { lat: 42.0526, lng: -70.1826 },
@@ -71,11 +76,33 @@ function hasBearEventCalendar(eventKey) {
     return config && config.calendarId;
 }
 
+// Format event dates for display
+function formatEventDates(event) {
+    if (!event.startDate || !event.endDate) return '';
+    
+    const start = new Date(event.startDate);
+    const end = new Date(event.endDate);
+    
+    const options = { month: 'short', day: 'numeric' };
+    const startFormatted = start.toLocaleDateString('en-US', options);
+    const endFormatted = end.toLocaleDateString('en-US', options);
+    
+    // If same year, show it once at the end
+    const year = start.getFullYear();
+    
+    if (start.getTime() === end.getTime()) {
+        return `${startFormatted}, ${year}`;
+    }
+    
+    return `${startFormatted} - ${endFormatted}, ${year}`;
+}
+
 // Make functions globally available for browser use
 window.BEAR_EVENTS_CONFIG = BEAR_EVENTS_CONFIG;
 window.getBearEventConfig = getBearEventConfig;
 window.getAvailableBearEvents = getAvailableBearEvents;
 window.hasBearEventCalendar = hasBearEventCalendar;
+window.formatEventDates = formatEventDates;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
