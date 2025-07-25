@@ -605,7 +605,7 @@ header {
     gap: 1rem;
     padding: 0.5rem 0 0.5rem 25%;
     min-width: fit-content;
-    transform: translateX(-12.5%);
+    transform: translateX(12.5%);
 }
 
 .event-compact-grid {
@@ -999,7 +999,7 @@ header {
     .city-compact-grid,
     .event-compact-grid {
         padding: 0.5rem 0 0.5rem 20%;
-        transform: translateX(-10%);
+        transform: translateX(10%);
     }
     
     .event-compact-grid {
