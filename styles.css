@@ -456,12 +456,10 @@ body.index-page header.visible {
     color: var(--text-inverse);
     position: relative;
     order: 1;
-    padding: 0 2rem 3rem 2rem;
 }
 
 @media (min-width: 769px) {
     .hero-content {
-        padding: 0 2rem 3rem 0;
     }
 }
 
@@ -595,13 +593,7 @@ body.index-page header.visible {
     order: 2;
 }
 
-.dad-joke-bubble::before {
-    content: '🐻';
-    position: absolute;
-    top: -15px;
-    left: 25px;
-    font-size: 1.5rem;
-}
+
 
 .dad-joke-bubble::after {
     content: '';
@@ -762,10 +754,6 @@ body.index-page header.visible {
     }
     
     .dad-joke-bubble::before {
-        display: none;
-    }
-    
-    .dad-joke-bubble::after {
         display: none;
     }
     
