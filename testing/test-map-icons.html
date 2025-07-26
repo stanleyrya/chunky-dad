@@ -406,7 +406,8 @@
                 • 🌐 <strong>Favicons:</strong> Use website favicons from event data as map icons<br>
                 • 🌈 <strong>Gradient Circles:</strong> Colorful gradient circles with emojis<br>
                 • ⚡ <strong>Neon Style:</strong> Glowing neon-style markers with animations<br>
-                • 📅 <strong>Real Calendar:</strong> Load actual calendar data to test with real events
+                • 📅 <strong>Real Calendar:</strong> Load actual calendar data using DynamicCalendarLoader (same as calendar tester)<br>
+                <strong style="color: #2ecc71;">✅ FIXED:</strong> Now properly loads Google Calendar data and extracts website URLs for favicons!
             </div>
         </div>
         
@@ -456,8 +457,10 @@
     
     <!-- Logger -->
     <script src="../js/logger.js"></script>
-    <!-- Calendar Core for real calendar integration -->
+    <!-- Calendar integration - use same approach as calendar tester -->
+    <script src="../js/city-config.js"></script>
     <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
     
     <script>
         // Test data with various event types
@@ -560,10 +563,15 @@
         let map;
         let markers = [];
         let currentStyle = 'emoji';
+        let calendarLoader = null;
         
         // Initialize the test page
         document.addEventListener('DOMContentLoaded', function() {
             logger.componentInit('MAP', 'Map icon test page initialized');
+            
+            // Initialize calendar loader for real data
+            calendarLoader = new DynamicCalendarLoader();
+            
             initializeMap();
             renderEvents();
             setupEventListeners();
@@ -1023,55 +1031,71 @@
         
                  async function loadRealCalendar() {
              try {
-                 logger.componentInit('CALENDAR', 'Loading real calendar data for icon testing');
+                 logger.componentInit('CALENDAR', 'Loading real calendar data for icon testing using DynamicCalendarLoader');
                  
-                 // Create a CalendarCore instance to parse real calendar data
-                 const calendarCore = new CalendarCore();
-                 
-                 // Load sample NYC calendar data
-                 const response = await fetch('../data/sample-calendar-file-nyc.ics');
-                 if (!response.ok) {
-                     throw new Error(`Failed to fetch calendar data: ${response.status} ${response.statusText}`);
+                 if (!calendarLoader) {
+                     logger.componentError('CALENDAR', 'Calendar loader not initialized');
+                     return;
                  }
-                 const icsData = await response.text();
                  
-                 // Parse the calendar data
-                 const parsedEvents = calendarCore.parseICalData(icsData);
-                 logger.info('CALENDAR', `Parsed ${parsedEvents.length} events from calendar`, { events: parsedEvents });
+                 // Use NYC as default city for testing (same as calendar tester)
+                 const cityKey = 'new-york';
+                 const cityConfig = getCityConfig(cityKey);
+                 
+                 if (!cityConfig || !cityConfig.calendarId) {
+                     logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
+                     return;
+                 }
+                 
+                 logger.info('CALENDAR', `Loading real calendar data for ${cityConfig.name}`, { cityConfig });
+                 
+                 // Load calendar data using the same method as calendar tester
+                 const calendarData = await calendarLoader.loadCalendarData(cityKey);
+                 
+                 if (!calendarData || !calendarData.events) {
+                     logger.componentError('CALENDAR', 'No calendar data received');
+                     return;
+                 }
+                 
+                 const events = calendarData.events;
+                 logger.info('CALENDAR', `Loaded ${events.length} real calendar events`, { events });
                  
                  // Clear existing test events
                  testEvents.length = 0;
                  
-                 // Convert parsed events to our test format
-                 parsedEvents.forEach((event, index) => {
+                 // Convert calendar events to our test format
+                 events.forEach((event, index) => {
                      // Generate emoji based on event name/type
                      const emoji = generateEmojiForEvent(event);
                      
                      // Extract nickname from description or generate from name
-                     const nickname = extractNickname(event) || generateNickname(event.summary || event.name);
+                     const nickname = extractNickname(event) || generateNickname(event.name);
                      
-                     // Extract website URL from event description
-                     const website = extractWebsiteFromDescription(event.description) || event.website || null;
+                     // Extract website URL from event description or use URL field
+                     const website = extractWebsiteFromDescription(event.description) || event.url || event.website || null;
                      
                      // Parse coordinates from location field if available
-                     const coordinates = parseCoordinatesFromLocation(event.location) || generateRandomNYCCoordinates();
+                     const coordinates = parseCoordinatesFromLocation(event.location) || 
+                                       parseCoordinatesFromLocation(event.barLocation) ||
+                                       generateRandomNYCCoordinates();
                      
-                     // Extract venue name from location
-                     const venue = extractVenueFromLocation(event.location) || event.location || 'Unknown Location';
+                     // Extract venue name from bar field or location
+                     const venue = event.bar || event.barName || extractVenueFromLocation(event.location) || 'Unknown Location';
                      
                      testEvents.push({
-                         name: event.summary || event.name || 'Unnamed Event',
+                         name: event.name || 'Unnamed Event',
                          nickname: nickname,
                          bar: venue,
-                         time: formatEventTime(event),
-                         day: formatEventDay(event),
-                         cover: extractCoverFromDescription(event.description) || 'TBD',
+                         time: event.time || 'Time TBD',
+                         day: event.day || 'Day TBD',
+                         cover: event.cover || extractCoverFromDescription(event.description) || 'TBD',
                          coordinates: coordinates,
                          emoji: emoji,
                          eventType: determineEventType(event),
                          website: website,
                          isRealEvent: true,
-                         description: event.description
+                         description: event.description,
+                         originalEvent: event // Keep reference to original for debugging
                      });
                  });
                  
@@ -1079,12 +1103,12 @@
                  updateMapMarkers();
                  renderEvents();
                  
-                 logger.componentLoad('CALENDAR', `Loaded ${parsedEvents.length} real calendar events from NYC data`);
+                 logger.componentLoad('CALENDAR', `Successfully loaded ${events.length} real calendar events for map testing`);
                  
              } catch (error) {
                  logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
                  
-                 // Fallback to mock "real-looking" events based on NYC data structure
+                 // Fallback to mock "real-looking" events
                  testEvents.length = 0;
                  testEvents.push(
                      {
@@ -1139,10 +1163,13 @@
          function extractWebsiteFromDescription(description) {
              if (!description) return null;
              
-             // Look for website links in description
+             // Look for website links in description with various formats
              const websiteMatch = description.match(/Website:\s*<a[^>]*href="([^"]*)"[^>]*>/i) ||
-                                 description.match(/Website:\s*(https?:\/\/[^\s<]+)/i) ||
-                                 description.match(/(https?:\/\/[^\s<]+)/);
+                                 description.match(/Website:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
+                                 description.match(/Link:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
+                                 description.match(/URL:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
+                                 description.match(/More info:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
+                                 description.match(/(https?:\/\/[^\s<\n\r]+)/);
              
              return websiteMatch ? websiteMatch[1] : null;
          }
@@ -1190,6 +1217,7 @@
          function generateEmojiForEvent(event) {
              const name = (event.name || event.summary || '').toLowerCase();
              const description = (event.description || '').toLowerCase();
+             const barName = (event.bar || event.barName || '').toLowerCase();
              
              // Event type based emoji mapping
              if (name.includes('happy hour') || name.includes('social hour')) return '🍺';
@@ -1204,8 +1232,17 @@
              if (name.includes('game')) return '🎲';
              if (name.includes('festival') || name.includes('weekend')) return '🎪';
              if (name.includes('underwear') || name.includes('jock')) return '🩲';
-             if (name.includes('animal')) return '🦁';
-             if (name.includes('eagle')) return '🦅';
+             
+             // Bar/venue specific emojis
+             if (barName.includes('animal')) return '🦁';
+             if (barName.includes('eagle')) return '🦅';
+             if (barName.includes('phoenix')) return '🔥';
+             if (barName.includes('stonewall')) return '🏳️‍🌈';
+             
+             // Description-based detection
+             if (description.includes('bear') || description.includes('cub')) return '🐻';
+             if (description.includes('leather')) return '🖤';
+             if (description.includes('dance')) return '💃';
              
              // Default bear emoji for bear community events
              return '🐻';
@@ -1245,52 +1282,22 @@
              return eventName.substring(0, 3).toUpperCase();
          }
          
-         function formatEventTime(event) {
-             if (event.time) return event.time;
-             
-             // Format from start/end times if available
-             const start = event.start || event.dtstart;
-             const end = event.end || event.dtend;
-             
-             if (start && end) {
-                 const startTime = new Date(start).toLocaleTimeString('en-US', { 
-                     hour: 'numeric', 
-                     minute: '2-digit',
-                     hour12: true 
-                 });
-                 const endTime = new Date(end).toLocaleTimeString('en-US', { 
-                     hour: 'numeric', 
-                     minute: '2-digit',
-                     hour12: true 
-                 });
-                 return `${startTime} - ${endTime}`;
-             }
-             
-             return 'Time TBD';
-         }
-         
-         function formatEventDay(event) {
-             if (event.day) return event.day;
-             
-             const start = event.start || event.dtstart;
-             if (start) {
-                 return new Date(start).toLocaleDateString('en-US', { weekday: 'long' });
-             }
-             
-             return 'Day TBD';
-         }
+
          
          function determineEventType(event) {
              const name = (event.name || event.summary || '').toLowerCase();
+             const description = (event.description || '').toLowerCase();
              
-             if (name.includes('happy hour')) return 'Happy Hour';
-             if (name.includes('brunch')) return 'Brunch';
-             if (name.includes('drag')) return 'Drag Show';
-             if (name.includes('karaoke')) return 'Entertainment';
-             if (name.includes('social')) return 'Social Event';
-             if (name.includes('party')) return 'Party';
-             if (name.includes('festival')) return 'Festival';
-             if (name.includes('tournament')) return 'Tournament';
+             if (name.includes('happy hour') || description.includes('happy hour')) return 'Happy Hour';
+             if (name.includes('brunch') || description.includes('brunch')) return 'Brunch';
+             if (name.includes('drag') || description.includes('drag')) return 'Drag Show';
+             if (name.includes('karaoke') || description.includes('karaoke')) return 'Entertainment';
+             if (name.includes('social') || description.includes('social')) return 'Social Event';
+             if (name.includes('party') || description.includes('party')) return 'Party';
+             if (name.includes('festival') || description.includes('festival')) return 'Festival';
+             if (name.includes('tournament') || description.includes('tournament')) return 'Tournament';
+             if (name.includes('underwear') || description.includes('underwear')) return 'Themed Party';
+             if (name.includes('leather') || description.includes('leather')) return 'Themed Night';
              
              return 'Social Event';
          }
