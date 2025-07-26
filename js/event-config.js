@@ -153,14 +153,11 @@ function formatEventDates(event) {
     const startFormatted = start.toLocaleDateString('en-US', options);
     const endFormatted = end.toLocaleDateString('en-US', options);
     
-    // If same year, show it once at the end
-    const year = start.getFullYear();
-    
     if (start.getTime() === end.getTime()) {
-        return `${startFormatted}, ${year}`;
+        return startFormatted;
     }
     
-    return `${startFormatted} - ${endFormatted}, ${year}`;
+    return `${startFormatted} - ${endFormatted}`;
 }
 
 // Make functions globally available for browser use
