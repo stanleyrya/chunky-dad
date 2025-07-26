@@ -950,7 +950,19 @@
                 
                 // Add error handling for iframe
                 if (!this.iframe) {
-                    console.warn('StyleTester: website-iframe element not found');
+                    console.error('StyleTester: website-iframe element not found - this will cause issues');
+                    // Try to find it again after a short delay
+                    setTimeout(() => {
+                        this.iframe = document.getElementById('website-iframe');
+                        if (this.iframe) {
+                            console.log('StyleTester: Found iframe on retry');
+                            this.setupIframeLoading();
+                        } else {
+                            console.error('StyleTester: Still could not find iframe element');
+                        }
+                    }, 100);
+                } else {
+                    console.log('StyleTester: iframe found successfully');
                 }
                 
                 console.log('StyleTester: Initialization complete');
@@ -1769,6 +1781,13 @@
             }
 
             setView(view) {
+                console.log(`StyleTester: Setting view to ${view}`);
+                
+                if (!this.iframe) {
+                    console.error('StyleTester: iframe not found');
+                    return;
+                }
+                
                 this.currentView = view;
                 const iframe = this.iframe;
                 
@@ -1788,13 +1807,18 @@
                         iframe.style.height = '100%';
                         iframe.style.margin = '0';
                         break;
+                    default:
+                        console.warn(`StyleTester: Unknown view type: ${view}`);
+                        return;
                 }
                 
                 // Update view buttons
                 document.querySelectorAll('.view-btn').forEach(btn => {
                     btn.classList.remove('active');
+                    if (btn.textContent.toLowerCase() === view.toLowerCase()) {
+                        btn.classList.add('active');
+                    }
                 });
-                event.target.classList.add('active');
                 
                 this.updateStatusBar();
                 this.updateURL();
@@ -2303,31 +2327,49 @@
         }
 
         // Initialize the style tester immediately and make it globally available
-        let styleTester = null;
+        let styleTesterInstance = null;
         
         // Create a proxy object that safely handles method calls
         window.styleTester = new Proxy({}, {
             get(target, prop) {
-                if (styleTester && typeof styleTester[prop] === 'function') {
-                    return (...args) => styleTester[prop](...args);
-                } else if (styleTester && styleTester[prop] !== undefined) {
-                    return styleTester[prop];
+                if (styleTesterInstance && typeof styleTesterInstance[prop] === 'function') {
+                    return (...args) => styleTesterInstance[prop](...args);
+                } else if (styleTesterInstance && styleTesterInstance[prop] !== undefined) {
+                    return styleTesterInstance[prop];
                 } else {
+                    // Return a function that queues the call until the instance is ready
                     return (...args) => {
-                        console.warn(`StyleTester not ready or method ${prop} not found. Retrying in 100ms...`);
-                        setTimeout(() => {
-                            if (styleTester && typeof styleTester[prop] === 'function') {
-                                styleTester[prop](...args);
+                        console.warn(`StyleTester not ready or method ${prop} not found. Retrying...`);
+                        const retry = () => {
+                            if (styleTesterInstance && typeof styleTesterInstance[prop] === 'function') {
+                                styleTesterInstance[prop](...args);
+                            } else if (styleTesterInstance && styleTesterInstance[prop] !== undefined) {
+                                return styleTesterInstance[prop];
+                            } else {
+                                setTimeout(retry, 50);
                             }
-                        }, 100);
+                        };
+                        retry();
                     };
                 }
             }
         });
         
+        // Initialize immediately instead of waiting for DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
-            styleTester = new StyleTester();
+            console.log('DOM loaded, initializing StyleTester...');
+            styleTesterInstance = new StyleTester();
+            console.log('StyleTester initialized:', styleTesterInstance);
         });
+        
+        // Also try to initialize early if DOM is already loaded
+        if (document.readyState === 'loading') {
+            // DOM is still loading, wait for DOMContentLoaded
+        } else {
+            // DOM has already loaded
+            console.log('DOM already loaded, initializing StyleTester immediately...');
+            styleTesterInstance = new StyleTester();
+        }
     </script>
 </body>
 </html>
