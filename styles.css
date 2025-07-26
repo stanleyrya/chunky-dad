@@ -458,7 +458,6 @@ body.index-page header.visible {
     color: var(--text-inverse);
     position: relative;
     order: 2;
-    padding: 2rem 0;
 }
 
 .hero-logo {
@@ -581,8 +580,8 @@ body.index-page header.visible {
         text-align: center;
         height: auto;
         min-height: 80vh;
-        justify-content: flex-start;
-        align-items: flex-start;
+        justify-content: center;
+        align-items: center;
         padding-top: 3rem;
     }
     
@@ -623,7 +622,7 @@ body.index-page header.visible {
         height: auto;
         min-height: 75vh;
         gap: 0.8rem;
-        align-items: flex-start;
+        align-items: center;
         padding-top: 2rem;
     }
     
