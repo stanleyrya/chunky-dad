@@ -447,21 +447,20 @@ body.index-page header.visible {
     position: relative;
     z-index: 1;
     height: 85vh;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
 }
 
 .hero-content {
-    text-align: left;
+    text-align: center;
     color: var(--text-inverse);
     position: relative;
-    order: 2;
+    padding: 2rem 0;
 }
 
 .hero-logo {
-    order: 1;
     margin-bottom: 0;
     display: flex;
     justify-content: center;
