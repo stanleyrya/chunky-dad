@@ -577,8 +577,8 @@ body.index-page header.visible {
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
     position: absolute;
-    top: 8rem;
-    right: 5%;
+    bottom: 15rem;
+    left: 5%;
     max-width: 320px;
     min-width: 280px;
     background: rgba(255, 255, 255, 0.95);
@@ -599,8 +599,21 @@ body.index-page header.visible {
     content: '🐻';
     position: absolute;
     top: -15px;
-    right: 25px;
+    left: 25px;
     font-size: 1.5rem;
+}
+
+.dad-joke-bubble::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 30px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid rgba(255, 255, 255, 0.95);
+    z-index: -1;
 }
 
 @keyframes bubbleFloat {
@@ -738,6 +751,8 @@ body.index-page header.visible {
     .dad-joke-bubble {
         position: relative;
         top: auto;
+        bottom: auto;
+        left: auto;
         right: auto;
         margin: 2rem auto;
         max-width: 90%;
@@ -747,6 +762,10 @@ body.index-page header.visible {
     }
     
     .dad-joke-bubble::before {
+        display: none;
+    }
+    
+    .dad-joke-bubble::after {
         display: none;
     }
     
@@ -886,7 +905,6 @@ body.index-page main {
 
 
 .hero-content {
-    flex: 1;
     padding: 0 2rem;
 }
 
