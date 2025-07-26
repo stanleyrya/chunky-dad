@@ -418,7 +418,7 @@ body.index-page header.visible {
 
 /* Hero Section */
 .hero {
-    min-height: 100vh;
+    min-height: 85vh;
     background: var(--gradient-primary);
     display: flex;
     align-items: center;
@@ -446,7 +446,7 @@ body.index-page header.visible {
     padding: 0 3rem;
     position: relative;
     z-index: 1;
-    height: 100vh;
+    height: 85vh;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
@@ -561,7 +561,7 @@ body.index-page header.visible {
 /* Hero Responsive Design */
 @media (max-width: 768px) {
     .hero {
-        min-height: 100vh;
+        min-height: 80vh;
         padding-top: 1rem;
     }
     
@@ -570,7 +570,7 @@ body.index-page header.visible {
         gap: 0.5rem;
         padding: 0 2rem;
         text-align: center;
-        height: 100vh;
+        height: 80vh;
         justify-content: center;
         align-items: center;
     }
@@ -603,13 +603,13 @@ body.index-page header.visible {
 
 @media (max-width: 480px) {
     .hero {
-        min-height: 100vh;
+        min-height: 75vh;
         padding-top: 0.5rem;
     }
     
     .hero-container {
         padding: 0 1rem;
-        height: 100vh;
+        height: 75vh;
         gap: 0.2rem;
         align-items: center;
     }
