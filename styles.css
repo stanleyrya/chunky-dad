@@ -673,21 +673,9 @@ header {
 
 .event-compact-grid {
     gap: 1rem;
-    justify-content: center;
-    max-width: calc(100vw - 2rem);
-    margin: 0 auto;
 }
 
-/* When events can fit in viewport, center them */
-@media (min-width: 1400px) {
-    .event-compact-grid {
-        padding: 0.5rem 2rem;
-        transform: none;
-        justify-content: center;
-        width: 100%;
-        max-width: 1200px;
-    }
-}
+
 
 /* Shared Compact Card Base Styles */
 .city-compact-card,
@@ -707,9 +695,8 @@ header {
 }
 
 .event-compact-card {
-    gap: 1rem;
-    min-width: 200px;
-    max-width: 200px;
+    gap: 0.5rem;
+    min-width: 100px;
 }
 
 /* Shared Emoji Box Styles */
@@ -1055,8 +1042,7 @@ header {
     }
     
     .event-compact-card {
-        min-width: 160px;
-        max-width: 160px;
+        min-width: 85px;
     }
     
     .city-compact-card .city-emoji-box,
@@ -1107,18 +1093,9 @@ header {
     
     .event-compact-grid {
         gap: 1rem;
-        justify-content: flex-start;
     }
     
-    /* Better mobile centering for smaller screens */
-    @media (max-width: 768px) {
-        .event-compact-grid {
-            padding: 0.5rem 1rem;
-            transform: none;
-            justify-content: flex-start;
-            overflow-x: auto;
-        }
-    }
+
     
     .city-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

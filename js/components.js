@@ -49,7 +49,7 @@ class ComponentsManager {
             <div id="bear-intel-modal" class="bear-intel-modal" style="display: none;">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3><img src="chunky-dad-emoji.png" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
+                        <h3><img src="Rising_Star_Ryan_Head_Full.png" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
                         <button class="modal-close" id="modal-close-btn">&times;</button>
                     </div>
                     <div class="modal-body">
@@ -65,7 +65,7 @@ class ComponentsManager {
                                 <option value="other">Other Bear Intel</option>
                             </select>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
-                            <button type="submit">Send Bear Intel <img src="chunky-dad-emoji.png" alt="chunky.dad" class="button-icon"></button>
+                            <button type="submit">Send Bear Intel <img src="Rising_Star_Ryan_Head_Full.png" alt="chunky.dad" class="button-icon"></button>
                         </form>
                     </div>
                 </div>
@@ -83,7 +83,7 @@ class ComponentsManager {
             <div id="bear-intel-modal" class="bear-intel-modal" style="display: none;">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3><img src="chunky-dad-emoji.png" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
+                        <h3><img src="Rising_Star_Ryan_Head_Full.png" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
                         <button class="modal-close" id="modal-close-btn">&times;</button>
                     </div>
                     <div class="modal-body">
@@ -99,7 +99,7 @@ class ComponentsManager {
                                 <option value="other">Other Bear Intel</option>
                             </select>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
-                            <button type="submit">Send Bear Intel <img src="chunky-dad-emoji.png" alt="chunky.dad" class="button-icon"></button>
+                            <button type="submit">Send Bear Intel <img src="Rising_Star_Ryan_Head_Full.png" alt="chunky.dad" class="button-icon"></button>
                         </form>
                     </div>
                 </div>
