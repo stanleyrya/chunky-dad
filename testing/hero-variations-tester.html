@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete Hero Section Tester - chunky.dad</title>
+    <title>Enhanced Hero Section Tester - chunky.dad</title>
     <link rel="stylesheet" href="../styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&family=Fredoka+One:wght@400&family=Comfortaa:wght@300;400;700&family=Righteous&family=Bungee&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
@@ -22,13 +22,13 @@
             padding: 20px;
             border-radius: 15px;
             backdrop-filter: blur(10px);
-            max-width: 320px;
-            max-height: 80vh;
+            max-width: 350px;
+            max-height: 85vh;
             overflow-y: auto;
         }
         
         .control-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .control-group label {
@@ -38,7 +38,7 @@
             font-size: 0.9rem;
         }
         
-        .control-group select {
+        .control-group select, .control-group input[type="checkbox"] {
             background: #333;
             color: white;
             border: 1px solid #555;
@@ -48,613 +48,396 @@
             font-size: 0.9rem;
         }
         
+        .control-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+        }
+        
         .hero-test {
             display: flex;
+            position: relative;
+            min-height: 100vh;
         }
 
-        /* Color Schemes */
+        /* Enhanced Color Schemes */
         .color-original {
             --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --text-inverse: #ffffff;
             --secondary-color: #ff6b6b;
+            --dot-color: #ffd93d;
         }
         
         .color-warm {
             --gradient-primary: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
             --text-inverse: #ffffff;
             --secondary-color: #ffd93d;
+            --dot-color: #ffffff;
         }
         
         .color-cool {
             --gradient-primary: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             --text-inverse: #ffffff;
             --secondary-color: #ff6b6b;
-        }
-        
-        .color-dark {
-            --gradient-primary: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            --text-inverse: #ffffff;
-            --secondary-color: #e74c3c;
+            --dot-color: #ffd93d;
         }
         
         .color-forest {
             --gradient-primary: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
             --text-inverse: #ffffff;
             --secondary-color: #ffd93d;
+            --dot-color: #ff6b6b;
         }
         
         .color-sunset {
             --gradient-primary: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
             --text-inverse: #2c3e50;
             --secondary-color: #e74c3c;
+            --dot-color: #8e44ad;
         }
         
         .color-midnight {
             --gradient-primary: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             --text-inverse: #ffffff;
             --secondary-color: #ff6b6b;
+            --dot-color: #ffd93d;
         }
         
-        .color-ocean {
-            --gradient-primary: linear-gradient(135deg, #667db6 0%, #0082c8 50%, #0082c8 100%);
+        .color-bear {
+            --gradient-primary: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #CD853F 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #FFD700;
+            --dot-color: #FF4500;
+        }
+        
+        .color-rainbow {
+            --gradient-primary: linear-gradient(135deg, #ff0080 0%, #ff8c00 25%, #40e0d0 50%, #9370db 75%, #ff1493 100%);
             --text-inverse: #ffffff;
             --secondary-color: #ffd93d;
+            --dot-color: #ffffff;
         }
 
-        /* Layout Variations - Updated and Cleaned */
+        /* Font Families */
+        .font-poppins {
+            --hero-font: 'Poppins', sans-serif;
+            --hero-weight: 800;
+        }
         
-        /* V1: Split Layout - Image Left, Text Right (UPDATED) */
-        .layout-v1 .hero-container {
-            max-width: 1400px;
+        .font-fredoka {
+            --hero-font: 'Fredoka One', cursive;
+            --hero-weight: 400;
+        }
+        
+        .font-comfortaa {
+            --hero-font: 'Comfortaa', cursive;
+            --hero-weight: 700;
+        }
+        
+        .font-righteous {
+            --hero-font: 'Righteous', cursive;
+            --hero-weight: 400;
+        }
+        
+        .font-bungee {
+            --hero-font: 'Bungee', cursive;
+            --hero-weight: 400;
+        }
+
+        /* Hero Base Styling */
+        .hero {
+            background: var(--gradient-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero-logo-img {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .hero-title {
+            font-family: var(--hero-font, 'Poppins');
+            font-weight: var(--hero-weight, 800);
+            font-size: 4rem;
+            line-height: 0.9;
+            margin-bottom: 1rem;
+            color: var(--text-inverse);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+        }
+        
+        .hero-chunky, .hero-dad {
+            display: inline-block;
+        }
+        
+        /* The Cool Dot Styling */
+        .hero-dot {
+            display: none;
+            color: var(--dot-color, #ffd93d);
+            font-size: 1.2em;
+            position: relative;
+            animation: dotPulse 2s ease-in-out infinite;
+            text-shadow: 
+                0 0 10px var(--dot-color, #ffd93d),
+                0 0 20px var(--dot-color, #ffd93d),
+                0 0 30px var(--dot-color, #ffd93d);
+            filter: drop-shadow(0 0 8px var(--dot-color, #ffd93d));
+        }
+        
+        .hero-dot.show {
+            display: inline-block;
+        }
+        
+        .hero-dot::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, var(--dot-color, #ffd93d) 0%, transparent 70%);
+            opacity: 0.3;
+            border-radius: 50%;
+            animation: dotGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes dotGlow {
+            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.2); }
+        }
+        
+        .hero-subtitle {
+            display: none;
+            font-size: 1.4rem;
+            color: var(--text-inverse);
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            font-weight: 400;
+        }
+        
+        .hero-subtitle.show {
+            display: block;
+        }
+
+        /* Speech Bubble Styling */
+        .dad-joke-bubble {
+            position: absolute;
+            top: 20%;
+            left: 10%;
+            max-width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            display: none;
+            animation: bubbleFloat 3s ease-in-out infinite;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .dad-joke-bubble.show {
+            display: block;
+        }
+        
+        .dad-joke-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 30px;
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 15px solid rgba(255, 255, 255, 0.95);
+        }
+        
+        .dad-joke-bubble::after {
+            content: '🐻';
+            position: absolute;
+            bottom: -35px;
+            left: 25px;
+            font-size: 1.5rem;
+        }
+        
+        @keyframes bubbleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .joke-text {
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .joke-punchline {
+            font-style: italic;
+            color: #8B4513;
+            font-weight: 600;
+        }
+        
+        .new-joke-btn {
+            background: var(--secondary-color, #ff6b6b);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .new-joke-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Layout Variations */
+        .layout-centered .hero-container {
+            text-align: center;
+        }
+        
+        .layout-left .hero-container {
+            text-align: left;
+            align-items: flex-start;
+            padding-left: 4rem;
+        }
+        
+        .layout-right .hero-container {
+            text-align: right;
+            align-items: flex-end;
+            padding-right: 4rem;
+        }
+        
+        .layout-split .hero-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 3rem;
             align-items: center;
-            height: auto;
-            padding: 0 4rem;
+            text-align: left;
         }
         
-        .layout-v1 .hero-content {
-            text-align: left;
+        .layout-split .hero-content {
             order: 2;
         }
         
-        .layout-v1 .hero-logo {
+        .layout-split .hero-logo {
             order: 1;
             margin-bottom: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .layout-v1 .hero-logo-img {
-            width: 320px;
-            height: 320px;
-        }
-        
-        .layout-v1 .hero-title {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            font-size: 6rem;
-            line-height: 0.8;
-            margin-bottom: 0;
-            letter-spacing: -3px;
-        }
-        
-        .layout-v1 .hero-chunky,
-        .layout-v1 .hero-dad {
-            display: block;
-        }
-        
-        .layout-v1 .hero-dot {
-            display: none;
-        }
-        
-        .layout-v1 .hero-subtitle {
-            display: none;
-        }
-        
-        .layout-v1 .hero-scroll-hint {
-            position: absolute;
-            bottom: 3rem;
-            left: 50%;
-            transform: translateX(-50%);
         }
 
-        /* V2: Vertical Stack Minimal */
-        .layout-v2 .hero-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100vh;
-            padding: 3rem 2rem;
+        /* Size Variations */
+        .size-small .hero-title {
+            font-size: 2.5rem;
         }
         
-        .layout-v2 .hero-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex-grow: 1;
-            justify-content: center;
-        }
-        
-        .layout-v2 .hero-logo {
-            margin-bottom: 1rem;
-        }
-        
-        .layout-v2 .hero-logo-img {
+        .size-small .hero-logo-img {
             width: 120px;
             height: 120px;
         }
         
-        .layout-v2 .hero-title {
-            font-size: 3.5rem;
-            margin-bottom: 0.5rem;
+        .size-medium .hero-title {
+            font-size: 4rem;
         }
         
-        .layout-v2 .hero-subtitle {
-            font-size: 1.2rem;
-            margin-bottom: 0;
-            display: block;
-        }
-        
-        .layout-v2 .hero-scroll-hint {
-            position: static;
-            transform: none;
-            margin-top: auto;
-        }
-
-        /* V3: Corner Positioned */
-        .layout-v3 .hero-container {
-            height: 100vh;
-            position: relative;
-        }
-        
-        .layout-v3 .hero-content {
-            position: absolute;
-            top: 6rem;
-            left: 4rem;
-            text-align: left;
-            max-width: 500px;
-        }
-        
-        .layout-v3 .hero-logo {
-            position: absolute;
-            bottom: 4rem;
-            right: 4rem;
-            margin-bottom: 0;
-        }
-        
-        .layout-v3 .hero-logo-img {
+        .size-medium .hero-logo-img {
             width: 200px;
             height: 200px;
         }
         
-        .layout-v3 .hero-title {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+        .size-large .hero-title {
+            font-size: 6rem;
         }
         
-        .layout-v3 .hero-subtitle {
-            display: block;
-        }
-        
-        .layout-v3 .hero-scroll-hint {
-            position: absolute;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        /* V4: Floating Card Style */
-        .layout-v4 {
-            padding: 4rem 2rem;
-        }
-        
-        .layout-v4 .hero-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            padding: 4rem;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 800px;
-        }
-        
-        .layout-v4 .hero-logo-img {
-            width: 160px;
-            height: 160px;
-        }
-        
-        .layout-v4 .hero-subtitle {
-            display: block;
-        }
-        
-        .layout-v4 .hero-scroll-hint {
-            display: none;
-        }
-
-        /* V5: Horizontal Layout */
-        .layout-v5 .hero-container {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 3rem;
-            height: auto;
-            padding: 6rem 4rem;
-        }
-        
-        .layout-v5 .hero-logo {
-            margin-bottom: 0;
-            flex-shrink: 0;
-        }
-        
-        .layout-v5 .hero-content {
-            text-align: left;
-        }
-        
-        .layout-v5 .hero-title {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-        }
-        
-        .layout-v5 .hero-subtitle {
-            display: block;
-        }
-        
-        .layout-v5 .hero-scroll-hint {
-            position: static;
-            transform: none;
-            margin-top: 2rem;
-            align-self: flex-start;
-        }
-
-        /* V6: Typography Focus (UPDATED from V8) */
-        .layout-v6 .hero-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            height: 100vh;
-            text-align: left;
-            padding-left: 4rem;
-        }
-        
-        .layout-v6 .hero-logo {
-            position: absolute;
-            top: 2rem;
-            right: 2rem;
-            margin: 0;
-        }
-        
-        .layout-v6 .hero-logo-img {
-            width: 100px;
-            height: 100px;
-        }
-        
-        .layout-v6 .hero-title {
-            font-size: 8rem;
-            line-height: 0.8;
-            margin-bottom: 2rem;
-            letter-spacing: -4px;
-        }
-        
-        .layout-v6 .hero-chunky,
-        .layout-v6 .hero-dad {
-            display: block;
-        }
-        
-        .layout-v6 .hero-dot {
-            display: none;
-        }
-        
-        .layout-v6 .hero-subtitle {
-            font-size: 2rem;
-            margin-left: 1rem;
-            display: block;
-        }
-
-        /* V7: Asymmetric Grid */
-        .layout-v7 .hero-container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 2rem;
-            height: 100vh;
-            padding: 2rem;
-        }
-        
-        .layout-v7 .hero-title {
-            grid-column: 1;
-            grid-row: 1;
-            font-size: 5rem;
-            margin: 0;
-            align-self: end;
-        }
-        
-        .layout-v7 .hero-subtitle {
-            grid-column: 1;
-            grid-row: 2;
-            margin: 0;
-            align-self: start;
-            font-size: 1.8rem;
-            display: block;
-        }
-        
-        .layout-v7 .hero-logo {
-            grid-column: 2;
-            grid-row: 1 / 3;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .layout-v7 .hero-logo-img {
-            width: 250px;
-            height: 250px;
-        }
-        
-        .layout-v7 .hero-scroll-hint {
-            display: none;
-        }
-
-        /* V8: Magazine Style */
-        .layout-v8 .hero-container {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            height: 100vh;
-            max-width: none;
-            padding: 0;
-        }
-        
-        .layout-v8 .hero-logo {
-            grid-column: 1;
-            background: rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-        }
-        
-        .layout-v8 .hero-content {
-            grid-column: 2;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 4rem;
-            text-align: left;
-        }
-        
-        .layout-v8 .hero-logo-img {
+        .size-large .hero-logo-img {
             width: 300px;
             height: 300px;
         }
         
-        .layout-v8 .hero-title {
-            font-size: 5rem;
-            margin-bottom: 1rem;
+        .size-xl .hero-title {
+            font-size: 8rem;
         }
         
-        .layout-v8 .hero-subtitle {
-            display: block;
+        .size-xl .hero-logo-img {
+            width: 400px;
+            height: 400px;
         }
 
-        /* Animation Options */
-        
-        /* Gentle Scale-In */
-        .anim-scale .hero-logo-img {
-            animation: gentleScale 1.5s ease-out;
-        }
-        
-        .anim-scale .hero-title {
-            animation: gentleScale 1.5s ease-out 0.3s both;
-        }
-        
-        @keyframes gentleScale {
-            0% {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        /* Fade-In Only */
-        .anim-fade .hero-logo-img {
-            animation: simpleFade 2s ease-out;
-        }
-        
-        .anim-fade .hero-title {
-            animation: simpleFade 2s ease-out 0.5s both;
-        }
-        
-        @keyframes simpleFade {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-
-        /* Typewriter Effect */
-        .anim-typewriter .hero-logo-img {
-            animation: simpleFade 1s ease-out;
-        }
-        
-        .anim-typewriter .hero-chunky {
-            animation: typewriter 1s steps(6) 0.5s both;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        
-        .anim-typewriter .hero-dad {
-            animation: typewriter 0.8s steps(3) 1.5s both;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        
-        @keyframes typewriter {
-            0% {
-                width: 0;
-                opacity: 0;
-            }
-            1% {
-                opacity: 1;
-            }
-            100% {
-                width: 100%;
-                opacity: 1;
-            }
-        }
-
-        /* Glow Effect */
-        .anim-glow .hero-logo-img {
-            animation: glowPulse 2s ease-in-out infinite;
-        }
-        
-        .anim-glow .hero-title {
-            animation: textGlow 3s ease-in-out infinite;
-        }
-        
-        @keyframes glowPulse {
-            0%, 100% {
-                box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-            }
-            50% {
-                box-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
-            }
-        }
-        
-        @keyframes textGlow {
-            0%, 100% {
-                text-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
-            }
-            50% {
-                text-shadow: 0 6px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.3);
-            }
-        }
-
-        /* Bounce In */
+        /* Animation Effects */
         .anim-bounce .hero-logo-img {
-            animation: bounceIn 1.2s ease-out;
+            animation: bounceIn 1.5s ease-out;
         }
         
         .anim-bounce .hero-title {
-            animation: bounceIn 1.2s ease-out 0.3s both;
+            animation: bounceIn 1.5s ease-out 0.3s both;
         }
         
         @keyframes bounceIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.3);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1.05);
-            }
-            70% {
-                transform: scale(0.95);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        /* Rotation Entrance */
-        .anim-rotate .hero-logo-img {
-            animation: rotateIn 1.5s ease-out;
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            70% { transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
         }
         
-        .anim-rotate .hero-title {
-            animation: simpleFade 1.5s ease-out 0.5s both;
+        .anim-fade .hero-logo-img,
+        .anim-fade .hero-title {
+            animation: fadeIn 2s ease-out;
         }
         
-        @keyframes rotateIn {
-            0% {
-                opacity: 0;
-                transform: rotate(-180deg) scale(0.8);
-            }
-            100% {
-                opacity: 1;
-                transform: rotate(0deg) scale(1);
-            }
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
         }
-
-        /* Slide Up (Original) */
+        
         .anim-slide .hero-logo-img {
-            animation: elegantFadeIn 2s ease-out;
+            animation: slideUp 1.5s ease-out;
         }
         
         .anim-slide .hero-title {
-            animation: heroTitleSlide 1s ease-out;
+            animation: slideUp 1.5s ease-out 0.3s both;
         }
         
-        .anim-slide .hero-subtitle {
-            animation: heroSubtitleFade 1.5s ease-out 0.5s both;
-        }
-        
-        @keyframes elegantFadeIn {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.9);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        @keyframes heroTitleSlide {
-            0% {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes heroSubtitleFade {
-            0% {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            100% {
-                opacity: 0.95;
-                transform: translateY(0);
-            }
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateY(50px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
 
-        /* No Animation */
-        .anim-none .hero-logo-img,
-        .anim-none .hero-title,
-        .anim-none .hero-subtitle {
-            animation: none;
-        }
-
-        /* Explore scroll hint animation - always active */
-        .hero-scroll-hint {
-            animation: heroScrollHintFade 2s ease-out 2s both;
-        }
-        
-        @keyframes heroScrollHintFade {
-            0% {
-                opacity: 0;
-                transform: translateX(-50%) translateY(10px);
-            }
-            100% {
-                opacity: 0.8;
-                transform: translateX(-50%) translateY(0);
-            }
-        }
-
-        /* Responsive Design for All Variations */
+        /* Responsive Design */
         @media (max-width: 768px) {
             .controls-panel {
                 position: relative;
@@ -662,78 +445,39 @@
                 margin-bottom: 2rem;
             }
             
-            .layout-v1 .hero-container,
-            .layout-v5 .hero-container,
-            .layout-v7 .hero-container,
-            .layout-v8 .hero-container {
-                grid-template-columns: 1fr;
-                gap: 2rem;
-                text-align: center;
-                padding: 2rem;
-            }
-            
-            .layout-v1 .hero-content,
-            .layout-v5 .hero-content {
-                order: 2;
-                text-align: center;
-            }
-            
-            .layout-v1 .hero-logo,
-            .layout-v5 .hero-logo {
-                order: 1;
-            }
-            
-            .layout-v3 .hero-content,
-            .layout-v3 .hero-logo {
-                position: static;
-                text-align: center;
-            }
-            
-            .layout-v3 .hero-container {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                padding: 2rem;
-            }
-            
-            .layout-v6 .hero-container {
-                text-align: center;
-                padding: 2rem;
-            }
-            
-            .layout-v6 .hero-logo {
-                position: static;
-                margin-bottom: 2rem;
-            }
-            
-            .layout-v7 .hero-title,
-            .layout-v7 .hero-subtitle,
-            .layout-v7 .hero-logo {
-                grid-column: 1;
-                grid-row: auto;
-            }
-            
-            .layout-v8 .hero-content {
-                grid-column: 1;
-                padding: 2rem;
-            }
-            
-            .layout-v8 .hero-logo {
-                grid-column: 1;
-            }
-            
-            /* Reduce font sizes on mobile */
             .hero-title {
                 font-size: 2.5rem !important;
             }
             
-            .hero-subtitle {
-                font-size: 1.2rem !important;
+            .hero-logo-img {
+                width: 150px !important;
+                height: 150px !important;
             }
             
-            .hero-logo-img {
-                width: 120px !important;
-                height: 120px !important;
+            .layout-split .hero-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            
+            .layout-split .hero-content {
+                order: 2;
+            }
+            
+            .layout-split .hero-logo {
+                order: 1;
+            }
+            
+            .dad-joke-bubble {
+                position: relative;
+                top: auto;
+                left: auto;
+                margin: 2rem auto;
+                max-width: 90%;
+            }
+            
+            .dad-joke-bubble::before,
+            .dad-joke-bubble::after {
+                display: none;
             }
         }
     </style>
@@ -741,62 +485,88 @@
 <body>
     <div class="controls-panel">
         <div class="control-group">
-            <label for="layout-select">Layout Style:</label>
+            <label for="layout-select">Layout:</label>
             <select id="layout-select">
-                <option value="v1" selected>V1: Split Layout (Image Left, Text Right) ⭐</option>
-                <option value="v2">V2: Vertical Stack Minimal</option>
-                <option value="v3">V3: Corner Positioned</option>
-                <option value="v4">V4: Floating Card Style</option>
-                <option value="v5">V5: Horizontal Flow</option>
-                <option value="v6">V6: Typography Focus (Large Text) ⭐</option>
-                <option value="v7">V7: Asymmetric Grid</option>
-                <option value="v8">V8: Magazine Style</option>
+                <option value="centered" selected>Centered</option>
+                <option value="left">Left Aligned</option>
+                <option value="right">Right Aligned</option>
+                <option value="split">Split Layout</option>
             </select>
         </div>
         
         <div class="control-group">
-            <label for="animation-select">Animation Style:</label>
-            <select id="animation-select">
-                <option value="none" selected>No Animation ⭐</option>
-                <option value="scale">Gentle Scale-In</option>
-                <option value="fade">Fade-In Only</option>
-                <option value="typewriter">Typewriter Effect</option>
-                <option value="glow">Glow Effect</option>
-                <option value="bounce">Bounce In</option>
-                <option value="rotate">Rotation Entrance</option>
-                <option value="slide">Slide Up (Original)</option>
+            <label for="size-select">Size:</label>
+            <select id="size-select">
+                <option value="small">Small</option>
+                <option value="medium" selected>Medium</option>
+                <option value="large">Large</option>
+                <option value="xl">Extra Large</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="font-select">Font:</label>
+            <select id="font-select">
+                <option value="poppins" selected>Poppins (Modern)</option>
+                <option value="fredoka">Fredoka One (Playful)</option>
+                <option value="comfortaa">Comfortaa (Rounded)</option>
+                <option value="righteous">Righteous (Bold)</option>
+                <option value="bungee">Bungee (Chunky)</option>
             </select>
         </div>
         
         <div class="control-group">
             <label for="color-select">Color Scheme:</label>
             <select id="color-select">
-                <option value="original" selected>Original Purple/Blue</option>
-                <option value="warm">Warm Orange/Red</option>
-                <option value="cool">Cool Blue/Cyan</option>
-                <option value="dark">Dark Gray/Black</option>
+                <option value="original" selected>Original Purple</option>
+                <option value="warm">Warm Orange</option>
+                <option value="cool">Cool Blue</option>
                 <option value="forest">Forest Green</option>
-                <option value="sunset">Sunset Pink/Yellow</option>
-                <option value="midnight">Midnight Blue/Purple</option>
-                <option value="ocean">Ocean Blue</option>
+                <option value="sunset">Sunset Pink</option>
+                <option value="midnight">Midnight Blue</option>
+                <option value="bear">Bear Brown</option>
+                <option value="rainbow">Pride Rainbow</option>
             </select>
         </div>
         
         <div class="control-group">
-            <label for="subtitle-toggle">Show Subtitle:</label>
-            <select id="subtitle-toggle">
-                <option value="hide" selected>Hide Subtitle ⭐</option>
-                <option value="show">Show Subtitle</option>
+            <label for="animation-select">Animation:</label>
+            <select id="animation-select">
+                <option value="none" selected>None</option>
+                <option value="bounce">Bounce In</option>
+                <option value="fade">Fade In</option>
+                <option value="slide">Slide Up</option>
             </select>
         </div>
         
+        <div class="control-group">
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="subtitle-toggle">
+                <label for="subtitle-toggle">Show Subtitle</label>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="dot-toggle">
+                <label for="dot-toggle">Show Cool Dot</label>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="joke-toggle">
+                <label for="joke-toggle">Show Dad Jokes</label>
+            </div>
+        </div>
+        
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #555; font-size: 0.8rem; opacity: 0.8;">
-            ⭐ = Current main site settings<br>
-            Use arrow keys to navigate options
+            🐻 Enhanced Hero Tester<br>
+            Try different combinations!
         </div>
     </div>
 
-    <section class="hero hero-test layout-v1 anim-none color-original" id="hero-display">
+    <section class="hero hero-test layout-centered size-medium font-poppins color-original anim-none" id="hero-display">
         <div class="hero-container">
             <div class="hero-logo">
                 <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
@@ -807,22 +577,87 @@
                     <span class="hero-dot">.</span>
                     <span class="hero-dad">dad</span>
                 </h1>
-                <p class="hero-subtitle" style="display: none;">Your Gay Bear Travel Guide</p>
+                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
             </div>
-            <div class="hero-scroll-hint">
-                <span class="scroll-text">Explore</span>
-                <div class="scroll-arrow">↓</div>
+        </div>
+        
+        <div class="dad-joke-bubble" id="joke-bubble">
+            <div class="joke-content">
+                <div class="joke-text">Why don't bears ever get lost?</div>
+                <div class="joke-punchline">Because they always know where the bear necessities are!</div>
             </div>
+            <button class="new-joke-btn" onclick="newJoke()">New Joke 🐻</button>
         </div>
     </section>
 
     <script>
+        // Bear-themed dad jokes
+        const bearJokes = [
+            {
+                setup: "Why don't bears ever get lost?",
+                punchline: "Because they always know where the bear necessities are!"
+            },
+            {
+                setup: "What do you call a bear with no teeth?",
+                punchline: "A gummy bear!"
+            },
+            {
+                setup: "Why did the bear break up with his boyfriend?",
+                punchline: "He couldn't bear the drama anymore!"
+            },
+            {
+                setup: "What's a bear's favorite type of music?",
+                punchline: "Bear-itone!"
+            },
+            {
+                setup: "Why don't bears wear shoes?",
+                punchline: "Because they have bear feet!"
+            },
+            {
+                setup: "What do you call a bear who loves to travel?",
+                punchline: "A roam-ing bear!"
+            },
+            {
+                setup: "Why did the bear go to therapy?",
+                punchline: "He had too many bear-ied emotions!"
+            },
+            {
+                setup: "What's a bear's favorite drink at the bar?",
+                punchline: "Bear-itas!"
+            },
+            {
+                setup: "Why don't bears ever lie?",
+                punchline: "Because the truth is un-bear-able to hide!"
+            },
+            {
+                setup: "What do you call a bear who's great at parties?",
+                punchline: "The life of the bear-ty!"
+            },
+            {
+                setup: "Why did the bear become a tour guide?",
+                punchline: "He wanted to show everyone the bear minimum of fun!"
+            },
+            {
+                setup: "What's a bear's favorite app?",
+                punchline: "Grindr... I mean, Bear-der!"
+            }
+        ];
+
+        let currentJokeIndex = 0;
+
+        // DOM elements
         const layoutSelect = document.getElementById('layout-select');
-        const animationSelect = document.getElementById('animation-select');
+        const sizeSelect = document.getElementById('size-select');
+        const fontSelect = document.getElementById('font-select');
         const colorSelect = document.getElementById('color-select');
+        const animationSelect = document.getElementById('animation-select');
         const subtitleToggle = document.getElementById('subtitle-toggle');
+        const dotToggle = document.getElementById('dot-toggle');
+        const jokeToggle = document.getElementById('joke-toggle');
         const heroDisplay = document.getElementById('hero-display');
         const heroSubtitle = heroDisplay.querySelector('.hero-subtitle');
+        const heroDot = heroDisplay.querySelector('.hero-dot');
+        const jokeBubble = document.getElementById('joke-bubble');
 
         function updateHero() {
             // Remove all existing classes
@@ -830,19 +665,35 @@
             
             // Add selected classes
             heroDisplay.classList.add(`layout-${layoutSelect.value}`);
-            heroDisplay.classList.add(`anim-${animationSelect.value}`);
+            heroDisplay.classList.add(`size-${sizeSelect.value}`);
+            heroDisplay.classList.add(`font-${fontSelect.value}`);
             heroDisplay.classList.add(`color-${colorSelect.value}`);
+            heroDisplay.classList.add(`anim-${animationSelect.value}`);
             
             // Handle subtitle visibility
-            if (subtitleToggle.value === 'show') {
-                heroSubtitle.style.display = 'block';
+            if (subtitleToggle.checked) {
+                heroSubtitle.classList.add('show');
             } else {
-                heroSubtitle.style.display = 'none';
+                heroSubtitle.classList.remove('show');
+            }
+            
+            // Handle dot visibility
+            if (dotToggle.checked) {
+                heroDot.classList.add('show');
+            } else {
+                heroDot.classList.remove('show');
+            }
+            
+            // Handle joke bubble visibility
+            if (jokeToggle.checked) {
+                jokeBubble.classList.add('show');
+            } else {
+                jokeBubble.classList.remove('show');
             }
             
             // Force animation restart for animation changes
             if (animationSelect.value !== 'none') {
-                const animatedElements = heroDisplay.querySelectorAll('.hero-logo-img, .hero-title, .hero-subtitle, .hero-chunky, .hero-dad');
+                const animatedElements = heroDisplay.querySelectorAll('.hero-logo-img, .hero-title');
                 animatedElements.forEach(el => {
                     el.style.animation = 'none';
                     el.offsetHeight; // Trigger reflow
@@ -851,47 +702,45 @@
             }
         }
 
+        function newJoke() {
+            currentJokeIndex = (currentJokeIndex + 1) % bearJokes.length;
+            const joke = bearJokes[currentJokeIndex];
+            const jokeContent = jokeBubble.querySelector('.joke-content');
+            
+            // Fade out
+            jokeContent.style.opacity = '0';
+            
+            setTimeout(() => {
+                jokeContent.querySelector('.joke-text').textContent = joke.setup;
+                jokeContent.querySelector('.joke-punchline').textContent = joke.punchline;
+                // Fade in
+                jokeContent.style.opacity = '1';
+            }, 200);
+        }
+
         // Event listeners
         layoutSelect.addEventListener('change', updateHero);
-        animationSelect.addEventListener('change', updateHero);
+        sizeSelect.addEventListener('change', updateHero);
+        fontSelect.addEventListener('change', updateHero);
         colorSelect.addEventListener('change', updateHero);
+        animationSelect.addEventListener('change', updateHero);
         subtitleToggle.addEventListener('change', updateHero);
+        dotToggle.addEventListener('change', updateHero);
+        jokeToggle.addEventListener('change', updateHero);
 
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
-            const selects = [layoutSelect, animationSelect, colorSelect, subtitleToggle];
-            let currentSelect = null;
-            
-            // Find currently focused select or default to first
-            for (let select of selects) {
-                if (document.activeElement === select) {
-                    currentSelect = select;
-                    break;
+            if (e.key === 'j' || e.key === 'J') {
+                if (jokeToggle.checked) {
+                    newJoke();
                 }
-            }
-            
-            if (!currentSelect) currentSelect = layoutSelect;
-            
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                const currentIndex = currentSelect.selectedIndex;
-                if (currentIndex > 0) {
-                    currentSelect.selectedIndex = currentIndex - 1;
-                    updateHero();
-                }
-            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                e.preventDefault();
-                const currentIndex = currentSelect.selectedIndex;
-                if (currentIndex < currentSelect.options.length - 1) {
-                    currentSelect.selectedIndex = currentIndex + 1;
-                    updateHero();
-                }
-            } else if (e.key === 'Tab') {
-                // Let tab work normally for navigation between controls
-                return;
             }
         });
 
+        // Initialize with a random joke
+        currentJokeIndex = Math.floor(Math.random() * bearJokes.length);
+        newJoke();
+        
         // Initialize
         updateHero();
     </script>
