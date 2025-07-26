@@ -1,5 +1,5 @@
 {
-  "generated": "2025-07-26T03:01:47.969Z",
+  "generated": "2025-07-26T03:05:17.948Z",
   "files": [
     {
       "name": "breakpoint-test.html",
@@ -7,14 +7,9 @@
       "modified": "2025-07-26T02:59:37.573Z"
     },
     {
-      "name": "hero-animation-options.html",
-      "size": 14269,
-      "modified": "2025-07-26T03:01:42.521Z"
-    },
-    {
       "name": "hero-variations-tester.html",
-      "size": 26708,
-      "modified": "2025-07-26T02:59:37.573Z"
+      "size": 26243,
+      "modified": "2025-07-26T03:05:09.421Z"
     },
     {
       "name": "iframe-fix-test.html",
