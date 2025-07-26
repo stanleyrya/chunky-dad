@@ -149,15 +149,15 @@ function formatEventDates(event) {
     const start = new Date(upcomingDates.startDate);
     const end = new Date(upcomingDates.endDate);
     
-    const options = { month: 'short', day: 'numeric' };
-    const startFormatted = start.toLocaleDateString('en-US', options);
-    const endFormatted = end.toLocaleDateString('en-US', options);
+    // Format as M/D (e.g., 8/11, 12/3)
+    const startFormatted = `${start.getMonth() + 1}/${start.getDate()}`;
+    const endFormatted = `${end.getMonth() + 1}/${end.getDate()}`;
     
     if (start.getTime() === end.getTime()) {
         return startFormatted;
     }
     
-    return `${startFormatted} - ${endFormatted}`;
+    return `${startFormatted}-${endFormatted}`;
 }
 
 // Make functions globally available for browser use
