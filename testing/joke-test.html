@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joke Button Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .dad-joke-bubble {
+            position: relative;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px 20px 50px 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            margin: 20px auto;
+        }
+        .new-joke-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            position: absolute;
+            right: 15px;
+            bottom: 15px;
+        }
+        .new-joke-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .joke-text {
+            margin-bottom: 10px;
+            font-weight: 500;
+            min-height: 1.4em;
+        }
+        .joke-punchline {
+            font-style: italic;
+            color: #666;
+            min-height: 1.4em;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+        }
+        .error {
+            background: #ffeaea;
+            border-color: #f44336;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Dad Joke Button Test</h1>
+        <div id="status" class="status">Loading...</div>
+        
+        <div class="dad-joke-bubble" id="joke-bubble">
+            <div class="joke-content">
+                <div class="joke-text">Why don't bears ever get lost?</div>
+                <div class="joke-punchline">Because they always know where the bear necessities are!</div>
+            </div>
+            <button class="new-joke-btn">New Joke 🐻</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="testGlobalFunction()" style="padding: 10px 20px; margin-right: 10px;">Test Global newJoke()</button>
+            <button onclick="testDirectCall()" style="padding: 10px 20px;">Test Direct Call</button>
+        </div>
+    </div>
+
+    <script src="../js/logger.js"></script>
+    <script src="../js/dad-jokes.js"></script>
+    
+    <script>
+        let statusDiv = document.getElementById('status');
+        
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'status error' : 'status';
+        }
+        
+        function testGlobalFunction() {
+            try {
+                updateStatus('Testing global newJoke() function...');
+                newJoke();
+                updateStatus('Global newJoke() called successfully!');
+            } catch (error) {
+                updateStatus('Error calling global newJoke(): ' + error.message, true);
+                console.error('Global newJoke error:', error);
+            }
+        }
+        
+        function testDirectCall() {
+            try {
+                updateStatus('Testing direct dadJokesManager call...');
+                if (window.dadJokesManager) {
+                    window.dadJokesManager.newJoke();
+                    updateStatus('Direct call successful!');
+                } else {
+                    updateStatus('dadJokesManager not found!', true);
+                }
+            } catch (error) {
+                updateStatus('Error in direct call: ' + error.message, true);
+                console.error('Direct call error:', error);
+            }
+        }
+        
+        // Initialize the dad jokes manager
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                updateStatus('Initializing dad jokes manager...');
+                if (window.DadJokesManager) {
+                    window.dadJokesManager = new DadJokesManager();
+                    updateStatus('Dad jokes manager initialized successfully!');
+                } else {
+                    updateStatus('DadJokesManager class not found!', true);
+                }
+            } catch (error) {
+                updateStatus('Initialization error: ' + error.message, true);
+                console.error('Initialization error:', error);
+            }
+        });
+        
+        // Global error handler
+        window.addEventListener('error', function(event) {
+            updateStatus('JavaScript Error: ' + event.message, true);
+            console.error('Global error:', event);
+        });
+    </script>
+</body>
+</html>
