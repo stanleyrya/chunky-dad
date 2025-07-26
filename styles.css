@@ -418,14 +418,13 @@ body.index-page header.visible {
 
 /* Hero Section */
 .hero {
-    min-height: 85vh;
+    height: 100vh;
     background: var(--gradient-primary);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
-    padding-top: 2rem;
 }
 
 .hero::before {
@@ -446,7 +445,7 @@ body.index-page header.visible {
     padding: 0 3rem;
     position: relative;
     z-index: 1;
-    height: 85vh;
+    height: 100vh;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
@@ -697,8 +696,7 @@ body.index-page header.visible {
 /* Hero Responsive Design */
 @media (max-width: 768px) {
     .hero {
-        min-height: 80vh;
-        padding-top: 2rem;
+        height: 100vh;
     }
     
     .hero-container {
@@ -707,11 +705,9 @@ body.index-page header.visible {
         gap: 1rem;
         padding: 0 2rem;
         text-align: center;
-        height: auto;
-        min-height: 80vh;
+        height: 100vh;
         justify-content: center;
         align-items: center;
-        padding-top: 3rem;
     }
     
     .hero-content {
@@ -762,17 +758,14 @@ body.index-page header.visible {
 
 @media (max-width: 480px) {
     .hero {
-        min-height: 75vh;
-        padding-top: 1.5rem;
+        height: 100vh;
     }
     
     .hero-container {
         padding: 0 1rem;
-        height: auto;
-        min-height: 75vh;
+        height: 100vh;
         gap: 0.8rem;
         align-items: center;
-        padding-top: 2rem;
     }
     
     .hero-content {
