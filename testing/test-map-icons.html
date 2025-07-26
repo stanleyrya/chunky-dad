@@ -566,11 +566,22 @@
         let calendarLoader = null;
         
         // Initialize the test page
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             logger.componentInit('MAP', 'Map icon test page initialized');
             
             // Initialize calendar loader for real data
             calendarLoader = new DynamicCalendarLoader();
+            
+            // Set up the city context manually (since we're not on a real city page)
+            calendarLoader.currentCity = 'new-york';
+            calendarLoader.currentCityConfig = getCityConfig('new-york');
+            
+            // Override getCityFromURL to return 'new-york' for testing
+            calendarLoader.getCityFromURL = function() {
+                return 'new-york';
+            };
+            
+            logger.componentLoad('MAP', 'Calendar loader set up for testing');
             
             initializeMap();
             renderEvents();
@@ -977,7 +988,6 @@
         }
         
         function addRandomEvent() {
-            // Use consistent coordinates for random events to prevent shuffling
             const randomEvents = [
                 {
                     name: "Trivia Night",
@@ -986,7 +996,7 @@
                     time: "7:00 PM - 10:00 PM",
                     day: "Wednesday",
                     cover: "$5",
-                    coordinates: { lat: 40.7420, lng: -73.9915 }, // Fixed coordinates
+                    coordinates: { lat: 40.7400 + Math.random() * 0.05, lng: -73.9900 + Math.random() * 0.05 },
                     emoji: "🧠",
                     eventType: "Quiz"
                 },
@@ -997,15 +1007,13 @@
                     time: "10:00 PM - 3:00 AM",
                     day: "Saturday",
                     cover: "$15",
-                    coordinates: { lat: 40.7535, lng: -73.9825 }, // Fixed coordinates
+                    coordinates: { lat: 40.7500 + Math.random() * 0.05, lng: -73.9800 + Math.random() * 0.05 },
                     emoji: "💃",
                     eventType: "Dancing"
                 }
             ];
             
-            // Use event count to select which random event to add (consistent selection)
-            const eventIndex = testEvents.length % randomEvents.length;
-            const randomEvent = randomEvents[eventIndex];
+            const randomEvent = randomEvents[Math.floor(Math.random() * randomEvents.length)];
             testEvents.push(randomEvent);
             updateMapMarkers();
             renderEvents();
@@ -1079,6 +1087,14 @@
                      return;
                  }
                  
+                 // Log the calendar loader state for debugging
+                 logger.info('CALENDAR', 'Calendar loader state', {
+                     hasLoader: !!calendarLoader,
+                     currentCity: calendarLoader.currentCity,
+                     currentCityConfig: calendarLoader.currentCityConfig,
+                     hasLoadCalendarDataMethod: typeof calendarLoader.loadCalendarData === 'function'
+                 });
+                 
                  // Use NYC as default city for testing (same as calendar tester)
                  const cityKey = 'new-york';
                  
@@ -1136,13 +1152,9 @@
                      const website = extractWebsiteFromDescription(event.description) || event.url || event.website || null;
                      
                      // Parse coordinates from location field if available
-                     let coordinates = parseCoordinatesFromLocation(event.location) || 
-                                     parseCoordinatesFromLocation(event.barLocation);
-                     
-                     // If no coordinates found, use a consistent fallback based on event name hash
-                     if (!coordinates) {
-                         coordinates = generateConsistentCoordinates(event.name || 'Unknown Event');
-                     }
+                     const coordinates = parseCoordinatesFromLocation(event.location) || 
+                                       parseCoordinatesFromLocation(event.barLocation) ||
+                                       generateRandomNYCCoordinates();
                      
                      // Extract venue name from bar field or location
                      const venue = event.bar || event.barName || extractVenueFromLocation(event.location) || 'Unknown Location';
@@ -1375,46 +1387,14 @@
          }
          
          function generateRandomNYCCoordinates() {
-             // Generate coordinates within NYC area - using seeded random to prevent shuffling
+             // Generate coordinates within NYC area
              const baseLat = 40.7505;
              const baseLng = -73.9934;
              const range = 0.1;
              
-             // Use event count as seed to generate consistent coordinates
-             const seed = testEvents.length;
-             const pseudoRandom1 = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-             const pseudoRandom2 = Math.sin(seed * 93.9898 + 67.345) * 43758.5453;
-             
              return {
-                 lat: baseLat + ((pseudoRandom1 - Math.floor(pseudoRandom1)) - 0.5) * range,
-                 lng: baseLng + ((pseudoRandom2 - Math.floor(pseudoRandom2)) - 0.5) * range
-             };
-         }
-         
-         function generateConsistentCoordinates(eventName) {
-             // Generate consistent coordinates based on event name hash to prevent shuffling
-             const baseLat = 40.7505;
-             const baseLng = -73.9934;
-             const range = 0.08; // Slightly smaller range for better clustering
-             
-             // Create a simple hash from the event name
-             let hash = 0;
-             for (let i = 0; i < eventName.length; i++) {
-                 const char = eventName.charCodeAt(i);
-                 hash = ((hash << 5) - hash) + char;
-                 hash = hash & hash; // Convert to 32-bit integer
-             }
-             
-             // Use hash to generate consistent pseudo-random values
-             const seed1 = Math.abs(hash);
-             const seed2 = Math.abs(hash * 1.618033988749); // Golden ratio multiplier
-             
-             const pseudoRandom1 = Math.sin(seed1 * 12.9898 + 78.233) * 43758.5453;
-             const pseudoRandom2 = Math.sin(seed2 * 93.9898 + 67.345) * 43758.5453;
-             
-             return {
-                 lat: baseLat + ((pseudoRandom1 - Math.floor(pseudoRandom1)) - 0.5) * range,
-                 lng: baseLng + ((pseudoRandom2 - Math.floor(pseudoRandom2)) - 0.5) * range
+                 lat: baseLat + (Math.random() - 0.5) * range,
+                 lng: baseLng + (Math.random() - 0.5) * range
              };
          }
          
