@@ -162,4 +162,4 @@ MIT License - feel free to use this as a template for community travel guides!
 
 ---
 
-Made with ![chunky.dad logo](Rising_Star_Ryan_Head_Full.png) for the bear community. Travel safe, have fun, and support bear businesses!
+Made with ![chunky.dad logo](Rising_Star_Ryan_Head_Compressed.png) for the bear community. Travel safe, have fun, and support bear businesses!
