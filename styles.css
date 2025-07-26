@@ -569,6 +569,99 @@ body.index-page header.visible {
     font-size: 1.5rem;
 }
 
+/* Dad Joke Speech Bubble Styling */
+.dad-joke-bubble {
+    position: absolute;
+    top: 20%;
+    right: 10%;
+    max-width: 300px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    animation: bubbleFloat 3s ease-in-out infinite;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    z-index: 10;
+}
+
+.dad-joke-bubble::before {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    right: 30px;
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 15px solid rgba(255, 255, 255, 0.95);
+}
+
+.dad-joke-bubble::after {
+    content: '🐻';
+    position: absolute;
+    bottom: -35px;
+    right: 25px;
+    font-size: 1.5rem;
+}
+
+@keyframes bubbleFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.joke-text {
+    margin-bottom: 10px;
+    font-weight: 500;
+    min-height: 1.4em;
+}
+
+.joke-punchline {
+    font-style: italic;
+    color: #8B4513;
+    font-weight: 600;
+    margin-bottom: 10px;
+    min-height: 1.4em;
+}
+
+/* Typewriter animation */
+.typewriter {
+    overflow: hidden;
+    border-right: 2px solid #8B4513;
+    white-space: nowrap;
+    animation: blink-caret 1s step-end infinite;
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: #8B4513; }
+}
+
+@keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+.new-joke-btn {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+    float: right;
+}
+
+.new-joke-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
 /* Hero Animations */
 @keyframes heroBounceIn {
     0% {
@@ -644,6 +737,26 @@ body.index-page header.visible {
     
     .hero-scroll-hint {
         bottom: 1.5rem;
+    }
+    
+    /* Dad Jokes Mobile Responsive */
+    .dad-joke-bubble {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin: 2rem auto;
+        max-width: 90%;
+    }
+    
+    .dad-joke-bubble::before,
+    .dad-joke-bubble::after {
+        display: none;
+    }
+    
+    .new-joke-btn {
+        float: none;
+        display: block;
+        margin: 0 auto;
     }
 }
 

@@ -40,6 +40,7 @@ class ChunkyDadApp {
         this.debugOverlay = null;
         this.cityRenderer = null;
         this.bearEventRenderer = null;
+        this.dadJokesManager = null;
         
         logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
@@ -115,6 +116,7 @@ class ChunkyDadApp {
         if (this.isMainPage) {
             this.initializeCityRenderer();
             this.initializeBearEventRenderer();
+            this.initializeDadJokes();
         }
         
         logger.componentLoad('SYSTEM', 'Core modules initialized');
@@ -150,6 +152,16 @@ class ChunkyDadApp {
             logger.componentInit('SYSTEM', 'Bear event renderer initialized in app');
         } else {
             logger.warn('SYSTEM', 'BearEventRenderer not available');
+        }
+    }
+
+    initializeDadJokes() {
+        if (window.DadJokesManager) {
+            this.dadJokesManager = new DadJokesManager();
+            window.dadJokesManager = this.dadJokesManager; // Make globally accessible
+            logger.componentInit('SYSTEM', 'Dad jokes manager initialized in app');
+        } else {
+            logger.warn('SYSTEM', 'DadJokesManager not available');
         }
     }
 
