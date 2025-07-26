@@ -41,24 +41,24 @@ class HeaderManager {
             return;
         }
 
-        let title = '🐻 chunky.dad';
+        let title = '<img src="chunky-dad-emoji.png" alt="chunky.dad logo" class="logo-img"> chunky.dad';
         
         if (this.isCityPage()) {
             const cityKey = this.getCityFromURL();
             const cityConfig = getCityConfig(cityKey);
             if (cityConfig) {
-                title = `🐻 chunky.dad/${cityKey}`;
+                title = `<img src="chunky-dad-emoji.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}`;
                 this.currentCity = cityConfig;
             }
         } else if (this.isTestPage) {
-            title = '🐻 chunky.dad [DEBUG]';
+            title = '<img src="chunky-dad-emoji.png" alt="chunky.dad logo" class="logo-img"> chunky.dad [DEBUG]';
         }
 
         // Update the title
         if (logoElement.querySelector('a')) {
-            logoElement.querySelector('a').textContent = title;
+            logoElement.querySelector('a').innerHTML = title;
         } else {
-            logoElement.textContent = title;
+            logoElement.innerHTML = title;
         }
 
         this.logger.componentLoad('HEADER', `Header title updated: ${title}`);

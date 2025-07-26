@@ -368,6 +368,69 @@ header {
 .logo a {
     color: var(--text-inverse);
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Logo image styles */
+.logo-img {
+    height: 1.5em;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+/* Section icon styles */
+.section-icon {
+    height: 1.2em;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+    margin-right: 0.3em;
+}
+
+/* Modal icon styles */
+.modal-icon {
+    height: 1.1em;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+    margin-right: 0.3em;
+}
+
+/* Button icon styles */
+.button-icon {
+    height: 1em;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+    margin-left: 0.3em;
+}
+
+/* Bear directory icon styles */
+.bear-directory-icon {
+    height: 2em;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+/* Map marker icon styles */
+.map-marker-icon {
+    height: 1.5em;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+/* Debug icon styles */
+.debug-icon {
+    height: 1em;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+    margin-right: 0.3em;
 }
 
 .nav-menu {
