@@ -996,7 +996,7 @@ body.index-page main {
 /* Shared Emoji Styles */
 .city-compact-card .city-emoji,
 .event-compact-card .event-emoji {
-    font-size: 2rem;
+    font-size: 2.5rem;
     filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
     line-height: 1;
 }
@@ -1317,17 +1317,17 @@ body.index-page main {
     }
     
     .event-compact-card .event-emoji-box {
-        width: 60px;
-        height: 60px;
+        width: 70px;
+        height: 70px;
     }
     
     .city-compact-card .city-emoji,
     .event-compact-card .event-emoji {
-        font-size: 1.8rem;
+        font-size: 2.2rem;
     }
     
     .event-compact-card .event-emoji {
-        font-size: 1.5rem;
+        font-size: 2.2rem;
     }
 
     /* Mobile spacer card adjustments */
@@ -1336,7 +1336,7 @@ body.index-page main {
     }
 
     .event-compact-card.spacer-card {
-        width: 60px;
+        width: 70px;
     }
     
     /* Content Mobile Styles */
