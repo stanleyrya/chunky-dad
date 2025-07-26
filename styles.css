@@ -472,7 +472,7 @@ body.index-page header.visible {
     width: 320px;
     height: 320px;
     transition: transform 0.3s ease;
-    animation: heroBounceIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
 }
 
 .hero-logo-img:hover {
@@ -488,7 +488,7 @@ body.index-page header.visible {
     line-height: 0.8;
     display: flex;
     flex-direction: column;
-    animation: heroBounceIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both;
+    animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.15s both;
 }
 
 .hero-chunky {
@@ -537,7 +537,14 @@ body.index-page header.visible {
 @keyframes heroBounceIn {
     0% {
         opacity: 0;
-        transform: scale(0.8) translateY(20px);
+        transform: scale(0.6) translateY(30px);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.05) translateY(-5px);
+    }
+    80% {
+        transform: scale(0.98) translateY(2px);
     }
     100% {
         opacity: 1;
@@ -578,12 +585,12 @@ body.index-page header.visible {
     .hero-content {
         order: 2;
         text-align: center;
-        margin-top: -1rem;
+        margin-top: 0.5rem;
     }
     
     .hero-logo {
         order: 1;
-        margin-bottom: -0.5rem;
+        margin-bottom: 0;
     }
     
     .hero-title {
@@ -615,11 +622,11 @@ body.index-page header.visible {
     }
     
     .hero-content {
-        margin-top: -1.5rem;
+        margin-top: 0.5rem;
     }
     
     .hero-logo {
-        margin-bottom: -1rem;
+        margin-bottom: 0;
     }
     
     .hero-title {
