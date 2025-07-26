@@ -442,7 +442,6 @@ body.index-page header.visible {
 .hero-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 3rem;
     position: relative;
     z-index: 1;
     height: 100vh;
@@ -456,11 +455,18 @@ body.index-page header.visible {
     text-align: left;
     color: var(--text-inverse);
     position: relative;
-    order: 2;
+    order: 1;
+    padding: 0 2rem 3rem 2rem;
+}
+
+@media (min-width: 769px) {
+    .hero-content {
+        padding: 0 2rem 3rem 0;
+    }
 }
 
 .hero-logo {
-    order: 1;
+    order: 0;
     margin-bottom: 0;
     display: flex;
     justify-content: center;
@@ -571,9 +577,10 @@ body.index-page header.visible {
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
     position: absolute;
-    bottom: 2rem;
+    top: 8rem;
     right: 5%;
     max-width: 320px;
+    min-width: 280px;
     background: rgba(255, 255, 255, 0.95);
     color: #333;
     padding: 20px 20px 50px 20px;
@@ -581,28 +588,17 @@ body.index-page header.visible {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     font-size: 0.9rem;
     line-height: 1.4;
-    animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 1.5s both, bubbleFloat 3s ease-in-out 2.5s infinite;
+    animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.8s both, bubbleFloat 3s ease-in-out 2.2s infinite;
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255, 255, 255, 0.3);
     z-index: 10;
+    order: 2;
 }
 
 .dad-joke-bubble::before {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    right: 30px;
-    width: 0;
-    height: 0;
-    border-left: 15px solid transparent;
-    border-right: 15px solid transparent;
-    border-top: 15px solid rgba(255, 255, 255, 0.95);
-}
-
-.dad-joke-bubble::after {
     content: '🐻';
     position: absolute;
-    bottom: -35px;
+    top: -15px;
     right: 25px;
     font-size: 1.5rem;
 }
@@ -654,6 +650,8 @@ body.index-page header.visible {
     position: absolute;
     right: 15px;
     bottom: 15px;
+    min-width: 80px;
+    white-space: nowrap;
 }
 
 .new-joke-btn:hover {
@@ -711,13 +709,14 @@ body.index-page header.visible {
     }
     
     .hero-content {
-        order: 2;
+        order: 1;
         text-align: center;
         margin-top: 0;
+        padding: 0 2rem 3rem 2rem;
     }
     
     .hero-logo {
-        order: 1;
+        order: 0;
         margin-bottom: 0;
     }
     
@@ -742,11 +741,12 @@ body.index-page header.visible {
         right: auto;
         margin: 2rem auto;
         max-width: 90%;
-        animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 1.5s both, bubbleFloat 3s ease-in-out 2.5s infinite;
+        min-width: 250px;
+        animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.8s both, bubbleFloat 3s ease-in-out 2.2s infinite;
+        order: 2;
     }
     
-    .dad-joke-bubble::before,
-    .dad-joke-bubble::after {
+    .dad-joke-bubble::before {
         display: none;
     }
     
@@ -771,10 +771,15 @@ body.index-page header.visible {
     
     .hero-content {
         margin-top: 0;
+        padding: 0 2rem 3rem 2rem;
     }
     
     .hero-logo {
         margin-bottom: 0;
+    }
+    
+    .dad-joke-bubble {
+        min-width: 200px;
     }
     
     .hero-title {

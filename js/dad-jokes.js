@@ -111,14 +111,39 @@ class DadJokesManager {
     initializeWithRandomJoke() {
         this.currentJokeIndex = Math.floor(Math.random() * this.bearJokes.length);
         logger.debug('PAGE', 'Initializing with random joke', { jokeIndex: this.currentJokeIndex });
-        this.displayJokeInstantly();
+        // Start with empty content and show typing animation after bubble appears
+        this.setupElement.textContent = '';
+        this.punchlineElement.textContent = '';
+        
+        // Wait for bubble animation to complete, then show typing animation
+        setTimeout(() => {
+            this.displayInitialJokeWithTyping();
+        }, 1300); // Slightly after the bubble bounce-in completes (0.8s + 0.5s)
     }
 
-    displayJokeInstantly() {
+    async displayInitialJokeWithTyping() {
         const joke = this.bearJokes[this.currentJokeIndex];
-        this.setupElement.textContent = joke.setup;
-        this.punchlineElement.textContent = joke.punchline;
-        logger.debug('PAGE', 'Initial joke displayed', { setup: joke.setup });
+        this.isTyping = true;
+        
+        try {
+            logger.debug('PAGE', 'Starting initial joke typing animation', { setup: joke.setup });
+            
+            // Type the setup first
+            await this.typeText(this.setupElement, joke.setup, 30);
+            
+            // Wait a moment for comedic timing
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Type the punchline
+            await this.typeText(this.punchlineElement, joke.punchline, 40);
+            
+            logger.componentLoad('PAGE', 'Initial joke typing animation completed');
+            
+        } catch (error) {
+            logger.componentError('PAGE', 'Error during initial joke animation', error);
+        } finally {
+            this.isTyping = false;
+        }
     }
 
     typeText(element, text, speed = 50) {
