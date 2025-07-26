@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hero Section Variations Tester - chunky.dad</title>
+    <title>Hero Section Layout Variations - chunky.dad</title>
     <link rel="stylesheet" href="../styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
@@ -17,11 +17,12 @@
             top: 20px;
             right: 20px;
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 15px;
             border-radius: 10px;
             backdrop-filter: blur(10px);
+            max-width: 300px;
         }
         
         .variation-selector select {
@@ -31,6 +32,8 @@
             padding: 8px;
             border-radius: 5px;
             margin-left: 10px;
+            width: 100%;
+            margin-top: 5px;
         }
         
         .hero-variation {
@@ -40,266 +43,594 @@
         .hero-variation.active {
             display: flex;
         }
+
+        /* V1: Split Layout - Image Left, Text Right (Requested) */
+        .hero-v1 {
+            flex-direction: row;
+            align-items: center;
+            padding: 0 4rem;
+        }
         
-        /* Variation 1: Current with no bounce */
+        .hero-v1 .hero-container {
+            max-width: 1400px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            height: auto;
+        }
+        
+        .hero-v1 .hero-content {
+            text-align: left;
+            order: 2;
+        }
+        
         .hero-v1 .hero-logo {
-            animation: none;
-        }
-        
-        .hero-v1 .scroll-arrow {
-            animation: none;
-        }
-        
-        .hero-v1 .hero-logo-img {
-            width: 180px;
-            height: 180px;
+            order: 1;
+            margin-bottom: 0;
+            display: flex;
+            justify-content: center;
         }
         
         .hero-v1 .hero-title {
-            font-size: 5rem;
-        }
-        
-        .hero-v1 .hero-subtitle {
-            font-size: 2rem;
-        }
-        
-        .hero-v1 .hero-scroll-hint {
-            bottom: 4rem;
-        }
-        
-        /* Variation 2: Elegant fade-in */
-        .hero-v2 .hero-logo {
-            animation: elegantFadeIn 2s ease-out;
-        }
-        
-        .hero-v2 .scroll-arrow {
-            animation: subtlePulse 3s ease-in-out infinite;
-        }
-        
-        .hero-v2 .hero-logo-img {
-            width: 200px;
-            height: 200px;
-            filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.4));
-        }
-        
-        .hero-v2 .hero-title {
-            font-size: 5.5rem;
-            letter-spacing: -2px;
-        }
-        
-        .hero-v2 .hero-subtitle {
-            font-size: 2.2rem;
-            font-weight: 400;
-        }
-        
-        .hero-v2 .hero-scroll-hint {
-            bottom: 5rem;
-            opacity: 0.8;
-        }
-        
-        /* Variation 3: Modern minimal */
-        .hero-v3 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .hero-v3 .hero-logo {
-            animation: none;
-            margin-bottom: 3rem;
-        }
-        
-        .hero-v3 .hero-logo-img {
-            width: 160px;
-            height: 160px;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .hero-v3 .hero-title {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
             font-size: 4.5rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
+            line-height: 0.9;
         }
         
-        .hero-v3 .hero-subtitle {
-            font-size: 1.8rem;
-            font-weight: 300;
+        .hero-v1 .hero-chunky,
+        .hero-v1 .hero-dad {
+            display: block;
         }
         
-        .hero-v3 .hero-scroll-hint {
+        .hero-v1 .hero-dot {
             display: none;
         }
         
-        /* Variation 4: Bold and dramatic */
-        .hero-v4 {
-            background: radial-gradient(circle at center, #ff6b6b 0%, #4ecdc4 50%, #45b7d1 100%);
+        .hero-v1 .hero-scroll-hint {
+            position: static;
+            margin-top: 2rem;
+            transform: none;
+        }
+
+        /* V2: Vertical Stack Minimal */
+        .hero-v2 .hero-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100vh;
+            padding: 3rem 2rem;
         }
         
-        .hero-v4 .hero-logo {
-            animation: none;
-            margin-bottom: 2.5rem;
+        .hero-v2 .hero-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            justify-content: center;
+        }
+        
+        .hero-v2 .hero-logo {
+            margin-bottom: 1rem;
+        }
+        
+        .hero-v2 .hero-logo-img {
+            width: 120px;
+            height: 120px;
+        }
+        
+        .hero-v2 .hero-title {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .hero-v2 .hero-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 0;
+        }
+        
+        .hero-v2 .hero-scroll-hint {
+            position: static;
+            transform: none;
+            margin-top: auto;
+        }
+
+        /* V3: Corner Positioned */
+        .hero-v3 .hero-container {
+            height: 100vh;
+            position: relative;
+        }
+        
+        .hero-v3 .hero-content {
+            position: absolute;
+            top: 6rem;
+            left: 4rem;
+            text-align: left;
+            max-width: 500px;
+        }
+        
+        .hero-v3 .hero-logo {
+            position: absolute;
+            bottom: 4rem;
+            right: 4rem;
+            margin-bottom: 0;
+        }
+        
+        .hero-v3 .hero-logo-img {
+            width: 200px;
+            height: 200px;
+        }
+        
+        .hero-v3 .hero-title {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-v3 .hero-scroll-hint {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* V4: Floating Card Style */
+        .hero-v4 {
+            padding: 4rem 2rem;
+        }
+        
+        .hero-v4 .hero-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 4rem;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 800px;
         }
         
         .hero-v4 .hero-logo-img {
-            width: 220px;
-            height: 220px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        
-        .hero-v4 .hero-title {
-            font-size: 6rem;
-            font-weight: 800;
-            text-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
-        }
-        
-        .hero-v4 .hero-subtitle {
-            font-size: 2.5rem;
-            font-weight: 500;
+            width: 160px;
+            height: 160px;
         }
         
         .hero-v4 .hero-scroll-hint {
-            bottom: 6rem;
+            display: none;
         }
-        
-        .hero-v4 .scroll-text {
-            font-size: 1.1rem;
-            font-weight: 500;
-        }
-        
-        /* Variation 5: Soft and welcoming */
-        .hero-v5 {
-            background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+
+        /* V5: Horizontal Layout */
+        .hero-v5 .hero-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 3rem;
+            height: auto;
+            padding: 6rem 4rem;
         }
         
         .hero-v5 .hero-logo {
-            animation: gentleFloat 4s ease-in-out infinite;
+            margin-bottom: 0;
+            flex-shrink: 0;
         }
         
-        .hero-v5 .hero-logo-img {
-            width: 190px;
-            height: 190px;
-            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.2));
+        .hero-v5 .hero-content {
+            text-align: left;
         }
         
         .hero-v5 .hero-title {
-            font-size: 5.2rem;
-            font-weight: 700;
-        }
-        
-        .hero-v5 .hero-subtitle {
-            font-size: 2.1rem;
-            opacity: 0.95;
+            font-size: 4rem;
+            margin-bottom: 1rem;
         }
         
         .hero-v5 .hero-scroll-hint {
-            bottom: 4.5rem;
+            position: static;
+            transform: none;
+            margin-top: 2rem;
+            align-self: flex-start;
+        }
+
+        /* V6: Bottom Heavy */
+        .hero-v6 .hero-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            height: 100vh;
+            padding-bottom: 8rem;
         }
         
-        /* Custom animations */
-        @keyframes elegantFadeIn {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.9);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+        .hero-v6 .hero-logo {
+            order: 3;
+            margin-bottom: 0;
+            margin-top: 2rem;
         }
         
-        @keyframes subtlePulse {
-            0%, 100% {
-                opacity: 0.7;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1.1);
-            }
+        .hero-v6 .hero-title {
+            order: 1;
+            font-size: 6rem;
+            margin-bottom: 1rem;
         }
         
-        @keyframes gentleFloat {
-            0%, 100% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-5px);
-            }
+        .hero-v6 .hero-subtitle {
+            order: 2;
+            margin-bottom: 0;
         }
         
-        /* Responsive adjustments for all variations */
+        .hero-v6 .hero-scroll-hint {
+            display: none;
+        }
+
+        /* V7: Asymmetric Grid */
+        .hero-v7 .hero-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 2rem;
+            height: 100vh;
+            padding: 2rem;
+        }
+        
+        .hero-v7 .hero-title {
+            grid-column: 1;
+            grid-row: 1;
+            font-size: 5rem;
+            margin: 0;
+            align-self: end;
+        }
+        
+        .hero-v7 .hero-subtitle {
+            grid-column: 1;
+            grid-row: 2;
+            margin: 0;
+            align-self: start;
+            font-size: 1.8rem;
+        }
+        
+        .hero-v7 .hero-logo {
+            grid-column: 2;
+            grid-row: 1 / 3;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero-v7 .hero-logo-img {
+            width: 250px;
+            height: 250px;
+        }
+        
+        .hero-v7 .hero-scroll-hint {
+            display: none;
+        }
+
+        /* V8: Stacked Typography */
+        .hero-v8 .hero-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100vh;
+            text-align: left;
+            padding-left: 4rem;
+        }
+        
+        .hero-v8 .hero-logo {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            margin: 0;
+        }
+        
+        .hero-v8 .hero-logo-img {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .hero-v8 .hero-title {
+            font-size: 8rem;
+            line-height: 0.8;
+            margin-bottom: 2rem;
+        }
+        
+        .hero-v8 .hero-chunky,
+        .hero-v8 .hero-dad {
+            display: block;
+        }
+        
+        .hero-v8 .hero-dot {
+            display: none;
+        }
+        
+        .hero-v8 .hero-subtitle {
+            font-size: 2rem;
+            margin-left: 1rem;
+        }
+
+        /* V9: Circular Layout */
+        .hero-v9 .hero-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .hero-v9 .hero-logo {
+            position: absolute;
+            top: 2rem;
+            margin: 0;
+        }
+        
+        .hero-v9 .hero-title {
+            position: absolute;
+            left: -2rem;
+            font-size: 4rem;
+        }
+        
+        .hero-v9 .hero-subtitle {
+            position: absolute;
+            right: -2rem;
+            bottom: 0;
+            font-size: 1.5rem;
+        }
+        
+        .hero-v9 .hero-scroll-hint {
+            position: absolute;
+            bottom: -3rem;
+            transform: translateX(-50%);
+        }
+
+        /* V10: Magazine Style */
+        .hero-v10 .hero-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            height: 100vh;
+            max-width: none;
+            padding: 0;
+        }
+        
+        .hero-v10 .hero-logo {
+            grid-column: 1;
+            background: rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        
+        .hero-v10 .hero-content {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 4rem;
+            text-align: left;
+        }
+        
+        .hero-v10 .hero-logo-img {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .hero-v10 .hero-title {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* V11: Diagonal Split */
+        .hero-v11 {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-v11::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 60%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            transform: skewX(-15deg);
+            transform-origin: top left;
+        }
+        
+        .hero-v11 .hero-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero-v11 .hero-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        
+        .hero-v11 .hero-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 2rem;
+            text-align: left;
+        }
+        
+        .hero-v11 .hero-logo-img {
+            width: 280px;
+            height: 280px;
+        }
+
+        /* V12: Overlapping Elements */
+        .hero-v12 .hero-container {
+            height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero-v12 .hero-logo {
+            position: absolute;
+            top: 50%;
+            left: 30%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            z-index: 1;
+        }
+        
+        .hero-v12 .hero-title {
+            position: absolute;
+            top: 40%;
+            right: 20%;
+            transform: translateY(-50%);
+            font-size: 4.5rem;
+            z-index: 2;
+        }
+        
+        .hero-v12 .hero-subtitle {
+            position: absolute;
+            bottom: 35%;
+            left: 15%;
+            font-size: 1.8rem;
+            z-index: 2;
+        }
+        
+        .hero-v12 .hero-logo-img {
+            width: 220px;
+            height: 220px;
+        }
+
+        /* Responsive Design for All Variations */
         @media (max-width: 768px) {
-            .hero-v1 .hero-title,
-            .hero-v2 .hero-title,
-            .hero-v3 .hero-title,
-            .hero-v4 .hero-title,
-            .hero-v5 .hero-title {
-                font-size: 3rem;
+            .hero-v1 .hero-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                text-align: center;
             }
             
-            .hero-v1 .hero-subtitle,
-            .hero-v2 .hero-subtitle,
-            .hero-v3 .hero-subtitle,
-            .hero-v4 .hero-subtitle,
-            .hero-v5 .hero-subtitle {
-                font-size: 1.5rem;
+            .hero-v1 .hero-content {
+                order: 2;
+                text-align: center;
             }
             
-            .hero-v1 .hero-logo-img,
-            .hero-v2 .hero-logo-img,
-            .hero-v3 .hero-logo-img,
-            .hero-v4 .hero-logo-img,
-            .hero-v5 .hero-logo-img {
-                width: 120px;
-                height: 120px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .hero-v1 .hero-title,
-            .hero-v2 .hero-title,
-            .hero-v3 .hero-title,
-            .hero-v4 .hero-title,
-            .hero-v5 .hero-title {
-                font-size: 2.5rem;
+            .hero-v1 .hero-logo {
+                order: 1;
             }
             
-            .hero-v1 .hero-subtitle,
-            .hero-v2 .hero-subtitle,
-            .hero-v3 .hero-subtitle,
-            .hero-v4 .hero-subtitle,
-            .hero-v5 .hero-subtitle {
-                font-size: 1.2rem;
+            .hero-v3 .hero-content,
+            .hero-v3 .hero-logo {
+                position: static;
+                text-align: center;
             }
             
-            .hero-v1 .hero-logo-img,
-            .hero-v2 .hero-logo-img,
-            .hero-v3 .hero-logo-img,
-            .hero-v4 .hero-logo-img,
-            .hero-v5 .hero-logo-img {
-                width: 100px;
-                height: 100px;
+            .hero-v3 .hero-container {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 2rem;
+            }
+            
+            .hero-v5 .hero-container,
+            .hero-v10 .hero-container,
+            .hero-v11 .hero-container {
+                grid-template-columns: 1fr;
+                flex-direction: column;
+                text-align: center;
+                padding: 2rem;
+            }
+            
+            .hero-v7 .hero-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+                text-align: center;
+                padding: 2rem;
+            }
+            
+            .hero-v7 .hero-title,
+            .hero-v7 .hero-subtitle,
+            .hero-v7 .hero-logo {
+                grid-column: 1;
+                grid-row: auto;
+            }
+            
+            .hero-v8 .hero-container {
+                text-align: center;
+                padding: 2rem;
+            }
+            
+            .hero-v8 .hero-logo {
+                position: static;
+                margin-bottom: 2rem;
+            }
+            
+            .hero-v9 .hero-title,
+            .hero-v9 .hero-subtitle,
+            .hero-v9 .hero-logo {
+                position: static;
+            }
+            
+            .hero-v9 .hero-container {
+                flex-direction: column;
+                padding: 2rem;
+            }
+            
+            .hero-v12 .hero-logo,
+            .hero-v12 .hero-title,
+            .hero-v12 .hero-subtitle {
+                position: static;
+                transform: none;
+            }
+            
+            .hero-v12 .hero-container {
+                flex-direction: column;
+                padding: 2rem;
+            }
+            
+            /* Reduce font sizes on mobile */
+            .hero-variation .hero-title {
+                font-size: 2.5rem !important;
+            }
+            
+            .hero-variation .hero-subtitle {
+                font-size: 1.2rem !important;
+            }
+            
+            .hero-variation .hero-logo-img {
+                width: 120px !important;
+                height: 120px !important;
             }
         }
     </style>
 </head>
 <body>
     <div class="variation-selector">
-        <label for="variation-select">Hero Variation:</label>
+        <label for="variation-select">Hero Layout Variation:</label>
         <select id="variation-select">
-            <option value="v1">V1: No Bounce + Bigger</option>
-            <option value="v2">V2: Elegant Fade</option>
-            <option value="v3">V3: Modern Minimal</option>
-            <option value="v4">V4: Bold Dramatic</option>
-            <option value="v5">V5: Soft Welcoming</option>
+            <option value="v1">V1: Split Layout (Image Left, Text Right)</option>
+            <option value="v2">V2: Vertical Stack Minimal</option>
+            <option value="v3">V3: Corner Positioned</option>
+            <option value="v4">V4: Floating Card Style</option>
+            <option value="v5">V5: Horizontal Flow</option>
+            <option value="v6">V6: Bottom Heavy</option>
+            <option value="v7">V7: Asymmetric Grid</option>
+            <option value="v8">V8: Typography Focus</option>
+            <option value="v9">V9: Circular Layout</option>
+            <option value="v10">V10: Magazine Style</option>
+            <option value="v11">V11: Diagonal Split</option>
+            <option value="v12">V12: Overlapping Elements</option>
         </select>
     </div>
 
-    <!-- Variation 1: Current with no bounce, bigger elements -->
+    <!-- V1: Split Layout - Image Left, Text Right (Requested) -->
     <section class="hero hero-variation hero-v1 active" id="hero-v1">
         <div class="hero-container">
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
             <div class="hero-content">
-                <div class="hero-logo">
-                    <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-                </div>
                 <h1 class="hero-title">
                     <span class="hero-chunky">chunky</span>
                     <span class="hero-dot">.</span>
@@ -314,7 +645,7 @@
         </div>
     </section>
 
-    <!-- Variation 2: Elegant fade-in -->
+    <!-- V2: Vertical Stack Minimal -->
     <section class="hero hero-variation hero-v2" id="hero-v2">
         <div class="hero-container">
             <div class="hero-content">
@@ -327,36 +658,36 @@
                     <span class="hero-dad">dad</span>
                 </h1>
                 <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-                <div class="hero-scroll-hint">
-                    <span class="scroll-text">Explore</span>
-                    <div class="scroll-arrow">↓</div>
-                </div>
+            </div>
+            <div class="hero-scroll-hint">
+                <span class="scroll-text">Explore</span>
+                <div class="scroll-arrow">↓</div>
             </div>
         </div>
     </section>
 
-    <!-- Variation 3: Modern minimal -->
+    <!-- V3: Corner Positioned -->
     <section class="hero hero-variation hero-v3" id="hero-v3">
         <div class="hero-container">
             <div class="hero-content">
-                <div class="hero-logo">
-                    <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-                </div>
                 <h1 class="hero-title">
                     <span class="hero-chunky">chunky</span>
                     <span class="hero-dot">.</span>
                     <span class="hero-dad">dad</span>
                 </h1>
                 <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-                <div class="hero-scroll-hint">
-                    <span class="scroll-text">Explore</span>
-                    <div class="scroll-arrow">↓</div>
-                </div>
+            </div>
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
+            <div class="hero-scroll-hint">
+                <span class="scroll-text">Explore</span>
+                <div class="scroll-arrow">↓</div>
             </div>
         </div>
     </section>
 
-    <!-- Variation 4: Bold and dramatic -->
+    <!-- V4: Floating Card Style -->
     <section class="hero hero-variation hero-v4" id="hero-v4">
         <div class="hero-container">
             <div class="hero-content">
@@ -369,21 +700,17 @@
                     <span class="hero-dad">dad</span>
                 </h1>
                 <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-                <div class="hero-scroll-hint">
-                    <span class="scroll-text">Explore</span>
-                    <div class="scroll-arrow">↓</div>
-                </div>
             </div>
         </div>
     </section>
 
-    <!-- Variation 5: Soft and welcoming -->
+    <!-- V5: Horizontal Flow -->
     <section class="hero hero-variation hero-v5" id="hero-v5">
         <div class="hero-container">
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
             <div class="hero-content">
-                <div class="hero-logo">
-                    <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-                </div>
                 <h1 class="hero-title">
                     <span class="hero-chunky">chunky</span>
                     <span class="hero-dot">.</span>
@@ -395,6 +722,123 @@
                     <div class="scroll-arrow">↓</div>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- V6: Bottom Heavy -->
+    <section class="hero hero-variation hero-v6" id="hero-v6">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="hero-chunky">chunky</span>
+                    <span class="hero-dot">.</span>
+                    <span class="hero-dad">dad</span>
+                </h1>
+                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
+                <div class="hero-logo">
+                    <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- V7: Asymmetric Grid -->
+    <section class="hero hero-variation hero-v7" id="hero-v7">
+        <div class="hero-container">
+            <h1 class="hero-title">
+                <span class="hero-chunky">chunky</span>
+                <span class="hero-dot">.</span>
+                <span class="hero-dad">dad</span>
+            </h1>
+            <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
+        </div>
+    </section>
+
+    <!-- V8: Typography Focus -->
+    <section class="hero hero-variation hero-v8" id="hero-v8">
+        <div class="hero-container">
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="hero-chunky">chunky</span>
+                    <span class="hero-dot">.</span>
+                    <span class="hero-dad">dad</span>
+                </h1>
+                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- V9: Circular Layout -->
+    <section class="hero hero-variation hero-v9" id="hero-v9">
+        <div class="hero-container">
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
+            <h1 class="hero-title">
+                <span class="hero-chunky">chunky</span>
+                <span class="hero-dot">.</span>
+                <span class="hero-dad">dad</span>
+            </h1>
+            <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
+            <div class="hero-scroll-hint">
+                <span class="scroll-text">Explore</span>
+                <div class="scroll-arrow">↓</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- V10: Magazine Style -->
+    <section class="hero hero-variation hero-v10" id="hero-v10">
+        <div class="hero-container">
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="hero-chunky">chunky</span>
+                    <span class="hero-dot">.</span>
+                    <span class="hero-dad">dad</span>
+                </h1>
+                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- V11: Diagonal Split -->
+    <section class="hero hero-variation hero-v11" id="hero-v11">
+        <div class="hero-container">
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="hero-chunky">chunky</span>
+                    <span class="hero-dot">.</span>
+                    <span class="hero-dad">dad</span>
+                </h1>
+                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- V12: Overlapping Elements -->
+    <section class="hero hero-variation hero-v12" id="hero-v12">
+        <div class="hero-container">
+            <div class="hero-logo">
+                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
+            </div>
+            <h1 class="hero-title">
+                <span class="hero-chunky">chunky</span>
+                <span class="hero-dot">.</span>
+                <span class="hero-dad">dad</span>
+            </h1>
+            <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
         </div>
     </section>
 
@@ -410,6 +854,23 @@
             const selectedHero = document.getElementById(`hero-${e.target.value}`);
             if (selectedHero) {
                 selectedHero.classList.add('active');
+            }
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                const currentIndex = variationSelect.selectedIndex;
+                if (currentIndex > 0) {
+                    variationSelect.selectedIndex = currentIndex - 1;
+                    variationSelect.dispatchEvent(new Event('change'));
+                }
+            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                const currentIndex = variationSelect.selectedIndex;
+                if (currentIndex < variationSelect.options.length - 1) {
+                    variationSelect.selectedIndex = currentIndex + 1;
+                    variationSelect.dispatchEvent(new Event('change'));
+                }
             }
         });
     </script>
