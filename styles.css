@@ -497,7 +497,43 @@ body.index-page header.visible {
 }
 
 .hero-dot {
-    display: none;
+    color: #ffd93d;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    animation: dotPulse 2s ease-in-out infinite;
+    text-shadow: 
+        0 0 10px #ffd93d,
+        0 0 20px #ffd93d,
+        0 0 30px #ffd93d;
+    filter: drop-shadow(0 0 8px #ffd93d);
+    position: relative;
+    z-index: 1;
+}
+
+.hero-dot::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, #ffd93d 0%, transparent 70%);
+    opacity: 0.4;
+    border-radius: 50%;
+    animation: dotGlow 3s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes dotPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@keyframes dotGlow {
+    0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.2); }
 }
 
 .hero-dad {
@@ -531,6 +567,99 @@ body.index-page header.visible {
 
 .scroll-arrow {
     font-size: 1.5rem;
+}
+
+/* Dad Joke Speech Bubble Styling */
+.dad-joke-bubble {
+    position: absolute;
+    top: 20%;
+    right: 10%;
+    max-width: 300px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    animation: bubbleFloat 3s ease-in-out infinite;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    z-index: 10;
+}
+
+.dad-joke-bubble::before {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    right: 30px;
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 15px solid rgba(255, 255, 255, 0.95);
+}
+
+.dad-joke-bubble::after {
+    content: '🐻';
+    position: absolute;
+    bottom: -35px;
+    right: 25px;
+    font-size: 1.5rem;
+}
+
+@keyframes bubbleFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.joke-text {
+    margin-bottom: 10px;
+    font-weight: 500;
+    min-height: 1.4em;
+}
+
+.joke-punchline {
+    font-style: italic;
+    color: #8B4513;
+    font-weight: 600;
+    margin-bottom: 10px;
+    min-height: 1.4em;
+}
+
+/* Typewriter animation */
+.typewriter {
+    overflow: hidden;
+    border-right: 2px solid #8B4513;
+    white-space: nowrap;
+    animation: blink-caret 1s step-end infinite;
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: #8B4513; }
+}
+
+@keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+.new-joke-btn {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+    float: right;
+}
+
+.new-joke-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* Hero Animations */
@@ -608,6 +737,26 @@ body.index-page header.visible {
     
     .hero-scroll-hint {
         bottom: 1.5rem;
+    }
+    
+    /* Dad Jokes Mobile Responsive */
+    .dad-joke-bubble {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin: 2rem auto;
+        max-width: 90%;
+    }
+    
+    .dad-joke-bubble::before,
+    .dad-joke-bubble::after {
+        display: none;
+    }
+    
+    .new-joke-btn {
+        float: none;
+        display: block;
+        margin: 0 auto;
     }
 }
 
