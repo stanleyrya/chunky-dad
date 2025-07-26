@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Icon Experiment - chunky.dad</title>
+    <meta name="description" content="Testing different icon styles for map markers">
+    <link rel="icon" type="image/png" href="../Rising_Star_Ryan_Head_Full.png">
+    <link rel="apple-touch-icon" href="../Rising_Star_Ryan_Head_Full.png">
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .test-title {
+            color: #FFA500;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .test-subtitle {
+            color: #ccc;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        
+        .icon-style-controls {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 2px solid #333;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+        }
+        
+        .control-label {
+            color: #FFA500;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .icon-style-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .style-btn {
+            background: #333;
+            color: #fff;
+            border: 2px solid #555;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .style-btn:hover {
+            background: #444;
+            border-color: #FFA500;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+        }
+        
+        .style-btn.active {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
+        }
+        
+        .map-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 2px solid #333;
+        }
+        
+        #test-map {
+            height: 600px;
+            border-radius: 8px;
+            border: 2px solid #333;
+        }
+        
+        .calendar-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #333;
+        }
+        
+        .calendar-header {
+            color: #FFA500;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .event-card {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .event-card:hover {
+            border-color: #FFA500;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.2);
+        }
+        
+        .event-name {
+            color: #FFA500;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .event-nickname {
+            color: #ccc;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .event-details {
+            color: #aaa;
+            font-size: 0.85rem;
+        }
+        
+        .icon-preview {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 8px;
+            background: #2a2a2a;
+            border-radius: 6px;
+        }
+        
+        .icon-preview-label {
+            color: #FFA500;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        /* Custom marker styles */
+        .emoji-marker {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .initials-marker {
+            background: #FFA500;
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 12px;
+            font-weight: 700;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .mixed-marker {
+            background: #FFA500;
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 14px;
+            font-weight: 600;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .overlay-marker {
+            background: rgba(255, 165, 0, 0.9);
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 16px;
+            font-weight: 700;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+        }
+        
+        .numbered-marker {
+            background: linear-gradient(145deg, #FFA500, #FF8C00);
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 12px;
+            font-weight: 700;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .numbered-marker::after {
+            content: attr(data-emoji);
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 14px;
+            background: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #333;
+        }
+        
+        @media (max-width: 768px) {
+            .icon-style-buttons {
+                flex-direction: column;
+            }
+            
+            .style-btn {
+                text-align: center;
+            }
+            
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1 class="test-title">🗺️ Map Icon Experiment</h1>
+            <p class="test-subtitle">Testing different icon styles for event markers</p>
+            <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 0.9rem; color: #ccc;">
+                <strong style="color: #FFA500;">Test Features:</strong><br>
+                • 🍺 <strong>Emojis Only:</strong> Beer for happy hour, etc.<br>
+                • 📝 <strong>Initials:</strong> BHH for Bear Happy Hour (from nickname field)<br>
+                • 🎭 <strong>Mixed:</strong> Emojis for common events, initials for unique ones<br>
+                • 📍 <strong>Overlay Icons:</strong> Icons placed directly over map locations (no pins)<br>
+                • 🔢 <strong>Numbered + Emoji:</strong> Numbers with emoji badges<br>
+                • 🐻 <strong>Original Pin:</strong> Current chunky.dad bear head pin<br>
+                • 📅 <strong>Real Calendar:</strong> Load actual calendar data to test with real events
+            </div>
+        </div>
+        
+        <div class="icon-style-controls">
+            <div class="control-section">
+                <label class="control-label">Icon Style:</label>
+                <div class="icon-style-buttons">
+                    <button class="style-btn active" data-style="emoji">🍺 Emojis Only</button>
+                    <button class="style-btn" data-style="initials">ABC Initials</button>
+                    <button class="style-btn" data-style="mixed">🍺 Mixed (Emoji + Initials)</button>
+                    <button class="style-btn" data-style="overlay">📍 Overlay Icons</button>
+                    <button class="style-btn" data-style="numbered">🔢 Numbered + Emoji</button>
+                    <button class="style-btn" data-style="original">🐻 Original Pin</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <label class="control-label">Map Actions:</label>
+                <div class="icon-style-buttons">
+                    <button class="style-btn" onclick="refreshMap()">🔄 Refresh Map</button>
+                    <button class="style-btn" onclick="fitAllMarkers()">🎯 Fit All Markers</button>
+                    <button class="style-btn" onclick="addRandomEvent()">➕ Add Random Event</button>
+                    <button class="style-btn" onclick="loadRealCalendar()">📅 Load Real Calendar</button>
+                    <button class="style-btn" onclick="clearMap()">🗑️ Clear All</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="test-map"></div>
+        </div>
+        
+        <div class="calendar-container">
+            <h2 class="calendar-header">📅 Test Events Calendar</h2>
+            <div id="events-grid" class="events-grid"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    
+    <!-- Logger -->
+    <script src="../js/logger.js"></script>
+    <!-- Calendar Core for real calendar integration -->
+    <script src="../js/calendar-core.js"></script>
+    
+    <script>
+        // Test data with various event types
+        const testEvents = [
+            {
+                name: "Bear Happy Hour",
+                nickname: "BHH",
+                bar: "The Bear Den",
+                time: "5:00 PM - 8:00 PM",
+                day: "Thursday",
+                cover: "Free",
+                coordinates: { lat: 40.7128, lng: -74.0060 },
+                emoji: "🍺",
+                eventType: "Happy Hour"
+            },
+            {
+                name: "Leather Night",
+                nickname: "Leather",
+                bar: "Leather & Lace",
+                time: "9:00 PM - 2:00 AM",
+                day: "Friday",
+                cover: "$10",
+                coordinates: { lat: 40.7589, lng: -73.9851 },
+                emoji: "🖤",
+                eventType: "Themed Night"
+            },
+            {
+                name: "Sunday Funday Brunch",
+                nickname: "SFB",
+                bar: "Rainbow Cafe",
+                time: "11:00 AM - 4:00 PM",
+                day: "Sunday",
+                cover: "Free",
+                coordinates: { lat: 40.7505, lng: -73.9934 },
+                emoji: "🥞",
+                eventType: "Brunch"
+            },
+            {
+                name: "Karaoke Night",
+                nickname: "Karaoke",
+                bar: "Sing Along Bar",
+                time: "8:00 PM - 12:00 AM",
+                day: "Wednesday",
+                cover: "$5",
+                coordinates: { lat: 40.7282, lng: -73.9942 },
+                emoji: "🎤",
+                eventType: "Entertainment"
+            },
+            {
+                name: "Pool Tournament",
+                nickname: "Pool",
+                bar: "Corner Pocket",
+                time: "7:00 PM - 11:00 PM",
+                day: "Tuesday",
+                cover: "$15",
+                coordinates: { lat: 40.7614, lng: -73.9776 },
+                emoji: "🎱",
+                eventType: "Tournament"
+            },
+            {
+                name: "Drag Bingo",
+                nickname: "D-Bingo",
+                bar: "Glitter Palace",
+                time: "7:30 PM - 10:30 PM",
+                day: "Monday",
+                cover: "$20",
+                coordinates: { lat: 40.7831, lng: -73.9712 },
+                emoji: "💄",
+                eventType: "Drag Show"
+            },
+            {
+                name: "Bear Weekend Festival",
+                nickname: "BWF",
+                bar: "Multiple Venues",
+                time: "All Day",
+                day: "Saturday-Sunday",
+                cover: "$50",
+                coordinates: { lat: 40.7410, lng: -74.0014 },
+                emoji: "🐻",
+                eventType: "Festival"
+            },
+            {
+                name: "Game Night",
+                nickname: "Games",
+                bar: "Board & Brew",
+                time: "6:00 PM - 10:00 PM",
+                day: "Thursday",
+                cover: "Free",
+                coordinates: { lat: 40.7549, lng: -73.9840 },
+                emoji: "🎲",
+                eventType: "Games"
+            }
+        ];
+        
+        let map;
+        let markers = [];
+        let currentStyle = 'emoji';
+        
+        // Initialize the test page
+        document.addEventListener('DOMContentLoaded', function() {
+            logger.componentInit('MAP', 'Map icon test page initialized');
+            initializeMap();
+            renderEvents();
+            setupEventListeners();
+        });
+        
+        function initializeMap() {
+            // Initialize map centered on NYC
+            map = L.map('test-map').setView([40.7505, -73.9934], 12);
+            
+            // Add dark theme tile layer
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors © CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Add initial markers
+            updateMapMarkers();
+            
+            logger.componentLoad('MAP', 'Test map initialized successfully');
+        }
+        
+        function setupEventListeners() {
+            // Style button listeners
+            document.querySelectorAll('.style-btn[data-style]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Update active button
+                    document.querySelectorAll('.style-btn[data-style]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update current style and refresh markers
+                    currentStyle = this.dataset.style;
+                    updateMapMarkers();
+                    updateEventPreviews();
+                    
+                    logger.userInteraction('MAP', `Icon style changed to: ${currentStyle}`);
+                });
+            });
+        }
+        
+        function updateMapMarkers() {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            // Add new markers with current style
+            testEvents.forEach((event, index) => {
+                const marker = createMarker(event, index);
+                if (marker) {
+                    marker.addTo(map);
+                    markers.push(marker);
+                }
+            });
+            
+            logger.componentLoad('MAP', `Updated ${markers.length} markers with style: ${currentStyle}`);
+        }
+        
+        function createMarker(event, index) {
+            if (!event.coordinates?.lat || !event.coordinates?.lng) {
+                return null;
+            }
+            
+            let icon;
+            
+            switch (currentStyle) {
+                case 'emoji':
+                    icon = L.divIcon({
+                        className: 'emoji-marker',
+                        html: event.emoji || '📍',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15],
+                        popupAnchor: [0, -15]
+                    });
+                    break;
+                    
+                case 'initials':
+                    const initials = getInitials(event.nickname || event.name);
+                    icon = L.divIcon({
+                        className: 'initials-marker',
+                        html: initials,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16],
+                        popupAnchor: [0, -16]
+                    });
+                    break;
+                    
+                case 'mixed':
+                    const mixedContent = shouldUseEmoji(event) ? event.emoji : getInitials(event.nickname || event.name);
+                    icon = L.divIcon({
+                        className: 'mixed-marker',
+                        html: mixedContent || '?',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18],
+                        popupAnchor: [0, -18]
+                    });
+                    break;
+                    
+                case 'overlay':
+                    const overlayContent = event.emoji || getInitials(event.nickname || event.name);
+                    icon = L.divIcon({
+                        className: 'overlay-marker',
+                        html: overlayContent,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20],
+                        popupAnchor: [0, -20]
+                    });
+                    break;
+                    
+                case 'numbered':
+                    icon = L.divIcon({
+                        className: 'numbered-marker',
+                        html: `<span>${index + 1}</span>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14],
+                        popupAnchor: [0, -14]
+                    });
+                    // Add emoji as pseudo-element via data attribute
+                    setTimeout(() => {
+                        const markerEl = document.querySelector(`.numbered-marker:nth-last-child(1)`);
+                        if (markerEl) {
+                            markerEl.setAttribute('data-emoji', event.emoji || '📍');
+                        }
+                    }, 100);
+                    break;
+                    
+                case 'original':
+                default:
+                    icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `
+                            <div class="marker-pin">
+                                <div class="marker-icon"><img src="../Rising_Star_Ryan_Head_Full.png" alt="chunky.dad" class="map-marker-icon"></div>
+                            </div>
+                        `,
+                        iconSize: [44, 56],
+                        iconAnchor: [22, 56],
+                        popupAnchor: [0, -56]
+                    });
+                    break;
+            }
+            
+            const marker = L.marker([event.coordinates.lat, event.coordinates.lng], { icon });
+            
+            // Add popup
+            marker.bindPopup(`
+                <div class="map-popup">
+                    <h4>${event.name}</h4>
+                    <p><strong>📍 ${event.bar}</strong></p>
+                    <p>📅 ${event.day} ${event.time}</p>
+                    <p>💰 ${event.cover}</p>
+                    <p>🎭 ${event.eventType}</p>
+                    ${event.nickname ? `<p>🏷️ Nickname: ${event.nickname}</p>` : ''}
+                    <p>🎨 Icon Style: ${currentStyle}</p>
+                </div>
+            `);
+            
+            return marker;
+        }
+        
+        function getInitials(text) {
+            if (!text) return '?';
+            
+            // Handle hyphenated nicknames (e.g., "D-Bingo" -> "DB")
+            if (text.includes('-')) {
+                return text.split('-').map(part => part.charAt(0).toUpperCase()).join('');
+            }
+            
+            // Handle space-separated words
+            const words = text.split(' ').filter(word => word.length > 0);
+            if (words.length >= 2) {
+                return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join('');
+            }
+            
+            // Single word - take first 2 characters
+            return text.substring(0, 2).toUpperCase();
+        }
+        
+        function shouldUseEmoji(event) {
+            // Logic to determine when to use emoji vs initials in mixed mode
+            // Use emoji for common event types, initials for unique/specific events
+            const commonEventTypes = ['Happy Hour', 'Brunch', 'Entertainment', 'Drag Show'];
+            return commonEventTypes.includes(event.eventType) || event.name.toLowerCase().includes('happy hour');
+        }
+        
+        function renderEvents() {
+            const eventsGrid = document.getElementById('events-grid');
+            eventsGrid.innerHTML = '';
+            
+            testEvents.forEach((event, index) => {
+                const eventCard = document.createElement('div');
+                eventCard.className = 'event-card';
+                
+                const iconPreview = getIconPreview(event, index);
+                
+                                 eventCard.innerHTML = `
+                     <div class="event-name">${event.name} ${event.isRealEvent ? '🔴 LIVE' : ''}</div>
+                     <div class="event-nickname">Nickname: ${event.nickname || 'None'}</div>
+                     <div class="event-details">
+                         📍 ${event.bar}<br>
+                         📅 ${event.day} ${event.time}<br>
+                         💰 ${event.cover}<br>
+                         🎭 ${event.eventType}
+                     </div>
+                     <div class="icon-preview">
+                         <span class="icon-preview-label">Icon:</span>
+                         <span>${iconPreview}</span>
+                     </div>
+                 `;
+                
+                // Add click handler to focus on map marker
+                eventCard.addEventListener('click', () => {
+                    if (markers[index]) {
+                        map.setView([event.coordinates.lat, event.coordinates.lng], 15);
+                        markers[index].openPopup();
+                        logger.userInteraction('MAP', `Event card clicked: ${event.name}`);
+                    }
+                });
+                
+                eventsGrid.appendChild(eventCard);
+            });
+        }
+        
+        function getIconPreview(event, index) {
+            switch (currentStyle) {
+                case 'emoji':
+                    return event.emoji || '📍';
+                case 'initials':
+                    return getInitials(event.nickname || event.name);
+                case 'mixed':
+                    return shouldUseEmoji(event) ? event.emoji : getInitials(event.nickname || event.name);
+                case 'overlay':
+                    return event.emoji || getInitials(event.nickname || event.name);
+                case 'numbered':
+                    return `${index + 1} ${event.emoji || '📍'}`;
+                case 'original':
+                default:
+                    return '🐻 (Original Pin)';
+            }
+        }
+        
+        function updateEventPreviews() {
+            renderEvents();
+        }
+        
+        // Utility functions
+        function refreshMap() {
+            updateMapMarkers();
+            logger.userInteraction('MAP', 'Map refreshed');
+        }
+        
+        function fitAllMarkers() {
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds(), { padding: [20, 20] });
+                logger.userInteraction('MAP', 'Fitted all markers to view');
+            }
+        }
+        
+        function addRandomEvent() {
+            const randomEvents = [
+                {
+                    name: "Trivia Night",
+                    nickname: "Trivia",
+                    bar: "Quiz Palace",
+                    time: "7:00 PM - 10:00 PM",
+                    day: "Wednesday",
+                    cover: "$5",
+                    coordinates: { lat: 40.7400 + Math.random() * 0.05, lng: -73.9900 + Math.random() * 0.05 },
+                    emoji: "🧠",
+                    eventType: "Quiz"
+                },
+                {
+                    name: "Dance Party",
+                    nickname: "Dance",
+                    bar: "Groove Central",
+                    time: "10:00 PM - 3:00 AM",
+                    day: "Saturday",
+                    cover: "$15",
+                    coordinates: { lat: 40.7500 + Math.random() * 0.05, lng: -73.9800 + Math.random() * 0.05 },
+                    emoji: "💃",
+                    eventType: "Dancing"
+                }
+            ];
+            
+            const randomEvent = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+            testEvents.push(randomEvent);
+            updateMapMarkers();
+            renderEvents();
+            
+            logger.userInteraction('MAP', `Added random event: ${randomEvent.name}`);
+        }
+        
+                 async function loadRealCalendar() {
+             try {
+                 logger.componentInit('CALENDAR', 'Loading real calendar data for icon testing');
+                 
+                 // Create a CalendarCore instance to parse real calendar data
+                 const calendarCore = new CalendarCore();
+                 
+                 // Load sample NYC calendar data
+                 const response = await fetch('../data/sample-calendar-file-nyc.ics');
+                 const icsData = await response.text();
+                 
+                 // Parse the calendar data
+                 const parsedEvents = calendarCore.parseICS(icsData);
+                 
+                 // Clear existing test events
+                 testEvents.length = 0;
+                 
+                 // Convert parsed events to our test format
+                 parsedEvents.forEach((event, index) => {
+                     // Generate emoji based on event name/type
+                     const emoji = generateEmojiForEvent(event);
+                     
+                     // Extract nickname from description or generate from name
+                     const nickname = extractNickname(event) || generateNickname(event.name);
+                     
+                     testEvents.push({
+                         name: event.name || event.summary || 'Unnamed Event',
+                         nickname: nickname,
+                         bar: event.location || event.bar || 'Unknown Location',
+                         time: formatEventTime(event),
+                         day: formatEventDay(event),
+                         cover: event.cover || 'TBD',
+                         coordinates: event.coordinates || generateRandomNYCCoordinates(),
+                         emoji: emoji,
+                         eventType: determineEventType(event),
+                         isRealEvent: true
+                     });
+                 });
+                 
+                 // Update map and events display
+                 updateMapMarkers();
+                 renderEvents();
+                 
+                 logger.componentLoad('CALENDAR', `Loaded ${parsedEvents.length} real calendar events`);
+                 
+             } catch (error) {
+                 logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
+                 
+                 // Fallback to mock "real-looking" events
+                 testEvents.length = 0;
+                 testEvents.push(
+                     {
+                         name: "Bears Are Animals",
+                         nickname: "BAA",
+                         bar: "Animal NYC",
+                         time: "7:00 PM - 10:00 PM",
+                         day: "Thursday",
+                         cover: "Free",
+                         coordinates: { lat: 40.71739735291992, lng: -73.94930680925715 },
+                         emoji: "🐻",
+                         eventType: "Weekly Social",
+                         isRealEvent: true
+                     },
+                     {
+                         name: "Thursday Night Social",
+                         nickname: "TNS",
+                         bar: "The Eagle NYC",
+                         time: "8:00 PM - 12:00 AM",
+                         day: "Thursday",
+                         cover: "$5",
+                         coordinates: { lat: 40.7589, lng: -73.9851 },
+                         emoji: "🦅",
+                         eventType: "Social Hour",
+                         isRealEvent: true
+                     }
+                 );
+                 
+                 updateMapMarkers();
+                 renderEvents();
+                 
+                 logger.componentLoad('CALENDAR', 'Loaded fallback real-style events');
+             }
+         }
+         
+         function generateEmojiForEvent(event) {
+             const name = (event.name || event.summary || '').toLowerCase();
+             const description = (event.description || '').toLowerCase();
+             
+             // Event type based emoji mapping
+             if (name.includes('happy hour') || name.includes('social hour')) return '🍺';
+             if (name.includes('brunch')) return '🥞';
+             if (name.includes('karaoke')) return '🎤';
+             if (name.includes('drag') || name.includes('bingo')) return '💄';
+             if (name.includes('leather')) return '🖤';
+             if (name.includes('bear') || name.includes('cub')) return '🐻';
+             if (name.includes('pool') || name.includes('billiards')) return '🎱';
+             if (name.includes('dance') || name.includes('party')) return '💃';
+             if (name.includes('trivia') || name.includes('quiz')) return '🧠';
+             if (name.includes('game')) return '🎲';
+             if (name.includes('festival') || name.includes('weekend')) return '🎪';
+             if (name.includes('underwear') || name.includes('jock')) return '🩲';
+             if (name.includes('animal')) return '🦁';
+             if (name.includes('eagle')) return '🦅';
+             
+             // Default bear emoji for bear community events
+             return '🐻';
+         }
+         
+         function extractNickname(event) {
+             const description = event.description || '';
+             
+             // Look for "Nickname:" in description
+             const nicknameMatch = description.match(/nickname:\s*([^\n\r]+)/i);
+             if (nicknameMatch) {
+                 return nicknameMatch[1].trim();
+             }
+             
+             // Look for "Nick:" in description
+             const nickMatch = description.match(/nick:\s*([^\n\r]+)/i);
+             if (nickMatch) {
+                 return nickMatch[1].trim();
+             }
+             
+             return null;
+         }
+         
+         function generateNickname(eventName) {
+             if (!eventName) return 'Event';
+             
+             // Extract meaningful words and create acronym
+             const words = eventName.split(' ')
+                 .filter(word => word.length > 2 && !['the', 'and', 'or', 'at', 'in', 'on'].includes(word.toLowerCase()))
+                 .slice(0, 3);
+             
+             if (words.length >= 2) {
+                 return words.map(word => word.charAt(0).toUpperCase()).join('');
+             }
+             
+             // Single word - take first 3 characters
+             return eventName.substring(0, 3).toUpperCase();
+         }
+         
+         function formatEventTime(event) {
+             if (event.time) return event.time;
+             
+             // Format from start/end times if available
+             const start = event.start || event.dtstart;
+             const end = event.end || event.dtend;
+             
+             if (start && end) {
+                 const startTime = new Date(start).toLocaleTimeString('en-US', { 
+                     hour: 'numeric', 
+                     minute: '2-digit',
+                     hour12: true 
+                 });
+                 const endTime = new Date(end).toLocaleTimeString('en-US', { 
+                     hour: 'numeric', 
+                     minute: '2-digit',
+                     hour12: true 
+                 });
+                 return `${startTime} - ${endTime}`;
+             }
+             
+             return 'Time TBD';
+         }
+         
+         function formatEventDay(event) {
+             if (event.day) return event.day;
+             
+             const start = event.start || event.dtstart;
+             if (start) {
+                 return new Date(start).toLocaleDateString('en-US', { weekday: 'long' });
+             }
+             
+             return 'Day TBD';
+         }
+         
+         function determineEventType(event) {
+             const name = (event.name || event.summary || '').toLowerCase();
+             
+             if (name.includes('happy hour')) return 'Happy Hour';
+             if (name.includes('brunch')) return 'Brunch';
+             if (name.includes('drag')) return 'Drag Show';
+             if (name.includes('karaoke')) return 'Entertainment';
+             if (name.includes('social')) return 'Social Event';
+             if (name.includes('party')) return 'Party';
+             if (name.includes('festival')) return 'Festival';
+             if (name.includes('tournament')) return 'Tournament';
+             
+             return 'Social Event';
+         }
+         
+         function generateRandomNYCCoordinates() {
+             // Generate coordinates within NYC area
+             const baseLat = 40.7505;
+             const baseLng = -73.9934;
+             const range = 0.1;
+             
+             return {
+                 lat: baseLat + (Math.random() - 0.5) * range,
+                 lng: baseLng + (Math.random() - 0.5) * range
+             };
+         }
+         
+         function clearMap() {
+             markers.forEach(marker => map.removeLayer(marker));
+             markers = [];
+             testEvents.length = 0; // Clear the array but keep the reference
+             
+             // Restore original test events
+            testEvents.push(
+                {
+                    name: "Bear Happy Hour",
+                    nickname: "BHH",
+                    bar: "The Bear Den",
+                    time: "5:00 PM - 8:00 PM",
+                    day: "Thursday",
+                    cover: "Free",
+                    coordinates: { lat: 40.7128, lng: -74.0060 },
+                    emoji: "🍺",
+                    eventType: "Happy Hour"
+                },
+                {
+                    name: "Leather Night",
+                    nickname: "Leather",
+                    bar: "Leather & Lace",
+                    time: "9:00 PM - 2:00 AM",
+                    day: "Friday",
+                    cover: "$10",
+                    coordinates: { lat: 40.7589, lng: -73.9851 },
+                    emoji: "🖤",
+                    eventType: "Themed Night"
+                },
+                {
+                    name: "Sunday Funday Brunch",
+                    nickname: "SFB",
+                    bar: "Rainbow Cafe",
+                    time: "11:00 AM - 4:00 PM",
+                    day: "Sunday",
+                    cover: "Free",
+                    coordinates: { lat: 40.7505, lng: -73.9934 },
+                    emoji: "🥞",
+                    eventType: "Brunch"
+                },
+                {
+                    name: "Karaoke Night",
+                    nickname: "Karaoke",
+                    bar: "Sing Along Bar",
+                    time: "8:00 PM - 12:00 AM",
+                    day: "Wednesday",
+                    cover: "$5",
+                    coordinates: { lat: 40.7282, lng: -73.9942 },
+                    emoji: "🎤",
+                    eventType: "Entertainment"
+                },
+                {
+                    name: "Pool Tournament",
+                    nickname: "Pool",
+                    bar: "Corner Pocket",
+                    time: "7:00 PM - 11:00 PM",
+                    day: "Tuesday",
+                    cover: "$15",
+                    coordinates: { lat: 40.7614, lng: -73.9776 },
+                    emoji: "🎱",
+                    eventType: "Tournament"
+                },
+                {
+                    name: "Drag Bingo",
+                    nickname: "D-Bingo",
+                    bar: "Glitter Palace",
+                    time: "7:30 PM - 10:30 PM",
+                    day: "Monday",
+                    cover: "$20",
+                    coordinates: { lat: 40.7831, lng: -73.9712 },
+                    emoji: "💄",
+                    eventType: "Drag Show"
+                },
+                {
+                    name: "Bear Weekend Festival",
+                    nickname: "BWF",
+                    bar: "Multiple Venues",
+                    time: "All Day",
+                    day: "Saturday-Sunday",
+                    cover: "$50",
+                    coordinates: { lat: 40.7410, lng: -74.0014 },
+                    emoji: "🐻",
+                    eventType: "Festival"
+                },
+                {
+                    name: "Game Night",
+                    nickname: "Games",
+                    bar: "Board & Brew",
+                    time: "6:00 PM - 10:00 PM",
+                    day: "Thursday",
+                    cover: "Free",
+                    coordinates: { lat: 40.7549, lng: -73.9840 },
+                    emoji: "🎲",
+                    eventType: "Games"
+                }
+            );
+            
+            updateMapMarkers();
+            renderEvents();
+            
+            logger.userInteraction('MAP', 'Map cleared and reset to original events');
+        }
+    </script>
+</body>
+</html>
