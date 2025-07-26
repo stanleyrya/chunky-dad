@@ -571,7 +571,7 @@ body.index-page header.visible {
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
     position: absolute;
-    bottom: 8rem;
+    bottom: 2rem;
     right: 5%;
     max-width: 320px;
     background: rgba(255, 255, 255, 0.95);
@@ -581,7 +581,7 @@ body.index-page header.visible {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     font-size: 0.9rem;
     line-height: 1.4;
-    animation: bubbleFloat 3s ease-in-out infinite;
+    animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 1.5s both, bubbleFloat 3s ease-in-out 2.5s infinite;
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255, 255, 255, 0.3);
     z-index: 10;
@@ -742,6 +742,7 @@ body.index-page header.visible {
         right: auto;
         margin: 2rem auto;
         max-width: 90%;
+        animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 1.5s both, bubbleFloat 3s ease-in-out 2.5s infinite;
     }
     
     .dad-joke-bubble::before,
