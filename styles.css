@@ -38,8 +38,7 @@
     --color-away: #f97316;
     
     /* Joke Bubble Colors */
-    --joke-bubble-bg: rgba(255, 255, 255, 0.95);
-    --joke-bubble-border: rgba(255, 255, 255, 0.3);
+    --joke-bubble-white: rgba(255, 255, 255, 0.95);
     --joke-punchline-color: #8B4513;
     --joke-dot-color: #ffd93d;
     
@@ -81,6 +80,17 @@
     --shadow-primary: none;
     --shadow-success: none;
     --shadow-error: none;
+}
+
+/* Dynamic Viewport Height Support for Mobile */
+.full-viewport-height {
+    height: 100vh;
+}
+
+@supports (height: 100dvh) {
+    .full-viewport-height {
+        height: 100dvh;
+    }
 }
 
 /* Reset and Base Styles */
@@ -427,7 +437,6 @@ body.index-page header.visible {
 
 /* Hero Section */
 .hero {
-    height: 100vh;
     background: var(--gradient-primary);
     display: flex;
     align-items: center;
@@ -583,7 +592,7 @@ body.index-page header.visible {
     bottom: 15rem;
     max-width: 320px;
     min-width: 280px;
-    background: var(--joke-bubble-bg);
+    background: var(--joke-bubble-white);
     color: var(--text-primary);
     padding: 20px 20px 50px 20px;
     border-radius: 20px;
@@ -592,7 +601,7 @@ body.index-page header.visible {
     line-height: 1.4;
     animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.8s both, bubbleFloat 3s ease-in-out 2.2s infinite;
     backdrop-filter: blur(10px);
-    border: 2px solid var(--joke-bubble-border);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     z-index: 5;
     order: 2;
     pointer-events: auto;
@@ -609,7 +618,7 @@ body.index-page header.visible {
     height: 0;
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-bottom: 10px solid var(--joke-bubble-bg);
+    border-bottom: 10px solid var(--joke-bubble-white);
     z-index: -1;
 }
 
@@ -722,17 +731,12 @@ body.index-page header.visible {
 
 /* Hero Responsive Design */
 @media (max-width: 768px) {
-    .hero {
-        height: 100vh;
-    }
-    
     .hero-container {
         display: flex;
         flex-direction: column;
         gap: 1rem;
         padding: 0 2rem;
         text-align: center;
-        height: 100vh;
         justify-content: center;
         align-items: center;
     }
@@ -787,13 +791,8 @@ body.index-page header.visible {
 }
 
 @media (max-width: 480px) {
-    .hero {
-        height: 100vh;
-    }
-    
     .hero-container {
         padding: 0 1rem;
-        height: 100vh;
         gap: 0.8rem;
         align-items: center;
     }
