@@ -37,6 +37,15 @@
     --color-busy: #f59e0b;
     --color-away: #f97316;
     
+    /* Joke Bubble Colors */
+    --joke-bubble-bg: rgba(255, 255, 255, 0.95);
+    --joke-bubble-border: rgba(255, 255, 255, 0.3);
+    --joke-punchline-color: #8B4513;
+    --joke-dot-color: #ffd93d;
+    
+    /* Dropdown Colors */
+    --dropdown-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+    
     /* Font Size Variables for Event Names */
     --event-name-font-size: 0.75rem;
     --event-name-font-weight: 600;
@@ -236,7 +245,7 @@ body.index-page header.visible {
 }
 
 .city-switcher-btn:hover .city-name {
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--text-inverse);
 }
 
 .city-switcher-btn:active {
@@ -248,7 +257,7 @@ body.index-page header.visible {
     position: absolute;
     top: 100%;
     right: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+    background: var(--dropdown-bg);
     border-radius: 20px;
     box-shadow: 0 15px 40px var(--shadow-heavy);
     padding: 0.8rem;
@@ -497,16 +506,16 @@ body.index-page header.visible {
 }
 
 .hero-dot {
-    color: #ffd93d;
+    color: var(--joke-dot-color);
     display: inline;
     margin: 0;
     padding: 0;
     animation: dotPulse 2s ease-in-out infinite;
     text-shadow: 
-        0 0 10px #ffd93d,
-        0 0 20px #ffd93d,
-        0 0 30px #ffd93d;
-    filter: drop-shadow(0 0 8px #ffd93d);
+        0 0 10px var(--joke-dot-color),
+        0 0 20px var(--joke-dot-color),
+        0 0 30px var(--joke-dot-color);
+    filter: drop-shadow(0 0 8px var(--joke-dot-color));
     position: relative;
     z-index: 1;
 }
@@ -519,7 +528,7 @@ body.index-page header.visible {
     transform: translate(-50%, -50%);
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle, #ffd93d 0%, transparent 70%);
+    background: radial-gradient(circle, var(--joke-dot-color) 0%, transparent 70%);
     opacity: 0.4;
     border-radius: 50%;
     animation: dotGlow 3s ease-in-out infinite;
@@ -574,8 +583,8 @@ body.index-page header.visible {
     bottom: 15rem;
     max-width: 320px;
     min-width: 280px;
-    background: rgba(255, 255, 255, 0.95);
-    color: #333;
+    background: var(--joke-bubble-bg);
+    color: var(--text-primary);
     padding: 20px 20px 50px 20px;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -583,7 +592,7 @@ body.index-page header.visible {
     line-height: 1.4;
     animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.8s both, bubbleFloat 3s ease-in-out 2.2s infinite;
     backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid var(--joke-bubble-border);
     z-index: 5;
     order: 2;
     pointer-events: auto;
@@ -600,7 +609,7 @@ body.index-page header.visible {
     height: 0;
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-bottom: 10px solid rgba(255, 255, 255, 0.95);
+    border-bottom: 10px solid var(--joke-bubble-bg);
     z-index: -1;
 }
 
@@ -636,7 +645,7 @@ body.index-page header.visible {
 
 .joke-punchline {
     font-style: italic;
-    color: #8B4513;
+    color: var(--joke-punchline-color);
     font-weight: 600;
     margin-bottom: 10px;
     min-height: 1.4em;
@@ -644,13 +653,13 @@ body.index-page header.visible {
 
 /* Typewriter animation */
 .typewriter {
-    border-right: 2px solid #8B4513;
+    border-right: 2px solid var(--joke-punchline-color);
     animation: blink-caret 1s step-end infinite;
 }
 
 @keyframes blink-caret {
     from, to { border-color: transparent; }
-    50% { border-color: #8B4513; }
+    50% { border-color: var(--joke-punchline-color); }
 }
 
 @keyframes typewriter {
@@ -659,8 +668,8 @@ body.index-page header.visible {
 }
 
 .new-joke-btn {
-    background: #ff6b6b;
-    color: white;
+    background: var(--secondary-color);
+    color: var(--text-inverse);
     border: none;
     padding: 8px 15px;
     border-radius: 15px;
@@ -2530,7 +2539,7 @@ body.index-page main {
     position: absolute;
     z-index: 10;
     font-size: 1.4rem;
-    color: white;
+    color: var(--white);
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     line-height: 1;
     display: flex;
@@ -3727,7 +3736,7 @@ footer {
 
 .city-link:hover {
     transform: translateY(-2px);
-    color: white;
+    color: var(--white);
 }
 
 /* Loading Message Styles */
@@ -3786,7 +3795,7 @@ footer {
 }
 
 .calendar-day.calendar-overview {
-    background: white;
+    background: var(--background-primary);
     border-radius: 12px;
     padding: 1rem;
     text-align: center;
@@ -3888,7 +3897,7 @@ footer {
 }
 
 .modal-content {
-    background: white;
+    background: var(--background-primary);
     border-radius: 20px;
     padding: 0;
     max-width: 500px;
@@ -4972,7 +4981,7 @@ footer {
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
     background: var(--primary-color);
-    color: white;
+    color: var(--white);
     text-decoration: none;
     border-radius: 25px;
     font-weight: 500;
@@ -5008,7 +5017,7 @@ footer {
     z-index: 10000;
     min-width: 200px;
     max-width: 300px;
-    border: 1px solid #333;
+    border: 1px solid var(--border-dark);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(10px);
     user-select: none;
@@ -5164,7 +5173,7 @@ footer {
 .debug-btn {
     background: linear-gradient(135deg, #444, #555);
     color: #fff;
-    border: 1px solid #666;
+    border: 1px solid var(--text-secondary);
     border-radius: 4px;
     padding: 6px 12px;
     font-size: 10px;
@@ -5177,14 +5186,14 @@ footer {
 }
 
 .debug-btn:hover {
-    background: linear-gradient(135deg, #555, #666);
+    background: linear-gradient(135deg, #555, var(--text-secondary));
     border-color: #777;
     transform: translateY(-1px);
 }
 
 .debug-btn:active {
     transform: translateY(0);
-    background: linear-gradient(135deg, #333, #444);
+    background: linear-gradient(135deg, var(--border-dark), #444);
 }
 
 /* View state management */
