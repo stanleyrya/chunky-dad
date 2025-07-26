@@ -57,6 +57,7 @@
         .joke-text {
             margin-bottom: 10px;
             font-weight: 500;
+            min-height: 1.4em;
         }
         
         .joke-punchline {
@@ -64,6 +65,25 @@
             color: #8B4513;
             font-weight: 600;
             margin-bottom: 10px;
+            min-height: 1.4em;
+        }
+        
+        /* Typewriter animation */
+        .typewriter {
+            overflow: hidden;
+            border-right: 2px solid #8B4513;
+            white-space: nowrap;
+            animation: blink-caret 1s step-end infinite;
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: #8B4513; }
+        }
+        
+        @keyframes typewriter {
+            from { width: 0; }
+            to { width: 100%; }
         }
         
         .new-joke-btn {
@@ -251,19 +271,54 @@
 
         let currentJokeIndex = 0;
 
-        function newJoke() {
+        function typeText(element, text, speed = 50) {
+            return new Promise((resolve) => {
+                element.textContent = '';
+                element.classList.add('typewriter');
+                let i = 0;
+                
+                const typeInterval = setInterval(() => {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    
+                    if (i >= text.length) {
+                        clearInterval(typeInterval);
+                        // Remove typewriter cursor after a brief pause
+                        setTimeout(() => {
+                            element.classList.remove('typewriter');
+                            resolve();
+                        }, 500);
+                    }
+                }, speed);
+            });
+        }
+
+        async function newJoke() {
             currentJokeIndex = (currentJokeIndex + 1) % bearJokes.length;
             const joke = bearJokes[currentJokeIndex];
             const jokeContent = document.querySelector('#joke-bubble .joke-content');
+            const setupElement = jokeContent.querySelector('.joke-text');
+            const punchlineElement = jokeContent.querySelector('.joke-punchline');
             
             // Fade out
             jokeContent.style.opacity = '0';
             
-            setTimeout(() => {
-                jokeContent.querySelector('.joke-text').textContent = joke.setup;
-                jokeContent.querySelector('.joke-punchline').textContent = joke.punchline;
+            setTimeout(async () => {
+                // Clear content
+                setupElement.textContent = '';
+                punchlineElement.textContent = '';
+                
                 // Fade in
                 jokeContent.style.opacity = '1';
+                
+                // Type the setup first
+                await typeText(setupElement, joke.setup, 30);
+                
+                // Wait a moment for comedic timing
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                // Type the punchline
+                await typeText(punchlineElement, joke.punchline, 40);
             }, 200);
         }
 
