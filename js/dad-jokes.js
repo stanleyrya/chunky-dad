@@ -203,3 +203,6 @@ function newJoke() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = DadJokesManager;
 }
+
+// Make DadJokesManager globally available
+window.DadJokesManager = DadJokesManager;

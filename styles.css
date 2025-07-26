@@ -572,12 +572,12 @@ body.index-page header.visible {
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
     position: absolute;
-    top: 20%;
-    right: 10%;
-    max-width: 300px;
+    top: 15%;
+    right: 5%;
+    max-width: 320px;
     background: rgba(255, 255, 255, 0.95);
     color: #333;
-    padding: 20px;
+    padding: 20px 20px 50px 20px;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     font-size: 0.9rem;
@@ -629,9 +629,7 @@ body.index-page header.visible {
 
 /* Typewriter animation */
 .typewriter {
-    overflow: hidden;
     border-right: 2px solid #8B4513;
-    white-space: nowrap;
     animation: blink-caret 1s step-end infinite;
 }
 
@@ -654,7 +652,9 @@ body.index-page header.visible {
     cursor: pointer;
     font-size: 0.8rem;
     transition: all 0.3s ease;
-    float: right;
+    position: absolute;
+    right: 15px;
+    bottom: 15px;
 }
 
 .new-joke-btn:hover {
@@ -754,9 +754,9 @@ body.index-page header.visible {
     }
     
     .new-joke-btn {
-        float: none;
-        display: block;
-        margin: 0 auto;
+        position: absolute;
+        right: 15px;
+        bottom: 15px;
     }
 }
 
