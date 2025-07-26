@@ -459,17 +459,14 @@ body.index-page header.visible {
 }
 
 .hero-logo {
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem;
     animation: elegantFadeIn 2s ease-out;
 }
 
 .hero-logo-img {
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+    width: 240px;
+    height: 240px;
     transition: transform 0.3s ease;
-    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
 }
 
 .hero-logo-img:hover {
@@ -591,8 +588,8 @@ body.index-page header.visible {
     }
     
     .hero-logo-img {
-        width: 120px;
-        height: 120px;
+        width: 160px;
+        height: 160px;
     }
     
     .hero-container {
@@ -616,8 +613,8 @@ body.index-page header.visible {
     }
     
     .hero-logo-img {
-        width: 100px;
-        height: 100px;
+        width: 130px;
+        height: 130px;
     }
     
     .hero-scroll-hint {
