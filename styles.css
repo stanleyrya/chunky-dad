@@ -418,14 +418,13 @@ body.index-page header.visible {
 
 /* Hero Section */
 .hero {
-    min-height: 85vh;
+    height: 100vh;
     background: var(--gradient-primary);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
-    padding-top: 2rem;
 }
 
 .hero::before {
@@ -446,7 +445,7 @@ body.index-page header.visible {
     padding: 0 3rem;
     position: relative;
     z-index: 1;
-    height: 85vh;
+    height: 100vh;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
@@ -572,12 +571,12 @@ body.index-page header.visible {
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
     position: absolute;
-    top: 20%;
-    right: 10%;
-    max-width: 300px;
+    bottom: 8rem;
+    right: 5%;
+    max-width: 320px;
     background: rgba(255, 255, 255, 0.95);
     color: #333;
-    padding: 20px;
+    padding: 20px 20px 50px 20px;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     font-size: 0.9rem;
@@ -629,9 +628,7 @@ body.index-page header.visible {
 
 /* Typewriter animation */
 .typewriter {
-    overflow: hidden;
     border-right: 2px solid #8B4513;
-    white-space: nowrap;
     animation: blink-caret 1s step-end infinite;
 }
 
@@ -654,7 +651,9 @@ body.index-page header.visible {
     cursor: pointer;
     font-size: 0.8rem;
     transition: all 0.3s ease;
-    float: right;
+    position: absolute;
+    right: 15px;
+    bottom: 15px;
 }
 
 .new-joke-btn:hover {
@@ -697,8 +696,7 @@ body.index-page header.visible {
 /* Hero Responsive Design */
 @media (max-width: 768px) {
     .hero {
-        min-height: 80vh;
-        padding-top: 2rem;
+        height: 100vh;
     }
     
     .hero-container {
@@ -707,11 +705,9 @@ body.index-page header.visible {
         gap: 1rem;
         padding: 0 2rem;
         text-align: center;
-        height: auto;
-        min-height: 80vh;
+        height: 100vh;
         justify-content: center;
         align-items: center;
-        padding-top: 3rem;
     }
     
     .hero-content {
@@ -754,25 +750,22 @@ body.index-page header.visible {
     }
     
     .new-joke-btn {
-        float: none;
-        display: block;
-        margin: 0 auto;
+        position: absolute;
+        right: 15px;
+        bottom: 15px;
     }
 }
 
 @media (max-width: 480px) {
     .hero {
-        min-height: 75vh;
-        padding-top: 1.5rem;
+        height: 100vh;
     }
     
     .hero-container {
         padding: 0 1rem;
-        height: auto;
-        min-height: 75vh;
+        height: 100vh;
         gap: 0.8rem;
         align-items: center;
-        padding-top: 2rem;
     }
     
     .hero-content {
