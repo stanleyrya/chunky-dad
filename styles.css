@@ -569,23 +569,25 @@ body.index-page header.visible {
 @media (max-width: 768px) {
     .hero {
         min-height: 80vh;
-        padding-top: 1rem;
+        padding-top: 2rem;
     }
     
     .hero-container {
         grid-template-columns: 1fr;
-        gap: 0.5rem;
+        gap: 1rem;
         padding: 0 2rem;
         text-align: center;
-        height: 80vh;
-        justify-content: center;
-        align-items: center;
+        height: auto;
+        min-height: 80vh;
+        justify-content: flex-start;
+        align-items: flex-start;
+        padding-top: 3rem;
     }
     
     .hero-content {
         order: 2;
         text-align: center;
-        margin-top: 0.5rem;
+        margin-top: 0;
     }
     
     .hero-logo {
@@ -611,18 +613,20 @@ body.index-page header.visible {
 @media (max-width: 480px) {
     .hero {
         min-height: 75vh;
-        padding-top: 0.5rem;
+        padding-top: 1.5rem;
     }
     
     .hero-container {
         padding: 0 1rem;
-        height: 75vh;
-        gap: 0.2rem;
-        align-items: center;
+        height: auto;
+        min-height: 75vh;
+        gap: 0.8rem;
+        align-items: flex-start;
+        padding-top: 2rem;
     }
     
     .hero-content {
-        margin-top: 0.5rem;
+        margin-top: 0;
     }
     
     .hero-logo {
