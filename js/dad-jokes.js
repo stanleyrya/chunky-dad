@@ -88,10 +88,13 @@ class DadJokesManager {
         // Button click handler
         const newJokeBtn = this.jokeBubble.querySelector('.new-joke-btn');
         if (newJokeBtn) {
-            newJokeBtn.addEventListener('click', () => {
+            newJokeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 logger.userInteraction('PAGE', 'New joke button clicked');
                 this.newJoke();
             });
+        } else {
+            logger.warn('PAGE', 'New joke button not found');
         }
 
         // Keyboard shortcut (J key)
@@ -192,10 +195,14 @@ class DadJokesManager {
 
 // Global function for backwards compatibility and external calls
 function newJoke() {
-    if (window.dadJokesManager) {
-        window.dadJokesManager.newJoke();
-    } else {
-        logger.warn('PAGE', 'Dad jokes manager not available');
+    try {
+        if (window.dadJokesManager && typeof window.dadJokesManager.newJoke === 'function') {
+            window.dadJokesManager.newJoke();
+        } else {
+            logger.warn('PAGE', 'Dad jokes manager not available or newJoke method missing');
+        }
+    } catch (error) {
+        logger.componentError('PAGE', 'Error calling newJoke function', error);
     }
 }
 
