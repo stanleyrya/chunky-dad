@@ -1,45 +1,50 @@
 {
-  "generated": "2025-07-25T20:27:14.547Z",
+  "generated": "2025-07-26T02:03:10.117Z",
   "files": [
     {
       "name": "breakpoint-test.html",
       "size": 34162,
-      "modified": "2025-07-25T20:15:43.669Z"
+      "modified": "2025-07-26T02:00:36.699Z"
     },
     {
       "name": "iframe-fix-test.html",
       "size": 9922,
-      "modified": "2025-07-25T20:15:43.669Z"
+      "modified": "2025-07-26T02:00:36.699Z"
     },
     {
       "name": "index.html",
       "size": 18216,
-      "modified": "2025-07-25T20:15:43.669Z"
+      "modified": "2025-07-26T02:00:36.699Z"
     },
     {
       "name": "style-test.html",
-      "size": 26192,
-      "modified": "2025-07-25T20:15:43.673Z"
+      "size": 26348,
+      "modified": "2025-07-26T02:00:36.699Z"
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 67746,
-      "modified": "2025-07-25T20:15:43.673Z"
+      "size": 68059,
+      "modified": "2025-07-26T02:00:36.699Z"
     },
     {
       "name": "test-display-modes.html",
       "size": 10729,
-      "modified": "2025-07-25T20:15:43.673Z"
+      "modified": "2025-07-26T02:00:36.699Z"
     },
     {
       "name": "test-google-sheets-loader.html",
-      "size": 40202,
-      "modified": "2025-07-25T20:15:43.673Z"
+      "size": 40516,
+      "modified": "2025-07-26T02:00:36.699Z"
+    },
+    {
+      "name": "test-map-icons.html",
+      "size": 29411,
+      "modified": "2025-07-26T02:03:03.064Z"
     },
     {
       "name": "ultimate-style-tester.html",
       "size": 110803,
-      "modified": "2025-07-25T20:15:43.673Z"
+      "modified": "2025-07-26T02:00:36.699Z"
     }
   ]
 }
