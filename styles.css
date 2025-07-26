@@ -1195,10 +1195,9 @@ body.index-page main {
     padding-bottom: 1rem;
 }
 
-/* Better centering for event scroll container */
+/* Event scroll container should behave like city scroll container */
 .event-scroll-container {
-    display: flex;
-    justify-content: center;
+    /* Removed display: flex and justify-content: center to match city behavior */
 }
 
 .city-scroll-container::-webkit-scrollbar,
