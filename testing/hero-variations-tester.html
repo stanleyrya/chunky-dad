@@ -196,46 +196,24 @@
             display: inline-block;
         }
         
-        /* The Cool Dot Styling */
+        /* The Cool Dot Styling - Fixed to stay close to "dad" */
         .hero-dot {
             display: none;
             color: var(--dot-color, #ffd93d);
-            font-size: 1.2em;
-            position: relative;
+            font-size: 1em;
+            margin: 0;
+            padding: 0;
             animation: dotPulse 2s ease-in-out infinite;
-            text-shadow: 
-                0 0 10px var(--dot-color, #ffd93d),
-                0 0 20px var(--dot-color, #ffd93d),
-                0 0 30px var(--dot-color, #ffd93d);
-            filter: drop-shadow(0 0 8px var(--dot-color, #ffd93d));
+            text-shadow: 0 0 5px var(--dot-color, #ffd93d);
         }
         
         .hero-dot.show {
-            display: inline-block;
-        }
-        
-        .hero-dot::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 150%;
-            height: 150%;
-            background: radial-gradient(circle, var(--dot-color, #ffd93d) 0%, transparent 70%);
-            opacity: 0.3;
-            border-radius: 50%;
-            animation: dotGlow 3s ease-in-out infinite;
+            display: inline;
         }
         
         @keyframes dotPulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        
-        @keyframes dotGlow {
-            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
-            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.2); }
+            50% { transform: scale(1.05); }
         }
         
         .hero-subtitle {

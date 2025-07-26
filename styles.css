@@ -497,7 +497,17 @@ body.index-page header.visible {
 }
 
 .hero-dot {
-    display: none;
+    color: #ffd93d;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    animation: dotPulse 2s ease-in-out infinite;
+    text-shadow: 0 0 5px #ffd93d;
+}
+
+@keyframes dotPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
 .hero-dad {

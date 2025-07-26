@@ -9,6 +9,102 @@
     <link rel="apple-touch-icon" href="Rising_Star_Ryan_Head_Compressed.png">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Dad Joke Speech Bubble Styling */
+        .dad-joke-bubble {
+            position: absolute;
+            top: 20%;
+            right: 10%;
+            max-width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            animation: bubbleFloat 3s ease-in-out infinite;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 10;
+        }
+        
+        .dad-joke-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 30px;
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 15px solid rgba(255, 255, 255, 0.95);
+        }
+        
+        .dad-joke-bubble::after {
+            content: '🐻';
+            position: absolute;
+            bottom: -35px;
+            right: 25px;
+            font-size: 1.5rem;
+        }
+        
+        @keyframes bubbleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .joke-text {
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .joke-punchline {
+            font-style: italic;
+            color: #8B4513;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .new-joke-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            float: right;
+        }
+        
+        .new-joke-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .dad-joke-bubble {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 2rem auto;
+                max-width: 90%;
+            }
+            
+            .dad-joke-bubble::before,
+            .dad-joke-bubble::after {
+                display: none;
+            }
+            
+            .new-joke-btn {
+                float: none;
+                display: block;
+                margin: 0 auto;
+            }
+        }
+    </style>
 </head>
 <body class="index-page">
     <header>
@@ -45,6 +141,15 @@
                 <span class="scroll-text">Explore</span>
                 <div class="scroll-arrow">↓</div>
             </div>
+        </div>
+        
+        <!-- Dad Joke Bubble -->
+        <div class="dad-joke-bubble" id="joke-bubble">
+            <div class="joke-content">
+                <div class="joke-text">Why don't bears ever get lost?</div>
+                <div class="joke-punchline">Because they always know where the bear necessities are!</div>
+            </div>
+            <button class="new-joke-btn" onclick="newJoke()">New Joke 🐻</button>
         </div>
     </section>
 
@@ -90,6 +195,91 @@
             <!-- Footer content will be injected by components.js -->
         </div>
     </footer>
+
+    <script>
+        // Bear-themed dad jokes
+        const bearJokes = [
+            {
+                setup: "Why don't bears ever get lost?",
+                punchline: "Because they always know where the bear necessities are!"
+            },
+            {
+                setup: "What do you call a bear with no teeth?",
+                punchline: "A gummy bear!"
+            },
+            {
+                setup: "Why did the bear break up with his boyfriend?",
+                punchline: "He couldn't bear the drama anymore!"
+            },
+            {
+                setup: "What's a bear's favorite type of music?",
+                punchline: "Bear-itone!"
+            },
+            {
+                setup: "Why don't bears wear shoes?",
+                punchline: "Because they have bear feet!"
+            },
+            {
+                setup: "What do you call a bear who loves to travel?",
+                punchline: "A roam-ing bear!"
+            },
+            {
+                setup: "Why did the bear go to therapy?",
+                punchline: "He had too many bear-ied emotions!"
+            },
+            {
+                setup: "What's a bear's favorite drink at the bar?",
+                punchline: "Bear-itas!"
+            },
+            {
+                setup: "Why don't bears ever lie?",
+                punchline: "Because the truth is un-bear-able to hide!"
+            },
+            {
+                setup: "What do you call a bear who's great at parties?",
+                punchline: "The life of the bear-ty!"
+            },
+            {
+                setup: "Why did the bear become a tour guide?",
+                punchline: "He wanted to show everyone the bear minimum of fun!"
+            },
+            {
+                setup: "What's a bear's favorite app?",
+                punchline: "Grindr... I mean, Bear-der!"
+            }
+        ];
+
+        let currentJokeIndex = 0;
+
+        function newJoke() {
+            currentJokeIndex = (currentJokeIndex + 1) % bearJokes.length;
+            const joke = bearJokes[currentJokeIndex];
+            const jokeContent = document.querySelector('#joke-bubble .joke-content');
+            
+            // Fade out
+            jokeContent.style.opacity = '0';
+            
+            setTimeout(() => {
+                jokeContent.querySelector('.joke-text').textContent = joke.setup;
+                jokeContent.querySelector('.joke-punchline').textContent = joke.punchline;
+                // Fade in
+                jokeContent.style.opacity = '1';
+            }, 200);
+        }
+
+        // Initialize with a random joke
+        document.addEventListener('DOMContentLoaded', () => {
+            currentJokeIndex = Math.floor(Math.random() * bearJokes.length);
+            newJoke();
+        });
+
+        // Keyboard shortcut for new joke
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'j' || e.key === 'J') {
+                newJoke();
+            }
+        });
+    </script>
 
     <script src="js/logger.js"></script>
     <script src="js/debug-overlay.js"></script>
