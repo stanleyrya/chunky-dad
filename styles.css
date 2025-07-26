@@ -458,10 +458,7 @@ body.index-page header.visible {
     order: 1;
 }
 
-@media (min-width: 769px) {
-    .hero-content {
-    }
-}
+
 
 .hero-logo {
     order: 0;
@@ -574,7 +571,7 @@ body.index-page header.visible {
 
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
-    position: absolute;
+    position: fixed;
     bottom: 15rem;
     left: 5%;
     max-width: 320px;
@@ -589,8 +586,9 @@ body.index-page header.visible {
     animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.8s both, bubbleFloat 3s ease-in-out 2.2s infinite;
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255, 255, 255, 0.3);
-    z-index: 10;
+    z-index: 5;
     order: 2;
+    pointer-events: auto;
 }
 
 
@@ -611,6 +609,27 @@ body.index-page header.visible {
 @keyframes bubbleFloat {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
+}
+
+/* Prevent overlap with logo on low screen heights */
+@media (max-height: 700px) and (min-width: 769px) {
+    .dad-joke-bubble {
+        bottom: 8rem;
+        left: 2%;
+        max-width: 280px;
+        min-width: 240px;
+    }
+}
+
+@media (max-height: 600px) and (min-width: 769px) {
+    .dad-joke-bubble {
+        bottom: 5rem;
+        left: 2%;
+        max-width: 250px;
+        min-width: 200px;
+        font-size: 0.8rem;
+        padding: 15px 15px 40px 15px;
+    }
 }
 
 .joke-text {
@@ -884,7 +903,6 @@ body.index-page main {
 .hero {
     background: var(--solid-primary);
     color: var(--text-inverse);
-    padding: 120px 0 80px;
     display: flex;
     align-items: center;
     min-height: 100vh;
@@ -892,9 +910,7 @@ body.index-page main {
 
 
 
-.hero-content {
-    padding: 0 2rem;
-}
+
 
 .hero-content h2 {
     font-size: 3.5rem;
