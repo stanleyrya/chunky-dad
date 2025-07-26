@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hero Section Layout Variations - chunky.dad</title>
+    <title>Complete Hero Section Tester - chunky.dad</title>
     <link rel="stylesheet" href="../styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -12,91 +12,158 @@
             padding: 0;
         }
         
-        .variation-selector {
+        .controls-panel {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 1000;
             background: rgba(0, 0, 0, 0.9);
             color: white;
-            padding: 15px;
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 15px;
             backdrop-filter: blur(10px);
-            max-width: 300px;
+            max-width: 320px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         
-        .variation-selector select {
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .control-group select {
             background: #333;
             color: white;
             border: 1px solid #555;
             padding: 8px;
             border-radius: 5px;
-            margin-left: 10px;
             width: 100%;
-            margin-top: 5px;
+            font-size: 0.9rem;
         }
         
-        .hero-variation {
-            display: none;
-        }
-        
-        .hero-variation.active {
+        .hero-test {
             display: flex;
         }
 
-        /* V1: Split Layout - Image Left, Text Right (Requested) */
-        .hero-v1 {
-            flex-direction: row;
-            align-items: center;
-            padding: 0 4rem;
+        /* Color Schemes */
+        .color-original {
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #ff6b6b;
         }
         
-        .hero-v1 .hero-container {
+        .color-warm {
+            --gradient-primary: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #ffd93d;
+        }
+        
+        .color-cool {
+            --gradient-primary: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #ff6b6b;
+        }
+        
+        .color-dark {
+            --gradient-primary: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #e74c3c;
+        }
+        
+        .color-forest {
+            --gradient-primary: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #ffd93d;
+        }
+        
+        .color-sunset {
+            --gradient-primary: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --text-inverse: #2c3e50;
+            --secondary-color: #e74c3c;
+        }
+        
+        .color-midnight {
+            --gradient-primary: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #ff6b6b;
+        }
+        
+        .color-ocean {
+            --gradient-primary: linear-gradient(135deg, #667db6 0%, #0082c8 50%, #0082c8 100%);
+            --text-inverse: #ffffff;
+            --secondary-color: #ffd93d;
+        }
+
+        /* Layout Variations - Updated and Cleaned */
+        
+        /* V1: Split Layout - Image Left, Text Right (UPDATED) */
+        .layout-v1 .hero-container {
             max-width: 1400px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4rem;
+            gap: 3rem;
             align-items: center;
             height: auto;
+            padding: 0 4rem;
         }
         
-        .hero-v1 .hero-content {
+        .layout-v1 .hero-content {
             text-align: left;
             order: 2;
         }
         
-        .hero-v1 .hero-logo {
+        .layout-v1 .hero-logo {
             order: 1;
             margin-bottom: 0;
             display: flex;
             justify-content: center;
+            align-items: center;
         }
         
-        .hero-v1 .hero-title {
+        .layout-v1 .hero-logo-img {
+            width: 320px;
+            height: 320px;
+        }
+        
+        .layout-v1 .hero-title {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            font-size: 4.5rem;
-            line-height: 0.9;
+            font-size: 6rem;
+            line-height: 0.8;
+            margin-bottom: 0;
+            letter-spacing: -3px;
         }
         
-        .hero-v1 .hero-chunky,
-        .hero-v1 .hero-dad {
+        .layout-v1 .hero-chunky,
+        .layout-v1 .hero-dad {
             display: block;
         }
         
-        .hero-v1 .hero-dot {
+        .layout-v1 .hero-dot {
             display: none;
         }
         
-        .hero-v1 .hero-scroll-hint {
-            position: static;
-            margin-top: 2rem;
-            transform: none;
+        .layout-v1 .hero-subtitle {
+            display: none;
+        }
+        
+        .layout-v1 .hero-scroll-hint {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
         /* V2: Vertical Stack Minimal */
-        .hero-v2 .hero-container {
+        .layout-v2 .hero-container {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -104,7 +171,7 @@
             padding: 3rem 2rem;
         }
         
-        .hero-v2 .hero-content {
+        .layout-v2 .hero-content {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -112,38 +179,39 @@
             justify-content: center;
         }
         
-        .hero-v2 .hero-logo {
+        .layout-v2 .hero-logo {
             margin-bottom: 1rem;
         }
         
-        .hero-v2 .hero-logo-img {
+        .layout-v2 .hero-logo-img {
             width: 120px;
             height: 120px;
         }
         
-        .hero-v2 .hero-title {
+        .layout-v2 .hero-title {
             font-size: 3.5rem;
             margin-bottom: 0.5rem;
         }
         
-        .hero-v2 .hero-subtitle {
+        .layout-v2 .hero-subtitle {
             font-size: 1.2rem;
             margin-bottom: 0;
+            display: block;
         }
         
-        .hero-v2 .hero-scroll-hint {
+        .layout-v2 .hero-scroll-hint {
             position: static;
             transform: none;
             margin-top: auto;
         }
 
         /* V3: Corner Positioned */
-        .hero-v3 .hero-container {
+        .layout-v3 .hero-container {
             height: 100vh;
             position: relative;
         }
         
-        .hero-v3 .hero-content {
+        .layout-v3 .hero-content {
             position: absolute;
             top: 6rem;
             left: 4rem;
@@ -151,24 +219,28 @@
             max-width: 500px;
         }
         
-        .hero-v3 .hero-logo {
+        .layout-v3 .hero-logo {
             position: absolute;
             bottom: 4rem;
             right: 4rem;
             margin-bottom: 0;
         }
         
-        .hero-v3 .hero-logo-img {
+        .layout-v3 .hero-logo-img {
             width: 200px;
             height: 200px;
         }
         
-        .hero-v3 .hero-title {
+        .layout-v3 .hero-title {
             font-size: 4rem;
             margin-bottom: 1rem;
         }
         
-        .hero-v3 .hero-scroll-hint {
+        .layout-v3 .hero-subtitle {
+            display: block;
+        }
+        
+        .layout-v3 .hero-scroll-hint {
             position: absolute;
             bottom: 2rem;
             left: 50%;
@@ -176,11 +248,11 @@
         }
 
         /* V4: Floating Card Style */
-        .hero-v4 {
+        .layout-v4 {
             padding: 4rem 2rem;
         }
         
-        .hero-v4 .hero-container {
+        .layout-v4 .hero-container {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
             border-radius: 30px;
@@ -190,17 +262,21 @@
             max-width: 800px;
         }
         
-        .hero-v4 .hero-logo-img {
+        .layout-v4 .hero-logo-img {
             width: 160px;
             height: 160px;
         }
         
-        .hero-v4 .hero-scroll-hint {
+        .layout-v4 .hero-subtitle {
+            display: block;
+        }
+        
+        .layout-v4 .hero-scroll-hint {
             display: none;
         }
 
         /* V5: Horizontal Layout */
-        .hero-v5 .hero-container {
+        .layout-v5 .hero-container {
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -209,103 +285,33 @@
             padding: 6rem 4rem;
         }
         
-        .hero-v5 .hero-logo {
+        .layout-v5 .hero-logo {
             margin-bottom: 0;
             flex-shrink: 0;
         }
         
-        .hero-v5 .hero-content {
+        .layout-v5 .hero-content {
             text-align: left;
         }
         
-        .hero-v5 .hero-title {
+        .layout-v5 .hero-title {
             font-size: 4rem;
             margin-bottom: 1rem;
         }
         
-        .hero-v5 .hero-scroll-hint {
+        .layout-v5 .hero-subtitle {
+            display: block;
+        }
+        
+        .layout-v5 .hero-scroll-hint {
             position: static;
             transform: none;
             margin-top: 2rem;
             align-self: flex-start;
         }
 
-        /* V6: Bottom Heavy */
-        .hero-v6 .hero-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            height: 100vh;
-            padding-bottom: 8rem;
-        }
-        
-        .hero-v6 .hero-logo {
-            order: 3;
-            margin-bottom: 0;
-            margin-top: 2rem;
-        }
-        
-        .hero-v6 .hero-title {
-            order: 1;
-            font-size: 6rem;
-            margin-bottom: 1rem;
-        }
-        
-        .hero-v6 .hero-subtitle {
-            order: 2;
-            margin-bottom: 0;
-        }
-        
-        .hero-v6 .hero-scroll-hint {
-            display: none;
-        }
-
-        /* V7: Asymmetric Grid */
-        .hero-v7 .hero-container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 2rem;
-            height: 100vh;
-            padding: 2rem;
-        }
-        
-        .hero-v7 .hero-title {
-            grid-column: 1;
-            grid-row: 1;
-            font-size: 5rem;
-            margin: 0;
-            align-self: end;
-        }
-        
-        .hero-v7 .hero-subtitle {
-            grid-column: 1;
-            grid-row: 2;
-            margin: 0;
-            align-self: start;
-            font-size: 1.8rem;
-        }
-        
-        .hero-v7 .hero-logo {
-            grid-column: 2;
-            grid-row: 1 / 3;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .hero-v7 .hero-logo-img {
-            width: 250px;
-            height: 250px;
-        }
-        
-        .hero-v7 .hero-scroll-hint {
-            display: none;
-        }
-
-        /* V8: Stacked Typography */
-        .hero-v8 .hero-container {
+        /* V6: Typography Focus (UPDATED from V8) */
+        .layout-v6 .hero-container {
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -314,74 +320,87 @@
             padding-left: 4rem;
         }
         
-        .hero-v8 .hero-logo {
+        .layout-v6 .hero-logo {
             position: absolute;
             top: 2rem;
             right: 2rem;
             margin: 0;
         }
         
-        .hero-v8 .hero-logo-img {
+        .layout-v6 .hero-logo-img {
             width: 100px;
             height: 100px;
         }
         
-        .hero-v8 .hero-title {
+        .layout-v6 .hero-title {
             font-size: 8rem;
             line-height: 0.8;
             margin-bottom: 2rem;
+            letter-spacing: -4px;
         }
         
-        .hero-v8 .hero-chunky,
-        .hero-v8 .hero-dad {
+        .layout-v6 .hero-chunky,
+        .layout-v6 .hero-dad {
             display: block;
         }
         
-        .hero-v8 .hero-dot {
+        .layout-v6 .hero-dot {
             display: none;
         }
         
-        .hero-v8 .hero-subtitle {
+        .layout-v6 .hero-subtitle {
             font-size: 2rem;
             margin-left: 1rem;
+            display: block;
         }
 
-        /* V9: Circular Layout */
-        .hero-v9 .hero-container {
+        /* V7: Asymmetric Grid */
+        .layout-v7 .hero-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 2rem;
+            height: 100vh;
+            padding: 2rem;
+        }
+        
+        .layout-v7 .hero-title {
+            grid-column: 1;
+            grid-row: 1;
+            font-size: 5rem;
+            margin: 0;
+            align-self: end;
+        }
+        
+        .layout-v7 .hero-subtitle {
+            grid-column: 1;
+            grid-row: 2;
+            margin: 0;
+            align-self: start;
+            font-size: 1.8rem;
+            display: block;
+        }
+        
+        .layout-v7 .hero-logo {
+            grid-column: 2;
+            grid-row: 1 / 3;
+            margin: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            position: relative;
         }
         
-        .hero-v9 .hero-logo {
-            position: absolute;
-            top: 2rem;
-            margin: 0;
+        .layout-v7 .hero-logo-img {
+            width: 250px;
+            height: 250px;
         }
         
-        .hero-v9 .hero-title {
-            position: absolute;
-            left: -2rem;
-            font-size: 4rem;
-        }
-        
-        .hero-v9 .hero-subtitle {
-            position: absolute;
-            right: -2rem;
-            bottom: 0;
-            font-size: 1.5rem;
-        }
-        
-        .hero-v9 .hero-scroll-hint {
-            position: absolute;
-            bottom: -3rem;
-            transform: translateX(-50%);
+        .layout-v7 .hero-scroll-hint {
+            display: none;
         }
 
-        /* V10: Magazine Style */
-        .hero-v10 .hero-container {
+        /* V8: Magazine Style */
+        .layout-v8 .hero-container {
             display: grid;
             grid-template-columns: 1fr 2fr;
             height: 100vh;
@@ -389,7 +408,7 @@
             padding: 0;
         }
         
-        .hero-v10 .hero-logo {
+        .layout-v8 .hero-logo {
             grid-column: 1;
             background: rgba(0, 0, 0, 0.1);
             display: flex;
@@ -398,7 +417,7 @@
             margin: 0;
         }
         
-        .hero-v10 .hero-content {
+        .layout-v8 .hero-content {
             grid-column: 2;
             display: flex;
             flex-direction: column;
@@ -407,198 +426,312 @@
             text-align: left;
         }
         
-        .hero-v10 .hero-logo-img {
+        .layout-v8 .hero-logo-img {
             width: 300px;
             height: 300px;
         }
         
-        .hero-v10 .hero-title {
+        .layout-v8 .hero-title {
             font-size: 5rem;
             margin-bottom: 1rem;
         }
+        
+        .layout-v8 .hero-subtitle {
+            display: block;
+        }
 
-        /* V11: Diagonal Split */
-        .hero-v11 {
-            position: relative;
+        /* Animation Options */
+        
+        /* Gentle Scale-In */
+        .anim-scale .hero-logo-img {
+            animation: gentleScale 1.5s ease-out;
+        }
+        
+        .anim-scale .hero-title {
+            animation: gentleScale 1.5s ease-out 0.3s both;
+        }
+        
+        @keyframes gentleScale {
+            0% {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Fade-In Only */
+        .anim-fade .hero-logo-img {
+            animation: simpleFade 2s ease-out;
+        }
+        
+        .anim-fade .hero-title {
+            animation: simpleFade 2s ease-out 0.5s both;
+        }
+        
+        @keyframes simpleFade {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Typewriter Effect */
+        .anim-typewriter .hero-logo-img {
+            animation: simpleFade 1s ease-out;
+        }
+        
+        .anim-typewriter .hero-chunky {
+            animation: typewriter 1s steps(6) 0.5s both;
             overflow: hidden;
+            white-space: nowrap;
         }
         
-        .hero-v11::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 60%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.1);
-            transform: skewX(-15deg);
-            transform-origin: top left;
+        .anim-typewriter .hero-dad {
+            animation: typewriter 0.8s steps(3) 1.5s both;
+            overflow: hidden;
+            white-space: nowrap;
         }
         
-        .hero-v11 .hero-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            height: 100vh;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .hero-v11 .hero-logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-        }
-        
-        .hero-v11 .hero-content {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding-left: 2rem;
-            text-align: left;
-        }
-        
-        .hero-v11 .hero-logo-img {
-            width: 280px;
-            height: 280px;
+        @keyframes typewriter {
+            0% {
+                width: 0;
+                opacity: 0;
+            }
+            1% {
+                opacity: 1;
+            }
+            100% {
+                width: 100%;
+                opacity: 1;
+            }
         }
 
-        /* V12: Overlapping Elements */
-        .hero-v12 .hero-container {
-            height: 100vh;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        /* Glow Effect */
+        .anim-glow .hero-logo-img {
+            animation: glowPulse 2s ease-in-out infinite;
         }
         
-        .hero-v12 .hero-logo {
-            position: absolute;
-            top: 50%;
-            left: 30%;
-            transform: translate(-50%, -50%);
-            margin: 0;
-            z-index: 1;
+        .anim-glow .hero-title {
+            animation: textGlow 3s ease-in-out infinite;
         }
         
-        .hero-v12 .hero-title {
-            position: absolute;
-            top: 40%;
-            right: 20%;
-            transform: translateY(-50%);
-            font-size: 4.5rem;
-            z-index: 2;
+        @keyframes glowPulse {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
+            }
         }
         
-        .hero-v12 .hero-subtitle {
-            position: absolute;
-            bottom: 35%;
-            left: 15%;
-            font-size: 1.8rem;
-            z-index: 2;
+        @keyframes textGlow {
+            0%, 100% {
+                text-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+            }
+            50% {
+                text-shadow: 0 6px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        /* Bounce In */
+        .anim-bounce .hero-logo-img {
+            animation: bounceIn 1.2s ease-out;
         }
         
-        .hero-v12 .hero-logo-img {
-            width: 220px;
-            height: 220px;
+        .anim-bounce .hero-title {
+            animation: bounceIn 1.2s ease-out 0.3s both;
+        }
+        
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Rotation Entrance */
+        .anim-rotate .hero-logo-img {
+            animation: rotateIn 1.5s ease-out;
+        }
+        
+        .anim-rotate .hero-title {
+            animation: simpleFade 1.5s ease-out 0.5s both;
+        }
+        
+        @keyframes rotateIn {
+            0% {
+                opacity: 0;
+                transform: rotate(-180deg) scale(0.8);
+            }
+            100% {
+                opacity: 1;
+                transform: rotate(0deg) scale(1);
+            }
+        }
+
+        /* Slide Up (Original) */
+        .anim-slide .hero-logo-img {
+            animation: elegantFadeIn 2s ease-out;
+        }
+        
+        .anim-slide .hero-title {
+            animation: heroTitleSlide 1s ease-out;
+        }
+        
+        .anim-slide .hero-subtitle {
+            animation: heroSubtitleFade 1.5s ease-out 0.5s both;
+        }
+        
+        @keyframes elegantFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        @keyframes heroTitleSlide {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes heroSubtitleFade {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 0.95;
+                transform: translateY(0);
+            }
+        }
+
+        /* No Animation */
+        .anim-none .hero-logo-img,
+        .anim-none .hero-title,
+        .anim-none .hero-subtitle {
+            animation: none;
+        }
+
+        /* Explore scroll hint animation - always active */
+        .hero-scroll-hint {
+            animation: heroScrollHintFade 2s ease-out 2s both;
+        }
+        
+        @keyframes heroScrollHintFade {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(10px);
+            }
+            100% {
+                opacity: 0.8;
+                transform: translateX(-50%) translateY(0);
+            }
         }
 
         /* Responsive Design for All Variations */
         @media (max-width: 768px) {
-            .hero-v1 .hero-container {
+            .controls-panel {
+                position: relative;
+                max-width: none;
+                margin-bottom: 2rem;
+            }
+            
+            .layout-v1 .hero-container,
+            .layout-v5 .hero-container,
+            .layout-v7 .hero-container,
+            .layout-v8 .hero-container {
                 grid-template-columns: 1fr;
                 gap: 2rem;
                 text-align: center;
+                padding: 2rem;
             }
             
-            .hero-v1 .hero-content {
+            .layout-v1 .hero-content,
+            .layout-v5 .hero-content {
                 order: 2;
                 text-align: center;
             }
             
-            .hero-v1 .hero-logo {
+            .layout-v1 .hero-logo,
+            .layout-v5 .hero-logo {
                 order: 1;
             }
             
-            .hero-v3 .hero-content,
-            .hero-v3 .hero-logo {
+            .layout-v3 .hero-content,
+            .layout-v3 .hero-logo {
                 position: static;
                 text-align: center;
             }
             
-            .hero-v3 .hero-container {
+            .layout-v3 .hero-container {
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
                 padding: 2rem;
             }
             
-            .hero-v5 .hero-container,
-            .hero-v10 .hero-container,
-            .hero-v11 .hero-container {
-                grid-template-columns: 1fr;
-                flex-direction: column;
+            .layout-v6 .hero-container {
                 text-align: center;
                 padding: 2rem;
             }
             
-            .hero-v7 .hero-container {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto auto auto;
-                text-align: center;
-                padding: 2rem;
-            }
-            
-            .hero-v7 .hero-title,
-            .hero-v7 .hero-subtitle,
-            .hero-v7 .hero-logo {
-                grid-column: 1;
-                grid-row: auto;
-            }
-            
-            .hero-v8 .hero-container {
-                text-align: center;
-                padding: 2rem;
-            }
-            
-            .hero-v8 .hero-logo {
+            .layout-v6 .hero-logo {
                 position: static;
                 margin-bottom: 2rem;
             }
             
-            .hero-v9 .hero-title,
-            .hero-v9 .hero-subtitle,
-            .hero-v9 .hero-logo {
-                position: static;
+            .layout-v7 .hero-title,
+            .layout-v7 .hero-subtitle,
+            .layout-v7 .hero-logo {
+                grid-column: 1;
+                grid-row: auto;
             }
             
-            .hero-v9 .hero-container {
-                flex-direction: column;
+            .layout-v8 .hero-content {
+                grid-column: 1;
                 padding: 2rem;
             }
             
-            .hero-v12 .hero-logo,
-            .hero-v12 .hero-title,
-            .hero-v12 .hero-subtitle {
-                position: static;
-                transform: none;
-            }
-            
-            .hero-v12 .hero-container {
-                flex-direction: column;
-                padding: 2rem;
+            .layout-v8 .hero-logo {
+                grid-column: 1;
             }
             
             /* Reduce font sizes on mobile */
-            .hero-variation .hero-title {
+            .hero-title {
                 font-size: 2.5rem !important;
             }
             
-            .hero-variation .hero-subtitle {
+            .hero-subtitle {
                 font-size: 1.2rem !important;
             }
             
-            .hero-variation .hero-logo-img {
+            .hero-logo-img {
                 width: 120px !important;
                 height: 120px !important;
             }
@@ -606,26 +739,64 @@
     </style>
 </head>
 <body>
-    <div class="variation-selector">
-        <label for="variation-select">Hero Layout Variation:</label>
-        <select id="variation-select">
-            <option value="v1">V1: Split Layout (Image Left, Text Right)</option>
-            <option value="v2">V2: Vertical Stack Minimal</option>
-            <option value="v3">V3: Corner Positioned</option>
-            <option value="v4">V4: Floating Card Style</option>
-            <option value="v5">V5: Horizontal Flow</option>
-            <option value="v6">V6: Bottom Heavy</option>
-            <option value="v7">V7: Asymmetric Grid</option>
-            <option value="v8">V8: Typography Focus</option>
-            <option value="v9">V9: Circular Layout</option>
-            <option value="v10">V10: Magazine Style</option>
-            <option value="v11">V11: Diagonal Split</option>
-            <option value="v12">V12: Overlapping Elements</option>
-        </select>
+    <div class="controls-panel">
+        <div class="control-group">
+            <label for="layout-select">Layout Style:</label>
+            <select id="layout-select">
+                <option value="v1" selected>V1: Split Layout (Image Left, Text Right) ⭐</option>
+                <option value="v2">V2: Vertical Stack Minimal</option>
+                <option value="v3">V3: Corner Positioned</option>
+                <option value="v4">V4: Floating Card Style</option>
+                <option value="v5">V5: Horizontal Flow</option>
+                <option value="v6">V6: Typography Focus (Large Text) ⭐</option>
+                <option value="v7">V7: Asymmetric Grid</option>
+                <option value="v8">V8: Magazine Style</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="animation-select">Animation Style:</label>
+            <select id="animation-select">
+                <option value="none" selected>No Animation ⭐</option>
+                <option value="scale">Gentle Scale-In</option>
+                <option value="fade">Fade-In Only</option>
+                <option value="typewriter">Typewriter Effect</option>
+                <option value="glow">Glow Effect</option>
+                <option value="bounce">Bounce In</option>
+                <option value="rotate">Rotation Entrance</option>
+                <option value="slide">Slide Up (Original)</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="color-select">Color Scheme:</label>
+            <select id="color-select">
+                <option value="original" selected>Original Purple/Blue</option>
+                <option value="warm">Warm Orange/Red</option>
+                <option value="cool">Cool Blue/Cyan</option>
+                <option value="dark">Dark Gray/Black</option>
+                <option value="forest">Forest Green</option>
+                <option value="sunset">Sunset Pink/Yellow</option>
+                <option value="midnight">Midnight Blue/Purple</option>
+                <option value="ocean">Ocean Blue</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="subtitle-toggle">Show Subtitle:</label>
+            <select id="subtitle-toggle">
+                <option value="hide" selected>Hide Subtitle ⭐</option>
+                <option value="show">Show Subtitle</option>
+            </select>
+        </div>
+        
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #555; font-size: 0.8rem; opacity: 0.8;">
+            ⭐ = Current main site settings<br>
+            Use arrow keys to navigate options
+        </div>
     </div>
 
-    <!-- V1: Split Layout - Image Left, Text Right (Requested) -->
-    <section class="hero hero-variation hero-v1 active" id="hero-v1">
+    <section class="hero hero-test layout-v1 anim-none color-original" id="hero-display">
         <div class="hero-container">
             <div class="hero-logo">
                 <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
@@ -636,243 +807,93 @@
                     <span class="hero-dot">.</span>
                     <span class="hero-dad">dad</span>
                 </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-                <div class="hero-scroll-hint">
-                    <span class="scroll-text">Explore</span>
-                    <div class="scroll-arrow">↓</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- V2: Vertical Stack Minimal -->
-    <section class="hero hero-variation hero-v2" id="hero-v2">
-        <div class="hero-container">
-            <div class="hero-content">
-                <div class="hero-logo">
-                    <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-                </div>
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
+                <p class="hero-subtitle" style="display: none;">Your Gay Bear Travel Guide</p>
             </div>
             <div class="hero-scroll-hint">
                 <span class="scroll-text">Explore</span>
                 <div class="scroll-arrow">↓</div>
             </div>
-        </div>
-    </section>
-
-    <!-- V3: Corner Positioned -->
-    <section class="hero hero-variation hero-v3" id="hero-v3">
-        <div class="hero-container">
-            <div class="hero-content">
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-            </div>
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-            <div class="hero-scroll-hint">
-                <span class="scroll-text">Explore</span>
-                <div class="scroll-arrow">↓</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- V4: Floating Card Style -->
-    <section class="hero hero-variation hero-v4" id="hero-v4">
-        <div class="hero-container">
-            <div class="hero-content">
-                <div class="hero-logo">
-                    <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-                </div>
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- V5: Horizontal Flow -->
-    <section class="hero hero-variation hero-v5" id="hero-v5">
-        <div class="hero-container">
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-            <div class="hero-content">
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-                <div class="hero-scroll-hint">
-                    <span class="scroll-text">Explore</span>
-                    <div class="scroll-arrow">↓</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- V6: Bottom Heavy -->
-    <section class="hero hero-variation hero-v6" id="hero-v6">
-        <div class="hero-container">
-            <div class="hero-content">
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-                <div class="hero-logo">
-                    <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- V7: Asymmetric Grid -->
-    <section class="hero hero-variation hero-v7" id="hero-v7">
-        <div class="hero-container">
-            <h1 class="hero-title">
-                <span class="hero-chunky">chunky</span>
-                <span class="hero-dot">.</span>
-                <span class="hero-dad">dad</span>
-            </h1>
-            <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-        </div>
-    </section>
-
-    <!-- V8: Typography Focus -->
-    <section class="hero hero-variation hero-v8" id="hero-v8">
-        <div class="hero-container">
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-            <div class="hero-content">
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- V9: Circular Layout -->
-    <section class="hero hero-variation hero-v9" id="hero-v9">
-        <div class="hero-container">
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-            <h1 class="hero-title">
-                <span class="hero-chunky">chunky</span>
-                <span class="hero-dot">.</span>
-                <span class="hero-dad">dad</span>
-            </h1>
-            <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-            <div class="hero-scroll-hint">
-                <span class="scroll-text">Explore</span>
-                <div class="scroll-arrow">↓</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- V10: Magazine Style -->
-    <section class="hero hero-variation hero-v10" id="hero-v10">
-        <div class="hero-container">
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-            <div class="hero-content">
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- V11: Diagonal Split -->
-    <section class="hero hero-variation hero-v11" id="hero-v11">
-        <div class="hero-container">
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-            <div class="hero-content">
-                <h1 class="hero-title">
-                    <span class="hero-chunky">chunky</span>
-                    <span class="hero-dot">.</span>
-                    <span class="hero-dad">dad</span>
-                </h1>
-                <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- V12: Overlapping Elements -->
-    <section class="hero hero-variation hero-v12" id="hero-v12">
-        <div class="hero-container">
-            <div class="hero-logo">
-                <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="hero-logo-img">
-            </div>
-            <h1 class="hero-title">
-                <span class="hero-chunky">chunky</span>
-                <span class="hero-dot">.</span>
-                <span class="hero-dad">dad</span>
-            </h1>
-            <p class="hero-subtitle">Your Gay Bear Travel Guide</p>
         </div>
     </section>
 
     <script>
-        const variationSelect = document.getElementById('variation-select');
-        const heroVariations = document.querySelectorAll('.hero-variation');
+        const layoutSelect = document.getElementById('layout-select');
+        const animationSelect = document.getElementById('animation-select');
+        const colorSelect = document.getElementById('color-select');
+        const subtitleToggle = document.getElementById('subtitle-toggle');
+        const heroDisplay = document.getElementById('hero-display');
+        const heroSubtitle = heroDisplay.querySelector('.hero-subtitle');
 
-        variationSelect.addEventListener('change', (e) => {
-            // Hide all variations
-            heroVariations.forEach(hero => hero.classList.remove('active'));
+        function updateHero() {
+            // Remove all existing classes
+            heroDisplay.className = 'hero hero-test';
             
-            // Show selected variation
-            const selectedHero = document.getElementById(`hero-${e.target.value}`);
-            if (selectedHero) {
-                selectedHero.classList.add('active');
+            // Add selected classes
+            heroDisplay.classList.add(`layout-${layoutSelect.value}`);
+            heroDisplay.classList.add(`anim-${animationSelect.value}`);
+            heroDisplay.classList.add(`color-${colorSelect.value}`);
+            
+            // Handle subtitle visibility
+            if (subtitleToggle.value === 'show') {
+                heroSubtitle.style.display = 'block';
+            } else {
+                heroSubtitle.style.display = 'none';
             }
-        });
+            
+            // Force animation restart for animation changes
+            if (animationSelect.value !== 'none') {
+                const animatedElements = heroDisplay.querySelectorAll('.hero-logo-img, .hero-title, .hero-subtitle, .hero-chunky, .hero-dad');
+                animatedElements.forEach(el => {
+                    el.style.animation = 'none';
+                    el.offsetHeight; // Trigger reflow
+                    el.style.animation = null;
+                });
+            }
+        }
 
-        // Add keyboard navigation
+        // Event listeners
+        layoutSelect.addEventListener('change', updateHero);
+        animationSelect.addEventListener('change', updateHero);
+        colorSelect.addEventListener('change', updateHero);
+        subtitleToggle.addEventListener('change', updateHero);
+
+        // Keyboard navigation
         document.addEventListener('keydown', (e) => {
+            const selects = [layoutSelect, animationSelect, colorSelect, subtitleToggle];
+            let currentSelect = null;
+            
+            // Find currently focused select or default to first
+            for (let select of selects) {
+                if (document.activeElement === select) {
+                    currentSelect = select;
+                    break;
+                }
+            }
+            
+            if (!currentSelect) currentSelect = layoutSelect;
+            
             if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                const currentIndex = variationSelect.selectedIndex;
+                e.preventDefault();
+                const currentIndex = currentSelect.selectedIndex;
                 if (currentIndex > 0) {
-                    variationSelect.selectedIndex = currentIndex - 1;
-                    variationSelect.dispatchEvent(new Event('change'));
+                    currentSelect.selectedIndex = currentIndex - 1;
+                    updateHero();
                 }
             } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                const currentIndex = variationSelect.selectedIndex;
-                if (currentIndex < variationSelect.options.length - 1) {
-                    variationSelect.selectedIndex = currentIndex + 1;
-                    variationSelect.dispatchEvent(new Event('change'));
+                e.preventDefault();
+                const currentIndex = currentSelect.selectedIndex;
+                if (currentIndex < currentSelect.options.length - 1) {
+                    currentSelect.selectedIndex = currentIndex + 1;
+                    updateHero();
                 }
+            } else if (e.key === 'Tab') {
+                // Let tab work normally for navigation between controls
+                return;
             }
         });
+
+        // Initialize
+        updateHero();
     </script>
 </body>
 </html>
