@@ -573,7 +573,6 @@ body.index-page header.visible {
 .dad-joke-bubble {
     position: fixed;
     bottom: 15rem;
-    left: 5%;
     max-width: 320px;
     min-width: 280px;
     background: rgba(255, 255, 255, 0.95);
@@ -615,7 +614,6 @@ body.index-page header.visible {
 @media (max-height: 700px) and (min-width: 769px) {
     .dad-joke-bubble {
         bottom: 8rem;
-        left: 2%;
         max-width: 280px;
         min-width: 240px;
     }
@@ -624,7 +622,6 @@ body.index-page header.visible {
 @media (max-height: 600px) and (min-width: 769px) {
     .dad-joke-bubble {
         bottom: 5rem;
-        left: 2%;
         max-width: 250px;
         min-width: 200px;
         font-size: 0.8rem;
@@ -763,7 +760,6 @@ body.index-page header.visible {
         position: relative;
         top: auto;
         bottom: auto;
-        left: auto;
         right: auto;
         margin: 2rem auto;
         max-width: 90%;
