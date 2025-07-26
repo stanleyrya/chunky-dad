@@ -458,6 +458,7 @@ body.index-page header.visible {
     color: var(--text-inverse);
     position: relative;
     order: 2;
+    padding: 2rem 0;
 }
 
 .hero-logo {
@@ -573,7 +574,8 @@ body.index-page header.visible {
     }
     
     .hero-container {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         gap: 1rem;
         padding: 0 2rem;
         text-align: center;
