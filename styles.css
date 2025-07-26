@@ -572,7 +572,7 @@ body.index-page header.visible {
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
     position: absolute;
-    top: 15%;
+    bottom: 8rem;
     right: 5%;
     max-width: 320px;
     background: rgba(255, 255, 255, 0.95);
