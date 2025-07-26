@@ -617,16 +617,36 @@
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
             
+            logger.info('MAP', `Updating markers for ${testEvents.length} events with style: ${currentStyle}`);
+            
             // Add new markers with current style
+            let successCount = 0;
+            let failureCount = 0;
+            
             testEvents.forEach((event, index) => {
+                if (!event.coordinates || !event.coordinates.lat || !event.coordinates.lng) {
+                    logger.warn('MAP', `Event ${index + 1} missing coordinates: ${event.name}`, { event });
+                    failureCount++;
+                    return;
+                }
+                
                 const marker = createMarker(event, index);
                 if (marker) {
                     marker.addTo(map);
                     markers.push(marker);
+                    successCount++;
+                } else {
+                    logger.warn('MAP', `Failed to create marker for event: ${event.name}`, { event });
+                    failureCount++;
                 }
             });
             
-            logger.componentLoad('MAP', `Updated ${markers.length} markers with style: ${currentStyle}`);
+            logger.componentLoad('MAP', `Updated ${successCount} markers with style: ${currentStyle}`, {
+                totalEvents: testEvents.length,
+                successfulMarkers: successCount,
+                failedMarkers: failureCount,
+                markersOnMap: markers.length
+            });
         }
         
         function createMarker(event, index) {
@@ -889,9 +909,17 @@
         
         function loadFaviconForMarker(markerId, faviconUrl, fallbackEmoji) {
             const img = new Image();
-            img.crossOrigin = 'anonymous';
+            // Remove crossOrigin to avoid CORS issues with Google's favicon service
+            // img.crossOrigin = 'anonymous';
+            
+            // Set a timeout to prevent hanging loads
+            const loadTimeout = setTimeout(() => {
+                logger.componentError('MAP', 'Favicon load timeout', { url: faviconUrl });
+                handleFaviconError(markerId, fallbackEmoji);
+            }, 5000);
             
             img.onload = function() {
+                clearTimeout(loadTimeout);
                 // Find the corresponding marker element and update it
                 const iconElement = document.getElementById(markerId);
                 if (iconElement) {
@@ -899,25 +927,35 @@
                     if (parentMarker) {
                         parentMarker.className = 'favicon-marker';
                     }
-                    iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="this.parentElement.parentElement.className='favicon-marker error'; this.parentElement.innerHTML='${fallbackEmoji}';">`;
+                    iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="handleFaviconImageError('${markerId}', '${fallbackEmoji}');">`;
                     logger.componentLoad('MAP', 'Favicon loaded successfully', { url: faviconUrl });
                 }
             };
             
             img.onerror = function() {
-                // Fallback to emoji if favicon fails to load
-                const iconElement = document.getElementById(markerId);
-                if (iconElement) {
-                    const parentMarker = iconElement.closest('.favicon-marker');
-                    if (parentMarker) {
-                        parentMarker.className = 'favicon-marker error';
-                    }
-                    iconElement.innerHTML = fallbackEmoji;
-                    logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
-                }
+                clearTimeout(loadTimeout);
+                logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
+                handleFaviconError(markerId, fallbackEmoji);
             };
             
             img.src = faviconUrl;
+        }
+        
+        function handleFaviconError(markerId, fallbackEmoji) {
+            // Fallback to emoji if favicon fails to load
+            const iconElement = document.getElementById(markerId);
+            if (iconElement) {
+                const parentMarker = iconElement.closest('.favicon-marker');
+                if (parentMarker) {
+                    parentMarker.className = 'favicon-marker error';
+                }
+                iconElement.innerHTML = fallbackEmoji;
+            }
+        }
+        
+        function handleFaviconImageError(markerId, fallbackEmoji) {
+            // Handle inline image load errors
+            handleFaviconError(markerId, fallbackEmoji);
         }
         
         function updateEventPreviews() {
@@ -939,6 +977,7 @@
         }
         
         function addRandomEvent() {
+            // Use consistent coordinates for random events to prevent shuffling
             const randomEvents = [
                 {
                     name: "Trivia Night",
@@ -947,7 +986,7 @@
                     time: "7:00 PM - 10:00 PM",
                     day: "Wednesday",
                     cover: "$5",
-                    coordinates: { lat: 40.7400 + Math.random() * 0.05, lng: -73.9900 + Math.random() * 0.05 },
+                    coordinates: { lat: 40.7420, lng: -73.9915 }, // Fixed coordinates
                     emoji: "🧠",
                     eventType: "Quiz"
                 },
@@ -958,13 +997,15 @@
                     time: "10:00 PM - 3:00 AM",
                     day: "Saturday",
                     cover: "$15",
-                    coordinates: { lat: 40.7500 + Math.random() * 0.05, lng: -73.9800 + Math.random() * 0.05 },
+                    coordinates: { lat: 40.7535, lng: -73.9825 }, // Fixed coordinates
                     emoji: "💃",
                     eventType: "Dancing"
                 }
             ];
             
-            const randomEvent = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+            // Use event count to select which random event to add (consistent selection)
+            const eventIndex = testEvents.length % randomEvents.length;
+            const randomEvent = randomEvents[eventIndex];
             testEvents.push(randomEvent);
             updateMapMarkers();
             renderEvents();
@@ -1040,11 +1081,18 @@
                  
                  // Use NYC as default city for testing (same as calendar tester)
                  const cityKey = 'new-york';
+                 
+                 // Check if getCityConfig function exists
+                 if (typeof getCityConfig !== 'function') {
+                     logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded');
+                     throw new Error('City configuration not available');
+                 }
+                 
                  const cityConfig = getCityConfig(cityKey);
                  
                  if (!cityConfig || !cityConfig.calendarId) {
-                     logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
-                     return;
+                     logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`, { cityConfig });
+                     throw new Error(`No calendar configuration for ${cityKey}`);
                  }
                  
                  logger.info('CALENDAR', `Loading real calendar data for ${cityConfig.name}`, { cityConfig });
@@ -1052,9 +1100,22 @@
                  // Load calendar data using the same method as calendar tester
                  const calendarData = await calendarLoader.loadCalendarData(cityKey);
                  
-                 if (!calendarData || !calendarData.events) {
-                     logger.componentError('CALENDAR', 'No calendar data received');
-                     return;
+                 if (!calendarData) {
+                     logger.componentError('CALENDAR', 'No calendar data received - loadCalendarData returned null/undefined');
+                     throw new Error('Calendar data loading failed');
+                 }
+                 
+                 if (!calendarData.events) {
+                     logger.componentError('CALENDAR', 'Calendar data received but no events property', { calendarData });
+                     throw new Error('No events in calendar data');
+                 }
+                 
+                 if (!Array.isArray(calendarData.events)) {
+                     logger.componentError('CALENDAR', 'Calendar events is not an array', { 
+                         eventsType: typeof calendarData.events,
+                         events: calendarData.events 
+                     });
+                     throw new Error('Invalid events data format');
                  }
                  
                  const events = calendarData.events;
@@ -1075,9 +1136,13 @@
                      const website = extractWebsiteFromDescription(event.description) || event.url || event.website || null;
                      
                      // Parse coordinates from location field if available
-                     const coordinates = parseCoordinatesFromLocation(event.location) || 
-                                       parseCoordinatesFromLocation(event.barLocation) ||
-                                       generateRandomNYCCoordinates();
+                     let coordinates = parseCoordinatesFromLocation(event.location) || 
+                                     parseCoordinatesFromLocation(event.barLocation);
+                     
+                     // If no coordinates found, use a consistent fallback based on event name hash
+                     if (!coordinates) {
+                         coordinates = generateConsistentCoordinates(event.name || 'Unknown Event');
+                     }
                      
                      // Extract venue name from bar field or location
                      const venue = event.bar || event.barName || extractVenueFromLocation(event.location) || 'Unknown Location';
@@ -1100,10 +1165,17 @@
                  });
                  
                  // Update map and events display
+                 logger.info('CALENDAR', `Converting ${events.length} calendar events to test format, now have ${testEvents.length} total events`);
                  updateMapMarkers();
                  renderEvents();
                  
-                 logger.componentLoad('CALENDAR', `Successfully loaded ${events.length} real calendar events for map testing`);
+                 // Log success with details about what was displayed
+                 logger.componentLoad('CALENDAR', `Successfully loaded and displayed ${events.length} real calendar events`, {
+                     totalEventsInArray: testEvents.length,
+                     markersOnMap: markers.length,
+                     eventsWithCoordinates: testEvents.filter(e => e.coordinates).length,
+                     eventsWithWebsites: testEvents.filter(e => e.website).length
+                 });
                  
              } catch (error) {
                  logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
@@ -1303,14 +1375,46 @@
          }
          
          function generateRandomNYCCoordinates() {
-             // Generate coordinates within NYC area
+             // Generate coordinates within NYC area - using seeded random to prevent shuffling
              const baseLat = 40.7505;
              const baseLng = -73.9934;
              const range = 0.1;
              
+             // Use event count as seed to generate consistent coordinates
+             const seed = testEvents.length;
+             const pseudoRandom1 = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+             const pseudoRandom2 = Math.sin(seed * 93.9898 + 67.345) * 43758.5453;
+             
              return {
-                 lat: baseLat + (Math.random() - 0.5) * range,
-                 lng: baseLng + (Math.random() - 0.5) * range
+                 lat: baseLat + ((pseudoRandom1 - Math.floor(pseudoRandom1)) - 0.5) * range,
+                 lng: baseLng + ((pseudoRandom2 - Math.floor(pseudoRandom2)) - 0.5) * range
+             };
+         }
+         
+         function generateConsistentCoordinates(eventName) {
+             // Generate consistent coordinates based on event name hash to prevent shuffling
+             const baseLat = 40.7505;
+             const baseLng = -73.9934;
+             const range = 0.08; // Slightly smaller range for better clustering
+             
+             // Create a simple hash from the event name
+             let hash = 0;
+             for (let i = 0; i < eventName.length; i++) {
+                 const char = eventName.charCodeAt(i);
+                 hash = ((hash << 5) - hash) + char;
+                 hash = hash & hash; // Convert to 32-bit integer
+             }
+             
+             // Use hash to generate consistent pseudo-random values
+             const seed1 = Math.abs(hash);
+             const seed2 = Math.abs(hash * 1.618033988749); // Golden ratio multiplier
+             
+             const pseudoRandom1 = Math.sin(seed1 * 12.9898 + 78.233) * 43758.5453;
+             const pseudoRandom2 = Math.sin(seed2 * 93.9898 + 67.345) * 43758.5453;
+             
+             return {
+                 lat: baseLat + ((pseudoRandom1 - Math.floor(pseudoRandom1)) - 0.5) * range,
+                 lng: baseLng + ((pseudoRandom2 - Math.floor(pseudoRandom2)) - 0.5) * range
              };
          }
          
