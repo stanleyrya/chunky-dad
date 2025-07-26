@@ -288,6 +288,15 @@
             height: 24px;
             object-fit: contain;
             border-radius: 4px;
+            display: block;
+        }
+        
+        .favicon-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .favicon-marker.loading {
@@ -682,28 +691,30 @@
                     
                 case 'favicon':
                     const faviconUrl = getFaviconUrl(event.website);
-                    icon = L.divIcon({
-                        className: 'favicon-marker loading',
-                        html: '⏳',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18],
-                        popupAnchor: [0, -18]
-                    });
+                    const markerId = `favicon-marker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                     
-                    // Load favicon asynchronously
                     if (faviconUrl) {
-                        loadFaviconForMarker(icon, faviconUrl, event.emoji || '🌐');
+                        icon = L.divIcon({
+                            className: `favicon-marker loading`,
+                            html: `<div id="${markerId}" class="favicon-content">⏳</div>`,
+                            iconSize: [36, 36],
+                            iconAnchor: [18, 18],
+                            popupAnchor: [0, -18]
+                        });
+                        
+                        // Load favicon asynchronously with proper error handling
+                        loadFaviconForMarker(markerId, faviconUrl, event.emoji || '🌐');
                     } else {
-                        // No website URL, use fallback
-                        setTimeout(() => {
-                            const iconElement = document.querySelector('.favicon-marker.loading:last-child');
-                            if (iconElement) {
-                                iconElement.className = 'favicon-marker error';
-                                iconElement.innerHTML = event.emoji || '🌐';
-                            }
-                        }, 100);
-                                         }
-                     break;
+                        // No website URL, use fallback immediately
+                        icon = L.divIcon({
+                            className: 'favicon-marker error',
+                            html: `<div class="favicon-content">${event.emoji || '🌐'}</div>`,
+                            iconSize: [36, 36],
+                            iconAnchor: [18, 18],
+                            popupAnchor: [0, -18]
+                        });
+                    }
+                    break;
                      
                 case 'gradient':
                     icon = L.divIcon({
@@ -752,6 +763,7 @@
                     <p>💰 ${event.cover}</p>
                     <p>🎭 ${event.eventType}</p>
                     ${event.nickname ? `<p>🏷️ Nickname: ${event.nickname}</p>` : ''}
+                    ${event.website ? `<p>🌐 <a href="${event.website}" target="_blank">Website</a></p>` : ''}
                     <p>🎨 Icon Style: ${currentStyle}</p>
                 </div>
             `);
@@ -852,40 +864,49 @@
             
             try {
                 const url = new URL(websiteUrl);
-                // Try multiple favicon approaches
+                
+                // Use Google's favicon service with fallback options
+                // This service is more reliable than trying to fetch favicons directly
                 return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`;
+                
+                // Alternative favicon services could be:
+                // return `https://favicons.githubusercontent.com/${url.hostname}`;
+                // return `https://icon.horse/icon/${url.hostname}`;
+                
             } catch (error) {
                 logger.componentError('MAP', 'Invalid website URL for favicon', { url: websiteUrl, error });
                 return null;
             }
         }
         
-        function loadFaviconForMarker(leafletIcon, faviconUrl, fallbackEmoji) {
+        function loadFaviconForMarker(markerId, faviconUrl, fallbackEmoji) {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             
             img.onload = function() {
                 // Find the corresponding marker element and update it
-                setTimeout(() => {
-                    const iconElement = document.querySelector('.favicon-marker.loading:last-child');
-                    if (iconElement) {
-                        iconElement.className = 'favicon-marker';
-                        iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="this.parentElement.className='favicon-marker error'; this.parentElement.innerHTML='${fallbackEmoji}';">`;
-                        logger.componentLoad('MAP', 'Favicon loaded successfully', { url: faviconUrl });
+                const iconElement = document.getElementById(markerId);
+                if (iconElement) {
+                    const parentMarker = iconElement.closest('.favicon-marker');
+                    if (parentMarker) {
+                        parentMarker.className = 'favicon-marker';
                     }
-                }, 100);
+                    iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="this.parentElement.parentElement.className='favicon-marker error'; this.parentElement.innerHTML='${fallbackEmoji}';">`;
+                    logger.componentLoad('MAP', 'Favicon loaded successfully', { url: faviconUrl });
+                }
             };
             
             img.onerror = function() {
                 // Fallback to emoji if favicon fails to load
-                setTimeout(() => {
-                    const iconElement = document.querySelector('.favicon-marker.loading:last-child');
-                    if (iconElement) {
-                        iconElement.className = 'favicon-marker error';
-                        iconElement.innerHTML = fallbackEmoji;
-                        logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
+                const iconElement = document.getElementById(markerId);
+                if (iconElement) {
+                    const parentMarker = iconElement.closest('.favicon-marker');
+                    if (parentMarker) {
+                        parentMarker.className = 'favicon-marker error';
                     }
-                }, 100);
+                    iconElement.innerHTML = fallbackEmoji;
+                    logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
+                }
             };
             
             img.src = faviconUrl;
@@ -946,6 +967,10 @@
         function testFaviconUrls() {
             logger.componentInit('MAP', 'Testing favicon URL extraction and loading');
             
+            let successCount = 0;
+            let failureCount = 0;
+            let noWebsiteCount = 0;
+            
             // Test favicon URL generation for current events
             testEvents.forEach((event, index) => {
                 if (event.website) {
@@ -960,17 +985,37 @@
                     if (faviconUrl) {
                         const testImg = new Image();
                         testImg.onload = () => {
-                            logger.componentLoad('MAP', `✅ Favicon loaded: ${event.name}`, { url: faviconUrl });
+                            successCount++;
+                            logger.componentLoad('MAP', `✅ Favicon loaded: ${event.name}`, { 
+                                url: faviconUrl,
+                                loadTime: Date.now()
+                            });
                         };
                         testImg.onerror = () => {
-                            logger.componentError('MAP', `❌ Favicon failed: ${event.name}`, { url: faviconUrl });
+                            failureCount++;
+                            logger.componentError('MAP', `❌ Favicon failed: ${event.name}`, { 
+                                url: faviconUrl,
+                                error: 'Image load error'
+                            });
                         };
                         testImg.src = faviconUrl;
                     }
                 } else {
+                    noWebsiteCount++;
                     logger.warn('MAP', `No website URL for event: ${event.name}`);
                 }
             });
+            
+            // Log summary after a brief delay to allow image loading
+            setTimeout(() => {
+                logger.info('MAP', 'Favicon test summary', {
+                    totalEvents: testEvents.length,
+                    withWebsite: testEvents.length - noWebsiteCount,
+                    successfulLoads: successCount,
+                    failedLoads: failureCount,
+                    noWebsite: noWebsiteCount
+                });
+            }, 2000);
             
             // Switch to favicon mode to see results
             document.querySelector('[data-style="favicon"]').click();
@@ -985,10 +1030,14 @@
                  
                  // Load sample NYC calendar data
                  const response = await fetch('../data/sample-calendar-file-nyc.ics');
+                 if (!response.ok) {
+                     throw new Error(`Failed to fetch calendar data: ${response.status} ${response.statusText}`);
+                 }
                  const icsData = await response.text();
                  
                  // Parse the calendar data
-                 const parsedEvents = calendarCore.parseICS(icsData);
+                 const parsedEvents = calendarCore.parseICalData(icsData);
+                 logger.info('CALENDAR', `Parsed ${parsedEvents.length} events from calendar`, { events: parsedEvents });
                  
                  // Clear existing test events
                  testEvents.length = 0;
@@ -999,23 +1048,30 @@
                      const emoji = generateEmojiForEvent(event);
                      
                      // Extract nickname from description or generate from name
-                     const nickname = extractNickname(event) || generateNickname(event.name);
+                     const nickname = extractNickname(event) || generateNickname(event.summary || event.name);
                      
-                     // Extract website URL from event data (already parsed by CalendarCore)
-                     const website = event.website || event.links?.find(link => link.type === 'website')?.url || null;
+                     // Extract website URL from event description
+                     const website = extractWebsiteFromDescription(event.description) || event.website || null;
+                     
+                     // Parse coordinates from location field if available
+                     const coordinates = parseCoordinatesFromLocation(event.location) || generateRandomNYCCoordinates();
+                     
+                     // Extract venue name from location
+                     const venue = extractVenueFromLocation(event.location) || event.location || 'Unknown Location';
                      
                      testEvents.push({
-                         name: event.name || event.summary || 'Unnamed Event',
+                         name: event.summary || event.name || 'Unnamed Event',
                          nickname: nickname,
-                         bar: event.location || event.bar || 'Unknown Location',
+                         bar: venue,
                          time: formatEventTime(event),
                          day: formatEventDay(event),
-                         cover: event.cover || 'TBD',
-                         coordinates: event.coordinates || generateRandomNYCCoordinates(),
+                         cover: extractCoverFromDescription(event.description) || 'TBD',
+                         coordinates: coordinates,
                          emoji: emoji,
                          eventType: determineEventType(event),
                          website: website,
-                         isRealEvent: true
+                         isRealEvent: true,
+                         description: event.description
                      });
                  });
                  
@@ -1023,12 +1079,12 @@
                  updateMapMarkers();
                  renderEvents();
                  
-                 logger.componentLoad('CALENDAR', `Loaded ${parsedEvents.length} real calendar events`);
+                 logger.componentLoad('CALENDAR', `Loaded ${parsedEvents.length} real calendar events from NYC data`);
                  
              } catch (error) {
                  logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
                  
-                 // Fallback to mock "real-looking" events
+                 // Fallback to mock "real-looking" events based on NYC data structure
                  testEvents.length = 0;
                  testEvents.push(
                      {
@@ -1046,7 +1102,7 @@
                      },
                      {
                          name: "Thursday Night Social",
-                         nickname: "TNS",
+                         nickname: "TNS", 
                          bar: "The Eagle NYC",
                          time: "8:00 PM - 12:00 AM",
                          day: "Thursday",
@@ -1055,6 +1111,19 @@
                          emoji: "🦅",
                          eventType: "Social Hour",
                          website: "https://eagle-ny.com",
+                         isRealEvent: true
+                     },
+                     {
+                         name: "Underwear Party",
+                         nickname: "UWP",
+                         bar: "NYC Venue",
+                         time: "10:00 PM - 2:00 AM",
+                         day: "Saturday",
+                         cover: "$15",
+                         coordinates: { lat: 40.7505, lng: -73.9934 },
+                         emoji: "🩲",
+                         eventType: "Themed Party",
+                         website: "https://example.com",
                          isRealEvent: true
                      }
                  );
@@ -1066,6 +1135,58 @@
              }
          }
          
+         // Helper functions for parsing calendar data
+         function extractWebsiteFromDescription(description) {
+             if (!description) return null;
+             
+             // Look for website links in description
+             const websiteMatch = description.match(/Website:\s*<a[^>]*href="([^"]*)"[^>]*>/i) ||
+                                 description.match(/Website:\s*(https?:\/\/[^\s<]+)/i) ||
+                                 description.match(/(https?:\/\/[^\s<]+)/);
+             
+             return websiteMatch ? websiteMatch[1] : null;
+         }
+         
+         function parseCoordinatesFromLocation(location) {
+             if (!location) return null;
+             
+             // Look for coordinates in format "lat, lng" 
+             const coordMatch = location.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+             if (coordMatch) {
+                 const lat = parseFloat(coordMatch[1]);
+                 const lng = parseFloat(coordMatch[2]);
+                 if (!isNaN(lat) && !isNaN(lng)) {
+                     return { lat, lng };
+                 }
+             }
+             
+             return null;
+         }
+         
+         function extractVenueFromLocation(location) {
+             if (!location) return null;
+             
+             // If location contains coordinates, try to extract venue name before coordinates
+             const coordMatch = location.match(/^([^0-9-]+)\s*(-?\d+\.?\d*\s*,\s*-?\d+\.?\d*)/);
+             if (coordMatch) {
+                 return coordMatch[1].trim();
+             }
+             
+             // If no coordinates, return the location as venue name
+             return location;
+         }
+         
+         function extractCoverFromDescription(description) {
+             if (!description) return null;
+             
+             // Look for cover charge information
+             const coverMatch = description.match(/cover:\s*\$?([^<\n\r]+)/i) ||
+                               description.match(/admission:\s*\$?([^<\n\r]+)/i) ||
+                               description.match(/price:\s*\$?([^<\n\r]+)/i);
+             
+             return coverMatch ? coverMatch[1].trim() : null;
+         }
+
          function generateEmojiForEvent(event) {
              const name = (event.name || event.summary || '').toLowerCase();
              const description = (event.description || '').toLowerCase();
