@@ -248,7 +248,7 @@ class BearDirectory {
             // No specific display content - show placeholder
             displayContent = `
                 <div class="tile-placeholder">
-                    <div class="bear-icon">🐻</div>
+                    <div class="bear-icon"><img src="chunky-dad-emoji.png" alt="chunky.dad" class="bear-directory-icon"></div>
                 </div>`;
         }
         
@@ -293,7 +293,7 @@ class BearDirectory {
                 </blockquote>
             </div>` :
             `<div class="tile-placeholder">
-                <div class="bear-icon">🐻</div>
+                <div class="bear-icon"><img src="chunky-dad-emoji.png" alt="chunky.dad" class="bear-directory-icon"></div>
             </div>`;
             
         return instagramContent;
@@ -308,7 +308,7 @@ class BearDirectory {
             'shop': '🛍️',
             'service': '💼'
         };
-        return icons[type.toLowerCase()] || '🐻';
+        return icons[type.toLowerCase()] || '<img src="chunky-dad-emoji.png" alt="chunky.dad" class="bear-directory-icon">';
     }
     
     updateMap() {

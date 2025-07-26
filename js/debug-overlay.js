@@ -54,7 +54,7 @@ class DebugOverlay {
         
         this.overlay.innerHTML = `
             <div class="debug-header">
-                <span class="debug-title">🐻 DEBUG</span>
+                <span class="debug-title"><img src="chunky-dad-emoji.png" alt="chunky.dad" class="debug-icon"> DEBUG</span>
                 <div class="debug-header-controls">
                     <button class="debug-toggle" aria-label="Toggle debug view" title="Toggle view">⌃</button>
                     <button class="debug-minimize" aria-label="Minimize debug overlay" title="Minimize">-</button>

@@ -162,4 +162,4 @@ MIT License - feel free to use this as a template for community travel guides!
 
 ---
 
-Made with 🐻 for the bear community. Travel safe, have fun, and support bear businesses!
+Made with ![chunky.dad logo](chunky-dad-emoji.png) for the bear community. Travel safe, have fun, and support bear businesses!

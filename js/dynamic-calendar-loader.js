@@ -1525,7 +1525,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 className: 'custom-marker',
                 html: `
                     <div class="marker-pin">
-                        <div class="marker-icon">🐻</div>
+                        <div class="marker-icon"><img src="chunky-dad-emoji.png" alt="chunky.dad" class="map-marker-icon"></div>
                     </div>
                 `,
                 iconSize: [44, 56],
