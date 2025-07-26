@@ -566,11 +566,22 @@
         let calendarLoader = null;
         
         // Initialize the test page
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             logger.componentInit('MAP', 'Map icon test page initialized');
             
             // Initialize calendar loader for real data
             calendarLoader = new DynamicCalendarLoader();
+            
+            // Set up the city context manually (since we're not on a real city page)
+            calendarLoader.currentCity = 'new-york';
+            calendarLoader.currentCityConfig = getCityConfig('new-york');
+            
+            // Override getCityFromURL to return 'new-york' for testing
+            calendarLoader.getCityFromURL = function() {
+                return 'new-york';
+            };
+            
+            logger.componentLoad('MAP', 'Calendar loader set up for testing');
             
             initializeMap();
             renderEvents();
@@ -617,16 +628,36 @@
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
             
+            logger.info('MAP', `Updating markers for ${testEvents.length} events with style: ${currentStyle}`);
+            
             // Add new markers with current style
+            let successCount = 0;
+            let failureCount = 0;
+            
             testEvents.forEach((event, index) => {
+                if (!event.coordinates || !event.coordinates.lat || !event.coordinates.lng) {
+                    logger.warn('MAP', `Event ${index + 1} missing coordinates: ${event.name}`, { event });
+                    failureCount++;
+                    return;
+                }
+                
                 const marker = createMarker(event, index);
                 if (marker) {
                     marker.addTo(map);
                     markers.push(marker);
+                    successCount++;
+                } else {
+                    logger.warn('MAP', `Failed to create marker for event: ${event.name}`, { event });
+                    failureCount++;
                 }
             });
             
-            logger.componentLoad('MAP', `Updated ${markers.length} markers with style: ${currentStyle}`);
+            logger.componentLoad('MAP', `Updated ${successCount} markers with style: ${currentStyle}`, {
+                totalEvents: testEvents.length,
+                successfulMarkers: successCount,
+                failedMarkers: failureCount,
+                markersOnMap: markers.length
+            });
         }
         
         function createMarker(event, index) {
@@ -889,9 +920,17 @@
         
         function loadFaviconForMarker(markerId, faviconUrl, fallbackEmoji) {
             const img = new Image();
-            img.crossOrigin = 'anonymous';
+            // Remove crossOrigin to avoid CORS issues with Google's favicon service
+            // img.crossOrigin = 'anonymous';
+            
+            // Set a timeout to prevent hanging loads
+            const loadTimeout = setTimeout(() => {
+                logger.componentError('MAP', 'Favicon load timeout', { url: faviconUrl });
+                handleFaviconError(markerId, fallbackEmoji);
+            }, 5000);
             
             img.onload = function() {
+                clearTimeout(loadTimeout);
                 // Find the corresponding marker element and update it
                 const iconElement = document.getElementById(markerId);
                 if (iconElement) {
@@ -899,25 +938,35 @@
                     if (parentMarker) {
                         parentMarker.className = 'favicon-marker';
                     }
-                    iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="this.parentElement.parentElement.className='favicon-marker error'; this.parentElement.innerHTML='${fallbackEmoji}';">`;
+                    iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="handleFaviconImageError('${markerId}', '${fallbackEmoji}');">`;
                     logger.componentLoad('MAP', 'Favicon loaded successfully', { url: faviconUrl });
                 }
             };
             
             img.onerror = function() {
-                // Fallback to emoji if favicon fails to load
-                const iconElement = document.getElementById(markerId);
-                if (iconElement) {
-                    const parentMarker = iconElement.closest('.favicon-marker');
-                    if (parentMarker) {
-                        parentMarker.className = 'favicon-marker error';
-                    }
-                    iconElement.innerHTML = fallbackEmoji;
-                    logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
-                }
+                clearTimeout(loadTimeout);
+                logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
+                handleFaviconError(markerId, fallbackEmoji);
             };
             
             img.src = faviconUrl;
+        }
+        
+        function handleFaviconError(markerId, fallbackEmoji) {
+            // Fallback to emoji if favicon fails to load
+            const iconElement = document.getElementById(markerId);
+            if (iconElement) {
+                const parentMarker = iconElement.closest('.favicon-marker');
+                if (parentMarker) {
+                    parentMarker.className = 'favicon-marker error';
+                }
+                iconElement.innerHTML = fallbackEmoji;
+            }
+        }
+        
+        function handleFaviconImageError(markerId, fallbackEmoji) {
+            // Handle inline image load errors
+            handleFaviconError(markerId, fallbackEmoji);
         }
         
         function updateEventPreviews() {
@@ -1038,13 +1087,28 @@
                      return;
                  }
                  
+                 // Log the calendar loader state for debugging
+                 logger.info('CALENDAR', 'Calendar loader state', {
+                     hasLoader: !!calendarLoader,
+                     currentCity: calendarLoader.currentCity,
+                     currentCityConfig: calendarLoader.currentCityConfig,
+                     hasLoadCalendarDataMethod: typeof calendarLoader.loadCalendarData === 'function'
+                 });
+                 
                  // Use NYC as default city for testing (same as calendar tester)
                  const cityKey = 'new-york';
+                 
+                 // Check if getCityConfig function exists
+                 if (typeof getCityConfig !== 'function') {
+                     logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded');
+                     throw new Error('City configuration not available');
+                 }
+                 
                  const cityConfig = getCityConfig(cityKey);
                  
                  if (!cityConfig || !cityConfig.calendarId) {
-                     logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
-                     return;
+                     logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`, { cityConfig });
+                     throw new Error(`No calendar configuration for ${cityKey}`);
                  }
                  
                  logger.info('CALENDAR', `Loading real calendar data for ${cityConfig.name}`, { cityConfig });
@@ -1052,9 +1116,22 @@
                  // Load calendar data using the same method as calendar tester
                  const calendarData = await calendarLoader.loadCalendarData(cityKey);
                  
-                 if (!calendarData || !calendarData.events) {
-                     logger.componentError('CALENDAR', 'No calendar data received');
-                     return;
+                 if (!calendarData) {
+                     logger.componentError('CALENDAR', 'No calendar data received - loadCalendarData returned null/undefined');
+                     throw new Error('Calendar data loading failed');
+                 }
+                 
+                 if (!calendarData.events) {
+                     logger.componentError('CALENDAR', 'Calendar data received but no events property', { calendarData });
+                     throw new Error('No events in calendar data');
+                 }
+                 
+                 if (!Array.isArray(calendarData.events)) {
+                     logger.componentError('CALENDAR', 'Calendar events is not an array', { 
+                         eventsType: typeof calendarData.events,
+                         events: calendarData.events 
+                     });
+                     throw new Error('Invalid events data format');
                  }
                  
                  const events = calendarData.events;
@@ -1100,10 +1177,17 @@
                  });
                  
                  // Update map and events display
+                 logger.info('CALENDAR', `Converting ${events.length} calendar events to test format, now have ${testEvents.length} total events`);
                  updateMapMarkers();
                  renderEvents();
                  
-                 logger.componentLoad('CALENDAR', `Successfully loaded ${events.length} real calendar events for map testing`);
+                 // Log success with details about what was displayed
+                 logger.componentLoad('CALENDAR', `Successfully loaded and displayed ${events.length} real calendar events`, {
+                     totalEventsInArray: testEvents.length,
+                     markersOnMap: markers.length,
+                     eventsWithCoordinates: testEvents.filter(e => e.coordinates).length,
+                     eventsWithWebsites: testEvents.filter(e => e.website).length
+                 });
                  
              } catch (error) {
                  logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
