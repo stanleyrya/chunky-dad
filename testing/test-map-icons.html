@@ -270,6 +270,102 @@
             border: 1px solid #333;
         }
         
+        .favicon-marker {
+            background: #fff;
+            border: 2px solid #FFA500;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .favicon-marker img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        
+        .favicon-marker.loading {
+            background: linear-gradient(45deg, #333, #555);
+            color: #FFA500;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .favicon-marker.error {
+            background: #444;
+            color: #FFA500;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .gradient-marker {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD);
+            background-size: 300% 300%;
+            animation: gradientShift 3s ease infinite;
+            color: #fff;
+            border: 2px solid #fff;
+            font-size: 16px;
+            font-weight: 700;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .neon-marker {
+            background: #0a0a0a;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            font-size: 16px;
+            font-weight: 700;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 
+                0 0 5px #00ffff,
+                0 0 10px #00ffff,
+                0 0 15px #00ffff,
+                inset 0 0 5px rgba(0,255,255,0.2);
+            animation: neonPulse 2s ease-in-out infinite alternate;
+            text-shadow: 0 0 5px #00ffff;
+        }
+        
+        @keyframes neonPulse {
+            from {
+                box-shadow: 
+                    0 0 5px #00ffff,
+                    0 0 10px #00ffff,
+                    0 0 15px #00ffff,
+                    inset 0 0 5px rgba(0,255,255,0.2);
+            }
+            to {
+                box-shadow: 
+                    0 0 10px #00ffff,
+                    0 0 20px #00ffff,
+                    0 0 25px #00ffff,
+                    inset 0 0 10px rgba(0,255,255,0.4);
+            }
+        }
+        
         @media (max-width: 768px) {
             .icon-style-buttons {
                 flex-direction: column;
@@ -298,6 +394,9 @@
                 • 📍 <strong>Overlay Icons:</strong> Icons placed directly over map locations (no pins)<br>
                 • 🔢 <strong>Numbered + Emoji:</strong> Numbers with emoji badges<br>
                 • 🐻 <strong>Original Pin:</strong> Current chunky.dad bear head pin<br>
+                • 🌐 <strong>Favicons:</strong> Use website favicons from event data as map icons<br>
+                • 🌈 <strong>Gradient Circles:</strong> Colorful gradient circles with emojis<br>
+                • ⚡ <strong>Neon Style:</strong> Glowing neon-style markers with animations<br>
                 • 📅 <strong>Real Calendar:</strong> Load actual calendar data to test with real events
             </div>
         </div>
@@ -312,6 +411,9 @@
                     <button class="style-btn" data-style="overlay">📍 Overlay Icons</button>
                     <button class="style-btn" data-style="numbered">🔢 Numbered + Emoji</button>
                     <button class="style-btn" data-style="original">🐻 Original Pin</button>
+                    <button class="style-btn" data-style="favicon">🌐 Favicons</button>
+                    <button class="style-btn" data-style="gradient">🌈 Gradient Circles</button>
+                    <button class="style-btn" data-style="neon">⚡ Neon Style</button>
                 </div>
             </div>
             
@@ -322,6 +424,7 @@
                     <button class="style-btn" onclick="fitAllMarkers()">🎯 Fit All Markers</button>
                     <button class="style-btn" onclick="addRandomEvent()">➕ Add Random Event</button>
                     <button class="style-btn" onclick="loadRealCalendar()">📅 Load Real Calendar</button>
+                    <button class="style-btn" onclick="testFaviconUrls()">🌐 Test Favicon URLs</button>
                     <button class="style-btn" onclick="clearMap()">🗑️ Clear All</button>
                 </div>
             </div>
@@ -359,7 +462,8 @@
                 cover: "Free",
                 coordinates: { lat: 40.7128, lng: -74.0060 },
                 emoji: "🍺",
-                eventType: "Happy Hour"
+                eventType: "Happy Hour",
+                website: "https://instagram.com/bearhappyhourny"
             },
             {
                 name: "Leather Night",
@@ -370,7 +474,8 @@
                 cover: "$10",
                 coordinates: { lat: 40.7589, lng: -73.9851 },
                 emoji: "🖤",
-                eventType: "Themed Night"
+                eventType: "Themed Night",
+                website: "https://eagle-ny.com"
             },
             {
                 name: "Sunday Funday Brunch",
@@ -381,7 +486,8 @@
                 cover: "Free",
                 coordinates: { lat: 40.7505, lng: -73.9934 },
                 emoji: "🥞",
-                eventType: "Brunch"
+                eventType: "Brunch",
+                website: "https://animal.nyc"
             },
             {
                 name: "Karaoke Night",
@@ -392,7 +498,8 @@
                 cover: "$5",
                 coordinates: { lat: 40.7282, lng: -73.9942 },
                 emoji: "🎤",
-                eventType: "Entertainment"
+                eventType: "Entertainment",
+                website: "https://www.yelp.com"
             },
             {
                 name: "Pool Tournament",
@@ -425,7 +532,8 @@
                 cover: "$50",
                 coordinates: { lat: 40.7410, lng: -74.0014 },
                 emoji: "🐻",
-                eventType: "Festival"
+                eventType: "Festival",
+                website: "https://github.com"
             },
             {
                 name: "Game Night",
@@ -572,6 +680,51 @@
                     }, 100);
                     break;
                     
+                case 'favicon':
+                    const faviconUrl = getFaviconUrl(event.website);
+                    icon = L.divIcon({
+                        className: 'favicon-marker loading',
+                        html: '⏳',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18],
+                        popupAnchor: [0, -18]
+                    });
+                    
+                    // Load favicon asynchronously
+                    if (faviconUrl) {
+                        loadFaviconForMarker(icon, faviconUrl, event.emoji || '🌐');
+                    } else {
+                        // No website URL, use fallback
+                        setTimeout(() => {
+                            const iconElement = document.querySelector('.favicon-marker.loading:last-child');
+                            if (iconElement) {
+                                iconElement.className = 'favicon-marker error';
+                                iconElement.innerHTML = event.emoji || '🌐';
+                            }
+                        }, 100);
+                                         }
+                     break;
+                     
+                case 'gradient':
+                    icon = L.divIcon({
+                        className: 'gradient-marker',
+                        html: event.emoji || '🎉',
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20],
+                        popupAnchor: [0, -20]
+                    });
+                    break;
+                    
+                case 'neon':
+                    icon = L.divIcon({
+                        className: 'neon-marker',
+                        html: event.emoji || '⚡',
+                        iconSize: [38, 38],
+                        iconAnchor: [19, 19],
+                        popupAnchor: [0, -19]
+                    });
+                    break;
+                     
                 case 'original':
                 default:
                     icon = L.divIcon({
@@ -681,10 +834,61 @@
                     return event.emoji || getInitials(event.nickname || event.name);
                 case 'numbered':
                     return `${index + 1} ${event.emoji || '📍'}`;
+                case 'favicon':
+                    return event.website ? '🌐 (Favicon)' : '❌ (No Website)';
+                case 'gradient':
+                    return `🌈 ${event.emoji || '🎉'}`;
+                case 'neon':
+                    return `⚡ ${event.emoji || '⚡'}`;
                 case 'original':
                 default:
                     return '🐻 (Original Pin)';
             }
+        }
+        
+        // Favicon helper functions
+        function getFaviconUrl(websiteUrl) {
+            if (!websiteUrl) return null;
+            
+            try {
+                const url = new URL(websiteUrl);
+                // Try multiple favicon approaches
+                return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`;
+            } catch (error) {
+                logger.componentError('MAP', 'Invalid website URL for favicon', { url: websiteUrl, error });
+                return null;
+            }
+        }
+        
+        function loadFaviconForMarker(leafletIcon, faviconUrl, fallbackEmoji) {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = function() {
+                // Find the corresponding marker element and update it
+                setTimeout(() => {
+                    const iconElement = document.querySelector('.favicon-marker.loading:last-child');
+                    if (iconElement) {
+                        iconElement.className = 'favicon-marker';
+                        iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="this.parentElement.className='favicon-marker error'; this.parentElement.innerHTML='${fallbackEmoji}';">`;
+                        logger.componentLoad('MAP', 'Favicon loaded successfully', { url: faviconUrl });
+                    }
+                }, 100);
+            };
+            
+            img.onerror = function() {
+                // Fallback to emoji if favicon fails to load
+                setTimeout(() => {
+                    const iconElement = document.querySelector('.favicon-marker.loading:last-child');
+                    if (iconElement) {
+                        iconElement.className = 'favicon-marker error';
+                        iconElement.innerHTML = fallbackEmoji;
+                        logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
+                    }
+                }, 100);
+            };
+            
+            img.src = faviconUrl;
         }
         
         function updateEventPreviews() {
@@ -739,6 +943,39 @@
             logger.userInteraction('MAP', `Added random event: ${randomEvent.name}`);
         }
         
+        function testFaviconUrls() {
+            logger.componentInit('MAP', 'Testing favicon URL extraction and loading');
+            
+            // Test favicon URL generation for current events
+            testEvents.forEach((event, index) => {
+                if (event.website) {
+                    const faviconUrl = getFaviconUrl(event.website);
+                    logger.info('MAP', `Event ${index + 1}: ${event.name}`, {
+                        website: event.website,
+                        faviconUrl: faviconUrl,
+                        hasWebsite: !!event.website
+                    });
+                    
+                    // Test if favicon actually loads
+                    if (faviconUrl) {
+                        const testImg = new Image();
+                        testImg.onload = () => {
+                            logger.componentLoad('MAP', `✅ Favicon loaded: ${event.name}`, { url: faviconUrl });
+                        };
+                        testImg.onerror = () => {
+                            logger.componentError('MAP', `❌ Favicon failed: ${event.name}`, { url: faviconUrl });
+                        };
+                        testImg.src = faviconUrl;
+                    }
+                } else {
+                    logger.warn('MAP', `No website URL for event: ${event.name}`);
+                }
+            });
+            
+            // Switch to favicon mode to see results
+            document.querySelector('[data-style="favicon"]').click();
+        }
+        
                  async function loadRealCalendar() {
              try {
                  logger.componentInit('CALENDAR', 'Loading real calendar data for icon testing');
@@ -764,6 +1001,9 @@
                      // Extract nickname from description or generate from name
                      const nickname = extractNickname(event) || generateNickname(event.name);
                      
+                     // Extract website URL from event data (already parsed by CalendarCore)
+                     const website = event.website || event.links?.find(link => link.type === 'website')?.url || null;
+                     
                      testEvents.push({
                          name: event.name || event.summary || 'Unnamed Event',
                          nickname: nickname,
@@ -774,6 +1014,7 @@
                          coordinates: event.coordinates || generateRandomNYCCoordinates(),
                          emoji: emoji,
                          eventType: determineEventType(event),
+                         website: website,
                          isRealEvent: true
                      });
                  });
@@ -800,6 +1041,7 @@
                          coordinates: { lat: 40.71739735291992, lng: -73.94930680925715 },
                          emoji: "🐻",
                          eventType: "Weekly Social",
+                         website: "https://animal.nyc",
                          isRealEvent: true
                      },
                      {
@@ -812,6 +1054,7 @@
                          coordinates: { lat: 40.7589, lng: -73.9851 },
                          emoji: "🦅",
                          eventType: "Social Hour",
+                         website: "https://eagle-ny.com",
                          isRealEvent: true
                      }
                  );
@@ -959,7 +1202,8 @@
                     cover: "Free",
                     coordinates: { lat: 40.7128, lng: -74.0060 },
                     emoji: "🍺",
-                    eventType: "Happy Hour"
+                    eventType: "Happy Hour",
+                    website: "https://instagram.com/bearhappyhourny"
                 },
                 {
                     name: "Leather Night",
@@ -970,7 +1214,8 @@
                     cover: "$10",
                     coordinates: { lat: 40.7589, lng: -73.9851 },
                     emoji: "🖤",
-                    eventType: "Themed Night"
+                    eventType: "Themed Night",
+                    website: "https://eagle-ny.com"
                 },
                 {
                     name: "Sunday Funday Brunch",
@@ -981,7 +1226,8 @@
                     cover: "Free",
                     coordinates: { lat: 40.7505, lng: -73.9934 },
                     emoji: "🥞",
-                    eventType: "Brunch"
+                    eventType: "Brunch",
+                    website: "https://animal.nyc"
                 },
                 {
                     name: "Karaoke Night",
@@ -992,7 +1238,8 @@
                     cover: "$5",
                     coordinates: { lat: 40.7282, lng: -73.9942 },
                     emoji: "🎤",
-                    eventType: "Entertainment"
+                    eventType: "Entertainment",
+                    website: "https://www.yelp.com"
                 },
                 {
                     name: "Pool Tournament",
@@ -1025,7 +1272,8 @@
                     cover: "$50",
                     coordinates: { lat: 40.7410, lng: -74.0014 },
                     emoji: "🐻",
-                    eventType: "Festival"
+                    eventType: "Festival",
+                    website: "https://github.com"
                 },
                 {
                     name: "Game Night",
