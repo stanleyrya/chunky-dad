@@ -425,6 +425,7 @@ body.index-page header.visible {
     justify-content: center;
     position: relative;
     overflow: hidden;
+    padding-bottom: 4rem;
 }
 
 .hero::before {
@@ -546,7 +547,7 @@ body.index-page header.visible {
 
 .hero-scroll-hint {
     position: fixed;
-    bottom: 2rem;
+    bottom: 5%;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
