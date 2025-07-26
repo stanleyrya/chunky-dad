@@ -444,10 +444,9 @@ body.index-page header.visible {
     margin: 0 auto;
     position: relative;
     z-index: 1;
-    height: 100vh;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    gap: 4rem 1.5rem;
     align-items: center;
 }
 
@@ -546,7 +545,7 @@ body.index-page header.visible {
 }
 
 .hero-scroll-hint {
-    position: absolute;
+    position: fixed;
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%);
@@ -571,7 +570,6 @@ body.index-page header.visible {
 
 /* Dad Joke Speech Bubble Styling */
 .dad-joke-bubble {
-    position: fixed;
     bottom: 15rem;
     max-width: 320px;
     min-width: 280px;
@@ -733,7 +731,6 @@ body.index-page header.visible {
         order: 1;
         text-align: center;
         margin-top: 0;
-        padding: 0 2rem 3rem 2rem;
     }
     
     .hero-logo {
@@ -793,7 +790,6 @@ body.index-page header.visible {
     
     .hero-content {
         margin-top: 0;
-        padding: 0 2rem 3rem 2rem;
     }
     
     .hero-logo {
