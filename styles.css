@@ -906,7 +906,6 @@ body.index-page main {
     color: var(--text-inverse);
     display: flex;
     align-items: center;
-    min-height: 100vh;
 }
 
 
