@@ -774,6 +774,32 @@
                 </div>
             </div>
 
+            <!-- Joke/Hero Colors Section -->
+            <div class="control-section">
+                <h3 onclick="toggleSection(this.parentElement)">
+                    😄 Joke/Hero Colors
+                    <span class="toggle-icon">▼</span>
+                </h3>
+                <div class="section-content">
+                    <div class="color-grid">
+                        <div class="color-control">
+                            <label>Punchline</label>
+                            <div class="color-input-group">
+                                <input type="color" id="joke-punchline-color" class="color-picker" value="#8B4513">
+                                <input type="text" id="joke-punchline-color-text" class="color-input" value="#8B4513">
+                            </div>
+                        </div>
+                        <div class="color-control">
+                            <label>Dot/Glow</label>
+                            <div class="color-input-group">
+                                <input type="color" id="joke-dot-color" class="color-picker" value="#ffd93d">
+                                <input type="text" id="joke-dot-color-text" class="color-input" value="#ffd93d">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Shadow Colors Section -->
             <div class="control-section">
                 <h3 onclick="toggleSection(this.parentElement)">
@@ -1723,6 +1749,11 @@
                         --solid-warning: ${document.getElementById('background-light').value};
                         --solid-light: ${document.getElementById('background-light').value};
                         --solid-error: ${document.getElementById('background-light').value};
+                        
+                        /* Joke Bubble Colors */
+                        --joke-bubble-background: ${document.getElementById('white').value};
+                        --joke-punchline-color: ${document.getElementById('joke-punchline-color').value};
+                        --joke-dot-color: ${document.getElementById('joke-dot-color').value};
                         
                         /* Gradients */
                         --gradient-primary: linear-gradient(135deg, ${document.getElementById('gradient-primary-start').value} 0%, ${document.getElementById('gradient-primary-end').value} 100%);
