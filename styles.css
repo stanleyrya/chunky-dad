@@ -666,13 +666,21 @@ header {
 .event-compact-grid {
     display: flex;
     gap: 1rem;
-    padding: 0.5rem 0 0.5rem 10%;
+    padding: 0.5rem 0;
     min-width: fit-content;
-    transform: translateX(5%);
 }
 
 .event-compact-grid {
     gap: 1rem;
+}
+
+/* Spacer cards for proper slider spacing */
+.spacer-card {
+    flex-shrink: 0;
+    width: 80px; /* Match the width of regular cards */
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
 }
 
 
@@ -1065,6 +1073,15 @@ header {
     .event-compact-card .event-emoji {
         font-size: 1.5rem;
     }
+
+    /* Mobile spacer card adjustments */
+    .city-compact-card.spacer-card {
+        width: 70px;
+    }
+
+    .event-compact-card.spacer-card {
+        width: 60px;
+    }
     
     /* Content Mobile Styles */
     .city-compact-card .city-name {
@@ -1087,8 +1104,7 @@ header {
     /* Grid Mobile Styles */
     .city-compact-grid,
     .event-compact-grid {
-        padding: 0.5rem 0 0.5rem 8%;
-        transform: translateX(4%);
+        padding: 0.5rem 0;
     }
     
     .event-compact-grid {
@@ -3818,6 +3834,22 @@ footer {
     color: rgba(255, 255, 255, 0.7) !important;
 }
 
+/* Tablet layout - partial responsive improvements */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .city-scroll-container,
+    .event-scroll-container {
+        display: flex;
+        justify-content: center;
+    }
+
+    .city-compact-grid,
+    .event-compact-grid {
+        justify-content: center;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+}
+
 /* Desktop and large screens - ensure full information is always shown */
 @media (min-width: 1025px) {
     /* Always show full event information on desktop */
@@ -3878,6 +3910,27 @@ footer {
         padding: 0.6rem 1.2rem;
         gap: 0.6rem;
         border-radius: 24px;
+    }
+
+    /* Improved slider layout for desktop */
+    .city-scroll-container,
+    .event-scroll-container {
+        display: flex;
+        justify-content: center;
+        overflow-x: visible;
+    }
+
+    .city-compact-grid,
+    .event-compact-grid {
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Hide spacer cards on desktop since we don't need them */
+    .spacer-card {
+        display: none;
     }
 }
 

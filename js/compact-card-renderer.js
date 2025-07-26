@@ -30,6 +30,10 @@ class CompactCardRenderer {
         // Clear existing content
         this.container.innerHTML = '';
 
+        // Add left spacer for better spacing
+        const leftSpacer = this.createSpacerCard();
+        this.container.appendChild(leftSpacer);
+
         // Render each item
         items.forEach(item => {
             const card = this.createCard(item);
@@ -39,6 +43,10 @@ class CompactCardRenderer {
         // Add "More" card
         const moreCard = this.createMoreCard();
         this.container.appendChild(moreCard);
+
+        // Add right spacer for better spacing
+        const rightSpacer = this.createSpacerCard();
+        this.container.appendChild(rightSpacer);
 
         logger.componentLoad(this.type.toUpperCase(), `${this.type}s rendered successfully`, { count: items.length });
         
@@ -119,7 +127,7 @@ class CompactCardRenderer {
 
         const emoji = document.createElement('span');
         emoji.className = `${this.type}-emoji`;
-        emoji.textContent = this.type === 'city' ? '🌍' : '🎉';
+        emoji.textContent = this.type === 'city' ? '🌍' : '📅';
 
         emojiBox.appendChild(emoji);
         card.appendChild(emojiBox);
@@ -147,6 +155,18 @@ class CompactCardRenderer {
         }
 
         return card;
+    }
+
+    createSpacerCard() {
+        const spacer = document.createElement('div');
+        spacer.className = `${this.type}-compact-card spacer-card`;
+        spacer.style.opacity = '0';
+        spacer.style.pointerEvents = 'none';
+        spacer.style.minWidth = '1rem';
+        spacer.style.maxWidth = '1rem';
+        spacer.setAttribute('aria-hidden', 'true');
+        
+        return spacer;
     }
 }
 
