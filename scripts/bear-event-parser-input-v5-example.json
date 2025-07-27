@@ -1,0 +1,78 @@
+{
+  "config": {
+    "dryRun": true,
+    "preview": true,
+    "calendarSync": false,
+    "safetyMode": true,
+    "maxEvents": 100,
+    "timeout": 30000,
+    "retryAttempts": 3
+  },
+  "parsers": [
+    {
+      "name": "Furball NYC",
+      "parser": "furball",
+      "urls": [
+        "https://www.furball.nyc",
+        "https://www.furball.nyc/ticket-information",
+        "https://www.furball.nyc/upcoming-schedule"
+      ],
+      "description": "Joe Fiore's infamous furry dance parties across multiple cities"
+    },
+    {
+      "name": "Rockbar NYC",
+      "parser": "rockbar",
+      "urls": ["https://www.rockbarnyc.com/calendar"],
+      "allowlist": ["rockstrap", "underbear", "bears night out", "leather night"],
+      "description": "NYC leather/bear bar with regular themed nights"
+    },
+    {
+      "name": "Bearracuda",
+      "parser": "bearracuda",
+      "urls": ["https://bearracuda.com/#events"],
+      "description": "Multi-city bear dance parties and events"
+    },
+    {
+      "name": "Megawoof America",
+      "parser": "megawoof",
+      "urls": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
+      "description": "Bear events across America via Eventbrite"
+    },
+    {
+      "name": "SF Eagle",
+      "parser": "sf-eagle",
+      "urls": ["https://sf-eagle.com/events/"],
+      "description": "San Francisco's legendary leather/bear bar"
+    },
+    {
+      "name": "Eagle NY",
+      "parser": "eagle-ny",
+      "urls": ["https://www.eagle-ny.com/events/"],
+      "description": "New York's Eagle Bar events and parties"
+    },
+    {
+      "name": "Precinct DTLA",
+      "parser": "precinct",
+      "urls": ["https://www.precinctdtla.com/events/"],
+      "description": "Los Angeles downtown leather/bear venue"
+    }
+  ],
+  "notes": {
+    "version": "V5 - Real Website Analysis",
+    "created": "2025-01-27",
+    "features": [
+      "Based on actual HTML structures from uploaded website examples",
+      "Enhanced safety features with dry run and preview modes",
+      "Real venue addresses and enhanced keyword detection",
+      "Support for all major bear event websites",
+      "Comprehensive reporting and logging"
+    ],
+    "safety": {
+      "dryRun": "When true, no calendar changes will be made",
+      "preview": "Shows detailed preview of what operations would be performed",
+      "calendarSync": "Must be explicitly enabled to allow calendar modifications",
+      "safetyMode": "Enables all safety features and protections"
+    },
+    "usage": "Copy this file to 'bear-event-parser-input.json' and modify as needed"
+  }
+}

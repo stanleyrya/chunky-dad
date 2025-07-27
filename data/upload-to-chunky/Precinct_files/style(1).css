@@ -1,0 +1,753 @@
+/*
+Theme Name: Precinct DTLA
+Description: This is a custom child theme for Precinct DTLA
+Theme URI:   https://johnmakesthings.com
+Author: John Constantine
+Author URI:  https://johnmakesthings.com
+Template: salient
+Version: 1.0
+*/
+ 
+ .page-id-6656 .gv-widget-search .gv-search-box {
+     min-width: 100%;
+ }
+ 
+.eael-custom-radio-checkbox input[type="checkbox"] {
+   vertical-align: middle !important;
+}
+
+.gfield_consent_label {margin: 0px 0px 0px 10px;}
+
+@media only screen and (min-width: 1001px) {
+body[data-header-format=left-header] #header-outer[data-lhe=animated_underline] #top nav>ul>li:not([class*=button_]).current-menu-item>a {
+    color: #000000 !important;
+    }
+
+    body[data-header-format=left-header] #header-outer[data-lhe=animated_underline] #top nav>ul>li:not([class*=button_])>a:hover {
+          color: #000000 !important;
+  
+    }
+}
+
+.drink-descriptions {
+font-size: 12px !important;
+    color: #fff !important;
+}
+
+#input_9_80 .gfield-choice-input+label {
+
+    vertical-align: top;
+}
+
+.review a {
+color: #000;}
+
+.review td {
+    line-height: 26px !important;
+}
+
+.review   td strong {
+    margin: 0 0 0 0;
+    padding: 0 0 0 10px;
+}
+
+.review  font{
+    font-size: 14px !important;
+}
+
+/* FONTS */
+@import url('https://fonts.googleapis.com/css?family=Montserrat:300,300i,400,400i,700,700i,900,900i&amp;display=swap');
+@import url("https://use.typekit.net/nfl8laa.css");
+@import url("https://use.typekit.net/nfl8laa.css");
+body[data-header-format="left-header"] #header-outer[data-lhe="animated_underline"] #top nav > ul > li:not([class * ="button_"]) > a:hover, body[data-header-format="left-header"] #header-outer[data-lhe="animated_underline"] #top nav > ul > li:not([class * ="button_"]).open-submenu > a, body[data-header-format="left-header"] #header-outer[data-lhe="animated_underline"] #top nav > ul > li:not([class * ="button_"]).current_page_item > a, body[data-header-format="left-header"] #header-outer[data-lhe="animated_underline"] #top nav > ul > li:not([class * ="button_"]).current-menu-item > a, body[data-header-format="left-header"] #header-outer[data-lhe="animated_underline"] #top nav > ul > li:not([class * ="button_"]).current-menu-ancestor > a {
+    color: #000 !important;
+}
+
+@media (max-width: 550px) {
+
+    p.desc_trig_outter {
+        padding-bottom: 0px;
+    }
+
+.evo_lightboxes .evo_pop_body .evcal_evdata_row .evcal_evdata_cell .evo_custom_content p {
+    padding-bottom: 0px !important;
+}
+
+.evo_pop_body .evcal_evdata_cell_title {
+    padding-left: 30px;
+    padding-top: 0px !important;
+}
+
+.evofc_months_strip.names .evo_fc_day{
+    padding:10px 2px 10px 2px;
+    }
+.evofc_months_strip.names .evo_fc_day.has_events span.day_evs {
+    flex-direction: inherit
+            }
+.evofc_months_strip.names .eventon_fc_days .evo_fc_day.has_events span i {
+    height: inherit;
+    width: inherit;
+    border-radius: 4px;
+    text-indent: inherit;
+    font-size: 7px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0px 5px 0px 5px;
+    margin: 1px 0px 1px 0px;
+            }
+
+.eventon_fc_days .evo_fc_day span.evo_day_in {
+   /* flex-wrap: wrap; */
+   justify-content: normal;
+   align-items: center;
+   /* align-content: center; */
+   font-size: 10px;
+   /* vertical-align: top; */
+   height: 70px;
+}
+
+    .evofc_months_strip.names .evo_fc_day {
+    padding: 10px 2px 10px 2px;
+}
+
+}
+#evcal_calendar_288 .calendar_header {
+    display: none;
+}
+
+.evo_metarow_directimg img {
+min-height: auto !important;
+}
+
+.evocard_row .evcal_evdata_icons i, .evocard_row .evcal_evdata_custometa_icons i {
+color: #000;
+}
+
+.eventon_full_description .eventon_desc_in,
+.eventon_full_description .eventon_desc_in p,
+.eventon_list_event .evo_eventcard_time_t,
+.evo_custom_content p {font-size: 13px !important;line-height: 23px !important;color: #000 !important;}
+
+.evo_lightboxes .evcal_evdata_cell p a {
+    color: #000000 !important;
+}
+
+@media (max-width: 768px) {
+.evocard_row, .evocard_row.L {
+
+padding-bottom: 0px;
+}
+}
+
+@media (max-width: 568px) {
+.eventon_events_list .eventon_list_event .evcal_desc, .evo_pop_body .evcal_desc, #page-content p.evcal_desc {
+    flex-basis: inherit;
+} 
+}
+
+.evo_lightbox {
+background-color: rgba(0, 0, 0, 0.74);
+}
+
+.evcal_evdata_row .evcal_evdata_cell h3 {
+    padding-bottom: 0px;
+}
+
+.eventon_events_list .eventon_list_event .desc_trig, .evopop_top {
+    background-color: #0000000 !important;
+}
+
+.eventon_events_list .eventon_list_event .evoet_cx, .evo_pop_body .evoet_cx {
+margin-right: 25px;
+}
+
+.evcal_cblock .evo_start em.month, .evcal_cblock .evo_end em.month, .evcal_cblock .evo_start em.day {
+    font-family: alternate-gothic-atf, sans-serif !important;
+    font-size: 22px;
+    text-align: center;
+}
+
+.evoFC_tip {
+    display: none !important;
+}
+
+.eventon_events_list .eventon_list_event .evoet_cx span.evcal_desc2, .evo_pop_body .evoet_cx span.evcal_desc2 {
+    font-size: 30px !important;
+    letter-spacing: .04em;
+    color: #fff;
+   
+
+}
+
+.eventon_events_list .eventon_list_event .evoet_cx .evcal_time::before, .evo_pop_body .evoet_cx em.evcal_time::before {top: 0px;/* padding: 0 27px 0 0px; */left: px;
+    
+}
+
+.eventon_events_list .eventon_list_event .evoet_cx .evcal_time, .evo_pop_body .evoet_cx .evcal_time {
+    font-size: 16px !important;
+}
+
+.eventon_events_list .eventon_list_event .evoet_cx .evcal_time, .evo_pop_body .evoet_cx .evcal_time {
+    font-style: normal;
+    padding-left: none;
+    margin-right: 5px;
+    position: relative;
+}
+
+.ajde_evcal_calendar .calendar_header p, .ajde_evcal_calendar .evcal_evdata_row .evcal_evdata_cell h3.evo_h3, .evo_lightbox_content h3.evo_h3, body .ajde_evcal_calendar h4.evo_h4, .evo_content_in h4.evo_h4, .evo_metarow_ICS .evcal_evdata_cell p a, .eventon_events_list .eventon_list_event .evoet_cx span.evcal_desc2, .eventon_list_event .evoet_cx span.evcal_event_title, .evoet_cx span.evcal_desc2, .evo_metarow_ICS .evcal_evdata_cell p a, .evo_metarow_learnMICS .evcal_col50 .evcal_evdata_cell p a, .eventon_list_event .evo_metarow_locImg p.evoLOCtxt .evo_loc_text_title, .evo_clik_row .evo_h3, .evotax_term_card .evotax_term_details h2, .evotax_term_card h3.evotax_term_subtitle, .ajde_evcal_calendar .evo_sort_btn, .eventon_main_section #evcal_cur, .ajde_evcal_calendar .calendar_header p.evo_month_title, .ajde_evcal_calendar .eventon_events_list .evcal_month_line p, .eventon_events_list .eventon_list_event .evcal_cblock, .ajde_evcal_calendar .evcal_month_line, .eventon_event .event_excerpt_in h3, .ajde_evcal_calendar .evo_footer_nav p.evo_month_title, .evo_eventon_live_now_section h3, .evo_tab_view .evo_tabs p.evo_tab, .evo_metarow_virtual .evo_live_now_tag, .evofc_months_strip.names .eventon_fc_days .evo_fc_day.has_events span i {
+    font-family: alternate-gothic-atf, sans-serif !important;
+}
+
+.eventon_fc_daynames .evo_fc_day {
+    color: #7d7d7d;
+    font-family: alternate-gothic-atf, sans-serif !important;
+    font-size: 22px !important;
+    font-weight: 500;
+}
+
+.evofc_months_strip.names .eventon_fc_days .evo_fc_day.has_events span i {
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 14px;
+    background: #000000 !important;
+    text-align: center;
+}
+
+.eventon_fc_days .evo_fc_day {
+    color: #b6b5b5;
+}
+
+.eventon_fullcal .eventon_fc_days .evo_fc_day.on_focus {
+    color: #000000 !important;
+}
+
+#slide-out-widget-area .secondary-header-text, body #slide-out-widget-area .inner-wrap .inner .nectar-header-text-content {
+    background: none !important;
+    padding: 0px 0px !important;
+    font-family: nimbus-sans, sans-serif !important;
+    text-transform: uppercase;
+    font-size: 12px !important;
+    line-height: 18px;
+}
+
+#slide-out-widget-area .inner .off-canvas-menu-container li a {
+    font-family: alternate-gothic-atf, sans-serif !important;
+    text-transform: uppercase;
+}
+
+#header-outer .span_3 {
+    float: none !important;
+}
+
+#header-outer #logo img {
+    margin: 0 auto;
+}
+
+.bold, strong, b {
+    font-family: inherit;
+    font-weight: 800;
+}
+
+.diet, .vegan {
+    color: #379828;
+}
+
+.vegan {
+    font-weight: 900;
+}
+
+.menu-section h4 {
+    font-size: 36px;
+    letter-spacing: 0;
+    font-weight: 600;
+}
+
+.nectar-header-text-content {
+    padding: 0 10px;
+    font-size: 16px !important;
+    font-weight: 500;
+}
+
+.page-id-690 .fa-circle-plus:before, .fa-plus-circle:before {
+    /* font-family: "Font Awesome 5 Pro"; */
+    /* font-weight: 900; */
+    content: "\f35a" !important;
+}
+
+.toggle h3 a i {
+    color: #000;
+}
+
+.page-id-690 .fa-circle-minus:before, .fa-minus-circle:before {
+    content: "\f358" !important;
+}
+
+div[data-style="default"] .toggle h3 a, div[data-style="default"] .toggle h3 {
+    font-family: alternate-gothic-atf, sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.price {
+    margin: 0px 0px 0px 5px;
+    font-size: 14px;
+    /* color: #fff; */
+    padding: 5px;
+    /* background: #3d3d3d; */
+    border-radius: 100%;
+    font-weight: 800;
+}
+
+body {
+    font-family: nimbus-sans, sans-serif;
+    font-size: 18px;
+}
+
+h1, h4 {
+    font-family: alternate-gothic-atf, sans-serif;
+}
+
+h4 {
+    font-weight: 800;
+    letter-spacing: .05em;
+    /* padding-bottom: 25px; */
+}
+
+h3 {
+    font-family: nimbus-sans-extended, sans-serif;
+    font-weight: 700;
+    font-style: normal;
+    margin: 0 0 20px 0 !important;
+}
+
+h1 {
+    font-size: 72px;
+}
+
+.sf-menu li {
+    font-family: alternate-gothic-atf, sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+#top nav > ul > li > a, .pull-left-wrap > ul > li > a {
+    font-size: 19px;
+}
+
+#header-outer.transparent #top nav > ul > li > a, #header-outer.transparent #top nav > .sf-menu > li > a {
+    opacity: 1 !important;
+}
+
+@font-face {
+    font-family: 'Cosmo';
+    src: url('fonts/cosmo.eot?#iefix') format('embedded-opentype'), url('fonts/cosmo.otf') format('opentype'), url('fonts/cosmo.woff') format('woff'), url('fonts/cosmo.ttf') format('truetype'), url('fonts/cosmo.svg#neontubes') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: alternate-gothic-atf, sans-serif;
+    src: url('fonts/neontubes.eot?#iefix') format('embedded-opentype'), url('fonts/neontubes.otf') format('opentype'), url('fonts/neontubes.woff') format('woff'), url('fonts/neontubes.ttf') format('truetype'), url('fonts/neontubes.svg#neontubes') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+h2 {
+    font-family: alternate-gothic-atf, sans-serif;
+    line-height: 34px;
+    padding-bottom: 25px;
+}
+
+@font-face {
+    font-family: 'Subway';
+    src: url('fonts/subway.eot?#iefix') format('embedded-opentype'), url('fonts/subway.woff') format('woff'), url('fonts/subway.ttf') format('truetype'), url('fonts/subway.svg#subway') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* ROWS */
+.light-gray .row-bg-overlay {
+    background-color: #dcdcdc;
+}
+
+.medium-gray .row-bg-overlay {
+    background-color: #333333;
+}
+
+.dark-gray .row-bg-overlay {
+    background-color: #262626;
+}
+
+/* GENERAL */
+body.material #slide-out-widget-area-bg.slide-out-from-right {
+    background-color: #333333 !important;
+}
+
+body[data-slide-out-widget-area-style="slide-out-from-right"]:not([data-header-color="custom"]).material .slide_out_area_close:before {
+    background-color: #e4d329 !important;
+}
+
+body[data-slide-out-widget-area-style="slide-out-from-right"] .ocm-effect-wrap {
+    -webkit-box-shadow: 0 0 25px 5px rgba(0, 0, 0, .5);
+    box-shadow: 0 0 25px 5px rgba(0, 0, 0, .5);
+}
+
+/* MENU */
+.page #header-outer.transparent #top nav > ul > li > a:hover, #header-outer.transparent #top nav > .sf-menu > li > a:hover {
+    color: #e4d329 !important;
+}
+
+#top nav ul li a {
+    /* color: #262626; */
+}
+
+#header-outer[data-lhe="animated_underline"] #top nav > ul > li > a:after {
+    border-color: #e4d329 !important;
+}
+
+.page #header-outer:not(.transparent) #social-in-menu a i:after {
+    color: #e4d329 !important;
+}
+
+.page #top nav ul .slide-out-widget-area-toggle a:hover span {
+    color: #e4d329 !important;
+}
+
+.food {
+    top -85px;
+}
+
+.nectar-button {
+    font-weight: 800 !important;
+    font-family: 'Montserrat', sans-serif !important;
+    letter-spacing: 1px;
+}
+
+body .nectar-button.large.see-through, body .nectar-button.large.see-through-2, body .nectar-button.large.see-through-3 {
+    border: 3px solid #ffffff !important;
+}
+
+.material .wpb_row, .material .wpb_content_element {
+    margin-bottom: 0px !important;
+}
+
+.paint-border {
+    transform: translateY(-75%) !important;
+}
+
+.paint-border:after {
+    width: 100%;
+    display: block;
+    z-index: 10;
+    margin-bottom: -7%;
+}
+
+@media only screen and (min-width: 1921px) {
+    .paint-border .center img.img-with-animation {
+        width: -webkit-fill-available;
+    }
+}
+
+body[data-ajax-transitions] .row-bg-wrap[data-bg-animation="zoom-out-slow"] .inner-wrap.using-image, .column-image-bg-wrap[data-bg-animation="zoom-out-slow"] .inner-wrap {
+    -webkit-transform: scale(1.35);
+    transform: scale(1.35);
+    -webkit-transition: transform 40s cubic-bezier(0.1, 0.2, .7, 1) !important;
+    transition: transform 40s cubic-bezier(0.1, 0.2, .7, 1) !important;
+}
+
+.testimonial_slider .image-icon, .nectar_single_testimonial .image-icon {
+    font-family: Georgia, serif !important;
+    font-weight: 800;
+    font-size: 50px;
+    border-radius: 100px;
+    margin-bottom: 15px !important;
+    border: 0px solid rgba(0, 0, 0, 0.13) !important;
+}
+
+.testimonial_slider blockquote p {
+    font-family: alternate-gothic-atf, sans-serif;
+    font-weight: 500;
+    font-size: 30px;
+}
+
+span.testimonial-name {
+    font-weight: 800;
+    font-family: alternate-gothic-atf, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .15em;
+}
+
+.eventon_events_list .eventon_list_event.no_events {
+    display: none;
+}
+
+.hero .wpb_row .row-bg, .full-width-section .row-bg {
+    -webkit-filter: grayscale(100%);
+    /* Safari 6.0 - 9.0 */
+    filter: grayscale(100%);
+}
+
+#footer-outer[data-cols="1"][data-disable-copyright="false"] #copyright {
+    padding: 10px 10px 10px 10px !important;
+    color: #ffffff !important;
+    font-family: 'Subway';
+    text-transform: uppercase !important;
+    letter-spacing: .05em;
+    font-size: 16px;
+}
+
+.centerbtn {
+    margin: 0 auto;
+    display: block;
+}
+
+@media only screen and (min-width: 641px) {
+    .submitas {
+        text-align: center;
+    }
+}
+
+.page-template-template-ygmsubmit .container-wrap {
+    background-color: #090b16;
+}
+
+.page-template-template-ygmsubmit .gform_wrapper .gfield_required {
+    color: #cdff00;
+    margin-left: 4px;
+}
+
+.page-template-template-ygmsubmit .gform_wrapper .top_label .gfield_label {
+    font-family: termina, sans-serif;
+    font-weight: 700;
+    font-style: normal;
+    font-size: 20px;
+}
+
+.page-template-template-ygmsubmit .gform_wrapper .gfield_radio li label {
+    font-family: termina, sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 18px;
+}
+
+.page-template-template-ygmsubmit .gform_wrapper input:not([type=radio]):not([type=checkbox]):not([type=submit]):not([type=button]):not([type=image]):not([type=file]) {
+    font-family: termina, sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 18px;
+}
+
+.page-template-template-ygmsubmit[data-form-submit="regular"] input[type=submit] {
+    border: 3px solid #cdff00;
+    background-color: inherit !important;
+    color: #cdff00;
+    font-family: termina, sans-serif;
+    font-weight: 700;
+    font-style: normal;
+    font-size: 20px !important;
+}
+
+.page-template-template-ygmsubmit .container-wrap .span_12.light input[type="submit"]:hover {
+    background-color: #cdff00 !important;
+    color: #000000 !important;
+    opacity: 1 !important;
+}
+
+@media only screen and (min-width: 641px) {
+    .page-template-template-ygmsubmit .gform_wrapper .top_label input.medium, .gform_wrapper .top_label select.medium {
+        width: calc(100% - 8px) !important;
+    }
+}
+
+.page-template-template-ygmsubmit h3 {
+    font-family: 'Cosmo';
+    color: #cdff00;
+    font-size: 30px;
+    letter-spacing: 2px;
+}
+
+.page-template-template-ygmsubmit h2 {
+    font-family: termina, sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 30px;
+}
+
+.page-template-template-ygmsubmit h5 {
+    font-family: termina, sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 16px;
+    line-height: inherit;
+}
+
+.page-template-template-ygmsubmit h5 a {
+    color: #cdff00;
+    position: relative;
+    display: inline-block;
+}
+
+.page-template-template-ygmsubmit h5 a:hover {
+    color: #ffffff;
+}
+
+.page-template-template-ygmsubmit h5 a:before {
+}
+
+.page-template-template-ygmsubmit h5 a:hover:before {
+}
+
+.custom-underline, .custom-underline:hover, .custom-underline:focus, .custom-underline:active {
+    /* color: #fff; */
+    text-decoration: none;
+}
+
+.custom-underline::after {
+    content: "";
+    position: absolute;
+}
+
+a.custom-underline:after {
+    bottom: 0;
+    height: 1px;
+    width: 0%;
+    left: 0;
+    background-color: rgb(205, 255, 0);
+    transition: 0.2s ease all .2s;
+}
+
+a.custom-underline:hover:after {
+    width: 100%;
+    transition: 0.2s ease all;
+    right: 0;
+}
+
+.page-template-template-ygmsubmit .nectar-3d-transparent-button {
+    margin: 0 auto;
+    display: block;
+}
+
+.deadline .nectar-milestone {
+    font-family: termina, sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: .09em;
+}
+
+.deadline .nectar-milestone .number {
+    font-family: termina, sans-serif;
+}
+
+.page-template-template-ygmsubmit #header-outer {
+    display: none !important;
+}
+
+@media only screen and (max-width: 765px) {
+    .page-id-486 h3 {
+        font-size: 20px;
+    }
+}
+
+.talent {
+    padding: 10px 0 10px 0;
+}
+
+.talent h4 {
+    font-weight: 800;
+    letter-spacing: .05em;
+    padding-bottom: 0px;
+    font-family: termina, sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: .09em;
+}
+
+.flowplayer a {
+    background-image: none !important;
+}
+
+#header-outer .sf-menu li ul li a {
+    font-size: 24px;
+    line-height: 34px;
+    transition: none;
+    letter-spacing: 0;
+}
+
+.evocard_box {
+overflow: inherit;
+}
+
+.ftimage{
+    background-color: inherit !important;
+}
+
+
+
+.page-id-6656 .gv-table-view tr td:before{
+    font-weight: 800!important;
+    color: #000;
+}
+
+.page-id-6656 caption, td, th {
+    color: #000;
+    font-size: 12px !important;
+    line-height: 22px;
+}
+
+@media (max-width: 575.98px) {
+    .gv-table-view tr td:before {
+width: auto !important;
+}
+}
+
+.page-id-6656 .gv-field-label {
+    font-weight: 900;
+    
+}
+
+.page-id-6656 .gv-widget-search .gv-search-box.gv-search-box-submit .gv-search-button {
+    background-color: #000 !important;
+}
+
+.page-id-6656 .gv-is-search .gv-search-clear{
+    padding: 7px 11px !important;
+    color: #000;
+}
+
+.page-id-6656 a.gv-sort.gv-icon-caret-up-down {
+    color: #000;
+}
+
+.page-id-6656 .page-numbers {
+    color: #000 !important;
+}
+
+.page-id-6656 .page-numbers .current {
+    background: #fad142 !important;
+}
+
+.page-id-6656 .page-numbers a:hover {
+      background: #fad142 !important;
+}
+
+img#input_7_1_resetbutton {
+    background-color: rgba(255, 255, 255, 1); /* Change the color and opacity as needed */
+    float: left !important;
+    margin: 0px !important;
+}
+
+div#input_7_1_toolbar {
+    margin: 5px 0px 0px 0px !important;
+}
+
+div#field_7_30 p {
+    color: #fff;
+    font-size: 17px;
+}
+
+.gform_wrapper.gravity-theme .gfield_validation_message, .gform_wrapper.gravity-theme .validation_message {
+background: none !important;
+}
