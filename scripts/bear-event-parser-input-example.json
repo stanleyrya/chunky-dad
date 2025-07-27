@@ -33,6 +33,10 @@
   "config": {
     "notCheckedFlag": true,
     "hideUncheckedEvents": false,
-    "debugMode": true
+    "debugMode": true,
+    "dryRun": true,
+    "preview": true,
+    "calendarSync": false,
+    "safetyMode": true
   }
 }

@@ -27,6 +27,11 @@ class BearEventScraperV2 {
         this.LOG_FILE = "bear-event-scraper-v2-logs.txt";
         this.PERFORMANCE_FILE = "bear-event-scraper-v2-performance.csv";
         
+        // Safety modes
+        this.DRY_RUN = true; // DEFAULT TO DRY RUN FOR SAFETY
+        this.PREVIEW_MODE = true; // Show what would be done
+        this.CALENDAR_SYNC_ENABLED = false; // Disabled by default
+        
         // Enhanced bear keywords (combining both implementations)
         this.bearKeywords = [
             // Original keywords
@@ -99,7 +104,15 @@ class BearEventScraperV2 {
     async loadInput() {
         try {
             const input = this.jsonManager.read(this.INPUT_FILE);
-            this.logger.log("Input configuration loaded successfully");
+            
+            // Load safety settings from config
+            if (input.config) {
+                this.DRY_RUN = input.config.dryRun !== false;
+                this.PREVIEW_MODE = input.config.preview !== false;
+                this.CALENDAR_SYNC_ENABLED = input.config.calendarSync === true;
+            }
+            
+            this.logger.log(`Configuration loaded - DRY_RUN: ${this.DRY_RUN}, PREVIEW: ${this.PREVIEW_MODE}, CALENDAR_SYNC: ${this.CALENDAR_SYNC_ENABLED}`);
             return input;
         } catch (error) {
             this.logger.log(`No input file found, using example configuration: ${error.message}`);
@@ -579,8 +592,21 @@ class BearEventScraperV2 {
             sources: [],
             totalEvents: 0,
             byCity: {},
-            errors: []
+            errors: [],
+            safetyMode: {
+                dryRun: this.DRY_RUN,
+                preview: this.PREVIEW_MODE,
+                calendarSync: this.CALENDAR_SYNC_ENABLED
+            }
         };
+        
+        // Log safety status
+        this.logger.log("=".repeat(60));
+        this.logger.log(`SAFETY MODE STATUS:`);
+        this.logger.log(`- DRY RUN: ${this.DRY_RUN ? 'ENABLED (No calendar changes)' : 'DISABLED'}`);
+        this.logger.log(`- PREVIEW: ${this.PREVIEW_MODE ? 'ENABLED' : 'DISABLED'}`);
+        this.logger.log(`- CALENDAR SYNC: ${this.CALENDAR_SYNC_ENABLED ? 'ENABLED' : 'DISABLED'}`);
+        this.logger.log("=".repeat(60));
         
         for (const parserConfig of input.parsers) {
             this.logger.log(`Processing ${parserConfig.name}`);

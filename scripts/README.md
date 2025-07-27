@@ -315,22 +315,27 @@ All dependencies are included in the script file.
 
 ### Version Comparison Summary
 
-| Feature | Original | V2 | V3 |
-|---------|----------|-----|-----|
-| HTML Parsing | Basic | Enhanced with JSON-LD | Precise per-site patterns |
-| Date Parsing | Standard | Advanced + relative | Specific formats (JULY 25, 2025) |
-| City Detection | Basic | Expanded | Expanded + location parsing |
-| Furball Support | Generic | Better | Precise h2/h3 structure |
-| Rockbar Support | Generic | Keyword filtering | h3 + div pattern, detail pages |
-| Eventbrite | Basic | Good | Structured data + fallbacks |
-| Performance | Basic logging | Detailed metrics | Detailed metrics |
-| Accuracy | Medium | Good | Excellent |
+| Feature | Original | V2 | V3 | Safe |
+|---------|----------|-----|-----|------|
+| HTML Parsing | Basic | Enhanced with JSON-LD | Precise per-site patterns | Same as V3 |
+| Date Parsing | Standard | Advanced + relative | Specific formats (JULY 25, 2025) | Same as V3 |
+| City Detection | Basic | Expanded | Expanded + location parsing | Same as V3 |
+| Furball Support | Generic | Better | Precise h2/h3 structure | Same as V3 |
+| Rockbar Support | Generic | Keyword filtering | h3 + div pattern, detail pages | Same as V3 |
+| Eventbrite | Basic | Good | Structured data + fallbacks | Same as V3 |
+| Performance | Basic logging | Detailed metrics | Detailed metrics | Detailed metrics |
+| Accuracy | Medium | Good | Excellent | Excellent |
+| Safety Features | ✅ Added | ✅ Added | ✅ Added | ✅ Enhanced reporting |
+| Dry Run Mode | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| Preview Mode | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes + detailed report |
 
 ## Safety and Testing
 
+**All versions (Original, V2, V3, and Safe) now include safety features!**
+
 ### Safe Mode Configuration
 
-The SAFE version uses these config options:
+All versions use these config options:
 ```json
 {
   "config": {
@@ -354,11 +359,16 @@ To enable calendar sync (USE WITH CAUTION):
 
 ### Testing Workflow
 
-1. Start with `bear-event-scraper-safe.js`
+1. Choose any version to test (all have safety features enabled by default)
 2. Run with default settings to see parsed events
-3. Review the safety report to understand what would happen
+3. Compare results between versions:
+   - Original: Basic parsing
+   - V2: Enhanced with structured data
+   - V3: Precise HTML patterns
+   - Safe: Same as V3 with extra safety reporting
 4. Check the generated JSON files for accuracy
-5. Only enable calendar sync after validating results
+5. Review logs to see what each version found
+6. Only enable calendar sync after validating results
 
 ## For Future AI Agents
 
