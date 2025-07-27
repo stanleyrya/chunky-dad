@@ -1,0 +1,83 @@
+{
+  "sources": [
+    {
+      "name": "Furball NYC",
+      "city": "nyc",
+      "urls": [
+        "https://www.furball.nyc",
+        "https://www.furball.nyc/ticket-information",
+        "https://www.furball.nyc/upcoming-schedule"
+      ],
+      "alwaysBear": true,
+      "description": "NYC's premier bear dance party - all events are bear-related"
+    },
+    {
+      "name": "Rockbar NYC",
+      "city": "nyc",
+      "url": "https://www.rockbarnyc.com/calendar",
+      "allowlist": ["rockstrap", "underbear", "bear happy hour", "woof"],
+      "requireKeywords": true,
+      "description": "Gay bar with regular bear events - filter by keywords"
+    },
+    {
+      "name": "Bearracuda",
+      "city": "multi",
+      "url": "https://bearracuda.com/#events",
+      "requireDetailPages": true,
+      "alwaysBear": true,
+      "description": "International bear dance party - events in multiple cities"
+    },
+    {
+      "name": "Megawoof",
+      "city": "multi",
+      "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+      "requireDetailPages": true,
+      "alwaysBear": true,
+      "description": "Bear weekend events across the US"
+    },
+    {
+      "name": "The Eagle NYC",
+      "city": "nyc",
+      "url": "https://www.eaglenyc.com/events",
+      "allowlist": ["bear", "cub", "otter", "woof", "furball"],
+      "requireKeywords": true,
+      "description": "Leather bar with frequent bear events"
+    },
+    {
+      "name": "Precinct LA",
+      "city": "la",
+      "url": "https://www.precinctdtla.com/events",
+      "allowlist": ["bear", "cub", "bearracuda", "woof"],
+      "requireKeywords": true,
+      "description": "LA video bar with bear nights"
+    },
+    {
+      "name": "The SF Eagle",
+      "city": "sf",
+      "url": "https://www.sf-eagle.com/events",
+      "allowlist": ["bear", "cub", "otter", "leather bears"],
+      "requireKeywords": true,
+      "description": "Historic SF leather bar with bear events"
+    }
+  ],
+  "settings": {
+    "maxEventsPerSource": 50,
+    "daysToLookAhead": 90,
+    "logRetentionDays": 30,
+    "enablePerformanceLogging": true,
+    "enableDebugMode": true
+  },
+  "calendarMappings": {
+    "nyc": "chunky-dad-nyc",
+    "la": "chunky-dad-la",
+    "sf": "chunky-dad-sf",
+    "chicago": "chunky-dad-chicago",
+    "seattle": "chunky-dad-seattle",
+    "portland": "chunky-dad-portland",
+    "denver": "chunky-dad-denver",
+    "austin": "chunky-dad-austin",
+    "miami": "chunky-dad-miami",
+    "boston": "chunky-dad-boston",
+    "dc": "chunky-dad-dc"
+  }
+}
