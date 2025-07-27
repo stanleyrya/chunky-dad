@@ -1,0 +1,38 @@
+{
+  "parsers": [
+    {
+      "name": "Furball",
+      "parser": "furball",
+      "urls": [
+        "https://www.furball.nyc",
+        "https://www.furball.nyc/ticket-information",
+        "https://www.furball.nyc/upcoming-schedule"
+      ],
+      "notes": "Event information is split across three pages, merge and consolidate. Always different cities, always bear events."
+    },
+    {
+      "name": "Rockbar",
+      "parser": "rockbar",
+      "urls": ["https://www.rockbarnyc.com/calendar"],
+      "allowlist": ["rockstrap", "underbear"],
+      "notes": "Most events are not bear related. Always in NY at Rockbar. Only add events with bear/cub keywords or in allowlist."
+    },
+    {
+      "name": "Bearracuda",
+      "parser": "bearracuda",
+      "urls": ["https://bearracuda.com/#events"],
+      "notes": "Click each event and go to the next page to see special event information. Always different cities, always bear."
+    },
+    {
+      "name": "Megawoof",
+      "parser": "megawoof",
+      "urls": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
+      "notes": "Click each event and go to the next page to see special event information. Always different cities, always bear."
+    }
+  ],
+  "config": {
+    "notCheckedFlag": true,
+    "hideUncheckedEvents": false,
+    "debugMode": true
+  }
+}
