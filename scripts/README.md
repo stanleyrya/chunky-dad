@@ -32,6 +32,19 @@ The most accurate and feature-complete version:
 - **NEW: Preview Reports** - Shows exactly what calendar operations would happen
 - **NEW: Detailed simulation** - See which events would be created vs updated
 
+### 5. bear-event-scraper-v5.js (Real Website Analysis Version) **RECOMMENDED**
+The most comprehensive and accurate version based on actual uploaded website HTML:
+- **Enhanced Furball**: Dual parsing patterns for both `<h2>JULY 25, 2025</h2>` date headers and text-based listings
+- **Precise Rockbar**: Exact pattern matching for `<div class="fc-event-title">BEARS NIGHT OUT</div>` structure
+- **Improved Bearracuda**: Handles WordPress/Elementor structure with proper title extraction
+- **Accurate Megawoof**: Parses Eventbrite `data-event-location` attributes and event cards
+- **SF Eagle & Eagle NY**: Tribe Events calendar parsing with date/time extraction
+- **Precinct**: Event calendar parsing for LA venue
+- **Real venue defaults**: Actual addresses from website analysis
+- **Enhanced keywords**: Includes specific event names found in real websites
+- **Multiple safety layers**: Dry run, preview mode, and calendar sync controls
+- **Comprehensive reporting**: Detailed logs, performance metrics, and preview reports
+
 ## Overview
 
 The Bear Event Parser is a Scriptable script that:
@@ -155,6 +168,13 @@ The V4 script generates:
 - `bear-event-scraper-v4-performance.csv`: Performance metrics
 - `bear-event-scraper-v4-report-{date}.txt`: Detailed report with all event fields
 - `bear-event-scraper-v4-preview-{date}.txt`: Preview of calendar operations (when preview mode is on)
+
+The V5 script generates:
+- `bear-events-v5-{date}.json`: Comprehensive event data with real website parsing
+- `bear-event-scraper-v5-logs.txt`: Detailed execution logs with source-specific info
+- `bear-event-scraper-v5-performance.csv`: Performance metrics by parser
+- `bear-event-scraper-v5-report-{date}.txt`: Complete report with source breakdown
+- `bear-event-scraper-v5-preview-{date}.txt`: Detailed preview of calendar operations
 
 ## Parser Configurations
 
@@ -333,11 +353,18 @@ All dependencies are included in the script file.
 
 ### Which Version to Use?
 
-- **Use V4** (Recommended) if you want:
-  - Most accurate and feature-complete parsing
+- **Use V5** (RECOMMENDED) if you want:
+  - Most accurate parsing based on real website HTML analysis
+  - Support for all major bear event websites
+  - Enhanced safety features with multiple protection layers
+  - Comprehensive reporting and preview capabilities
+  - Real venue addresses and enhanced keyword detection
+  
+- **Use V4** if you want:
+  - Good parsing with theoretical website patterns
   - Full safety controls
   - Preview mode for testing
-  - Best overall performance
+  - Solid performance
   
 - **Use V3** if you want:
   - Good general-purpose parsing with safety features
@@ -352,20 +379,23 @@ All dependencies are included in the script file.
 
 ### Version Comparison Summary
 
-| Feature | Original | V2 | V3 |
-|---------|----------|-----|-----|
-| HTML Parsing | Basic | Enhanced with JSON-LD | Precise per-site patterns |
-| Date Parsing | Standard | Advanced + relative | Specific formats (JULY 25, 2025) |
-| City Detection | Basic | Expanded | Expanded + location parsing |
-| Furball Support | Generic | Better | Precise h2/h3 structure |
-| Rockbar Support | Generic | Keyword filtering | h3 + div pattern, detail pages |
-| Eventbrite | Basic | Good | Structured data + fallbacks |
-| Performance | Basic logging | Detailed metrics | Detailed metrics |
-| Accuracy | Medium | Good | Excellent |
-| Safety Features | ✅ Yes | ✅ Yes | ✅ Yes |
-| Dry Run Mode | ✅ Yes | ✅ Yes | ✅ Yes |
-| Preview Reports | ❌ No | ❌ No | ✅ Yes - detailed operation preview |
-| Calendar Simulation | ❌ No | ❌ No | ✅ Yes - shows what would happen |
+| Feature | Original | V2 | V3 | V4 | V5 |
+|---------|----------|-----|-----|-----|-----|
+| HTML Parsing | Basic | Enhanced with JSON-LD | Precise per-site patterns | Theoretical patterns | **Real website HTML** |
+| Date Parsing | Standard | Advanced + relative | Specific formats | JULY 25, 2025 | **Multiple real formats** |
+| City Detection | Basic | Expanded | Expanded + location | Good | **Venue-based + text** |
+| Furball Support | Generic | Better | Precise h2/h3 | Good | **Dual pattern matching** |
+| Rockbar Support | Generic | Keyword filtering | h3 + div pattern | Good | **Exact fc-event-title** |
+| Eventbrite | Basic | Good | Structured data | Good | **data-event-location** |
+| Eagle Support | ❌ No | ❌ No | ❌ No | ❌ No | **✅ SF & NY Eagles** |
+| Precinct Support | ❌ No | ❌ No | ❌ No | ❌ No | **✅ LA Precinct** |
+| Venue Addresses | ❌ No | ❌ No | ❌ No | Basic | **✅ Real addresses** |
+| Performance | Basic logging | Detailed metrics | Detailed metrics | Good | **Per-parser metrics** |
+| Accuracy | Medium | Good | Excellent | Very Good | **Outstanding** |
+| Safety Features | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | **✅ Multi-layer** |
+| Dry Run Mode | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| Preview Reports | ❌ No | ❌ No | ✅ Yes | ✅ Yes | **✅ Comprehensive** |
+| Calendar Simulation | ❌ No | ❌ No | ✅ Yes | ✅ Yes | **✅ Detailed preview** |
 
 ## Safety and Testing
 
@@ -412,40 +442,32 @@ To enable calendar sync (USE WITH CAUTION):
 ### Current State
 
 As of this implementation, we have:
-- 3 versions of the scraper (Original, V2, V3)
+- 5 versions of the scraper (Original, V2, V3, V4, V5)
 - All versions include safety features (dry run, preview mode)
-- V3 is the most complete with precise parsing + preview reports
-- Precise parsing patterns for Furball and Rockbar based on actual HTML analysis
-- Basic parsing for Bearracuda and Megawoof (needs improvement)
+- **V5 is the most complete** with real website HTML analysis + comprehensive parsing
+- Precise parsing patterns for all major bear event websites based on actual uploaded HTML
+- Support for Furball, Rockbar, Bearracuda, Megawoof, SF Eagle, Eagle NY, and Precinct
 
 ### Areas for Improvement
 
-1. **Bearracuda Parser**: 
-   - Needs actual HTML analysis like we did for Furball/Rockbar
-   - Current implementation is generic
-   - Should analyze the #events section structure
-
-2. **Megawoof/Eventbrite Parser**:
-   - Could be improved with better Eventbrite-specific parsing
-   - Should handle pagination if events span multiple pages
-   - Better extraction of multi-day events
-
-3. **Calendar Integration**:
-   - Currently only simulated in the Safe version
-   - Original V1 attempted real calendar sync but was incomplete
+1. **Calendar Integration**:
+   - Currently only simulated with preview reports
    - Need to implement actual Calendar API calls with proper error handling
+   - Add calendar sync functionality for production use
 
-4. **Additional Sources to Add**:
-   - The Eagle (various cities)
-   - Precinct LA
-   - SF Eagle
-   - Local bear bar websites
+2. **Additional Sources to Add**:
+   - Local bear bar websites in other cities
+   - International bear event sources
+   - Social media event sources (Instagram, Facebook)
+   - Ticketing platform integrations (Eventbrite search, etc.)
 
-5. **Enhanced Features**:
+3. **Enhanced Features**:
+   - Image extraction from event pages
+   - Ticket price parsing and availability checking
+   - Event category classification (dance party, leather, etc.)
+   - Recurring event pattern detection
    - Duplicate detection based on fuzzy matching
-   - Event image extraction
    - Ticket link preservation
-   - Price range parsing
    - Age restriction detection
 
 ### Code Architecture

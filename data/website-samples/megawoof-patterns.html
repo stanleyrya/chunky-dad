@@ -1,0 +1,35 @@
+<!-- Megawoof/Eventbrite Parsing Patterns -->
+<!-- Main pattern: data-event-location and data-event-category attributes -->
+<div data-event-id="1433358025439" data-event-paid-status="paid" data-event-location="Atlanta, GA" data-event-category="community">
+  <div class="event-card-image__aspect-container">
+    <img alt="MEGAWOOF ATLANTA" />
+  </div>
+  <h3>MEGAWOOF ATLANTA BEAR WEEKEND</h3>
+</div>
+
+<div data-event-id="1446957562019" data-event-paid-status="paid" data-event-location="Los Angeles, CA" data-event-category="music">
+  <div class="event-card-image__aspect-container">
+    <img alt="WOOF LA" />
+  </div>
+  <h3>WOOF LA DANCE PARTY</h3>
+</div>
+
+<div data-event-id="1381219547849" data-event-paid-status="paid" data-event-location="Denver, CO" data-event-category="community">
+  <div class="event-card-image__aspect-container">
+    <img alt="DENVER BEARS" />
+  </div>
+  <h3>DENVER BEAR WEEKEND</h3>
+</div>
+
+<!-- Alternative pattern with title attribute -->
+<a title="MEGAWOOF CHICAGO SUMMER PARTY" data-event-location="Chicago, IL" data-event-category="community">
+  <div>Event details...</div>
+</a>
+
+<!-- Key parsing elements:
+- Location in: data-event-location="City, State"
+- Category in: data-event-category="community|music"
+- Title in: title attribute or nearby h3/heading tags
+- Look for MEGAWOOF, WOOF, Bear keywords
+- Map location to city codes (Atlanta, GA -> atlanta)
+-->
