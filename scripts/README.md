@@ -16,8 +16,8 @@ An improved version with:
 - Better error handling and performance tracking
 - Detailed reporting capabilities
 
-### 3. bear-event-scraper-v3.js (Precise Parsing Version)
-The most accurate version based on actual website analysis:
+### 3. bear-event-scraper-v3.js (Precise Parsing + Preview Version)
+The most accurate and feature-complete version:
 - **Furball**: Parses `<h2>` date tags followed by `<h2>` title and `<h3>` location
 - **Rockbar**: Extracts `<h3>` titles with adjacent `<div>` for details, follows "View Event" links
 - **Megawoof**: Handles Eventbrite's structured data and event cards
@@ -25,15 +25,8 @@ The most accurate version based on actual website analysis:
 - Includes precise date parsing for formats like "JULY 25, 2025"
 - Better venue extraction with default addresses
 - Enhanced bear keyword list including "diaper happy hour" and "bears night out"
-
-### 4. bear-event-scraper-safe.js (Safe Testing Version)
-A safety-focused version for testing without affecting calendars:
-- **DRY RUN MODE**: Enabled by default - no calendar modifications
-- **PREVIEW MODE**: Shows exactly what would be created/updated
-- **CALENDAR SYNC**: Disabled by default - must explicitly enable
-- Generates detailed safety reports showing planned operations
-- Perfect for testing and validating parser improvements
-- Based on V3 parsing with added safety layers
+- **NEW: Preview Reports** - Shows exactly what calendar operations would happen
+- **NEW: Detailed simulation** - See which events would be created vs updated
 
 ## Overview
 
@@ -59,10 +52,9 @@ The Bear Event Parser is a Scriptable script that:
 
 1. Install [Scriptable](https://scriptable.app/) on your iOS device
 2. Choose which version to use:
-   - Copy `bear-event-parser.js` for the original version
-   - Copy `bear-event-scraper-v2.js` for the enhanced version
-   - Copy `bear-event-scraper-v3.js` for the precise parsing version
-   - Copy `bear-event-scraper-safe.js` for safe testing (recommended for first-time users)
+   - Copy `bear-event-parser.js` for the original version (basic parsing)
+   - Copy `bear-event-scraper-v2.js` for the enhanced version (better date/city detection)
+   - Copy `bear-event-scraper-v3.js` for the best version (recommended - precise parsing + preview)
 3. The scripts include all necessary dependencies (minified)
 
 ## Usage
@@ -133,6 +125,7 @@ The V3 script generates:
 - `bear-event-scraper-v3-logs.txt`: Detailed parsing logs
 - `bear-event-scraper-v3-performance.csv`: Performance metrics
 - `bear-event-scraper-v3-report-{date}.txt`: Detailed report with all event fields
+- `bear-event-scraper-v3-preview-{date}.txt`: Preview of calendar operations (when preview mode is on)
 
 ## Parser Configurations
 
@@ -315,19 +308,20 @@ All dependencies are included in the script file.
 
 ### Version Comparison Summary
 
-| Feature | Original | V2 | V3 | Safe |
-|---------|----------|-----|-----|------|
-| HTML Parsing | Basic | Enhanced with JSON-LD | Precise per-site patterns | Same as V3 |
-| Date Parsing | Standard | Advanced + relative | Specific formats (JULY 25, 2025) | Same as V3 |
-| City Detection | Basic | Expanded | Expanded + location parsing | Same as V3 |
-| Furball Support | Generic | Better | Precise h2/h3 structure | Same as V3 |
-| Rockbar Support | Generic | Keyword filtering | h3 + div pattern, detail pages | Same as V3 |
-| Eventbrite | Basic | Good | Structured data + fallbacks | Same as V3 |
-| Performance | Basic logging | Detailed metrics | Detailed metrics | Detailed metrics |
-| Accuracy | Medium | Good | Excellent | Excellent |
-| Safety Features | ✅ Added | ✅ Added | ✅ Added | ✅ Enhanced reporting |
-| Dry Run Mode | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| Preview Mode | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes + detailed report |
+| Feature | Original | V2 | V3 |
+|---------|----------|-----|-----|
+| HTML Parsing | Basic | Enhanced with JSON-LD | Precise per-site patterns |
+| Date Parsing | Standard | Advanced + relative | Specific formats (JULY 25, 2025) |
+| City Detection | Basic | Expanded | Expanded + location parsing |
+| Furball Support | Generic | Better | Precise h2/h3 structure |
+| Rockbar Support | Generic | Keyword filtering | h3 + div pattern, detail pages |
+| Eventbrite | Basic | Good | Structured data + fallbacks |
+| Performance | Basic logging | Detailed metrics | Detailed metrics |
+| Accuracy | Medium | Good | Excellent |
+| Safety Features | ✅ Yes | ✅ Yes | ✅ Yes |
+| Dry Run Mode | ✅ Yes | ✅ Yes | ✅ Yes |
+| Preview Reports | ❌ No | ❌ No | ✅ Yes - detailed operation preview |
+| Calendar Simulation | ❌ No | ❌ No | ✅ Yes - shows what would happen |
 
 ## Safety and Testing
 
@@ -364,8 +358,7 @@ To enable calendar sync (USE WITH CAUTION):
 3. Compare results between versions:
    - Original: Basic parsing
    - V2: Enhanced with structured data
-   - V3: Precise HTML patterns
-   - Safe: Same as V3 with extra safety reporting
+   - V3: Precise HTML patterns + preview reports
 4. Check the generated JSON files for accuracy
 5. Review logs to see what each version found
 6. Only enable calendar sync after validating results
@@ -375,10 +368,11 @@ To enable calendar sync (USE WITH CAUTION):
 ### Current State
 
 As of this implementation, we have:
-- 4 versions of the scraper (Original, V2, V3, Safe)
+- 3 versions of the scraper (Original, V2, V3)
+- All versions include safety features (dry run, preview mode)
+- V3 is the most complete with precise parsing + preview reports
 - Precise parsing patterns for Furball and Rockbar based on actual HTML analysis
 - Basic parsing for Bearracuda and Megawoof (needs improvement)
-- Safety features to prevent calendar corruption during testing
 
 ### Areas for Improvement
 

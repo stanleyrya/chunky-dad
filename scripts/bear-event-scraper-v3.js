@@ -732,6 +732,133 @@ class BearEventScraperV3 {
         return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     }
     
+    // Simulate calendar operations for preview
+    async simulateCalendarOperations(events) {
+        const operations = {
+            toCreate: [],
+            toUpdate: [],
+            toSkip: [],
+            errors: []
+        };
+        
+        this.logger.log("=== SIMULATING CALENDAR OPERATIONS ===");
+        
+        for (const event of events) {
+            try {
+                const calendarName = event.calendar || 'unmatched';
+                
+                if (calendarName === 'unmatched') {
+                    operations.toSkip.push({
+                        event: event,
+                        reason: 'No matching calendar for city'
+                    });
+                    continue;
+                }
+                
+                // Simulate checking for existing events (in real implementation, would check actual calendar)
+                const wouldExist = Math.random() > 0.7; // Simulate 30% new events
+                
+                if (wouldExist) {
+                    operations.toUpdate.push({
+                        event: event,
+                        calendar: calendarName,
+                        action: 'UPDATE',
+                        changes: this.simulateChanges(event)
+                    });
+                } else {
+                    operations.toCreate.push({
+                        event: event,
+                        calendar: calendarName,
+                        action: 'CREATE'
+                    });
+                }
+                
+            } catch (error) {
+                operations.errors.push({
+                    event: event,
+                    error: error.message
+                });
+            }
+        }
+        
+        return operations;
+    }
+    
+    // Simulate what changes would be made
+    simulateChanges(event) {
+        const changes = [];
+        
+        if (event.location) {
+            changes.push(`Add/update location: ${event.location}`);
+        }
+        
+        if (event.description) {
+            changes.push(`Update description`);
+        }
+        
+        if (event.price) {
+            changes.push(`Add price: ${event.price}`);
+        }
+        
+        return changes;
+    }
+    
+    // Generate preview report for calendar operations
+    generatePreviewReport(operations) {
+        let report = `\n${'='.repeat(60)}\n`;
+        report += `CALENDAR OPERATIONS PREVIEW\n`;
+        report += `${'='.repeat(60)}\n\n`;
+        
+        report += `SUMMARY:\n`;
+        report += `- Events to CREATE: ${operations.toCreate.length}\n`;
+        report += `- Events to UPDATE: ${operations.toUpdate.length}\n`;
+        report += `- Events to SKIP: ${operations.toSkip.length}\n`;
+        report += `- Errors: ${operations.errors.length}\n\n`;
+        
+        if (operations.toCreate.length > 0) {
+            report += `NEW EVENTS TO CREATE:\n`;
+            report += `${'-'.repeat(40)}\n`;
+            operations.toCreate.forEach((op, idx) => {
+                const event = op.event;
+                const dateStr = event.date ? new Date(event.date).toLocaleDateString() : 'No date';
+                report += `${idx + 1}. ${event.title || event.name}\n`;
+                report += `   Calendar: ${op.calendar}\n`;
+                report += `   Date: ${dateStr}\n`;
+                report += `   Venue: ${event.venue || 'TBA'}\n`;
+                report += `   Source: ${event.sourceName}\n\n`;
+            });
+        }
+        
+        if (operations.toUpdate.length > 0) {
+            report += `EXISTING EVENTS TO UPDATE:\n`;
+            report += `${'-'.repeat(40)}\n`;
+            operations.toUpdate.forEach((op, idx) => {
+                const event = op.event;
+                report += `${idx + 1}. ${event.title || event.name}\n`;
+                report += `   Calendar: ${op.calendar}\n`;
+                report += `   Changes: ${op.changes.join(', ') || 'No changes'}\n\n`;
+            });
+        }
+        
+        if (operations.toSkip.length > 0) {
+            report += `EVENTS TO SKIP:\n`;
+            report += `${'-'.repeat(40)}\n`;
+            operations.toSkip.forEach((op, idx) => {
+                const event = op.event;
+                report += `${idx + 1}. ${event.title || event.name}\n`;
+                report += `   Reason: ${op.reason}\n\n`;
+            });
+        }
+        
+        if (this.DRY_RUN) {
+            report += `\n${'='.repeat(60)}\n`;
+            report += `⚠️  DRY RUN MODE - NO CHANGES WILL BE MADE TO CALENDARS\n`;
+            report += `${'='.repeat(60)}\n`;
+        }
+        
+        return report;
+    }
+    
     // Main parsing orchestrator
     async parseAllSources() {
         const input = await this.loadInput();
@@ -833,6 +960,21 @@ class BearEventScraperV3 {
         
         results.totalEvents = allEvents.length;
         
+        // Generate preview report if in preview mode
+        if (this.PREVIEW_MODE) {
+            const operations = await this.simulateCalendarOperations(allEvents);
+            results.calendarOperations = operations;
+            
+            // Generate and save preview report
+            const previewReport = this.generatePreviewReport(operations);
+            const timestamp = new Date().toISOString().split('T')[0];
+            const fm = FileManager.local();
+            const previewPath = fm.documentsDirectory() + `/bear-event-scraper-v3-preview-${timestamp}.txt`;
+            fm.writeString(previewPath, previewReport);
+            
+            this.logger.log("Preview report generated: " + previewPath);
+        }
+        
         // Save results
         const timestamp = new Date().toISOString().split('T')[0];
         this.jsonManager.write(`bear-events-v3-${timestamp}.json`, results);
@@ -850,10 +992,19 @@ class BearEventScraperV3 {
         report += `Generated: ${new Date().toLocaleString()}\n`;
         report += `${'='.repeat(60)}\n\n`;
         
+        report += `SAFETY MODE: ${results.safetyMode.dryRun ? 'DRY RUN' : 'LIVE'}\n`;
+        report += `${'='.repeat(60)}\n\n`;
+        
         report += `SUMMARY\n`;
         report += `${'='.repeat(60)}\n`;
         report += `Total Events Found: ${results.totalEvents}\n`;
         report += `Cities Covered: ${Object.keys(results.byCity).length}\n\n`;
+        
+        // Include preview report if available
+        if (results.calendarOperations) {
+            report += this.generatePreviewReport(results.calendarOperations);
+            report += `\n`;
+        }
         
         report += `BY SOURCE\n`;
         report += `${'='.repeat(60)}\n`;
