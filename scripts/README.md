@@ -26,6 +26,15 @@ The most accurate version based on actual website analysis:
 - Better venue extraction with default addresses
 - Enhanced bear keyword list including "diaper happy hour" and "bears night out"
 
+### 4. bear-event-scraper-safe.js (Safe Testing Version)
+A safety-focused version for testing without affecting calendars:
+- **DRY RUN MODE**: Enabled by default - no calendar modifications
+- **PREVIEW MODE**: Shows exactly what would be created/updated
+- **CALENDAR SYNC**: Disabled by default - must explicitly enable
+- Generates detailed safety reports showing planned operations
+- Perfect for testing and validating parser improvements
+- Based on V3 parsing with added safety layers
+
 ## Overview
 
 The Bear Event Parser is a Scriptable script that:
@@ -52,7 +61,8 @@ The Bear Event Parser is a Scriptable script that:
 2. Choose which version to use:
    - Copy `bear-event-parser.js` for the original version
    - Copy `bear-event-scraper-v2.js` for the enhanced version
-   - Copy `bear-event-scraper-v3.js` for the precise parsing version (recommended)
+   - Copy `bear-event-scraper-v3.js` for the precise parsing version
+   - Copy `bear-event-scraper-safe.js` for safe testing (recommended for first-time users)
 3. The scripts include all necessary dependencies (minified)
 
 ## Usage
@@ -315,3 +325,126 @@ All dependencies are included in the script file.
 | Eventbrite | Basic | Good | Structured data + fallbacks |
 | Performance | Basic logging | Detailed metrics | Detailed metrics |
 | Accuracy | Medium | Good | Excellent |
+
+## Safety and Testing
+
+### Safe Mode Configuration
+
+The SAFE version uses these config options:
+```json
+{
+  "config": {
+    "dryRun": true,        // Don't modify calendars
+    "preview": true,       // Show what would be done
+    "calendarSync": false, // Disable calendar sync
+    "safetyMode": true    // Enable all safety features
+  }
+}
+```
+
+To enable calendar sync (USE WITH CAUTION):
+```json
+{
+  "config": {
+    "safetyMode": false,
+    "calendarSync": true
+  }
+}
+```
+
+### Testing Workflow
+
+1. Start with `bear-event-scraper-safe.js`
+2. Run with default settings to see parsed events
+3. Review the safety report to understand what would happen
+4. Check the generated JSON files for accuracy
+5. Only enable calendar sync after validating results
+
+## For Future AI Agents
+
+### Current State
+
+As of this implementation, we have:
+- 4 versions of the scraper (Original, V2, V3, Safe)
+- Precise parsing patterns for Furball and Rockbar based on actual HTML analysis
+- Basic parsing for Bearracuda and Megawoof (needs improvement)
+- Safety features to prevent calendar corruption during testing
+
+### Areas for Improvement
+
+1. **Bearracuda Parser**: 
+   - Needs actual HTML analysis like we did for Furball/Rockbar
+   - Current implementation is generic
+   - Should analyze the #events section structure
+
+2. **Megawoof/Eventbrite Parser**:
+   - Could be improved with better Eventbrite-specific parsing
+   - Should handle pagination if events span multiple pages
+   - Better extraction of multi-day events
+
+3. **Calendar Integration**:
+   - Currently only simulated in the Safe version
+   - Original V1 attempted real calendar sync but was incomplete
+   - Need to implement actual Calendar API calls with proper error handling
+
+4. **Additional Sources to Add**:
+   - The Eagle (various cities)
+   - Precinct LA
+   - SF Eagle
+   - Local bear bar websites
+
+5. **Enhanced Features**:
+   - Duplicate detection based on fuzzy matching
+   - Event image extraction
+   - Ticket link preservation
+   - Price range parsing
+   - Age restriction detection
+
+### Code Architecture
+
+The codebase follows this pattern:
+1. **Minified dependencies** embedded at the top
+2. **Configuration** loaded from JSON files
+3. **Parser methods** specific to each source
+4. **Safety features** in the Safe version
+5. **Reporting** in multiple formats (JSON, text, preview)
+
+### Key Files and Their Purposes
+
+- `bear-event-parser-input.json`: Configuration for sources to scrape
+- `bear-event-parser-input-example.json`: Example configuration with notes
+- Output files follow pattern: `bear-events-{version}-{date}.json`
+- Logs follow pattern: `bear-event-scraper-{version}-logs.txt`
+
+### HTML Parsing Patterns Discovered
+
+**Furball**:
+```html
+<h2>JULY 25, 2025</h2>
+<h2>FURBALL NYC</h2>
+<h3>Eagle Bar - NYC</h3>
+```
+
+**Rockbar**:
+```html
+<h3>BEARS NIGHT OUT</h3>
+<div>Friday, January 10 · 10:00 PM...</div>
+```
+
+### Next Steps
+
+1. **Complete Calendar Integration**: Implement actual calendar sync in a new version
+2. **Add More Sources**: Analyze and add parsers for other bear event websites
+3. **Improve Existing Parsers**: Use actual HTML analysis for Bearracuda/Megawoof
+4. **Add Unit Tests**: Create test cases with sample HTML
+5. **Error Recovery**: Better handling of network failures and parsing errors
+6. **Scheduling**: Add support for recurring events
+7. **Notifications**: Alert when new events are found
+
+### Important Notes
+
+- Always test with Safe mode first
+- The cityCalendarMap determines which calendar events go to
+- Bear keywords are case-insensitive
+- Date parsing handles multiple formats but may need expansion
+- Performance metrics help identify slow parsers
