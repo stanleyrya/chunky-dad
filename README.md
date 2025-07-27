@@ -37,6 +37,7 @@ chunky-dad/
 ├── new-york.html        # NYC bear guide with weekly calendar and events
 ├── styles.css           # Bear-themed responsive styling
 ├── js/                 # Modular JavaScript architecture
+├── scripts/            # Automation tools and scrapers
 ├── package.json         # Project configuration
 └── README.md           # This file
 ```
@@ -140,6 +141,13 @@ Know about bear events or businesses we're missing? We want to hear from you!
 - Chrome, Firefox, Safari, Edge (latest versions)
 - Mobile browsers (iOS Safari, Chrome Mobile)
 - Graceful degradation for older browsers
+
+## Scripts / Automatic Event Importer
+
+The `scripts/` directory contains automation tools for maintaining event calendars:
+
+- **Bear Event Scraper**: A Scriptable-based tool that automatically fetches bear events from various websites and syncs them to Google Calendars
+- See [scripts/README.md](scripts/README.md) for detailed documentation on setup and usage
 
 ## Future Plans
 
