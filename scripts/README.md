@@ -16,6 +16,16 @@ An improved version with:
 - Better error handling and performance tracking
 - Detailed reporting capabilities
 
+### 3. bear-event-scraper-v3.js (Precise Parsing Version)
+The most accurate version based on actual website analysis:
+- **Furball**: Parses `<h2>` date tags followed by `<h2>` title and `<h3>` location
+- **Rockbar**: Extracts `<h3>` titles with adjacent `<div>` for details, follows "View Event" links
+- **Megawoof**: Handles Eventbrite's structured data and event cards
+- **Bearracuda**: Maintains V2 approach (not analyzed in detail)
+- Includes precise date parsing for formats like "JULY 25, 2025"
+- Better venue extraction with default addresses
+- Enhanced bear keyword list including "diaper happy hour" and "bears night out"
+
 ## Overview
 
 The Bear Event Parser is a Scriptable script that:
@@ -41,7 +51,8 @@ The Bear Event Parser is a Scriptable script that:
 1. Install [Scriptable](https://scriptable.app/) on your iOS device
 2. Choose which version to use:
    - Copy `bear-event-parser.js` for the original version
-   - Copy `bear-event-scraper-v2.js` for the enhanced version (recommended)
+   - Copy `bear-event-scraper-v2.js` for the enhanced version
+   - Copy `bear-event-scraper-v3.js` for the precise parsing version (recommended)
 3. The scripts include all necessary dependencies (minified)
 
 ## Usage
@@ -106,6 +117,12 @@ The V2 script generates:
 - `bear-event-scraper-v2-logs.txt`: Detailed execution logs
 - `bear-event-scraper-v2-performance.csv`: Performance metrics
 - `bear-event-scraper-v2-report-{date}.txt`: Comprehensive report with event details
+
+The V3 script generates:
+- `bear-events-v3-{date}.json`: Parsed events with precise extraction
+- `bear-event-scraper-v3-logs.txt`: Detailed parsing logs
+- `bear-event-scraper-v3-performance.csv`: Performance metrics
+- `bear-event-scraper-v3-report-{date}.txt`: Detailed report with all event fields
 
 ## Parser Configurations
 
@@ -269,13 +286,32 @@ All dependencies are included in the script file.
 
 ### Which Version to Use?
 
+- **Use V3** (Recommended) if you want:
+  - Most accurate parsing based on actual website structures
+  - Precise extraction of dates, venues, and event details
+  - Best handling of Furball's multi-page structure
+  - Accurate Rockbar event filtering with detail page support
+  
 - **Use V2** if you want:
-  - Better accuracy in event detection
-  - More comprehensive city coverage
-  - Detailed performance metrics
-  - Widget functionality
+  - Good general-purpose parsing
+  - Structured data extraction when available
+  - Comprehensive city coverage
+  - Fallback for sites not yet analyzed
   
 - **Use Original** if you want:
   - Simpler, more straightforward parsing
   - Compatibility with existing cache files
   - Less complex output format
+
+### Version Comparison Summary
+
+| Feature | Original | V2 | V3 |
+|---------|----------|-----|-----|
+| HTML Parsing | Basic | Enhanced with JSON-LD | Precise per-site patterns |
+| Date Parsing | Standard | Advanced + relative | Specific formats (JULY 25, 2025) |
+| City Detection | Basic | Expanded | Expanded + location parsing |
+| Furball Support | Generic | Better | Precise h2/h3 structure |
+| Rockbar Support | Generic | Keyword filtering | h3 + div pattern, detail pages |
+| Eventbrite | Basic | Good | Structured data + fallbacks |
+| Performance | Basic logging | Detailed metrics | Detailed metrics |
+| Accuracy | Medium | Good | Excellent |
