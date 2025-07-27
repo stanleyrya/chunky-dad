@@ -113,6 +113,11 @@ class BearEventParser {
     this.events = [];
     this.existingEvents = new Map();
     this.config = this.loadConfig();
+    
+    // Safety modes
+    this.DRY_RUN = true; // DEFAULT TO DRY RUN FOR SAFETY
+    this.PREVIEW_MODE = true; // Show what would be done
+    this.CALENDAR_SYNC_ENABLED = false; // Disabled by default
   }
 
   loadConfig() {
