@@ -1,0 +1,244 @@
+{
+  "platformPatterns": {
+    "description": "Website platforms and their reusable parsing patterns",
+    "version": "1.0",
+    "platforms": {
+      "squarespace": {
+        "description": "Squarespace-powered websites with built-in calendar functionality",
+        "identifiers": [
+          "Static.SQUARESPACE_CONTEXT",
+          "squarespace.com",
+          "assets.squarespace.com",
+          "fc-event-title",
+          "fc-event-time"
+        ],
+        "calendarPattern": {
+          "eventTitle": "<div class=\"fc-event-title\">EVENT_NAME</div>",
+          "eventTime": "<div class=\"fc-event-time\">START_TIME - END_TIME</div>",
+          "dateFormat": "12-hour format (9:00 PM - 2:00 AM)"
+        },
+        "parsingLogic": {
+          "eventPattern": "/<div class=\"fc-event-title\">([^<]+)<\\/div><div class=\"fc-event-time\">([^<]+)<\\/div>/gi",
+          "timeExtraction": "Split on ' - ' for start/end times",
+          "filtering": "Use allowlist + bear keywords"
+        },
+        "knownSites": [
+          {
+            "name": "Rockbar NYC",
+            "url": "https://www.rockbarnyc.com/calendar",
+            "notes": "Uses allowlist: rockstrap, underbear, bears night out"
+          }
+        ],
+        "futureUsage": "Any Squarespace site with calendar can use this pattern by looking for fc-event-* classes"
+      },
+      "wix": {
+        "description": "Wix-powered websites with custom HTML structures",
+        "identifiers": [
+          "wixui-rich-text",
+          "static.wixstatic.com",
+          "wix.com Website Builder",
+          "thunderbolt"
+        ],
+        "patterns": {
+          "dateHeaders": "<h2><span>MONTH DAY, YEAR</span></h2>",
+          "eventTitles": "<h2><span>EVENT NAME</span></h2>",
+          "venues": "<h3>VENUE - CITY</h3>",
+          "textEvents": "M/D EVENT NAME @ VENUE"
+        },
+        "parsingLogic": {
+          "datePattern": "/<h2[^>]*>([A-Z]+ \\d+, \\d+)<\\/h2>/gi",
+          "eventPattern": "/<h2[^>]*>(FURBALL[^<]+)<\\/h2>/gi",
+          "venuePattern": "/<h3[^>]*>([^<]+)<\\/h3>/gi",
+          "textPattern": "/(\\d+\\/\\d+)\\s+(FURBALL[^<\\n]+)/gi"
+        },
+        "knownSites": [
+          {
+            "name": "Furball NYC",
+            "url": "https://www.furball.nyc",
+            "notes": "Multiple pages with different event listing formats"
+          }
+        ],
+        "futureUsage": "Look for wixui-rich-text classes and h2/h3 date/event structure"
+      },
+      "eventbrite": {
+        "description": "Eventbrite organizer pages and event listings",
+        "identifiers": [
+          "eventbrite.com",
+          "evbuc.com",
+          "data-event-location",
+          "data-event-category",
+          "event-card"
+        ],
+        "patterns": {
+          "eventCards": "data-event-location=\"CITY, STATE\" data-event-category=\"CATEGORY\"",
+          "titles": "title=\"EVENT_NAME\" or nearby h3 tags",
+          "locations": "data-event-location maps to city codes"
+        },
+        "parsingLogic": {
+          "eventPattern": "/data-event-location=\"([^\"]+)\"[^>]*data-event-category=\"([^\"]+)\"[^>]*>[\\s\\S]*?<[^>]*>([^<]+)</gi",
+          "titleExtraction": "Look for title attributes or nearby headings",
+          "locationMapping": "Atlanta, GA -> atlanta, Los Angeles, CA -> la"
+        },
+        "knownSites": [
+          {
+            "name": "Megawoof America",
+            "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+            "notes": "Bear events across multiple cities"
+          }
+        ],
+        "futureUsage": "Any Eventbrite organizer page can use data-event-* attribute parsing"
+      },
+      "wordpress_tribe_events": {
+        "description": "WordPress sites using The Events Calendar (Tribe Events) plugin",
+        "identifiers": [
+          "tribe-events-calendar-list",
+          "tribe-event-date-start",
+          "tribe-event-time",
+          "tribe-events-calendar-list__event-title"
+        ],
+        "patterns": {
+          "dateTime": "<span class=\"tribe-event-date-start\">DATE @ TIME</span>",
+          "endTime": "<span class=\"tribe-event-time\">END_TIME</span>",
+          "titles": "<a title=\"EVENT_NAME\"> within h3.tribe-events-calendar-list__event-title"
+        },
+        "parsingLogic": {
+          "eventPattern": "/<span class=\"tribe-event-date-start\">([^<]+)<\\/span>[^<]*<span class=\"tribe-event-time\">([^<]+)<\\/span>[\\s\\S]*?<h3 class=\"tribe-events-calendar-list__event-title[^\"]*\">[\\s\\S]*?<a[^>]*title=\"([^\"]+)\"/gi",
+          "dateFormat": "July 27 @ 12:00 pm",
+          "timeFormat": "2:00 am (end time)"
+        },
+        "knownSites": [
+          {
+            "name": "SF Eagle",
+            "url": "https://sf-eagle.com/events/",
+            "address": "398 12th St, San Francisco, CA"
+          },
+          {
+            "name": "Eagle NY", 
+            "url": "https://www.eagle-ny.com/events/",
+            "address": "554 W 28th St, New York, NY"
+          }
+        ],
+        "futureUsage": "Any WordPress site with Tribe Events plugin will use these CSS classes"
+      },
+      "wordpress_elementor": {
+        "description": "WordPress sites using Elementor page builder",
+        "identifiers": [
+          "elementor",
+          "wp-content/plugins/elementor",
+          "elementor-frontend",
+          "widget-heading",
+          "widget-icon-list"
+        ],
+        "patterns": {
+          "eventTitles": "<h1> tags with city names",
+          "metadata": "<meta property=\"article:modified_time\">",
+          "sections": "Elementor widget containers"
+        },
+        "parsingLogic": {
+          "titlePattern": "/<h1[^>]*>([^<]*(?:Atlanta|Chicago|NYC|NOLA|Denver)[^<]*)<\\/h1>/gi",
+          "datePattern": "/<meta property=\"article:modified_time\" content=\"([^\"]+)\"/i",
+          "contextExtraction": "Look for city names in titles"
+        },
+        "knownSites": [
+          {
+            "name": "Bearracuda",
+            "url": "https://bearracuda.com/#events", 
+            "notes": "Multi-city bear dance parties"
+          }
+        ],
+        "futureUsage": "WordPress + Elementor sites can be identified by elementor CSS classes"
+      },
+      "custom_event_systems": {
+        "description": "Custom-built event calendar systems",
+        "identifiers": [
+          "Custom CSS classes",
+          "Proprietary event structures",
+          "Venue-specific layouts"
+        ],
+        "patterns": {
+          "generic": "Look for event, date, time, title patterns in HTML",
+          "headings": "h2, h3 tags often contain event info",
+          "containers": "div containers with event-related classes"
+        },
+        "parsingLogic": {
+          "fallbackPattern": "/<div[^>]*class=\"[^\"]*event[^\"]*\"[^>]*>[\\s\\S]*?<h[23][^>]*>([^<]+)<\\/h[23]>[\\s\\S]*?<[^>]*>([^<]*\\d{1,2}[^<]*)<[^>]*>/gi",
+          "approach": "Generic pattern matching for event structures"
+        },
+        "knownSites": [
+          {
+            "name": "Precinct DTLA",
+            "url": "https://www.precinctdtla.com/events/",
+            "address": "357 S Broadway, Los Angeles, CA"
+          }
+        ],
+        "futureUsage": "Use generic patterns when platform cannot be identified"
+      }
+    }
+  },
+  "platformDetection": {
+    "description": "How to automatically detect website platforms",
+    "detectionMethods": {
+      "htmlContent": {
+        "squarespace": "Look for 'Static.SQUARESPACE_CONTEXT' or 'squarespace.com' in HTML",
+        "wix": "Look for 'wix.com Website Builder' or 'wixui-rich-text' classes",
+        "eventbrite": "Check if URL contains 'eventbrite.com' or has data-event-* attributes",
+        "wordpress": "Look for 'wp-content' paths or WordPress-specific meta tags",
+        "tribe_events": "Look for 'tribe-events-calendar-list' classes",
+        "elementor": "Look for 'elementor-frontend' or elementor-specific classes"
+      },
+      "urlPatterns": {
+        "eventbrite": "eventbrite.com/o/organizer-name-id",
+        "squarespace": "Often custom domains but with squarespace assets",
+        "wix": "Often custom domains but with wixstatic.com assets"
+      },
+      "cssClasses": {
+        "squarespace": ["fc-event-title", "fc-event-time"],
+        "wix": ["wixui-rich-text", "wixui-rich-text__text"],
+        "tribe_events": ["tribe-events-calendar-list", "tribe-event-date-start"],
+        "eventbrite": ["event-card", "eds-btn", "eds-icon-button"]
+      }
+    }
+  },
+  "scalingStrategy": {
+    "description": "How to add new websites using existing patterns",
+    "steps": [
+      {
+        "step": 1,
+        "action": "Identify Platform",
+        "details": "Use detection methods to determine underlying platform"
+      },
+      {
+        "step": 2,
+        "action": "Match Pattern",
+        "details": "Use existing parser for detected platform"
+      },
+      {
+        "step": 3,
+        "action": "Test & Adjust",
+        "details": "Test parser on new site, adjust allowlists/keywords as needed"
+      },
+      {
+        "step": 4,
+        "action": "Document",
+        "details": "Add new site to knownSites list for platform"
+      }
+    ],
+    "examples": {
+      "newSquarespaceSite": {
+        "detection": "Contains fc-event-title classes",
+        "parser": "Use rockbar parser pattern",
+        "customization": "Adjust allowlist for venue-specific events"
+      },
+      "newTribeEventsSite": {
+        "detection": "Contains tribe-events-calendar-list classes", 
+        "parser": "Use eagle parser pattern",
+        "customization": "Update venue address and city mapping"
+      },
+      "newEventbritePage": {
+        "detection": "URL contains eventbrite.com/o/",
+        "parser": "Use megawoof parser pattern",
+        "customization": "No changes needed, uses data attributes"
+      }
+    }
+  }
+}

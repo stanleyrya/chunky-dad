@@ -12,6 +12,7 @@ This directory contains minimal HTML samples and data structures used by the bea
 
 ### Data Structure
 - **`event-data-structure.json`** - Standardized event format for repeatability
+- **`platform-patterns.json`** - Website platforms and reusable parsing patterns
 
 ## Purpose
 
@@ -22,6 +23,7 @@ These samples serve multiple purposes:
 3. **Documentation** - Show exactly what HTML patterns each parser expects
 4. **Testing** - Enable unit testing without relying on live websites
 5. **Maintenance** - Quick reference when websites change their structure
+6. **Scalability** - Identify platform patterns to easily add new websites
 
 ## Data Structure Consistency
 
@@ -61,3 +63,25 @@ When websites change their HTML structure:
 4. Update the data structure if new fields are needed
 
 This approach ensures the parser remains maintainable and testable over time.
+
+## Platform Patterns for Scaling
+
+The `platform-patterns.json` file documents the underlying technologies:
+
+### Supported Platforms
+- **Squarespace** - Calendar sites with `fc-event-title` classes (like Rockbar)
+- **Wix** - Sites with `wixui-rich-text` structures (like Furball)  
+- **Eventbrite** - Organizer pages with `data-event-*` attributes (like Megawoof)
+- **WordPress + Tribe Events** - Sites with `tribe-events-calendar-list` (like Eagles)
+- **WordPress + Elementor** - Sites with `elementor-frontend` (like Bearracuda)
+- **Custom Systems** - Fallback patterns for proprietary calendars
+
+### Adding New Sites
+When you find a new bear event website:
+
+1. **Identify the platform** using the detection methods in `platform-patterns.json`
+2. **Use the existing parser** for that platform type
+3. **Customize as needed** (allowlists, venue info, etc.)
+4. **Test and document** the new site
+
+For example, if you find a new Squarespace bar website, you can immediately use the Rockbar parser pattern by looking for `fc-event-title` classes.

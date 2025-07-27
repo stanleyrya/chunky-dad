@@ -55,6 +55,13 @@
       "parser": "precinct",
       "urls": ["https://www.precinctdtla.com/events/"],
       "description": "Los Angeles downtown leather/bear venue"
+    },
+    {
+      "name": "Auto-Detect Example",
+      "parser": "auto",
+      "urls": ["https://example-bear-bar.com/events"],
+      "allowlist": ["bear", "leather"],
+      "description": "Example of auto-platform detection - will detect Squarespace, Wix, etc. automatically"
     }
   ],
   "notes": {
@@ -62,10 +69,11 @@
     "created": "2025-01-27",
     "features": [
       "Based on actual HTML structures from uploaded website examples",
-      "Enhanced safety features with dry run and preview modes",
+      "Enhanced safety features with dry run and preview modes", 
       "Real venue addresses and enhanced keyword detection",
       "Support for all major bear event websites",
-      "Comprehensive reporting and logging"
+      "Comprehensive reporting and logging",
+      "Automatic platform detection for easy scaling to new sites"
     ],
     "safety": {
       "dryRun": "When true, no calendar changes will be made",

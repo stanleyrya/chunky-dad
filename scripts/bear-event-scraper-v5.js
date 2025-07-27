@@ -233,6 +233,12 @@ class BearEventParser {
                 request.timeoutInterval = this.config.timeout;
                 const html = await request.loadString();
                 
+                // Auto-detect platform if not specified
+                const detectedPlatform = this.detectPlatform(html, url);
+                if (detectedPlatform && detectedPlatform !== parser.parser) {
+                    this.logger.log(`🔍 Detected platform: ${detectedPlatform} (configured: ${parser.parser})`);
+                }
+                
                 let sourceEvents = [];
                 
                 switch (parser.parser) {
@@ -257,6 +263,10 @@ class BearEventParser {
                     case 'precinct':
                         sourceEvents = this.parsePrecinct(html, url);
                         break;
+                    case 'auto':
+                        // Auto-detect and use appropriate parser
+                        sourceEvents = this.parseByPlatform(html, url, detectedPlatform, parser);
+                        break;
                     default:
                         this.logger.log(`⚠️ Unknown parser type: ${parser.parser}`);
                         continue;
@@ -270,6 +280,71 @@ class BearEventParser {
         }
         
         return events;
+    }
+    
+    detectPlatform(html, url) {
+        // Platform detection based on data/website-samples/platform-patterns.json
+        
+        // Squarespace detection
+        if (html.includes('Static.SQUARESPACE_CONTEXT') || 
+            html.includes('squarespace.com') ||
+            html.includes('fc-event-title')) {
+            return 'squarespace';
+        }
+        
+        // Wix detection
+        if (html.includes('wix.com Website Builder') ||
+            html.includes('wixui-rich-text') ||
+            html.includes('static.wixstatic.com')) {
+            return 'wix';
+        }
+        
+        // Eventbrite detection
+        if (url.includes('eventbrite.com') ||
+            html.includes('data-event-location') ||
+            html.includes('event-card')) {
+            return 'eventbrite';
+        }
+        
+        // WordPress + Tribe Events detection
+        if (html.includes('tribe-events-calendar-list') ||
+            html.includes('tribe-event-date-start')) {
+            return 'wordpress_tribe_events';
+        }
+        
+        // WordPress + Elementor detection
+        if (html.includes('elementor-frontend') ||
+            html.includes('wp-content/plugins/elementor')) {
+            return 'wordpress_elementor';
+        }
+        
+        // WordPress general detection
+        if (html.includes('wp-content') ||
+            html.includes('wordpress')) {
+            return 'wordpress';
+        }
+        
+        return 'custom';
+    }
+    
+    parseByPlatform(html, url, platform, parser) {
+        // Auto-parse based on detected platform
+        this.logger.log(`🤖 Auto-parsing using ${platform} patterns`);
+        
+        switch (platform) {
+            case 'squarespace':
+                return this.parseRockbar(html, url, parser.allowlist || []);
+            case 'wix':
+                return this.parseFurball(html, url);
+            case 'eventbrite':
+                return this.parseMegawoof(html, url);
+            case 'wordpress_tribe_events':
+                return this.parseSFEagle(html, url);
+            case 'wordpress_elementor':
+                return this.parseBearracuda(html, url);
+            default:
+                return this.parsePrecinct(html, url);
+        }
     }
     
     // Enhanced Furball parser based on actual HTML structure
