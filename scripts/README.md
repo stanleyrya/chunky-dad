@@ -2,6 +2,20 @@
 
 This directory contains scripts for parsing bear event data from various websites and updating Google Calendar automatically using Scriptable on iOS.
 
+## Available Scripts
+
+### 1. bear-event-parser.js (Original)
+The original implementation with basic parsing capabilities.
+
+### 2. bear-event-scraper-v2.js (Enhanced Version)
+An improved version with:
+- Enhanced HTML parsing with structured data support
+- Better date parsing (handles relative dates, multiple formats)
+- Improved city detection with expanded mappings
+- More comprehensive bear keyword list
+- Better error handling and performance tracking
+- Detailed reporting capabilities
+
 ## Overview
 
 The Bear Event Parser is a Scriptable script that:
@@ -25,8 +39,10 @@ The Bear Event Parser is a Scriptable script that:
 ## Installation
 
 1. Install [Scriptable](https://scriptable.app/) on your iOS device
-2. Copy `bear-event-parser.js` to Scriptable
-3. The script includes all necessary dependencies (minified)
+2. Choose which version to use:
+   - Copy `bear-event-parser.js` for the original version
+   - Copy `bear-event-scraper-v2.js` for the enhanced version (recommended)
+3. The scripts include all necessary dependencies (minified)
 
 ## Usage
 
@@ -78,13 +94,18 @@ Create a file named `bear-event-parser-input.json` in Scriptable with your parse
 
 ### Output Files
 
-The script generates several files:
-
+The original script generates:
 - `calendar-cache-{city}.json`: Cached events for each city calendar
 - `bear-event-parser-logs.txt`: Detailed execution logs
 - `bear-event-parser-performance.csv`: Performance metrics
 - `bear-event-parser-report-{date}.txt`: Comparison report for validation
 - `bear-event-parser-config.json`: Saved configuration and last run time
+
+The V2 script generates:
+- `bear-events-v2-{date}.json`: Parsed events organized by city
+- `bear-event-scraper-v2-logs.txt`: Detailed execution logs
+- `bear-event-scraper-v2-performance.csv`: Performance metrics
+- `bear-event-scraper-v2-report-{date}.txt`: Comprehensive report with event details
 
 ## Parser Configurations
 
@@ -226,3 +247,35 @@ The script includes minified versions of:
 - PerformanceDebugger: Performance tracking
 
 All dependencies are included in the script file.
+
+## Version Comparison
+
+### Original (bear-event-parser.js)
+- Basic HTML parsing
+- Standard date formats
+- Core city mappings
+- Simple keyword matching
+- Basic logging
+
+### V2 (bear-event-scraper-v2.js)
+- **Enhanced HTML parsing**: Extracts structured data (JSON-LD) when available
+- **Advanced date parsing**: Handles relative dates ("next Friday"), multiple formats, times
+- **Expanded city detection**: More city aliases, state abbreviations, neighborhood names
+- **Comprehensive keywords**: Extended bear-related keyword list
+- **Better error handling**: Graceful fallbacks, detailed error reporting
+- **Improved performance tracking**: Wrapped function calls with timing metrics
+- **Rich reporting**: Detailed event breakdowns by source and city
+- **Widget support**: Can display summary as iOS widget
+
+### Which Version to Use?
+
+- **Use V2** if you want:
+  - Better accuracy in event detection
+  - More comprehensive city coverage
+  - Detailed performance metrics
+  - Widget functionality
+  
+- **Use Original** if you want:
+  - Simpler, more straightforward parsing
+  - Compatibility with existing cache files
+  - Less complex output format
