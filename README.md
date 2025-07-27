@@ -37,6 +37,9 @@ chunky-dad/
 ├── new-york.html        # NYC bear guide with weekly calendar and events
 ├── styles.css           # Bear-themed responsive styling
 ├── js/                 # Modular JavaScript architecture
+├── scripts/            # Scriptable scripts for automation
+│   ├── bear-event-parser.js  # Automated event parsing from bear websites
+│   └── README.md       # Documentation for scripts
 ├── package.json         # Project configuration
 └── README.md           # This file
 ```
@@ -134,6 +137,19 @@ Know about bear events or businesses we're missing? We want to hear from you!
 - **Fast Loading**: Optimized for quick access while traveling
 - **Progressive Enhancement**: Works with JavaScript disabled
 - **SEO Optimized**: Proper meta tags and structure
+
+## Automation Scripts
+
+The `scripts/` directory contains automation tools for maintaining event data:
+
+- **Bear Event Parser**: A Scriptable (iOS) script that automatically:
+  - Fetches event data from multiple bear event websites
+  - Parses and formats events for our calendar system
+  - Detects cities and assigns to appropriate calendars
+  - Merges with existing events to avoid duplicates
+  - Flags new events as "not-checked" until validated
+
+See [scripts/README.md](scripts/README.md) for detailed documentation on using these tools.
 
 ## Browser Support
 
