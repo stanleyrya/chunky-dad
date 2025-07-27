@@ -1061,6 +1061,9 @@ class DynamicCalendarLoader extends CalendarCore {
 
         const recurringBadge = event.recurring ? 
             `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
+        
+        const notCheckedBadge = event.notChecked ? 
+            `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
 
         // Format day/time more concisely (e.g., "Thu 5pm-9pm")
         const formatDayTime = (day, time) => {
@@ -1077,6 +1080,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     <div class="event-meta">
                         <div class="event-day">${formatDayTime(event.day, event.time)}</div>
                         ${recurringBadge}
+                        ${notCheckedBadge}
                     </div>
                 </div>
                 <div class="event-details">
@@ -1102,6 +1106,12 @@ class DynamicCalendarLoader extends CalendarCore {
         
         return this.allEvents.filter(event => {
             if (!event.startDate) return false;
+            
+            // Filter out events marked as notChecked if configured to hide them
+            if (event.notChecked && this.config?.hideUncheckedEvents) {
+                logger.debug('CALENDAR', `Filtering out unchecked event: ${event.name}`);
+                return false;
+            }
             
             // For recurring events, check if they occur in this period
             if (event.recurring) {
