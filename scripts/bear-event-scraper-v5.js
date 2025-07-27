@@ -2,6 +2,10 @@
 // Based on actual HTML structures from uploaded website examples
 // Created: 2025-01-27
 // Features: Real website patterns, enhanced safety, detailed preview mode
+//
+// Data Structure: Follows standardized format in data/website-samples/event-data-structure.json
+// HTML Patterns: Based on samples in data/website-samples/ directory
+// Repeatability: Ensures consistent output format for chunky-dad calendar system
 
 // Minified dependencies (embedded for Scriptable)
 // JSONFileManager - File-based JSON storage for Scriptable
@@ -73,16 +77,53 @@ class BearEventParser {
         };
         
         // Venue location defaults based on real website analysis
+        // Matches data/website-samples/event-data-structure.json format
         this.venueDefaults = {
-            'eagle bar': { city: 'nyc', address: '554 W 28th St, New York, NY' },
-            'rockbar': { city: 'nyc', address: '185 Christopher St, New York, NY' },
-            'sf eagle': { city: 'sf', address: '398 12th St, San Francisco, CA' },
-            'eagle ny': { city: 'nyc', address: '554 W 28th St, New York, NY' },
-            'metro': { city: 'chicago', address: '3730 N Clark St, Chicago, IL' },
-            'santos bar': { city: 'nola', address: '1135 Decatur St, New Orleans, LA' },
-            'executive suite': { city: 'la', address: '3428 E Broadway, Long Beach, CA' },
-            'paradise': { city: 'nyc', address: '126 2nd Ave, New York, NY' },
-            'precinct': { city: 'la', address: '357 S Broadway, Los Angeles, CA' }
+            'eagle bar': { 
+                city: 'nyc', 
+                address: '554 W 28th St, New York, NY',
+                coordinates: { lat: 40.7505, lng: -73.9934 }
+            },
+            'rockbar': { 
+                city: 'nyc', 
+                address: '185 Christopher St, New York, NY',
+                coordinates: { lat: 40.7338, lng: -74.0027 }
+            },
+            'sf eagle': { 
+                city: 'sf', 
+                address: '398 12th St, San Francisco, CA',
+                coordinates: { lat: 37.7697, lng: -122.4131 }
+            },
+            'eagle ny': { 
+                city: 'nyc', 
+                address: '554 W 28th St, New York, NY',
+                coordinates: { lat: 40.7505, lng: -73.9934 }
+            },
+            'metro': { 
+                city: 'chicago', 
+                address: '3730 N Clark St, Chicago, IL',
+                coordinates: { lat: 41.9489, lng: -87.6598 }
+            },
+            'santos bar': { 
+                city: 'nola', 
+                address: '1135 Decatur St, New Orleans, LA',
+                coordinates: { lat: 29.9584, lng: -90.0644 }
+            },
+            'executive suite': { 
+                city: 'la', 
+                address: '3428 E Broadway, Long Beach, CA',
+                coordinates: { lat: 33.7701, lng: -118.1937 }
+            },
+            'paradise': { 
+                city: 'nyc', 
+                address: '126 2nd Ave, New York, NY',
+                coordinates: { lat: 40.7282, lng: -73.9942 }
+            },
+            'precinct': { 
+                city: 'la', 
+                address: '357 S Broadway, Los Angeles, CA',
+                coordinates: { lat: 34.0489, lng: -118.2517 }
+            }
         };
     }
     
@@ -685,13 +726,20 @@ class BearEventParser {
     
     formatEventForCalendar(eventData) {
         try {
-            // Determine city
+            // Standardized event formatting based on data/website-samples/event-data-structure.json
+            
+            // Determine city using venue defaults for consistency
             let city = eventData.city;
+            let coordinates = eventData.coordinates;
+            let address = eventData.address;
+            
             if (!city && eventData.venue) {
                 const venueLower = eventData.venue.toLowerCase();
                 for (const [venue, defaults] of Object.entries(this.venueDefaults)) {
                     if (venueLower.includes(venue)) {
                         city = defaults.city;
+                        address = address || defaults.address;
+                        coordinates = coordinates || defaults.coordinates;
                         break;
                     }
                 }
@@ -701,37 +749,70 @@ class BearEventParser {
                 city = this.detectCityFromText(eventData.name + ' ' + (eventData.venue || ''));
             }
             
-            // Format time string
+            // Standardized time formatting (12-hour format with AM/PM)
             const timeStr = eventData.startDate ? 
                 eventData.startDate.toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
                     hour12: true 
-                }).replace(':00', '') : 'TBD';
+                }).replace(':00', '').replace(' ', '') : 'TBD';
             
-            return {
-                name: eventData.name,
+            // Ensure required fields are present
+            const formattedEvent = {
+                // Required fields
+                name: eventData.name || 'Untitled Event',
                 startDate: eventData.startDate || new Date(),
                 endDate: eventData.endDate || new Date(Date.now() + 4 * 60 * 60 * 1000),
                 day: eventData.startDate ? eventData.startDate.toLocaleDateString('en-US', { weekday: 'long' }) : 'TBD',
                 time: timeStr,
                 bar: eventData.venue || 'TBD',
+                city: city || 'unknown',
+                
+                // Optional fields
                 cover: eventData.cover || 'TBD',
                 tea: eventData.description || `${eventData.source} event`,
-                coordinates: eventData.coordinates || { lat: 0, lng: 0 },
+                coordinates: coordinates || { lat: 0, lng: 0 },
                 links: [
                     { type: 'website', url: eventData.sourceUrl, label: '🌐 Website' }
                 ],
                 eventType: 'special',
                 recurring: false,
-                notChecked: true,
-                city: city || 'unknown',
+                notChecked: true, // Always true for newly parsed events
                 source: eventData.source,
-                address: eventData.address
+                address: address
             };
+            
+            // Validate the formatted event matches our standard structure
+            this.validateEventStructure(formattedEvent);
+            
+            return formattedEvent;
         } catch (error) {
             this.logger.log(`Error formatting event: ${error.message}`);
             return null;
+        }
+    }
+    
+    validateEventStructure(event) {
+        // Validate against standardized data structure
+        const requiredFields = ['name', 'startDate', 'endDate', 'day', 'time', 'bar', 'city'];
+        
+        for (const field of requiredFields) {
+            if (!event[field] || event[field] === 'TBD') {
+                this.logger.log(`⚠️ Missing or TBD required field: ${field} in event: ${event.name}`);
+            }
+        }
+        
+        // Validate data formats
+        if (event.startDate && !(event.startDate instanceof Date)) {
+            this.logger.log(`⚠️ Invalid startDate format in event: ${event.name}`);
+        }
+        
+        if (event.coordinates && (!event.coordinates.lat || !event.coordinates.lng)) {
+            this.logger.log(`⚠️ Invalid coordinates format in event: ${event.name}`);
+        }
+        
+        if (event.city && typeof event.city !== 'string') {
+            this.logger.log(`⚠️ Invalid city format in event: ${event.name}`);
         }
     }
     
