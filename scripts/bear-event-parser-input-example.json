@@ -34,9 +34,12 @@
     "notCheckedFlag": true,
     "hideUncheckedEvents": false,
     "debugMode": true,
+    "// Safety modes - set these carefully": "",
     "dryRun": true,
     "preview": true,
     "calendarSync": false,
-    "safetyMode": true
+    "// dryRun: true = no calendar changes, false = allow changes": "",
+    "// preview: true = show what would be done, false = no preview": "",
+    "// calendarSync: true = enable calendar sync, false = disable": ""
   }
 }

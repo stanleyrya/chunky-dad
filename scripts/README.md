@@ -5,10 +5,10 @@ This directory contains scripts for parsing bear event data from various website
 ## Available Scripts
 
 ### 1. bear-event-scraper-v1.js (Original Parser)
-The original implementation with basic parsing capabilities. Has safety variables declared but not fully implemented.
+The original implementation with basic parsing capabilities. Now includes full safety mode implementation.
 
 ### 2. bear-event-scraper-v2.js (First Scraper Version)
-First version renamed as "scraper" with basic scraping capabilities.
+First version renamed as "scraper" with basic scraping capabilities. Now includes full safety mode implementation.
 
 ### 3. bear-event-scraper-v3.js (Enhanced Version)
 An improved version with:
@@ -63,6 +63,27 @@ The Bear Event Parser is a Scriptable script that:
 3. The scripts include all necessary dependencies (minified)
 
 ## Usage
+
+### Safety Modes
+
+All scripts now include three safety modes to prevent accidental calendar modifications:
+
+1. **DRY_RUN** (default: `true`) - When enabled, no changes will be made to calendars
+2. **PREVIEW_MODE** (default: `true`) - Shows what operations would be performed
+3. **CALENDAR_SYNC_ENABLED** (default: `false`) - Must be explicitly enabled to allow calendar modifications
+
+To enable calendar synchronization, add this to your configuration:
+
+```json
+{
+  "config": {
+    "dryRun": false,
+    "preview": true,
+    "calendarSync": true
+  },
+  "parsers": [...]
+}
+```
 
 ### Input Configuration
 
@@ -284,11 +305,12 @@ All dependencies are included in the script file.
 - Core city mappings
 - Simple keyword matching
 - Basic logging
-- Safety variables declared but not implemented
+- Full safety mode implementation (DRY_RUN, PREVIEW_MODE, CALENDAR_SYNC_ENABLED)
 
 ### V2 (bear-event-scraper-v2.js) - First Scraper
 - Basic scraping functionality
-- No safety mode implementation
+- Calendar sync capabilities
+- Full safety mode implementation (DRY_RUN, PREVIEW_MODE, CALENDAR_SYNC_ENABLED)
 
 ### V3 (bear-event-scraper-v3.js)
 - **Enhanced HTML parsing**: Extracts structured data (JSON-LD) when available

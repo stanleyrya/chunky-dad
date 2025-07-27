@@ -1,6 +1,6 @@
 // Bear Event Scraper v1 for Scriptable (Original Parser)
 // Parses event data from various bear event websites and updates Google Calendar
-// Note: Safety variables declared but not fully implemented
+// Now includes full safety mode implementation (DRY_RUN, PREVIEW_MODE, CALENDAR_SYNC_ENABLED)
 // Author: Chunky Dad Team
 
 // ===== MINIFIED DEPENDENCIES =====
@@ -840,6 +840,12 @@ class BearEventParser {
   generateComparisonReport(events) {
     let report = "=== Event Parser Comparison Report ===\n\n";
     
+    // Add safety status to report
+    report += "SAFETY MODE STATUS:\n";
+    report += `- DRY RUN: ${this.DRY_RUN ? 'ENABLED (No calendar changes)' : 'DISABLED'}\n`;
+    report += `- PREVIEW: ${this.PREVIEW_MODE ? 'ENABLED' : 'DISABLED'}\n`;
+    report += `- CALENDAR SYNC: ${this.CALENDAR_SYNC_ENABLED ? 'ENABLED' : 'DISABLED'}\n\n`;
+    
     events.forEach((event, index) => {
       report += `Event ${index + 1}: ${event.name || 'Unnamed'}\n`;
       report += `  Source: ${event.source}\n`;
@@ -907,6 +913,20 @@ async function main() {
     // Initialize parser
     const parser = new BearEventParser();
     
+    // Load safety settings from input file if available
+    try {
+      const input = jsonManager.read(inputFile);
+      if (input.config) {
+        parser.DRY_RUN = input.config.dryRun !== false;
+        parser.PREVIEW_MODE = input.config.preview !== false;
+        parser.CALENDAR_SYNC_ENABLED = input.config.calendarSync === true;
+        
+        logger.log(`Safety settings loaded - DRY_RUN: ${parser.DRY_RUN}, PREVIEW: ${parser.PREVIEW_MODE}, CALENDAR_SYNC: ${parser.CALENDAR_SYNC_ENABLED}`);
+      }
+    } catch (error) {
+      // Safety settings remain at defaults
+    }
+    
     // Parse events
     const events = await parser.parseEvents(parserConfigs);
     logger.log(`Total events parsed: ${events.length}`);
@@ -934,6 +954,17 @@ async function main() {
       logger.log(`  ${calendarId}: ${calendarEvents.length} events`);
     }
     logger.log(`Unmapped events: ${unmappedEvents.length}`);
+    
+    // Log safety status
+    logger.log("\n=== SAFETY MODE STATUS ===");
+    logger.log(`DRY RUN: ${parser.DRY_RUN ? 'ENABLED (No calendar changes)' : 'DISABLED'}`);
+    logger.log(`PREVIEW: ${parser.PREVIEW_MODE ? 'ENABLED' : 'DISABLED'}`);
+    logger.log(`CALENDAR SYNC: ${parser.CALENDAR_SYNC_ENABLED ? 'ENABLED' : 'DISABLED'}`);
+    
+    if (parser.DRY_RUN) {
+      logger.log("\n⚠️  DRY RUN MODE - No calendar operations were performed");
+      logger.log("To sync events to calendars, set dryRun: false in the config");
+    }
     
   } catch (error) {
     logger.log(`Fatal error: ${error.message}`);

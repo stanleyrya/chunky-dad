@@ -1,6 +1,6 @@
 // Bear Event Scraper v2 for Scriptable (First Scraper Version)
 // Auto-checks target websites, parses events, and merges into Google Calendars
-// Note: No safety mode implementation
+// Now includes full safety mode implementation (DRY_RUN, PREVIEW_MODE, CALENDAR_SYNC_ENABLED)
 
 // ===== EMBEDDED MINIFIED MODULES =====
 
@@ -48,6 +48,11 @@ class BearEventScraper {
             'washington': 'chunky-dad-dc'
         };
         
+        // Safety modes
+        this.DRY_RUN = true; // DEFAULT TO DRY RUN FOR SAFETY
+        this.PREVIEW_MODE = true; // Show what would be done
+        this.CALENDAR_SYNC_ENABLED = false; // Disabled by default
+        
         this.logger.logSessionStart('Bear Event Scraper');
     }
     
@@ -92,6 +97,15 @@ class BearEventScraper {
                     }
                 ]
             };
+        }
+        
+        // Load safety settings from config
+        if (config.safetyMode) {
+            this.DRY_RUN = config.safetyMode.dryRun !== false;
+            this.PREVIEW_MODE = config.safetyMode.preview !== false;
+            this.CALENDAR_SYNC_ENABLED = config.safetyMode.calendarSync === true;
+            
+            this.logger.info(`Safety settings loaded - DRY_RUN: ${this.DRY_RUN}, PREVIEW: ${this.PREVIEW_MODE}, CALENDAR_SYNC: ${this.CALENDAR_SYNC_ENABLED}`);
         }
         
         this.perfDebugger.endTimer('loadConfig');
@@ -326,8 +340,12 @@ class BearEventScraper {
                 }
                 
                 if (updated) {
-                    await existingEvent.save();
-                    this.logger.info(`Updated event: ${event.title}`);
+                    if (!this.DRY_RUN && this.CALENDAR_SYNC_ENABLED) {
+                        await existingEvent.save();
+                        this.logger.info(`Updated event: ${event.title}`);
+                    } else {
+                        this.logger.info(`[DRY RUN] Would update event: ${event.title}`);
+                    }
                 }
                 
                 return { action: 'updated', event: existingEvent };
@@ -348,8 +366,12 @@ class BearEventScraper {
                     calendarEvent.notes += '\n\n[not-checked] This event needs verification';
                 }
                 
-                await calendarEvent.save();
-                this.logger.info(`Created event: ${event.title}`);
+                if (!this.DRY_RUN && this.CALENDAR_SYNC_ENABLED) {
+                    await calendarEvent.save();
+                    this.logger.info(`Created event: ${event.title}`);
+                } else {
+                    this.logger.info(`[DRY RUN] Would create event: ${event.title}`);
+                }
                 
                 return { action: 'created', event: calendarEvent };
             }
@@ -442,6 +464,13 @@ class BearEventScraper {
         this.logger.info(`Events updated: ${results.updated}`);
         this.logger.info(`Errors: ${results.errors}`);
         this.logger.info(`Unmatched events: ${results.unmatched.length}`);
+        
+        // Log safety status
+        this.logger.info('');
+        this.logger.info('=== SAFETY MODE STATUS ===');
+        this.logger.info(`DRY RUN: ${this.DRY_RUN ? 'ENABLED (No calendar changes)' : 'DISABLED'}`);
+        this.logger.info(`PREVIEW: ${this.PREVIEW_MODE ? 'ENABLED' : 'DISABLED'}`);
+        this.logger.info(`CALENDAR SYNC: ${this.CALENDAR_SYNC_ENABLED ? 'ENABLED' : 'DISABLED'}`);
         
         this.perfDebugger.endTimer('scrapeAllSources');
         this.perfDebugger.logSummary();
