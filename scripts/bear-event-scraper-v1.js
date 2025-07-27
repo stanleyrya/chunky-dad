@@ -1,5 +1,6 @@
-// Bear Event Parser for Scriptable
+// Bear Event Scraper v1 for Scriptable (Original Parser)
 // Parses event data from various bear event websites and updates Google Calendar
+// Note: Safety variables declared but not fully implemented
 // Author: Chunky Dad Team
 
 // ===== MINIFIED DEPENDENCIES =====
@@ -77,9 +78,9 @@ const logger = new FileLogger();
 const perfDebugger = new PerformanceDebugger();
 
 // Configuration
-const CONFIG_FILE = "bear-event-parser-config.json";
-const LOG_FILE = "bear-event-parser-logs.txt";
-const PERFORMANCE_FILE = "bear-event-parser-performance.csv";
+const CONFIG_FILE = "bear-event-scraper-v1-config.json";
+const LOG_FILE = "bear-event-scraper-v1-logs.txt";
+const PERFORMANCE_FILE = "bear-event-scraper-v1-performance.csv";
 
 // Calendar IDs mapping
 const CALENDAR_IDS = {
@@ -915,7 +916,7 @@ async function main() {
     
     // Generate comparison report
     const report = parser.generateComparisonReport(events);
-    const reportFile = `bear-event-parser-report-${new Date().toISOString().split('T')[0]}.txt`;
+    const reportFile = `bear-event-scraper-v1-report-${new Date().toISOString().split('T')[0]}.txt`;
     const fm = FileManager.local();
     fm.writeString(fm.documentsDirectory() + "/" + reportFile, report);
     logger.log(`Comparison report saved to: ${reportFile}`);
