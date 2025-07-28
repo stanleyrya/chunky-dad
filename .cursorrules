@@ -32,6 +32,11 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 │   ├── dynamic-calendar-loader.js # Calendar UI and interactions
 │   └── app.js          # Main application coordinator
 ├── data/               # JSON data files
+├── scripts/            # Scriptable automation scripts
+│   ├── README.md       # Scripts documentation
+│   ├── scriptable-complete-api.md # Complete Scriptable API reference (54 classes)
+│   ├── bear-event-scraper-v*.js   # Bear event scraping scripts
+│   └── scraper-config.json        # Scraper configuration
 ├── testing/            # Test files and utilities
 │   ├── index.html      # Dynamic test file browser
 │   ├── manifest.json   # Auto-generated list of test files
@@ -78,6 +83,17 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - **Fail fast**: If a feature doesn't work, show an error message rather than falling back to old systems
 - **Simple is better**: Prefer simple, direct implementations over complex multi-path systems
 - **Clean architecture**: When updating systems, replace old functionality rather than maintaining parallel systems
+
+## Scriptable Development
+- **API Reference**: Complete Scriptable API documentation available at `scripts/scriptable-complete-api.md`
+- **54 documented classes**: All Scriptable APIs from Alert to XMLParser with full method signatures
+- **Bear Event Scrapers**: iOS automation scripts for scraping bear community events
+- **Development Context**: When working on Scriptable scripts, reference the API documentation for:
+  - HTTP requests (Request class)
+  - Calendar integration (Calendar, CalendarEvent classes)
+  - File operations (FileManager class)
+  - Data parsing (Data, XMLParser classes)
+  - UI components (Alert, Notification classes)
 
 ## Project-Specific Notes
 - Bear community focus - inclusive, welcoming tone
@@ -168,6 +184,8 @@ logger.error('COMPONENT', 'error message', optionalData);
 - **Adding logging to new features**: Use component-specific logging patterns
 - **Debugging issues**: Check console logs, filter by component, review error messages
 - **Performance optimization**: Use logger.time/timeEnd for timing analysis
+- **Scriptable development**: Reference `scripts/scriptable-complete-api.md` for API usage
+- **Event scraper updates**: Modify bear-event-scraper-v*.js files in scripts/ folder
 
 ## IMPORTANT RESTRICTIONS
 - **NEVER create new *.md files** - no documentation, summaries, or guides
