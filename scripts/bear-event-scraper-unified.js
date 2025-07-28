@@ -90,7 +90,7 @@ async function loadInlineModules() {
     }
     
     // Simplified Event Processor (inline version of the full module)
-    class SimpleEventProcessor {
+    class InlineEventProcessor {
         constructor(config = {}) {
             this.config = config;
             this.bearKeywords = ['bear', 'bears', 'cub', 'cubs', 'otter', 'rockstrap', 'underbear', 'furball'];
@@ -254,7 +254,7 @@ async function loadInlineModules() {
     
     // Set up the simplified modules
     InputAdapters = { createInputAdapter: () => new SimpleInputAdapter() };
-    EventProcessor = SimpleEventProcessor;
+    EventProcessor = InlineEventProcessor;
     DisplayAdapters = { createDisplayAdapter: () => new SimpleDisplayAdapter() };
 }
 
@@ -276,6 +276,10 @@ class BearEventScraper {
     
     async initialize() {
         await loadModules();
+        
+        if (!InputAdapters || !EventProcessor || !DisplayAdapters) {
+            throw new Error('Failed to load required modules');
+        }
         
         this.inputAdapter = InputAdapters.createInputAdapter();
         this.processor = new EventProcessor(this.config);
@@ -431,19 +435,13 @@ if (typeof importModule !== 'undefined') {
     // Scriptable environment
     main().catch(console.error);
 } else if (typeof window !== 'undefined' && window.document) {
-    // Web environment - load modules and expose functions globally
+    // Web environment - expose BearEventScraper immediately and load modules
+    window.BearEventScraper = BearEventScraper;
+    window.runBearEventScraper = main;
+    
+    // Load modules in the background
     loadModules().then(() => {
-        window.BearEventScraper = BearEventScraper;
-        window.runBearEventScraper = main;
-        
-        // Auto-run if page is loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('Bear Event Scraper loaded. Call runBearEventScraper() to start.');
-            });
-        } else {
-            console.log('Bear Event Scraper loaded. Call runBearEventScraper() to start.');
-        }
+        console.log('Bear Event Scraper modules loaded successfully');
     }).catch(error => {
         console.error('Failed to load Bear Event Scraper modules:', error);
     });
@@ -452,4 +450,8 @@ if (typeof importModule !== 'undefined') {
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { BearEventScraper, main, DEFAULT_SOURCES };
+    // Also expose globally for testing
+    if (typeof global !== 'undefined') {
+        global.BearEventScraper = BearEventScraper;
+    }
 }
