@@ -1,13 +1,13 @@
-# Complete Scriptable API Reference
+# Scriptable API Reference
 
-This document contains comprehensive API documentation for Scriptable, extracted from the official documentation. It includes every class, method, property, parameter, and code example.
+This document contains comprehensive API documentation for Scriptable. Each class is organized with its description, constructor, methods, and properties clearly documented.
 
 ## Table of Contents
 
+- [CallbackURL](#callbackurl)
 - [Alert](#alert)
 - [Calendar](#calendar)
 - [CalendarEvent](#calendarevent)
-- [CallbackURL](#callbackurl)
 - [Color](#color)
 - [Contact](#contact)
 - [ContactsContainer](#contactscontainer)
@@ -59,19583 +59,2138 @@ This document contains comprehensive API documentation for Scriptable, extracted
 - [WidgetStack](#widgetstack)
 - [WidgetText](#widgettext)
 - [XMLParser](#xmlparser)
-- [args](#args)
-- [config](#config)
-- [console](#console)
-- [importModule](#importmodule)
-- [module](#module)
-
----
-
-## Alert
-
-### Instance Methods
-
-#### `presentAlert`
-
-Instance method presentAlert
-
-#### `textFieldValue`
-
-Instance method textFieldValue
-
-#### `addCancelAction`
-
-Instance method addCancelAction
-
-#### `addTextField`
-
-Instance method addTextField
-
-#### `present`
-
-Instance method present
-
-#### `addDestructiveAction`
-
-Instance method addDestructiveAction
-
-#### `addSecureTextField`
-
-Instance method addSecureTextField
-
-#### `presentSheet`
-
-Instance method presentSheet
-
-#### `addAction`
-
-Instance method addAction
-
-#### `new Alert`
-
-Instance method new Alert
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `message`
-
-Property message
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `TextField`
-
-Property TextField
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `title`
-
-Property title
-
-#### `Path`
-
-Property Path
-
-#### `Message`
-
-Property Message
-
-#### `Safari`
-
-Property Safari
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-title : string
-```
-
-**Example 2:**
-```javascript
-message : string
-```
-
-**Example 3:**
-```javascript
-new Alert ()
-```
-
-**Example 4:**
-```javascript
-addAction ( title : string )
-```
-
-**Example 5:**
-```javascript
-addDestructiveAction ( title : string )
-```
-
----
-
-## Calendar
-
-### Static Methods
-
-#### `presentPicker`
-
-Static method presentPicker
-
-#### `forRemindersByTitle`
-
-Static method forRemindersByTitle
-
-#### `createForReminders`
-
-Static method createForReminders
-
-#### `defaultForEvents`
-
-Static method defaultForEvents
-
-#### `forEvents`
-
-Static method forEvents
-
-#### `forReminders`
-
-Static method forReminders
-
-#### `forEventsByTitle`
-
-Static method forEventsByTitle
-
-#### `defaultForReminders`
-
-Static method defaultForReminders
-
-#### `findOrCreateForReminders`
-
-Static method findOrCreateForReminders
-
-### Instance Methods
-
-#### `supportsAvailability`
-
-Instance method supportsAvailability
-
-#### `remove`
-
-Instance method remove
-
-#### `save`
-
-Instance method save
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `color`
-
-Property color
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `identifier`
-
-Property identifier
-
-#### `Color`
-
-Property Color
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `title`
-
-Property title
-
-#### `Path`
-
-Property Path
-
-#### `Message`
-
-Property Message
-
-#### `Safari`
-
-Property Safari
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `allowsContentModifications`
-
-Property allowsContentModifications
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `isSubscribed`
-
-Property isSubscribed
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-identifier : string
-```
-
-**Example 2:**
-```javascript
-title : string
-```
-
-**Example 3:**
-```javascript
-isSubscribed : bool
-```
-
-**Example 4:**
-```javascript
-allowsContentModifications : bool
-```
-
-**Example 5:**
-```javascript
-color : Color
-```
-
----
-
-## CalendarEvent
-
-### Static Methods
-
-#### `tomorrow`
-
-Static method tomorrow
-
-#### `between`
-
-Static method between
-
-#### `presentCreate`
-
-Static method presentCreate
-
-#### `lastWeek`
-
-Static method lastWeek
-
-#### `yesterday`
-
-Static method yesterday
-
-#### `thisWeek`
-
-Static method thisWeek
-
-#### `today`
-
-Static method today
-
-#### `nextWeek`
-
-Static method nextWeek
-
-### Instance Methods
-
-#### `addRecurrenceRule`
-
-Instance method addRecurrenceRule
-
-#### `presentEdit`
-
-Instance method presentEdit
-
-#### `new CalendarEvent`
-
-Instance method new CalendarEvent
-
-#### `removeAllRecurrenceRules`
-
-Instance method removeAllRecurrenceRules
-
-#### `remove`
-
-Instance method remove
-
-#### `save`
-
-Instance method save
-
-### Properties
-
-#### `timeZone`
-
-Property timeZone
-
-#### `location`
-
-Property location
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `Device`
-
-Property Device
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `isAllDay`
-
-Property isAllDay
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `UUID`
-
-Property UUID
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `endDate`
-
-Property endDate
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `notes`
-
-Property notes
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `startDate`
-
-Property startDate
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `identifier`
-
-Property identifier
-
-#### `Color`
-
-Property Color
-
-#### `Calendar`
-
-Property Calendar
-
-#### `calendar`
-
-Property calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `title`
-
-Property title
-
-#### `Path`
-
-Property Path
-
-#### `Message`
-
-Property Message
-
-#### `Safari`
-
-Property Safari
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `availability`
-
-Property availability
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `attendees`
-
-Property attendees
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-identifier : string
-```
-
-**Example 2:**
-```javascript
-title : string
-```
-
-**Example 3:**
-```javascript
-location : string
-```
-
-**Example 4:**
-```javascript
-notes : string
-```
-
-**Example 5:**
-```javascript
-startDate : Date
-```
 
 ---
 
 ## CallbackURL
 
-### Instance Methods
+Open x-callback-url requests.
 
-#### `open`
+Opens apps that support x-callback-url and waits for a response from the target application. You can find a list of apps that support x-callback-url at [x-callback-url.com/apps](http://x-callback-url.com/apps/).
 
-Instance method open
+### Constructor
 
-#### `new CallbackURL`
+#### `new CallbackURL(baseURL: string)`
 
-Instance method new CallbackURL
+Constructs an object that opens x-callback-url requests and waits for a response from the target app.
 
-#### `addParameter`
+**Parameters:**
+- `baseURL` (string): Base URL of the request. This is usually something like my-app://x-callback-url/action
 
-Instance method addParameter
+### Methods
 
-#### `getURL`
+#### `addParameter(name: string, value: string)`
 
-Instance method getURL
+Appends a key/value pair to the base URL as a query parameter. The name and value are automatically encoded. Do not add the x-callback-url parameters, i.e. x-source, x-success, x-error and x-cancel as Scriptable will add those.
+
+**Parameters:**
+- `name` (string): Name of the query parameter to add.
+- `value` (string): Value of the query parameter to add.
+
+#### `open(): Promise<{string: string}>`
+
+Opens the callback URL.
+
+Opens the target app and waits for the target app to perform the action. The returned promise contains the query parameters supplied by the target app when it invokes the callback. If the action failed in the target app or the action was cancelled, the promise will be rejected. The promise is also rejected if the action times out because the target app did not invoke the callback.
+
+**Return value:**
+- `Promise<{string: string}>`: Promise that provides the query parameters supplied by the target app when it invokes the callback.
+
+#### `getURL(): string`
+
+Creates the callback URL.
+
+Creates a callback URL with the specified base URL and query parameters.
+
+**Return value:**
+- `string`: Configured callback URL.
+
+---
+
+## Alert
+
+Presents an alert.
+
+Use this to configure an alert presented modally or as a sheet. After configuring the alert, call presentAlert() or presentSheet() to present the alert. The two presentations methods will return a value which carries the index of the action that was selected when fulfilled.
 
 ### Properties
 
-#### `UITableCell`
+#### `title: string`
 
-Property UITableCell
+Title displayed in the alert. Usually a short string.
 
-#### `QuickLook`
+#### `message: string`
 
-Property QuickLook
+Detailed message displayed in the alert.
 
-#### `config`
+### Constructor
 
-Property config
+#### `new Alert()`
 
-#### `Point`
+Constructs a new alert.
 
-Property Point
+### Methods
 
-#### `XMLParser`
+#### `addAction(title: string)`
 
-Property XMLParser
+Adds an action to the alert.
 
-#### `Device`
+Adds an action button to the alert. To check if an action was selected, you should use the first parameter provided when the promise returned by presentAlert() and presentSheet() is resolved.
 
-Property Device
+**Parameters:**
+- `title` (string): Title of the action.
 
-#### `args`
+#### `addDestructiveAction(title: string)`
 
-Property args
+Adds a destructive action to the alert.
 
-#### `Request`
+Destructive action titles have a red text color, signaling that the action may modify or delete data.
 
-Property Request
+**Parameters:**
+- `title` (string): Title of the action.
 
-#### `TextField`
+#### `addCancelAction(title: string)`
 
-Property TextField
+Adds a cancel action to the alert.
 
-#### `DrawContext`
+Adds a cancel action to the alert. When a cancel action is selected, the index provided by presentAlert() or presentSheet() will always be -1. Please note that when running on the iPad and presenting using presentSheet(), the action will not be shown in the list of actions. The operation is cancelled by tapping outside the sheet.
 
-Property DrawContext
+An alert can only contain a single cancel action. Attempting to add more cancel actions will remove any previously added cancel actions.
 
-#### `Size`
+**Parameters:**
+- `title` (string): Title of the action.
 
-Property Size
+#### `addTextField(placeholder: string, text: string): TextField`
 
-#### `CalendarEvent`
+Adds a text field prompting for user input.
 
-Property CalendarEvent
+Adds a text field to the alert controller prompting for user input. Retrieve the value for the text field using textFieldValue() and supply the index of the text field. Indices for text fields are assigned in the same order as they are added to the alert starting at 0.
 
-#### `Timer`
+Text fields are not supported when using the sheet presentation.
 
-Property Timer
+**Parameters:**
+- `placeholder` (string): Optional placeholder that will be displayed when the text field is empty.
+- `text` (string): Optional default value for the text field.
 
-#### `Notification`
+**Return value:**
+- `TextField`: Text field added to the alert.
 
-Property Notification
+#### `addSecureTextField(placeholder: string, text: string): TextField`
 
-#### `ShareSheet`
+Adds a secure text field prompting for user input.
 
-Property ShareSheet
+Adds a secure text field to the alert controller prompting for user input. Values entered into a secure text field will be hidden behind dots. Retrieve the value for the text field using textFieldValue() and supply the index of the text field. Indices for text fields are assigned in the same order as they are added to the alert starting at 0.
 
-#### `ContactsGroup`
+**Parameters:**
+- `placeholder` (string): Optional placeholder that will be displayed when the text field is empty.
+- `text` (string): Optional default value for the text field.
 
-Property ContactsGroup
+**Return value:**
+- `TextField`: Text field added to the alert.
 
-#### `Rect`
+#### `textFieldValue(index: number): string`
 
-Property Rect
+Retrieves value of a text field.
 
-#### `Script`
+Retrieves the value of a text field added using addTextField() or addSecureTextField(). Indices for text fields are assigned in the same order as they are added to the alert starting at 0.
 
-Property Script
+**Parameters:**
+- `index` (number): Index of text field to retrieve for value.
 
-#### `UUID`
+**Return value:**
+- `string`: Value of the text field at the specified index.
 
-Property UUID
+#### `present(): Promise<number>`
 
-#### `DatePicker`
+Presents the alert modally.
 
-Property DatePicker
+This is a shorthand for presentAlert().
 
-#### `DateFormatter`
+**Return value:**
+- `Promise<number>`: A promise carrying the selected action index when fulfilled.
 
-Property DateFormatter
+#### `presentAlert(): Promise<number>`
 
-#### `Data`
+Presents the alert modally.
 
-Property Data
+**Return value:**
+- `Promise<number>`: A promise carrying the selected action index when fulfilled.
 
-#### `RelativeDateTimeFormatter`
+#### `presentSheet(): Promise<number>`
 
-Property RelativeDateTimeFormatter
+Presents the alert as a sheet.
 
-#### `Location`
+**Return value:**
+- `Promise<number>`: A promise carrying the selected action index when fulfilled.
 
-Property Location
+---
 
-#### `URLScheme`
+## Calendar
 
-Property URLScheme
+Holds reminders and events.
 
-#### `WidgetImage`
+Use the Calendar type to get a specific calendar. The calendar is used with the Reminder and CalendarEvent types when fetching reminders or events from a specific calendar or when inserting into a calendar. If you are fetching reminders or events from all calendars, you do not need to pass the calendars when performing the fetch with the Reminder or CalendarEvent types.
 
-Property WidgetImage
+### Properties
 
-#### `module`
+#### `identifier: string`
 
-Property module
+Calendar identifier.
 
-#### `Mail`
+*Read-only.*
 
-Property Mail
+#### `title: string`
 
-#### `LinearGradient`
+Title of calendar.
 
-Property LinearGradient
+#### `isSubscribed: bool`
 
-#### `Alert`
+Whether the calendar is a subscribed calendar.
 
-Property Alert
+*Read-only.*
 
-#### `Scriptable Docs`
+#### `allowsContentModifications: bool`
 
-Property Scriptable Docs
+Indicates whether items can be added, edited, and deleted in the calendar.
 
-#### `Color`
+*Read-only.*
 
-Property Color
+#### `color: Color`
 
-#### `WidgetSpacer`
+Color of calendar.
 
-Property WidgetSpacer
+### Methods
 
-#### `Calendar`
+#### `supportsAvailability(availability: string): bool`
 
-Property Calendar
+Checks if the calendar supports availability.
 
-#### `FileManager`
+The following values are supported:
+- busy
+- free
+- tentative
+- unavailable
 
-Property FileManager
+Not all calendars support all of these availabilities and some calendars may not support availability at all. Use this function to check if the calendar supports a specific availability.
 
-#### `Keychain`
+**Parameters:**
+- `availability` (string): Availability to check against.
 
-Property Keychain
+**Return value:**
+- `bool`: True if the calendar supports the availability, otherwise false.
 
-#### `UITable`
+#### `save()`
 
-Property UITable
+Saves calendar.
 
-#### `WidgetStack`
+Saves changes to the calendar.
 
-Property WidgetStack
+#### `remove()`
 
-#### `ListWidget`
+Removes calendar.
 
-Property ListWidget
+The calendar is removed immediately. This cannot be undone.
 
-#### `UITableRow`
+### Static Methods
 
-Property UITableRow
+#### `forReminders(): Promise<[Calendar]>`
 
-#### `SFSymbol`
+Fetches calendars for reminders.
 
-Property SFSymbol
+A calendar can only hold either reminders or events. Call this function to fetch all calendars that can hold reminders.
 
-#### `WidgetDate`
+**Return value:**
+- `Promise<[Calendar]>`: Promise that provides the calendars when fulfilled.
 
-Property WidgetDate
+#### `forEvents(): Promise<[Calendar]>`
 
-#### `console`
+Fetches calendars for events.
 
-Property console
+A calendar can only hold either reminders or events. Call this function to fetch all calendars that can hold events.
 
-#### `Path`
+**Return value:**
+- `Promise<[Calendar]>`: Promise that provides the calendars when fulfilled.
 
-Property Path
+#### `forRemindersByTitle(title: string): Promise<Calendar>`
 
-#### `Safari`
+Fetches a calendar that holds reminders.
 
-Property Safari
+**Parameters:**
+- `title` (string): Title of calendar.
 
-#### `Message`
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
 
-Property Message
+#### `forEventsByTitle(title: string): Promise<Calendar>`
 
-#### `WebView`
+Fetches a calendar that holds events.
 
-Property WebView
+**Parameters:**
+- `title` (string): Title of calendar.
 
-#### `WidgetText`
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
 
-Property WidgetText
+#### `createForReminders(title: string): Promise<Calendar>`
 
-#### `Photos`
+Create a new calendar that holds reminders.
 
-Property Photos
+This will create a new list for reminders in the Reminders app. The list is automatically saved so there is no need to call `save()` after creating the list.
 
-#### `Image`
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the created calendar when fulfilled.
 
-Property Image
+#### `findOrCreateForReminders(title: string): Promise<Calendar>`
 
-#### `Font`
+Find or create a new calendar that holds reminders.
 
-Property Font
+This will attempt to find a calendar for reminders with the specified name. If no calendar is found, a new calendar is created and the calendar will appear as a reminder list in the Reminders app. If multiple calendars are found for the specified name, the first one will be returned. The list is automatically saved so there is no need to call `save()` in the case the list was created.
 
-#### `CallbackURL`
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
 
-Property CallbackURL
+#### `defaultForReminders(): Promise<Calendar>`
 
-#### `Reminder`
+Default calendar for reminders.
 
-Property Reminder
+A calendar can only hold either reminders or events. Call this function to get the default calendar that can hold reminders.
 
-#### `Contact`
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
 
-Property Contact
+#### `defaultForEvents(): Promise<Calendar>`
 
-#### `Dictation`
+Default calendar for events.
 
-Property Dictation
+A calendar can only hold either reminders or events. Call this function to get the default calendar that can hold events.
 
-#### `DocumentPicker`
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
 
-Property DocumentPicker
+#### `presentPicker(allowMultiple: bool): Promise<[Calendar]>`
 
-#### `importModule`
+Presents a view for picking calendars.
 
-Property importModule
+**Parameters:**
+- `allowMultiple` (bool): Whether to allow picking multiple calenders. Defaults to false.
 
-#### `Pasteboard`
+**Return value:**
+- `Promise<[Calendar]>`: Promise that provides the calendars when fulfilled.
 
-Property Pasteboard
+---
 
-#### `Speech`
+## CalendarEvent
 
-Property Speech
+Manages events in calendars.
 
-#### `RecurrenceRule`
+Used for creating, fetching and removing events from your calendars.
 
-Property RecurrenceRule
+### Properties
 
-#### `ContactsContainer`
+#### `identifier: string`
 
-Property ContactsContainer
+Identifier of event.
 
-### Code Examples
+*Read-only.*
 
-**Example 1:**
+#### `title: string`
+
+Title of event.
+
+#### `location: string`
+
+Location of event.
+
+#### `notes: string`
+
+Notes associated with event.
+
+#### `startDate: Date`
+
+Start date of event.
+
+#### `endDate: Date`
+
+End date of event.
+
+#### `isAllDay: bool`
+
+Whether the event is an all-day event.
+
+#### `attendees: [any]`
+
+Attendees associated with the event.
+
+*Read-only.*
+
+An array of objects on the following form:
+
 ```javascript
-new CallbackURL ( baseURL : string )
+{
+  "isCurrentUser": false,
+  "name": "John Appleseed",
+  "status": "accepted",
+  "type": "person",
+  "role": "required"
+}
 ```
 
-**Example 2:**
-```javascript
-addParameter ( name : string , value : string )
-```
+Note that the property is read-only since iOS does not expose API to modify the attendees of an event.
 
-**Example 3:**
-```javascript
-open () : Promise { string : string } >
-```
+#### `availability: string`
 
-**Example 4:**
-```javascript
-getURL () : string
-```
+Availability during the event.
 
-**Example 5:**
-```javascript
-new CallbackURL ( baseURL : string )
-```
+Indicates how the event should be treated for scheduling purposes. The following values are supported:
+- busy
+- free
+- tentative
+- unavailable
+
+Be aware that not all calendars support all of these availabilities and some calendars may not support availability at all. Use `Calendar.supportsAvailability()` to check if a calendar supports a specific availability.
+
+#### `timeZone: string`
+
+Time zone of event.
+
+Geopolitical region identifier that identifies the time zone, e.g. "Europe/Copenhagen", "America/New_York" and "Asia/Tokyo".
+
+#### `calendar: Calendar`
+
+Calendar the event is stored in.
+
+### Constructor
+
+#### `new CalendarEvent()`
+
+Constructs an event.
+
+In order to add the event to your calendar, you must call the save() function.
+
+### Methods
+
+#### `addRecurrenceRule(recurrenceRule: RecurrenceRule)`
+
+Adds a recurrence rule.
+
+Recurrence rules specify when the eventer or reminder should be repeated. See the documentation of RecurrenceRule for more information on creating rules.
+
+**Parameters:**
+- `recurrenceRule` (RecurrenceRule): Recurrence rule to add to the reminder.
+
+#### `removeAllRecurrenceRules()`
+
+Removes all recurrence rules.
+
+#### `save()`
+
+Saves event.
+
+Saves changes to an event, inserting it into the calendar if it is newly created.
+
+#### `remove()`
+
+Removes event from calendar.
+
+#### `presentEdit(): Promise<CalendarEvent>`
+
+Presents a view for editing the calendar event.
+
+The presented view supports editing various attributes of the event, including title, location, dates, recurrence and alerts.
+
+**Return value:**
+- `Promise<CalendarEvent>`: Promise that provides the updated event when fulfilled.
+
+### Static Methods
+
+#### `presentCreate(): Promise<CalendarEvent>`
+
+Presents a view for creating a calendar event.
+
+The presented view supports editing various attributes of the event, including title, location, dates, recurrence and alerts.
+
+**Return value:**
+- `Promise<CalendarEvent>`: Promise that provides the created event when fulfilled.
+
+#### `today(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events occurring today.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `tomorrow(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events occurring tomorrow.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `yesterday(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occurred yesterday.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `thisWeek(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occur this week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `nextWeek(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occur next week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `lastWeek(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occurred last week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `between(startDate: Date, endDate: Date, calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occurs between two dates.
+
+**Parameters:**
+- `startDate` (Date): Start date to fetch events for.
+- `endDate` (Date): End date to fetch events for.
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
 
 ---
 
 ## Color
 
-### Static Methods
+Stores color data including opacity.
 
-#### `yellow`
-
-Static method yellow
-
-#### `lightGray`
-
-Static method lightGray
-
-#### `green`
-
-Static method green
-
-#### `magenta`
-
-Static method magenta
-
-#### `orange`
-
-Static method orange
-
-#### `brown`
-
-Static method brown
-
-#### `darkGray`
-
-Static method darkGray
-
-#### `white`
-
-Static method white
-
-#### `red`
-
-Static method red
-
-#### `purple`
-
-Static method purple
-
-#### `cyan`
-
-Static method cyan
-
-#### `gray`
-
-Static method gray
-
-#### `clear`
-
-Static method clear
-
-#### `dynamic`
-
-Static method dynamic
-
-#### `blue`
-
-Static method blue
-
-#### `black`
-
-Static method black
-
-### Instance Methods
-
-#### `new Color`
-
-Instance method new Color
+A color can be created using a hex value, e.g. #FF0000 and optionally an alpha or it can be created using the provided system colors.
 
 ### Properties
 
-#### `UITableCell`
+#### `hex: string`
 
-Property UITableCell
+HEX representation.
 
-#### `QuickLook`
+*Read-only.*
 
-Property QuickLook
+#### `red: number`
 
-#### `config`
+Amount of red in the color.
 
-Property config
+*Read-only.*
 
-#### `Point`
+#### `green: number`
 
-Property Point
+Amount of green in the color.
 
-#### `XMLParser`
+*Read-only.*
 
-Property XMLParser
+#### `blue: number`
 
-#### `Device`
+Amount of blue in the color.
 
-Property Device
+*Read-only.*
 
-#### `args`
+#### `alpha: number`
 
-Property args
+Alpha of the color.
 
-#### `Request`
+*Read-only.*
 
-Property Request
+### Constructor
 
-#### `TextField`
+#### `new Color(hex: string, alpha: number)`
 
-Property TextField
+Constructs a color.
 
-#### `DrawContext`
+Constructs a new color with a hex value and optionally an alpha value. The hex value may specify the alpha value but this will be ignored if the alpha value parameter is provided. Examples of valid hex values: #ff0000, #00ff0080, #00f and #ff. The hashtag is optional.
 
-Property DrawContext
+**Parameters:**
+- `hex` (string): Hex value.
+- `alpha` (number): Alpha value.
 
-#### `red`
+### Static Methods
 
-Property red
+#### `black(): Color`
 
-#### `Size`
+Constructs a black color.
 
-Property Size
+**Return value:**
+- `Color`: A black color.
 
-#### `CalendarEvent`
+#### `darkGray(): Color`
 
-Property CalendarEvent
+Constructs a dark gray color.
 
-#### `Timer`
+**Return value:**
+- `Color`: A dark gray color.
 
-Property Timer
+#### `lightGray(): Color`
 
-#### `Notification`
+Constructs a light gray color.
 
-Property Notification
+**Return value:**
+- `Color`: A light gray color.
 
-#### `ShareSheet`
+#### `white(): Color`
 
-Property ShareSheet
+Constructs a white color.
 
-#### `ContactsGroup`
+**Return value:**
+- `Color`: A white color.
 
-Property ContactsGroup
+#### `gray(): Color`
 
-#### `green`
+Constructs a gray color.
 
-Property green
+**Return value:**
+- `Color`: A gray color.
 
-#### `Rect`
+#### `red(): Color`
 
-Property Rect
+Constructs a red color.
 
-#### `Script`
+**Return value:**
+- `Color`: A red color.
 
-Property Script
+#### `green(): Color`
 
-#### `UUID`
+Constructs a green color.
 
-Property UUID
+**Return value:**
+- `Color`: A green color.
 
-#### `DatePicker`
+#### `blue(): Color`
 
-Property DatePicker
+Constructs a blue color.
 
-#### `DateFormatter`
+**Return value:**
+- `Color`: A blue color.
 
-Property DateFormatter
+#### `cyan(): Color`
 
-#### `hex`
+Constructs a cyan color.
 
-Property hex
+**Return value:**
+- `Color`: A cyan color.
 
-#### `alpha`
+#### `yellow(): Color`
 
-Property alpha
+Constructs a yellow color.
 
-#### `blue`
+**Return value:**
+- `Color`: A yellow color.
 
-Property blue
+#### `magenta(): Color`
 
-#### `Data`
+Constructs a magenta color.
 
-Property Data
+**Return value:**
+- `Color`: A magenta color.
 
-#### `RelativeDateTimeFormatter`
+#### `orange(): Color`
 
-Property RelativeDateTimeFormatter
+Constructs a orange color.
 
-#### `Location`
+**Return value:**
+- `Color`: A orange color.
 
-Property Location
+#### `purple(): Color`
 
-#### `URLScheme`
+Constructs a purple color.
 
-Property URLScheme
+**Return value:**
+- `Color`: A purple color.
 
-#### `WidgetImage`
+#### `brown(): Color`
 
-Property WidgetImage
+Constructs a brown color.
 
-#### `module`
+**Return value:**
+- `Color`: A brown color.
 
-Property module
+#### `clear(): Color`
 
-#### `Mail`
+Constructs a transparent color.
 
-Property Mail
+**Return value:**
+- `Color`: A transparent color.
 
-#### `LinearGradient`
+#### `dynamic(lightColor: Color, darkColor: Color): Color`
 
-Property LinearGradient
+Creates a dynamic color.
 
-#### `Color`
+The dynamic color will use either its light or dark variant depending the appearance of the system.
 
-Property Color
+Dynamic colors are not supported when used with `DrawContext`.
 
-#### `Scriptable Docs`
+**Parameters:**
+- `lightColor` (Color): Color used in light appearance.
+- `darkColor` (Color): Color used in dark appearance.
 
-Property Scriptable Docs
-
-#### `Alert`
-
-Property Alert
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-hex : string
-```
-
-**Example 2:**
-```javascript
-red : number
-```
-
-**Example 3:**
-```javascript
-green : number
-```
-
-**Example 4:**
-```javascript
-blue : number
-```
-
-**Example 5:**
-```javascript
-alpha : number
-```
+**Return value:**
+- `Color`: Dynamic color.
 
 ---
 
 ## Contact
 
-### Static Methods
+Contact in the address book.
 
-#### `inGroups`
-
-Static method inGroups
-
-#### `delete`
-
-Static method delete
-
-#### `update`
-
-Static method update
-
-#### `add`
-
-Static method add
-
-#### `persistChanges`
-
-Static method persistChanges
-
-#### `all`
-
-Static method all
-
-### Instance Methods
-
-#### `new Contact`
-
-Instance method new Contact
+The type represents a contact in the address book. You can use the type to fetch and update contacts in the address book. If you are signed into multiple accounts on the device, you may have multiple sources that populate the address book. A source is is represented as a `ContactsContainer`. A contact may be in only one container. A CardDAV account usually has a single container whereas an Exchange account may have multiple containers.
 
 ### Properties
 
-#### `QuickLook`
+#### `identifier: string`
 
-Property QuickLook
+Uniquely identifies the contact on the device.
 
-#### `Point`
+*Read-only.*
 
-Property Point
+#### `namePrefix: string`
 
-#### `Device`
+Name prefix.
 
-Property Device
+#### `givenName: string`
 
-#### `isMiddleNameAvailable`
+Given name.
 
-Property isMiddleNameAvailable
+#### `middleName: string`
 
-#### `args`
+Middle name.
 
-Property args
+#### `familyName: string`
 
-#### `Request`
+Family name.
 
-Property Request
+#### `nickname: string`
 
-#### `isBirthdayAvailable`
+Nickname.
 
-Property isBirthdayAvailable
+#### `birthday: Date`
 
-#### `givenName`
+Birthday.
 
-Property givenName
+#### `image: Image`
 
-#### `ShareSheet`
+Profile picture.
 
-Property ShareSheet
+#### `emailAddresses: [{string: string}]`
 
-#### `UUID`
+Email addresses.
 
-Property UUID
+An array of objects on the following form:
 
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `isURLAddressesAvailable`
-
-Property isURLAddressesAvailable
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `isNicknameAvailable`
-
-Property isNicknameAvailable
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `jobTitle`
-
-Property jobTitle
-
-#### `isOrganizationNameAvailable`
-
-Property isOrganizationNameAvailable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `Safari`
-
-Property Safari
-
-#### `Path`
-
-Property Path
-
-#### `middleName`
-
-Property middleName
-
-#### `isEmailAddressesAvailable`
-
-Property isEmailAddressesAvailable
-
-#### `Dictation`
-
-Property Dictation
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `nickname`
-
-Property nickname
-
-#### `emailAddresses`
-
-Property emailAddresses
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `phoneNumbers`
-
-Property phoneNumbers
-
-#### `postalAddresses`
-
-Property postalAddresses
-
-#### `departmentName`
-
-Property departmentName
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `isDepartmentNameAvailable`
-
-Property isDepartmentNameAvailable
-
-#### `image`
-
-Property image
-
-#### `socialProfiles`
-
-Property socialProfiles
-
-#### `Data`
-
-Property Data
-
-#### `Location`
-
-Property Location
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `isImageAvailable`
-
-Property isImageAvailable
-
-#### `config`
-
-Property config
-
-#### `familyName`
-
-Property familyName
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `isDatesAvailable`
-
-Property isDatesAvailable
-
-#### `isFamilyNameAvailable`
-
-Property isFamilyNameAvailable
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `isNamePrefixAvailable`
-
-Property isNamePrefixAvailable
-
-#### `isSocialProfilesAvailable`
-
-Property isSocialProfilesAvailable
-
-#### `isNoteAvailable`
-
-Property isNoteAvailable
-
-#### `Color`
-
-Property Color
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `identifier`
-
-Property identifier
-
-#### `isPhoneNumbersAvailable`
-
-Property isPhoneNumbersAvailable
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WebView`
-
-Property WebView
-
-#### `organizationName`
-
-Property organizationName
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `urlAddresses`
-
-Property urlAddresses
-
-#### `Reminder`
-
-Property Reminder
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `isPostalAddressesAvailable`
-
-Property isPostalAddressesAvailable
-
-#### `Speech`
-
-Property Speech
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `dates`
-
-Property dates
-
-#### `TextField`
-
-Property TextField
-
-#### `Size`
-
-Property Size
-
-#### `note`
-
-Property note
-
-#### `Notification`
-
-Property Notification
-
-#### `isGiveNameAvailable`
-
-Property isGiveNameAvailable
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `isJobTitleAvailable`
-
-Property isJobTitleAvailable
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `console`
-
-Property console
-
-#### `Message`
-
-Property Message
-
-#### `birthday`
-
-Property birthday
-
-#### `namePrefix`
-
-Property namePrefix
-
-#### `Contact`
-
-Property Contact
-
-#### `importModule`
-
-Property importModule
-
-### Code Examples
-
-**Example 1:**
 ```javascript
-ContactsContainer
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Home",
+  "localizedLabel": "Home",
+  "value": "my@example.com"
+}
 ```
 
-**Example 2:**
+The identifier uniquely identifies the email address on this device. The label is a description of the email address and the value holds the email address itself.
+
+When updating this property, you must set the entire array of email addresses that you would like to store on the contact. Each value in the array must have the "value" key. The other keys are optional.
+
+#### `phoneNumbers: [{string: string}]`
+
+Phone numbers.
+
+An array of objects on the following form:
+
 ```javascript
-identifier : string
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Home",
+  "localizedLabel": "Home",
+  "value": "(111)234-5678"
+}
 ```
 
-**Example 3:**
+The identifier uniquely identifies the phone number on this device. The label is a description of the phone number and the value holds the phone number itself.
+
+When updating this property, you must set the entire array of phone numbers that you would like to store on the contact. Each value in the array must have the "value" key. The other keys are optional.
+
+#### `postalAddresses: [{string: string}]`
+
+Postal addresses.
+
+An array of objects on the following form:
+
 ```javascript
-namePrefix : string
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Home",
+  "localizedLabel": "Home",
+  "street": "240  Terry Lane",
+  "city": "New York",
+  "state": "New York",
+  "postalCode": "10001",
+  "country": "United States of America"
+}
 ```
 
-**Example 4:**
+The identifier uniquely identifies the pstal address on this device. The label is a description of the phone number and the value holds the phone number itself.
+
+When updating this property, you must set the entire array of postal addresses that you would like to store on the contact. The "identifier" key is optional.
+
+#### `socialProfiles: [{string: string}]`
+
+Social profiles.
+
+An array of objects on the following form:
+
 ```javascript
-givenName : string
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Twitter",
+  "localizedLabel": "Twitter",
+  "service": "Twitter",
+  "url": "https://twitter.com/scriptableapp",
+  "userIdentifier": null,
+  "username": "scriptableapp"
+}
 ```
 
-**Example 5:**
-```javascript
-middleName : string
-```
+### Constructor
+
+#### `new Contact()`
+
+Constructs a contact.
+
+In order to add the contact to your address book, you must queue it for insertion using `Contact.add()`. When you're done making changes to the address book you should call `Contact.persistChanges()` to persist the changes.
+
+### Static Methods
+
+#### `all(containers: [ContactsContainer]): Promise<[Contact]>`
+
+Fetches contacts.
+
+Fetches the contacts in the specified containers. A contact can be in only one container.
+
+**Parameters:**
+- `containers` ([ContactsContainer]): Containers to fetch contacts from.
+
+**Return value:**
+- `Promise<[Contact]>`: Promise that provides the contacts when fulfilled.
+
+#### `inGroups(groups: [ContactsGroup]): Promise<[Contact]>`
+
+Fetches contacts in groups.
+
+Fetches the contacts in the specified contacts groups. A contact may belong to many groups.
+
+**Parameters:**
+- `groups` ([ContactsGroup]): Groups to fetch contacts from.
+
+**Return value:**
+- `Promise<[Contact]>`: Promise that provides the contacts when fulfilled.
+
+#### `add(contact: Contact, containerIdentifier: string)`
+
+Queues a contact to be added.
+
+After you have created a contact, you must queue the contact to be added to the address book and invoke `Contact.persistChanges()` to persist the changes to the address book.
+
+For performance reasons, it is best to batch changes to the address book. Therefore you should queue all updates, insertions and removals of contacts and contacts groups to as large batches as possible and then call `Contact.persistChanges()` when you want to persist the changes to the address book.
+
+**Parameters:**
+- `contact` (Contact): Contact to queue to be added.
+- `containerIdentifier` (string): Optional. Identifier of container to add the contact to. If null is specified, the contact will be added to the default container.
+
+#### `update(contact: Contact)`
+
+Queues an update to a contact.
+
+After you have updated one or more properties on a contact, you must queue the contact to be updated and invoke `Contact.persistChanges()` to persist the changes to the address book.
+
+For performance reasons, it is best to batch changes to the address book. Therefore you should queue all updates, insertions and removals of contacts and contacts groups to as large batches as possible and then call `Contact.persistChanges()` when you want to persist the changes to the address book.
+
+**Parameters:**
+- `contact` (Contact): Contact to queue to be updated.
 
 ---
 
 ## ContactsContainer
 
-### Static Methods
+Collection of contacts.
 
-#### `withIdentifier`
-
-Static method withIdentifier
-
-#### `default`
-
-Static method default
-
-#### `all`
-
-Static method all
+If you're signed into multiple accounts on your device, you may have multiple contact containers. A contact can be in only one container. CardDAV accounts usually have a single container whereas Exchange accounts may have multiple containers. A container may have multiple groups. While a single contact can only belong to one container, a contact may belong to many groups.
 
 ### Properties
 
-#### `UITableCell`
+#### `identifier: string`
 
-Property UITableCell
+Identifier of the contacts container.
 
-#### `QuickLook`
+*Read-only.*
 
-Property QuickLook
+#### `name: string`
 
-#### `config`
+Name of the contacts container.
 
-Property config
+*Read-only.*
 
-#### `Point`
+### Static Methods
 
-Property Point
+#### `default(): Promise<ContactsContainer>`
 
-#### `XMLParser`
+Fetches default contacts container.
 
-Property XMLParser
+**Return value:**
+- `Promise<ContactsContainer>`: Promise that provides the default contacts container when fulfilled.
 
-#### `Device`
+#### `all(): Promise<[ContactsContainer]>`
 
-Property Device
+Fetches all contacts containers.
 
-#### `args`
+**Return value:**
+- `Promise<[ContactsContainer]>`: Promise that provides all contacts containers when fulfilled.
 
-Property args
+#### `withIdentifier(identifier: string): Promise<ContactsContainer>`
 
-#### `Request`
+Fetches a contacts container.
 
-Property Request
+**Parameters:**
+- `identifier` (string): Identifier of the contacts container to fetch.
 
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `name`
-
-Property name
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `identifier`
-
-Property identifier
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-identifier : string
-```
-
-**Example 2:**
-```javascript
-name : string
-```
-
-**Example 3:**
-```javascript
-static default () : Promise ContactsContainer >
-```
-
-**Example 4:**
-```javascript
-static all () : Promise [ ContactsContainer ] >
-```
-
-**Example 5:**
-```javascript
-static withIdentifier ( identifier : string ) : Promise ContactsContainer >
-```
+**Return value:**
+- `Promise<ContactsContainer>`: Promise that provides the contacts container when fulfilled.
 
 ---
 
 ## ContactsGroup
 
-### Static Methods
+Group of contacts.
 
-#### `delete`
-
-Static method delete
-
-#### `add`
-
-Static method add
-
-#### `update`
-
-Static method update
-
-#### `all`
-
-Static method all
-
-### Instance Methods
-
-#### `removeMember`
-
-Instance method removeMember
-
-#### `new ContactsGroup`
-
-Instance method new ContactsGroup
-
-#### `addMember`
-
-Instance method addMember
+A contacts container may have several groups of contacts. A contact can only belong to a single contacts container but may belong to zero or more contacts groups. For example, an iCloud account has only one container but may have many groups.
 
 ### Properties
 
-#### `UITableCell`
+#### `identifier: string`
 
-Property UITableCell
+Identifier of the contacts group.
 
-#### `QuickLook`
+*Read-only.*
 
-Property QuickLook
+#### `name: string`
 
-#### `config`
+Name of the contacts group.
 
-Property config
+### Constructor
 
-#### `Point`
+#### `new ContactsGroup()`
 
-Property Point
+Constructs a contacts group.
 
-#### `XMLParser`
+In order to add the group to your address book, you must queue it for insertion using `ContactsGroup.add()`. When you're done making changes to the address book you should call `Contact.persistChanges()` to persist the changes.
 
-Property XMLParser
+### Methods
 
-#### `Device`
+#### `addMember(contact: Contact)`
 
-Property Device
+Adds a contact to the group.
 
-#### `args`
+In order to persist the change, you should call `Contact.persistChanges()`. It is important that the contact is added to the address book. To add the contact to the address book, you should queue it for insertion using `Contact.add()` before persisting the changes.
 
-Property args
+**Parameters:**
+- `contact` (Contact): Contact to add to the group.
 
-#### `Request`
+#### `removeMember(contact: Contact)`
 
-Property Request
+Removes a contact from the group.
 
-#### `TextField`
+In order to persist the change, you should call `Contact.persistChanges()`. It is important that the contact is added to the address book. To add the contact to the address book, you should queue it for insertion using `Contact.add()` before persisting the changes.
 
-Property TextField
+**Parameters:**
+- `contact` (Contact): Contact to add to the group.
 
-#### `DrawContext`
+### Static Methods
 
-Property DrawContext
+#### `all(containers: [ContactsContainer]): Promise<[ContactsGroup]>`
 
-#### `Size`
+Fetches contacts groups.
 
-Property Size
+Fetches the contacts groups in the specified containers. A group can be in only one container.
 
-#### `name`
+**Parameters:**
+- `containers` ([ContactsContainer]): Container to fetch contacts groups from.
 
-Property name
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `identifier`
-
-Property identifier
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-identifier : string
-```
-
-**Example 2:**
-```javascript
-name : string
-```
-
-**Example 3:**
-```javascript
-new ContactsGroup ()
-```
-
-**Example 4:**
-```javascript
-ContactsGroup.add()
-```
-
-**Example 5:**
-```javascript
-Contact.persistChanges()
-```
+**Return value:**
+- `Promise<[ContactsGroup]>`: Promise that provides the contacts groups when fulfilled.
 
 ---
 
 ## Data
 
+Raw data representation.
+
+Raw data representation of strings, files and images.
+
 ### Static Methods
 
-#### `fromBase64String`
+#### `fromString(string: string): Data`
 
-Static method fromBase64String
+Creates data from string.
 
-#### `fromPNG`
+The provided string is assumed to be UTF8 encoded. If the string is not UTF8 encoded, the function will return null.
 
-Static method fromPNG
+**Parameters:**
+- `string` (string): String to create data from.
 
-#### `fromString`
+**Return value:**
+- `Data`: Data representation of the string.
 
-Static method fromString
+#### `fromFile(filePath: string): Data`
 
-#### `fromFile`
+Reads data from file path.
 
-Static method fromFile
+Reads the raw data of the file at the specified file path.
 
-#### `fromBytes`
+**Parameters:**
+- `filePath` (string): Path of file to read data from.
 
-Static method fromBytes
+**Return value:**
+- `Data`: Data representation of the file.
 
-#### `fromJPEG`
+#### `fromBase64String(base64String: string): Data`
 
-Static method fromJPEG
+Creates data from base64 encoded string.
 
-### Instance Methods
+The supplied string must be base64 encoded otherwise the function will return null.
 
-#### `getBytes`
+**Parameters:**
+- `base64String` (string): Base64 encoded string to create data from.
 
-Instance method getBytes
+**Return value:**
+- `Data`: Data representation of the string.
 
-#### `toRawString`
+#### `fromJPEG(image: Image): Data`
 
-Instance method toRawString
+Creates data from JPEG image.
 
-#### `toBase64String`
+**Parameters:**
+- `image` (Image): JPEG image to convert to data.
 
-Instance method toBase64String
+**Return value:**
+- `Data`: Data representation of the image.
 
-### Properties
+#### `fromPNG(image: Image): Data`
 
-#### `UITableCell`
+Creates data from PNG image.
 
-Property UITableCell
+**Parameters:**
+- `image` (Image): PNG image to convert to data.
 
-#### `QuickLook`
+**Return value:**
+- `Data`: Data representation of the image.
 
-Property QuickLook
+#### `fromBytes(bytes: [number]): Data`
 
-#### `config`
+Creates data from an array of bytes.
 
-Property config
+**Parameters:**
+- `bytes` ([number]): Array of bytes to convert to data.
 
-#### `Point`
+**Return value:**
+- `Data`: Data creates from the bytes.
 
-Property Point
+### Methods
 
-#### `XMLParser`
+#### `toRawString(): string`
 
-Property XMLParser
+Creates a string from the data.
 
-#### `Device`
+The data is assumed to represent a UTF8 encoded string. If the string is not UTF8 encoded string, the function will return null.
 
-Property Device
+**Return value:**
+- `string`: Data converted to string.
 
-#### `args`
+#### `toBase64String(): string`
 
-Property args
+Creates a base64 encoded string.
 
-#### `Request`
+Creates a base64 encoded string from the data.
 
-Property Request
+**Return value:**
+- `string`: Base64 encoded string.
 
-#### `TextField`
+#### `getBytes(): [number]`
 
-Property TextField
+Gets bytes from data.
 
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static fromString ( string : string ) : Data
-```
-
-**Example 2:**
-```javascript
-static fromFile ( filePath : string ) : Data
-```
-
-**Example 3:**
-```javascript
-static fromBase64String ( base64String : string ) : Data
-```
-
-**Example 4:**
-```javascript
-static fromJPEG ( image : Image ) : Data
-```
-
-**Example 5:**
-```javascript
-static fromPNG ( image : Image ) : Data
-```
-
----
-
-## DateFormatter
-
-### Instance Methods
-
-#### `useShortTimeStyle`
-
-Instance method useShortTimeStyle
-
-#### `useLongDateStyle`
-
-Instance method useLongDateStyle
-
-#### `useFullTimeStyle`
-
-Instance method useFullTimeStyle
-
-#### `string`
-
-Instance method string
-
-#### `useShortDateStyle`
-
-Instance method useShortDateStyle
-
-#### `date`
-
-Instance method date
-
-#### `useNoDateStyle`
-
-Instance method useNoDateStyle
-
-#### `useMediumTimeStyle`
-
-Instance method useMediumTimeStyle
-
-#### `useMediumDateStyle`
-
-Instance method useMediumDateStyle
-
-#### `new DateFormatter`
-
-Instance method new DateFormatter
-
-#### `useFullDateStyle`
-
-Instance method useFullDateStyle
-
-#### `useNoTimeStyle`
-
-Instance method useNoTimeStyle
-
-#### `useLongTimeStyle`
-
-Instance method useLongTimeStyle
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `dateFormat`
-
-Property dateFormat
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `UUID`
-
-Property UUID
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `locale`
-
-Property locale
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-useMediumDateStyle()
-```
-
-**Example 2:**
-```javascript
-useMediumTimeStyle()
-```
-
-**Example 3:**
-```javascript
-dateFormat : string
-```
-
-**Example 4:**
-```javascript
-locale : string
-```
-
-**Example 5:**
-```javascript
-new DateFormatter ()
-```
-
----
-
-## DatePicker
-
-### Instance Methods
-
-#### `pickDateAndTime`
-
-Instance method pickDateAndTime
-
-#### `pickDate`
-
-Instance method pickDate
-
-#### `pickTime`
-
-Instance method pickTime
-
-#### `new DatePicker`
-
-Instance method new DatePicker
-
-#### `pickCountdownDuration`
-
-Instance method pickCountdownDuration
-
-### Properties
-
-#### `countdownDuration`
-
-Property countdownDuration
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `minuteInterval`
-
-Property minuteInterval
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `minimumDate`
-
-Property minimumDate
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `initialDate`
-
-Property initialDate
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `maximumDate`
-
-Property maximumDate
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-pickDateAndTime()
-```
-
-**Example 2:**
-```javascript
-pickCountDownTimer()
-```
-
-**Example 3:**
-```javascript
-pickDateAndTime()
-```
-
-**Example 4:**
-```javascript
-pickCountDownTimer()
-```
-
-**Example 5:**
-```javascript
-minimumDate : Date
-```
+**Return value:**
+- `[number]`: Array of bytes.
 
 ---
 
 ## Device
 
-### Static Methods
+Provides information about the device.
 
-#### `systemName`
-
-Static method systemName
-
-#### `isInLandscapeRight`
-
-Static method isInLandscapeRight
-
-#### `volume`
-
-Static method volume
-
-#### `name`
-
-Static method name
-
-#### `isDischarging`
-
-Static method isDischarging
-
-#### `isFullyCharged`
-
-Static method isFullyCharged
-
-#### `isCharging`
-
-Static method isCharging
-
-#### `isPhone`
-
-Static method isPhone
-
-#### `isFaceDown`
-
-Static method isFaceDown
-
-#### `model`
-
-Static method model
-
-#### `screenBrightness`
-
-Static method screenBrightness
-
-#### `systemVersion`
-
-Static method systemVersion
-
-#### `setScreenBrightness`
-
-Static method setScreenBrightness
-
-#### `isFaceUp`
-
-Static method isFaceUp
-
-#### `batteryLevel`
-
-Static method batteryLevel
-
-#### `isInLandscapeLeft`
-
-Static method isInLandscapeLeft
-
-#### `locale`
-
-Static method locale
-
-#### `screenResolution`
-
-Static method screenResolution
-
-#### `language`
-
-Static method language
-
-#### `preferredLanguages`
-
-Static method preferredLanguages
-
-#### `isUsingDarkAppearance`
-
-Static method isUsingDarkAppearance
-
-#### `screenScale`
-
-Static method screenScale
-
-#### `screenSize`
-
-Static method screenSize
-
-#### `isInPortrait`
-
-Static method isInPortrait
-
-#### `isInPortraitUpsideDown`
-
-Static method isInPortraitUpsideDown
-
-#### `isPad`
-
-Static method isPad
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static name () : string
-```
-
-**Example 2:**
-```javascript
-static systemName () : string
-```
-
-**Example 3:**
-```javascript
-static systemVersion () : string
-```
-
-**Example 4:**
-```javascript
-static model () : string
-```
-
-**Example 5:**
-```javascript
-static isPhone () : bool
-```
-
----
-
-## Dictation
+Reads information about the current device and its screen.
 
 ### Static Methods
 
-#### `start`
+#### `name(): string`
 
-Static method start
+Name identifying the device.
 
-### Properties
+You can find and edit the name of your device in the system settings.
 
-#### `UITableCell`
+#### `systemName(): string`
 
-Property UITableCell
+Name of the operating system.
 
-#### `QuickLook`
+#### `systemVersion(): string`
 
-Property QuickLook
+Version of the operating system.
 
-#### `config`
+#### `model(): string`
 
-Property config
+Model of the device, e.g. "iPhone".
 
-#### `Point`
+#### `isPhone(): bool`
 
-Property Point
+Whether the device is a phone.
 
-#### `XMLParser`
+You can use this property to choose behavior of a script depending on whether its running on a phone or a pad.
 
-Property XMLParser
+#### `isPad(): bool`
 
-#### `Device`
+Whether the device is a pad.
 
-Property Device
+You can use this property to choose behavior of a script depending on whether its running on a phone or a pad.
 
-#### `args`
+#### `screenSize(): Size`
 
-Property args
+Size of the screen.
 
-#### `Request`
+The value is measured in points. For an explanation of the relationship between points and pixels, see the documentation of the `screenScale()` method. The value takes the device rotation into account, so the value will vary between portrait and landscape.
 
-Property Request
+#### `screenResolution(): Size`
 
-#### `TextField`
+Resolution of the screen.
 
-Property TextField
+The value is measured in pixels. The value does not take the rotation of the deviec into account.
 
-#### `DrawContext`
+#### `screenScale(): number`
 
-Property DrawContext
+Scale of the screen.
 
-#### `Size`
+Standard resolution displays have a scale of 1.0 where one point on the screen equals one pixel. Retina displays will have a scale factor of 2.0 or 3.0 where one point on the screen is four or nine pixels, respectively.
 
-Property Size
+#### `screenBrightness(): number`
 
-#### `CalendarEvent`
+Brightness of the screen in percentage.
 
-Property CalendarEvent
+The value range from 0 to 1. To set the screen brightness, refer to the `setScreenBrightness()` function.
 
-#### `Timer`
+#### `isInPortrait(): bool`
 
-Property Timer
+Whether the device is in portrait with the home button or home indicator at the bottom.
 
-#### `Notification`
+#### `isInPortraitUpsideDown(): bool`
 
-Property Notification
+Whether the device is in portrait but upside down with the home button or home indicator at the top.
 
-#### `ShareSheet`
+#### `isInLandscapeLeft(): bool`
 
-Property ShareSheet
+Whether the device is in landscape with the home button or home indicator on the right side.
 
-#### `ContactsGroup`
+#### `isInLandscapeRight(): bool`
 
-Property ContactsGroup
+Whether the device is in landscape with the home button or home indicator on the left side.
 
-#### `Rect`
+#### `isFaceUp(): bool`
 
-Property Rect
+Whether the device is lying parallel to the ground with the screen facing upwards.
 
-#### `Script`
+#### `isFaceDown(): bool`
 
-Property Script
+Whether the device is lying parallel to the ground with the screen facing downwards.
 
-#### `UUID`
+#### `batteryLevel(): number`
 
-Property UUID
+Current battery level.
 
-#### `DatePicker`
+The value is in percentage ranging between 0 and 1.
 
-Property DatePicker
+#### `isDischarging(): bool`
 
-#### `DateFormatter`
+Whether the device is being not plugged into power and thus discharging.
 
-Property DateFormatter
+#### `isCharging(): bool`
 
-#### `Data`
+Whether the device is being charged.
 
-Property Data
+#### `isFullyCharged(): bool`
 
-#### `RelativeDateTimeFormatter`
+Whether the device is fully charged.
 
-Property RelativeDateTimeFormatter
+#### `preferredLanguages(): [string]`
 
-#### `Location`
+The preferred langauges.
 
-Property Location
+The list is ordered according to the language preferences specified in the system settings.
 
-#### `URLScheme`
+#### `locale(): string`
 
-Property URLScheme
+Identifier for the device locale.
 
-#### `WidgetImage`
+#### `language(): string`
 
-Property WidgetImage
+Identifier for the device language.
 
-#### `module`
+#### `isUsingDarkAppearance(): bool`
 
-Property module
+Whether the device is using dark appearance.
 
-#### `Mail`
+This API is not supported in widgets.
 
-Property Mail
+#### `volume(): number`
 
-#### `LinearGradient`
+The device volume.
 
-Property LinearGradient
+The value range from 0 to 1.
 
-#### `Alert`
+#### `setScreenBrightness(percentage: number)`
 
-Property Alert
+Sets the brightness of the screen.
 
-#### `Scriptable Docs`
+The value range from 0 to 1. To get the screen brightness, refer to the `screenBrightness()` function.
 
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Dictation`
-
-Property Dictation
-
-#### `Contact`
-
-Property Contact
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static start ( locale : string ) : Promise string >
-```
-
-**Example 2:**
-```javascript
-static start ( locale : string ) : Promise string >
-```
-
----
-
-## DocumentPicker
-
-### Static Methods
-
-#### `export`
-
-Static method export
-
-#### `exportImage`
-
-Static method exportImage
-
-#### `exportData`
-
-Static method exportData
-
-#### `open`
-
-Static method open
-
-#### `openFile`
-
-Static method openFile
-
-#### `openFolder`
-
-Static method openFolder
-
-#### `exportString`
-
-Static method exportString
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `Dictation`
-
-Property Dictation
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static open ( types : [ string ]) : Promise [ string ] >
-```
-
-**Example 2:**
-```javascript
-static openFile () : Promise string >
-```
-
-**Example 3:**
-```javascript
-static openFolder () : Promise string >
-```
-
-**Example 4:**
-```javascript
-static export ( path : string ) : Promise [ string ] >
-```
-
-**Example 5:**
-```javascript
-static exportString ( content : string , name : string ) : Promise [ string ] >
-```
-
----
-
-## DrawContext
-
-### Instance Methods
-
-#### `drawImageAtPoint`
-
-Instance method drawImageAtPoint
-
-#### `drawText`
-
-Instance method drawText
-
-#### `new DrawContext`
-
-Instance method new DrawContext
-
-#### `drawTextInRect`
-
-Instance method drawTextInRect
-
-#### `strokeEllipse`
-
-Instance method strokeEllipse
-
-#### `fill`
-
-Instance method fill
-
-#### `drawImageInRect`
-
-Instance method drawImageInRect
-
-#### `setFont`
-
-Instance method setFont
-
-#### `setTextAlignedLeft`
-
-Instance method setTextAlignedLeft
-
-#### `fillPath`
-
-Instance method fillPath
-
-#### `setTextAlignedCenter`
-
-Instance method setTextAlignedCenter
-
-#### `strokePath`
-
-Instance method strokePath
-
-#### `setTextColor`
-
-Instance method setTextColor
-
-#### `strokeRect`
-
-Instance method strokeRect
-
-#### `setFontSize`
-
-Instance method setFontSize
-
-#### `fillRect`
-
-Instance method fillRect
-
-#### `getImage`
-
-Instance method getImage
-
-#### `fillEllipse`
-
-Instance method fillEllipse
-
-#### `stroke`
-
-Instance method stroke
-
-#### `setFillColor`
-
-Instance method setFillColor
-
-#### `addPath`
-
-Instance method addPath
-
-#### `setTextAlignedRight`
-
-Instance method setTextAlignedRight
-
-#### `setLineWidth`
-
-Instance method setLineWidth
-
-#### `setStrokeColor`
-
-Instance method setStrokeColor
-
-### Properties
-
-#### `respectScreenScale`
-
-Property respectScreenScale
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `opaque`
-
-Property opaque
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `size`
-
-Property size
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-size : Size
-```
-
-**Example 2:**
-```javascript
-respectScreenScale : bool
-```
-
-**Example 3:**
-```javascript
-opaque : bool
-```
-
-**Example 4:**
-```javascript
-new DrawContext ()
-```
-
-**Example 5:**
-```javascript
-getImage () : Image
-```
+**Parameters:**
+- `percentage` (number): Percentage to set the screen brightness to. Value between 0 and 1.
 
 ---
 
 ## FileManager
 
-### Static Methods
+Read and write files on disk.
 
-#### `local`
-
-Static method local
-
-#### `iCloud`
-
-Static method iCloud
-
-### Instance Methods
-
-#### `read`
-
-Instance method read
-
-#### `downloadFileFromiCloud`
-
-Instance method downloadFileFromiCloud
-
-#### `readImage`
-
-Instance method readImage
-
-#### `documentsDirectory`
-
-Instance method documentsDirectory
-
-#### `move`
-
-Instance method move
-
-#### `allExtendedAttributes`
-
-Instance method allExtendedAttributes
-
-#### `addTag`
-
-Instance method addTag
-
-#### `writeExtendedAttribute`
-
-Instance method writeExtendedAttribute
-
-#### `allFileBookmarks`
-
-Instance method allFileBookmarks
-
-#### `fileExists`
-
-Instance method fileExists
-
-#### `writeImage`
-
-Instance method writeImage
-
-#### `joinPath`
-
-Instance method joinPath
-
-#### `write`
-
-Instance method write
-
-#### `fileName`
-
-Instance method fileName
-
-#### `isFileDownloaded`
-
-Instance method isFileDownloaded
-
-#### `copy`
-
-Instance method copy
-
-#### `remove`
-
-Instance method remove
-
-#### `temporaryDirectory`
-
-Instance method temporaryDirectory
-
-#### `allTags`
-
-Instance method allTags
-
-#### `readExtendedAttribute`
-
-Instance method readExtendedAttribute
-
-#### `removeExtendedAttribute`
-
-Instance method removeExtendedAttribute
-
-#### `fileSize`
-
-Instance method fileSize
-
-#### `creationDate`
-
-Instance method creationDate
-
-#### `cacheDirectory`
-
-Instance method cacheDirectory
-
-#### `isDirectory`
-
-Instance method isDirectory
-
-#### `modificationDate`
-
-Instance method modificationDate
-
-#### `libraryDirectory`
-
-Instance method libraryDirectory
-
-#### `bookmarkExists`
-
-Instance method bookmarkExists
-
-#### `createDirectory`
-
-Instance method createDirectory
-
-#### `getUTI`
-
-Instance method getUTI
-
-#### `fileExtension`
-
-Instance method fileExtension
-
-#### `listContents`
-
-Instance method listContents
-
-#### `bookmarkedPath`
-
-Instance method bookmarkedPath
-
-#### `isFileStoredIniCloud`
-
-Instance method isFileStoredIniCloud
-
-#### `removeTag`
-
-Instance method removeTag
-
-#### `readString`
-
-Instance method readString
-
-#### `writeString`
-
-Instance method writeString
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static local () : FileManager
-```
-
-**Example 2:**
-```javascript
-static iCloud () : FileManager
-```
-
-**Example 3:**
-```javascript
-read ( filePath : string ) : Data
-```
-
-**Example 4:**
-```javascript
-readString(filePath)
-```
-
-**Example 5:**
-```javascript
-readImage(filePath)
-```
-
----
-
-## Font
+A FileManager lets you read files stored on the disk and make changes to them. Paths to files are supplied as strings.
 
 ### Static Methods
 
-#### `lightMonospacedSystemFont`
+#### `local(): FileManager`
 
-Static method lightMonospacedSystemFont
+Creates a local FileManager.
 
-#### `thinSystemFont`
+Creates a file manager for operating with files stored locally.
 
-Static method thinSystemFont
+**Return value:**
+- `FileManager`: Local FileManager.
 
-#### `boldRoundedSystemFont`
+#### `iCloud(): FileManager`
 
-Static method boldRoundedSystemFont
+Creates an iCloud FileManager.
 
-#### `headline`
+Creates a file manager for operating with files stored in iCloud. iCloud must be enabled on the device in order to use this.
 
-Static method headline
+**Return value:**
+- `FileManager`: iCloud FileManager.
 
-#### `blackSystemFont`
+### Methods
 
-Static method blackSystemFont
+#### `read(filePath: string): Data`
 
-#### `title3`
+Read contents of a file as data.
 
-Static method title3
+Reads the contents of the file specified by the file path as raw data. To read the file as a string see `readString(filePath)` and to read it as an image see `readImage(filePath)`.
 
-#### `title1`
+The function will error if the file does not exist or if it exists in iCloud but has not been download. Use `fileExists(filePath)` to check if a file exists and `downloadFileFromiCloud(filePath)` to download the file. Note that it is always safe to call `downloadFileFromiCloud(filePath)`, even if the file is stored locally on the device.
 
-Static method title1
+**Parameters:**
+- `filePath` (string): Path of the file to read.
 
-#### `ultraLightMonospacedSystemFont`
+**Return value:**
+- `Data`: Contents of the file as a data or null if the file could not be read.
 
-Static method ultraLightMonospacedSystemFont
+#### `readString(filePath: string): string`
 
-#### `ultraLightSystemFont`
+Read contents of a file as string.
 
-Static method ultraLightSystemFont
+The function will error if the file does not exist or if it exists in iCloud but has not been download. Use `fileExists(filePath)` to check if a file exists and `downloadFileFromiCloud(filePath)` to download the file. Note that it is always safe to call `downloadFileFromiCloud(filePath)`, even if the file is stored locally on the device.
 
-#### `caption1`
+**Parameters:**
+- `filePath` (string): Path of the file to read.
 
-Static method caption1
+**Return value:**
+- `string`: Contents of the file as a string or null if the file could not be read.
 
-#### `callout`
+#### `readImage(filePath: string): Image`
 
-Static method callout
+Read contents of a file as an image.
 
-#### `mediumSystemFont`
+Reads the contents of the file specified by the file path and converts it to an image.
 
-Static method mediumSystemFont
+The function will error if the file does not exist or if it exists in iCloud but has not been download. Use `fileExists(filePath)` to check if a file exists and `downloadFileFromiCloud(filePath)` to download the file. Note that it is always safe to call `downloadFileFromiCloud(filePath)`, even if the file is stored locally on the device.
 
-#### `semiboldSystemFont`
+**Parameters:**
+- `filePath` (string): Path of the file to read.
 
-Static method semiboldSystemFont
+**Return value:**
+- `Image`: Contents of the file as an image or null if the file could not be read.
 
-#### `semiboldMonospacedSystemFont`
+#### `write(filePath: string, content: Data)`
 
-Static method semiboldMonospacedSystemFont
+Write data to a file.
 
-#### `boldMonospacedSystemFont`
+**Parameters:**
+- `filePath` (string): Path of file to write to.
+- `content` (Data): Data to write to disk.
 
-Static method boldMonospacedSystemFont
+#### `writeString(filePath: string, content: string)`
 
-#### `heavyMonospacedSystemFont`
+Write a string to a file.
 
-Static method heavyMonospacedSystemFont
+Writes the content to the specified file path on disk. If the file does not already exist, it will be created. If the file already exists the contents of the file will be overwritten with the new content.
 
-#### `heavyRoundedSystemFont`
+**Parameters:**
+- `filePath` (string): Path of file to write to.
+- `content` (string): Content to write to disk.
 
-Static method heavyRoundedSystemFont
+#### `writeImage(filePath: string, image: Image)`
 
-#### `blackRoundedSystemFont`
+Write an image to a file.
 
-Static method blackRoundedSystemFont
+Writes the image to the specified file path on disk. If the file does not already exist, it will be created. If the file already exists the contents of the file will be overwritten with the new content.
 
-#### `largeTitle`
+**Parameters:**
+- `filePath` (string): Path of file to write to.
+- `image` (Image): Image to write to disk.
 
-Static method largeTitle
+#### `remove(filePath: string)`
 
-#### `italicSystemFont`
+Removes a file.
 
-Static method italicSystemFont
+Removes the file at the specified path. Use with caution. Removed files cannot be restored.
 
-#### `lightSystemFont`
+**Parameters:**
+- `filePath` (string): Path of file to remove.
 
-Static method lightSystemFont
+#### `move(sourceFilePath: string, destinationFilePath: string)`
 
-#### `regularMonospacedSystemFont`
+Moves a file.
 
-Static method regularMonospacedSystemFont
+Moves the file from the source path to the destination path. Caution: This operation will replace any existing file at the the destination.
 
-#### `body`
+**Parameters:**
+- `sourceFilePath` (string): Path of the file to move.
+- `destinationFilePath` (string): Path to move the file to.
 
-Static method body
+#### `copy(sourceFilePath: string, destinationFilePath: string)`
 
-#### `regularSystemFont`
+Copies a file.
 
-Static method regularSystemFont
+Copies the file from the source path to the destination path. If a file already exists at the destination file path, the operation will fail and the file will not be copied.
 
-#### `mediumRoundedSystemFont`
+**Parameters:**
+- `sourceFilePath` (string): Path of the file to copy.
+- `destinationFilePath` (string): Path to copy the file to.
 
-Static method mediumRoundedSystemFont
+#### `fileExists(filePath: string): bool`
 
-#### `thinRoundedSystemFont`
+Checks if the file exists.
 
-Static method thinRoundedSystemFont
+Checks if the file exists at the specified file path. Checking this before moving or copying to a destination can be a good idea as those operations will replace any existing file at the destination file path.
 
-#### `heavySystemFont`
+**Parameters:**
+- `filePath` (string): File path to examine.
 
-Static method heavySystemFont
+**Return value:**
+- `bool`: True if the file exists otherwise false.
 
-#### `semiboldRoundedSystemFont`
+#### `isDirectory(path: string): bool`
 
-Static method semiboldRoundedSystemFont
+Checks if a path points to a directory.
 
-#### `lightRoundedSystemFont`
+**Parameters:**
+- `path` (string): Path to examine.
 
-Static method lightRoundedSystemFont
+**Return value:**
+- `bool`: True if the path points to a directory otherwise false.
 
-#### `ultraLightRoundedSystemFont`
+#### `createDirectory(path: string, intermediateDirectories: bool)`
 
-Static method ultraLightRoundedSystemFont
+Creates a directory at the specified path.
 
-#### `subheadline`
+You can optionally create all intermediate directories.
 
-Static method subheadline
+**Parameters:**
+- `path` (string): Path of directory to create.
+- `intermediateDirectories` (bool): Whether to create all intermediate directories. Defaults to false.
 
-#### `footnote`
+#### `temporaryDirectory(): string`
 
-Static method footnote
+Path of temporary directory.
 
-#### `mediumMonospacedSystemFont`
+Used to retrieve the path of a temporary directory on disk. Data persisted in a temporary directory will generally live shorter than data persisted in the cache directory.
 
-Static method mediumMonospacedSystemFont
+The operating system may at any time delete files stored in this directory and therefore you should not rely on it for long time storage. If you need long time storage, see documentsDirectory() or libraryDirectory(). This directory is not shared between the app, the action extension and Siri.
 
-#### `systemFont`
+**Return value:**
+- `string`: Path to temporary directory.
 
-Static method systemFont
+#### `cacheDirectory(): string`
 
-#### `blackMonospacedSystemFont`
+Path of cache directory.
 
-Static method blackMonospacedSystemFont
+Used to retrieve the path of a cache directory on disk. The operating system may at any time delete files stored in this directory and therefore you should not rely on it for long time storage.
 
-#### `regularRoundedSystemFont`
+Data persisted in the cache directory will generally live longer than data persisted in a temporary directory.
 
-Static method regularRoundedSystemFont
+If you need long time storage, see documentsDirectory() or libraryDirectory(). This directory is not shared between the app, the action extension and Siri.
 
-#### `title2`
+**Return value:**
+- `string`: Path to temporary directory.
 
-Static method title2
+#### `documentsDirectory(): string`
 
-#### `boldSystemFont`
-
-Static method boldSystemFont
-
-#### `thinMonospacedSystemFont`
-
-Static method thinMonospacedSystemFont
-
-#### `caption2`
-
-Static method caption2
-
-### Instance Methods
-
-#### `new Font`
-
-Instance method new Font
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-new Font ( name : string , size : number )
-```
-
-**Example 2:**
-```javascript
-static largeTitle () : Font
-```
-
-**Example 3:**
-```javascript
-static title1 () : Font
-```
-
-**Example 4:**
-```javascript
-static title2 () : Font
-```
-
-**Example 5:**
-```javascript
-static title3 () : Font
-```
+Path of documents directory.
 
 ---
 
 ## Image
 
-### Static Methods
+Manages image data.
 
-#### `fromFile`
-
-Static method fromFile
-
-#### `fromData`
-
-Static method fromData
+Images objects contains image data. APIs in Scriptable that work with images, either by taking an image as input or returning an image, will use this the Image type.
 
 ### Properties
 
-#### `UITableCell`
+#### `size: Size`
 
-Property UITableCell
+Size of the image in pixels.
 
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `size`
-
-Property size
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-size : Size
-```
-
-**Example 2:**
-```javascript
-static fromFile ( filePath : string ) : Image
-```
-
-**Example 3:**
-```javascript
-static fromData ( data : Data ) : Image
-```
-
-**Example 4:**
-```javascript
-size : Size
-```
-
-**Example 5:**
-```javascript
-static fromFile ( filePath : string ) : Image
-```
-
----
-
-## Keychain
+*Read-only.*
 
 ### Static Methods
 
-#### `get`
+#### `fromFile(filePath: string): Image`
 
-Static method get
+Creates an image from file.
 
-#### `contains`
+Loads an image from the specified file path. If the image could not be read, the function will return null.
 
-Static method contains
+**Parameters:**
+- `filePath` (string): File path to read image from.
 
-#### `remove`
+**Return value:**
+- `Image`: The read image or null if the image could not be read.
 
-Static method remove
+#### `fromData(data: Data): Image`
 
-#### `set`
+Creates an image from raw data.
 
-Static method set
+Loads an image from the raw data. If the image could not be read, the function will return null.
 
-### Properties
+**Parameters:**
+- `data` (Data): Data to read image from.
 
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static contains ( key : string ) : bool
-```
-
-**Example 2:**
-```javascript
-static set ( key : string , value : string )
-```
-
-**Example 3:**
-```javascript
-static get ( key : string ) : string
-```
-
-**Example 4:**
-```javascript
-static remove ( key : string )
-```
-
-**Example 5:**
-```javascript
-static contains ( key : string ) : bool
-```
-
----
-
-## LinearGradient
-
-### Instance Methods
-
-#### `new LinearGradient`
-
-Instance method new LinearGradient
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `colors`
-
-Property colors
-
-#### `startPoint`
-
-Property startPoint
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Request`
-
-Property Request
-
-#### `Size`
-
-Property Size
-
-#### `TextField`
-
-Property TextField
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `locations`
-
-Property locations
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `endPoint`
-
-Property endPoint
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-colors : [ Color ]
-```
-
-**Example 2:**
-```javascript
-locations : [ number ]
-```
-
-**Example 3:**
-```javascript
-startPoint : Point
-```
-
-**Example 4:**
-```javascript
-endPoint : Point
-```
-
-**Example 5:**
-```javascript
-new LinearGradient ()
-```
-
----
-
-## ListWidget
-
-### Instance Methods
-
-#### `presentAccessoryRectangular`
-
-Instance method presentAccessoryRectangular
-
-#### `presentExtraLarge`
-
-Instance method presentExtraLarge
-
-#### `addText`
-
-Instance method addText
-
-#### `useDefaultPadding`
-
-Instance method useDefaultPadding
-
-#### `addStack`
-
-Instance method addStack
-
-#### `presentLarge`
-
-Instance method presentLarge
-
-#### `addDate`
-
-Instance method addDate
-
-#### `presentAccessoryCircular`
-
-Instance method presentAccessoryCircular
-
-#### `presentAccessoryInline`
-
-Instance method presentAccessoryInline
-
-#### `presentSmall`
-
-Instance method presentSmall
-
-#### `presentMedium`
-
-Instance method presentMedium
-
-#### `addSpacer`
-
-Instance method addSpacer
-
-#### `addImage`
-
-Instance method addImage
-
-#### `setPadding`
-
-Instance method setPadding
-
-#### `new ListWidget`
-
-Instance method new ListWidget
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `backgroundColor`
-
-Property backgroundColor
-
-#### `Timer`
-
-Property Timer
-
-#### `backgroundImage`
-
-Property backgroundImage
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `addAccessoryWidgetBackground`
-
-Property addAccessoryWidgetBackground
-
-#### `Message`
-
-Property Message
-
-#### `Safari`
-
-Property Safari
-
-#### `spacing`
-
-Property spacing
-
-#### `WebView`
-
-Property WebView
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `refreshAfterDate`
-
-Property refreshAfterDate
-
-#### `backgroundGradient`
-
-Property backgroundGradient
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `url`
-
-Property url
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-backgroundColor : Color
-```
-
-**Example 2:**
-```javascript
-backgroundImage : Image
-```
-
-**Example 3:**
-```javascript
-backgroundGradient : LinearGradient
-```
-
-**Example 4:**
-```javascript
-addAccessoryWidgetBackground : bool
-```
-
-**Example 5:**
-```javascript
-addSpacer()
-```
-
----
-
-## Location
-
-### Static Methods
-
-#### `setAccuracyToBest`
-
-Static method setAccuracyToBest
-
-#### `setAccuracyToHundredMeters`
-
-Static method setAccuracyToHundredMeters
-
-#### `setAccuracyToKilometer`
-
-Static method setAccuracyToKilometer
-
-#### `current`
-
-Static method current
-
-#### `setAccuracyToThreeKilometers`
-
-Static method setAccuracyToThreeKilometers
-
-#### `setAccuracyToTenMeters`
-
-Static method setAccuracyToTenMeters
-
-#### `reverseGeocode`
-
-Static method reverseGeocode
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static current () : Promise { string : number } >
-```
-
-**Example 2:**
-```javascript
-static setAccuracyToBest ()
-```
-
-**Example 3:**
-```javascript
-static setAccuracyToTenMeters ()
-```
-
-**Example 4:**
-```javascript
-static setAccuracyToHundredMeters ()
-```
-
-**Example 5:**
-```javascript
-static setAccuracyToKilometer ()
-```
-
----
-
-## Mail
-
-### Instance Methods
-
-#### `addDataAttachment`
-
-Instance method addDataAttachment
-
-#### `new Mail`
-
-Instance method new Mail
-
-#### `send`
-
-Instance method send
-
-#### `addImageAttachment`
-
-Instance method addImageAttachment
-
-#### `addFileAttachment`
-
-Instance method addFileAttachment
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `module`
-
-Property module
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `isBodyHTML`
-
-Property isBodyHTML
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `bccRecipients`
-
-Property bccRecipients
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `toRecipients`
-
-Property toRecipients
-
-#### `subject`
-
-Property subject
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `body`
-
-Property body
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `ccRecipients`
-
-Property ccRecipients
-
-#### `Reminder`
-
-Property Reminder
-
-#### `preferredSendingEmailAddress`
-
-Property preferredSendingEmailAddress
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-toRecipients : [ string ]
-```
-
-**Example 2:**
-```javascript
-ccRecipients : [ string ]
-```
-
-**Example 3:**
-```javascript
-bccRecipients : [ string ]
-```
-
-**Example 4:**
-```javascript
-subject : string
-```
-
-**Example 5:**
-```javascript
-body : string
-```
-
----
-
-## Message
-
-### Instance Methods
-
-#### `addDataAttachment`
-
-Instance method addDataAttachment
-
-#### `new Message`
-
-Instance method new Message
-
-#### `send`
-
-Instance method send
-
-#### `addImageAttachment`
-
-Instance method addImageAttachment
-
-#### `addFileAttachment`
-
-Instance method addFileAttachment
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `recipients`
-
-Property recipients
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `body`
-
-Property body
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-recipients : [ string ]
-```
-
-**Example 2:**
-```javascript
-body : string
-```
-
-**Example 3:**
-```javascript
-new Message ()
-```
-
-**Example 4:**
-```javascript
-send () : Promise
-```
-
-**Example 5:**
-```javascript
-addImageAttachment ( image : Image )
-```
+**Return value:**
+- `Image`: The read image or null if the image could not be read.
 
 ---
 
 ## Notification
 
-### Static Methods
+Schedules and manages notifications.
 
-#### `removeAllDelivered`
-
-Static method removeAllDelivered
-
-#### `allDelivered`
-
-Static method allDelivered
-
-#### `removePending`
-
-Static method removePending
-
-#### `current`
-
-Static method current
-
-#### `allPending`
-
-Static method allPending
-
-#### `resetCurrent`
-
-Static method resetCurrent
-
-#### `removeAllPending`
-
-Static method removeAllPending
-
-#### `removeDelivered`
-
-Static method removeDelivered
-
-### Instance Methods
-
-#### `new Notification`
-
-Instance method new Notification
-
-#### `setWeeklyTrigger`
-
-Instance method setWeeklyTrigger
-
-#### `schedule`
-
-Instance method schedule
-
-#### `setTriggerDate`
-
-Instance method setTriggerDate
-
-#### `setDailyTrigger`
-
-Instance method setDailyTrigger
-
-#### `remove`
-
-Instance method remove
-
-#### `addAction`
-
-Instance method addAction
+Notifications are scheduled for delivery at some point in the future. A notification may be delivered even when Scriptable is not running.
 
 ### Properties
 
-#### `UITableCell`
+#### `identifier: string`
 
-Property UITableCell
+Identifier of the notification.
 
-#### `QuickLook`
+To reschedule a notification, use the identifier of an existing notification.
 
-Property QuickLook
+#### `title: string`
 
-#### `config`
+Title of the notification.
 
-Property config
+#### `subtitle: string`
 
-#### `Point`
+Subtitle of the notification.
 
-Property Point
+#### `body: string`
 
-#### `XMLParser`
+Body of the notification.
 
-Property XMLParser
+#### `preferredContentHeight: number`
 
-#### `Device`
+Preferred height of the notification.
 
-Property Device
+By default Scriptable attempts to determine an appropriate height for your notification. If you want to override the default behavior, you can specify a preferred content height. The preferred content height is only used when running a script inside the notification, i.e. when `scriptName` is not null. iOS may limit the height of the notification in which case the preferred content height is not guaranteed to be respected.
 
-#### `args`
+#### `badge: number`
 
-Property args
+Number to display in the app icon's badge.
 
-#### `Request`
+When the number is zero, no badge is displayed. When the number is greater than zero, the number is displayed in the app icon's badge. Setting the value to null, will leave the badge unchanged. The default value is null.
 
-Property Request
+#### `threadIdentifier: string`
 
-#### `TextField`
+Identifier for grouping the notification.
 
-Property TextField
+Notifications are grouped by the identifier on the Home screen and in the Notification Center.
 
-#### `DrawContext`
+#### `userInfo: {string: any}`
 
-Property DrawContext
+Custom information.
 
-#### `Size`
+Store any custom information for the notification. This can be accessed from the `Notification.opened` property when a script is run from a notification.
 
-Property Size
+#### `sound: string`
 
-#### `openURL`
+Sound of the notification.
 
-Property openURL
+Set to null if you do not want any sound. Set to one of the following values if you want a sound.
 
-#### `actions`
+- default
+- accept
+- alert
+- complete
+- event
+- failure
+- piano_error
+- piano_success
+- popup
 
-Property actions
+By default the notification is delivered with no sound.
 
-#### `CalendarEvent`
+#### `openURL: string`
 
-Property CalendarEvent
+URL to open when notification is tapped.
 
-#### `WidgetSpacer`
+The Scriptable application will open the URL when the notification is tapped. This can be a URL that uses Scriptables URL scheme, the URL scheme of another application or a website URL.
 
-Property WidgetSpacer
+#### `deliveryDate: Date`
 
-#### `subtitle`
+Delivery date of the notification.
 
-Property subtitle
+*Read-only.*
 
-#### `Timer`
+If the notification has already been delivered, for example because it was fetched using `Notification.allDelivered()`, the deliveryDate will be populated. Otherwise it will be null.
 
-Property Timer
+The property cannot be set. In order to specify a future delivery date for a notification, see the `setTriggerDate` function. For recurring notifications, see the `setDailyTrigger` and `setWeeklyTrigger` functions.
 
-#### `Notification`
+#### `nextTriggerDate: Date`
 
-Property Notification
+Next trigger date of the notification.
 
-#### `ShareSheet`
+*Read-only.*
 
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `badge`
-
-Property badge
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `preferredContentHeight`
-
-Property preferredContentHeight
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Data`
-
-Property Data
-
-#### `threadIdentifier`
-
-Property threadIdentifier
-
-#### `Location`
-
-Property Location
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `scriptName`
-
-Property scriptName
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `identifier`
-
-Property identifier
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `body`
-
-Property body
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `sound`
-
-Property sound
-
-#### `console`
-
-Property console
-
-#### `title`
-
-Property title
-
-#### `Path`
-
-Property Path
-
-#### `Message`
-
-Property Message
-
-#### `Safari`
-
-Property Safari
-
-#### `nextTriggerDate`
-
-Property nextTriggerDate
-
-#### `WebView`
-
-Property WebView
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `deliveryDate`
-
-Property deliveryDate
-
-#### `userInfo`
-
-Property userInfo
-
-### Code Examples
-
-**Example 1:**
-```javascript
-identifier : string
-```
-
-**Example 2:**
-```javascript
-title : string
-```
-
-**Example 3:**
-```javascript
-subtitle : string
-```
-
-**Example 4:**
-```javascript
-body : string
-```
-
-**Example 5:**
-```javascript
-preferredContentHeight : number
-```
-
----
-
-## Pasteboard
-
-### Static Methods
-
-#### `paste`
-
-Static method paste
-
-#### `copyString`
-
-Static method copyString
-
-#### `pasteImage`
-
-Static method pasteImage
-
-#### `copy`
-
-Static method copy
-
-#### `pasteString`
-
-Static method pasteString
-
-#### `copyImage`
-
-Static method copyImage
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static copy ( string : string )
-```
-
-**Example 2:**
-```javascript
-static paste () : string
-```
-
-**Example 3:**
-```javascript
-static copyString ( string : string )
-```
-
-**Example 4:**
-```javascript
-static pasteString () : string
-```
-
-**Example 5:**
-```javascript
-static copyImage ( image : Image )
-```
-
----
-
-## Path
-
-### Instance Methods
-
-#### `addLine`
-
-Instance method addLine
-
-#### `addCurve`
-
-Instance method addCurve
-
-#### `addRoundedRect`
-
-Instance method addRoundedRect
-
-#### `move`
-
-Instance method move
-
-#### `addQuadCurve`
-
-Instance method addQuadCurve
-
-#### `addEllipse`
-
-Instance method addEllipse
-
-#### `addRect`
-
-Instance method addRect
-
-#### `closeSubpath`
-
-Instance method closeSubpath
-
-#### `addRects`
-
-Instance method addRects
-
-#### `new Path`
-
-Instance method new Path
-
-#### `addLines`
-
-Instance method addLines
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-new Path ()
-```
-
-**Example 2:**
-```javascript
-move ( point : Point )
-```
-
-**Example 3:**
-```javascript
-addLine ( point : Point )
-```
-
-**Example 4:**
-```javascript
-addRect ( rect : Rect )
-```
-
-**Example 5:**
-```javascript
-addEllipse ( rect : Rect )
-```
-
----
-
-## Photos
-
-### Static Methods
-
-#### `fromLibrary`
-
-Static method fromLibrary
-
-#### `latestScreenshots`
-
-Static method latestScreenshots
-
-#### `removeLatestScreenshots`
-
-Static method removeLatestScreenshots
-
-#### `latestScreenshot`
-
-Static method latestScreenshot
-
-#### `fromCamera`
-
-Static method fromCamera
-
-#### `latestPhotos`
-
-Static method latestPhotos
-
-#### `removeLatestPhoto`
-
-Static method removeLatestPhoto
-
-#### `latestPhoto`
-
-Static method latestPhoto
-
-#### `removeLatestScreenshot`
-
-Static method removeLatestScreenshot
-
-#### `removeLatestPhotos`
-
-Static method removeLatestPhotos
-
-#### `save`
-
-Static method save
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static fromLibrary () : Promise Image >
-```
-
-**Example 2:**
-```javascript
-static fromCamera () : Promise Image >
-```
-
-**Example 3:**
-```javascript
-static latestPhoto () : Promise Image >
-```
-
-**Example 4:**
-```javascript
-static latestPhotos ( count : number ) : Promise [ Image ] >
-```
-
-**Example 5:**
-```javascript
-static latestScreenshot () : Promise Image >
-```
-
----
-
-## Point
-
-### Instance Methods
-
-#### `new Point`
-
-Instance method new Point
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `Point`
-
-Property Point
-
-#### `config`
-
-Property config
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `y`
-
-Property y
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `x`
-
-Property x
-
-### Code Examples
-
-**Example 1:**
-```javascript
-new Point ( x : number , y : number )
-```
-
-**Example 2:**
-```javascript
-new Point ( x : number , y : number )
-```
-
----
-
-## QuickLook
-
-### Static Methods
-
-#### `present`
-
-Static method present
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static present ( item : any , fullscreen : bool ) : Promise
-```
-
-**Example 2:**
-```javascript
-static present ( item : any , fullscreen : bool ) : Promise
-```
-
----
-
-## Rect
-
-### Instance Methods
-
-#### `new Rect`
-
-Instance method new Rect
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `width`
-
-Property width
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `height`
-
-Property height
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `maxX`
-
-Property maxX
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `maxY`
-
-Property maxY
-
-#### `minY`
-
-Property minY
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `size`
-
-Property size
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `origin`
-
-Property origin
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `y`
-
-Property y
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `minX`
-
-Property minX
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `x`
-
-Property x
-
-### Code Examples
-
-**Example 1:**
-```javascript
-minX : number
-```
-
-**Example 2:**
-```javascript
-minY : number
-```
-
-**Example 3:**
-```javascript
-maxX : number
-```
-
-**Example 4:**
-```javascript
-maxY : number
-```
-
-**Example 5:**
-```javascript
-width : number
-```
-
----
-
-## RecurrenceRule
-
-### Static Methods
-
-#### `dailyEndDate`
-
-Static method dailyEndDate
-
-#### `complexYearlyOccurrenceCount`
-
-Static method complexYearlyOccurrenceCount
-
-#### `weeklyOccurrenceCount`
-
-Static method weeklyOccurrenceCount
-
-#### `dailyOccurrenceCount`
-
-Static method dailyOccurrenceCount
-
-#### `complexMonthlyOccurrenceCount`
-
-Static method complexMonthlyOccurrenceCount
-
-#### `complexWeeklyOccurrenceCount`
-
-Static method complexWeeklyOccurrenceCount
-
-#### `monthlyOccurrenceCount`
-
-Static method monthlyOccurrenceCount
-
-#### `weekly`
-
-Static method weekly
-
-#### `daily`
-
-Static method daily
-
-#### `weeklyEndDate`
-
-Static method weeklyEndDate
-
-#### `yearlyEndDate`
-
-Static method yearlyEndDate
-
-#### `yearlyOccurrenceCount`
-
-Static method yearlyOccurrenceCount
-
-#### `complexMonthly`
-
-Static method complexMonthly
-
-#### `monthly`
-
-Static method monthly
-
-#### `monthlyEndDate`
-
-Static method monthlyEndDate
-
-#### `complexMonthlyEndDate`
-
-Static method complexMonthlyEndDate
-
-#### `complexWeeklyEndDate`
-
-Static method complexWeeklyEndDate
-
-#### `complexYearlyEndDate`
-
-Static method complexYearlyEndDate
-
-#### `complexYearly`
-
-Static method complexYearly
-
-#### `complexWeekly`
-
-Static method complexWeekly
-
-#### `yearly`
-
-Static method yearly
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static daily ( interval : number ) : RecurrenceRule
-```
-
-**Example 2:**
-```javascript
-static dailyEndDate ( interval : number , endDate : Date ) : RecurrenceRule
-```
-
-**Example 3:**
-```javascript
-static dailyOccurrenceCount ( interval : number , occurrenceCount : number ) : RecurrenceRule
-```
-
-**Example 4:**
-```javascript
-static weekly ( interval : number ) : RecurrenceRule
-```
-
-**Example 5:**
-```javascript
-static weeklyEndDate ( interval : number , endDate : Date ) : RecurrenceRule
-```
-
----
-
-## RelativeDateTimeFormatter
-
-### Instance Methods
-
-#### `new RelativeDateTimeFormatter`
-
-Instance method new RelativeDateTimeFormatter
-
-#### `useNumericDateTimeStyle`
-
-Instance method useNumericDateTimeStyle
-
-#### `string`
-
-Instance method string
-
-#### `useNamedDateTimeStyle`
-
-Instance method useNamedDateTimeStyle
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `locale`
-
-Property locale
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-locale : string
-```
-
-**Example 2:**
-```javascript
-new RelativeDateTimeFormatter ()
-```
-
-**Example 3:**
-```javascript
-string ( date : Date , referenceDate : Date ) : string
-```
-
-**Example 4:**
-```javascript
-useNamedDateTimeStyle ()
-```
-
-**Example 5:**
-```javascript
-useNumericDateTimeStyle ()
-```
-
----
-
-## Reminder
-
-### Static Methods
-
-#### `completedDueYesterday`
-
-Static method completedDueYesterday
-
-#### `incompleteDueToday`
-
-Static method incompleteDueToday
-
-#### `scheduled`
-
-Static method scheduled
-
-#### `completedDueBetween`
-
-Static method completedDueBetween
-
-#### `completedLastWeek`
-
-Static method completedLastWeek
-
-#### `allIncomplete`
-
-Static method allIncomplete
-
-#### `completedDueNextWeek`
-
-Static method completedDueNextWeek
-
-#### `completedDueLastWeek`
-
-Static method completedDueLastWeek
-
-#### `incompleteDueBetween`
-
-Static method incompleteDueBetween
-
-#### `incompleteDueNextWeek`
-
-Static method incompleteDueNextWeek
-
-#### `allCompleted`
-
-Static method allCompleted
-
-#### `allDueYesterday`
-
-Static method allDueYesterday
-
-#### `incompleteDueLastWeek`
-
-Static method incompleteDueLastWeek
-
-#### `completedDueToday`
-
-Static method completedDueToday
-
-#### `incompleteDueTomorrow`
-
-Static method incompleteDueTomorrow
-
-#### `incompleteDueThisWeek`
-
-Static method incompleteDueThisWeek
-
-#### `completedDueTomorrow`
-
-Static method completedDueTomorrow
-
-#### `allDueTomorrow`
-
-Static method allDueTomorrow
-
-#### `completedToday`
-
-Static method completedToday
-
-#### `allDueNextWeek`
-
-Static method allDueNextWeek
-
-#### `completedBetween`
-
-Static method completedBetween
-
-#### `allDueToday`
-
-Static method allDueToday
-
-#### `completedDueThisWeek`
-
-Static method completedDueThisWeek
-
-#### `completedThisWeek`
-
-Static method completedThisWeek
-
-#### `allDueLastWeek`
-
-Static method allDueLastWeek
-
-#### `allDueBetween`
-
-Static method allDueBetween
-
-#### `allDueThisWeek`
-
-Static method allDueThisWeek
-
-#### `incompleteDueYesterday`
-
-Static method incompleteDueYesterday
-
-#### `all`
-
-Static method all
-
-### Instance Methods
-
-#### `new Reminder`
-
-Instance method new Reminder
-
-#### `addRecurrenceRule`
-
-Instance method addRecurrenceRule
-
-#### `removeAllRecurrenceRules`
-
-Instance method removeAllRecurrenceRules
-
-#### `save`
-
-Instance method save
-
-#### `remove`
-
-Instance method remove
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `UITable`
-
-Property UITable
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `isCompleted`
-
-Property isCompleted
-
-#### `dueDate`
-
-Property dueDate
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `notes`
-
-Property notes
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `identifier`
-
-Property identifier
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `dueDateIncludesTime`
-
-Property dueDateIncludesTime
-
-#### `creationDate`
-
-Property creationDate
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `calendar`
-
-Property calendar
-
-#### `completionDate`
-
-Property completionDate
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `title`
-
-Property title
-
-#### `Message`
-
-Property Message
-
-#### `Safari`
-
-Property Safari
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `WebView`
-
-Property WebView
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `isOverdue`
-
-Property isOverdue
-
-#### `Font`
-
-Property Font
-
-#### `Reminder`
-
-Property Reminder
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `priority`
-
-Property priority
-
-### Code Examples
-
-**Example 1:**
-```javascript
-identifier : string
-```
-
-**Example 2:**
-```javascript
-title : string
-```
-
-**Example 3:**
-```javascript
-notes : string
-```
-
-**Example 4:**
-```javascript
-isCompleted : bool
-```
-
-**Example 5:**
-```javascript
-isOverdue : bool
-```
+The next trigger date is the point in time where the next notification will be delivered.
 
 ---
 
 ## Request
 
-### Instance Methods
+Performs HTTP requests.
 
-#### `load`
-
-Instance method load
-
-#### `addFileDataToMultipart`
-
-Instance method addFileDataToMultipart
-
-#### `loadJSON`
-
-Instance method loadJSON
-
-#### `addParameterToMultipart`
-
-Instance method addParameterToMultipart
-
-#### `addFileToMultipart`
-
-Instance method addFileToMultipart
-
-#### `new Request`
-
-Instance method new Request
-
-#### `loadImage`
-
-Instance method loadImage
-
-#### `loadString`
-
-Instance method loadString
-
-#### `addImageToMultipart`
-
-Instance method addImageToMultipart
+Performs a URL request and returns the response in an appropriate format.
 
 ### Properties
 
-#### `timeoutInterval`
+#### `url: string`
 
-Property timeoutInterval
+URL to send request to.
 
-#### `UITableCell`
+#### `method: string`
 
-Property UITableCell
+HTTP method used for the request.
 
-#### `QuickLook`
+Specifies the HTTP method to use when sending the request. The default is to send the request using the GET HTTP method.
 
-Property QuickLook
+#### `headers: {string: string}`
 
-#### `config`
+HTTP headers to send with the request.
 
-Property config
+Key value pairs where the key is the name of an HTTP header and the value will be sent as the value for the HTTP header.
 
-#### `Point`
+#### `body: any`
 
-Property Point
+Body to send with the request.
 
-#### `XMLParser`
+The body will be send along the request. While this property can be any value, currently only strings and Data is supported.
 
-Property XMLParser
+Be aware that this property is ignored if you convert the request to a multipart request using `addParameterToMultipart`, `addFileToMultipart` or `addFileDataToMultipart`.
 
-#### `Device`
+#### `timeoutInterval: number`
 
-Property Device
+Timeout interval of the request.
 
-#### `args`
+If a request remains idle for longer than the timeout interval, the request is considered timed out.
 
-Property args
+The timeout interval is measured in seconds and defaults to 60 seconds.
 
-#### `onRedirect`
+#### `onRedirect: fn(Request) -> Request`
 
-Property onRedirect
+Function called upon redirect.
 
-#### `Request`
+The function determines how redirects should be handled. By default redirects are allowed. When invoked the function is supplied with the request that we're about to redirect to. The function can return the request to continue redirecting or it can return another request to redirect to. Returning null will stop the redirect. Note that onRedirect will only be invoked on the initial request. Consecutive redirects should be handled on the initial request.
 
-Property Request
+#### `response: {string: any}`
 
-#### `TextField`
+Response of the request.
 
-Property TextField
+*Read-only.*
 
-#### `DrawContext`
+The response is not populated until the request has been completed. The response is an object that looks like the following example.
 
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `allowInsecureRequest`
-
-Property allowInsecureRequest
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `body`
-
-Property body
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `response`
-
-Property response
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `headers`
-
-Property headers
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `url`
-
-Property url
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `method`
-
-Property method
-
-### Code Examples
-
-**Example 1:**
-```javascript
-url : string
+```
+{
+  "url": "https://example.com/",
+  "statusCode": 200
+  "mimeType": "application/json",
+  "textEncodingName": "utf-8",
+  "headers": {
+    "Content-Type": "application/json;charset=utf-8",
+    "Content-Length": "17671"
+  },
+  "cookies": [{
+    "path": "/",
+    "httpOnly": true,
+    "domain": "www.example.com",
+    "sessionOnly": true,
+    "name": "JSESSIONID",
+    "value": "7616271F4878CFD05182D20C45F4CEB3"
+  }]
+}
 ```
 
-**Example 2:**
-```javascript
-method : string
-```
+#### `allowInsecureRequest: bool`
 
-**Example 3:**
-```javascript
-headers : { string : string }
-```
+Allow the request even if it is deemed insecure.
 
-**Example 4:**
-```javascript
-addParameterToMultipart
-```
+By default Scriptable will attempt to reject requests that are deemed insecure.
 
-**Example 5:**
-```javascript
-addFileToMultipart
-```
+As an example, Scriptable will reject communicating with a server that has an invalid certificate. Such servers might be malicious and may put confidential information at risk. By enabling this setting, those requests will be allowed.
 
----
+Enable this setting at your own risk.
 
-## SFSymbol
+### Constructor
 
-### Static Methods
+#### `new Request(url: string)`
 
-#### `named`
+Constructs a request.
 
-Static method named
+Constructs a new request that will be sent to the provided URL. The request is not sent until an appropriate load method is called, e.g. loadImage for downloading and interpreting the response as an image.
 
-### Instance Methods
+**Parameters:**
+- `url` (string): URL to send request to.
 
-#### `applySemiboldWeight`
+### Methods
 
-Instance method applySemiboldWeight
+#### `load(): Promise<Data>`
 
-#### `applyThinWeight`
+Sends request.
 
-Instance method applyThinWeight
+Call to send the configured request to the specified URL. The raw response is provided when the returned promise is fulfilled.
 
-#### `applyFont`
+**Return value:**
+- `Promise<Data>`: Promise that provides the response as data when fulfilled.
 
-Instance method applyFont
+#### `loadString(): Promise<string>`
 
-#### `applyHeavyWeight`
+Sends request and parses response as a string.
 
-Instance method applyHeavyWeight
+Call to send the configured request to the specified URL. The response is parsed to a string and provided when the returned promise is fulfilled.
 
-#### `applyBoldWeight`
+**Return value:**
+- `Promise<string>`: Promise that provides the response as a string when fulfilled.
 
-Instance method applyBoldWeight
+#### `loadJSON(): Promise<any>`
 
-#### `applyLightWeight`
+Sends request and parses response as JSON.
 
-Instance method applyLightWeight
+Call to send the configured request to the specified URL. The response is expected to be a valid JSON string and is parsed into an object.
 
-#### `applyBlackWeight`
-
-Instance method applyBlackWeight
-
-#### `applyMediumWeight`
-
-Instance method applyMediumWeight
-
-#### `applyRegularWeight`
-
-Instance method applyRegularWeight
-
-#### `applyUltraLightWeight`
-
-Instance method applyUltraLightWeight
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `image`
-
-Property image
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-image : Image
-```
-
-**Example 2:**
-```javascript
-static named ( symbolName : string ) : SFSymbol
-```
-
-**Example 3:**
-```javascript
-applyFont ( font : Font )
-```
-
-**Example 4:**
-```javascript
-applyUltraLightWeight ()
-```
-
-**Example 5:**
-```javascript
-applyThinWeight ()
-```
-
----
-
-## Safari
-
-### Static Methods
-
-#### `open`
-
-Static method open
-
-#### `openInApp`
-
-Static method openInApp
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `Safari`
-
-Property Safari
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static openInApp ( url : string , fullscreen : bool ) : Promise
-```
-
-**Example 2:**
-```javascript
-static open ( url : string )
-```
-
-**Example 3:**
-```javascript
-static openInApp ( url : string , fullscreen : bool ) : Promise
-```
-
-**Example 4:**
-```javascript
-static open ( url : string )
-```
-
----
-
-## Script
-
-### Static Methods
-
-#### `name`
-
-Static method name
-
-#### `setShortcutOutput`
-
-Static method setShortcutOutput
-
-#### `complete`
-
-Static method complete
-
-#### `setWidget`
-
-Static method setWidget
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Script`
-
-Property Script
-
-#### `Rect`
-
-Property Rect
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static name () : string
-```
-
-**Example 2:**
-```javascript
-static complete ()
-```
-
-**Example 3:**
-```javascript
-static setShortcutOutput ( value : any )
-```
-
-**Example 4:**
-```javascript
-static setWidget ( widget : any )
-```
-
-**Example 5:**
-```javascript
-static name () : string
-```
-
----
-
-## ShareSheet
-
-### Static Methods
-
-#### `present`
-
-Static method present
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `Notification`
-
-Property Notification
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static present ( activityItems : [ any ]) : Promise { string : any } >
-```
-
-**Example 2:**
-```javascript
-static present ( activityItems : [ any ]) : Promise { string : any } >
-```
-
----
-
-## Size
-
-### Instance Methods
-
-#### `new Size`
-
-Instance method new Size
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `width`
-
-Property width
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `height`
-
-Property height
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-width : number
-```
-
-**Example 2:**
-```javascript
-height : number
-```
-
-**Example 3:**
-```javascript
-new Size ( width : number , height : number )
-```
-
-**Example 4:**
-```javascript
-width : number
-```
-
-**Example 5:**
-```javascript
-height : number
-```
-
----
-
-## Speech
-
-### Static Methods
-
-#### `speak`
-
-Static method speak
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static speak ( text : string )
-```
-
-**Example 2:**
-```javascript
-static speak ( text : string )
-```
-
----
-
-## TextField
-
-### Instance Methods
-
-#### `setNumberPadKeyboard`
-
-Instance method setNumberPadKeyboard
-
-#### `setEmailAddressKeyboard`
-
-Instance method setEmailAddressKeyboard
-
-#### `setPhonePadKeyboard`
-
-Instance method setPhonePadKeyboard
-
-#### `setDefaultKeyboard`
-
-Instance method setDefaultKeyboard
-
-#### `setTwitterKeyboard`
-
-Instance method setTwitterKeyboard
-
-#### `setWebSearchKeyboard`
-
-Instance method setWebSearchKeyboard
-
-#### `leftAlignText`
-
-Instance method leftAlignText
-
-#### `rightAlignText`
-
-Instance method rightAlignText
-
-#### `setNumbersAndPunctuationKeyboard`
-
-Instance method setNumbersAndPunctuationKeyboard
-
-#### `setURLKeyboard`
-
-Instance method setURLKeyboard
-
-#### `setDecimalPadKeyboard`
-
-Instance method setDecimalPadKeyboard
-
-#### `centerAlignText`
-
-Instance method centerAlignText
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `isSecure`
-
-Property isSecure
-
-#### `font`
-
-Property font
-
-#### `Device`
-
-Property Device
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `args`
-
-Property args
-
-#### `placeholder`
-
-Property placeholder
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `text`
-
-Property text
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `textColor`
-
-Property textColor
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-addTextField()
-```
-
-**Example 2:**
-```javascript
-addSecureTextField()
-```
-
-**Example 3:**
-```javascript
-text : string
-```
-
-**Example 4:**
-```javascript
-placeholder : string
-```
-
-**Example 5:**
-```javascript
-isSecure : bool
-```
-
----
-
-## Timer
-
-### Static Methods
-
-#### `schedule`
-
-Static method schedule
-
-### Instance Methods
-
-#### `schedule`
-
-Instance method schedule
-
-#### `invalidate`
-
-Instance method invalidate
-
-#### `new Timer`
-
-Instance method new Timer
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `repeats`
-
-Property repeats
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `timeInterval`
-
-Property timeInterval
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-timeInterval : number
-```
-
-**Example 2:**
-```javascript
-repeats : bool
-```
-
-**Example 3:**
-```javascript
-new Timer ()
-```
-
-**Example 4:**
-```javascript
-schedule ( callback : fn ())
-```
-
-**Example 5:**
-```javascript
-invalidate()
-```
-
----
-
-## UITable
-
-### Instance Methods
-
-#### `addRow`
-
-Instance method addRow
-
-#### `removeRow`
-
-Instance method removeRow
-
-#### `present`
-
-Instance method present
-
-#### `new UITable`
-
-Instance method new UITable
-
-#### `reload`
-
-Instance method reload
-
-#### `removeAllRows`
-
-Instance method removeAllRows
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `UITable`
-
-Property UITable
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `showSeparators`
-
-Property showSeparators
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-showSeparators : bool
-```
-
-**Example 2:**
-```javascript
-new UITable ()
-```
-
-**Example 3:**
-```javascript
-addRow ( row : UITableRow )
-```
-
-**Example 4:**
-```javascript
-removeRow ( row : UITableRow )
-```
-
-**Example 5:**
-```javascript
-removeAllRows ()
-```
-
----
-
-## UITableCell
-
-### Static Methods
-
-#### `button`
-
-Static method button
-
-#### `imageAtURL`
-
-Static method imageAtURL
-
-#### `text`
-
-Static method text
-
-#### `image`
-
-Static method image
-
-### Instance Methods
-
-#### `rightAligned`
-
-Instance method rightAligned
-
-#### `leftAligned`
-
-Instance method leftAligned
-
-#### `centerAligned`
-
-Instance method centerAligned
-
-### Properties
-
-#### `onTap`
-
-Property onTap
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `titleFont`
-
-Property titleFont
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `subtitleFont`
-
-Property subtitleFont
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `titleColor`
-
-Property titleColor
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `subtitleColor`
-
-Property subtitleColor
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `widthWeight`
-
-Property widthWeight
-
-#### `dismissOnTap`
-
-Property dismissOnTap
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-widthWeight : number
-```
-
-**Example 2:**
-```javascript
-onTap : fn ()
-```
-
-**Example 3:**
-```javascript
-dismissOnTap : bool
-```
-
-**Example 4:**
-```javascript
-titleColor : Color
-```
-
-**Example 5:**
-```javascript
-subtitleColor : Color
-```
-
----
-
-## UITableRow
-
-### Instance Methods
-
-#### `addImageAtURL`
-
-Instance method addImageAtURL
-
-#### `addText`
-
-Instance method addText
-
-#### `addCell`
-
-Instance method addCell
-
-#### `new UITableRow`
-
-Instance method new UITableRow
-
-#### `addButton`
-
-Instance method addButton
-
-#### `addImage`
-
-Instance method addImage
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `cellSpacing`
-
-Property cellSpacing
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `backgroundColor`
-
-Property backgroundColor
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `height`
-
-Property height
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `onSelect`
-
-Property onSelect
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `isHeader`
-
-Property isHeader
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `dismissOnSelect`
-
-Property dismissOnSelect
-
-### Code Examples
-
-**Example 1:**
-```javascript
-cellSpacing : number
-```
-
-**Example 2:**
-```javascript
-height : number
-```
-
-**Example 3:**
-```javascript
-isHeader : bool
-```
-
-**Example 4:**
-```javascript
-dismissOnSelect : bool
-```
-
-**Example 5:**
-```javascript
-onSelect : fn ()
-```
-
----
-
-## URLScheme
-
-### Static Methods
-
-#### `parameter`
-
-Static method parameter
-
-#### `allParameters`
-
-Static method allParameters
-
-#### `forOpeningScriptSettings`
-
-Static method forOpeningScriptSettings
-
-#### `forOpeningScript`
-
-Static method forOpeningScript
-
-#### `forRunningScript`
-
-Static method forRunningScript
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `Location`
-
-Property Location
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-scriptable://
-```
-
-**Example 2:**
-```javascript
-scriptable:///add
-```
-
-**Example 3:**
-```javascript
-scriptable:///open/Example
-```
-
-**Example 4:**
-```javascript
-openSettings
-```
-
-**Example 5:**
-```javascript
-scriptable:///run/Example
-```
-
----
-
-## UUID
-
-### Static Methods
-
-#### `string`
-
-Static method string
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `UUID`
-
-Property UUID
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static string () : string
-```
-
-**Example 2:**
-```javascript
-static string () : string
-```
+**Return value:**
+- `Promise<any>`: Promise that provides the response as a JSON object when fulfilled.
 
 ---
 
 ## WebView
 
-### Static Methods
+Presents websites and evaluates JavaScript on websites.
 
-#### `loadFile`
+Supports rendering HTML as well as loading a file and rendering it. A file can be of various types. It could for example be an HTML file or an image.
 
-Static method loadFile
-
-#### `loadHTML`
-
-Static method loadHTML
-
-#### `loadURL`
-
-Static method loadURL
-
-### Instance Methods
-
-#### `getHTML`
-
-Instance method getHTML
-
-#### `waitForLoad`
-
-Instance method waitForLoad
-
-#### `loadURL`
-
-Instance method loadURL
-
-#### `evaluateJavaScript`
-
-Instance method evaluateJavaScript
-
-#### `loadRequest`
-
-Instance method loadRequest
-
-#### `loadFile`
-
-Instance method loadFile
-
-#### `present`
-
-Instance method present
-
-#### `loadHTML`
-
-Instance method loadHTML
-
-#### `new WebView`
-
-Instance method new WebView
+The web view also supports evaluating JavaScript on a website.
 
 ### Properties
 
-#### `UITableCell`
+#### `shouldAllowRequest: fn(Request) -> bool`
 
-Property UITableCell
+Function called upon load of a request.
 
-#### `QuickLook`
+When the web view performs a request to load a resource, the function can determine whether or not to allow the request. Disallowing request can speed up the time it takes to load the website.
 
-Property QuickLook
+By default all requests are allowed.
 
-#### `config`
+### Constructor
 
-Property config
+#### `new WebView()`
 
-#### `Point`
+Constructs web view.
 
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `WebView`
-
-Property WebView
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Message`
-
-Property Message
-
-#### `Safari`
-
-Property Safari
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `shouldAllowRequest`
-
-Property shouldAllowRequest
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-shouldAllowRequest : fn ( Request ) -> bool
-```
-
-**Example 2:**
-```javascript
-new WebView ()
-```
-
-**Example 3:**
-```javascript
-static loadHTML ( html : string , baseURL : string , preferredSize : Size , fullscreen : bool ) : Promise
-```
-
-**Example 4:**
-```javascript
-static loadFile ( fileURL : string , preferredSize : Size , fullscreen : bool ) : Promise
-```
-
-**Example 5:**
-```javascript
-preferredSize
-```
-
----
-
-## WidgetDate
-
-### Instance Methods
-
-#### `applyDateStyle`
-
-Instance method applyDateStyle
-
-#### `applyRelativeStyle`
-
-Instance method applyRelativeStyle
-
-#### `leftAlignText`
-
-Instance method leftAlignText
-
-#### `applyOffsetStyle`
-
-Instance method applyOffsetStyle
-
-#### `rightAlignText`
-
-Instance method rightAlignText
-
-#### `applyTimerStyle`
-
-Instance method applyTimerStyle
-
-#### `centerAlignText`
-
-Instance method centerAlignText
-
-#### `applyTimeStyle`
-
-Instance method applyTimeStyle
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `date`
-
-Property date
-
-#### `font`
-
-Property font
-
-#### `Device`
-
-Property Device
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `textColor`
-
-Property textColor
-
-#### `minimumScaleFactor`
-
-Property minimumScaleFactor
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `shadowRadius`
-
-Property shadowRadius
-
-#### `shadowOffset`
-
-Property shadowOffset
-
-#### `lineLimit`
-
-Property lineLimit
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `textOpacity`
-
-Property textOpacity
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `url`
-
-Property url
-
-#### `shadowColor`
-
-Property shadowColor
-
-### Code Examples
-
-**Example 1:**
-```javascript
-date : Date
-```
-
-**Example 2:**
-```javascript
-textColor : Color
-```
-
-**Example 3:**
-```javascript
-font : Font
-```
-
-**Example 4:**
-```javascript
-textOpacity : number
-```
-
-**Example 5:**
-```javascript
-lineLimit : number
-```
-
----
-
-## WidgetImage
-
-### Instance Methods
-
-#### `centerAlignImage`
-
-Instance method centerAlignImage
-
-#### `applyFillingContentMode`
-
-Instance method applyFillingContentMode
-
-#### `rightAlignImage`
-
-Instance method rightAlignImage
-
-#### `applyFittingContentMode`
-
-Instance method applyFittingContentMode
-
-#### `leftAlignImage`
-
-Instance method leftAlignImage
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `tintColor`
-
-Property tintColor
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `resizable`
-
-Property resizable
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `imageOpacity`
-
-Property imageOpacity
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `cornerRadius`
-
-Property cornerRadius
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `image`
-
-Property image
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `imageSize`
-
-Property imageSize
-
-#### `borderColor`
-
-Property borderColor
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `borderWidth`
-
-Property borderWidth
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `url`
-
-Property url
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `containerRelativeShape`
-
-Property containerRelativeShape
-
-### Code Examples
-
-**Example 1:**
-```javascript
-image : Image
-```
-
-**Example 2:**
-```javascript
-resizable : bool
-```
-
-**Example 3:**
-```javascript
-imageSize : Size
-```
-
-**Example 4:**
-```javascript
-imageOpacity : number
-```
-
-**Example 5:**
-```javascript
-containerRelativeShape
-```
-
----
-
-## WidgetSpacer
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `length`
-
-Property length
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Color`
-
-Property Color
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-length : number
-```
-
-**Example 2:**
-```javascript
-length : number
-```
-
----
-
-## WidgetStack
-
-### Instance Methods
-
-#### `layoutHorizontally`
-
-Instance method layoutHorizontally
-
-#### `centerAlignContent`
-
-Instance method centerAlignContent
-
-#### `addText`
-
-Instance method addText
-
-#### `useDefaultPadding`
-
-Instance method useDefaultPadding
-
-#### `addStack`
-
-Instance method addStack
-
-#### `addDate`
-
-Instance method addDate
-
-#### `topAlignContent`
-
-Instance method topAlignContent
-
-#### `bottomAlignContent`
-
-Instance method bottomAlignContent
-
-#### `layoutVertically`
-
-Instance method layoutVertically
-
-#### `addSpacer`
-
-Instance method addSpacer
-
-#### `addImage`
-
-Instance method addImage
-
-#### `setPadding`
-
-Instance method setPadding
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `backgroundColor`
-
-Property backgroundColor
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `backgroundImage`
-
-Property backgroundImage
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `cornerRadius`
-
-Property cornerRadius
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `spacing`
-
-Property spacing
-
-#### `borderColor`
-
-Property borderColor
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `size`
-
-Property size
-
-#### `backgroundGradient`
-
-Property backgroundGradient
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `borderWidth`
-
-Property borderWidth
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `url`
-
-Property url
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-backgroundColor : Color
-```
-
-**Example 2:**
-```javascript
-backgroundImage : Image
-```
-
-**Example 3:**
-```javascript
-backgroundGradient : LinearGradient
-```
-
-**Example 4:**
-```javascript
-addSpacer()
-```
-
-**Example 5:**
-```javascript
-spacing : number
-```
-
----
-
-## WidgetText
-
-### Instance Methods
-
-#### `centerAlignText`
-
-Instance method centerAlignText
-
-#### `leftAlignText`
-
-Instance method leftAlignText
-
-#### `rightAlignText`
-
-Instance method rightAlignText
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `font`
-
-Property font
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `textColor`
-
-Property textColor
-
-#### `minimumScaleFactor`
-
-Property minimumScaleFactor
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `shadowRadius`
-
-Property shadowRadius
-
-#### `shadowOffset`
-
-Property shadowOffset
-
-#### `lineLimit`
-
-Property lineLimit
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `text`
-
-Property text
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `textOpacity`
-
-Property textOpacity
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `url`
-
-Property url
-
-#### `shadowColor`
-
-Property shadowColor
-
-### Code Examples
-
-**Example 1:**
-```javascript
-text : string
-```
-
-**Example 2:**
-```javascript
-textColor : Color
-```
-
-**Example 3:**
-```javascript
-font : Font
-```
-
-**Example 4:**
-```javascript
-textOpacity : number
-```
-
-**Example 5:**
-```javascript
-lineLimit : number
-```
-
----
-
-## XMLParser
-
-### Instance Methods
-
-#### `new XMLParser`
-
-Instance method new XMLParser
-
-#### `parse`
-
-Instance method parse
-
-### Properties
-
-#### `didStartElement`
-
-Property didStartElement
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `didEndDocument`
-
-Property didEndDocument
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `string`
-
-Property string
-
-#### `parseErrorOccurred`
-
-Property parseErrorOccurred
-
-#### `didStartDocument`
-
-Property didStartDocument
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `didEndElement`
-
-Property didEndElement
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `foundCharacters`
-
-Property foundCharacters
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-didStartDocument : fn ()
-```
-
-**Example 2:**
-```javascript
-didEndDocument : fn ()
-```
-
-**Example 3:**
-```javascript
-didStartElement : fn ( string , { string : string })
-```
-
-**Example 4:**
-```javascript
-didEndElement : fn ()
-```
-
-**Example 5:**
-```javascript
-foundCharacters : fn ()
-```
-
----
-
-## args
-
-### Properties
-
-#### `urls`
-
-Property urls
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `images`
-
-Property images
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `length`
-
-Property length
-
-#### `siriShortcutArguments`
-
-Property siriShortcutArguments
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `widgetParameter`
-
-Property widgetParameter
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `notification`
-
-Property notification
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `plainTexts`
-
-Property plainTexts
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `fileURLs`
-
-Property fileURLs
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `queryParameters`
-
-Property queryParameters
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `shortcutParameter`
-
-Property shortcutParameter
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-#### `all`
-
-Property all
-
-### Code Examples
-
-**Example 1:**
-```javascript
-length : number
-```
-
-**Example 2:**
-```javascript
-all : [ any ]
-```
-
-**Example 3:**
-```javascript
-plainTexts : [ string ]
-```
-
-**Example 4:**
-```javascript
-urls : [ string ]
-```
-
-**Example 5:**
-```javascript
-fileURLs : [ string ]
-```
-
----
-
-## config
-
-### Properties
-
-#### `UITableCell`
-
-Property UITableCell
-
-#### `QuickLook`
-
-Property QuickLook
-
-#### `config`
-
-Property config
-
-#### `Point`
-
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `widgetFamily`
-
-Property widgetFamily
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `runsFromHomeScreen`
-
-Property runsFromHomeScreen
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `runsInAccessoryWidget`
-
-Property runsInAccessoryWidget
-
-#### `Calendar`
-
-Property Calendar
-
-#### `runsInActionExtension`
-
-Property runsInActionExtension
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `runsWithSiri`
-
-Property runsWithSiri
-
-#### `Image`
-
-Property Image
-
-#### `runsInNotification`
-
-Property runsInNotification
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `runsInWidget`
-
-Property runsInWidget
-
-#### `runsInApp`
-
-Property runsInApp
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-runsInApp : bool
-```
-
-**Example 2:**
-```javascript
-runsInActionExtension : bool
-```
-
-**Example 3:**
-```javascript
-runsWithSiri : bool
-```
-
-**Example 4:**
-```javascript
-runsInWidget : bool
-```
-
-**Example 5:**
-```javascript
-runsInAccessoryWidget : bool
-```
-
----
-
-## console
+Constructs a new web view. Use a web view to evaluate JavaScript on websites.
 
 ### Static Methods
 
-#### `warn`
+#### `loadHTML(html: string, baseURL: string, preferredSize: Size, fullscreen: bool): Promise`
 
-Static method warn
+Loads HTML and renders it.
 
-#### `log`
+**Parameters:**
+- `html` (string): HTML to load and render.
+- `baseURL` (string): Optional. Base URL used to resolve relative URLs in the HTML.
+- `preferredSize` (Size): Optional. Preferred size of the view. This size is not guaranteed to be respected and is only used when the script is run with Siri or in the Shortcuts app.
+- `fullscreen` (bool): Optional. Set to true to present the web view in fullscreen. This only has an effect when used within the app. Defaults to false.
 
-Static method log
+**Return value:**
+- `Promise`: Promise that carries no value. Once the web view have been closed, the promise will complete.
 
-#### `logError`
+#### `loadFile(fileURL: string, preferredSize: Size, fullscreen: bool): Promise`
 
-Static method logError
+Loads a file and renders it.
 
-#### `error`
+Files can be of various types, including HTML files and images.
 
-Static method error
+The supplied HTML file can reference files and nested directories in the same directory as the HTML file resides.
 
-### Properties
+The optional `preferredSize` parameter is ignored unless the script is run in a Siri Shortcut.
 
-#### `UITableCell`
+If you are displaying large images in a memory constrained environment, for example in a Siri Shortcut, you should use the WebView bridge instead of the QuickLook bridge. The technical reason for this is that a Siri Shortcut and other app extension processes have very limited memory and loading a very large image will cause the app extension to be terminated. However, the web view will run in a different process meaning that it is not affected by the same memory constraints.
 
-Property UITableCell
+**Parameters:**
+- `fileURL` (string): URL of the file to load and render.
+- `preferredSize` (Size): Optional. Preferred size of the view. This size is not guaranteed to be respected and is only used when the script is run with Siri or in the Shortcuts app.
+- `fullscreen` (bool): Optional. Set to true to present the web view in fullscreen. This only has an effect when used within the app. Defaults to false.
 
-#### `QuickLook`
+**Return value:**
+- `Promise`: Promise that carries no value. Once the web view have been closed, the promise will complete.
 
-Property QuickLook
+#### `loadURL(url: string, preferredSize: Size, fullscreen: bool): Promise`
 
-#### `config`
+Loads URL in web view and presents the web view.
 
-Property config
+The optional `preferredSize` parameter is ignored unless the script is run in a Siri Shortcut.
 
-#### `Point`
+**Parameters:**
+- `url` (string): URL to load into the web view.
+- `preferredSize` (Size): Optional. Preferred size of the view. This size is not guaranteed to be respected and is only used when the script is run with Siri or in the Shortcuts app.
+- `fullscreen` (bool): Optional. Set to true to present the web view in fullscreen. This only has an effect when used within the app. Defaults to false.
 
-Property Point
-
-#### `XMLParser`
-
-Property XMLParser
-
-#### `Device`
-
-Property Device
-
-#### `args`
-
-Property args
-
-#### `Request`
-
-Property Request
-
-#### `TextField`
-
-Property TextField
-
-#### `DrawContext`
-
-Property DrawContext
-
-#### `Size`
-
-Property Size
-
-#### `CalendarEvent`
-
-Property CalendarEvent
-
-#### `Timer`
-
-Property Timer
-
-#### `Notification`
-
-Property Notification
-
-#### `ShareSheet`
-
-Property ShareSheet
-
-#### `ContactsGroup`
-
-Property ContactsGroup
-
-#### `Rect`
-
-Property Rect
-
-#### `Script`
-
-Property Script
-
-#### `UUID`
-
-Property UUID
-
-#### `DatePicker`
-
-Property DatePicker
-
-#### `DateFormatter`
-
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-static log ( message : any )
-```
-
-**Example 2:**
-```javascript
-console.error(message)
-```
-
-**Example 3:**
-```javascript
-log(message)
-```
-
-**Example 4:**
-```javascript
-console.log
-```
-
-**Example 5:**
-```javascript
-static warn ( message : any )
-```
+**Return value:**
+- `Promise`: Promise that carries no value. Once the web view have been closed, the promise will complete.
 
 ---
 
-## importModule
+## ListWidget
+
+Widget showing a list of elements.
+
+A widget showing a list of elements. Pass the widget to Script.setWidget() display it on your Home Screen.
+
+Be aware that the widget will refresh periodically and the rate at which the widget refreshes is largely determined by the operating system.
+
+Also note that there are memory limitations when running a script in a widget. When using too much memory the widget will crash and not render correctly.
 
 ### Properties
 
-#### `UITableCell`
+#### `backgroundColor: Color`
 
-Property UITableCell
+Background color of the widget.
 
-#### `QuickLook`
+Defaults to a solid color in widgets placed on the Home Screen and a transparent color placed on the Lock Screen.
 
-Property QuickLook
+#### `backgroundImage: Image`
 
-#### `config`
+Background image.
 
-Property config
+#### `backgroundGradient: LinearGradient`
 
-#### `Point`
+Background gradient.
 
-Property Point
+#### `addAccessoryWidgetBackground: bool`
 
-#### `XMLParser`
+Whether to use an accessory widget background.
 
-Property XMLParser
+Enable to add an adaptive background that provides a standard appearance based on the widget's environment. Defaults to false.
 
-#### `Device`
+This is only available starting from iOS 16.
 
-Property Device
+#### `spacing: number`
 
-#### `args`
+Spacing between elements.
 
-Property args
+Specifies the spacing between elements in the widget. You can also use the `addSpacer()` function on the widget to add spacing between elements. Defaults to 0.
 
-#### `Request`
+#### `url: string`
 
-Property Request
+URL to open.
 
-#### `TextField`
+The URL will be opened when the widget is tapped. This will override any behavior defined in the configuration of the widget. E.g. if the widget is configured to run the script when interacting with the widget but a URL is set the URL will take precedence.
 
-Property TextField
+#### `refreshAfterDate: Date`
 
-#### `DrawContext`
+Earliest date to refresh the widget.
 
-Property DrawContext
+The property indicates when the widget can be refreshed again. The widget will not be refreshed before the date have been reached. It is not guaranteed that the widget will refresh at exactly the specified date.
 
-#### `Size`
+The refresh rate of a widget is partly up to iOS/iPadOS. For example, a widget may not refresh if the device is low on battery or the user is rarely looking at the widget.
 
-Property Size
+When the property is `null` the default refresh interval is used. Defaults to `null`.
 
-#### `CalendarEvent`
+### Constructor
 
-Property CalendarEvent
+#### `new ListWidget()`
 
-#### `Timer`
+Constructs a new list widget.
 
-Property Timer
+A widget showing a list of elements. Pass the widget to Script.setWidget() to display it on your Home Screen.
 
-#### `Notification`
+### Methods
 
-Property Notification
+#### `addText(text: string): WidgetText`
 
-#### `ShareSheet`
+Add text to the widget.
 
-Property ShareSheet
+Adds a text element to the widget. Use the properties on the returned element to style the text.
 
-#### `ContactsGroup`
+**Return value:**
+- `WidgetText`: Text element.
 
-Property ContactsGroup
+#### `addDate(date: Date): WidgetDate`
 
-#### `Rect`
+Add date to the widget.
 
-Property Rect
+Adds a date element to the widget. Use the properties on the returned element to style the date.
 
-#### `Script`
+**Return value:**
+- `WidgetDate`: Date element.
 
-Property Script
+#### `addImage(image: Image): WidgetImage`
 
-#### `UUID`
+Add image to the widget.
 
-Property UUID
+Adds an image element to the widget. Use the properties on the returned element to style the image.
 
-#### `DatePicker`
+**Return value:**
+- `WidgetImage`: Image element.
 
-Property DatePicker
+#### `addSpacer(length: number): WidgetSpacer`
 
-#### `DateFormatter`
+Add spacer.
 
-Property DateFormatter
+Adds a spacer to the widget. This can be used to offset the content vertically in the widget.
 
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `importModule`
-
-Property importModule
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-importModule ( name : string )
-```
-
-**Example 2:**
-```javascript
-importModule('foo')
-```
-
-**Example 3:**
-```javascript
-importModule('/lib/foo')
-```
-
-**Example 4:**
-```javascript
-importModule
-```
-
-**Example 5:**
-```javascript
-module.exports
-```
+**Parameters:**
+- `length` (number): Length of the spacer.
 
 ---
 
-## module
+## DateFormatter
+
+Converts between dates and strings.
+
+The date formatter can convert between dates and their textual representations.
 
 ### Properties
 
-#### `UITableCell`
+#### `dateFormat: string`
 
-Property UITableCell
+Date format to be used by the formatter.
 
-#### `QuickLook`
+Sets a fixed format to be used by the formatter. For example the date "2019-08-26 16:47" can be represented using the format "yyyy-MM-dd HH:mm".
 
-Property QuickLook
+When converting dates to strings, it's advised to use some of the predefined formats for dates and times that can be applied using functions on the formatter, e.g. `useMediumDateStyle()` and `useMediumTimeStyle()`.
 
-#### `config`
+Year:
+- `y`: Year with no padding. Example: "2019"
+- `yy`: Year with two zeros. Adds padding if necessary. Example: "19"
+- `yyyy`: Year with a minimum of four digits. Adds padding if necessary. Example: "2019"
 
-Property config
+Quarter:
+- `Q`: Quarter of the year. Example: "4"
+- `QQQQ`: Quarter spelled out. Example: "4th quarter"
 
-#### `Point`
+Month:
+- `M`: Numeric month of the year. Example: "1"
+- `MM`: Numeric month of the year. Adds padding if necessary. Example: "01"
+- `MMM`: Shorthand name of the month. Example: "Jan"
+- `MMMM`: Full name of the month. Example: "January"
+- `MMMMM`: Narrow name of the month. Example: "J"
 
-Property Point
+Day:
+- `d`: Day of the month. Example: "9"
+- `dd`: Day of the month. Adds padding if necessary. Example: "09"
+- `F`: Day of the week. Example: "3rd Friday in August"
+- `E`: Day of the week. Example: "Fri"
+- `EEEE`: Full name of the day. Example: "Friday"
+- `EEEEE`: Narrow day of the week. Example: "F"
 
-#### `XMLParser`
+Hour:
+- `h`: Hour on a 12-hour clock. Example: "9"
+- `hh`: Hour on a 12-hour clock. Adds padding if necessary. Example: "09"
+- `H`: Hour on a 24-hour clock. Example: "21"
+- `HH`: Hour on a 24-hour clock. Adds padding if necessary. Example: "21"
+- `a`: AM/PM for times on a 12-hour clock. Example: "PM"
 
-Property XMLParser
+Minute:
+- `m`: Minute. Example: "7"
+- `mm`: Minute. Adds padding if necessary. Example: "07"
 
-#### `Device`
+Second:
+- `s`: Seconds. Example: "4"
+- `ss`: Seconds. Adds padding if necessary. Example: "04"
+- `SSS`: Milliseconds. Example: "384"
 
-Property Device
+Time zone:
+- `zzz`: Three letter name of the time zone. Falls back to GMT-08:00 if the name is unknown. Example: "CST"
+- `zzzz`: Full name of the time zone. Falls back to GMT-08:00 if the name is unknown. Example: "Central Standard Time"
+- `Z`: Time zone in RFC 822 GMT format. Also matches a literal Z for Zulu (UTC) time. Example: "-0600"
+- `ZZZZ`: Time zone with abbreviation and offset. Example: "CST-06:00"
+- `ZZZZZ`: Time zone in ISO 8601 format. Example: "-06:00"
 
-#### `args`
+A great resource for experimenting with date formats is nsdateformatter.com developed by Ben Scheirman.
 
-Property args
+#### `locale: string`
 
-#### `Request`
+Locale to use when formatting.
 
-Property Request
+The locale should be specified using a string identifier, e.g. "en", "it" or "da". When no locale is set, the formatter will use the current locale of the device.
 
-#### `TextField`
+### Constructor
 
-Property TextField
+#### `new DateFormatter()`
 
-#### `DrawContext`
+Constructs a date formatter.
 
-Property DrawContext
+To convert between dates and their textual representation, use the `string()` and `date()` functions.
 
-#### `Size`
+### Methods
 
-Property Size
+#### `string(date: Date): string`
 
-#### `CalendarEvent`
+Creates a string from a date.
 
-Property CalendarEvent
+**Parameters:**
+- `date` (Date): The date to convert to a string.
 
-#### `Timer`
+**Return value:**
+- `string`: A textual representation of the date.
 
-Property Timer
+#### `date(str: string): Date`
 
-#### `Notification`
+Creates a date from a string.
 
-Property Notification
+Uses the date formatters configuration to parse the string into a date. If the string cannot be parsed with the date formatters configuration, the function will return null.
 
-#### `ShareSheet`
+**Parameters:**
+- `str` (string): The string to parse into a date.
 
-Property ShareSheet
+**Return value:**
+- `Date`: A date representation of the string or null if the string could not be parsed.
 
-#### `ContactsGroup`
+#### `useNoDateStyle()`
 
-Property ContactsGroup
+Use no style for the date.
 
-#### `Rect`
+This will remove the date from the formatted string.
 
-Property Rect
+#### `useShortDateStyle()`
 
-#### `Script`
+Use a short style for the date.
 
-Property Script
+Dates with a short style are typically numeric only e.g. "08/23/19".
 
-#### `UUID`
+#### `useMediumDateStyle()`
 
-Property UUID
+Use a medium style for the date.
 
-#### `DatePicker`
+Dates with a medium style usually includes abbreviations, e.g. "Aug 23, 2019" or "7:16:42 PM".
 
-Property DatePicker
+#### `useLongDateStyle()`
 
-#### `DateFormatter`
+Use a long style for the date.
 
-Property DateFormatter
-
-#### `Data`
-
-Property Data
-
-#### `RelativeDateTimeFormatter`
-
-Property RelativeDateTimeFormatter
-
-#### `Location`
-
-Property Location
-
-#### `URLScheme`
-
-Property URLScheme
-
-#### `WidgetImage`
-
-Property WidgetImage
-
-#### `module`
-
-Property module
-
-#### `Mail`
-
-Property Mail
-
-#### `LinearGradient`
-
-Property LinearGradient
-
-#### `Alert`
-
-Property Alert
-
-#### `Scriptable Docs`
-
-Property Scriptable Docs
-
-#### `Color`
-
-Property Color
-
-#### `WidgetSpacer`
-
-Property WidgetSpacer
-
-#### `Calendar`
-
-Property Calendar
-
-#### `FileManager`
-
-Property FileManager
-
-#### `Keychain`
-
-Property Keychain
-
-#### `UITable`
-
-Property UITable
-
-#### `WidgetStack`
-
-Property WidgetStack
-
-#### `ListWidget`
-
-Property ListWidget
-
-#### `exports`
-
-Property exports
-
-#### `SFSymbol`
-
-Property SFSymbol
-
-#### `UITableRow`
-
-Property UITableRow
-
-#### `console`
-
-Property console
-
-#### `Path`
-
-Property Path
-
-#### `Safari`
-
-Property Safari
-
-#### `Message`
-
-Property Message
-
-#### `WebView`
-
-Property WebView
-
-#### `WidgetDate`
-
-Property WidgetDate
-
-#### `WidgetText`
-
-Property WidgetText
-
-#### `Photos`
-
-Property Photos
-
-#### `Image`
-
-Property Image
-
-#### `filename`
-
-Property filename
-
-#### `Font`
-
-Property Font
-
-#### `CallbackURL`
-
-Property CallbackURL
-
-#### `Reminder`
-
-Property Reminder
-
-#### `Contact`
-
-Property Contact
-
-#### `Dictation`
-
-Property Dictation
-
-#### `DocumentPicker`
-
-Property DocumentPicker
-
-#### `importModule`
-
-Property importModule
-
-#### `Pasteboard`
-
-Property Pasteboard
-
-#### `Speech`
-
-Property Speech
-
-#### `RecurrenceRule`
-
-Property RecurrenceRule
-
-#### `ContactsContainer`
-
-Property ContactsContainer
-
-### Code Examples
-
-**Example 1:**
-```javascript
-let circle = importModule ( 'circle' ) let r = 2 let area = circle . area ( r ) log ( 'Area of circle: ' + area )
-```
-
-**Example 2:**
-```javascript
-module . exports . area = ( r ) => { return Math . PI * Math . pow ( r , 2 ) } module . exports . circumference = ( r ) => { return 2 * Math . PI * r }
-```
-
-**Example 3:**
-```javascript
-circumference
-```
-
-**Example 4:**
-```javascript
-importModule
-```
-
-**Example 5:**
-```javascript
-filename : string
-```
+Dates with a long style usually includes a full text, e.g. "August 23, 2019".
 
 ---
 
+## Font
+
+Represents a font and text size.
+
+The font can be used to style texts, for example in widgets.
+
+### Constructor
+
+#### `new Font(name: string, size: number)`
+
+Constructs a new font.
+
+Refer to [iosfonts.com](http://iosfonts.com/) for a list of the fonts that are available in iOS and iPadOS.
+
+**Parameters:**
+- `name` (string): Name of the font.
+- `size` (number): Size of the font.
+
+### Static Methods
+
+#### `largeTitle(): Font`
+
+Preferred font for large titles.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `title1(): Font`
+
+Preferred font for first level hierarchical headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `title2(): Font`
+
+Preferred font for second level hierarchical headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `title3(): Font`
+
+Preferred font for third level hierarchical headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `headline(): Font`
+
+Preferred font for headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `subheadline(): Font`
+
+Preferred font for subheadings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `body(): Font`
+
+Preferred font for body texts.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `callout(): Font`
+
+Preferred font for callouts.
+
+**Return value:**
+- `Font`: Preferred font.
+
+---
+
+## Timer
+
+A timer that fires after a time interval has elapsed.
+
+The timer fires after a specified time interval has elapsed. The timer can be repeating in which case it will fire multiple times.
+
+### Properties
+
+#### `timeInterval: number`
+
+The frequency at which the timer fires, in milliseconds.
+
+Be aware that the time interval is specified in setting. Defaults to 0, causing the timer to fire instantly.
+
+#### `repeats: bool`
+
+Whether the timer should repeat.
+
+A repeating timer will keep firing until it is invalidated. In contrast to non-repeating timers, repeating timers are not automatically invalidated. Defaults to false.
+
+### Constructor
+
+#### `new Timer()`
+
+Constructs a timer.
+
+Constructs a timer that fires after a specified time interval.
+
+### Methods
+
+#### `schedule(callback: fn())`
+
+Schedules the timer.
+
+Schedules the timer using its configuration. The supplied function is called when the timer fires. To stop the timer from firing, call the `invalidate()` function.
+
+**Parameters:**
+- `callback` (fn()): The callback to be called when the timer fires.
+
+#### `invalidate()`
+
+Stops the timer from firing.
+
+Stops the timer from firing ever again. Non-repeating timers are automatically invalidated after they have fired once. Repeating timers must be manually invalidated.
+
+### Static Methods
+
+#### `schedule(timeInterval: number, repeats: bool, callback: fn()): Timer`
+
+Schedules a timer.
+
+This is a convenience function for creating a new timer. The created timer is instantly scheduled and will fire after the specified time interval.
+
+**Parameters:**
+- `timeInterval` (number): The time interval to fire the timer at.
+- `repeats` (bool): Whether the timer should repeat or not.
+- `callback` (fn()): The callback to be called when the timer fires.
+
+**Return value:**
+- `Timer`: The constructed timer.
+
+---
