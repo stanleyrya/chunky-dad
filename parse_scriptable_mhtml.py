@@ -6,12 +6,12 @@ This script parses Scriptable documentation MHTML files and converts them
 to structured Markdown format following the established pattern.
 
 Usage:
-    python parse_scriptable_mhtml.py <input_mhtml_file> [output_md_file]
+    python3 parse_scriptable_mhtml.py <input_mhtml_file> [output_md_file]
     
 If no output file is specified, it will print to stdout.
 
 Example:
-    python parse_scriptable_mhtml.py "Alert - Scriptable Docs.mhtml" alert.md
+    python3 parse_scriptable_mhtml.py "Alert - Scriptable Docs.mhtml" alert.md
 """
 
 import sys
@@ -41,33 +41,22 @@ class ScriptableMHTMLParser:
     def extract_description(self):
         """Extract the class description."""
         # Find the description paragraph after the main heading
-        class_pattern = rf'<h1 id=3D"[^"]*">{re.escape(self.class_name)}<.*?</h1>\s*<p>([^<]+)</p>'
+        class_pattern = rf'<h1 id=3D"[^"]*">{re.escape(self.class_name)}<.*?</h1>(.*?)(?=<h2|$)'
         match = re.search(class_pattern, self.content, re.DOTALL)
         if match:
-            desc = html.unescape(match.group(1)).strip()
-            self.description = desc
-            
-        # Look for additional description paragraphs
-        additional_desc = []
-        pattern = rf'<h1 id=3D"[^"]*">{re.escape(self.class_name)}<.*?</h1>(.*?)(?=<h[1-6]|$)'
-        match = re.search(pattern, self.content, re.DOTALL)
-        if match:
             section = match.group(1)
-            # Extract all <p> tags
+            # Extract all <p> tags from the section
             p_matches = re.findall(r'<p>([^<]+)</p>', section)
-            if len(p_matches) > 1:
-                additional_desc = [html.unescape(p).strip() for p in p_matches[1:]]
-        
-        if additional_desc:
-            full_desc = [self.description] + additional_desc
-            self.description = "\n\n".join(full_desc)
+            if p_matches:
+                descriptions = [html.unescape(p).strip() for p in p_matches]
+                self.description = "\n\n".join(descriptions)
             
         return self.description
     
     def extract_properties(self):
         """Extract properties from the MHTML content."""
         # Look for property sections (h2 elements that aren't methods)
-        property_pattern = r'<h2 id=3D"([^"]*)"[^>]*>([^<]+)<.*?</h2>(.*?)(?=<h[1-6]|<hr>|$)'
+        property_pattern = r'<h2 id=3D"([^"]*)"[^>]*>([^<]+)<.*?</h2>(.*?)(?=<h2|<hr>|$)'
         matches = re.findall(property_pattern, self.content, re.DOTALL)
         
         for prop_id, prop_name, prop_content in matches:
@@ -79,17 +68,42 @@ class ScriptableMHTMLParser:
             if '(' in prop_name or prop_name.startswith(('+', '-')):
                 continue
                 
-            # Extract property type from code block
+            # Extract property type from code block - more flexible pattern
             prop_type = ""
-            type_match = re.search(r'<code[^>]*><span[^>]*>([^<]+)</span><span[^>]*>:</span>.*?<span[^>]*>([^<]+)</span>', prop_content)
-            if type_match:
-                prop_type = html.unescape(type_match.group(2)).strip()
+            # Try different patterns for type extraction
+            type_patterns = [
+                r'<span class=3D"nx">([^<]+)</span><span class=3D"o">:</span>.*?<span class=3D"nx">([^<]+)</span>',
+                r'<code[^>]*>.*?<span[^>]*>([^<:]+)</span><span[^>]*>:</span>.*?<span[^>]*>([^<]+)</span>',
+                r'<code[^>]*>(.*?)</code>'
+            ]
             
-            # Extract description
-            desc_match = re.search(r'</div>\s*<p>([^<]+)</p>', prop_content)
+            for pattern in type_patterns:
+                type_match = re.search(pattern, prop_content, re.DOTALL)
+                if type_match:
+                    if len(type_match.groups()) >= 2:
+                        prop_type = html.unescape(type_match.group(2)).strip()
+                    else:
+                        # Extract type from full code block
+                        code_content = type_match.group(1)
+                        code_clean = re.sub(r'<[^>]+>', '', code_content)
+                        code_parts = html.unescape(code_clean).split(':')
+                        if len(code_parts) >= 2:
+                            prop_type = code_parts[1].strip()
+                    break
+            
+            # Extract description - look for paragraphs after the code block
             prop_desc = ""
-            if desc_match:
-                prop_desc = html.unescape(desc_match.group(1)).strip()
+            desc_patterns = [
+                r'</div>\s*<p>([^<]+)</p>',
+                r'</code></pre></div>\s*<p>([^<]+)</p>',
+                r'<p>([^<]+)</p>'
+            ]
+            
+            for pattern in desc_patterns:
+                desc_match = re.search(pattern, prop_content)
+                if desc_match:
+                    prop_desc = html.unescape(desc_match.group(1)).strip()
+                    break
             
             # Check for read-only
             is_readonly = '<em>Read-only.</em>' in prop_content
@@ -106,7 +120,7 @@ class ScriptableMHTMLParser:
     def extract_methods(self):
         """Extract methods and static methods."""
         # Look for method sections (h2 elements that contain parentheses or +/-)
-        method_pattern = r'<h2 id=3D"[^"]*"[^>]*>([^<]+)<.*?</h2>(.*?)(?=<h[1-6]|$)'
+        method_pattern = r'<h2 id=3D"[^"]*"[^>]*>([^<]+)<.*?</h2>(.*?)(?=<h2|$)'
         matches = re.findall(method_pattern, self.content, re.DOTALL)
         
         for method_name, method_content in matches:
@@ -126,20 +140,37 @@ class ScriptableMHTMLParser:
             if method_name.startswith(('+', '-')):
                 clean_name = method_name[1:]
             
-            # Extract method signature from code block
+            # Extract method signature from code block - improved extraction
             signature = ""
-            sig_match = re.search(r'<div class=3D"codehilite">.*?<code[^>]*>(.*?)</code>', method_content, re.DOTALL)
-            if sig_match:
-                sig_html = sig_match.group(1)
-                # Clean up HTML tags and decode
-                sig_clean = re.sub(r'<[^>]+>', '', sig_html)
-                signature = html.unescape(sig_clean).strip()
+            sig_patterns = [
+                r'<div class=3D"codehilite">.*?<code[^>]*>(.*?)</code>',
+                r'<pre><span></span><code>(.*?)</code></pre>'
+            ]
             
-            # Extract description
-            desc_match = re.search(r'</div>\s*<p>([^<]+)</p>', method_content)
+            for pattern in sig_patterns:
+                sig_match = re.search(pattern, method_content, re.DOTALL)
+                if sig_match:
+                    sig_html = sig_match.group(1)
+                    # Clean up HTML tags and decode
+                    sig_clean = re.sub(r'<[^>]+>', '', sig_html)
+                    signature = html.unescape(sig_clean).strip()
+                    # Remove line breaks and extra spaces
+                    signature = ' '.join(signature.split())
+                    break
+            
+            # Extract description - look for first paragraph after code block
             method_desc = ""
-            if desc_match:
-                method_desc = html.unescape(desc_match.group(1)).strip()
+            desc_patterns = [
+                r'</div>\s*<p>([^<]+)</p>',
+                r'</pre></div>\s*<p>([^<]+)</p>',
+                r'<p>([^<]+)</p>'
+            ]
+            
+            for pattern in desc_patterns:
+                desc_match = re.search(pattern, method_content)
+                if desc_match:
+                    method_desc = html.unescape(desc_match.group(1)).strip()
+                    break
             
             # Extract parameters
             parameters = []
@@ -195,30 +226,34 @@ class ScriptableMHTMLParser:
         # Class name and description
         md_lines.append(f"## {self.class_name}")
         md_lines.append("")
-        md_lines.append(self.description)
-        md_lines.append("")
+        if self.description:
+            md_lines.append(self.description)
+            md_lines.append("")
         
         # Properties
         if self.properties:
             md_lines.append("### Properties")
             md_lines.append("")
             for prop in self.properties:
-                md_lines.append(f"#### `{prop['name']}: {prop['type']}`")
+                type_str = f": {prop['type']}" if prop['type'] else ""
+                md_lines.append(f"#### `{prop['name']}{type_str}`")
                 md_lines.append("")
-                md_lines.append(prop['description'])
-                if prop['readonly']:
+                if prop['description']:
+                    md_lines.append(prop['description'])
                     md_lines.append("")
+                if prop['readonly']:
                     md_lines.append("*Read-only.*")
-                md_lines.append("")
+                    md_lines.append("")
         
         # Constructor
-        if self.constructor:
+        if self.constructor and self.constructor['signature']:
             md_lines.append("### Constructor")
             md_lines.append("")
             md_lines.append(f"#### `{self.constructor['signature']}`")
             md_lines.append("")
-            md_lines.append(self.constructor['description'])
-            md_lines.append("")
+            if self.constructor['description']:
+                md_lines.append(self.constructor['description'])
+                md_lines.append("")
             
             if self.constructor['parameters']:
                 md_lines.append("**Parameters:**")
@@ -236,42 +271,46 @@ class ScriptableMHTMLParser:
             md_lines.append("### Static Methods")
             md_lines.append("")
             for method in self.static_methods:
-                md_lines.append(f"#### `{method['signature']}`")
-                md_lines.append("")
-                md_lines.append(method['description'])
-                md_lines.append("")
-                
-                if method['parameters']:
-                    md_lines.append("**Parameters:**")
-                    for param in method['parameters']:
-                        md_lines.append(f"- `{param['name']}` ({param['type']}): {param['description']}")
+                if method['signature']:
+                    md_lines.append(f"#### `{method['signature']}`")
                     md_lines.append("")
-                
-                if method['return_value']:
-                    md_lines.append("**Return value:**")
-                    md_lines.append(f"- `{method['return_value']}`")
-                    md_lines.append("")
+                    if method['description']:
+                        md_lines.append(method['description'])
+                        md_lines.append("")
+                    
+                    if method['parameters']:
+                        md_lines.append("**Parameters:**")
+                        for param in method['parameters']:
+                            md_lines.append(f"- `{param['name']}` ({param['type']}): {param['description']}")
+                        md_lines.append("")
+                    
+                    if method['return_value']:
+                        md_lines.append("**Return value:**")
+                        md_lines.append(f"- `{method['return_value']}`")
+                        md_lines.append("")
         
         # Instance Methods
         if self.methods:
             md_lines.append("### Methods")
             md_lines.append("")
             for method in self.methods:
-                md_lines.append(f"#### `{method['signature']}`")
-                md_lines.append("")
-                md_lines.append(method['description'])
-                md_lines.append("")
-                
-                if method['parameters']:
-                    md_lines.append("**Parameters:**")
-                    for param in method['parameters']:
-                        md_lines.append(f"- `{param['name']}` ({param['type']}): {param['description']}")
+                if method['signature']:
+                    md_lines.append(f"#### `{method['signature']}`")
                     md_lines.append("")
-                
-                if method['return_value']:
-                    md_lines.append("**Return value:**")
-                    md_lines.append(f"- `{method['return_value']}`")
-                    md_lines.append("")
+                    if method['description']:
+                        md_lines.append(method['description'])
+                        md_lines.append("")
+                    
+                    if method['parameters']:
+                        md_lines.append("**Parameters:**")
+                        for param in method['parameters']:
+                            md_lines.append(f"- `{param['name']}` ({param['type']}): {param['description']}")
+                        md_lines.append("")
+                    
+                    if method['return_value']:
+                        md_lines.append("**Return value:**")
+                        md_lines.append(f"- `{method['return_value']}`")
+                        md_lines.append("")
         
         md_lines.append("---")
         md_lines.append("")
@@ -305,7 +344,7 @@ def parse_mhtml_file(input_file, output_file=None):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python parse_scriptable_mhtml.py <input_mhtml_file> [output_md_file]")
+        print("Usage: python3 parse_scriptable_mhtml.py <input_mhtml_file> [output_md_file]")
         sys.exit(1)
     
     input_file = sys.argv[1]
