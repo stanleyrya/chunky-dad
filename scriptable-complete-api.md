@@ -1050,6 +1050,246 @@ Fetches the contacts groups in the specified containers. A group can be in only 
 
 ---
 
-*Note: This documentation contains the complete API reference for Scriptable. The remaining classes (Data, DateFormatter, DatePicker, Device, Dictation, DocumentPicker, DrawContext, FileManager, Font, Image, Keychain, LinearGradient, ListWidget, Location, Mail, Message, Notification, Pasteboard, Path, Photos, Point, QuickLook, Rect, RecurrenceRule, RelativeDateTimeFormatter, Reminder, Request, Safari, Script, SFSymbol, ShareSheet, Size, Speech, TextField, Timer, UITable, UITableCell, UITableRow, URLScheme, UUID, WebView, WidgetDate, WidgetImage, WidgetSpacer, WidgetStack, WidgetText, XMLParser) follow the same consistent documentation pattern with proper descriptions, constructors, properties, methods, parameters, and return types as shown in the classes above.*
+## Data
+
+Raw data representation.
+
+Raw data representation of strings, files and images.
+
+### Static Methods
+
+#### `fromString(string: string): Data`
+
+Creates data from string.
+
+The provided string is assumed to be UTF8 encoded. If the string is not UTF8 encoded, the function will return null.
+
+**Parameters:**
+- `string` (string): String to create data from.
+
+**Return value:**
+- `Data`: Data representation of the string.
+
+#### `fromFile(filePath: string): Data`
+
+Reads data from file path.
+
+Reads the raw data of the file at the specified file path.
+
+**Parameters:**
+- `filePath` (string): Path of file to read data from.
+
+**Return value:**
+- `Data`: Data representation of the file.
+
+#### `fromBase64String(base64String: string): Data`
+
+Creates data from base64 encoded string.
+
+The supplied string must be base64 encoded otherwise the function will return null.
+
+**Parameters:**
+- `base64String` (string): Base64 encoded string to create data from.
+
+**Return value:**
+- `Data`: Data representation of the string.
+
+#### `fromJPEG(image: Image): Data`
+
+Creates data from JPEG image.
+
+**Parameters:**
+- `image` (Image): JPEG image to convert to data.
+
+**Return value:**
+- `Data`: Data representation of the image.
+
+#### `fromPNG(image: Image): Data`
+
+Creates data from PNG image.
+
+**Parameters:**
+- `image` (Image): PNG image to convert to data.
+
+**Return value:**
+- `Data`: Data representation of the image.
+
+#### `fromBytes(bytes: [number]): Data`
+
+Creates data from an array of bytes.
+
+**Parameters:**
+- `bytes` ([number]): Array of bytes to convert to data.
+
+**Return value:**
+- `Data`: Data creates from the bytes.
+
+### Methods
+
+#### `toRawString(): string`
+
+Creates a string from the data.
+
+The data is assumed to represent a UTF8 encoded string. If the string is not UTF8 encoded string, the function will return null.
+
+**Return value:**
+- `string`: Data converted to string.
+
+#### `toBase64String(): string`
+
+Creates a base64 encoded string.
+
+Creates a base64 encoded string from the data.
+
+**Return value:**
+- `string`: Base64 encoded string.
+
+#### `getBytes(): [number]`
+
+Gets bytes from data.
+
+**Return value:**
+- `[number]`: Array of bytes.
+
+---
+
+## Device
+
+Provides information about the device.
+
+Reads information about the current device and its screen.
+
+### Static Methods
+
+#### `name(): string`
+
+Name identifying the device.
+
+You can find and edit the name of your device in the system settings.
+
+#### `systemName(): string`
+
+Name of the operating system.
+
+#### `systemVersion(): string`
+
+Version of the operating system.
+
+#### `model(): string`
+
+Model of the device, e.g. "iPhone".
+
+#### `isPhone(): bool`
+
+Whether the device is a phone.
+
+You can use this property to choose behavior of a script depending on whether its running on a phone or a pad.
+
+#### `isPad(): bool`
+
+Whether the device is a pad.
+
+You can use this property to choose behavior of a script depending on whether its running on a phone or a pad.
+
+#### `screenSize(): Size`
+
+Size of the screen.
+
+The value is measured in points. For an explanation of the relationship between points and pixels, see the documentation of the `screenScale()` method. The value takes the device rotation into account, so the value will vary between portrait and landscape.
+
+#### `screenResolution(): Size`
+
+Resolution of the screen.
+
+The value is measured in pixels. The value does not take the rotation of the deviec into account.
+
+#### `screenScale(): number`
+
+Scale of the screen.
+
+Standard resolution displays have a scale of 1.0 where one point on the screen equals one pixel. Retina displays will have a scale factor of 2.0 or 3.0 where one point on the screen is four or nine pixels, respectively.
+
+#### `screenBrightness(): number`
+
+Brightness of the screen in percentage.
+
+The value range from 0 to 1. To set the screen brightness, refer to the `setScreenBrightness()` function.
+
+#### `isInPortrait(): bool`
+
+Whether the device is in portrait with the home button or home indicator at the bottom.
+
+#### `isInPortraitUpsideDown(): bool`
+
+Whether the device is in portrait but upside down with the home button or home indicator at the top.
+
+#### `isInLandscapeLeft(): bool`
+
+Whether the device is in landscape with the home button or home indicator on the right side.
+
+#### `isInLandscapeRight(): bool`
+
+Whether the device is in landscape with the home button or home indicator on the left side.
+
+#### `isFaceUp(): bool`
+
+Whether the device is lying parallel to the ground with the screen facing upwards.
+
+#### `isFaceDown(): bool`
+
+Whether the device is lying parallel to the ground with the screen facing downwards.
+
+#### `batteryLevel(): number`
+
+Current battery level.
+
+The value is in percentage ranging between 0 and 1.
+
+#### `isDischarging(): bool`
+
+Whether the device is being not plugged into power and thus discharging.
+
+#### `isCharging(): bool`
+
+Whether the device is being charged.
+
+#### `isFullyCharged(): bool`
+
+Whether the device is fully charged.
+
+#### `preferredLanguages(): [string]`
+
+The preferred langauges.
+
+The list is ordered according to the language preferences specified in the system settings.
+
+#### `locale(): string`
+
+Identifier for the device locale.
+
+#### `language(): string`
+
+Identifier for the device language.
+
+#### `isUsingDarkAppearance(): bool`
+
+Whether the device is using dark appearance.
+
+This API is not supported in widgets.
+
+#### `volume(): number`
+
+The device volume.
+
+The value range from 0 to 1.
+
+#### `setScreenBrightness(percentage: number)`
+
+Sets the brightness of the screen.
+
+The value range from 0 to 1. To get the screen brightness, refer to the `screenBrightness()` function.
+
+**Parameters:**
+- `percentage` (number): Percentage to set the screen brightness to. Value between 0 and 1.
 
 ---
