@@ -2194,3 +2194,2717 @@ This is a convenience function for creating a new timer. The created timer is in
 - `Timer`: The constructed timer.
 
 ---
+
+## DatePicker
+
+Presents a date picker.
+
+The date picker can be configured towards picking a date with or without
+ time, just a time or picking hours and minutes for a timer.
+
+### Properties
+
+#### `minimumDate`
+
+Minimum date that is selected in the picker.
+
+#### `maximumDate`
+
+Maximum date that is selected in the picker.
+
+#### `countdownDuration`
+
+Countdown duration displayed by the date picker.
+
+#### `minuteInterval`
+
+Interval at which the date picker displays minutes.
+
+#### `initialDate`
+
+The initially selected date.
+
+### Constructor
+
+#### `new DatePicker()`
+
+Use the date picker to present a view for selecting a date.
+
+### Methods
+
+#### `pickDateAndTime(): Promise<Date>`
+
+Presents the date picker displaying date and time.
+
+#### `pickCountdownDuration():Promise<number>`
+
+Presents the date picker for selecting the duration of a countdown.
+
+---
+
+## Dictation
+
+### Static Methods
+
+#### `static start(locale: string): Promise<string>`
+
+Presents an interface that shows the dictated string. Press "Done"
+when you are done dictating the text.
+
+**Parameters:**
+- `locale` (string): Optional string identifier that specifies the language to dictate in. E.g. 
+"en" for English, "it" for Italian and "da" for Danish. Defaults to the loc
+ale of the device.
+
+---
+
+## DocumentPicker
+
+Presents a document picker.
+
+Use this to present a picker that allows opening a document from Files a
+pp or exporting a document to Files app.
+When opening a document, the picker will prompt you to select one or more d
+ocuments after which you will get the path for the documents. Use the FileM
+anager to read the content of these files.
+When exporting a document, the picker will ask you to select a destination 
+to store the document.
+
+### Static Methods
+
+#### `static open(types: [string]): Promise<[string]>`
+
+Opens a document.
+
+**Parameters:**
+- `types` ([string]): Types of files to select. Specified using UTIs. Defaults to all files.
+
+**Return value:**
+- `Promise<[string]>: Promise that provides paths for the selected documents when fulfilled.`
+
+#### `static openFile(): Promise<string>`
+
+Presents a document picker for opening a file from the Files app. The do
+cument picker will allow the selection of any file.
+
+#### `static openFolder(): Promise<string>`
+
+Presents a document picker for opening a folder from the Files app.
+
+#### `static export(path: string): Promise<[string]>=`
+
+Exports the file to a document with. A picker prompting for a destinatio
+n to export the document to is presented.
+
+**Parameters:**
+- `path` (string): Path of the file to export.
+
+**Return value:**
+- `Promise<[string]>: Promise that provides paths for the selected file destination when fulfille
+d.`
+
+#### `static exportString(content: string, name: string):Promise<[string]>`
+
+Exports a string to a new file. The name of the file can optionally be s
+pecified. A picker prompting for a destination to export the document to is
+ presented.
+
+**Parameters:**
+- `content` (string): Content of the document to export.
+- `name` (string): Optional name of the document to export.
+
+#### `static exportImage(image: Image, name: string): Promise<[string]>`
+
+Exports an image to a new file. The name of the file can optionally be s
+pecified. A picker prompting for a destination to export the document to is
+ presented.
+
+**Parameters:**
+- `image` (Image): Image to export.
+- `name` (string): Optional name of the image to export.
+
+#### `static exportData(data:Data,name: string): Promise<[string]>`
+
+Exports data to a new file. The name of the file can optionally be speci
+fied. A picker prompting for a destination to export the document to is pre
+sented.
+
+**Parameters:**
+- `data` (Data): Data to export.
+- `name` (string): Optional name of the image to export.
+
+---
+
+## DrawContext
+
+Context for drawing images.
+
+An instance of DrawContext is a canvas on which you can draw an image us
+ing shapes, texts and other images. You must specify the size of your canva
+s by setting the size property. At any point after beginning your drawing a
+nd before ending your drawing can you call getImage() to get an image objec
+t of your drawing.
+
+### Properties
+
+#### `size: Size`
+
+Size of canvas.
+
+#### `respectScreenScale`
+
+Enable to respect the scale of the screen.
+
+#### `opaque`
+
+Determines whether the context is opaque.
+
+### Constructor
+
+#### `new DrawContext()`
+
+Constructs a new canvas to draw images, shapes and texts on.
+
+### Methods
+
+#### `drawImageInRect(image: Image, rect: Rect)`
+
+Draws the image in the rectangle. The image will be scaled to fit within
+ the rectangle.
+
+**Parameters:**
+- `image` (Image): Image to draw.
+- `rect` (Rect): Rectangle to draw the image in.
+
+#### `drawImageAtPoint(image: Image, point: Point)`
+
+Draws the image at the point. The top-left corner of the image will be d
+rawn at the specified point.
+
+**Parameters:**
+- `image` (Image): Image to draw.
+- `point` (Point): Point at which to draw top-left corner of the image.
+
+#### `setFillColor(color: Color)`
+
+Sets the fill color to be used when performing a fill operation. Any fil
+l operation performed afterwards will fill with the specified color until a
+nother call to setFillColor is made.
+
+**Parameters:**
+- `color` (Color): Color to set for filling.
+
+#### `setStrokeColor(color: Color)`
+
+Sets the stroke color to be used when performing a stroke operation. Any
+ stroke operation performed afterwards will stroke with the specified color
+ until another call to setStrokeColor is made.
+
+**Parameters:**
+- `color` (Color): Color to set for stroking.
+
+#### `setLineWidth(width: number)`
+
+Sets the line width to be used when performing a stroke operation.
+
+**Parameters:**
+- `width` (number): Line width to use for stroking.
+
+#### `fill(rect: Rect)`
+
+Fills the rectangle with the color set when calling setFillColor.
+
+**Parameters:**
+- `rect` (Rect): Rectangle to fill.
+
+#### `fillEllipse(rect: Rect)`
+
+Fills the ellipse that fits within the supplied rectangle with the color
+ set when calling setFillColor.
+
+**Parameters:**
+- `rect` (Rect): Rectangle incapsulating the ellipse to fill.
+
+#### `stroke(rect: Rect)`
+
+Draws a line around the rectangle using the color set when calling setSt
+rokeColor. The line will have the width set when calling setLineWidth.
+
+**Parameters:**
+- `rect` (Rect): Rectangle to stroke.
+
+#### `strokeRect(rect: Rect)`
+
+Draws a line around the rectangle using the color set when calling setSt
+rokeColor. The line will have the width set when calling setLineWidth.
+
+**Parameters:**
+- `rect` (Rect): Rectangle to stroke.
+
+#### `strokeEllipse(rect: Rect)`
+
+Draws a line around the ellipse that fits within the supplied rectangle.
+ The line will have the color set when calling setStrokeColor and the width
+ set when calling setLineWidth.
+
+**Parameters:**
+- `rect` (Rect): Rectangle incapsulating the ellipse to stroke.
+
+#### `strokePath()`
+
+The path that was added the latest to the context is stroked with the co
+lor set using setStrokeColor and the line width set using setLineWidth.
+
+#### `drawTextInRect(text: string, rect: Rect)`
+
+Call this to draw a text string in a rectangle. Specify how the text sho
+uld be aligned within the rectangle by calling setTextAlignedLeft, setTextA
+lignedCenter or setTextAlignedRight before drawing the text.
+
+**Parameters:**
+- `text` (string): Text to draw.
+- `rect` (Rect): Rectangle to draw text in.
+
+#### `setFontSize(size: number)`
+
+Sets the font size to be used when drawing texts to the context.
+
+**Parameters:**
+- `size` (number): Font size to use when drawing text.
+
+#### `setTextColor(color: Color)`
+
+Sets the text color to be used when drawing text strings to the context.
+
+**Parameters:**
+- `color` (Color): Color to use when drawing text.
+
+#### `setTextAlignedLeft()`
+
+Sets text alignment to left. Texts drawn after calling this will be left
+ aligned inside the provided rectangle.
+
+#### `setTextAlignedCenter()`
+
+Sets text alignment to center. Texts drawn after calling this will be ce
+nter aligned inside the provided rectangle.
+
+#### `setTextAlignedRight()`
+
+Sets text alignment to right. Texts drawn after calling this will be rig
+ht aligned inside the provided rectangle.
+
+---
+
+## Keychain
+
+Secure storage for credentials.
+
+### Static Methods
+
+#### `static contains(key: string): bool`
+
+Checks if the keychain contains the specified key.
+
+**Return value:**
+- `bool: True if the key exists in the keychain, otherwise false.`
+
+#### `static set(key: string, value: string)`
+
+Adds the value to the keychain, assigning it to the specified key. If th
+e key already exists in the keychain, the value is overwritten.
+
+**Parameters:**
+- `key` (string): Key which the value should be assigned to.
+- `value` (string): Value to assign to the specified key.
+
+#### `static get(key: string): string`
+
+Reads a value from the keychain.
+
+**Parameters:**
+- `key` (string): Key to read value for.
+
+**Return value:**
+- `string: Value assigned to the specified key.`
+
+#### `static remove(key: string)`
+
+Remove key from keychain.
+
+**Parameters:**
+- `key` (string): Key to remove from the keychain.
+
+---
+
+## Location
+
+Fetches your location.
+
+### Static Methods
+
+#### `static current(): Promise<{string: number}>`
+
+Your location is fetched using GPS, WiFi and cellular hardware. The obje
+ct carried by the promise includes the latitude, longitude and altitude as 
+well as the horizontal and vertical accuracy measured in meters.
+
+**Return value:**
+- `Promise<{string: number}>: Promise providing an object containing information about your location.`
+
+#### `static setAccuracyToBest()`
+
+Set this when you want to achieve the best possible accuracy when retrie
+ving your location. This is the default accuracy.
+
+#### `static setAccuracyToTenMeters()`
+
+Sets accuracy to within ten meters.
+
+#### `static setAccuracyToHundredMeters()`
+
+Sets accuracy to within hundred meters.
+
+#### `static setAccuracyToKilometer()`
+
+Sets accuracy to within one kilometer.
+
+#### `static setAccuracyToThreeKilometers()`
+
+Sets accuracy to within three kilometers.
+
+#### `static reverseGeocode(latitude: number, longitude: number, locale: string):[{string: any}]`
+
+A reverse-geocoding request fetches information about the current locati
+on. The data is delivered by Apple's geocoding service.
+
+**Return value:**
+- `[{string: any}]: Promise that carries all available information about the address when resol
+ved.`
+
+---
+
+## Mail
+
+Sends a mail.
+
+Presents UI for sending a mail.
+
+### Properties
+
+#### `toRecipients: string`
+
+Recipients of the mail.
+
+#### `ccRecipients: string`
+
+Recipients to set CC on the mail.
+
+#### `bccRecipients: string`
+
+Recipients to set BCC on the mail.
+
+#### `subject`
+
+Subject of the mail.
+
+#### `body: string`
+
+Body of the mail.
+
+#### `isBodyHTML`
+
+Whether body is HTML.
+
+#### `preferredSendingEmailAddress: string`
+
+Preferred email address to use in the from field.
+
+### Constructor
+
+#### `new Mail()`
+
+Constructs a mail.
+
+### Methods
+
+#### `send(): Promise`
+
+Presents a screen from which the mail can be sent. The mail will not be 
+sent until you have confirmed it from the presented screen.
+
+**Return value:**
+- `Promise: Promise that is fulfilled when the mail have been sent or saved.`
+
+#### `addImageAttachment(image: Image)`
+
+Adds an image attachment to the mail.
+
+**Parameters:**
+- `image` (Image): Image to add to the mail.
+
+#### `addFileAttachment(filePath: string)`
+
+Adds a file attachment to the mail.
+
+#### `addDataAttachment(data: Data, mimeType: string, filename: string)`
+
+Adds a data attachment to the mail.
+
+---
+
+## Message
+
+Sends a message.
+
+Presents UI for sending a message.
+
+### Properties
+
+#### `recipients: string`
+
+Body of the message.
+
+### Constructor
+
+#### `new Message()`
+
+Constructs a message to be sent either as a text message or an iMessage.
+
+### Methods
+
+#### `send(): Promise`
+
+Presents a screen from which the message can be sent. The message will n
+ot be sent until you have confirmed it from the presented screen.
+
+**Return value:**
+- `Promise: Promise that is fulfilled when the message have been sent.`
+
+#### `addImageAttachment(image: Image)`
+
+Adds an image attachment to the message.
+
+#### `addFileAttachment(filePath: string)`
+
+Adds a file attachment to the message.
+
+**Parameters:**
+- `filePath` (string): Path of file to add to the message.
+
+#### `addDataAttachment(data: Data, uti: string, filename: string)`
+
+Adds a data attachment to the message.
+
+**Parameters:**
+- `data` (Data): Data representation of file to add to the message.
+- `uti` (string): UTI of file represented by the data.
+- `filename` (string): Name of the file represented by the data.
+
+---
+
+## Pasteboard
+
+Copy and paste strings or images.
+
+Copy and paste strings and images to and from the pasteboard.
+
+### Static Methods
+
+#### `static copy(string: string)=`
+
+Copies a string to the pasteboard.
+
+**Parameters:**
+- `string` (string): The string to copy to the pasteboard.
+
+#### `static paste(): string`
+
+Pastes a string from the pasteboard.
+
+**Return value:**
+- `string: String in the pasteboard or null if no string is in the pasteboard.`
+
+#### `static copyString(string: string)`
+
+Copies a string to the pasteboard.
+
+**Parameters:**
+- `string` (string): The string to copy to the pasteboard.
+
+#### `static pasteString(): string`
+
+Pastes a string from the pasteboard.
+
+**Return value:**
+- `string: String in the pasteboard or null if no string is in the pasteboard.`
+
+#### `static pasteImage(): Image`
+
+Pastes an image from the pasteboard.
+
+**Return value:**
+- `Image: Image in the pasteboard or null if no image is in the pasteboard.`
+
+---
+
+## Path
+
+A path describes a shape.
+
+Shapes can be descriped using a path. Use an instance of Path
+to create complex shapes that can be drawn to a DrawContext.
+
+### Constructor
+
+#### `new Path()`
+
+Use the methods on the path to create complex shapes.
+
+### Methods
+
+#### `move(point: Point)`
+
+Moves to a point without drawing a line between the current
+point and the new point.
+
+**Parameters:**
+- `point` (Point): Point to move to.
+
+#### `addLine(point: Point)`
+
+Add a line from the current point, e.g. set using the move method,
+and to the new point.
+
+#### `addRect(rect: Rect)`
+
+This is a convenience function for adding a rectangle to the path starti
+ng from the lower left corner and drawing the lines counter-clockwise until
+ the rectangle is closed.
+
+#### `addRoundedRect(rect: Rect, cornerWidth: number, cornerHeight: number)`
+
+Adds a rounded rectangle to the path. The corner width specifies the hor
+izontal size of the corner and the corner height specifies the the vertical
+ size of the corner.
+
+#### `addCurve(point: Point, control1: Point, control2:Point)`
+
+Adds a cubic Bezier curve to the path with the specified end point and c
+ontrol points.
+
+#### `addQuadCurve(point: Point, control: Point)`
+
+Adds a quadratic Bezier curve to the specified end point with the specif
+ied control point.
+
+#### `addLines(points: [Point])`
+
+Adds straight lines between an array of points. Calling this method is e
+quivalent to calling the move function with the first point in the array of
+ points and then calling addLine on the subsequent points in the array.
+
+#### `addRects(rects: [Rect])`
+
+Calling this is equivalent to repeatedly calling addRect.
+
+#### `closeSubpath()`
+
+Adds a straight line from the current point to the start of the current 
+subpath.
+
+---
+
+## Point
+
+Structure representing a point.
+
+The structure encapsulates a coordinate in a two-dimensional coordinate 
+system.
+
+### Properties
+
+#### `x: nu
+mber`
+
+X value.
+
+#### `y: nu
+mber`
+
+Y value.
+
+---
+
+## Rect
+
+Structure representing a rectangle.
+
+The structure has a width, height and a coordinate in a two-dimensional 
+coordinate system.
+
+### Properties
+
+#### `minX: number`
+
+Minimum X value.
+
+*Read-only.*
+
+#### `minY: number`
+
+Minimum Y value.
+
+*Read-only.*
+
+#### `maxX: number`
+
+Maximum X value.
+
+*Read-only.*
+
+#### `maxY: number`
+
+Maximum Y value.
+
+*Read-only.*
+
+#### `x: nu
+mber`
+
+X value.
+
+#### `y: nu
+mber`
+
+Y value.
+
+#### `width: number`
+
+Width of rectangle.
+
+#### `height`
+
+Height of rectangle.
+
+#### `origin`
+
+Point that specifies the rectangles origin.
+
+#### `size: Size`
+
+Size of the rectangle.
+
+### Constructor
+
+#### `new Rect(x: number, y: number, width: number, height: number)`
+
+Constructs a new rectangle placed in a two-dimensional coordinate system
+.
+
+**Parameters:**
+- `x` (number): X coordinate.
+- `y` (number): Y coordinate.
+- `width` (number): Width of rectangle.
+- `height` (number): Height of rectangle.
+
+---
+
+## Size
+
+Structure representing a size.
+
+The structure has a width and a height to specify a two-dimensional size
+.
+
+### Properties
+
+#### `width: number`
+
+Width value.
+
+#### `height`
+
+Height value.
+
+### Constructor
+
+#### `new Size(width: number, height: number)`
+
+Constructs a new size.
+
+**Parameters:**
+- `width` (number): Width value.
+- `height` (number): Height value.
+
+---
+
+## Photos
+
+Provides access to your photo library.
+
+### Static Methods
+
+#### `static fromLibrary(): Promise<Image>`
+
+Use this for picking an image from the photo library.
+
+#### `static latestPhoto(): Promise<Image>`
+
+Reads the latest photo from your photo library. If no photo is available
+, the promise will be rejected.
+
+#### `static latestPhotos(count: number): Promise<[Image]>`
+
+Reads the latests photos from your photo library. If no photo is availab
+le, the promise will be rejected.
+
+**Return value:**
+- `Promise<[Image]>: Promise that provides the photos when fulfilled.`
+
+#### `static latestScreenshot(): Promise<Image>`
+
+Reads the latest screenshot from your photo library. If no screenshot is
+ available, the promise will be rejected.
+
+#### `static latestScreenshots(count: number): Promise<[Image]>`
+
+Reads the latests screenshots from your photo library. If no screenshot 
+is available, the promise will be rejected.
+
+**Parameters:**
+- `count` (number): Number of screenshots to fetch.
+
+**Return value:**
+- `Promise<[Image]>: Promise that provides the screenshots when fulfilled.`
+
+#### `static removeLatestPhoto()`
+
+Before removing the photo, an alert is shown prompting you to confirm th
+e removal.
+
+#### `static removeLatestPhotos(count: number)`
+
+Before removing the photos, an alert is shown prompting you to confirm t
+he removal.
+
+**Parameters:**
+- `count` (number): Number of photos to remove.
+
+#### `static removeLatestScreenshot()`
+
+Before removing the screenshot, an alert is shown prompting you to confi
+rm the removal.
+
+#### `static removeLatestScreenshots(count: number)`
+
+Before removing the screenshots, an alert is shown prompting you to conf
+irm the removal.
+
+**Parameters:**
+- `count` (number): Number of screenshots to remove.
+
+#### `static save(image: Image)`
+
+Saves the image to the photo library.
+
+**Parameters:**
+- `image` (Image): The image to save.
+
+---
+
+## QuickLook
+
+### Static Methods
+
+#### `static present(item: any, fullscreen: bool): Promise`
+
+Chooses the best suited presentation of the item and performs
+the presentation if possible.
+
+**Parameters:**
+- `item` (any): Item to be present.
+- `fullscreen` (bool): Optional. Set to true to present the item in fullscreen. This only has an e
+ffect when used within the app. Defaults to false.
+
+**Return value:**
+- `Promise: Promise that is fulfilled when the quick look is dismissed.`
+
+---
+
+## RecurrenceRule
+
+Recurrence rule used with reminders and calendar events.
+
+A recurrence rule specifies how often a reminder or a calendar event sho
+uld repeat.
+
+### Static Methods
+
+#### `static daily(interval:number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every day and a value of 3 specifies that the rule should rep
+eat every third day.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static dailyEndDate(interval: number, endDate: Date): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every day and a value of 3 specifies that the rule should rep
+eat every third day.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `endDate` (Date): Date at which the recurrence rule should end.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static dailyOccurrenceCount(interval: number, occurrenceCount: number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every day and a value of 3 specifies that the rule should rep
+eat every third day.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `occurrenceCount` (number): Number of times the rule should repeat before it ends.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static weekly(interval:number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every week and a value of 3 specifies that the rule should re
+peat every third week.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static weeklyEndDate(interval:number, endDate: Date): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every week and a value of 3 specifies that the rule should re
+peat every third week.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `endDate` (Date): Date at which the recurrence rule should end.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static weeklyOccurrenceCount(interval: number, occurrenceCount: number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every week and a value of 3 specifies that the rule should re
+peat every third week.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `occurrenceCount` (number): Number of times the rule should repeat before it ends.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static monthlyEndDate(interval: number, endDate: Date): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every month and a value of 3 specifies that the rule should r
+epeat every third month.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `endDate` (Date): Date at which the recurrence rule should end.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static monthlyOccurrenceCount(interval: number, occurrenceCount: number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every month and a value of 3 specifies that the rule should r
+epeat every third month.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `occurrenceCount` (number): Number of times the rule should repeat before it ends.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static yearly(interval:number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every year and a value of 3 specifies that the rule should re
+peat every third year.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static yearlyEndDate(interval:number, endDate: Date): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every year and a value of 3 specifies that the rule should re
+peat every third year.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `endDate` (Date): Date at which the recurrence rule should end.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static yearlyOccurrenceCount(interval: number, occurrenceCount: number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every year and a value of 3 specifies that the rule should re
+peat every third year.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `occurrenceCount` (number): Number of times the rule should repeat before it ends.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexWeekly(interval: number, daysOfTheWeek: [number], setPositions: [number]): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every week and a value of 3 specifies that the rule should re
+peat every third week.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexWeeklyEndDate(interval: number, daysOfTheWeek: [number], setPositions: [number], endDate: Date): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every week and a value of 3 specifies that the rule should re
+peat every third week.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+- `endDate` (Date): Date at which the recurrence rule should end.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexWeeklyOccurrenceCount(interval: number, daysOfTheWeek: [number], setPositions: [number], occurrenceCount: number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every week and a value of 3 specifies that the rule should re
+peat every third week.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+- `occurrenceCount` (number): Number of times the rule should repeat before it ends.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexMonthly(interval: number, daysOfTheWeek: [number], daysOfTheMonth: [number], setPositions: [number]): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every month and a value of 3 specifies that the rule should r
+epeat every third month.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `daysOfTheMonth` ([number]): Days of the month to repeat the rule. Values range from 1 to 31 and from -1
+ to -31.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexMonthlyEndDate(interval: number, daysOfTheWeek: [number], daysOfTheMonth: [number], setPositions: [number], endDate: Date): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every month and a value of 3 specifies that the rule should r
+epeat every third month.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `daysOfTheMonth` ([number]): Days of the month to repeat the rule. Values range from 1 to 31 and from -1
+ to -31.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+- `endDate` (Date): Date at which the recurrence rule should end.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexMonthlyOccurrenceCount(interval: number, daysOfTheWeek: [number], daysOfTheMonth: [number], setPositions: [number], occurrenceCount: number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every month and a value of 3 specifies that the rule should r
+epeat every third month.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `daysOfTheMonth` ([number]): Days of the month to repeat the rule. Values range from 1 to 31 and from -1
+ to -31.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+- `occurrenceCount` (number): Number of times the rule should repeat before it ends.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexYearly(interval: number, daysOfTheWeek: [number], monthsOfTheYear: [number], weeksOfTheYear: [number], daysOfTheYear: [number], setPositions: [number]): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every year and a value of 3 specifies that the rule should re
+peat every third year.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `monthsOfTheYear` ([number]): The months of the year to repeat the rule. Values range from 1 to 12.
+- `weeksOfTheYear` ([number]): The weeks of the year to repeat the rule. Values range from 1 to 53 and -1 
+to -53.
+- `daysOfTheYear` ([number]): The days of the year to repeat the rule. Values range from 1 to 366 and -1 
+to -366.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexYearlyEndDate(interval: number, daysOfTheWeek: [number], monthsOfTheYear: [number], weeksOfTheYear: [number], daysOfTheYear: [number], setPositions: [number], endDate: Date): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every year and a value of 3 specifies that the rule should re
+peat every third week.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `monthsOfTheYear` ([number]): The months of the year to repeat the rule. Values range from 1 to 12.
+- `weeksOfTheYear` ([number]): The weeks of the year to repeat the rule. Values range from 1 to 53 and -1 
+to -53.
+- `daysOfTheYear` ([number]): The days of the year to repeat the rule. Values range from 1 to 366 and -1 
+to -366.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+- `endDate` (Date): Date at which the recurrence rule should end.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+#### `static complexYearlyOccurrenceCount(interval: number, daysOfTheWeek: [number], monthsOfTheYear: [number], weeksOfTheYear: [number],daysOfTheYear: [number], setPositions: [number], occurrenceCount: number): RecurrenceRule`
+
+The interval should have a value greater than 0 and specifies how often 
+the pattern repeats. For example, an interval of 1 specifies that the rule 
+should repeat every year and a value of 3 specifies that the rule should re
+peat every third year.
+
+**Parameters:**
+- `interval` (number): Interval at which to repeat the rule.
+- `daysOfTheWeek` ([number]): Days of the week to repeat the rule. Values range from 1 to 7, with Sunday 
+being 1.
+- `monthsOfTheYear` ([number]): The months of the year to repeat the rule. Values range from 1 to 12.
+- `weeksOfTheYear` ([number]): The weeks of the year to repeat the rule. Values range from 1 to 53 and -1 
+to -53.
+- `daysOfTheYear` ([number]): The days of the year to repeat the rule. Values range from 1 to 366 and -1 
+to -366.
+- `setPositions` ([number]): Filters which recurrences to include in the rule's frequency.
+- `occurrenceCount` (number): Number of times the rule should repeat before it ends.
+
+**Return value:**
+- `RecurrenceRule: Constructed recurrence rule.`
+
+---
+
+## Reminder
+
+Manages reminders in calendars.
+
+### Properties
+
+#### `identifier: string`
+
+Title of reminder.
+
+#### `notes: string`
+
+Notes associated with reminder.
+
+#### `isCompleted`
+
+Whether the reminder is completed.
+
+#### `isOverdue`
+
+Priority of reminder.
+
+#### `dueDate`
+
+Due date of reminder.
+
+#### `dueDateIncludesTime`
+
+Whether the due date includes a time.
+
+#### `completionDate`
+
+Completion date of reminder.
+
+*Read-only.*
+
+#### `creationDate`
+
+Creation date of reminder.
+
+*Read-only.*
+
+#### `calendar`
+
+Calendar the reminder is stored in.
+
+### Constructor
+
+#### `new Reminder()`
+
+In order to add the reminder to your calendar, you must call the save() 
+function.
+
+### Static Methods
+
+#### `static all(calendars: [Calendar]): Promise<[Reminder]>`
+
+For performance reasons iOS limits fetched results to events within a fo
+ur year timespan.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allCompleted(calendars:[Calendar]): Promise&lt;[Reminder]>`
+
+For performance reasons iOS limits fetched results to events within a fo
+ur year timespan.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allIncomplete(calendars: [Calendar]): Promise&lt;[Reminder]>`
+
+For performance reasons iOS limits fetched results to events within a fo
+ur year timespan.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allDueToday(calendars: [Calendar]): Promise<;[Reminder]>`
+
+Fetches all reminders due today.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedDueToday(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches completed reminders due today.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static incompleteDueToday(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches incomplete reminders due today.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allDueTomorrow(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches all reminders due tomorrow.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedDueTomorrow(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches completed reminders due tomorrow.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static incompleteDueTomorrow(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches incomplete reminders due tomorrow.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allDueYesterday(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches all reminders due yesterday.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedDueYesterday(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches completed reminders due yesterday.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static incompleteDueYesterday(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches incomplete reminders due yesterday.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allDueThisWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches all reminders due this week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedDueThisWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches completed reminders due this week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static incompleteDueThisWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches incomplete reminders due this week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allDueNextWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches all reminders due next week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedDueNextWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches completed reminders due next week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static incompleteDueNextWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches incomplete reminders due next week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allDueLastWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches all reminders due last week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedDueLastWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches completed reminders due last week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static incompleteDueLastWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches incomplete reminders due last week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedToday(calendars: [Calendar]): Promise<[Reminder]>`
+
+Note that this does not take the due date into account. This will return
+ all reminders that you have completed today.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedThisWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Note that this does not take the due date into account. This will return
+ all reminders that you have completed this week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedLastWeek(calendars: [Calendar]): Promise<[Reminder]>`
+
+Note that this does not take the due date into account. This will return
+ all reminders that you have completed last week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static allDueBetween(startDate: Date, endDate: Date, calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches reminders that are due within the time interval constituted by
+the start and end dates.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedDueBetween(startDate: Date, endDate: Date, calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches reminders that are completed and that were due within the time i
+nterval constituted by the start and end dates.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static incompleteDueBetween(startDate: Date, endDate: Date, calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches reminders that are incomplete and that were due within the time 
+interval constituted by the start and end dates.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+#### `static completedBetween(startDate: Date, endDate: Date, calendars: [Calendar]): Promise<[Reminder]>`
+
+Fetches reminders that were completed within the time interval constitut
+ed by the start and end dates.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch reminders for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[Reminder]>: Promise that provides the reminders when fulfilled.`
+
+### Methods
+
+#### `addRecurrenceRule(recurrenceRule: RecurrenceRule)`
+
+Recurrence rules specify when the reminder should be repeated. See the d
+ocumentation of RecurrenceRule for more information on creating rules.
+
+#### `removeAllRecurrenceRules()`
+
+Removes all recurrence rules.
+
+#### `save()`
+
+Saves changes to a reminder, inserting it into the calendar if it is new
+ly created.
+
+#### `remove()`
+
+Removes reminder from calendar.
+
+---
+
+## RelativeDateTimeFormatter
+
+Creates a textual representation of the amount of time between two dates
+.
+
+The relative date formatter takes two dates as input and creates a textu
+al representation that communicates the relative time between the two dates
+, e.g. "yesterday" and "in 1 week".
+
+### Properties
+
+#### `locale`
+
+Locale to use when formatting.
+
+### Constructor
+
+#### `new RelativeDateTimeFormatter()`
+
+The formatter creates a textual representation of the time between two p
+oints in time.
+
+### Methods
+
+#### `string(date: Date, referenceDate: Date): string`
+
+Creates a localized textual representation of the amount of time between
+ to dates. If the two dates are the same, the function will return "now". I
+f the reference date is yesterday, the function will return "yesterday". Ot
+her examples include "in 10 seconds", "2 hours ago", "last week" and "next 
+year".
+
+**Parameters:**
+- `date` (Date): The date to create a relative date and time for.
+
+**Return value:**
+- `string: A textual representation of the amount of time between the two dates.`
+
+#### `useNamedDateTimeStyle()`
+
+When using the named style, the formatter tries to find a suitable textu
+al representation over a numeric value for the relative time, e.g. "now" in
+stead of "in 0 seconds" and "yesterday" instead of "1 day ago".
+
+#### `useNumericDateTimeStyle()`
+
+When using the numeric style, the formatter will always prefer numeric r
+epresentations over named representations. E.g. it will return "in 0 second
+s" instead of "now" and "1 day ago" instead of "yesteday".
+
+---
+
+## Safari
+
+Presents a website.
+
+Presents a website either in-app or by leaving the app an opening the Sa
+fari app.
+
+### Static Methods
+
+#### `static openInApp(url: string,fullscreen: bool): Promise`
+
+Presents a website without leaving the app.
+
+#### `static open(url: string)`
+
+Presents a website in the Safari app, thus leaving the current app.
+
+**Parameters:**
+- `url` (string): URL of website to present.
+
+---
+
+## Script
+
+Access information about the script.
+
+Allows for accessing information about the script that is currently bein
+g run and controlling selected parts of the script execution.
+
+### Static Methods
+
+#### `static name(): string`
+
+Name of the script.
+
+#### `static complete()`
+
+Call this function to inform the system that the script has completed ru
+nning.
+
+#### `static setShortcutOutput(value: any)`
+
+Use this function to pass values to other actions in the Shortcuts app. 
+The output can be a text, a number, a boolean, a dictionary or a file path 
+pointing to a file stored in iCloud.
+
+#### `static setWidget(widget: any)=`
+
+Sets the widget to be displayed.
+
+**Parameters:**
+- `widget` (any): Widget to display.
+
+---
+
+## SFSymbol
+
+Representation of a SF symbol.
+
+SF symbols are Apple's configurable icons that are designed to look grea
+t with the San Francisco font.
+
+### Properties
+
+#### `image: Image`
+
+Convert the symbol to an image.
+
+*Read-only.*
+
+### Static Methods
+
+#### `static named(symbolName: string): SFSymbol`
+
+SF symbols are Apple's configurable icons that are designed to look grea
+t with the San Francisco font.
+
+**Return value:**
+- `SFSymbol: Constructed SF symbol or null if no symbol with the name exists.`
+
+### Methods
+
+#### `applyUltraLightWeight()`
+
+Configures the symbol to use an ultra light weight.
+
+#### `applyThinWeight()`
+
+Configures the symbol to use an thin weight.
+
+#### `applyLightWeight()`
+
+Configures the symbol to use an light weight.
+
+#### `applyRegularWeight()`
+
+Configures the symbol to use an regular weight.
+
+#### `applyMediumWeight()`
+
+Configures the symbol to use an medium weight.
+
+#### `applySemiboldWeight()`
+
+Configures the symbol to use an semibold weight.
+
+#### `applyBoldWeight()`
+
+Configures the symbol to use an bold weight.
+
+#### `applyHeavyWeight()`
+
+Configures the symbol to use an heavy weight.
+
+#### `applyBlackWeight()`
+
+Configures the symbol to use an black weight.
+
+---
+
+## ShareSheet
+
+Offers standard activities to perform on items.
+
+The activity picker presents activities that can be performed on a set o
+f items. For example sending an item via an email or SMS, saving an item to
+ disk or opening
+an item in a third party app.
+Available activites vary depending on the provided items.
+
+### Static Methods
+
+#### `static present(activityItems: [any]): Promise<{string: any}>`
+
+Presents a share sheet with an array of items to share. The activities i
+ncluded in the presented sheet will vary based
+on the type of item.
+
+**Parameters:**
+- `activityItems` ([any]): Items to perform activity on.
+
+**Return value:**
+- `Promise<{string: any}>: Promise carrying a value that tells which activity that was performed, if a
+ny. The promise is fulfilled when the sheet is dismissed.`
+
+---
+
+## Speech
+
+Speaks a text.
+
+If used in a script triggered by a Siri Shortcut, Siri will speak the te
+xt.
+
+### Static Methods
+
+#### `static speak(text: string)`
+
+Speaks a text.
+
+---
+
+## TextField
+
+### Properties
+
+#### `text: string`
+
+Text in the text field.
+
+#### `placeholder`
+
+Placeholder shown in the text field while it is empty.
+
+#### `isSecure`
+
+Hides the text that is entered when set to true.
+
+#### `textColor: Font`
+
+Font of the text.
+
+### Methods
+
+#### `setDefaultKeyboard()`
+
+Use the default keyboard for entering text.
+
+#### `setNumberPadKeyboard()`
+
+Use a keyboard that prominently features the numbers 0 through 9.
+
+#### `setDecimalPadKeyboard()`
+
+Use a numeric keyboard with a decimal point for entering text.
+
+#### `setNumbersAndPunctuationKeyboard()`
+
+Use a numeric keyboard with punctuation for entering text.
+
+#### `setPhonePadKeyboard()`
+
+Use a keyboard that prominently feaetures the numbers 0 through 9 and th
+e * and # characters.
+
+#### `setWebSearchKeyboard()`
+
+Use a keyboard that prominently features the space and period characters
+.
+
+#### `setEmailAddressKeyboard()`
+
+Use a keyboard that prominently features the @, period and space charact
+ers.
+
+#### `setURLKeyboard()`
+
+Use a keyboard that prominently faetures the period and slash characters
+ and the ".com" string.
+
+#### `setTwitterKeyboard()`
+
+Use a keyboard that prominently features the @ and # characters.
+
+#### `leftAlignText()`
+
+This is the default text alignment.
+
+#### `centerAlignText()`
+
+Center aligns the text.
+
+#### `rightAlignText()`
+
+Right aligns the text.
+
+---
+
+## UITable
+
+Renders a table.
+
+Tables present data in a structured manner. A table contains rows which 
+in turn contains cells.
+
+### Properties
+
+#### `showSeparators`
+
+Whether to show separators.
+
+### Constructor
+
+#### `new UITable()`
+
+Use a table to present data in a structured manner.
+
+### Methods
+
+#### `addRow(row: UITableRow)`
+
+Adds a row.
+
+#### `removeAllRows()`
+
+Removes all rows.
+
+#### `reload()`
+
+If you add or remove rows while a table view is presented, you must relo
+ad the table in order for the changes to take effect.
+
+#### `present(fullscreen: bool): Promise`
+
+Presents the table.
+
+**Parameters:**
+- `fullscreen` (bool): Optional. Set to true to present the web view in fullscreen. This only has 
+an effect when used within the app. Defaults to false.
+
+**Return value:**
+- `Promise: Promise that is fulfilled when the table is dismissed.`
+
+---
+
+## UITableCell
+
+Cell in a UITableRow.
+
+Cells are shown horizontally in a UITableRow which in turn is shown
+vertically in a UITable. Cells have content, e.g. a text or an image.
+
+### Properties
+
+#### `widthWeight`
+
+Relative width of the cell.
+
+#### `onTap: fn()`
+
+Called when the button is tapped.
+
+#### `dismissOnTap`
+
+Whether to dismiss the table when the button is tapped.
+
+#### `titleColor`
+
+Color of the title.
+
+#### `subtitleColor`
+
+Color of the subtitle.
+
+#### `titleFont`
+
+Font of the subtitle.
+
+### Static Methods
+
+#### `static text(title: string, subtitle: string): UITableCell`
+
+Constructs a new cell containing text.
+
+**Parameters:**
+- `title` (string): Optional title to show in the cell.
+- `subtitle` (string): Optional subtitle shown below the title.
+
+**Return value:**
+- `UITableCell: Constructed cell.`
+
+#### `static image(image: Image): UITableCell`
+
+Constructs a new cell containing an image.
+
+**Parameters:**
+- `image` (Image): Image to show in the cell.
+
+**Return value:**
+- `UITableCell: Constructed cell.`
+
+#### `static imageAtURL(url: string): UITableCell`
+
+Constructs a new cell that loads the image at the specified URL.
+
+**Parameters:**
+- `url` (string): URL to image.
+
+**Return value:**
+- `UITableCell: Constructed cell.`
+
+#### `static button(title: string): UITableCell`
+
+Constructs a button cell.
+
+**Parameters:**
+- `title` (string): Title of the button.
+
+**Return value:**
+- `UITableCell: Constructed cell.`
+
+### Methods
+
+#### `leftAligned()`
+
+Specifies that content in the cell should be left aligned.
+
+#### `centerAligned()`
+
+Specifies that content in the cell should be center aligned.
+
+#### `rightAligned()`
+
+Specifies that content in the cell should be right aligned.
+
+---
+
+## UITableRow
+
+Row in a UITable.
+
+Rows can be added to an instance of UITable. A row is shown vertically
+in a UITable in the order they are added to the table. Rows contain cells w
+hich are shown horizontally in the order they are added to the row.
+
+### Properties
+
+#### `cellSpacing`
+
+Spacing between cells.
+
+#### `height`
+
+Height of the row.
+
+#### `isHeader`
+
+Whether the cell is a header.
+
+#### `dismissOnSelect`
+
+Whether to dismiss the table when the row is selected.
+
+#### `onSelect`
+
+Called when the row is selected.
+
+#### `backgroundColor`
+
+Background color.
+
+### Constructor
+
+#### `new UITableRow()`
+
+Rows are shown vertically in a UITable. A row contains cells which are d
+isplayed horizontally.
+
+### Methods
+
+#### `addCell(cell: UITableCell)`
+
+Adds a cell to the row. Note that cells are shown in the order they are 
+added to the row.
+
+**Parameters:**
+- `cell` (UITableCell): Cell to add to the row.
+
+#### `addText(title: string, subtitle: string): UITableCell`
+
+Constructs a new cell containing the specified string and adds it to the
+ row.
+
+**Parameters:**
+- `title` (string): Optional title to show in the cell.
+- `subtitle` (string): Optional subtitle shown below the title in the cell.
+
+**Return value:**
+- `UITableCell: Constructed cell.`
+
+#### `addImageAtURL(url: string): UITableCell`
+
+Constructs a new cell that loads the image at the specified url and adds
+ the cell to the row.
+
+**Parameters:**
+- `url` (string): URL to image.
+
+**Return value:**
+- `UITableCell: Cosntructed cell.`
+
+#### `addButton(title: string): UITableCell`
+
+Adds a button cell.
+
+**Parameters:**
+- `title` (string): Title of the button.
+
+**Return value:**
+- `UITableCell: Cosntructed cell.`
+
+---
+
+## URLScheme
+
+### Static Methods
+
+#### `static allParameters(): {string: string}`
+
+Gets all the query parameters that were passed in the URL when running t
+his script by invoking its URL scheme.
+
+**Return value:**
+- `{string: string}: All query parameters.`
+
+#### `static forOpeningScript(): string`
+
+URL for opening the script.
+
+**Return value:**
+- `string: URL for opening script.`
+
+#### `static forOpeningScriptSettings(): string`
+
+Gets the URL for opening the settings of the current script. When making
+ a request to the returned URL from another app, e.g. Safari, the settings 
+of the current script will be opened.
+
+**Return value:**
+- `string: URL for opening script settings.`
+
+#### `static forRunningScript(): string`
+
+URL for running script.
+
+**Return value:**
+- `string: URL for opening script settings.`
+
+---
+
+## UUID
+
+Unique identifier.
+
+A universally unique value that can be used to identify items.
+
+### Static Methods
+
+#### `static string(): string`
+
+Used for getting the string value of a UUID.
+
+**Return value:**
+- `string: String value.`
+
+---
+
+## XMLParser
+
+### Properties
+
+#### `didStartDocument`
+
+Function called when the parser begins parsing a document.
+
+#### `didEndDocument`
+
+Function called when the parser ends parsing a document.
+
+#### `didStartElement: string`
+
+Function called when starting to parse an element.
+
+#### `didEndElement`
+
+Function called when ended parsing an element.
+
+#### `foundCharacters`
+
+Function called when the parser finds characters of an element.
+
+#### `parseErrorOccurred`
+
+Function called when the parser encounters an error.
+
+#### `string`
+
+XML string to be parsed.
+
+### Constructor
+
+#### `new XMLParser(string: string)`
+
+Constructs an event driven XML parser. It does not do any parsing on its
+ own and therefore the callback functions must be set before starting to pa
+rse.
+
+**Parameters:**
+- `string` (string): XML string to be parsed.
+
+### Methods
+
+#### `parse(): bool`
+
+Before calling this function you should ensure that the parser is correc
+tly configured, i.e. the necessary callback functions should be set.
+
+**Return value:**
+- `bool: Whether parsing was successfully started.`
+
+---
+
+## WidgetDate
+
+Date element shown in a widget.
+
+A date shown in a widget. Dates will update periodically when shown in a
+ widget.
+
+### Properties
+
+#### `date: Date`
+
+Date to show in a widget.
+
+#### `textColor: Font`
+
+Font and text size of the text.
+
+#### `textOpacity`
+
+Opacity of the text.
+
+#### `lineLimit`
+
+Minimum amount the text scales down to.
+
+#### `shadowColor`
+
+Color of the shadow.
+
+#### `shadowRadius`
+
+Size of the shadow.
+
+#### `shadowOffset`
+
+Offset of the shadow.
+
+#### `url`
+
+URL to open.
+
+### Methods
+
+#### `leftAlignText()`
+
+Specifies that text should be left aligned. This is the default.
+
+#### `centerAlignText()`
+
+Specifies that text should be center aligned.
+
+#### `rightAlignText()`
+
+Specifies that text should be right aligned.
+
+#### `applyTimeStyle()`
+
+Example output:
+    11:23PM
+
+#### `applyDateStyle()`
+
+Example output:
+    June 3, 2019
+
+#### `applyRelativeStyle()`
+
+Example output:
+    2 hours, 23 minutes
+    1 year, 1 month
+
+#### `applyOffsetStyle()`
+
+Example output:
+    +2 hours
+    -3 months
+
+#### `applyTimerStyle()`
+
+Example output:
+   2:32
+   36:59:01
+
+---
+
+## WidgetImage
+
+Image element shown in widget.
+
+### Properties
+
+#### `image: Image`
+
+Image to show in widget.
+
+#### `resizable`
+
+Opacity when shown in widget.
+
+#### `cornerRadius`
+
+Radius of the corners.
+
+#### `borderWidth`
+
+Border width.
+
+#### `borderColor`
+
+Border color.
+
+#### `containerRelativeShape: bool`
+
+Shape the image relative to its container.
+
+#### `tintColor`
+
+URL to open.
+
+### Methods
+
+#### `leftAlignImage()`
+
+Specifies that image should be left aligned. This is the default.
+
+#### `centerAlignImage()`
+
+Specifies that image should be center aligned.
+
+#### `rightAlignImage()`
+
+Specifies that image should be right aligned.
+
+#### `applyFittingContentMode()`
+
+The image will fit the available space. This content mode is the default
+.
+
+#### `applyFillingContentMode()`
+
+The image will fill the available space.
+
+---
+
+## WidgetSpacer
+
+Spacer element shown in widget.
+
+Shows a spacer in the widget. A spacer with a null length has a flexible
+ length.
+
+### Properties
+
+#### `length`
+
+Text to show in widget.
+
+---
+
+## WidgetStack
+
+Stack element shown in widget.
+
+Shows a stack in the widget.
+
+### Properties
+
+#### `backgroundColor`
+
+Background color of the widget.
+
+#### `backgroundImage`
+
+Background image.
+
+#### `backgroundGradient`
+
+Background gradient.
+
+#### `spacing`
+
+Spacing between elements.
+
+#### `size: Size`
+
+Size of the stack.
+
+#### `cornerRadius`
+
+Radius of the corners.
+
+#### `borderWidth`
+
+Border width.
+
+#### `borderColor`
+
+Border color.
+
+#### `url`
+
+URL to open.
+
+### Methods
+
+#### `addSpacer(length: number): WidgetSpacer`
+
+Adds a spacer to the stack. This can be used to offset the content horiz
+ontally in the stack.
+
+**Return value:**
+- `WidgetSpacer: Spacer element.`
+
+#### `setPadding(top: number, leading: number, bottom: number, trailing: number)`
+
+Sets the padding on each side of the stack.
+
+**Parameters:**
+- `top` (number): Padding on the top edge.
+- `leading` (number): Padding on the leading edge.
+- `bottom` (number): Padding on the bottom edge.
+- `trailing` (number): Padding on the trailing edge.
+
+#### `useDefaultPadding()`
+
+Use the default padding.
+
+#### `topAlignContent()`
+
+Specifies that content should be top aligned. This is the default.
+
+#### `centerAlignContent()`
+
+Specifies that content should be center aligned.
+
+#### `bottomAlignContent()`
+
+Specifies that content should be bottom aligned.
+
+#### `layoutHorizontally()`
+
+Specifies that the stack should layout elements horizontally. This is th
+e default.
+
+#### `layoutVertically()`
+
+Specifies that the stack should layout elements vertically.
+
+---
+
+## WidgetText
+
+Text element shown in a widget.
+
+### Properties
+
+#### `text: string`
+
+Text to show in a widget.
+
+#### `textColor: Font`
+
+Font and text size of the text.
+
+#### `textOpacity`
+
+Opacity of the text.
+
+#### `lineLimit`
+
+Minimum amount the text scales down to.
+
+#### `shadowColor`
+
+Color of the shadow.
+
+#### `shadowRadius`
+
+Size of the shadow.
+
+#### `shadowOffset`
+
+Offset of the shadow.
+
+#### `url`
+
+URL to open.
+
+### Methods
+
+#### `leftAlignText()`
+
+Specifies that text should be left aligned. This is the default.
+
+#### `centerAlignText()`
+
+Specifies that text should be center aligned.
+
+#### `rightAlignText()`
+
+Specifies that text should be right aligned.
+
+---
+
+## LinearGradient
+
+Linear gradient.
+
+A linear gradient to be used in a widget.
+
+### Properties
+
+#### `colors: Color`
+
+Colors of the gradient.
+
+#### `locations: number`
+
+Locations of each color.
+
+#### `startPoint`
+
+Point to start the gradient.
+
+#### `endPoint`
+
+Constructs a linear gradient.
+
+---
+
+## args
+
+Arguments passed to the script.
+
+Arguments are passed to the script when the script is executed from a sh
+are sheet. You can specify the types of arguments a script supports from th
+e script settings.
+
+### Properties
+
+#### `length`
+
+Number of arguments supplied by a share sheet.
+
+*Read-only.*
+
+#### `all: [
+any]`
+
+All arguments supplied by a share sheet.
+
+*Read-only.*
+
+#### `plainTexts: string`
+
+Plain texts supplied by a share sheet or a shortcut action.
+
+*Read-only.*
+
+#### `urls: 
+[string]`
+
+URLs supplied by a share sheet or a shortcut action.
+
+*Read-only.*
+
+#### `fileURLs: string`
+
+File URLs supplied by a share sheet or a shortcut action.
+
+*Read-only.*
+
+#### `images: Image`
+
+Images supplied by a share sheet or a shortcut action.
+
+*Read-only.*
+
+#### `queryParameters: string`
+
+Query parameters from a URL scheme.
+
+*Read-only.*
+
+#### `siriShortcutArguments: string`
+
+Arguments passed from a Siri Shortcut.
+
+*Read-only.*
+
+#### `shortcutParameter`
+
+Parameter passed to a Shortcut.
+
+*Read-only.*
+
+#### `widgetParameter`
+
+Parameter passed to a widget.
+
+*Read-only.*
+
+#### `notification`
+
+Notification being handled by the script.
+
+*Read-only.*
+
+---
+
+## config
+
+Configuration the script runs with.
+
+Contains information about the configuration the script is currently bei
+ng run under.
+
+### Properties
+
+#### `runsInApp`
+
+Whether the script is running in the app.
+
+*Read-only.*
+
+#### `runsInActionExtension`
+
+Whether the script is running in the action extension.
+
+*Read-only.*
+
+#### `runsWithSiri`
+
+Whether the script is running with Siri.
+
+*Read-only.*
+
+#### `runsInWidget`
+
+Whether the script is running in a widget.
+
+*Read-only.*
+
+#### `runsInAccessoryWidget`
+
+Whether the script is running in a widget.
+
+*Read-only.*
+
+#### `runsInNotification`
+
+Whether the script is running in a notification.
+
+*Read-only.*
+
+#### `runsFromHomeScreen`
+
+Whether the script was run from the home screen. You can add a script to
+ the home screen from the script settings.
+
+*Read-only.*
+
+#### `widgetFamily`
+
+The size of the widget the script is running in.
+
+*Read-only.*
+
+---
+
+## console
+
+Adds messages to the log.
+
+The console can be used to log information when running your script. The
+ log may be useful when debugging your script, e.g. to examine values of va
+riables.
+
+### Static Methods
+
+#### `static log(message: any)`
+
+Logs a message to the console.
+
+#### `static warn(message: any)`
+
+Logs a warning message to the console.
+
+**Parameters:**
+- `message` (any): Message to log to the console.
+
+#### `static error(message: any)`
+
+Logs an error message to the console.
+
+**Parameters:**
+- `message` (any): Message to log to the console.
+
+#### `static logError(message: any)=`
+
+Logs an error message to the console.
+
+**Parameters:**
+- `message` (any): Message to log to the console.
+
+---
+
+## importModule
+
+Consider the following file.
+
+### Properties
+
+#### `Parameters`
+
+---
+
+## module
+
+The current module.
+
+### Properties
+
+#### `filename`
+
+Path to file containing the module.
+
+*Read-only.*
+
+#### `exports`
+
+Exported functions and modules.
+
+---
+
+## 
+
+### Properties
+
+#### `JavaScript Environment`
+
+#### `Learning JavaScript`
+
+Note that some guides and tutorials will assume that you're running Java
+Script in a browser and therefore have access to browser specific objects, 
+such as a document. Scriptable does not run JavaScript in a browser and the
+refore such objects do not exist.
+
+#### `Community`
+
+---
+
