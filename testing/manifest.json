@@ -1,60 +1,65 @@
 {
-  "generated": "2025-07-28T22:33:28.006Z",
+  "generated": "2025-07-28T23:24:20.966Z",
   "files": [
     {
       "name": "breakpoint-test.html",
       "size": 34162,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "hero-variations-tester.html",
       "size": 26248,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "iframe-fix-test.html",
       "size": 9922,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "index.html",
       "size": 18216,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "style-test.html",
       "size": 26360,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "test-calendar-logging.html",
       "size": 68099,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "test-display-modes.html",
       "size": 10729,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
+    },
+    {
+      "name": "test-end-to-end-flow.html",
+      "size": 24806,
+      "modified": "2025-07-28T23:23:39.660Z"
     },
     {
       "name": "test-google-sheets-loader.html",
       "size": 40540,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "test-map-icons.html",
       "size": 61258,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "test-unified-scraper.html",
       "size": 13771,
-      "modified": "2025-07-28T22:33:22.613Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     },
     {
       "name": "ultimate-style-tester.html",
       "size": 116287,
-      "modified": "2025-07-28T22:28:57.533Z"
+      "modified": "2025-07-28T23:20:48.932Z"
     }
   ]
 }
