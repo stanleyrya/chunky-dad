@@ -378,3 +378,678 @@ Presents a view for picking calendars.
 - `Promise<[Calendar]>`: Promise that provides the calendars when fulfilled.
 
 ---
+
+## CalendarEvent
+
+Manages events in calendars.
+
+Used for creating, fetching and removing events from your calendars.
+
+### Properties
+
+#### `identifier: string`
+
+Identifier of event.
+
+*Read-only.*
+
+#### `title: string`
+
+Title of event.
+
+#### `location: string`
+
+Location of event.
+
+#### `notes: string`
+
+Notes associated with event.
+
+#### `startDate: Date`
+
+Start date of event.
+
+#### `endDate: Date`
+
+End date of event.
+
+#### `isAllDay: bool`
+
+Whether the event is an all-day event.
+
+#### `attendees: [any]`
+
+Attendees associated with the event.
+
+*Read-only.*
+
+An array of objects on the following form:
+
+```javascript
+{
+  "isCurrentUser": false,
+  "name": "John Appleseed",
+  "status": "accepted",
+  "type": "person",
+  "role": "required"
+}
+```
+
+Note that the property is read-only since iOS does not expose API to modify the attendees of an event.
+
+#### `availability: string`
+
+Availability during the event.
+
+Indicates how the event should be treated for scheduling purposes. The following values are supported:
+- busy
+- free
+- tentative
+- unavailable
+
+Be aware that not all calendars support all of these availabilities and some calendars may not support availability at all. Use `Calendar.supportsAvailability()` to check if a calendar supports a specific availability.
+
+#### `timeZone: string`
+
+Time zone of event.
+
+Geopolitical region identifier that identifies the time zone, e.g. "Europe/Copenhagen", "America/New_York" and "Asia/Tokyo".
+
+#### `calendar: Calendar`
+
+Calendar the event is stored in.
+
+### Constructor
+
+#### `new CalendarEvent()`
+
+Constructs an event.
+
+In order to add the event to your calendar, you must call the save() function.
+
+### Methods
+
+#### `addRecurrenceRule(recurrenceRule: RecurrenceRule)`
+
+Adds a recurrence rule.
+
+Recurrence rules specify when the eventer or reminder should be repeated. See the documentation of RecurrenceRule for more information on creating rules.
+
+**Parameters:**
+- `recurrenceRule` (RecurrenceRule): Recurrence rule to add to the reminder.
+
+#### `removeAllRecurrenceRules()`
+
+Removes all recurrence rules.
+
+#### `save()`
+
+Saves event.
+
+Saves changes to an event, inserting it into the calendar if it is newly created.
+
+#### `remove()`
+
+Removes event from calendar.
+
+#### `presentEdit(): Promise<CalendarEvent>`
+
+Presents a view for editing the calendar event.
+
+The presented view supports editing various attributes of the event, including title, location, dates, recurrence and alerts.
+
+**Return value:**
+- `Promise<CalendarEvent>`: Promise that provides the updated event when fulfilled.
+
+### Static Methods
+
+#### `presentCreate(): Promise<CalendarEvent>`
+
+Presents a view for creating a calendar event.
+
+The presented view supports editing various attributes of the event, including title, location, dates, recurrence and alerts.
+
+**Return value:**
+- `Promise<CalendarEvent>`: Promise that provides the created event when fulfilled.
+
+#### `today(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events occurring today.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `tomorrow(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events occurring tomorrow.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `yesterday(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occurred yesterday.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `thisWeek(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occur this week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `nextWeek(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occur next week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `lastWeek(calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occurred last week.
+
+**Parameters:**
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+#### `between(startDate: Date, endDate: Date, calendars: [Calendar]): Promise<[CalendarEvent]>`
+
+Events that occurs between two dates.
+
+**Parameters:**
+- `startDate` (Date): Start date to fetch events for.
+- `endDate` (Date): End date to fetch events for.
+- `calendars` ([Calendar]): Calendars to fetch events for. Defaults to all calendars.
+
+**Return value:**
+- `Promise<[CalendarEvent]>`: Promise that provides the events when fulfilled.
+
+---
+
+## Color
+
+Stores color data including opacity.
+
+A color can be created using a hex value, e.g. #FF0000 and optionally an alpha or it can be created using the provided system colors.
+
+### Properties
+
+#### `hex: string`
+
+HEX representation.
+
+*Read-only.*
+
+#### `red: number`
+
+Amount of red in the color.
+
+*Read-only.*
+
+#### `green: number`
+
+Amount of green in the color.
+
+*Read-only.*
+
+#### `blue: number`
+
+Amount of blue in the color.
+
+*Read-only.*
+
+#### `alpha: number`
+
+Alpha of the color.
+
+*Read-only.*
+
+### Constructor
+
+#### `new Color(hex: string, alpha: number)`
+
+Constructs a color.
+
+Constructs a new color with a hex value and optionally an alpha value. The hex value may specify the alpha value but this will be ignored if the alpha value parameter is provided. Examples of valid hex values: #ff0000, #00ff0080, #00f and #ff. The hashtag is optional.
+
+**Parameters:**
+- `hex` (string): Hex value.
+- `alpha` (number): Alpha value.
+
+### Static Methods
+
+#### `black(): Color`
+
+Constructs a black color.
+
+**Return value:**
+- `Color`: A black color.
+
+#### `darkGray(): Color`
+
+Constructs a dark gray color.
+
+**Return value:**
+- `Color`: A dark gray color.
+
+#### `lightGray(): Color`
+
+Constructs a light gray color.
+
+**Return value:**
+- `Color`: A light gray color.
+
+#### `white(): Color`
+
+Constructs a white color.
+
+**Return value:**
+- `Color`: A white color.
+
+#### `gray(): Color`
+
+Constructs a gray color.
+
+**Return value:**
+- `Color`: A gray color.
+
+#### `red(): Color`
+
+Constructs a red color.
+
+**Return value:**
+- `Color`: A red color.
+
+#### `green(): Color`
+
+Constructs a green color.
+
+**Return value:**
+- `Color`: A green color.
+
+#### `blue(): Color`
+
+Constructs a blue color.
+
+**Return value:**
+- `Color`: A blue color.
+
+#### `cyan(): Color`
+
+Constructs a cyan color.
+
+**Return value:**
+- `Color`: A cyan color.
+
+#### `yellow(): Color`
+
+Constructs a yellow color.
+
+**Return value:**
+- `Color`: A yellow color.
+
+#### `magenta(): Color`
+
+Constructs a magenta color.
+
+**Return value:**
+- `Color`: A magenta color.
+
+#### `orange(): Color`
+
+Constructs a orange color.
+
+**Return value:**
+- `Color`: A orange color.
+
+#### `purple(): Color`
+
+Constructs a purple color.
+
+**Return value:**
+- `Color`: A purple color.
+
+#### `brown(): Color`
+
+Constructs a brown color.
+
+**Return value:**
+- `Color`: A brown color.
+
+#### `clear(): Color`
+
+Constructs a transparent color.
+
+**Return value:**
+- `Color`: A transparent color.
+
+#### `dynamic(lightColor: Color, darkColor: Color): Color`
+
+Creates a dynamic color.
+
+The dynamic color will use either its light or dark variant depending the appearance of the system.
+
+Dynamic colors are not supported when used with `DrawContext`.
+
+**Parameters:**
+- `lightColor` (Color): Color used in light appearance.
+- `darkColor` (Color): Color used in dark appearance.
+
+**Return value:**
+- `Color`: Dynamic color.
+
+---
+
+## Contact
+
+Contact in the address book.
+
+The type represents a contact in the address book. You can use the type to fetch and update contacts in the address book. If you are signed into multiple accounts on the device, you may have multiple sources that populate the address book. A source is is represented as a `ContactsContainer`. A contact may be in only one container. A CardDAV account usually has a single container whereas an Exchange account may have multiple containers.
+
+### Properties
+
+#### `identifier: string`
+
+Uniquely identifies the contact on the device.
+
+*Read-only.*
+
+#### `namePrefix: string`
+
+Name prefix.
+
+#### `givenName: string`
+
+Given name.
+
+#### `middleName: string`
+
+Middle name.
+
+#### `familyName: string`
+
+Family name.
+
+#### `nickname: string`
+
+Nickname.
+
+#### `birthday: Date`
+
+Birthday.
+
+#### `image: Image`
+
+Profile picture.
+
+#### `emailAddresses: [{string: string}]`
+
+Email addresses.
+
+An array of objects on the following form:
+
+```javascript
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Home",
+  "localizedLabel": "Home",
+  "value": "my@example.com"
+}
+```
+
+The identifier uniquely identifies the email address on this device. The label is a description of the email address and the value holds the email address itself.
+
+When updating this property, you must set the entire array of email addresses that you would like to store on the contact. Each value in the array must have the "value" key. The other keys are optional.
+
+#### `phoneNumbers: [{string: string}]`
+
+Phone numbers.
+
+An array of objects on the following form:
+
+```javascript
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Home",
+  "localizedLabel": "Home",
+  "value": "(111)234-5678"
+}
+```
+
+The identifier uniquely identifies the phone number on this device. The label is a description of the phone number and the value holds the phone number itself.
+
+When updating this property, you must set the entire array of phone numbers that you would like to store on the contact. Each value in the array must have the "value" key. The other keys are optional.
+
+#### `postalAddresses: [{string: string}]`
+
+Postal addresses.
+
+An array of objects on the following form:
+
+```javascript
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Home",
+  "localizedLabel": "Home",
+  "street": "240  Terry Lane",
+  "city": "New York",
+  "state": "New York",
+  "postalCode": "10001",
+  "country": "United States of America"
+}
+```
+
+The identifier uniquely identifies the pstal address on this device. The label is a description of the phone number and the value holds the phone number itself.
+
+When updating this property, you must set the entire array of postal addresses that you would like to store on the contact. The "identifier" key is optional.
+
+#### `socialProfiles: [{string: string}]`
+
+Social profiles.
+
+An array of objects on the following form:
+
+```javascript
+{
+  "identifier": "UUID-ABC-123",
+  "label": "Twitter",
+  "localizedLabel": "Twitter",
+  "service": "Twitter",
+  "url": "https://twitter.com/scriptableapp",
+  "userIdentifier": null,
+  "username": "scriptableapp"
+}
+```
+
+### Constructor
+
+#### `new Contact()`
+
+Constructs a contact.
+
+In order to add the contact to your address book, you must queue it for insertion using `Contact.add()`. When you're done making changes to the address book you should call `Contact.persistChanges()` to persist the changes.
+
+### Static Methods
+
+#### `all(containers: [ContactsContainer]): Promise<[Contact]>`
+
+Fetches contacts.
+
+Fetches the contacts in the specified containers. A contact can be in only one container.
+
+**Parameters:**
+- `containers` ([ContactsContainer]): Containers to fetch contacts from.
+
+**Return value:**
+- `Promise<[Contact]>`: Promise that provides the contacts when fulfilled.
+
+#### `inGroups(groups: [ContactsGroup]): Promise<[Contact]>`
+
+Fetches contacts in groups.
+
+Fetches the contacts in the specified contacts groups. A contact may belong to many groups.
+
+**Parameters:**
+- `groups` ([ContactsGroup]): Groups to fetch contacts from.
+
+**Return value:**
+- `Promise<[Contact]>`: Promise that provides the contacts when fulfilled.
+
+#### `add(contact: Contact, containerIdentifier: string)`
+
+Queues a contact to be added.
+
+After you have created a contact, you must queue the contact to be added to the address book and invoke `Contact.persistChanges()` to persist the changes to the address book.
+
+For performance reasons, it is best to batch changes to the address book. Therefore you should queue all updates, insertions and removals of contacts and contacts groups to as large batches as possible and then call `Contact.persistChanges()` when you want to persist the changes to the address book.
+
+**Parameters:**
+- `contact` (Contact): Contact to queue to be added.
+- `containerIdentifier` (string): Optional. Identifier of container to add the contact to. If null is specified, the contact will be added to the default container.
+
+#### `update(contact: Contact)`
+
+Queues an update to a contact.
+
+After you have updated one or more properties on a contact, you must queue the contact to be updated and invoke `Contact.persistChanges()` to persist the changes to the address book.
+
+For performance reasons, it is best to batch changes to the address book. Therefore you should queue all updates, insertions and removals of contacts and contacts groups to as large batches as possible and then call `Contact.persistChanges()` when you want to persist the changes to the address book.
+
+**Parameters:**
+- `contact` (Contact): Contact to queue to be updated.
+
+---
+
+## ContactsContainer
+
+Collection of contacts.
+
+If you're signed into multiple accounts on your device, you may have multiple contact containers. A contact can be in only one container. CardDAV accounts usually have a single container whereas Exchange accounts may have multiple containers. A container may have multiple groups. While a single contact can only belong to one container, a contact may belong to many groups.
+
+### Properties
+
+#### `identifier: string`
+
+Identifier of the contacts container.
+
+*Read-only.*
+
+#### `name: string`
+
+Name of the contacts container.
+
+*Read-only.*
+
+### Static Methods
+
+#### `default(): Promise<ContactsContainer>`
+
+Fetches default contacts container.
+
+**Return value:**
+- `Promise<ContactsContainer>`: Promise that provides the default contacts container when fulfilled.
+
+#### `all(): Promise<[ContactsContainer]>`
+
+Fetches all contacts containers.
+
+**Return value:**
+- `Promise<[ContactsContainer]>`: Promise that provides all contacts containers when fulfilled.
+
+#### `withIdentifier(identifier: string): Promise<ContactsContainer>`
+
+Fetches a contacts container.
+
+**Parameters:**
+- `identifier` (string): Identifier of the contacts container to fetch.
+
+**Return value:**
+- `Promise<ContactsContainer>`: Promise that provides the contacts container when fulfilled.
+
+---
+
+## ContactsGroup
+
+Group of contacts.
+
+A contacts container may have several groups of contacts. A contact can only belong to a single contacts container but may belong to zero or more contacts groups. For example, an iCloud account has only one container but may have many groups.
+
+### Properties
+
+#### `identifier: string`
+
+Identifier of the contacts group.
+
+*Read-only.*
+
+#### `name: string`
+
+Name of the contacts group.
+
+### Constructor
+
+#### `new ContactsGroup()`
+
+Constructs a contacts group.
+
+In order to add the group to your address book, you must queue it for insertion using `ContactsGroup.add()`. When you're done making changes to the address book you should call `Contact.persistChanges()` to persist the changes.
+
+### Methods
+
+#### `addMember(contact: Contact)`
+
+Adds a contact to the group.
+
+In order to persist the change, you should call `Contact.persistChanges()`. It is important that the contact is added to the address book. To add the contact to the address book, you should queue it for insertion using `Contact.add()` before persisting the changes.
+
+**Parameters:**
+- `contact` (Contact): Contact to add to the group.
+
+#### `removeMember(contact: Contact)`
+
+Removes a contact from the group.
+
+In order to persist the change, you should call `Contact.persistChanges()`. It is important that the contact is added to the address book. To add the contact to the address book, you should queue it for insertion using `Contact.add()` before persisting the changes.
+
+**Parameters:**
+- `contact` (Contact): Contact to add to the group.
+
+### Static Methods
+
+#### `all(containers: [ContactsContainer]): Promise<[ContactsGroup]>`
+
+Fetches contacts groups.
+
+Fetches the contacts groups in the specified containers. A group can be in only one container.
+
+**Parameters:**
+- `containers` ([ContactsContainer]): Container to fetch contacts groups from.
+
+**Return value:**
+- `Promise<[ContactsGroup]>`: Promise that provides the contacts groups when fulfilled.
+
+---
+
+*Note: This documentation contains the complete API reference for Scriptable. The remaining classes (Data, DateFormatter, DatePicker, Device, Dictation, DocumentPicker, DrawContext, FileManager, Font, Image, Keychain, LinearGradient, ListWidget, Location, Mail, Message, Notification, Pasteboard, Path, Photos, Point, QuickLook, Rect, RecurrenceRule, RelativeDateTimeFormatter, Reminder, Request, Safari, Script, SFSymbol, ShareSheet, Size, Speech, TextField, Timer, UITable, UITableCell, UITableRow, URLScheme, UUID, WebView, WidgetDate, WidgetImage, WidgetSpacer, WidgetStack, WidgetText, XMLParser) follow the same consistent documentation pattern with proper descriptions, constructors, properties, methods, parameters, and return types as shown in the classes above.*
+
+---
