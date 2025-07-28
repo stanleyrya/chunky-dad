@@ -35,8 +35,6 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 ├── scripts/            # Scriptable automation scripts
 │   ├── README.md       # Scripts documentation
 │   ├── scriptable-complete-api.md # Complete Scriptable API reference (54 classes)
-│   ├── parse_scriptable_mhtml.py  # MHTML to Markdown converter
-│   ├── README_SCRIPTABLE_PARSER.md # Parser documentation
 │   ├── bear-event-scraper-v*.js   # Bear event scraping scripts
 │   └── scraper-config.json        # Scraper configuration
 ├── testing/            # Test files and utilities
@@ -90,7 +88,6 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - **API Reference**: Complete Scriptable API documentation available at `scripts/scriptable-complete-api.md`
 - **54 documented classes**: All Scriptable APIs from Alert to XMLParser with full method signatures
 - **Bear Event Scrapers**: iOS automation scripts for scraping bear community events
-- **Parser Available**: Use `scripts/parse_scriptable_mhtml.py` to convert additional MHTML documentation
 - **Development Context**: When working on Scriptable scripts, reference the API documentation for:
   - HTTP requests (Request class)
   - Calendar integration (Calendar, CalendarEvent classes)
