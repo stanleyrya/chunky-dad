@@ -11,6 +11,7 @@ async function loadModules() {
     if (isScriptable) {
         // Scriptable environment - load modules using importModule
         try {
+            console.log('Loading core modules for Scriptable environment...');
             const inputModule = importModule('core/input-adapters');
             const processorModule = importModule('core/event-processor');
             const displayModule = importModule('core/display-adapters');
@@ -18,244 +19,47 @@ async function loadModules() {
             InputAdapters = inputModule;
             EventProcessor = processorModule.EventProcessor;
             DisplayAdapters = displayModule;
+            
+            console.log('✓ Successfully loaded core modules for Scriptable');
         } catch (error) {
-            // Fallback: load inline versions if modules not found
-            console.log('Loading inline modules for Scriptable');
-            await loadInlineModules();
+            console.error('✗ Failed to load core modules for Scriptable:', error);
+            throw new Error(`Failed to load core modules: ${error.message}`);
         }
     } else {
         // Web environment - modules should be loaded via script tags
         if (typeof window !== 'undefined') {
+            console.log('Loading core modules for web environment...');
             InputAdapters = window.InputAdapters;
             EventProcessor = window.EventProcessor;
             DisplayAdapters = window.DisplayAdapters;
-        }
-        
-        // If modules not loaded, load them dynamically
-        if (!InputAdapters || !EventProcessor || !DisplayAdapters) {
-            console.log('Loading inline modules for web');
-            await loadInlineModules();
-        }
-    }
-}
-
-async function loadInlineModules() {
-    // This would contain the inline versions of the modules
-    // For now, we'll use simplified versions
-    
-    // Simplified Input Adapter
-    class SimpleInputAdapter {
-        constructor() {
-            this.isScriptable = typeof importModule !== 'undefined';
-        }
-        
-        async fetchData(config) {
-            if (config.mockMode || !this.isScriptable) {
-                return {
-                    url: config.url,
-                    html: this.getMockHTML(config.parser),
-                    status: 200,
-                    timestamp: new Date().toISOString(),
-                    mock: true
-                };
-            }
             
-            // Scriptable fetch
-            try {
-                const request = new Request(config.url);
-                const html = await request.loadString();
-                return {
-                    url: config.url,
-                    html: html,
-                    status: 200,
-                    timestamp: new Date().toISOString()
-                };
-            } catch (error) {
-                return {
-                    url: config.url,
-                    error: error.message,
-                    timestamp: new Date().toISOString()
-                };
-            }
-        }
-        
-        getMockHTML(parser) {
-            const mockData = {
-                'furball': '<div class="event"><h3>Furball Dance Party</h3><time>2025-02-15</time></div>',
-                'rockbar': '<div class="event-item"><h2>Rockstrap Night</h2><span class="date">Feb 20, 2025</span></div>',
-                'sf-eagle': '<div class="event"><h4>Bear Happy Hour</h4><div class="date">March 1, 2025</div></div>'
-            };
-            return `<html><body>${mockData[parser] || mockData['furball']}</body></html>`;
-        }
-    }
-    
-    // Simplified Event Processor (inline version of the full module)
-    class InlineEventProcessor {
-        constructor(config = {}) {
-            this.config = config;
-            this.bearKeywords = ['bear', 'bears', 'cub', 'cubs', 'otter', 'rockstrap', 'underbear', 'furball'];
-        }
-        
-        async processEvents(rawData, parserConfig) {
-            const events = [];
-            
-            try {
-                const parsedEvents = this.parseHTML(rawData.html, parserConfig);
-                
-                for (const eventData of parsedEvents) {
-                    const processedEvent = {
-                        title: eventData.title,
-                        date: eventData.date,
-                        venue: eventData.venue || parserConfig.defaultVenue,
-                        city: eventData.city || parserConfig.defaultCity,
-                        source: parserConfig.name,
-                        isBearEvent: this.isBearEvent(eventData, parserConfig)
-                    };
-                    
-                    if (processedEvent.title) {
-                        events.push(processedEvent);
-                    }
-                }
-                
-                return {
-                    success: true,
-                    events: events,
-                    source: parserConfig.name,
-                    timestamp: new Date().toISOString()
-                };
-            } catch (error) {
-                return {
-                    success: false,
-                    error: error.message,
-                    source: parserConfig.name,
-                    timestamp: new Date().toISOString()
-                };
-            }
-        }
-        
-        parseHTML(html, parserConfig) {
-            const events = [];
-            const eventPattern = /<div[^>]*class="[^"]*event[^"]*"[^>]*>[\s\S]*?<\/div>/gi;
-            const matches = html.match(eventPattern) || [];
-            
-            for (const match of matches) {
-                const titleMatch = match.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i);
-                const dateMatch = match.match(/<time[^>]*>([^<]+)<\/time>/i) || 
-                                match.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i) ||
-                                match.match(/<div[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/div>/i);
-                
-                if (titleMatch) {
-                    events.push({
-                        title: titleMatch[1].trim(),
-                        date: dateMatch ? dateMatch[1].trim() : null,
-                        venue: parserConfig.defaultVenue,
-                        city: parserConfig.defaultCity
-                    });
-                }
-            }
-            
-            return events;
-        }
-        
-        isBearEvent(eventData, parserConfig) {
-            if (parserConfig.alwaysBear) return true;
-            
-            const text = (eventData.title || '').toLowerCase();
-            return this.bearKeywords.some(keyword => text.includes(keyword));
-        }
-    }
-    
-    // Simplified Display Adapter
-    class SimpleDisplayAdapter {
-        constructor() {
-            this.isScriptable = typeof importModule !== 'undefined';
-        }
-        
-        async displayResults(results, config = {}) {
-            if (this.isScriptable) {
-                return this.displayScriptable(results);
+            if (InputAdapters && EventProcessor && DisplayAdapters) {
+                console.log('✓ Successfully loaded core modules for web');
             } else {
-                return this.displayWeb(results);
+                throw new Error('Core modules not found. Ensure input-adapters.js, event-processor.js, and display-adapters.js are loaded via script tags.');
             }
-        }
-        
-        async displayScriptable(results) {
-            const eventCount = results.events ? results.events.length : 0;
-            const bearEventCount = results.events ? 
-                results.events.filter(e => e.isBearEvent).length : 0;
-            
-            const alert = new Alert();
-            alert.title = "Bear Event Scraper";
-            alert.message = `Found ${eventCount} events (${bearEventCount} bear events) from ${results.source}`;
-            alert.addAction("OK");
-            
-            await alert.presentAlert();
-            
-            // Also log to console
-            console.log(`\nBear Event Scraper Results:`);
-            console.log(`Source: ${results.source}`);
-            console.log(`Total Events: ${eventCount}`);
-            console.log(`Bear Events: ${bearEventCount}`);
-            
-            if (results.events) {
-                results.events.forEach((event, index) => {
-                    console.log(`\n${index + 1}. ${event.title} ${event.isBearEvent ? '🐻' : ''}`);
-                    console.log(`   Date: ${event.date || 'TBD'}`);
-                    console.log(`   Venue: ${event.venue || 'N/A'}`);
-                });
-            }
-            
-            return { text: alert.message };
-        }
-        
-        displayWeb(results) {
-            const output = document.createElement('div');
-            output.style.cssText = 'font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px;';
-            
-            const header = document.createElement('h2');
-            header.textContent = 'Bear Event Scraper Results';
-            output.appendChild(header);
-            
-            const eventCount = results.events ? results.events.length : 0;
-            const bearEventCount = results.events ? 
-                results.events.filter(e => e.isBearEvent).length : 0;
-            
-            const summary = document.createElement('div');
-            summary.innerHTML = `
-                <p><strong>Source:</strong> ${results.source}</p>
-                <p><strong>Total Events:</strong> ${eventCount}</p>
-                <p><strong>Bear Events:</strong> ${bearEventCount}</p>
-            `;
-            output.appendChild(summary);
-            
-            if (results.events && results.events.length > 0) {
-                results.events.forEach(event => {
-                    const eventDiv = document.createElement('div');
-                    eventDiv.style.cssText = `
-                        border: 1px solid ${event.isBearEvent ? '#4CAF50' : '#ddd'};
-                        margin: 10px 0;
-                        padding: 15px;
-                        background: ${event.isBearEvent ? '#f8fff8' : '#fff'};
-                    `;
-                    
-                    eventDiv.innerHTML = `
-                        <h3>${event.title} ${event.isBearEvent ? '🐻' : ''}</h3>
-                        <p><strong>Date:</strong> ${event.date || 'TBD'}</p>
-                        <p><strong>Venue:</strong> ${event.venue || 'N/A'}</p>
-                        <p><strong>City:</strong> ${event.city || 'N/A'}</p>
-                    `;
-                    output.appendChild(eventDiv);
-                });
-            }
-            
-            return { element: output };
+        } else {
+            throw new Error('Neither Scriptable nor web environment detected');
         }
     }
     
-    // Set up the simplified modules
-    InputAdapters = { createInputAdapter: () => new SimpleInputAdapter() };
-    EventProcessor = InlineEventProcessor;
-    DisplayAdapters = { createDisplayAdapter: () => new SimpleDisplayAdapter() };
+    // Validate all modules are properly loaded
+    if (!InputAdapters || !EventProcessor || !DisplayAdapters) {
+        throw new Error('One or more core modules failed to load properly');
+    }
+    
+    // Validate module exports
+    if (typeof InputAdapters.createInputAdapter !== 'function') {
+        throw new Error('InputAdapters module missing createInputAdapter function');
+    }
+    if (typeof EventProcessor !== 'function') {
+        throw new Error('EventProcessor is not a constructor function');
+    }
+    if (typeof DisplayAdapters.createDisplayAdapter !== 'function') {
+        throw new Error('DisplayAdapters module missing createDisplayAdapter function');
+    }
+    
+    console.log('✓ All core modules validated successfully');
 }
 
 // Main Bear Event Scraper Class
@@ -266,73 +70,109 @@ class BearEventScraper {
             preview: true,
             mockMode: false,
             maxEvents: 50,
+            enableDebugMode: true,
+            daysToLookAhead: 90,
             ...config
         };
         
         this.inputAdapter = null;
         this.processor = null;
         this.displayAdapter = null;
+        this.isInitialized = false;
     }
     
     async initialize() {
-        await loadModules();
-        
-        if (!InputAdapters || !EventProcessor || !DisplayAdapters) {
-            throw new Error('Failed to load required modules');
+        if (this.isInitialized) {
+            console.log('Bear Event Scraper already initialized');
+            return;
         }
         
-        this.inputAdapter = InputAdapters.createInputAdapter();
-        this.processor = new EventProcessor(this.config);
-        this.displayAdapter = DisplayAdapters.createDisplayAdapter();
+        console.log('Initializing Bear Event Scraper...');
         
-        console.log('Bear Event Scraper initialized');
+        try {
+            await loadModules();
+            
+            // Create instances using the actual downloaded modules
+            this.inputAdapter = InputAdapters.createInputAdapter();
+            this.processor = new EventProcessor(this.config);
+            this.displayAdapter = DisplayAdapters.createDisplayAdapter();
+            
+            this.isInitialized = true;
+            console.log('✓ Bear Event Scraper initialized successfully');
+            
+            // Log environment info
+            const env = typeof importModule !== 'undefined' ? 'Scriptable' : 'Web';
+            console.log(`Environment: ${env}`);
+            console.log(`Mock Mode: ${this.config.mockMode}`);
+            console.log(`Max Events: ${this.config.maxEvents}`);
+            console.log(`Days to Look Ahead: ${this.config.daysToLookAhead}`);
+            
+        } catch (error) {
+            console.error('✗ Failed to initialize Bear Event Scraper:', error);
+            throw error;
+        }
     }
     
     async scrapeEvents(sources) {
-        if (!this.inputAdapter) {
+        if (!this.isInitialized) {
             await this.initialize();
         }
         
+        console.log(`Starting to scrape ${sources.length} sources...`);
         const results = [];
         
         for (const source of sources) {
             console.log(`Processing: ${source.name}`);
             
             try {
-                // 1. Input - Fetch data
+                // 1. Input - Fetch data using the actual InputAdapter
+                console.log(`  → Fetching data from ${source.url}`);
                 const rawData = await this.inputAdapter.fetchData({
                     url: source.url,
                     parser: source.parser,
-                    mockMode: this.config.mockMode
+                    mockMode: this.config.mockMode,
+                    timeout: 10000 // 10 second timeout
                 });
                 
                 if (rawData.error) {
-                    console.error(`Error fetching ${source.name}: ${rawData.error}`);
+                    console.error(`  ✗ Error fetching ${source.name}: ${rawData.error}`);
                     continue;
                 }
                 
-                // 2. Processing - Parse and standardize
+                console.log(`  ✓ Fetched ${rawData.html ? rawData.html.length : 0} characters of HTML`);
+                if (rawData.mock) {
+                    console.log('  ℹ Using mock data for testing');
+                }
+                
+                // 2. Processing - Parse and standardize using the actual EventProcessor
+                console.log(`  → Processing events with ${source.parser} parser`);
                 const processedResult = await this.processor.processEvents(rawData, source);
                 
                 if (processedResult.success) {
                     results.push(processedResult);
-                    console.log(`✓ ${source.name}: ${processedResult.events.length} events found`);
+                    const bearCount = processedResult.events.filter(e => e.isBearEvent).length;
+                    console.log(`  ✓ ${source.name}: ${processedResult.events.length} events found (${bearCount} bear events)`);
                 } else {
-                    console.error(`✗ ${source.name}: ${processedResult.error}`);
+                    console.error(`  ✗ ${source.name}: ${processedResult.error}`);
                 }
                 
             } catch (error) {
-                console.error(`Error processing ${source.name}:`, error);
+                console.error(`  ✗ Error processing ${source.name}:`, error);
             }
         }
         
         // Combine all results
         const combinedResult = this.combineResults(results);
+        console.log(`✓ Scraping completed: ${combinedResult.events.length} total events from ${combinedResult.totalSources} sources`);
         
-        // 3. Display - Show results
-        await this.displayAdapter.displayResults(combinedResult, {
-            format: this.config.displayFormat || 'default'
-        });
+        // 3. Display - Show results using the actual DisplayAdapter
+        try {
+            await this.displayAdapter.displayResults(combinedResult, {
+                format: this.config.displayFormat || 'default'
+            });
+        } catch (error) {
+            console.error('Error displaying results:', error);
+        }
         
         return combinedResult;
     }
@@ -340,21 +180,36 @@ class BearEventScraper {
     combineResults(results) {
         const allEvents = [];
         const sources = [];
+        let successfulSources = 0;
         
         for (const result of results) {
-            allEvents.push(...result.events);
-            sources.push(result.source);
+            if (result.success) {
+                allEvents.push(...result.events);
+                sources.push(result.source);
+                successfulSources++;
+            }
         }
         
         // Remove duplicates based on title and date
         const uniqueEvents = this.removeDuplicates(allEvents);
+        
+        // Sort by date (upcoming events first)
+        uniqueEvents.sort((a, b) => {
+            if (!a.date && !b.date) return 0;
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+            return new Date(a.date) - new Date(b.date);
+        });
         
         return {
             success: true,
             events: uniqueEvents,
             sources: sources,
             totalSources: results.length,
-            timestamp: new Date().toISOString()
+            successfulSources: successfulSources,
+            bearEventCount: uniqueEvents.filter(e => e.isBearEvent).length,
+            timestamp: new Date().toISOString(),
+            config: this.config
         };
     }
     
@@ -368,6 +223,36 @@ class BearEventScraper {
             seen.add(key);
             return true;
         });
+    }
+    
+    // Validate that we're using the actual downloaded modules
+    validateModules() {
+        const checks = [
+            { name: 'InputAdapters', module: InputAdapters, expectedMethods: ['createInputAdapter'] },
+            { name: 'EventProcessor', module: EventProcessor, isConstructor: true },
+            { name: 'DisplayAdapters', module: DisplayAdapters, expectedMethods: ['createDisplayAdapter'] }
+        ];
+        
+        for (const check of checks) {
+            if (!check.module) {
+                throw new Error(`${check.name} module not loaded`);
+            }
+            
+            if (check.isConstructor && typeof check.module !== 'function') {
+                throw new Error(`${check.name} is not a constructor function`);
+            }
+            
+            if (check.expectedMethods) {
+                for (const method of check.expectedMethods) {
+                    if (typeof check.module[method] !== 'function') {
+                        throw new Error(`${check.name} missing method: ${method}`);
+                    }
+                }
+            }
+        }
+        
+        console.log('✓ All modules validated - using actual downloaded libraries');
+        return true;
     }
 }
 
@@ -401,27 +286,35 @@ const DEFAULT_SOURCES = [
 
 // Main execution function
 async function main() {
-    console.log('Starting Bear Event Scraper (Unified Version)');
+    console.log('🐻 Starting Bear Event Scraper (Unified Version)');
+    console.log('Using actual downloaded core modules for full end-to-end flow');
     
     const scraper = new BearEventScraper({
         mockMode: true, // Set to false for real scraping
         dryRun: true,
-        maxEvents: 50
+        maxEvents: 50,
+        enableDebugMode: true
     });
     
     try {
+        // Validate we're using the real modules
+        await scraper.initialize();
+        scraper.validateModules();
+        
         const results = await scraper.scrapeEvents(DEFAULT_SOURCES);
-        console.log('\nScraping completed successfully!');
+        console.log('\n🎉 Scraping completed successfully!');
+        console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`);
+        
         return results;
     } catch (error) {
-        console.error('Scraping failed:', error);
+        console.error('💥 Scraping failed:', error);
         
         // Show error in appropriate format
         const isScriptable = typeof importModule !== 'undefined';
         if (isScriptable) {
             const alert = new Alert();
-            alert.title = "Scraping Error";
-            alert.message = error.message;
+            alert.title = "Bear Event Scraper Error";
+            alert.message = `Failed to complete scraping: ${error.message}`;
             alert.addAction("OK");
             await alert.presentAlert();
         }
@@ -435,16 +328,12 @@ if (typeof importModule !== 'undefined') {
     // Scriptable environment
     main().catch(console.error);
 } else if (typeof window !== 'undefined' && window.document) {
-    // Web environment - expose BearEventScraper immediately and load modules
+    // Web environment - expose BearEventScraper immediately
     window.BearEventScraper = BearEventScraper;
     window.runBearEventScraper = main;
     
-    // Load modules in the background
-    loadModules().then(() => {
-        console.log('Bear Event Scraper modules loaded successfully');
-    }).catch(error => {
-        console.error('Failed to load Bear Event Scraper modules:', error);
-    });
+    console.log('🌐 Bear Event Scraper loaded for web environment');
+    console.log('Use runBearEventScraper() to execute or create new BearEventScraper() instance');
 }
 
 // Export for module systems
