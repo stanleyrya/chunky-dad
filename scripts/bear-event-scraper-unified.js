@@ -431,18 +431,22 @@ if (typeof importModule !== 'undefined') {
     // Scriptable environment
     main().catch(console.error);
 } else if (typeof window !== 'undefined' && window.document) {
-    // Web environment - expose functions globally
-    window.BearEventScraper = BearEventScraper;
-    window.runBearEventScraper = main;
-    
-    // Auto-run if page is loaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
+    // Web environment - load modules and expose functions globally
+    loadModules().then(() => {
+        window.BearEventScraper = BearEventScraper;
+        window.runBearEventScraper = main;
+        
+        // Auto-run if page is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('Bear Event Scraper loaded. Call runBearEventScraper() to start.');
+            });
+        } else {
             console.log('Bear Event Scraper loaded. Call runBearEventScraper() to start.');
-        });
-    } else {
-        console.log('Bear Event Scraper loaded. Call runBearEventScraper() to start.');
-    }
+        }
+    }).catch(error => {
+        console.error('Failed to load Bear Event Scraper modules:', error);
+    });
 }
 
 // Export for module systems
