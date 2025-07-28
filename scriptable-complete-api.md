@@ -224,3 +224,157 @@ Presents the alert as a sheet.
 - `Promise<number>`: A promise carrying the selected action index when fulfilled.
 
 ---
+
+## Calendar
+
+Holds reminders and events.
+
+Use the Calendar type to get a specific calendar. The calendar is used with the Reminder and CalendarEvent types when fetching reminders or events from a specific calendar or when inserting into a calendar. If you are fetching reminders or events from all calendars, you do not need to pass the calendars when performing the fetch with the Reminder or CalendarEvent types.
+
+### Properties
+
+#### `identifier: string`
+
+Calendar identifier.
+
+*Read-only.*
+
+#### `title: string`
+
+Title of calendar.
+
+#### `isSubscribed: bool`
+
+Whether the calendar is a subscribed calendar.
+
+*Read-only.*
+
+#### `allowsContentModifications: bool`
+
+Indicates whether items can be added, edited, and deleted in the calendar.
+
+*Read-only.*
+
+#### `color: Color`
+
+Color of calendar.
+
+### Methods
+
+#### `supportsAvailability(availability: string): bool`
+
+Checks if the calendar supports availability.
+
+The following values are supported:
+- busy
+- free
+- tentative
+- unavailable
+
+Not all calendars support all of these availabilities and some calendars may not support availability at all. Use this function to check if the calendar supports a specific availability.
+
+**Parameters:**
+- `availability` (string): Availability to check against.
+
+**Return value:**
+- `bool`: True if the calendar supports the availability, otherwise false.
+
+#### `save()`
+
+Saves calendar.
+
+Saves changes to the calendar.
+
+#### `remove()`
+
+Removes calendar.
+
+The calendar is removed immediately. This cannot be undone.
+
+### Static Methods
+
+#### `forReminders(): Promise<[Calendar]>`
+
+Fetches calendars for reminders.
+
+A calendar can only hold either reminders or events. Call this function to fetch all calendars that can hold reminders.
+
+**Return value:**
+- `Promise<[Calendar]>`: Promise that provides the calendars when fulfilled.
+
+#### `forEvents(): Promise<[Calendar]>`
+
+Fetches calendars for events.
+
+A calendar can only hold either reminders or events. Call this function to fetch all calendars that can hold events.
+
+**Return value:**
+- `Promise<[Calendar]>`: Promise that provides the calendars when fulfilled.
+
+#### `forRemindersByTitle(title: string): Promise<Calendar>`
+
+Fetches a calendar that holds reminders.
+
+**Parameters:**
+- `title` (string): Title of calendar.
+
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
+
+#### `forEventsByTitle(title: string): Promise<Calendar>`
+
+Fetches a calendar that holds events.
+
+**Parameters:**
+- `title` (string): Title of calendar.
+
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
+
+#### `createForReminders(title: string): Promise<Calendar>`
+
+Create a new calendar that holds reminders.
+
+This will create a new list for reminders in the Reminders app. The list is automatically saved so there is no need to call `save()` after creating the list.
+
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the created calendar when fulfilled.
+
+#### `findOrCreateForReminders(title: string): Promise<Calendar>`
+
+Find or create a new calendar that holds reminders.
+
+This will attempt to find a calendar for reminders with the specified name. If no calendar is found, a new calendar is created and the calendar will appear as a reminder list in the Reminders app. If multiple calendars are found for the specified name, the first one will be returned. The list is automatically saved so there is no need to call `save()` in the case the list was created.
+
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
+
+#### `defaultForReminders(): Promise<Calendar>`
+
+Default calendar for reminders.
+
+A calendar can only hold either reminders or events. Call this function to get the default calendar that can hold reminders.
+
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
+
+#### `defaultForEvents(): Promise<Calendar>`
+
+Default calendar for events.
+
+A calendar can only hold either reminders or events. Call this function to get the default calendar that can hold events.
+
+**Return value:**
+- `Promise<Calendar>`: Promise that provides the calendar when fulfilled.
+
+#### `presentPicker(allowMultiple: bool): Promise<[Calendar]>`
+
+Presents a view for picking calendars.
+
+**Parameters:**
+- `allowMultiple` (bool): Whether to allow picking multiple calenders. Defaults to false.
+
+**Return value:**
+- `Promise<[Calendar]>`: Promise that provides the calendars when fulfilled.
+
+---
