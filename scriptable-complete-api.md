@@ -1293,3 +1293,904 @@ The value range from 0 to 1. To get the screen brightness, refer to the `screenB
 - `percentage` (number): Percentage to set the screen brightness to. Value between 0 and 1.
 
 ---
+
+## FileManager
+
+Read and write files on disk.
+
+A FileManager lets you read files stored on the disk and make changes to them. Paths to files are supplied as strings.
+
+### Static Methods
+
+#### `local(): FileManager`
+
+Creates a local FileManager.
+
+Creates a file manager for operating with files stored locally.
+
+**Return value:**
+- `FileManager`: Local FileManager.
+
+#### `iCloud(): FileManager`
+
+Creates an iCloud FileManager.
+
+Creates a file manager for operating with files stored in iCloud. iCloud must be enabled on the device in order to use this.
+
+**Return value:**
+- `FileManager`: iCloud FileManager.
+
+### Methods
+
+#### `read(filePath: string): Data`
+
+Read contents of a file as data.
+
+Reads the contents of the file specified by the file path as raw data. To read the file as a string see `readString(filePath)` and to read it as an image see `readImage(filePath)`.
+
+The function will error if the file does not exist or if it exists in iCloud but has not been download. Use `fileExists(filePath)` to check if a file exists and `downloadFileFromiCloud(filePath)` to download the file. Note that it is always safe to call `downloadFileFromiCloud(filePath)`, even if the file is stored locally on the device.
+
+**Parameters:**
+- `filePath` (string): Path of the file to read.
+
+**Return value:**
+- `Data`: Contents of the file as a data or null if the file could not be read.
+
+#### `readString(filePath: string): string`
+
+Read contents of a file as string.
+
+The function will error if the file does not exist or if it exists in iCloud but has not been download. Use `fileExists(filePath)` to check if a file exists and `downloadFileFromiCloud(filePath)` to download the file. Note that it is always safe to call `downloadFileFromiCloud(filePath)`, even if the file is stored locally on the device.
+
+**Parameters:**
+- `filePath` (string): Path of the file to read.
+
+**Return value:**
+- `string`: Contents of the file as a string or null if the file could not be read.
+
+#### `readImage(filePath: string): Image`
+
+Read contents of a file as an image.
+
+Reads the contents of the file specified by the file path and converts it to an image.
+
+The function will error if the file does not exist or if it exists in iCloud but has not been download. Use `fileExists(filePath)` to check if a file exists and `downloadFileFromiCloud(filePath)` to download the file. Note that it is always safe to call `downloadFileFromiCloud(filePath)`, even if the file is stored locally on the device.
+
+**Parameters:**
+- `filePath` (string): Path of the file to read.
+
+**Return value:**
+- `Image`: Contents of the file as an image or null if the file could not be read.
+
+#### `write(filePath: string, content: Data)`
+
+Write data to a file.
+
+**Parameters:**
+- `filePath` (string): Path of file to write to.
+- `content` (Data): Data to write to disk.
+
+#### `writeString(filePath: string, content: string)`
+
+Write a string to a file.
+
+Writes the content to the specified file path on disk. If the file does not already exist, it will be created. If the file already exists the contents of the file will be overwritten with the new content.
+
+**Parameters:**
+- `filePath` (string): Path of file to write to.
+- `content` (string): Content to write to disk.
+
+#### `writeImage(filePath: string, image: Image)`
+
+Write an image to a file.
+
+Writes the image to the specified file path on disk. If the file does not already exist, it will be created. If the file already exists the contents of the file will be overwritten with the new content.
+
+**Parameters:**
+- `filePath` (string): Path of file to write to.
+- `image` (Image): Image to write to disk.
+
+#### `remove(filePath: string)`
+
+Removes a file.
+
+Removes the file at the specified path. Use with caution. Removed files cannot be restored.
+
+**Parameters:**
+- `filePath` (string): Path of file to remove.
+
+#### `move(sourceFilePath: string, destinationFilePath: string)`
+
+Moves a file.
+
+Moves the file from the source path to the destination path. Caution: This operation will replace any existing file at the the destination.
+
+**Parameters:**
+- `sourceFilePath` (string): Path of the file to move.
+- `destinationFilePath` (string): Path to move the file to.
+
+#### `copy(sourceFilePath: string, destinationFilePath: string)`
+
+Copies a file.
+
+Copies the file from the source path to the destination path. If a file already exists at the destination file path, the operation will fail and the file will not be copied.
+
+**Parameters:**
+- `sourceFilePath` (string): Path of the file to copy.
+- `destinationFilePath` (string): Path to copy the file to.
+
+#### `fileExists(filePath: string): bool`
+
+Checks if the file exists.
+
+Checks if the file exists at the specified file path. Checking this before moving or copying to a destination can be a good idea as those operations will replace any existing file at the destination file path.
+
+**Parameters:**
+- `filePath` (string): File path to examine.
+
+**Return value:**
+- `bool`: True if the file exists otherwise false.
+
+#### `isDirectory(path: string): bool`
+
+Checks if a path points to a directory.
+
+**Parameters:**
+- `path` (string): Path to examine.
+
+**Return value:**
+- `bool`: True if the path points to a directory otherwise false.
+
+#### `createDirectory(path: string, intermediateDirectories: bool)`
+
+Creates a directory at the specified path.
+
+You can optionally create all intermediate directories.
+
+**Parameters:**
+- `path` (string): Path of directory to create.
+- `intermediateDirectories` (bool): Whether to create all intermediate directories. Defaults to false.
+
+#### `temporaryDirectory(): string`
+
+Path of temporary directory.
+
+Used to retrieve the path of a temporary directory on disk. Data persisted in a temporary directory will generally live shorter than data persisted in the cache directory.
+
+The operating system may at any time delete files stored in this directory and therefore you should not rely on it for long time storage. If you need long time storage, see documentsDirectory() or libraryDirectory(). This directory is not shared between the app, the action extension and Siri.
+
+**Return value:**
+- `string`: Path to temporary directory.
+
+#### `cacheDirectory(): string`
+
+Path of cache directory.
+
+Used to retrieve the path of a cache directory on disk. The operating system may at any time delete files stored in this directory and therefore you should not rely on it for long time storage.
+
+Data persisted in the cache directory will generally live longer than data persisted in a temporary directory.
+
+If you need long time storage, see documentsDirectory() or libraryDirectory(). This directory is not shared between the app, the action extension and Siri.
+
+**Return value:**
+- `string`: Path to temporary directory.
+
+#### `documentsDirectory(): string`
+
+Path of documents directory.
+
+---
+
+## Image
+
+Manages image data.
+
+Images objects contains image data. APIs in Scriptable that work with images, either by taking an image as input or returning an image, will use this the Image type.
+
+### Properties
+
+#### `size: Size`
+
+Size of the image in pixels.
+
+*Read-only.*
+
+### Static Methods
+
+#### `fromFile(filePath: string): Image`
+
+Creates an image from file.
+
+Loads an image from the specified file path. If the image could not be read, the function will return null.
+
+**Parameters:**
+- `filePath` (string): File path to read image from.
+
+**Return value:**
+- `Image`: The read image or null if the image could not be read.
+
+#### `fromData(data: Data): Image`
+
+Creates an image from raw data.
+
+Loads an image from the raw data. If the image could not be read, the function will return null.
+
+**Parameters:**
+- `data` (Data): Data to read image from.
+
+**Return value:**
+- `Image`: The read image or null if the image could not be read.
+
+---
+
+## Notification
+
+Schedules and manages notifications.
+
+Notifications are scheduled for delivery at some point in the future. A notification may be delivered even when Scriptable is not running.
+
+### Properties
+
+#### `identifier: string`
+
+Identifier of the notification.
+
+To reschedule a notification, use the identifier of an existing notification.
+
+#### `title: string`
+
+Title of the notification.
+
+#### `subtitle: string`
+
+Subtitle of the notification.
+
+#### `body: string`
+
+Body of the notification.
+
+#### `preferredContentHeight: number`
+
+Preferred height of the notification.
+
+By default Scriptable attempts to determine an appropriate height for your notification. If you want to override the default behavior, you can specify a preferred content height. The preferred content height is only used when running a script inside the notification, i.e. when `scriptName` is not null. iOS may limit the height of the notification in which case the preferred content height is not guaranteed to be respected.
+
+#### `badge: number`
+
+Number to display in the app icon's badge.
+
+When the number is zero, no badge is displayed. When the number is greater than zero, the number is displayed in the app icon's badge. Setting the value to null, will leave the badge unchanged. The default value is null.
+
+#### `threadIdentifier: string`
+
+Identifier for grouping the notification.
+
+Notifications are grouped by the identifier on the Home screen and in the Notification Center.
+
+#### `userInfo: {string: any}`
+
+Custom information.
+
+Store any custom information for the notification. This can be accessed from the `Notification.opened` property when a script is run from a notification.
+
+#### `sound: string`
+
+Sound of the notification.
+
+Set to null if you do not want any sound. Set to one of the following values if you want a sound.
+
+- default
+- accept
+- alert
+- complete
+- event
+- failure
+- piano_error
+- piano_success
+- popup
+
+By default the notification is delivered with no sound.
+
+#### `openURL: string`
+
+URL to open when notification is tapped.
+
+The Scriptable application will open the URL when the notification is tapped. This can be a URL that uses Scriptables URL scheme, the URL scheme of another application or a website URL.
+
+#### `deliveryDate: Date`
+
+Delivery date of the notification.
+
+*Read-only.*
+
+If the notification has already been delivered, for example because it was fetched using `Notification.allDelivered()`, the deliveryDate will be populated. Otherwise it will be null.
+
+The property cannot be set. In order to specify a future delivery date for a notification, see the `setTriggerDate` function. For recurring notifications, see the `setDailyTrigger` and `setWeeklyTrigger` functions.
+
+#### `nextTriggerDate: Date`
+
+Next trigger date of the notification.
+
+*Read-only.*
+
+The next trigger date is the point in time where the next notification will be delivered.
+
+---
+
+## Request
+
+Performs HTTP requests.
+
+Performs a URL request and returns the response in an appropriate format.
+
+### Properties
+
+#### `url: string`
+
+URL to send request to.
+
+#### `method: string`
+
+HTTP method used for the request.
+
+Specifies the HTTP method to use when sending the request. The default is to send the request using the GET HTTP method.
+
+#### `headers: {string: string}`
+
+HTTP headers to send with the request.
+
+Key value pairs where the key is the name of an HTTP header and the value will be sent as the value for the HTTP header.
+
+#### `body: any`
+
+Body to send with the request.
+
+The body will be send along the request. While this property can be any value, currently only strings and Data is supported.
+
+Be aware that this property is ignored if you convert the request to a multipart request using `addParameterToMultipart`, `addFileToMultipart` or `addFileDataToMultipart`.
+
+#### `timeoutInterval: number`
+
+Timeout interval of the request.
+
+If a request remains idle for longer than the timeout interval, the request is considered timed out.
+
+The timeout interval is measured in seconds and defaults to 60 seconds.
+
+#### `onRedirect: fn(Request) -> Request`
+
+Function called upon redirect.
+
+The function determines how redirects should be handled. By default redirects are allowed. When invoked the function is supplied with the request that we're about to redirect to. The function can return the request to continue redirecting or it can return another request to redirect to. Returning null will stop the redirect. Note that onRedirect will only be invoked on the initial request. Consecutive redirects should be handled on the initial request.
+
+#### `response: {string: any}`
+
+Response of the request.
+
+*Read-only.*
+
+The response is not populated until the request has been completed. The response is an object that looks like the following example.
+
+```
+{
+  "url": "https://example.com/",
+  "statusCode": 200
+  "mimeType": "application/json",
+  "textEncodingName": "utf-8",
+  "headers": {
+    "Content-Type": "application/json;charset=utf-8",
+    "Content-Length": "17671"
+  },
+  "cookies": [{
+    "path": "/",
+    "httpOnly": true,
+    "domain": "www.example.com",
+    "sessionOnly": true,
+    "name": "JSESSIONID",
+    "value": "7616271F4878CFD05182D20C45F4CEB3"
+  }]
+}
+```
+
+#### `allowInsecureRequest: bool`
+
+Allow the request even if it is deemed insecure.
+
+By default Scriptable will attempt to reject requests that are deemed insecure.
+
+As an example, Scriptable will reject communicating with a server that has an invalid certificate. Such servers might be malicious and may put confidential information at risk. By enabling this setting, those requests will be allowed.
+
+Enable this setting at your own risk.
+
+### Constructor
+
+#### `new Request(url: string)`
+
+Constructs a request.
+
+Constructs a new request that will be sent to the provided URL. The request is not sent until an appropriate load method is called, e.g. loadImage for downloading and interpreting the response as an image.
+
+**Parameters:**
+- `url` (string): URL to send request to.
+
+### Methods
+
+#### `load(): Promise<Data>`
+
+Sends request.
+
+Call to send the configured request to the specified URL. The raw response is provided when the returned promise is fulfilled.
+
+**Return value:**
+- `Promise<Data>`: Promise that provides the response as data when fulfilled.
+
+#### `loadString(): Promise<string>`
+
+Sends request and parses response as a string.
+
+Call to send the configured request to the specified URL. The response is parsed to a string and provided when the returned promise is fulfilled.
+
+**Return value:**
+- `Promise<string>`: Promise that provides the response as a string when fulfilled.
+
+#### `loadJSON(): Promise<any>`
+
+Sends request and parses response as JSON.
+
+Call to send the configured request to the specified URL. The response is expected to be a valid JSON string and is parsed into an object.
+
+**Return value:**
+- `Promise<any>`: Promise that provides the response as a JSON object when fulfilled.
+
+---
+
+## WebView
+
+Presents websites and evaluates JavaScript on websites.
+
+Supports rendering HTML as well as loading a file and rendering it. A file can be of various types. It could for example be an HTML file or an image.
+
+The web view also supports evaluating JavaScript on a website.
+
+### Properties
+
+#### `shouldAllowRequest: fn(Request) -> bool`
+
+Function called upon load of a request.
+
+When the web view performs a request to load a resource, the function can determine whether or not to allow the request. Disallowing request can speed up the time it takes to load the website.
+
+By default all requests are allowed.
+
+### Constructor
+
+#### `new WebView()`
+
+Constructs web view.
+
+Constructs a new web view. Use a web view to evaluate JavaScript on websites.
+
+### Static Methods
+
+#### `loadHTML(html: string, baseURL: string, preferredSize: Size, fullscreen: bool): Promise`
+
+Loads HTML and renders it.
+
+**Parameters:**
+- `html` (string): HTML to load and render.
+- `baseURL` (string): Optional. Base URL used to resolve relative URLs in the HTML.
+- `preferredSize` (Size): Optional. Preferred size of the view. This size is not guaranteed to be respected and is only used when the script is run with Siri or in the Shortcuts app.
+- `fullscreen` (bool): Optional. Set to true to present the web view in fullscreen. This only has an effect when used within the app. Defaults to false.
+
+**Return value:**
+- `Promise`: Promise that carries no value. Once the web view have been closed, the promise will complete.
+
+#### `loadFile(fileURL: string, preferredSize: Size, fullscreen: bool): Promise`
+
+Loads a file and renders it.
+
+Files can be of various types, including HTML files and images.
+
+The supplied HTML file can reference files and nested directories in the same directory as the HTML file resides.
+
+The optional `preferredSize` parameter is ignored unless the script is run in a Siri Shortcut.
+
+If you are displaying large images in a memory constrained environment, for example in a Siri Shortcut, you should use the WebView bridge instead of the QuickLook bridge. The technical reason for this is that a Siri Shortcut and other app extension processes have very limited memory and loading a very large image will cause the app extension to be terminated. However, the web view will run in a different process meaning that it is not affected by the same memory constraints.
+
+**Parameters:**
+- `fileURL` (string): URL of the file to load and render.
+- `preferredSize` (Size): Optional. Preferred size of the view. This size is not guaranteed to be respected and is only used when the script is run with Siri or in the Shortcuts app.
+- `fullscreen` (bool): Optional. Set to true to present the web view in fullscreen. This only has an effect when used within the app. Defaults to false.
+
+**Return value:**
+- `Promise`: Promise that carries no value. Once the web view have been closed, the promise will complete.
+
+#### `loadURL(url: string, preferredSize: Size, fullscreen: bool): Promise`
+
+Loads URL in web view and presents the web view.
+
+The optional `preferredSize` parameter is ignored unless the script is run in a Siri Shortcut.
+
+**Parameters:**
+- `url` (string): URL to load into the web view.
+- `preferredSize` (Size): Optional. Preferred size of the view. This size is not guaranteed to be respected and is only used when the script is run with Siri or in the Shortcuts app.
+- `fullscreen` (bool): Optional. Set to true to present the web view in fullscreen. This only has an effect when used within the app. Defaults to false.
+
+**Return value:**
+- `Promise`: Promise that carries no value. Once the web view have been closed, the promise will complete.
+
+---
+
+## ListWidget
+
+Widget showing a list of elements.
+
+A widget showing a list of elements. Pass the widget to Script.setWidget() display it on your Home Screen.
+
+Be aware that the widget will refresh periodically and the rate at which the widget refreshes is largely determined by the operating system.
+
+Also note that there are memory limitations when running a script in a widget. When using too much memory the widget will crash and not render correctly.
+
+### Properties
+
+#### `backgroundColor: Color`
+
+Background color of the widget.
+
+Defaults to a solid color in widgets placed on the Home Screen and a transparent color placed on the Lock Screen.
+
+#### `backgroundImage: Image`
+
+Background image.
+
+#### `backgroundGradient: LinearGradient`
+
+Background gradient.
+
+#### `addAccessoryWidgetBackground: bool`
+
+Whether to use an accessory widget background.
+
+Enable to add an adaptive background that provides a standard appearance based on the widget's environment. Defaults to false.
+
+This is only available starting from iOS 16.
+
+#### `spacing: number`
+
+Spacing between elements.
+
+Specifies the spacing between elements in the widget. You can also use the `addSpacer()` function on the widget to add spacing between elements. Defaults to 0.
+
+#### `url: string`
+
+URL to open.
+
+The URL will be opened when the widget is tapped. This will override any behavior defined in the configuration of the widget. E.g. if the widget is configured to run the script when interacting with the widget but a URL is set the URL will take precedence.
+
+#### `refreshAfterDate: Date`
+
+Earliest date to refresh the widget.
+
+The property indicates when the widget can be refreshed again. The widget will not be refreshed before the date have been reached. It is not guaranteed that the widget will refresh at exactly the specified date.
+
+The refresh rate of a widget is partly up to iOS/iPadOS. For example, a widget may not refresh if the device is low on battery or the user is rarely looking at the widget.
+
+When the property is `null` the default refresh interval is used. Defaults to `null`.
+
+### Constructor
+
+#### `new ListWidget()`
+
+Constructs a new list widget.
+
+A widget showing a list of elements. Pass the widget to Script.setWidget() to display it on your Home Screen.
+
+### Methods
+
+#### `addText(text: string): WidgetText`
+
+Add text to the widget.
+
+Adds a text element to the widget. Use the properties on the returned element to style the text.
+
+**Return value:**
+- `WidgetText`: Text element.
+
+#### `addDate(date: Date): WidgetDate`
+
+Add date to the widget.
+
+Adds a date element to the widget. Use the properties on the returned element to style the date.
+
+**Return value:**
+- `WidgetDate`: Date element.
+
+#### `addImage(image: Image): WidgetImage`
+
+Add image to the widget.
+
+Adds an image element to the widget. Use the properties on the returned element to style the image.
+
+**Return value:**
+- `WidgetImage`: Image element.
+
+#### `addSpacer(length: number): WidgetSpacer`
+
+Add spacer.
+
+Adds a spacer to the widget. This can be used to offset the content vertically in the widget.
+
+**Parameters:**
+- `length` (number): Length of the spacer.
+
+---
+
+## DateFormatter
+
+Converts between dates and strings.
+
+The date formatter can convert between dates and their textual representations.
+
+### Properties
+
+#### `dateFormat: string`
+
+Date format to be used by the formatter.
+
+Sets a fixed format to be used by the formatter. For example the date "2019-08-26 16:47" can be represented using the format "yyyy-MM-dd HH:mm".
+
+When converting dates to strings, it's advised to use some of the predefined formats for dates and times that can be applied using functions on the formatter, e.g. `useMediumDateStyle()` and `useMediumTimeStyle()`.
+
+Year:
+- `y`: Year with no padding. Example: "2019"
+- `yy`: Year with two zeros. Adds padding if necessary. Example: "19"
+- `yyyy`: Year with a minimum of four digits. Adds padding if necessary. Example: "2019"
+
+Quarter:
+- `Q`: Quarter of the year. Example: "4"
+- `QQQQ`: Quarter spelled out. Example: "4th quarter"
+
+Month:
+- `M`: Numeric month of the year. Example: "1"
+- `MM`: Numeric month of the year. Adds padding if necessary. Example: "01"
+- `MMM`: Shorthand name of the month. Example: "Jan"
+- `MMMM`: Full name of the month. Example: "January"
+- `MMMMM`: Narrow name of the month. Example: "J"
+
+Day:
+- `d`: Day of the month. Example: "9"
+- `dd`: Day of the month. Adds padding if necessary. Example: "09"
+- `F`: Day of the week. Example: "3rd Friday in August"
+- `E`: Day of the week. Example: "Fri"
+- `EEEE`: Full name of the day. Example: "Friday"
+- `EEEEE`: Narrow day of the week. Example: "F"
+
+Hour:
+- `h`: Hour on a 12-hour clock. Example: "9"
+- `hh`: Hour on a 12-hour clock. Adds padding if necessary. Example: "09"
+- `H`: Hour on a 24-hour clock. Example: "21"
+- `HH`: Hour on a 24-hour clock. Adds padding if necessary. Example: "21"
+- `a`: AM/PM for times on a 12-hour clock. Example: "PM"
+
+Minute:
+- `m`: Minute. Example: "7"
+- `mm`: Minute. Adds padding if necessary. Example: "07"
+
+Second:
+- `s`: Seconds. Example: "4"
+- `ss`: Seconds. Adds padding if necessary. Example: "04"
+- `SSS`: Milliseconds. Example: "384"
+
+Time zone:
+- `zzz`: Three letter name of the time zone. Falls back to GMT-08:00 if the name is unknown. Example: "CST"
+- `zzzz`: Full name of the time zone. Falls back to GMT-08:00 if the name is unknown. Example: "Central Standard Time"
+- `Z`: Time zone in RFC 822 GMT format. Also matches a literal Z for Zulu (UTC) time. Example: "-0600"
+- `ZZZZ`: Time zone with abbreviation and offset. Example: "CST-06:00"
+- `ZZZZZ`: Time zone in ISO 8601 format. Example: "-06:00"
+
+A great resource for experimenting with date formats is nsdateformatter.com developed by Ben Scheirman.
+
+#### `locale: string`
+
+Locale to use when formatting.
+
+The locale should be specified using a string identifier, e.g. "en", "it" or "da". When no locale is set, the formatter will use the current locale of the device.
+
+### Constructor
+
+#### `new DateFormatter()`
+
+Constructs a date formatter.
+
+To convert between dates and their textual representation, use the `string()` and `date()` functions.
+
+### Methods
+
+#### `string(date: Date): string`
+
+Creates a string from a date.
+
+**Parameters:**
+- `date` (Date): The date to convert to a string.
+
+**Return value:**
+- `string`: A textual representation of the date.
+
+#### `date(str: string): Date`
+
+Creates a date from a string.
+
+Uses the date formatters configuration to parse the string into a date. If the string cannot be parsed with the date formatters configuration, the function will return null.
+
+**Parameters:**
+- `str` (string): The string to parse into a date.
+
+**Return value:**
+- `Date`: A date representation of the string or null if the string could not be parsed.
+
+#### `useNoDateStyle()`
+
+Use no style for the date.
+
+This will remove the date from the formatted string.
+
+#### `useShortDateStyle()`
+
+Use a short style for the date.
+
+Dates with a short style are typically numeric only e.g. "08/23/19".
+
+#### `useMediumDateStyle()`
+
+Use a medium style for the date.
+
+Dates with a medium style usually includes abbreviations, e.g. "Aug 23, 2019" or "7:16:42 PM".
+
+#### `useLongDateStyle()`
+
+Use a long style for the date.
+
+Dates with a long style usually includes a full text, e.g. "August 23, 2019".
+
+---
+
+## Font
+
+Represents a font and text size.
+
+The font can be used to style texts, for example in widgets.
+
+### Constructor
+
+#### `new Font(name: string, size: number)`
+
+Constructs a new font.
+
+Refer to [iosfonts.com](http://iosfonts.com/) for a list of the fonts that are available in iOS and iPadOS.
+
+**Parameters:**
+- `name` (string): Name of the font.
+- `size` (number): Size of the font.
+
+### Static Methods
+
+#### `largeTitle(): Font`
+
+Preferred font for large titles.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `title1(): Font`
+
+Preferred font for first level hierarchical headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `title2(): Font`
+
+Preferred font for second level hierarchical headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `title3(): Font`
+
+Preferred font for third level hierarchical headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `headline(): Font`
+
+Preferred font for headings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `subheadline(): Font`
+
+Preferred font for subheadings.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `body(): Font`
+
+Preferred font for body texts.
+
+**Return value:**
+- `Font`: Preferred font.
+
+#### `callout(): Font`
+
+Preferred font for callouts.
+
+**Return value:**
+- `Font`: Preferred font.
+
+---
+
+## Timer
+
+A timer that fires after a time interval has elapsed.
+
+The timer fires after a specified time interval has elapsed. The timer can be repeating in which case it will fire multiple times.
+
+### Properties
+
+#### `timeInterval: number`
+
+The frequency at which the timer fires, in milliseconds.
+
+Be aware that the time interval is specified in setting. Defaults to 0, causing the timer to fire instantly.
+
+#### `repeats: bool`
+
+Whether the timer should repeat.
+
+A repeating timer will keep firing until it is invalidated. In contrast to non-repeating timers, repeating timers are not automatically invalidated. Defaults to false.
+
+### Constructor
+
+#### `new Timer()`
+
+Constructs a timer.
+
+Constructs a timer that fires after a specified time interval.
+
+### Methods
+
+#### `schedule(callback: fn())`
+
+Schedules the timer.
+
+Schedules the timer using its configuration. The supplied function is called when the timer fires. To stop the timer from firing, call the `invalidate()` function.
+
+**Parameters:**
+- `callback` (fn()): The callback to be called when the timer fires.
+
+#### `invalidate()`
+
+Stops the timer from firing.
+
+Stops the timer from firing ever again. Non-repeating timers are automatically invalidated after they have fired once. Repeating timers must be manually invalidated.
+
+### Static Methods
+
+#### `schedule(timeInterval: number, repeats: bool, callback: fn()): Timer`
+
+Schedules a timer.
+
+This is a convenience function for creating a new timer. The created timer is instantly scheduled and will fire after the specified time interval.
+
+**Parameters:**
+- `timeInterval` (number): The time interval to fire the timer at.
+- `repeats` (bool): Whether the timer should repeat or not.
+- `callback` (fn()): The callback to be called when the timer fires.
+
+**Return value:**
+- `Timer`: The constructed timer.
+
+---
