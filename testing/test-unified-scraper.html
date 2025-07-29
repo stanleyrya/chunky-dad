@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bear Event Scraper - Unified Architecture Test</title>
+    <title>Bear Event Scraper - Unified Test</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
             background: #f5f5f5;
@@ -29,30 +29,28 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .control-group {
-            margin-bottom: 15px;
+        .controls label {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
         }
         
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        select, input, button {
-            padding: 8px 12px;
+        .controls select, .controls input {
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 14px;
+            margin-left: 10px;
         }
         
         button {
             background: #007cba;
             color: white;
             border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
             cursor: pointer;
-            padding: 10px 20px;
-            font-weight: bold;
+            font-size: 16px;
+            margin: 10px 10px 10px 0;
         }
         
         button:hover {
@@ -64,453 +62,397 @@
             cursor: not-allowed;
         }
         
-        .results {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-            color: #666;
-            background: #f0f8ff;
-            border-radius: 8px;
-            border: 2px dashed #007cba;
-        }
-        
-        .loading::after {
-            content: "";
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #007cba;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-            margin-left: 10px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .results-summary {
-            background: #e8f5e8;
-            border: 1px solid #4CAF50;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-family: monospace;
-        }
-        
-        .results-summary h3 {
-            margin: 0 0 10px 0;
-            color: #2e7d32;
-        }
-        
-        .enhanced-info {
-            background: #fff3e0;
-            border-left: 4px solid #ff9800;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 0 8px 8px 0;
-        }
-        
-        .enhanced-info h3 {
-            margin: 0 0 10px 0;
-            color: #ef6c00;
-        }
-        
-        .feature-highlight {
-            background: #f3e5f5;
-            border: 1px solid #9c27b0;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 10px 0;
-        }
-        
-        .feature-highlight h4 {
-            margin: 0 0 8px 0;
-            color: #7b1fa2;
-        }
-        
-        .error {
-            background: #ffe6e6;
-            border: 1px solid #ff9999;
-            color: #cc0000;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        
-        .info-box {
-            background: #e6f3ff;
-            border: 1px solid #99ccff;
-            color: #0066cc;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-        
-        .architecture-diagram {
-            background: white;
+        .console-output {
+            background: #1e1e1e;
+            color: #ffffff;
             padding: 20px;
             border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .flow-diagram {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .flow-step {
-            background: #f0f8ff;
-            border: 2px solid #007cba;
+        .results-container {
+            background: white;
             border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            min-width: 150px;
-            position: relative;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         
-        .flow-step::after {
-            content: '→';
-            position: absolute;
-            right: -30px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 24px;
-            color: #007cba;
+        .html-output-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .flow-step:last-child::after {
-            display: none;
+        .html-output-container h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
         }
         
-        .code-sample {
-            background: #f8f8f8;
+        #htmlOutput {
             border: 1px solid #ddd;
             border-radius: 4px;
-            padding: 15px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            overflow-x: auto;
-            margin: 10px 0;
+            padding: 20px;
+            background: #fafafa;
+            min-height: 200px;
         }
         
-        @media (max-width: 768px) {
-            .flow-diagram {
-                flex-direction: column;
-            }
-            
-            .flow-step::after {
-                content: '↓';
-                right: 50%;
-                top: 100%;
-                transform: translateX(50%);
-            }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #f44336;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #2196f3;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+        }
+        
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+        
+        .log-entry.success {
+            color: #51cf66;
+        }
+        
+        .log-entry.info {
+            color: #64b5f6;
+        }
+        
+        .log-entry.warn {
+            color: #ffd93d;
+        }
+        
+        /* Make the generated HTML display nicely */
+        #htmlOutput .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        #htmlOutput .event-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        #htmlOutput .stats-container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🐻 Bear Event Scraper - Unified Architecture</h1>
-        <p>Demonstrating modular Input → Processing → Display architecture that works in both Scriptable and web environments</p>
-    </div>
-
-    <div class="architecture-diagram">
-        <h2>Architecture Overview</h2>
-        <div class="flow-diagram">
-            <div class="flow-step">
-                <h3>Input</h3>
-                <p>Fetch data from websites</p>
-                <small>Different adapters for Scriptable vs Web</small>
-            </div>
-            <div class="flow-step">
-                <h3>Processing</h3>
-                <p>Parse & standardize events</p>
-                <small>Same logic in both environments</small>
-            </div>
-            <div class="flow-step">
-                <h3>Display</h3>
-                <p>Show results</p>
-                <small>Alerts in Scriptable, HTML in web</small>
-            </div>
-        </div>
-        
-        <div class="info-box">
-            <strong>Key Benefits:</strong>
-            <ul>
-                <li><strong>Modular:</strong> Each component has a single responsibility</li>
-                <li><strong>Testable:</strong> Can test processing logic without hitting real websites</li>
-                <li><strong>Dual Environment:</strong> Same core logic works in Scriptable and web browsers</li>
-                <li><strong>Extensible:</strong> Easy to add new websites by creating new parsers</li>
-                <li><strong>Safe:</strong> Mock mode for testing, dry-run mode for safety</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="controls">
-        <h2>Test Controls</h2>
-        
-        <div class="control-group">
-            <label for="environment">Environment:</label>
-            <select id="environment">
-                <option value="web">Web (Current)</option>
-                <option value="scriptable" disabled>Scriptable (Not Available)</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="mockMode">Mode:</label>
-            <select id="mockMode">
-                <option value="true">Mock Mode (Safe Testing)</option>
-                <option value="false">Live Mode (Real Websites)</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="displayFormat">Display Format:</label>
-            <select id="displayFormat">
-                <option value="html">HTML Cards with Statistics</option>
-                <option value="table">Table View</option>
-                <option value="json">Raw JSON (Full Data)</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="showStatistics">Statistics Detail Level:</label>
-            <select id="showStatistics">
-                <option value="full">Full Statistics (Recommended)</option>
-                <option value="summary">Summary Only</option>
-                <option value="minimal">Minimal</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="maxEvents">Max Events:</label>
-            <input type="number" id="maxEvents" value="20" min="1" max="100">
-        </div>
-        
-        <div class="control-group">
-            <label for="daysAhead">Days to Look Ahead:</label>
-            <input type="number" id="daysAhead" value="30" min="1" max="365" placeholder="Leave empty for all future events">
-        </div>
-        
-        <button id="runScraper" onclick="runTest()">Run Bear Event Scraper</button>
-        <button id="clearResults" onclick="clearResults()">Clear Results</button>
+        <h1>🐻 Bear Event Scraper - Unified Test</h1>
+        <p>Test the bear event scraper with live data and see the generated HTML output</p>
     </div>
     
-    <div class="enhanced-info">
-        <h3>🚀 Enhanced Output Features</h3>
-        <p>This version now provides comprehensive statistics and insights about the scraping process:</p>
+    <div class="controls">
+        <h3>Test Options</h3>
+        <label>
+            Source:
+            <select id="sourceSelect">
+                <option value="all">All Sources</option>
+                <option value="furball">Furball NYC</option>
+                <option value="rockbar">Rockbar NYC</option>
+                <option value="bearracuda">Bearracuda</option>
+                <option value="megawoof">Megawoof America</option>
+                <option value="sf-eagle">SF Eagle</option>
+                <option value="eagle-ny">Eagle NY</option>
+                <option value="precinct">Precinct DTLA</option>
+            </select>
+        </label>
         
-        <div class="feature-highlight">
-            <h4>📊 Processing Statistics</h4>
-            <ul>
-                <li><strong>Event Processing:</strong> Total parsed, valid events, invalid events, processing errors</li>
-                <li><strong>Event Classification:</strong> Bear vs non-bear events, events with/without dates</li>
-                <li><strong>Filtering Results:</strong> Duplicates removed, past events filtered, date range filtering</li>
-            </ul>
-        </div>
+        <label>
+            Days to Look Ahead:
+            <input type="number" id="daysInput" value="" placeholder="All future events">
+        </label>
         
-        <div class="feature-highlight">
-            <h4>🔍 Source Performance Analysis</h4>
-            <ul>
-                <li><strong>Per-source metrics:</strong> Success rates, bear event rates, events discarded</li>
-                <li><strong>Comparative analysis:</strong> Which sources perform best for different criteria</li>
-                <li><strong>Quality indicators:</strong> Color-coded performance ratings</li>
-            </ul>
-        </div>
+        <label>
+            <input type="checkbox" id="dryRunCheckbox" checked>
+            Dry Run Mode (no calendar changes)
+        </label>
         
-        <div class="feature-highlight">
-            <h4>🐻 Bear Event Detection Insights</h4>
-            <ul>
-                <li><strong>Keyword matches:</strong> Which bear-related keywords triggered event classification</li>
-                <li><strong>Match frequency:</strong> Most common keywords across all sources</li>
-                <li><strong>Detection methods:</strong> Allowlist vs general bear keywords vs always-bear sources</li>
-            </ul>
-        </div>
+        <br>
         
-        <div class="feature-highlight">
-            <h4>🗑️ Discard Analysis</h4>
-            <ul>
-                <li><strong>Discard reasons:</strong> Why events were filtered out (past dates, validation failures, etc.)</li>
-                <li><strong>Discard counts:</strong> How many events were discarded for each reason</li>
-                <li><strong>Event structure analysis:</strong> What data fields are commonly present/missing</li>
-            </ul>
-        </div>
-        
-        <p><strong>Try different display formats:</strong> HTML shows visual cards with full statistics, Table provides a compact view, and JSON shows the complete raw data structure.</p>
+        <button onclick="runTest()" id="testBtn">Run Scraper Test</button>
+        <button onclick="clearConsole()">Clear Console</button>
+        <button onclick="testMockData()">Test with Mock Data</button>
     </div>
-
-    <div id="results" class="results" style="display: none;"></div>
-
+    
+    <div class="console-output" id="console"></div>
+    
+    <div class="results-container" id="resultsContainer" style="display: none;">
+        <h3>📊 Scraping Results</h3>
+        <div id="results"></div>
+    </div>
+    
+    <div class="html-output-container">
+        <h2>🎨 Generated HTML Output</h2>
+        <div id="htmlOutput">
+            <p style="color: #666; text-align: center;">Run the scraper to see the generated HTML output here...</p>
+        </div>
+    </div>
+    
     <!-- Load the core modules -->
     <script src="../scripts/core/input-adapters.js"></script>
     <script src="../scripts/core/event-processor.js"></script>
     <script src="../scripts/core/display-adapters.js"></script>
     <script src="../scripts/bear-event-scraper-unified.js"></script>
-
+    
     <script>
-        let currentResults = null;
-
-        async function runTest() {
-            const runButton = document.getElementById('runScraper');
-            const resultsDiv = document.getElementById('results');
+        // Custom console logging
+        const consoleDiv = document.getElementById('console');
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn,
+            info: console.info
+        };
+        
+        function addLogEntry(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            consoleDiv.appendChild(entry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
             
-            // Get configuration
-            const mockMode = document.getElementById('mockMode').value === 'true';
-            const displayFormat = document.getElementById('displayFormat').value;
-            const showStatistics = document.getElementById('showStatistics').value;
-            const maxEvents = parseInt(document.getElementById('maxEvents').value);
-            const daysAhead = document.getElementById('daysAhead').value;
-            
-            // Disable button and show loading
-            runButton.disabled = true;
-            runButton.textContent = 'Running...';
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = '<div class="loading">🐻 Scraping bear events...</div>';
-            
+            // Also log to real console
+            originalConsole[type](message);
+        }
+        
+        // Override console methods
+        console.log = (message) => addLogEntry(message, 'info');
+        console.error = (message) => addLogEntry(message, 'error');
+        console.warn = (message) => addLogEntry(message, 'warn');
+        console.info = (message) => addLogEntry(message, 'info');
+        
+        function clearConsole() {
+            consoleDiv.innerHTML = '';
+        }
+        
+        async function loadScraperConfig() {
             try {
-                console.log('Starting test with config:', { mockMode, displayFormat, showStatistics, maxEvents, daysAhead });
-                
-                // Create scraper with test configuration
-                const scraper = new BearEventScraper({
-                    mockMode: mockMode,
-                    dryRun: true,
-                    maxEvents: maxEvents,
-                    displayFormat: displayFormat,
-                    showStatistics: showStatistics,
-                    daysAhead: daysAhead
-                });
-                
-                // Define test sources
-                const testSources = [
-                    {
-                        name: "Furball NYC",
-                        parser: "furball",
-                        url: "https://www.furball.nyc",
-                        alwaysBear: true,
-                        defaultCity: "nyc",
-                        defaultVenue: "Various"
-                    },
-                    {
-                        name: "Rockbar NYC",
-                        parser: "rockbar", 
-                        url: "https://www.rockbarnyc.com/calendar",
-                        allowlist: ["rockstrap", "underbear", "bear happy hour"],
-                        defaultCity: "nyc",
-                        defaultVenue: "Rockbar"
-                    },
-                    {
-                        name: "SF Eagle",
-                        parser: "sf-eagle",
-                        url: "https://www.sf-eagle.com/events",
-                        allowlist: ["bear", "cub", "otter", "leather bears"],
-                        defaultCity: "sf",
-                        defaultVenue: "SF Eagle"
-                    }
-                ];
-                
-                // Run the scraper
-                const results = await scraper.scrapeEvents(testSources);
-                currentResults = results;
-                
-                // Display results using the display adapter
-                const displayAdapter = DisplayAdapters.createDisplayAdapter();
-                const displayResult = await displayAdapter.displayResults(results, {
-                    format: displayFormat,
-                    showStatistics: showStatistics
-                });
-                
-                // Show results in the page
-                if (displayResult.element) {
-                    resultsDiv.innerHTML = '';
-                    resultsDiv.appendChild(displayResult.element);
-                } else if (displayResult.text) {
-                    resultsDiv.innerHTML = `<pre style="padding: 20px; white-space: pre-wrap;">${displayResult.text}</pre>`;
+                const response = await fetch('../scripts/scraper-input.json');
+                if (!response.ok) {
+                    throw new Error(`Failed to load config: ${response.status}`);
                 }
-                
-                console.log('Test completed successfully:', results);
-                
+                return await response.json();
             } catch (error) {
-                console.error('Test failed:', error);
-                resultsDiv.innerHTML = `
-                    <div class="error">
-                        <h3>Error</h3>
-                        <p><strong>Message:</strong> ${error.message}</p>
-                        <p><strong>Stack:</strong></p>
-                        <pre>${error.stack}</pre>
-                    </div>
-                `;
-            } finally {
-                // Re-enable button
-                runButton.disabled = false;
-                runButton.textContent = 'Run Bear Event Scraper';
+                console.error(`Failed to load scraper configuration: ${error.message}`);
+                return null;
             }
         }
         
-        function clearResults() {
+        async function runTest() {
+            const testBtn = document.getElementById('testBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
             const resultsDiv = document.getElementById('results');
-            resultsDiv.style.display = 'none';
-            resultsDiv.innerHTML = '';
-            currentResults = null;
+            const htmlOutput = document.getElementById('htmlOutput');
+            
+            testBtn.disabled = true;
+            testBtn.textContent = 'Running Test...';
+            resultsContainer.style.display = 'none';
+            
+            clearConsole();
+            console.log('🐻 Starting Bear Event Scraper Test');
+            
+            try {
+                // Load configuration
+                const configData = await loadScraperConfig();
+                if (!configData) {
+                    throw new Error('Failed to load scraper configuration');
+                }
+                
+                // Get test options
+                const sourceSelect = document.getElementById('sourceSelect').value;
+                const daysInput = document.getElementById('daysInput').value;
+                const dryRun = document.getElementById('dryRunCheckbox').checked;
+                
+                // Filter sources if specific one selected
+                let sources = configData.parsers;
+                if (sourceSelect !== 'all') {
+                    sources = sources.filter(s => s.parser === sourceSelect);
+                }
+                
+                // Create scraper config
+                const config = {
+                    dryRun: dryRun,
+                    daysToLookAhead: daysInput ? parseInt(daysInput) : undefined
+                };
+                
+                console.log(`Configuration: ${JSON.stringify(config)}`);
+                console.log(`Testing ${sources.length} source(s)`);
+                
+                // Create and run scraper
+                const scraper = new BearEventScraper(config);
+                await scraper.initialize();
+                
+                const results = await scraper.scrapeAll(sources);
+                
+                // Display results summary
+                resultsContainer.style.display = 'block';
+                resultsDiv.innerHTML = `
+                    <div class="status ${results.success ? 'success' : 'error'}">
+                        <strong>${results.success ? '✅ Success' : '❌ Failed'}</strong>
+                        <br>Total Events: ${results.events.length}
+                        <br>Bear Events: ${results.bearEventCount}
+                        <br>Sources: ${results.successfulSources}/${results.totalSources} successful
+                        <br>Duplicates Removed: ${results.processingStats.duplicatesRemoved}
+                        <br>Past Events Filtered: ${results.processingStats.pastEventsFiltered}
+                    </div>
+                `;
+                
+                // Display the generated HTML
+                console.log('Generating HTML output...');
+                const displayAdapter = DisplayAdapters.createDisplayAdapter();
+                const displayResult = await displayAdapter.displayResults(results, { format: 'html' });
+                
+                if (displayResult.element) {
+                    htmlOutput.innerHTML = '';
+                    htmlOutput.appendChild(displayResult.element);
+                    console.log('✅ HTML output generated successfully');
+                } else {
+                    htmlOutput.innerHTML = '<p style="color: red;">Failed to generate HTML output</p>';
+                }
+                
+            } catch (error) {
+                console.error(`Test failed: ${error.message}`);
+                resultsContainer.style.display = 'block';
+                resultsDiv.innerHTML = `
+                    <div class="status error">
+                        <strong>❌ Test Failed</strong>
+                        <br>Error: ${error.message}
+                    </div>
+                `;
+                htmlOutput.innerHTML = '<p style="color: red;">Test failed - no output generated</p>';
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Run Scraper Test';
+            }
         }
         
-        // Initialize page
+        async function testMockData() {
+            const htmlOutput = document.getElementById('htmlOutput');
+            
+            console.log('🧪 Testing with mock data...');
+            
+            try {
+                // Create mock results
+                const mockResults = {
+                    success: true,
+                    events: [
+                        {
+                            title: 'Bear Night Out',
+                            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                            venue: 'Rockbar',
+                            city: 'nyc',
+                            description: 'Monthly bear gathering with drink specials',
+                            isBearEvent: true,
+                            source: 'Rockbar NYC',
+                            url: 'https://example.com/event1'
+                        },
+                        {
+                            title: 'Furball NYC',
+                            date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                            venue: 'Terminal 5',
+                            city: 'nyc',
+                            description: 'The biggest bear dance party in NYC',
+                            isBearEvent: true,
+                            source: 'Furball NYC',
+                            url: 'https://example.com/event2'
+                        },
+                        {
+                            title: 'Bearracuda SF',
+                            date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+                            venue: 'SF Eagle',
+                            city: 'sf',
+                            description: 'Bear dance party with go-go dancers',
+                            isBearEvent: true,
+                            source: 'Bearracuda',
+                            url: 'https://example.com/event3'
+                        }
+                    ],
+                    totalSources: 3,
+                    successfulSources: 3,
+                    bearEventCount: 3,
+                    processingStats: {
+                        totalEventsFound: 5,
+                        duplicatesRemoved: 1,
+                        pastEventsFiltered: 1,
+                        finalEventCount: 3
+                    },
+                    comprehensiveStats: {
+                        totalParsed: 5,
+                        validEvents: 3,
+                        bearEvents: 3,
+                        processingSuccess: 100,
+                        bearEventRate: 100
+                    },
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Generate HTML display
+                const displayAdapter = DisplayAdapters.createDisplayAdapter();
+                const displayResult = await displayAdapter.displayResults(mockResults, { format: 'html' });
+                
+                if (displayResult.element) {
+                    htmlOutput.innerHTML = '';
+                    htmlOutput.appendChild(displayResult.element);
+                    console.log('✅ Mock data HTML generated successfully');
+                } else {
+                    htmlOutput.innerHTML = '<p style="color: red;">Failed to generate HTML from mock data</p>';
+                }
+                
+            } catch (error) {
+                console.error(`Mock test failed: ${error.message}`);
+                htmlOutput.innerHTML = '<p style="color: red;">Mock test failed</p>';
+            }
+        }
+        
+        // Run mock test on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Bear Event Scraper Test Page Loaded');
+            console.log('Page loaded - Bear Event Scraper Test Ready');
             console.log('Available modules:', {
                 InputAdapters: typeof InputAdapters !== 'undefined',
-                EventProcessor: typeof EventProcessor !== 'undefined', 
+                EventProcessor: typeof EventProcessor !== 'undefined',
                 DisplayAdapters: typeof DisplayAdapters !== 'undefined',
                 BearEventScraper: typeof BearEventScraper !== 'undefined'
             });
-            
-            // Add some sample architecture explanation
-            const architectureDiv = document.querySelector('.architecture-diagram');
-            
-            const codeExample = document.createElement('div');
-            codeExample.innerHTML = `
-                <h3>Code Structure Example</h3>
-                <div class="code-sample">
-// 1. Input - Fetch data (different for each environment)
-const inputAdapter = createInputAdapter(); // Auto-detects environment
-const rawData = await inputAdapter.fetchData(config);
-
-// 2. Processing - Parse events (same logic everywhere)  
-const processor = new EventProcessor();
-const processedEvents = await processor.processEvents(rawData, parserConfig);
-
-// 3. Display - Show results (different for each environment)
-const displayAdapter = createDisplayAdapter(); // Auto-detects environment
-await displayAdapter.displayResults(processedEvents, displayConfig);
-                </div>
-                
-                <h3>Environment Detection</h3>
-                <div class="code-sample">
-// Automatically detects Scriptable vs Web environment
-function detectEnvironment() {
-    return typeof importModule !== 'undefined' ? 'scriptable' : 'web';
-}
-
-// Uses appropriate APIs for each environment
-// Scriptable: Request class, Alert, FileManager
-// Web: fetch API, DOM manipulation, localStorage
-                </div>
-            `;
-            
-            architectureDiv.appendChild(codeExample);
         });
     </script>
 </body>
