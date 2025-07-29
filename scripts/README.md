@@ -31,10 +31,8 @@ Use `scraper-input.json` as your main configuration file. Key settings:
 {
   "config": {
     "dryRun": true,           // When false, allows calendar modifications
-    "maxEvents": 100,         // Maximum events to process per source
     "timeout": 30000,         // HTTP request timeout in milliseconds
-    "retryAttempts": 3,       // Number of retry attempts for failed requests
-    "daysToLookAhead": 90     // How many days ahead to look for events
+    "retryAttempts": 3        // Number of retry attempts for failed requests
   },
   "parsers": [
     {
@@ -56,7 +54,10 @@ Use `scraper-input.json` as your main configuration file. Key settings:
 
 ### Safety Mode
 - **Dry Run**: When `dryRun: true`, no calendar modifications occur. Set to `false` to enable calendar writes.
-- **Mock Mode**: Available in the script constructor for testing with sample data.
+
+### Event Filtering
+- **Future Events Only**: Automatically filters out events in the past
+- **Optional Date Range**: Use `daysToLookAhead` parameter to limit how far ahead to look (unlimited by default)
 
 ## Installation & Usage
 

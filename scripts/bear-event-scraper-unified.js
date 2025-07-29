@@ -66,7 +66,7 @@ async function loadModules() {
 class BearEventScraper {
     constructor(config = {}) {
         // Extract only the supported parameters, ignore legacy ones
-        const { dryRun, mockMode, maxEvents, enableDebugMode, daysToLookAhead, ...ignored } = config;
+        const { dryRun, daysToLookAhead, ...ignored } = config;
         
         // Warn about ignored parameters
         const ignoredKeys = Object.keys(ignored);
@@ -76,10 +76,7 @@ class BearEventScraper {
         
         this.config = {
             dryRun: dryRun !== undefined ? dryRun : true,
-            mockMode: mockMode !== undefined ? mockMode : false,
-            maxEvents: maxEvents !== undefined ? maxEvents : 50,
-            enableDebugMode: enableDebugMode !== undefined ? enableDebugMode : true,
-            daysToLookAhead: daysToLookAhead !== undefined ? daysToLookAhead : 90
+            daysToLookAhead: daysToLookAhead // undefined by default - get all future events
         };
         
         this.inputAdapter = null;
@@ -111,9 +108,7 @@ class BearEventScraper {
             const env = typeof importModule !== 'undefined' ? 'Scriptable' : 'Web';
             console.log(`Environment: ${env}`);
             console.log(`Dry Run Mode: ${this.config.dryRun ? 'ENABLED (no calendar changes)' : 'DISABLED (will modify calendars)'}`);
-            console.log(`Mock Mode: ${this.config.mockMode}`);
-            console.log(`Max Events: ${this.config.maxEvents}`);
-            console.log(`Days to Look Ahead: ${this.config.daysToLookAhead}`);
+            console.log(`Days to Look Ahead: ${this.config.daysToLookAhead || 'unlimited (all future events)'}`);
             
         } catch (error) {
             console.error('✗ Failed to initialize Bear Event Scraper:', error);
@@ -138,7 +133,6 @@ class BearEventScraper {
                 const rawData = await this.inputAdapter.fetchData({
                     url: source.url,
                     parser: source.parser,
-                    mockMode: this.config.mockMode,
                     timeout: 10000 // 10 second timeout
                 });
                 
@@ -201,8 +195,28 @@ class BearEventScraper {
         // Remove duplicates based on title and date
         const uniqueEvents = this.removeDuplicates(allEvents);
         
+        // Filter out past events
+        const now = new Date();
+        const futureEvents = uniqueEvents.filter(event => {
+            if (!event.date) return true; // Keep events without dates
+            const eventDate = new Date(event.date);
+            return eventDate >= now;
+        });
+        
+        // Apply daysToLookAhead filter if specified
+        let filteredEvents = futureEvents;
+        if (this.config.daysToLookAhead) {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() + this.config.daysToLookAhead);
+            filteredEvents = futureEvents.filter(event => {
+                if (!event.date) return true; // Keep events without dates
+                const eventDate = new Date(event.date);
+                return eventDate <= cutoffDate;
+            });
+        }
+        
         // Sort by date (upcoming events first)
-        uniqueEvents.sort((a, b) => {
+        filteredEvents.sort((a, b) => {
             if (!a.date && !b.date) return 0;
             if (!a.date) return 1;
             if (!b.date) return -1;
@@ -211,11 +225,11 @@ class BearEventScraper {
         
         return {
             success: true,
-            events: uniqueEvents,
+            events: filteredEvents,
             sources: sources,
             totalSources: results.length,
             successfulSources: successfulSources,
-            bearEventCount: uniqueEvents.filter(e => e.isBearEvent).length,
+            bearEventCount: filteredEvents.filter(e => e.isBearEvent).length,
             timestamp: new Date().toISOString(),
             config: this.config
         };
@@ -298,10 +312,7 @@ async function main() {
     console.log('Using actual downloaded core modules for full end-to-end flow');
     
     const scraper = new BearEventScraper({
-        mockMode: true, // Set to false for real scraping
-        dryRun: true,   // When false, will write to calendars
-        maxEvents: 50,
-        enableDebugMode: true
+        dryRun: true   // When false, will write to calendars
     });
     
     try {

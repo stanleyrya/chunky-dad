@@ -1,10 +1,8 @@
 {
   "config": {
     "dryRun": true,
-    "maxEvents": 100,
     "timeout": 30000,
-    "retryAttempts": 3,
-    "daysToLookAhead": 90
+    "retryAttempts": 3
   },
   "parsers": [
     {
@@ -93,6 +91,7 @@
     "features": [
       "Single configuration file for all scraper settings",
       "Simplified safety with only dryRun mode",
+      "Automatic filtering of past events",
       "Combined venue and parser configurations",
       "Real venue addresses and enhanced keyword detection",
       "Support for all major bear event websites"
