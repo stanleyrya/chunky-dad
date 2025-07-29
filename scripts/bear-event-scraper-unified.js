@@ -528,16 +528,20 @@ async function main() {
     }
 }
 
+// Export for web environments immediately
+if (typeof window !== 'undefined') {
+    window.BearEventScraper = BearEventScraper;
+    window.runWithConfig = runWithConfig;
+    window.loadConfiguration = loadConfiguration;
+}
+
 // Auto-run if this is the main script
 if (typeof importModule !== 'undefined') {
     // Scriptable environment - auto-run
     main().catch(console.error);
 } else if (typeof window !== 'undefined' && window.document) {
     // Web environment - just expose functions, don't auto-run
-    window.BearEventScraper = BearEventScraper;
     window.runBearEventScraper = main;
-    window.runWithConfig = runWithConfig;
-    window.loadConfiguration = loadConfiguration;
     
     console.log('🌐 Bear Event Scraper loaded for web environment');
     console.log('Available classes:', {
@@ -594,7 +598,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
 }
 
-// Export for web environments
+// Additional exports for web environments (already done above, but kept for compatibility)
 if (typeof window !== 'undefined') {
     window.BearEventScraper = BearEventScraper;
     window.runWithConfig = runWithConfig;
