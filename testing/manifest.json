@@ -1,70 +1,65 @@
 {
-  "generated": "2025-07-29T01:50:16.727Z",
+  "generated": "2025-07-29T14:15:55.068Z",
   "files": [
     {
       "name": "breakpoint-test.html",
       "size": 34162,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "hero-variations-tester.html",
       "size": 26248,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "iframe-fix-test.html",
       "size": 9922,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "index.html",
       "size": 18216,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "style-test.html",
       "size": 26360,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "test-calendar-logging.html",
       "size": 68099,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "test-display-modes.html",
       "size": 10729,
-      "modified": "2025-07-29T01:45:31.865Z"
-    },
-    {
-      "name": "test-end-to-end-flow.html",
-      "size": 24806,
-      "modified": "2025-07-29T01:45:31.865Z"
-    },
-    {
-      "name": "test-enhanced-output.html",
-      "size": 7352,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "test-google-sheets-loader.html",
       "size": 40540,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     },
     {
       "name": "test-map-icons.html",
       "size": 61258,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
+    },
+    {
+      "name": "test-new-structure.html",
+      "size": 11257,
+      "modified": "2025-07-29T14:15:46.148Z"
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 16704,
-      "modified": "2025-07-29T01:49:16.920Z"
+      "size": 19038,
+      "modified": "2025-07-29T14:14:27.360Z"
     },
     {
       "name": "ultimate-style-tester.html",
       "size": 116287,
-      "modified": "2025-07-29T01:45:31.865Z"
+      "modified": "2025-07-29T14:06:55.562Z"
     }
   ]
 }

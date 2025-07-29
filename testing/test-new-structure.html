@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bear Event Scraper - New Structure Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover { background: #005a87; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        #results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-section">
+        <h1>🐻 Bear Event Scraper - New Structure Test</h1>
+        <p>Testing the new modular architecture with separate input handlers, event parsers, and display handlers.</p>
+        
+        <div id="moduleStatus"></div>
+        
+        <button onclick="testModuleLoading()">Test Module Loading</button>
+        <button onclick="testBasicFunctionality()">Test Basic Functionality</button>
+        <button onclick="testMockScraping()">Test Mock Scraping</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <!-- Load the new modular architecture -->
+    <script src="../scripts/core/input-handler-web.js" onerror="console.error('Failed to load input-handler-web.js')"></script>
+    <script src="../scripts/core/display-handler-web.js" onerror="console.error('Failed to load display-handler-web.js')"></script>
+    <script src="../scripts/core/event-parser-megawoof.js" onerror="console.error('Failed to load event-parser-megawoof.js')"></script>
+    <script src="../scripts/core/event-parser-bearraccuda.js" onerror="console.error('Failed to load event-parser-bearraccuda.js')"></script>
+    <script src="../scripts/core/event-parser-generic.js" onerror="console.error('Failed to load event-parser-generic.js')"></script>
+    <script src="../scripts/bear-event-scraper-unified.js" onerror="console.error('Failed to load bear-event-scraper-unified.js')"></script>
+
+    <script>
+        function addStatus(message, type = 'info') {
+            const results = document.getElementById('results');
+            const status = document.createElement('div');
+            status.className = `status ${type}`;
+            status.innerHTML = message;
+            results.appendChild(status);
+        }
+
+        function testModuleLoading() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Module Loading Test</h3>';
+            
+            const modules = {
+                'WebInputHandler': WebInputHandler,
+                'WebDisplayHandler': WebDisplayHandler,
+                'MegawoofEventParser': MegawoofEventParser,
+                'BearraccudaEventParser': BearraccudaEventParser,
+                'GenericEventParser': GenericEventParser,
+                'BearEventScraper': BearEventScraper
+            };
+            
+            let allLoaded = true;
+            
+            for (const [name, module] of Object.entries(modules)) {
+                if (typeof module === 'function') {
+                    addStatus(`✅ ${name} loaded successfully`, 'success');
+                } else {
+                    addStatus(`❌ ${name} failed to load`, 'error');
+                    allLoaded = false;
+                }
+            }
+            
+            if (allLoaded) {
+                addStatus('🎉 All modules loaded successfully!', 'success');
+            } else {
+                addStatus('⚠️ Some modules failed to load', 'error');
+            }
+        }
+
+        async function testBasicFunctionality() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Basic Functionality Test</h3>';
+            
+            try {
+                // Test input handler
+                const inputHandler = new WebInputHandler();
+                addStatus('✅ WebInputHandler instantiated', 'success');
+                
+                // Test display handler
+                const displayHandler = new WebDisplayHandler();
+                addStatus('✅ WebDisplayHandler instantiated', 'success');
+                
+                // Test event parsers
+                const megawoofParser = new MegawoofEventParser();
+                const bearraccudaParser = new BearraccudaEventParser();
+                const genericParser = new GenericEventParser();
+                addStatus('✅ All event parsers instantiated', 'success');
+                
+                // Test BearEventScraper
+                const scraper = new BearEventScraper({ dryRun: true });
+                addStatus('✅ BearEventScraper instantiated', 'success');
+                
+                await scraper.initialize();
+                addStatus('✅ BearEventScraper initialized', 'success');
+                
+                addStatus('🎉 All basic functionality tests passed!', 'success');
+                
+            } catch (error) {
+                addStatus(`❌ Basic functionality test failed: ${error.message}`, 'error');
+                console.error('Basic functionality test error:', error);
+            }
+        }
+
+        async function testMockScraping() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Mock Scraping Test</h3>';
+            
+            try {
+                const scraper = new BearEventScraper({ dryRun: true });
+                await scraper.initialize();
+                addStatus('✅ Scraper initialized', 'success');
+                
+                // Create mock sources
+                const mockSources = [
+                    {
+                        name: 'Test Megawoof',
+                        url: 'https://example.com/megawoof-test'
+                    },
+                    {
+                        name: 'Test Generic',
+                        url: 'https://example.com/generic-test'
+                    }
+                ];
+                
+                addStatus('🔄 Starting mock scraping test...', 'info');
+                
+                // This will likely fail due to CORS, but we can test the structure
+                try {
+                    const results = await scraper.scrapeEvents(mockSources);
+                    addStatus(`✅ Scraping completed: ${results.events.length} events found`, 'success');
+                    
+                    // Test display
+                    const displayResult = await scraper.displayResults(results, { format: 'html' });
+                    if (displayResult.success && displayResult.element) {
+                        addStatus('✅ Display generation successful', 'success');
+                        
+                        // Append the display result
+                        const displayContainer = document.createElement('div');
+                        displayContainer.appendChild(displayResult.element);
+                        document.getElementById('results').appendChild(displayContainer);
+                    }
+                    
+                } catch (scrapingError) {
+                    addStatus(`⚠️ Scraping failed (expected due to CORS): ${scrapingError.message}`, 'info');
+                    
+                    // Test with mock data instead
+                    const mockResults = {
+                        success: true,
+                        events: [
+                            {
+                                title: 'Test Bear Event',
+                                date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                                venue: 'Test Venue',
+                                city: 'nyc',
+                                description: 'A test bear event for the new structure',
+                                isBearEvent: true,
+                                source: 'Test Source',
+                                url: 'https://example.com/test'
+                            }
+                        ],
+                        totalSources: 1,
+                        successfulSources: 1,
+                        bearEventCount: 1,
+                        processingStats: {
+                            totalEventsFound: 1,
+                            duplicatesRemoved: 0,
+                            pastEventsFiltered: 0,
+                            finalEventCount: 1
+                        },
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    const displayResult = await scraper.displayResults(mockResults, { format: 'html' });
+                    if (displayResult.success && displayResult.element) {
+                        addStatus('✅ Mock display generation successful', 'success');
+                        
+                        const displayContainer = document.createElement('div');
+                        displayContainer.appendChild(displayResult.element);
+                        document.getElementById('results').appendChild(displayContainer);
+                    }
+                }
+                
+            } catch (error) {
+                addStatus(`❌ Mock scraping test failed: ${error.message}`, 'error');
+                console.error('Mock scraping test error:', error);
+            }
+        }
+
+        // Run module loading test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🐻 New Structure Test Page Loaded');
+            
+            // Show module status immediately
+            const moduleStatus = document.getElementById('moduleStatus');
+            const modules = [
+                'WebInputHandler', 'WebDisplayHandler', 'MegawoofEventParser', 
+                'BearraccudaEventParser', 'GenericEventParser', 'BearEventScraper'
+            ];
+            
+            const loaded = modules.filter(name => typeof window[name] === 'function');
+            const missing = modules.filter(name => typeof window[name] !== 'function');
+            
+            if (missing.length === 0) {
+                moduleStatus.innerHTML = `<div class="status success">✅ All ${loaded.length} modules loaded successfully</div>`;
+            } else {
+                moduleStatus.innerHTML = `<div class="status error">❌ Missing modules: ${missing.join(', ')}</div>`;
+            }
+        });
+    </script>
+</body>
+</html>

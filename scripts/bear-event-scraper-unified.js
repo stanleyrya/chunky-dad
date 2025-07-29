@@ -1,11 +1,13 @@
 // Bear Event Scraper - Unified Version
-// Uses modular architecture: Input → Processing → Display
+// Uses modular architecture with environment-specific handlers and event parsers
 // Works in both Scriptable and web environments
 
 console.log('bear-event-scraper-unified.js is loading...');
 
 // Import core modules (environment-specific loading)
-let InputAdapters, EventProcessor, DisplayAdapters;
+let ScriptableInputHandler, WebInputHandler;
+let MegawoofEventParser, BearraccudaEventParser, GenericEventParser;
+let ScriptableDisplayHandler, WebDisplayHandler;
 
 async function loadModules() {
     const isScriptable = typeof importModule !== 'undefined';
@@ -14,13 +16,21 @@ async function loadModules() {
         // Scriptable environment - load modules using importModule
         try {
             console.log('Loading core modules for Scriptable environment...');
-            const inputModule = importModule('core/input-adapters');
-            const processorModule = importModule('core/event-processor');
-            const displayModule = importModule('core/display-adapters');
             
-            InputAdapters = inputModule;
-            EventProcessor = processorModule.EventProcessor;
-            DisplayAdapters = displayModule;
+            // Import handlers
+            const inputModule = importModule('core/input-handler-scriptable');
+            const displayModule = importModule('core/display-handler-scriptable');
+            
+            // Import event parsers
+            const megawoofModule = importModule('core/event-parser-megawoof');
+            const bearraccudaModule = importModule('core/event-parser-bearraccuda');
+            const genericModule = importModule('core/event-parser-generic');
+            
+            ScriptableInputHandler = inputModule.ScriptableInputHandler;
+            ScriptableDisplayHandler = displayModule.ScriptableDisplayHandler;
+            MegawoofEventParser = megawoofModule.MegawoofEventParser;
+            BearraccudaEventParser = bearraccudaModule.BearraccudaEventParser;
+            GenericEventParser = genericModule.GenericEventParser;
             
             console.log('✓ Successfully loaded core modules for Scriptable');
         } catch (error) {
@@ -31,34 +41,27 @@ async function loadModules() {
         // Web environment - modules should be loaded via script tags
         if (typeof window !== 'undefined') {
             console.log('Loading core modules for web environment...');
-            InputAdapters = window.InputAdapters;
-            EventProcessor = window.EventProcessor;
-            DisplayAdapters = window.DisplayAdapters;
             
-            if (InputAdapters && EventProcessor && DisplayAdapters) {
+            WebInputHandler = window.WebInputHandler;
+            WebDisplayHandler = window.WebDisplayHandler;
+            MegawoofEventParser = window.MegawoofEventParser;
+            BearraccudaEventParser = window.BearraccudaEventParser;
+            GenericEventParser = window.GenericEventParser;
+            
+            if (WebInputHandler && WebDisplayHandler && MegawoofEventParser && BearraccudaEventParser && GenericEventParser) {
                 console.log('✓ Successfully loaded core modules for web');
             } else {
-                throw new Error('Core modules not found. Ensure input-adapters.js, event-processor.js, and display-adapters.js are loaded via script tags.');
+                const missing = [];
+                if (!WebInputHandler) missing.push('WebInputHandler');
+                if (!WebDisplayHandler) missing.push('WebDisplayHandler');
+                if (!MegawoofEventParser) missing.push('MegawoofEventParser');
+                if (!BearraccudaEventParser) missing.push('BearraccudaEventParser');
+                if (!GenericEventParser) missing.push('GenericEventParser');
+                throw new Error(`Core modules not found: ${missing.join(', ')}. Ensure all handler and parser files are loaded via script tags.`);
             }
         } else {
             throw new Error('Neither Scriptable nor web environment detected');
         }
-    }
-    
-    // Validate all modules are properly loaded
-    if (!InputAdapters || !EventProcessor || !DisplayAdapters) {
-        throw new Error('One or more core modules failed to load properly');
-    }
-    
-    // Validate module exports
-    if (typeof InputAdapters.createInputAdapter !== 'function') {
-        throw new Error('InputAdapters module missing createInputAdapter function');
-    }
-    if (typeof EventProcessor !== 'function') {
-        throw new Error('EventProcessor is not a constructor function');
-    }
-    if (typeof DisplayAdapters.createDisplayAdapter !== 'function') {
-        throw new Error('DisplayAdapters module missing createDisplayAdapter function');
     }
     
     console.log('✓ All core modules validated successfully');
@@ -81,10 +84,12 @@ class BearEventScraper {
             daysToLookAhead: daysToLookAhead // undefined by default - get all future events
         };
         
-        this.inputAdapter = null;
-        this.processor = null;
-        this.displayAdapter = null;
+        this.inputHandler = null;
+        this.displayHandler = null;
+        this.eventParsers = {};
+        this.visitedUrls = new Set(); // Track visited URLs to prevent loops
         this.isInitialized = false;
+        this.isScriptable = typeof importModule !== 'undefined';
     }
     
     async initialize() {
@@ -98,19 +103,27 @@ class BearEventScraper {
         try {
             await loadModules();
             
-            // Create instances using the actual downloaded modules
-            this.inputAdapter = InputAdapters.createInputAdapter();
-            this.processor = new EventProcessor(this.config);
-            this.displayAdapter = DisplayAdapters.createDisplayAdapter();
+            // Create handlers based on environment
+            if (this.isScriptable) {
+                this.inputHandler = new ScriptableInputHandler(this.config);
+                this.displayHandler = new ScriptableDisplayHandler(this.config);
+            } else {
+                this.inputHandler = new WebInputHandler(this.config);
+                this.displayHandler = new WebDisplayHandler(this.config);
+            }
             
-            // Pass the input adapter to the processor for additional URL processing
-            this.processor.setInputAdapter(this.inputAdapter);
+            // Initialize event parsers
+            this.eventParsers = {
+                'megawoof': new MegawoofEventParser(),
+                'bearraccuda': new BearraccudaEventParser(),
+                'generic': new GenericEventParser()
+            };
             
             this.isInitialized = true;
             console.log('✓ Bear Event Scraper initialized successfully');
             
             // Log environment info
-            const env = typeof importModule !== 'undefined' ? 'Scriptable' : 'Web';
+            const env = this.isScriptable ? 'Scriptable' : 'Web';
             console.log(`Environment: ${env}`);
             console.log(`Dry Run Mode: ${this.config.dryRun ? 'ENABLED (no calendar changes)' : 'DISABLED (will modify calendars)'}`);
             console.log(`Days to Look Ahead: ${this.config.daysToLookAhead || 'unlimited (all future events)'}`);
@@ -134,53 +147,62 @@ class BearEventScraper {
         let successfulSources = 0;
         const sourceStatistics = [];
         
+        // Clear visited URLs for this scraping session
+        this.visitedUrls.clear();
+        
         // Process each source
         for (const source of sources) {
             try {
                 console.log(`📡 Processing source: ${source.name}`);
                 
-                // Create input adapter and fetch data
-                const inputAdapter = InputAdapters.createInputAdapter();
                 // Extract first URL from urls array for compatibility
-                const sourceWithUrl = {
-                    ...source,
-                    url: source.urls && source.urls.length > 0 ? source.urls[0] : source.url
-                };
-                const rawData = await inputAdapter.fetchData(sourceWithUrl);
+                const sourceUrl = source.urls && source.urls.length > 0 ? source.urls[0] : source.url;
                 
-                // Create event processor and process events
-                const processor = new EventProcessor(this.config);
-                processor.setInputAdapter(inputAdapter);
+                // Fetch initial data
+                const rawData = await this.inputHandler.fetchData(sourceUrl);
                 
-                const events = await processor.processEvents(rawData, source);
-                const statistics = processor.getProcessingStatistics();
+                if (!rawData.success) {
+                    throw new Error(`Failed to fetch data: ${rawData.error}`);
+                }
                 
-                // Store source-specific statistics
-                sourceStatistics.push({
-                    source: source.name,
-                    url: sourceWithUrl.url,
-                    ...statistics
-                });
+                // Mark this URL as visited
+                this.visitedUrls.add(sourceUrl);
+                
+                // Choose appropriate parser based on source
+                const parser = this.chooseParser(source.name, sourceUrl);
+                
+                // Parse events from the main page
+                const parseResult = parser.parseEvents(rawData);
+                let allSourceEvents = [...parseResult.events];
+                
+                // Follow additional links if found (one level deep only)
+                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                    console.log(`🔗 Following ${parseResult.additionalLinks.length} additional links for ${source.name}`);
+                    
+                    const additionalData = await this.followAdditionalLinks(parseResult.additionalLinks, parser);
+                    allSourceEvents.push(...additionalData);
+                }
+                
+                // Filter for bear events
+                const bearEvents = allSourceEvents.filter(event => event.isBearEvent);
                 
                 const processedResult = {
                     success: true,
-                    events: events,
+                    events: bearEvents,
                     source: source.name,
-                    url: sourceWithUrl.url,
-                    statistics: statistics,
+                    url: sourceUrl,
+                    additionalLinksFollowed: parseResult.additionalLinks ? parseResult.additionalLinks.length : 0,
                     timestamp: new Date().toISOString()
                 };
                 
                 results.push(processedResult);
-                allEvents.push(...events);
+                allEvents.push(...bearEvents);
                 
-                const bearCount = events.filter(e => e.isBearEvent).length;
-                console.log(`✅ ${source.name}: Found ${events.length} events (${bearCount} bear events, ${statistics.discardedEvents.length} discarded)`);
+                console.log(`✅ ${source.name}: Found ${allSourceEvents.length} total events, ${bearEvents.length} bear events`);
                 successfulSources++;
                 
             } catch (error) {
                 console.error(`❌ ${source.name}: ${error.message}`);
-                // Extract URL for error reporting
                 const errorUrl = source.urls && source.urls.length > 0 ? source.urls[0] : source.url;
                 results.push({
                     success: false,
@@ -241,7 +263,6 @@ class BearEventScraper {
             events: filteredEvents,
             sources: sources,
             sourceResults: results,
-            sourceStatistics: sourceStatistics,
             totalSources: results.length,
             successfulSources: successfulSources,
             bearEventCount: filteredEvents.filter(e => e.isBearEvent).length,
@@ -252,10 +273,75 @@ class BearEventScraper {
                 dateRangeFiltered: dateRangeFiltered,
                 finalEventCount: filteredEvents.length
             },
-            comprehensiveStats: comprehensiveStats,
             timestamp: new Date().toISOString(),
             config: this.config
         };
+    }
+    
+    // Choose appropriate parser based on source name and URL
+    chooseParser(sourceName, url) {
+        const lowerName = sourceName.toLowerCase();
+        const lowerUrl = url.toLowerCase();
+        
+        if (lowerName.includes('megawoof') || lowerUrl.includes('megawoof')) {
+            return this.eventParsers.megawoof;
+        } else if (lowerName.includes('bearraccuda') || lowerName.includes('bearracuda') || 
+                   lowerUrl.includes('bearraccuda') || lowerUrl.includes('bearracuda')) {
+            return this.eventParsers.bearraccuda;
+        } else {
+            // Use generic parser with source-specific configuration
+            return new GenericEventParser({
+                source: sourceName,
+                baseUrl: new URL(url).origin
+            });
+        }
+    }
+    
+    // Follow additional links found by parsers (one level deep only)
+    async followAdditionalLinks(links, parser) {
+        const additionalEvents = [];
+        
+        for (const link of links) {
+            // Skip if we've already visited this URL
+            if (this.visitedUrls.has(link)) {
+                console.log(`🔗 Skipping already visited URL: ${link}`);
+                continue;
+            }
+            
+            try {
+                // Mark as visited before fetching to prevent loops
+                this.visitedUrls.add(link);
+                
+                // Fetch the additional page
+                const linkData = await this.inputHandler.fetchData(link);
+                
+                if (linkData.success) {
+                    // Parse events from the additional page
+                    const linkParseResult = parser.parseEvents(linkData);
+                    
+                    if (linkParseResult.events && linkParseResult.events.length > 0) {
+                        console.log(`🔗 Found ${linkParseResult.events.length} events from ${link}`);
+                        additionalEvents.push(...linkParseResult.events);
+                    }
+                } else {
+                    console.warn(`🔗 Failed to fetch additional link: ${link} - ${linkData.error}`);
+                }
+                
+            } catch (error) {
+                console.warn(`🔗 Error processing additional link ${link}:`, error);
+            }
+        }
+        
+        return additionalEvents;
+    }
+    
+    // Display results using the appropriate display handler
+    async displayResults(results, options = {}) {
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
+        
+        return await this.displayHandler.displayResults(results, options);
     }
     
     // Calculate comprehensive statistics across all sources
@@ -381,33 +467,48 @@ class BearEventScraper {
         });
     }
     
-    // Validate that we're using the actual downloaded modules
+    // Validate that we're using the new modular architecture
     validateModules() {
-        const checks = [
-            { name: 'InputAdapters', module: InputAdapters, expectedMethods: ['createInputAdapter'] },
-            { name: 'EventProcessor', module: EventProcessor, isConstructor: true },
-            { name: 'DisplayAdapters', module: DisplayAdapters, expectedMethods: ['createDisplayAdapter'] }
-        ];
+        const isScriptable = this.isScriptable;
         
-        for (const check of checks) {
-            if (!check.module) {
-                throw new Error(`${check.name} module not loaded`);
-            }
+        if (isScriptable) {
+            const checks = [
+                { name: 'ScriptableInputHandler', module: ScriptableInputHandler },
+                { name: 'ScriptableDisplayHandler', module: ScriptableDisplayHandler }
+            ];
             
-            if (check.isConstructor && typeof check.module !== 'function') {
-                throw new Error(`${check.name} is not a constructor function`);
+            for (const check of checks) {
+                if (!check.module || typeof check.module !== 'function') {
+                    throw new Error(`${check.name} not properly loaded for Scriptable environment`);
+                }
             }
+        } else {
+            const checks = [
+                { name: 'WebInputHandler', module: WebInputHandler },
+                { name: 'WebDisplayHandler', module: WebDisplayHandler }
+            ];
             
-            if (check.expectedMethods) {
-                for (const method of check.expectedMethods) {
-                    if (typeof check.module[method] !== 'function') {
-                        throw new Error(`${check.name} missing method: ${method}`);
-                    }
+            for (const check of checks) {
+                if (!check.module || typeof check.module !== 'function') {
+                    throw new Error(`${check.name} not properly loaded for Web environment`);
                 }
             }
         }
         
-        console.log('✓ All modules validated - using actual downloaded libraries');
+        // Check event parsers
+        const parserChecks = [
+            { name: 'MegawoofEventParser', module: MegawoofEventParser },
+            { name: 'BearraccudaEventParser', module: BearraccudaEventParser },
+            { name: 'GenericEventParser', module: GenericEventParser }
+        ];
+        
+        for (const check of parserChecks) {
+            if (!check.module || typeof check.module !== 'function') {
+                throw new Error(`${check.name} not properly loaded`);
+            }
+        }
+        
+        console.log('✓ All modules validated - using new modular architecture');
         return true;
     }
 }
@@ -548,9 +649,11 @@ if (typeof importModule !== 'undefined') {
     console.log('🌐 Bear Event Scraper loaded for web environment');
     console.log('Available classes:', {
         BearEventScraper: typeof BearEventScraper !== 'undefined',
-        InputAdapters: typeof InputAdapters !== 'undefined',
-        EventProcessor: typeof EventProcessor !== 'undefined',
-        DisplayAdapters: typeof DisplayAdapters !== 'undefined'
+        WebInputHandler: typeof WebInputHandler !== 'undefined',
+        WebDisplayHandler: typeof WebDisplayHandler !== 'undefined',
+        MegawoofEventParser: typeof MegawoofEventParser !== 'undefined',
+        BearraccudaEventParser: typeof BearraccudaEventParser !== 'undefined',
+        GenericEventParser: typeof GenericEventParser !== 'undefined'
     });
 }
 
