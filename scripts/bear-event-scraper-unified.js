@@ -128,10 +128,19 @@ class BearEventScraper {
             console.log(`Processing: ${source.name}`);
             
             try {
+                // Handle multiple URLs per source (use first URL or single URL)
+                const urls = Array.isArray(source.urls) ? source.urls : [source.url || source.urls];
+                const primaryUrl = urls[0];
+                
+                if (!primaryUrl) {
+                    console.error(`  ✗ Error: No URL found for ${source.name}`);
+                    continue;
+                }
+                
                 // 1. Input - Fetch data using the actual InputAdapter
-                console.log(`  → Fetching data from ${source.url}`);
+                console.log(`  → Fetching data from ${primaryUrl}`);
                 const rawData = await this.inputAdapter.fetchData({
-                    url: source.url,
+                    url: primaryUrl,
                     parser: source.parser,
                     timeout: 10000 // 10 second timeout
                 });
