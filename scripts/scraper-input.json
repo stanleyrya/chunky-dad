@@ -89,9 +89,10 @@
     "version": "V6 - Simplified Configuration",
     "created": "2025-01-27",
     "features": [
-      "Single configuration file for all scraper settings",
+      "Single required configuration file for all scraper settings",
       "Simplified safety with only dryRun mode",
       "Automatic filtering of past events",
+      "No hardcoded fallbacks - configuration is mandatory",
       "Combined venue and parser configurations",
       "Real venue addresses and enhanced keyword detection",
       "Support for all major bear event websites"

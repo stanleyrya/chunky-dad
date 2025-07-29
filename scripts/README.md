@@ -74,9 +74,9 @@ Use `scraper-input.json` as your main configuration file. Key settings:
 3. Use the web interface to test different configurations
 
 ### Configuration Loading
-- **Scriptable**: Looks for `scraper-input.json` in iCloud Drive/Scriptable/ folder
-- **Web**: Loads `scraper-input.json` from the scripts directory
-- **Fallback**: Uses hardcoded default sources if JSON file not found
+- **Scriptable**: Requires `scraper-input.json` in iCloud Drive/Scriptable/ folder
+- **Web**: Requires `scraper-input.json` in the scripts directory
+- **Required**: Script will fail if JSON configuration file is not found
 
 ## Scriptable API Reference
 
