@@ -86,35 +86,6 @@
       "allowlist": ["bear", "cub", "bearracuda", "woof"],
       "requireKeywords": true,
       "description": "Los Angeles downtown leather/bear venue"
-    },
-    {
-      "name": "Example Custom Patterns",
-      "parser": "custom-example",
-      "urls": ["https://example-venue.com/calendar"],
-      "city": "chicago",
-      "requireDetailPages": true,
-      "urlPatterns": [
-        {
-          "name": "Monthly Calendar",
-          "regex": "href=\"([^\"]*\\/calendar\\/\\d{4}-\\d{2}[^\"]*)\">",
-          "maxMatches": 12,
-          "description": "Monthly calendar pages"
-        },
-        {
-          "name": "Event Details",
-          "regex": "href=\"([^\"]*\\/event\\/[a-z0-9-]+[^\"]*)\">",
-          "maxMatches": 25,
-          "description": "Individual event detail pages"
-        }
-      ],
-      "urlFilters": {
-        "exclude": ["admin", "login", "register", "\\?preview="],
-        "include": ["event", "calendar"]
-      },
-      "allowlist": ["bear", "leather", "gay", "pride"],
-      "requireKeywords": true,
-      "description": "Example showing custom URL patterns and filters",
-      "_disabled": true
     }
   ],
   "calendarMappings": {
@@ -148,6 +119,11 @@
       "Automatic website detection (Eventbrite, Facebook, Eagle sites, etc.)",
       "Rate limiting and error handling for additional URL processing"
     ],
+    "bear_events": {
+      "always_bear": ["Furball NYC", "Bearracuda", "Megawoof America"],
+      "keyword_required": ["Rockbar NYC", "SF Eagle", "Eagle NY", "Precinct DTLA"],
+      "note": "Furball, Bearracuda, and Megawoof events are always considered bear events"
+    },
     "scalability": {
       "approach": "Hybrid system combining configurable patterns with parser-specific logic",
       "benefits": [
