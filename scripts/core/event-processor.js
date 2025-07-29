@@ -70,6 +70,36 @@ class EventProcessor {
 
         // Initialize input adapter for additional URL processing
         this.inputAdapter = null;
+        
+        // Initialize processing statistics
+        this.resetStatistics();
+    }
+    
+    // Reset statistics for new processing session
+    resetStatistics() {
+        this.statistics = {
+            totalParsed: 0,
+            validEvents: 0,
+            invalidEvents: 0,
+            bearEvents: 0,
+            nonBearEvents: 0,
+            pastEvents: 0,
+            futureEvents: 0,
+            eventsWithDates: 0,
+            eventsWithoutDates: 0,
+            duplicatesRemoved: 0,
+            discardedEvents: [],
+            eventStructures: new Map(), // Track different event structures found
+            processingErrors: [],
+            bearKeywordMatches: new Map(), // Track which keywords matched
+            venueDistribution: new Map(), // Track venue frequency
+            cityDistribution: new Map(), // Track city frequency
+            dateRangeStats: {
+                earliest: null,
+                latest: null,
+                averageDaysOut: 0
+            }
+        };
     }
 
     // Set input adapter for processing additional URLs
@@ -79,17 +109,53 @@ class EventProcessor {
 
     // Main processing method - same logic for all environments
     async processEvents(rawData, parserConfig) {
+        // Reset statistics for this processing session
+        this.resetStatistics();
+        
         const events = [];
         
         try {
             // Parse HTML based on parser type
             const parsedEvents = await this.parseHTML(rawData.html, parserConfig);
+            this.statistics.totalParsed = parsedEvents.length;
             
             // Process each event
             for (const eventData of parsedEvents) {
-                const processedEvent = await this.processEvent(eventData, parserConfig);
-                if (processedEvent && this.isValidEvent(processedEvent)) {
-                    events.push(processedEvent);
+                try {
+                    const processedEvent = await this.processEvent(eventData, parserConfig);
+                    if (processedEvent) {
+                        // Analyze event structure
+                        this.analyzeEventStructure(processedEvent);
+                        
+                        if (this.isValidEvent(processedEvent)) {
+                            events.push(processedEvent);
+                            this.statistics.validEvents++;
+                            
+                            // Update bear event statistics
+                            if (processedEvent.isBearEvent) {
+                                this.statistics.bearEvents++;
+                                this.trackBearKeywordMatches(eventData, parserConfig);
+                            } else {
+                                this.statistics.nonBearEvents++;
+                            }
+                            
+                            // Update distribution statistics
+                            this.updateDistributionStats(processedEvent);
+                            
+                            // Update date statistics
+                            this.updateDateStats(processedEvent);
+                            
+                        } else {
+                            this.statistics.invalidEvents++;
+                            this.trackDiscardedEvent(processedEvent, 'Failed validation');
+                        }
+                    }
+                } catch (error) {
+                    this.statistics.processingErrors.push({
+                        event: eventData,
+                        error: error.message,
+                        stack: error.stack
+                    });
                 }
             }
 
@@ -98,24 +164,149 @@ class EventProcessor {
                 const additionalEvents = await this.processAdditionalUrls(rawData.html, parserConfig);
                 events.push(...additionalEvents);
             }
-            
-            return {
-                success: true,
-                events: events,
-                source: parserConfig.name,
-                timestamp: new Date().toISOString(),
-                rawDataUrl: rawData.url
-            };
-            
         } catch (error) {
-            return {
-                success: false,
-                error: error.message,
+            this.statistics.processingErrors.push({
                 source: parserConfig.name,
-                timestamp: new Date().toISOString(),
-                rawDataUrl: rawData.url
-            };
+                error: error.message,
+                stack: error.stack
+            });
         }
+        
+        return events;
+    }
+    
+    // Analyze the structure of events to understand data patterns
+    analyzeEventStructure(event) {
+        const structure = {
+            hasTitle: !!event.title,
+            hasDate: !!event.date,
+            hasVenue: !!event.venue,
+            hasCity: !!event.city,
+            hasDescription: !!event.description,
+            hasUrl: !!event.url,
+            hasCoordinates: !!(event.coordinates && event.coordinates.lat && event.coordinates.lng),
+            hasAddress: !!event.address,
+            fieldCount: Object.keys(event).filter(key => 
+                event[key] !== null && 
+                event[key] !== undefined && 
+                event[key] !== ''
+            ).length
+        };
+        
+        const structureKey = JSON.stringify(structure);
+        const count = this.statistics.eventStructures.get(structureKey) || 0;
+        this.statistics.eventStructures.set(structureKey, count + 1);
+    }
+    
+    // Track which bear keywords matched for analysis
+    trackBearKeywordMatches(eventData, parserConfig) {
+        if (parserConfig.alwaysBear) {
+            const key = 'alwaysBear (parser setting)';
+            this.statistics.bearKeywordMatches.set(key, 
+                (this.statistics.bearKeywordMatches.get(key) || 0) + 1);
+            return;
+        }
+        
+        const text = (eventData.title + ' ' + (eventData.description || '')).toLowerCase();
+        
+        // Check allowlist keywords
+        if (parserConfig.allowlist && parserConfig.allowlist.length > 0) {
+            for (const keyword of parserConfig.allowlist) {
+                if (text.includes(keyword.toLowerCase())) {
+                    const key = `allowlist: ${keyword}`;
+                    this.statistics.bearKeywordMatches.set(key, 
+                        (this.statistics.bearKeywordMatches.get(key) || 0) + 1);
+                }
+            }
+        } else {
+            // Check bear keywords
+            for (const keyword of this.bearKeywords) {
+                if (text.includes(keyword.toLowerCase())) {
+                    const key = `bear keyword: ${keyword}`;
+                    this.statistics.bearKeywordMatches.set(key, 
+                        (this.statistics.bearKeywordMatches.get(key) || 0) + 1);
+                }
+            }
+        }
+    }
+    
+    // Track events that were discarded and why
+    trackDiscardedEvent(event, reason) {
+        this.statistics.discardedEvents.push({
+            title: event.title,
+            date: event.date,
+            venue: event.venue,
+            city: event.city,
+            reason: reason,
+            isBearEvent: event.isBearEvent
+        });
+    }
+    
+    // Update venue and city distribution statistics
+    updateDistributionStats(event) {
+        if (event.venue) {
+            const venue = event.venue.toLowerCase();
+            this.statistics.venueDistribution.set(venue, 
+                (this.statistics.venueDistribution.get(venue) || 0) + 1);
+        }
+        
+        if (event.city) {
+            const city = event.city.toLowerCase();
+            this.statistics.cityDistribution.set(city, 
+                (this.statistics.cityDistribution.get(city) || 0) + 1);
+        }
+    }
+    
+    // Update date-related statistics
+    updateDateStats(event) {
+        if (event.date) {
+            this.statistics.eventsWithDates++;
+            const eventDate = new Date(event.date);
+            const now = new Date();
+            
+            if (eventDate >= now) {
+                this.statistics.futureEvents++;
+                
+                // Update date range
+                if (!this.statistics.dateRangeStats.earliest || eventDate < this.statistics.dateRangeStats.earliest) {
+                    this.statistics.dateRangeStats.earliest = eventDate;
+                }
+                if (!this.statistics.dateRangeStats.latest || eventDate > this.statistics.dateRangeStats.latest) {
+                    this.statistics.dateRangeStats.latest = eventDate;
+                }
+            } else {
+                this.statistics.pastEvents++;
+                this.trackDiscardedEvent(event, 'Event is in the past');
+            }
+        } else {
+            this.statistics.eventsWithoutDates++;
+        }
+    }
+    
+    // Get comprehensive processing statistics
+    getProcessingStatistics() {
+        // Calculate average days out for future events
+        if (this.statistics.futureEvents > 0 && this.statistics.dateRangeStats.earliest) {
+            const now = new Date();
+            const totalDays = this.statistics.futureEvents > 0 ? 
+                Array.from({length: this.statistics.futureEvents}, (_, i) => {
+                    // This is a simplified calculation - in practice we'd track each event's days
+                    const avgDate = new Date((this.statistics.dateRangeStats.earliest.getTime() + 
+                                            this.statistics.dateRangeStats.latest.getTime()) / 2);
+                    return Math.ceil((avgDate - now) / (1000 * 60 * 60 * 24));
+                }).reduce((sum, days) => sum + days, 0) : 0;
+            
+            this.statistics.dateRangeStats.averageDaysOut = Math.round(totalDays / this.statistics.futureEvents);
+        }
+        
+        return {
+            ...this.statistics,
+            // Convert Maps to Objects for easier serialization
+            eventStructures: Object.fromEntries(this.statistics.eventStructures),
+            bearKeywordMatches: Object.fromEntries(this.statistics.bearKeywordMatches),
+            venueDistribution: Object.fromEntries(this.statistics.venueDistribution),
+            cityDistribution: Object.fromEntries(this.statistics.cityDistribution)
+        };
     }
 
     // Process additional URLs found on the main page

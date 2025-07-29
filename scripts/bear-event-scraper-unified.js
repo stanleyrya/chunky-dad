@@ -119,90 +119,73 @@ class BearEventScraper {
         }
     }
     
-    async scrapeEvents(sources) {
-        if (!this.isInitialized) {
-            await this.initialize();
+    async scrapeEvents(sources = []) {
+        if (!sources || sources.length === 0) {
+            throw new Error('No sources provided for scraping');
         }
+
+        console.log(`🚀 Starting to scrape ${sources.length} sources...`);
         
-        console.log(`Starting to scrape ${sources.length} sources...`);
+        // Initialize processing results
         const results = [];
+        const allEvents = [];
+        let successfulSources = 0;
+        const sourceStatistics = [];
         
+        // Process each source
         for (const source of sources) {
-            console.log(`Processing: ${source.name}`);
-            
             try {
-                // Handle multiple URLs per source (use first URL or single URL)
-                const urls = Array.isArray(source.urls) ? source.urls : [source.url || source.urls];
-                const primaryUrl = urls[0];
+                console.log(`📡 Processing source: ${source.name}`);
                 
-                if (!primaryUrl) {
-                    console.error(`  ✗ Error: No URL found for ${source.name}`);
-                    continue;
-                }
+                // Create input adapter and fetch data
+                const inputAdapter = InputAdapters.createInputAdapter();
+                const rawData = await inputAdapter.fetchData(source);
                 
-                // 1. Input - Fetch data using the actual InputAdapter
-                console.log(`  → Fetching data from ${primaryUrl}`);
-                const rawData = await this.inputAdapter.fetchData({
-                    url: primaryUrl,
-                    parser: source.parser,
-                    timeout: 10000 // 10 second timeout
+                // Create event processor and process events
+                const processor = new EventProcessor(this.config);
+                processor.setInputAdapter(inputAdapter);
+                
+                const events = await processor.processEvents(rawData, source);
+                const statistics = processor.getProcessingStatistics();
+                
+                // Store source-specific statistics
+                sourceStatistics.push({
+                    source: source.name,
+                    url: source.url,
+                    ...statistics
                 });
                 
-                if (rawData.error) {
-                    console.error(`  ✗ Error fetching ${source.name}: ${rawData.error}`);
-                    continue;
-                }
+                const processedResult = {
+                    success: true,
+                    events: events,
+                    source: source.name,
+                    url: source.url,
+                    statistics: statistics,
+                    timestamp: new Date().toISOString()
+                };
                 
-                console.log(`  ✓ Fetched ${rawData.html ? rawData.html.length : 0} characters of HTML`);
+                results.push(processedResult);
+                allEvents.push(...events);
                 
-                // 2. Processing - Parse and standardize using the actual EventProcessor
-                console.log(`  → Processing events with ${source.parser} parser`);
-                const processedResult = await this.processor.processEvents(rawData, source);
-                
-                if (processedResult.success) {
-                    results.push(processedResult);
-                    const bearCount = processedResult.events.filter(e => e.isBearEvent).length;
-                    console.log(`  ✓ ${source.name}: ${processedResult.events.length} events found (${bearCount} bear events)`);
-                } else {
-                    console.error(`  ✗ ${source.name}: ${processedResult.error}`);
-                }
+                const bearCount = events.filter(e => e.isBearEvent).length;
+                console.log(`✅ ${source.name}: Found ${events.length} events (${bearCount} bear events, ${statistics.discardedEvents.length} discarded)`);
+                successfulSources++;
                 
             } catch (error) {
-                console.error(`  ✗ Error processing ${source.name}:`, error);
-            }
-        }
-        
-        // Combine all results
-        const combinedResult = this.combineResults(results);
-        console.log(`✓ Scraping completed: ${combinedResult.events.length} total events from ${combinedResult.totalSources} sources`);
-        
-        // 3. Display - Show results using the actual DisplayAdapter
-        try {
-            await this.displayAdapter.displayResults(combinedResult, {
-                format: this.config.displayFormat || 'default'
-            });
-        } catch (error) {
-            console.error('Error displaying results:', error);
-        }
-        
-        return combinedResult;
-    }
-    
-    combineResults(results) {
-        const allEvents = [];
-        const sources = [];
-        let successfulSources = 0;
-        
-        for (const result of results) {
-            if (result.success) {
-                allEvents.push(...result.events);
-                sources.push(result.source);
-                successfulSources++;
+                console.error(`❌ ${source.name}: ${error.message}`);
+                results.push({
+                    success: false,
+                    error: error.message,
+                    source: source.name,
+                    url: source.url,
+                    timestamp: new Date().toISOString()
+                });
             }
         }
         
         // Remove duplicates based on title and date
         const uniqueEvents = this.removeDuplicates(allEvents);
+        const duplicatesRemoved = allEvents.length - uniqueEvents.length;
         
         // Filter out past events
         const now = new Date();
@@ -211,17 +194,21 @@ class BearEventScraper {
             const eventDate = new Date(event.date);
             return eventDate >= now;
         });
+        const pastEventsFiltered = uniqueEvents.length - futureEvents.length;
         
         // Apply daysToLookAhead filter if specified
         let filteredEvents = futureEvents;
+        let dateRangeFiltered = 0;
         if (this.config.daysToLookAhead) {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() + this.config.daysToLookAhead);
+            const beforeFilter = filteredEvents.length;
             filteredEvents = futureEvents.filter(event => {
                 if (!event.date) return true; // Keep events without dates
                 const eventDate = new Date(event.date);
                 return eventDate <= cutoffDate;
             });
+            dateRangeFiltered = beforeFilter - filteredEvents.length;
         }
         
         // Sort by date (upcoming events first)
@@ -232,15 +219,144 @@ class BearEventScraper {
             return new Date(a.date) - new Date(b.date);
         });
         
+        // Calculate comprehensive statistics
+        const comprehensiveStats = this.calculateComprehensiveStats(sourceStatistics, {
+            duplicatesRemoved,
+            pastEventsFiltered,
+            dateRangeFiltered,
+            finalEventCount: filteredEvents.length
+        });
+        
         return {
             success: true,
             events: filteredEvents,
             sources: sources,
+            sourceResults: results,
+            sourceStatistics: sourceStatistics,
             totalSources: results.length,
             successfulSources: successfulSources,
             bearEventCount: filteredEvents.filter(e => e.isBearEvent).length,
+            processingStats: {
+                totalEventsFound: allEvents.length,
+                duplicatesRemoved: duplicatesRemoved,
+                pastEventsFiltered: pastEventsFiltered,
+                dateRangeFiltered: dateRangeFiltered,
+                finalEventCount: filteredEvents.length
+            },
+            comprehensiveStats: comprehensiveStats,
             timestamp: new Date().toISOString(),
             config: this.config
+        };
+    }
+    
+    // Calculate comprehensive statistics across all sources
+    calculateComprehensiveStats(sourceStatistics, filteringStats) {
+        const totals = {
+            totalParsed: 0,
+            validEvents: 0,
+            invalidEvents: 0,
+            bearEvents: 0,
+            nonBearEvents: 0,
+            pastEvents: 0,
+            futureEvents: 0,
+            eventsWithDates: 0,
+            eventsWithoutDates: 0,
+            processingErrors: 0,
+            discardedEventsTotal: 0
+        };
+        
+        const aggregatedData = {
+            bearKeywordMatches: new Map(),
+            venueDistribution: new Map(),
+            cityDistribution: new Map(),
+            eventStructures: new Map(),
+            discardReasons: new Map(),
+            sourcePerformance: []
+        };
+        
+        // Aggregate statistics from all sources
+        for (const sourceStat of sourceStatistics) {
+            // Sum totals
+            Object.keys(totals).forEach(key => {
+                if (typeof sourceStat[key] === 'number') {
+                    totals[key] += sourceStat[key];
+                }
+            });
+            
+            totals.processingErrors += sourceStat.processingErrors ? sourceStat.processingErrors.length : 0;
+            totals.discardedEventsTotal += sourceStat.discardedEvents ? sourceStat.discardedEvents.length : 0;
+            
+            // Aggregate bear keyword matches
+            if (sourceStat.bearKeywordMatches) {
+                Object.entries(sourceStat.bearKeywordMatches).forEach(([keyword, count]) => {
+                    aggregatedData.bearKeywordMatches.set(keyword, 
+                        (aggregatedData.bearKeywordMatches.get(keyword) || 0) + count);
+                });
+            }
+            
+            // Aggregate venue distribution
+            if (sourceStat.venueDistribution) {
+                Object.entries(sourceStat.venueDistribution).forEach(([venue, count]) => {
+                    aggregatedData.venueDistribution.set(venue, 
+                        (aggregatedData.venueDistribution.get(venue) || 0) + count);
+                });
+            }
+            
+            // Aggregate city distribution
+            if (sourceStat.cityDistribution) {
+                Object.entries(sourceStat.cityDistribution).forEach(([city, count]) => {
+                    aggregatedData.cityDistribution.set(city, 
+                        (aggregatedData.cityDistribution.get(city) || 0) + count);
+                });
+            }
+            
+            // Aggregate event structures
+            if (sourceStat.eventStructures) {
+                Object.entries(sourceStat.eventStructures).forEach(([structure, count]) => {
+                    aggregatedData.eventStructures.set(structure, 
+                        (aggregatedData.eventStructures.get(structure) || 0) + count);
+                });
+            }
+            
+            // Track discard reasons
+            if (sourceStat.discardedEvents) {
+                sourceStat.discardedEvents.forEach(event => {
+                    const reason = event.reason || 'Unknown';
+                    aggregatedData.discardReasons.set(reason, 
+                        (aggregatedData.discardReasons.get(reason) || 0) + 1);
+                });
+            }
+            
+            // Track source performance
+            aggregatedData.sourcePerformance.push({
+                source: sourceStat.source,
+                url: sourceStat.url,
+                totalParsed: sourceStat.totalParsed || 0,
+                validEvents: sourceStat.validEvents || 0,
+                bearEvents: sourceStat.bearEvents || 0,
+                discardedEvents: sourceStat.discardedEvents ? sourceStat.discardedEvents.length : 0,
+                successRate: sourceStat.totalParsed > 0 ? 
+                    Math.round((sourceStat.validEvents / sourceStat.totalParsed) * 100) : 0,
+                bearEventRate: sourceStat.validEvents > 0 ? 
+                    Math.round((sourceStat.bearEvents / sourceStat.validEvents) * 100) : 0
+            });
+        }
+        
+        return {
+            totals: {
+                ...totals,
+                ...filteringStats
+            },
+            bearKeywordMatches: Object.fromEntries(aggregatedData.bearKeywordMatches),
+            venueDistribution: Object.fromEntries(aggregatedData.venueDistribution),
+            cityDistribution: Object.fromEntries(aggregatedData.cityDistribution),
+            eventStructures: Object.fromEntries(aggregatedData.eventStructures),
+            discardReasons: Object.fromEntries(aggregatedData.discardReasons),
+            sourcePerformance: aggregatedData.sourcePerformance,
+            overallSuccessRate: totals.totalParsed > 0 ? 
+                Math.round((totals.validEvents / totals.totalParsed) * 100) : 0,
+            overallBearEventRate: totals.validEvents > 0 ? 
+                Math.round((totals.bearEvents / totals.validEvents) * 100) : 0
         };
     }
     
@@ -345,8 +461,47 @@ async function main() {
         scraper.validateModules();
         
         const results = await scraper.scrapeEvents(sources);
-        console.log('\n🎉 Scraping completed successfully!');
-        console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`);
+        console.log('🎉 Scraping completed successfully!')
+        console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`)
+        
+        // Log comprehensive statistics if available
+        if (results.comprehensiveStats) {
+            const stats = results.comprehensiveStats;
+            console.log('\n📈 Comprehensive Statistics:');
+            console.log(`   Total Events Found: ${stats.totals.totalEventsFound}`);
+            console.log(`   Processing Success Rate: ${stats.overallSuccessRate}%`);
+            console.log(`   Bear Event Rate: ${stats.overallBearEventRate}%`);
+            console.log(`   Duplicates Removed: ${stats.totals.duplicatesRemoved}`);
+            console.log(`   Past Events Filtered: ${stats.totals.pastEventsFiltered}`);
+            console.log(`   Total Discarded: ${stats.totals.discardedEventsTotal}`);
+            
+            // Log source performance
+            if (stats.sourcePerformance && stats.sourcePerformance.length > 0) {
+                console.log('\n🔍 Source Performance:');
+                stats.sourcePerformance.forEach(source => {
+                    console.log(`   ${source.source}: ${source.validEvents}/${source.totalParsed} events (${source.successRate}% success, ${source.bearEventRate}% bear)`);
+                });
+            }
+            
+            // Log top bear keywords
+            if (stats.bearKeywordMatches && Object.keys(stats.bearKeywordMatches).length > 0) {
+                console.log('\n🐻 Top Bear Keywords:');
+                const topKeywords = Object.entries(stats.bearKeywordMatches)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5);
+                topKeywords.forEach(([keyword, count]) => {
+                    console.log(`   "${keyword}": ${count} matches`);
+                });
+            }
+            
+            // Log discard reasons
+            if (stats.discardReasons && Object.keys(stats.discardReasons).length > 0) {
+                console.log('\n🗑️ Discard Reasons:');
+                Object.entries(stats.discardReasons).forEach(([reason, count]) => {
+                    console.log(`   ${reason}: ${count} events`);
+                });
+            }
+        }
         
         return results;
     } catch (error) {
