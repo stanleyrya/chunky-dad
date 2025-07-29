@@ -65,6 +65,7 @@ class ScriptableInputAdapter extends InputAdapter {
 
     async fetchData(config) {
         // For Scriptable environment - use Request class
+        console.log(`🌐 Fetching URL: ${config.url}`);
         try {
             const request = new Request(config.url);
             request.headers = {
@@ -76,7 +77,18 @@ class ScriptableInputAdapter extends InputAdapter {
                 request.timeoutInterval = config.timeout / 1000; // Convert ms to seconds
             }
             
+            console.log(`📡 Sending request with timeout: ${request.timeoutInterval}s`);
             const html = await request.loadString();
+            
+            console.log(`✅ Response received:
+   - Status: ${request.response?.statusCode || 'unknown'}
+   - Content-Type: ${request.response?.headers?.['Content-Type'] || 'unknown'}
+   - HTML Length: ${html ? html.length : 0} characters
+   - First 200 chars: ${html ? html.substring(0, 200).replace(/\s+/g, ' ') : 'No content'}`);
+            
+            if (!html || html.length === 0) {
+                console.error(`❌ Empty response from ${config.url}`);
+            }
             
             return {
                 url: config.url,
@@ -86,6 +98,8 @@ class ScriptableInputAdapter extends InputAdapter {
                 timestamp: new Date().toISOString()
             };
         } catch (error) {
+            console.error(`❌ Request failed for ${config.url}: ${error.message}`);
+            console.error(`   Stack: ${error.stack}`);
             return {
                 url: config.url,
                 error: error.message,
