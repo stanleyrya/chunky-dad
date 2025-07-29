@@ -228,12 +228,16 @@
     </div>
     
     <!-- Load the core modules -->
-    <script src="../scripts/core/input-adapters.js"></script>
-    <script src="../scripts/core/event-processor.js"></script>
-    <script src="../scripts/core/display-adapters.js"></script>
-    <script src="../scripts/bear-event-scraper-unified.js"></script>
+    <script src="../scripts/core/input-adapters.js" onerror="console.error('Failed to load input-adapters.js')"></script>
+    <script src="../scripts/core/event-processor.js" onerror="console.error('Failed to load event-processor.js')"></script>
+    <script src="../scripts/core/display-adapters.js" onerror="console.error('Failed to load display-adapters.js')"></script>
+    <script src="../scripts/bear-event-scraper-unified.js" onerror="console.error('Failed to load bear-event-scraper-unified.js')"></script>
     
     <script>
+        // Add global error handler to catch any script errors
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.message, 'in', event.filename, 'line', event.lineno);
+        });
         // Custom console logging
         const consoleDiv = document.getElementById('console');
         const originalConsole = {
@@ -283,6 +287,13 @@
             const resultsContainer = document.getElementById('resultsContainer');
             const resultsDiv = document.getElementById('results');
             const htmlOutput = document.getElementById('htmlOutput');
+            
+            // Check if BearEventScraper is available
+            if (typeof BearEventScraper === 'undefined') {
+                console.error('BearEventScraper is not loaded yet. Please refresh the page and try again.');
+                alert('BearEventScraper is not loaded. Please refresh the page and try again.');
+                return;
+            }
             
             testBtn.disabled = true;
             testBtn.textContent = 'Running Test...';
@@ -447,12 +458,30 @@
         // Run mock test on page load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Page loaded - Bear Event Scraper Test Ready');
-            console.log('Available modules:', {
+            
+            // Check module availability
+            const moduleStatus = {
                 InputAdapters: typeof InputAdapters !== 'undefined',
                 EventProcessor: typeof EventProcessor !== 'undefined',
                 DisplayAdapters: typeof DisplayAdapters !== 'undefined',
                 BearEventScraper: typeof BearEventScraper !== 'undefined'
-            });
+            };
+            
+            console.log('Available modules:', moduleStatus);
+            
+            // If any module is missing, show an error
+            const missingModules = Object.entries(moduleStatus)
+                .filter(([name, loaded]) => !loaded)
+                .map(([name]) => name);
+            
+            if (missingModules.length > 0) {
+                console.error('Missing modules:', missingModules.join(', '));
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'status error';
+                errorDiv.innerHTML = `<strong>⚠️ Module Loading Error</strong><br>Missing modules: ${missingModules.join(', ')}<br>Please check the console for errors.`;
+                document.getElementById('resultsContainer').style.display = 'block';
+                document.getElementById('results').appendChild(errorDiv);
+            }
         });
     </script>
 </body>
