@@ -65,14 +65,18 @@ async function loadModules() {
 // Main Bear Event Scraper Class
 class BearEventScraper {
     constructor(config = {}) {
+        // Extract only the supported parameters, ignore legacy ones
+        const { dryRun, daysToLookAhead, ...ignored } = config;
+        
+        // Warn about ignored parameters
+        const ignoredKeys = Object.keys(ignored);
+        if (ignoredKeys.length > 0) {
+            console.warn(`⚠️  Ignoring unsupported parameters: ${ignoredKeys.join(', ')}`);
+        }
+        
         this.config = {
-            dryRun: true,
-            preview: true,
-            mockMode: false,
-            maxEvents: 50,
-            enableDebugMode: true,
-            daysToLookAhead: 90,
-            ...config
+            dryRun: dryRun !== undefined ? dryRun : true,
+            daysToLookAhead: daysToLookAhead // undefined by default - get all future events
         };
         
         this.inputAdapter = null;
@@ -103,9 +107,8 @@ class BearEventScraper {
             // Log environment info
             const env = typeof importModule !== 'undefined' ? 'Scriptable' : 'Web';
             console.log(`Environment: ${env}`);
-            console.log(`Mock Mode: ${this.config.mockMode}`);
-            console.log(`Max Events: ${this.config.maxEvents}`);
-            console.log(`Days to Look Ahead: ${this.config.daysToLookAhead}`);
+            console.log(`Dry Run Mode: ${this.config.dryRun ? 'ENABLED (no calendar changes)' : 'DISABLED (will modify calendars)'}`);
+            console.log(`Days to Look Ahead: ${this.config.daysToLookAhead || 'unlimited (all future events)'}`);
             
         } catch (error) {
             console.error('✗ Failed to initialize Bear Event Scraper:', error);
@@ -130,7 +133,6 @@ class BearEventScraper {
                 const rawData = await this.inputAdapter.fetchData({
                     url: source.url,
                     parser: source.parser,
-                    mockMode: this.config.mockMode,
                     timeout: 10000 // 10 second timeout
                 });
                 
@@ -140,9 +142,6 @@ class BearEventScraper {
                 }
                 
                 console.log(`  ✓ Fetched ${rawData.html ? rawData.html.length : 0} characters of HTML`);
-                if (rawData.mock) {
-                    console.log('  ℹ Using mock data for testing');
-                }
                 
                 // 2. Processing - Parse and standardize using the actual EventProcessor
                 console.log(`  → Processing events with ${source.parser} parser`);
@@ -193,8 +192,28 @@ class BearEventScraper {
         // Remove duplicates based on title and date
         const uniqueEvents = this.removeDuplicates(allEvents);
         
+        // Filter out past events
+        const now = new Date();
+        const futureEvents = uniqueEvents.filter(event => {
+            if (!event.date) return true; // Keep events without dates
+            const eventDate = new Date(event.date);
+            return eventDate >= now;
+        });
+        
+        // Apply daysToLookAhead filter if specified
+        let filteredEvents = futureEvents;
+        if (this.config.daysToLookAhead) {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() + this.config.daysToLookAhead);
+            filteredEvents = futureEvents.filter(event => {
+                if (!event.date) return true; // Keep events without dates
+                const eventDate = new Date(event.date);
+                return eventDate <= cutoffDate;
+            });
+        }
+        
         // Sort by date (upcoming events first)
-        uniqueEvents.sort((a, b) => {
+        filteredEvents.sort((a, b) => {
             if (!a.date && !b.date) return 0;
             if (!a.date) return 1;
             if (!b.date) return -1;
@@ -203,11 +222,11 @@ class BearEventScraper {
         
         return {
             success: true,
-            events: uniqueEvents,
+            events: filteredEvents,
             sources: sources,
             totalSources: results.length,
             successfulSources: successfulSources,
-            bearEventCount: uniqueEvents.filter(e => e.isBearEvent).length,
+            bearEventCount: filteredEvents.filter(e => e.isBearEvent).length,
             timestamp: new Date().toISOString(),
             config: this.config
         };
@@ -256,52 +275,64 @@ class BearEventScraper {
     }
 }
 
-// Configuration for different sources
-const DEFAULT_SOURCES = [
-    {
-        name: "Furball NYC",
-        parser: "furball",
-        url: "https://www.furball.nyc",
-        alwaysBear: true,
-        defaultCity: "nyc",
-        defaultVenue: "Various"
-    },
-    {
-        name: "Rockbar NYC",
-        parser: "rockbar",
-        url: "https://www.rockbarnyc.com/calendar",
-        allowlist: ["rockstrap", "underbear", "bear happy hour"],
-        defaultCity: "nyc",
-        defaultVenue: "Rockbar"
-    },
-    {
-        name: "SF Eagle",
-        parser: "sf-eagle",
-        url: "https://www.sf-eagle.com/events",
-        allowlist: ["bear", "cub", "otter", "leather bears"],
-        defaultCity: "sf",
-        defaultVenue: "SF Eagle"
+// Configuration is now required via scraper-input.json - no hardcoded fallbacks
+
+// Load configuration from JSON file
+async function loadConfiguration() {
+    const isScriptable = typeof importModule !== 'undefined';
+    
+    try {
+        if (isScriptable) {
+            // Scriptable environment - use FileManager
+            const fm = FileManager.iCloud();
+            const configPath = fm.joinPath(fm.documentsDirectory(), 'scraper-input.json');
+            
+            if (fm.fileExists(configPath)) {
+                const configData = fm.readString(configPath);
+                return JSON.parse(configData);
+            } else {
+                throw new Error('❌ scraper-input.json not found in Scriptable documents directory. Place the file in: iCloud Drive/Scriptable/');
+            }
+        } else {
+            // Web environment - try to fetch from same directory
+            const response = await fetch('../scripts/scraper-input.json');
+            if (response.ok) {
+                return await response.json();
+            } else {
+                throw new Error('❌ scraper-input.json not found in scripts directory');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading configuration:', error.message || error);
+        throw error;
     }
-];
+}
 
 // Main execution function
 async function main() {
     console.log('🐻 Starting Bear Event Scraper (Unified Version)');
     console.log('Using actual downloaded core modules for full end-to-end flow');
     
-    const scraper = new BearEventScraper({
-        mockMode: true, // Set to false for real scraping
-        dryRun: true,
-        maxEvents: 50,
-        enableDebugMode: true
-    });
+    // Load required configuration from JSON file
+    const config = await loadConfiguration();
+    console.log('✅ Loaded configuration from scraper-input.json');
+    
+    if (!config.parsers || config.parsers.length === 0) {
+        throw new Error('❌ No parsers found in configuration file');
+    }
+    
+    const sources = config.parsers;
+    const scraperConfig = { dryRun: true, ...config.config };
+    console.log(`📋 Found ${sources.length} configured parsers`);
+    
+    const scraper = new BearEventScraper(scraperConfig);
     
     try {
         // Validate we're using the real modules
         await scraper.initialize();
         scraper.validateModules();
         
-        const results = await scraper.scrapeEvents(DEFAULT_SOURCES);
+        const results = await scraper.scrapeEvents(sources);
         console.log('\n🎉 Scraping completed successfully!');
         console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`);
         
@@ -331,16 +362,55 @@ if (typeof importModule !== 'undefined') {
     // Web environment - expose BearEventScraper immediately
     window.BearEventScraper = BearEventScraper;
     window.runBearEventScraper = main;
+    window.runWithConfig = runWithConfig;
+    window.loadConfiguration = loadConfiguration;
     
     console.log('🌐 Bear Event Scraper loaded for web environment');
-    console.log('Use runBearEventScraper() to execute or create new BearEventScraper() instance');
+    console.log('Use runBearEventScraper() to execute with JSON config or runWithConfig({}) for custom config');
+}
+
+// Helper function to run with custom configuration
+async function runWithConfig(customConfig = {}) {
+    console.log('🐻 Starting Bear Event Scraper with custom configuration');
+    
+    const scraper = new BearEventScraper(customConfig);
+    
+    try {
+        await scraper.initialize();
+        scraper.validateModules();
+        
+        // Use custom sources if provided, otherwise load from required JSON config
+        let sources;
+        
+        if (customConfig.sources) {
+            sources = customConfig.sources;
+            console.log(`✅ Using ${sources.length} custom sources`);
+        } else {
+            const config = await loadConfiguration();
+            if (!config.parsers || config.parsers.length === 0) {
+                throw new Error('❌ No parsers found in configuration file');
+            }
+            sources = config.parsers;
+            console.log(`✅ Using ${sources.length} parsers from scraper-input.json`);
+        }
+        
+        const results = await scraper.scrapeEvents(sources);
+        console.log('\n🎉 Scraping completed successfully!');
+        console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`);
+        
+        return results;
+    } catch (error) {
+        console.error('💥 Scraping failed:', error);
+        throw error;
+    }
 }
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BearEventScraper, main, DEFAULT_SOURCES };
+    module.exports = { BearEventScraper, main, runWithConfig, loadConfiguration };
     // Also expose globally for testing
     if (typeof global !== 'undefined') {
         global.BearEventScraper = BearEventScraper;
+        global.runWithConfig = runWithConfig;
     }
 }
