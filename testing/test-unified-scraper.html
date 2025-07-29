@@ -74,7 +74,67 @@
         .loading {
             text-align: center;
             padding: 40px;
+            font-size: 18px;
             color: #666;
+            background: #f0f8ff;
+            border-radius: 8px;
+            border: 2px dashed #007cba;
+        }
+        
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #007cba;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .results-summary {
+            background: #e8f5e8;
+            border: 1px solid #4CAF50;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-family: monospace;
+        }
+        
+        .results-summary h3 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .enhanced-info {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .enhanced-info h3 {
+            margin: 0 0 10px 0;
+            color: #ef6c00;
+        }
+        
+        .feature-highlight {
+            background: #f3e5f5;
+            border: 1px solid #9c27b0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .feature-highlight h4 {
+            margin: 0 0 8px 0;
+            color: #7b1fa2;
         }
         
         .error {
@@ -221,9 +281,18 @@
         <div class="control-group">
             <label for="displayFormat">Display Format:</label>
             <select id="displayFormat">
-                <option value="html">HTML Cards</option>
+                <option value="html">HTML Cards with Statistics</option>
                 <option value="table">Table View</option>
-                <option value="json">Raw JSON</option>
+                <option value="json">Raw JSON (Full Data)</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="showStatistics">Statistics Detail Level:</label>
+            <select id="showStatistics">
+                <option value="full">Full Statistics (Recommended)</option>
+                <option value="summary">Summary Only</option>
+                <option value="minimal">Minimal</option>
             </select>
         </div>
         
@@ -232,8 +301,56 @@
             <input type="number" id="maxEvents" value="20" min="1" max="100">
         </div>
         
+        <div class="control-group">
+            <label for="daysAhead">Days to Look Ahead:</label>
+            <input type="number" id="daysAhead" value="30" min="1" max="365" placeholder="Leave empty for all future events">
+        </div>
+        
         <button id="runScraper" onclick="runTest()">Run Bear Event Scraper</button>
         <button id="clearResults" onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div class="enhanced-info">
+        <h3>🚀 Enhanced Output Features</h3>
+        <p>This version now provides comprehensive statistics and insights about the scraping process:</p>
+        
+        <div class="feature-highlight">
+            <h4>📊 Processing Statistics</h4>
+            <ul>
+                <li><strong>Event Processing:</strong> Total parsed, valid events, invalid events, processing errors</li>
+                <li><strong>Event Classification:</strong> Bear vs non-bear events, events with/without dates</li>
+                <li><strong>Filtering Results:</strong> Duplicates removed, past events filtered, date range filtering</li>
+            </ul>
+        </div>
+        
+        <div class="feature-highlight">
+            <h4>🔍 Source Performance Analysis</h4>
+            <ul>
+                <li><strong>Per-source metrics:</strong> Success rates, bear event rates, events discarded</li>
+                <li><strong>Comparative analysis:</strong> Which sources perform best for different criteria</li>
+                <li><strong>Quality indicators:</strong> Color-coded performance ratings</li>
+            </ul>
+        </div>
+        
+        <div class="feature-highlight">
+            <h4>🐻 Bear Event Detection Insights</h4>
+            <ul>
+                <li><strong>Keyword matches:</strong> Which bear-related keywords triggered event classification</li>
+                <li><strong>Match frequency:</strong> Most common keywords across all sources</li>
+                <li><strong>Detection methods:</strong> Allowlist vs general bear keywords vs always-bear sources</li>
+            </ul>
+        </div>
+        
+        <div class="feature-highlight">
+            <h4>🗑️ Discard Analysis</h4>
+            <ul>
+                <li><strong>Discard reasons:</strong> Why events were filtered out (past dates, validation failures, etc.)</li>
+                <li><strong>Discard counts:</strong> How many events were discarded for each reason</li>
+                <li><strong>Event structure analysis:</strong> What data fields are commonly present/missing</li>
+            </ul>
+        </div>
+        
+        <p><strong>Try different display formats:</strong> HTML shows visual cards with full statistics, Table provides a compact view, and JSON shows the complete raw data structure.</p>
     </div>
 
     <div id="results" class="results" style="display: none;"></div>
@@ -254,7 +371,9 @@
             // Get configuration
             const mockMode = document.getElementById('mockMode').value === 'true';
             const displayFormat = document.getElementById('displayFormat').value;
+            const showStatistics = document.getElementById('showStatistics').value;
             const maxEvents = parseInt(document.getElementById('maxEvents').value);
+            const daysAhead = document.getElementById('daysAhead').value;
             
             // Disable button and show loading
             runButton.disabled = true;
@@ -263,14 +382,16 @@
             resultsDiv.innerHTML = '<div class="loading">🐻 Scraping bear events...</div>';
             
             try {
-                console.log('Starting test with config:', { mockMode, displayFormat, maxEvents });
+                console.log('Starting test with config:', { mockMode, displayFormat, showStatistics, maxEvents, daysAhead });
                 
                 // Create scraper with test configuration
                 const scraper = new BearEventScraper({
                     mockMode: mockMode,
                     dryRun: true,
                     maxEvents: maxEvents,
-                    displayFormat: displayFormat
+                    displayFormat: displayFormat,
+                    showStatistics: showStatistics,
+                    daysAhead: daysAhead
                 });
                 
                 // Define test sources
@@ -308,7 +429,8 @@
                 // Display results using the display adapter
                 const displayAdapter = DisplayAdapters.createDisplayAdapter();
                 const displayResult = await displayAdapter.displayResults(results, {
-                    format: displayFormat
+                    format: displayFormat,
+                    showStatistics: showStatistics
                 });
                 
                 // Show results in the page
