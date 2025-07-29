@@ -101,6 +101,9 @@ class BearEventScraper {
             this.processor = new EventProcessor(this.config);
             this.displayAdapter = DisplayAdapters.createDisplayAdapter();
             
+            // Pass the input adapter to the processor for additional URL processing
+            this.processor.setInputAdapter(this.inputAdapter);
+            
             this.isInitialized = true;
             console.log('✓ Bear Event Scraper initialized successfully');
             
