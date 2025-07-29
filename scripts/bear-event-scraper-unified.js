@@ -65,14 +65,21 @@ async function loadModules() {
 // Main Bear Event Scraper Class
 class BearEventScraper {
     constructor(config = {}) {
+        // Extract only the supported parameters, ignore legacy ones
+        const { dryRun, mockMode, maxEvents, enableDebugMode, daysToLookAhead, ...ignored } = config;
+        
+        // Warn about ignored parameters
+        const ignoredKeys = Object.keys(ignored);
+        if (ignoredKeys.length > 0) {
+            console.warn(`⚠️  Ignoring unsupported parameters: ${ignoredKeys.join(', ')}`);
+        }
+        
         this.config = {
-            dryRun: true,
-            preview: true,
-            mockMode: false,
-            maxEvents: 50,
-            enableDebugMode: true,
-            daysToLookAhead: 90,
-            ...config
+            dryRun: dryRun !== undefined ? dryRun : true,
+            mockMode: mockMode !== undefined ? mockMode : false,
+            maxEvents: maxEvents !== undefined ? maxEvents : 50,
+            enableDebugMode: enableDebugMode !== undefined ? enableDebugMode : true,
+            daysToLookAhead: daysToLookAhead !== undefined ? daysToLookAhead : 90
         };
         
         this.inputAdapter = null;
@@ -103,6 +110,7 @@ class BearEventScraper {
             // Log environment info
             const env = typeof importModule !== 'undefined' ? 'Scriptable' : 'Web';
             console.log(`Environment: ${env}`);
+            console.log(`Dry Run Mode: ${this.config.dryRun ? 'ENABLED (no calendar changes)' : 'DISABLED (will modify calendars)'}`);
             console.log(`Mock Mode: ${this.config.mockMode}`);
             console.log(`Max Events: ${this.config.maxEvents}`);
             console.log(`Days to Look Ahead: ${this.config.daysToLookAhead}`);
@@ -291,7 +299,7 @@ async function main() {
     
     const scraper = new BearEventScraper({
         mockMode: true, // Set to false for real scraping
-        dryRun: true,
+        dryRun: true,   // When false, will write to calendars
         maxEvents: 50,
         enableDebugMode: true
     });
