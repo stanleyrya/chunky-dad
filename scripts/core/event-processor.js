@@ -1014,7 +1014,9 @@ class EventProcessor {
 if (typeof module !== 'undefined' && module.exports) {
     // Node.js/CommonJS
     module.exports = { EventProcessor };
-} else if (typeof window !== 'undefined') {
-    // Browser
+}
+
+// Always export to window if it exists (for browser environment)
+if (typeof window !== 'undefined') {
     window.EventProcessor = EventProcessor;
 }

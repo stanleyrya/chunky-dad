@@ -124,7 +124,9 @@ function createInputAdapter(environment = 'auto') {
 if (typeof module !== 'undefined' && module.exports) {
     // Node.js/CommonJS
     module.exports = { InputAdapter, WebInputAdapter, ScriptableInputAdapter, createInputAdapter };
-} else if (typeof window !== 'undefined') {
-    // Browser
+}
+
+// Always export to window if it exists (for browser environment)
+if (typeof window !== 'undefined') {
     window.InputAdapters = { InputAdapter, WebInputAdapter, ScriptableInputAdapter, createInputAdapter };
 }
