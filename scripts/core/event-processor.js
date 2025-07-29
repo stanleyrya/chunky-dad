@@ -115,9 +115,23 @@ class EventProcessor {
         const events = [];
         
         try {
+            console.log(`🔍 Processing events for ${parserConfig.name}`);
+            console.log(`   Parser type: ${parserConfig.parser}`);
+            console.log(`   Raw data: ${rawData.error ? `Error - ${rawData.error}` : `HTML received (${rawData.html?.length || 0} chars)`}`);
+            
+            if (rawData.error) {
+                throw new Error(`Failed to fetch data: ${rawData.error}`);
+            }
+            
+            if (!rawData.html || rawData.html.length === 0) {
+                throw new Error('No HTML content received');
+            }
+            
             // Parse HTML based on parser type
             const parsedEvents = await this.parseHTML(rawData.html, parserConfig);
             this.statistics.totalParsed = parsedEvents.length;
+            
+            console.log(`   📋 Parsed ${parsedEvents.length} raw events`);
             
             // Process each event
             for (const eventData of parsedEvents) {
@@ -153,22 +167,28 @@ class EventProcessor {
                 } catch (error) {
                     this.statistics.processingErrors.push({
                         event: eventData,
-                        error: error.message,
-                        stack: error.stack
+                        error: error.message
                     });
+                    console.error(`   ⚠️ Error processing event: ${error.message}`);
                 }
             }
-
-            // If parser requires detail pages, process additional URLs
+            
+            console.log(`   ✅ Valid events: ${events.length} (${this.statistics.bearEvents} bear events)`);
+            
+            // Process additional URLs if configured
             if (parserConfig.requireDetailPages && this.inputAdapter) {
+                console.log(`   🔗 Processing additional detail pages...`);
                 const additionalEvents = await this.processAdditionalUrls(rawData.html, parserConfig);
                 events.push(...additionalEvents);
+                console.log(`   📄 Found ${additionalEvents.length} additional events from detail pages`);
             }
+            
         } catch (error) {
+            console.error(`❌ Fatal error processing events: ${error.message}`);
             this.statistics.processingErrors.push({
                 source: parserConfig.name,
                 error: error.message,
-                stack: error.stack
+                fatal: true
             });
         }
         

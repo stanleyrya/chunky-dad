@@ -504,9 +504,165 @@ class ScriptableDisplayAdapter extends DisplayAdapter {
             return this.displayNotification(results);
         } else if (config.format === 'table') {
             return this.displayTable(results);
+        } else if (config.format === 'html' || config.format === 'webview') {
+            return this.displayWebView(results);
         } else {
-            return this.displayConsole(results);
+            // Default to WebView for rich display
+            return this.displayWebView(results);
         }
+    }
+    
+    async displayWebView(results) {
+        // Generate HTML content similar to web display
+        const eventCount = results.events ? results.events.length : 0;
+        const bearEventCount = results.events ? results.events.filter(e => e.isBearEvent).length : 0;
+        const stats = results.comprehensiveStats || {};
+        const processingStats = results.processingStats || {};
+        
+        let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    background: #f5f5f5;
+                }
+                .summary {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 25px;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px;
+                    margin-top: 20px;
+                }
+                .stat-item {
+                    text-align: center;
+                }
+                .stat-value {
+                    font-size: 2em;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .event-card {
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    margin-bottom: 15px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                .event-title {
+                    font-size: 1.2em;
+                    font-weight: bold;
+                    color: #333;
+                    margin-bottom: 10px;
+                }
+                .event-details {
+                    color: #666;
+                    line-height: 1.5;
+                }
+                .bear-badge {
+                    background: #4CAF50;
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.8em;
+                    display: inline-block;
+                    margin-left: 10px;
+                }
+                .no-events {
+                    text-align: center;
+                    padding: 40px;
+                    color: #666;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="summary">
+                <h1>🐻 Bear Event Scraper Results</h1>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${eventCount}</div>
+                        <div>Final Events</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${bearEventCount}</div>
+                        <div>Bear Events</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${results.successfulSources || 0}/${results.totalSources || 0}</div>
+                        <div>Sources</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${processingStats.duplicatesRemoved || 0}</div>
+                        <div>Duplicates</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (results.events && results.events.length > 0) {
+            html += '<div class="events">';
+            results.events.forEach(event => {
+                const date = event.date ? new Date(event.date).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                }) : 'Date TBD';
+                
+                html += `
+                    <div class="event-card">
+                        <div class="event-title">
+                            ${event.title}
+                            ${event.isBearEvent ? '<span class="bear-badge">🐻 BEAR EVENT</span>' : ''}
+                        </div>
+                        <div class="event-details">
+                            📅 ${date}<br>
+                            📍 ${event.venue || 'Venue TBD'} - ${event.city || 'City TBD'}<br>
+                            🔗 ${event.source || 'Unknown Source'}
+                            ${event.description ? `<br><br>${event.description}` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        } else {
+            html += '<div class="no-events">No events found</div>';
+        }
+        
+        html += `
+            <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 10px;">
+                <h3>📊 Processing Statistics</h3>
+                <p>Total Events Found: ${stats.totalEventsFound || processingStats.totalEventsFound || 0}</p>
+                <p>Processing Success Rate: ${Math.round((results.successfulSources / results.totalSources) * 100) || 0}%</p>
+                <p>Bear Event Rate: ${eventCount > 0 ? Math.round((bearEventCount / eventCount) * 100) : 0}%</p>
+                <p>Past Events Filtered: ${processingStats.pastEventsFiltered || 0}</p>
+            </div>
+        </body>
+        </html>
+        `;
+        
+        // Create and present WebView
+        const webView = new WebView();
+        await webView.loadHTML(html);
+        await webView.present();
+        
+        // Also log summary to console
+        console.log(`\n📊 Final Results: ${eventCount} events (${bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`);
+        
+        return {
+            text: `Found ${eventCount} events (${bearEventCount} bear events)`,
+            html: html
+        };
     }
 
     async displayAlert(results) {
