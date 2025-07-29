@@ -2,6 +2,8 @@
 // Uses modular architecture: Input → Processing → Display
 // Works in both Scriptable and web environments
 
+console.log('bear-event-scraper-unified.js is loading...');
+
 // Import core modules (environment-specific loading)
 let InputAdapters, EventProcessor, DisplayAdapters;
 
@@ -600,7 +602,9 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // Additional exports for web environments (already done above, but kept for compatibility)
 if (typeof window !== 'undefined') {
+    console.log('Exporting BearEventScraper to window object...');
     window.BearEventScraper = BearEventScraper;
     window.runWithConfig = runWithConfig;
     window.loadConfiguration = loadConfiguration;
+    console.log('BearEventScraper exported successfully:', typeof window.BearEventScraper);
 }
