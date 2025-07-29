@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Scraper Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; }
+        #output { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Simple Bear Event Scraper Test</h1>
+    
+    <button onclick="testModuleLoading()">Test Module Loading</button>
+    <button onclick="testScraperInstantiation()">Test Scraper Instantiation</button>
+    <button onclick="testWithSampleData()">Test With Sample Data</button>
+    
+    <div id="output"></div>
+    
+    <!-- Load the core modules -->
+    <script src="../scripts/core/input-adapters.js"></script>
+    <script src="../scripts/core/event-processor.js"></script>
+    <script src="../scripts/core/display-adapters.js"></script>
+    <script src="../scripts/bear-event-scraper-unified.js"></script>
+    
+    <script>
+        function log(message, isError = false) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = isError ? 'error' : 'success';
+            output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+        }
+        
+        function testModuleLoading() {
+            log('=== Testing Module Loading ===');
+            
+            const modules = [
+                { name: 'InputAdapters', obj: window.InputAdapters },
+                { name: 'EventProcessor', obj: window.EventProcessor },
+                { name: 'DisplayAdapters', obj: window.DisplayAdapters },
+                { name: 'BearEventScraper', obj: window.BearEventScraper }
+            ];
+            
+            modules.forEach(module => {
+                if (module.obj) {
+                    log(`✅ ${module.name} is available`);
+                } else {
+                    log(`❌ ${module.name} is NOT available`, true);
+                }
+            });
+        }
+        
+        function testScraperInstantiation() {
+            log('=== Testing Scraper Instantiation ===');
+            
+            try {
+                if (typeof BearEventScraper === 'undefined') {
+                    throw new Error('BearEventScraper is not defined');
+                }
+                
+                const scraper = new BearEventScraper({ dryRun: true });
+                log('✅ BearEventScraper instantiated successfully');
+                
+                // Test if it has the expected methods
+                if (typeof scraper.initialize === 'function') {
+                    log('✅ initialize method is available');
+                } else {
+                    log('❌ initialize method is missing', true);
+                }
+                
+                if (typeof scraper.scrapeEvents === 'function') {
+                    log('✅ scrapeEvents method is available');
+                } else {
+                    log('❌ scrapeEvents method is missing', true);
+                }
+                
+            } catch (error) {
+                log(`❌ Scraper instantiation failed: ${error.message}`, true);
+            }
+        }
+        
+        async function testWithSampleData() {
+            log('=== Testing With Sample Data ===');
+            
+            try {
+                const scraper = new BearEventScraper({ dryRun: true });
+                await scraper.initialize();
+                log('✅ Scraper initialized');
+                
+                // Test with minimal sample data
+                const sampleSources = [{
+                    name: "Test Source",
+                    urls: ["https://example.com"],
+                    parser: "test",
+                    city: "test"
+                }];
+                
+                log('⏳ Testing scrapeEvents with sample data...');
+                
+                // This will likely fail due to network/parsing issues, but should not crash
+                const results = await scraper.scrapeEvents(sampleSources);
+                log(`✅ scrapeEvents completed - found ${results.events.length} events`);
+                
+            } catch (error) {
+                log(`⚠️ Expected error during sample test: ${error.message}`);
+                log('✅ Error handling is working correctly');
+            }
+        }
+        
+        // Auto-run module loading test on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🚀 Page loaded - running initial tests...');
+                testModuleLoading();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

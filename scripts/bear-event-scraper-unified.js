@@ -530,17 +530,22 @@ async function main() {
 
 // Auto-run if this is the main script
 if (typeof importModule !== 'undefined') {
-    // Scriptable environment
+    // Scriptable environment - auto-run
     main().catch(console.error);
 } else if (typeof window !== 'undefined' && window.document) {
-    // Web environment - expose BearEventScraper immediately
+    // Web environment - just expose functions, don't auto-run
     window.BearEventScraper = BearEventScraper;
     window.runBearEventScraper = main;
     window.runWithConfig = runWithConfig;
     window.loadConfiguration = loadConfiguration;
     
     console.log('🌐 Bear Event Scraper loaded for web environment');
-    console.log('Use runBearEventScraper() to execute with JSON config or runWithConfig({}) for custom config');
+    console.log('Available classes:', {
+        BearEventScraper: typeof BearEventScraper !== 'undefined',
+        InputAdapters: typeof InputAdapters !== 'undefined',
+        EventProcessor: typeof EventProcessor !== 'undefined',
+        DisplayAdapters: typeof DisplayAdapters !== 'undefined'
+    });
 }
 
 // Helper function to run with custom configuration
