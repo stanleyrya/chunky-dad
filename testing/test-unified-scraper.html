@@ -322,7 +322,7 @@
                 const scraper = new BearEventScraper(config);
                 await scraper.initialize();
                 
-                const results = await scraper.scrapeAll(sources);
+                const results = await scraper.scrapeEvents(sources);
                 
                 // Display results summary
                 resultsContainer.style.display = 'block';
