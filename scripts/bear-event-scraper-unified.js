@@ -139,7 +139,12 @@ class BearEventScraper {
                 
                 // Create input adapter and fetch data
                 const inputAdapter = InputAdapters.createInputAdapter();
-                const rawData = await inputAdapter.fetchData(source);
+                // Extract first URL from urls array for compatibility
+                const sourceWithUrl = {
+                    ...source,
+                    url: source.urls && source.urls.length > 0 ? source.urls[0] : source.url
+                };
+                const rawData = await inputAdapter.fetchData(sourceWithUrl);
                 
                 // Create event processor and process events
                 const processor = new EventProcessor(this.config);
@@ -151,7 +156,7 @@ class BearEventScraper {
                 // Store source-specific statistics
                 sourceStatistics.push({
                     source: source.name,
-                    url: source.url,
+                    url: sourceWithUrl.url,
                     ...statistics
                 });
                 
@@ -159,7 +164,7 @@ class BearEventScraper {
                     success: true,
                     events: events,
                     source: source.name,
-                    url: source.url,
+                    url: sourceWithUrl.url,
                     statistics: statistics,
                     timestamp: new Date().toISOString()
                 };
@@ -173,11 +178,13 @@ class BearEventScraper {
                 
             } catch (error) {
                 console.error(`❌ ${source.name}: ${error.message}`);
+                // Extract URL for error reporting
+                const errorUrl = source.urls && source.urls.length > 0 ? source.urls[0] : source.url;
                 results.push({
                     success: false,
                     error: error.message,
                     source: source.name,
-                    url: source.url,
+                    url: errorUrl,
                     timestamp: new Date().toISOString()
                 });
             }
