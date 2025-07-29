@@ -59,6 +59,71 @@ Use `scraper-input.json` as your main configuration file. Key settings:
 - **Future Events Only**: Automatically filters out events in the past
 - **Optional Date Range**: Use `daysToLookAhead` parameter to limit how far ahead to look (unlimited by default)
 
+## Enhanced Features (V7 - Additional Link Processing)
+
+### 🔗 Additional Link Processing
+The event parser now supports processing additional links for event pages that require deeper scraping:
+
+#### Supported Parsers with Detail Pages:
+- **Bearracuda** - Processes city-specific pages (`/sf/`, `/atlanta/`, `/vancouver-pride/`)
+- **Megawoof** - Processes individual Eventbrite event pages
+- **Generic parsers** - Looks for `/events/`, `/shows/`, `/calendar/` links
+
+#### Configuration:
+```json
+{
+  "name": "Bearracuda",
+  "parser": "bearracuda", 
+  "urls": ["https://bearracuda.com/#events"],
+  "requireDetailPages": true,  // ← Enables additional link processing
+  "alwaysBear": true
+}
+```
+
+#### How It Works:
+1. **Main Page**: Parser extracts initial events and discovers additional URLs
+2. **URL Extraction**: Finds city-specific or event-specific detail pages
+3. **Detail Processing**: Fetches and parses each additional URL
+4. **Event Merging**: Combines events from main page and detail pages
+5. **Deduplication**: Removes duplicate events based on title/date/venue
+
+#### Bearracuda-Specific Enhancements:
+- **City Detection**: Automatically maps cities (NEW ORLEANS → nola, San Francisco → sf)
+- **Date Parsing**: Handles various date formats ("August 23, 2025")
+- **Multi-City Support**: Processes events across multiple cities
+- **Calendar Mapping**: Maps events to appropriate city calendars
+
+#### URL Extraction Patterns:
+```javascript
+// Bearracuda city pages
+/href="([^"]*\/(?:sf|atlanta|denver|la|nyc|seattle|portland|vancouver|chicago|new-orleans)[^"]*)"[^>]*>/gi
+
+// Generic event pages  
+/href="([^"]*\/event[s]?\/[^"]*)"[^>]*>/gi
+/href="([^"]*\/show[s]?\/[^"]*)"[^>]*>/gi
+/href="([^"]*\/calendar\/[^"]*)"[^>]*>/gi
+```
+
+#### Performance Considerations:
+- **Rate Limiting**: Limited to 8-15 additional URLs per parser
+- **Timeout Protection**: 10-second timeout per request
+- **Error Handling**: Graceful failure - continues if detail pages fail
+- **Logging**: Detailed progress logging for debugging
+
+#### Example Output:
+```
+Processing: Bearracuda
+  → Fetching data from https://bearracuda.com/#events
+  ✓ Fetched 15,234 characters of HTML
+  → Processing events with bearracuda parser
+  → Found 4 additional URLs to process
+    → Processing detail page: https://bearracuda.com/sf/
+    ✓ Processed 1 events from detail page
+    → Processing detail page: https://bearracuda.com/atlanta/
+    ✓ Processed 1 events from detail page
+  ✓ Bearracuda: 6 events found (6 bear events)
+```
+
 ## Installation & Usage
 
 ### For Scriptable (iOS)

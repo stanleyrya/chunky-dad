@@ -67,6 +67,14 @@ class EventProcessor {
                 coordinates: { lat: 37.7697, lng: -122.4131 }
             }
         };
+
+        // Initialize input adapter for additional URL processing
+        this.inputAdapter = null;
+    }
+
+    // Set input adapter for processing additional URLs
+    setInputAdapter(inputAdapter) {
+        this.inputAdapter = inputAdapter;
     }
 
     // Main processing method - same logic for all environments
@@ -83,6 +91,12 @@ class EventProcessor {
                 if (processedEvent && this.isValidEvent(processedEvent)) {
                     events.push(processedEvent);
                 }
+            }
+
+            // If parser requires detail pages, process additional URLs
+            if (parserConfig.requireDetailPages && this.inputAdapter) {
+                const additionalEvents = await this.processAdditionalUrls(rawData.html, parserConfig);
+                events.push(...additionalEvents);
             }
             
             return {
@@ -102,6 +116,169 @@ class EventProcessor {
                 rawDataUrl: rawData.url
             };
         }
+    }
+
+    // Process additional URLs found on the main page
+    async processAdditionalUrls(html, parserConfig) {
+        const additionalEvents = [];
+        
+        try {
+            // Extract additional URLs based on parser type
+            const additionalUrls = this.extractAdditionalUrls(html, parserConfig);
+            
+            console.log(`  → Found ${additionalUrls.length} additional URLs to process`);
+            
+            // Process each additional URL
+            for (const url of additionalUrls) {
+                try {
+                    console.log(`    → Processing detail page: ${url}`);
+                    
+                    const detailData = await this.inputAdapter.fetchData({
+                        url: url,
+                        parser: parserConfig.parser,
+                        timeout: 10000
+                    });
+                    
+                    if (detailData.error) {
+                        console.error(`    ✗ Error fetching ${url}: ${detailData.error}`);
+                        continue;
+                    }
+                    
+                    // Parse the detail page
+                    const detailEvents = await this.parseHTML(detailData.html, parserConfig);
+                    
+                    // Process each event from the detail page
+                    for (const eventData of detailEvents) {
+                        // Add the source URL to the event data
+                        eventData.detailUrl = url;
+                        
+                        const processedEvent = await this.processEvent(eventData, parserConfig);
+                        if (processedEvent && this.isValidEvent(processedEvent)) {
+                            additionalEvents.push(processedEvent);
+                        }
+                    }
+                    
+                    console.log(`    ✓ Processed ${detailEvents.length} events from detail page`);
+                    
+                } catch (error) {
+                    console.error(`    ✗ Error processing detail page ${url}:`, error);
+                }
+            }
+            
+        } catch (error) {
+            console.error(`Error processing additional URLs: ${error.message}`);
+        }
+        
+        return additionalEvents;
+    }
+
+    // Extract additional URLs to process based on parser type
+    extractAdditionalUrls(html, parserConfig) {
+        switch (parserConfig.parser) {
+            case 'bearracuda':
+                return this.extractBearracudaUrls(html);
+            case 'megawoof':
+                return this.extractMegawoofUrls(html);
+            default:
+                return this.extractGenericUrls(html, parserConfig);
+        }
+    }
+
+    // Extract Bearracuda city-specific URLs
+    extractBearracudaUrls(html) {
+        const urls = [];
+        const baseUrl = 'https://bearracuda.com';
+        
+        // Look for city-specific links like /sf/, /atlanta/, /vancouver-pride/, etc.
+        const cityLinkPatterns = [
+            /href="([^"]*\/[a-z-]+\/?)"[^>]*>.*?(?:atlanta|denver|los angeles|new orleans|portland|san francisco|seattle|vancouver|chicago|sf|la|nyc)/gi,
+            /href="([^"]*\/(?:sf|atlanta|denver|la|nyc|seattle|portland|vancouver|chicago|new-orleans)[^"]*)"[^>]*>/gi,
+            /href="([^"]*\/[a-z-]+-pride[^"]*)"[^>]*>/gi
+        ];
+        
+        for (const pattern of cityLinkPatterns) {
+            let match;
+            while ((match = pattern.exec(html)) !== null) {
+                let url = match[1];
+                
+                // Convert relative URLs to absolute
+                if (url.startsWith('/')) {
+                    url = baseUrl + url;
+                } else if (!url.startsWith('http')) {
+                    url = baseUrl + '/' + url;
+                }
+                
+                // Avoid duplicates
+                if (!urls.includes(url) && url !== baseUrl && !url.includes('#')) {
+                    urls.push(url);
+                }
+            }
+        }
+        
+        // Also look for event-specific links
+        const eventLinkPattern = /href="([^"]*\/events?\/[^"]*)"[^>]*>/gi;
+        let match;
+        while ((match = eventLinkPattern.exec(html)) !== null) {
+            let url = match[1];
+            if (url.startsWith('/')) {
+                url = baseUrl + url;
+            }
+            if (!urls.includes(url)) {
+                urls.push(url);
+            }
+        }
+        
+        return urls.slice(0, 10); // Limit to prevent excessive requests
+    }
+
+    // Extract Megawoof Eventbrite URLs
+    extractMegawoofUrls(html) {
+        const urls = [];
+        
+        // Look for Eventbrite event links
+        const eventbritePattern = /href="(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"/gi;
+        let match;
+        while ((match = eventbritePattern.exec(html)) !== null) {
+            const url = match[1];
+            if (!urls.includes(url)) {
+                urls.push(url);
+            }
+        }
+        
+        return urls.slice(0, 15); // Limit to prevent excessive requests
+    }
+
+    // Generic URL extraction for other parsers
+    extractGenericUrls(html, parserConfig) {
+        const urls = [];
+        
+        // Look for event detail links based on common patterns
+        const patterns = [
+            /href="([^"]*\/event[s]?\/[^"]*)"[^>]*>/gi,
+            /href="([^"]*\/show[s]?\/[^"]*)"[^>]*>/gi,
+            /href="([^"]*\/calendar\/[^"]*)"[^>]*>/gi
+        ];
+        
+        for (const pattern of patterns) {
+            let match;
+            while ((match = pattern.exec(html)) !== null) {
+                let url = match[1];
+                
+                // Convert relative URLs to absolute if we have a base URL
+                if (parserConfig.urls && parserConfig.urls.length > 0) {
+                    const baseUrl = new URL(parserConfig.urls[0]).origin;
+                    if (url.startsWith('/')) {
+                        url = baseUrl + url;
+                    }
+                }
+                
+                if (!urls.includes(url)) {
+                    urls.push(url);
+                }
+            }
+        }
+        
+        return urls.slice(0, 8); // Conservative limit
     }
 
     async parseHTML(html, parserConfig) {
@@ -196,8 +373,133 @@ class EventProcessor {
     }
 
     parseBearracudaHTML(html) {
-        // Bearracuda-specific parsing logic - similar to generic but with multi-city support
-        return this.parseGenericHTML(html);
+        // Enhanced Bearracuda-specific parsing logic
+        const events = [];
+        
+        // Look for upcoming events section
+        const upcomingEventsPattern = /<h[1-6][^>]*>.*?upcoming events.*?<\/h[1-6]>[\s\S]*?(?=<h[1-6]|$)/gi;
+        const upcomingMatch = html.match(upcomingEventsPattern);
+        
+        if (upcomingMatch) {
+            const upcomingSection = upcomingMatch[0];
+            
+            // Extract city/event combinations
+            const cityEventPattern = /<h[1-6][^>]*>([^<]+)<\/h[1-6]>[\s\S]*?<h[2-6][^>]*>([^<]+)<\/h[2-6]>/gi;
+            let match;
+            while ((match = cityEventPattern.exec(upcomingSection)) !== null) {
+                const city = match[1].trim();
+                const dateInfo = match[2].trim();
+                
+                // Try to parse the date
+                let eventDate = null;
+                const dateMatch = dateInfo.match(/(\w+)\s+(\d+),?\s+(\d{4})/i);
+                if (dateMatch) {
+                    eventDate = new Date(`${dateMatch[1]} ${dateMatch[2]}, ${dateMatch[3]}`).toISOString();
+                }
+                
+                events.push({
+                    title: `Bearracuda ${city}`,
+                    date: eventDate,
+                    venue: `Bearracuda ${city}`,
+                    city: this.normalizeCityName(city),
+                    description: `Bearracuda bear dance party in ${city}`,
+                    rawHTML: match[0]
+                });
+            }
+        }
+        
+        // Alternative pattern: Look for consecutive h3/h4 pairs (city/date)
+        if (events.length === 0) {
+            const cityDatePattern = /<h3[^>]*>([^<]+)<\/h3>[\s\S]*?<h4[^>]*>([^<]+)<\/h4>/gi;
+            let match;
+            while ((match = cityDatePattern.exec(html)) !== null) {
+                const city = match[1].trim();
+                const dateInfo = match[2].trim();
+                
+                // Try to parse the date
+                let eventDate = null;
+                const dateMatch = dateInfo.match(/(\w+)\s+(\d+),?\s+(\d{4})/i);
+                if (dateMatch) {
+                    try {
+                        eventDate = new Date(`${dateMatch[1]} ${dateMatch[2]}, ${dateMatch[3]}`).toISOString();
+                    } catch (e) {
+                        // Date parsing failed, leave as null
+                    }
+                }
+                
+                events.push({
+                    title: `Bearracuda ${city}`,
+                    date: eventDate,
+                    venue: `Bearracuda ${city}`,
+                    city: this.normalizeCityName(city),
+                    description: `Bearracuda bear dance party in ${city}`,
+                    rawHTML: match[0]
+                });
+            }
+        }
+        
+        // Also look for individual event pages (when processing detail pages)
+        const eventTitlePattern = /<h1[^>]*>([^<]*bearracuda[^<]*)<\/h1>/gi;
+        const titleMatch = html.match(eventTitlePattern);
+        if (titleMatch) {
+            const title = titleMatch[0].replace(/<[^>]*>/g, '').trim();
+            
+            // Look for date information
+            const datePattern = /<time[^>]*>([^<]+)<\/time>|<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/gi;
+            const dateMatch = html.match(datePattern);
+            let eventDate = null;
+            if (dateMatch && dateMatch[0]) {
+                const dateText = dateMatch[0].replace(/<[^>]*>/g, '').trim();
+                try {
+                    eventDate = new Date(dateText).toISOString();
+                } catch (e) {
+                    // Date parsing failed, leave as null
+                }
+            }
+            
+            // Extract city from URL or content
+            let city = 'multi';
+            const cityFromUrl = html.match(/bearracuda\.com\/([a-z-]+)/i);
+            if (cityFromUrl) {
+                city = this.normalizeCityName(cityFromUrl[1]);
+            }
+            
+            events.push({
+                title: title,
+                date: eventDate,
+                venue: `Bearracuda ${city}`,
+                city: city,
+                description: `Bearracuda bear dance party`,
+                rawHTML: html.substring(0, 500) // First 500 chars for context
+            });
+        }
+        
+        // Fallback: look for generic event patterns
+        if (events.length === 0) {
+            return this.parseGenericHTML(html);
+        }
+        
+        return events;
+    }
+
+    // Normalize city names for consistent mapping
+    normalizeCityName(cityName) {
+        const normalizedName = cityName.toLowerCase()
+            .replace(/\s+/g, ' ')
+            .replace(/[^a-z\s]/g, '')
+            .trim();
+        
+        const cityMappings = {
+            'san francisco': 'sf',
+            'los angeles': 'la',
+            'new york': 'nyc',
+            'new orleans': 'nola',
+            'las vegas': 'vegas',
+            'vancouver pride': 'vancouver',
+            'sf hmd': 'sf'
+        };
+        
+        return cityMappings[normalizedName] || normalizedName;
     }
 
     parseGenericHTML(html) {
@@ -237,7 +539,7 @@ class EventProcessor {
             venue: eventData.venue || parserConfig.defaultVenue,
             city: eventData.city || parserConfig.defaultCity,
             source: parserConfig.name,
-            url: eventData.url,
+            url: eventData.url || eventData.detailUrl,
             description: eventData.description,
             isBearEvent: this.isBearEvent(eventData, parserConfig),
             rawData: eventData
@@ -308,10 +610,17 @@ class EventProcessor {
         if (event.date) {
             const eventDate = new Date(event.date);
             const now = new Date();
-            const maxDate = new Date(now.getTime() + (this.config.daysToLookAhead * 24 * 60 * 60 * 1000));
             
-            if (eventDate < now || eventDate > maxDate) {
-                return false;
+            if (this.config.daysToLookAhead) {
+                const maxDate = new Date(now.getTime() + (this.config.daysToLookAhead * 24 * 60 * 60 * 1000));
+                if (eventDate < now || eventDate > maxDate) {
+                    return false;
+                }
+            } else {
+                // Just check if it's not in the past
+                if (eventDate < now) {
+                    return false;
+                }
             }
         }
 
