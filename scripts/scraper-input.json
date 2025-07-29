@@ -22,9 +22,14 @@
       "parser": "rockbar",
       "urls": ["https://www.rockbarnyc.com/calendar"],
       "city": "nyc",
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 8,
       "allowlist": ["rockstrap", "underbear", "bears night out", "leather night", "bear happy hour", "woof"],
       "requireKeywords": true,
-      "description": "NYC leather/bear bar with regular themed nights"
+      "description": "NYC leather/bear bar with regular themed nights",
+      "urlFilters": {
+        "exclude": ["\\?", "#", "facebook\\.com", "instagram\\.com"]
+      }
     },
     {
       "name": "Bearracuda",
@@ -33,6 +38,7 @@
       "city": "multi",
       "alwaysBear": true,
       "requireDetailPages": true,
+      "urlExtractionMethod": "parser-specific",
       "description": "Multi-city bear dance parties and events"
     },
     {
@@ -42,13 +48,19 @@
       "city": "multi",
       "alwaysBear": true,
       "requireDetailPages": true,
-      "description": "Bear events across America via Eventbrite"
+      "maxAdditionalUrls": 20,
+      "description": "Bear events across America via Eventbrite",
+      "urlFilters": {
+        "include": ["eventbrite\\.com\\/e\\/"]
+      }
     },
     {
       "name": "SF Eagle",
       "parser": "sf-eagle",
       "urls": ["https://sf-eagle.com/events/"],
       "city": "sf",
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 12,
       "allowlist": ["bear", "cub", "otter", "leather bears"],
       "requireKeywords": true,
       "description": "San Francisco's legendary leather/bear bar"
@@ -58,6 +70,8 @@
       "parser": "eagle-ny",
       "urls": ["https://www.eagle-ny.com/events/"],
       "city": "nyc",
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 10,
       "allowlist": ["bear", "cub", "otter", "woof", "furball"],
       "requireKeywords": true,
       "description": "New York's Eagle Bar events and parties"
@@ -67,6 +81,8 @@
       "parser": "precinct",
       "urls": ["https://www.precinctdtla.com/events/"],
       "city": "la",
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 8,
       "allowlist": ["bear", "cub", "bearracuda", "woof"],
       "requireKeywords": true,
       "description": "Los Angeles downtown leather/bear venue"
@@ -86,7 +102,7 @@
     "dc": "chunky-dad-dc"
   },
   "notes": {
-    "version": "V6 - Simplified Configuration",
+    "version": "V7 - Scalable URL Processing",
     "created": "2025-01-27",
     "features": [
       "Single required configuration file for all scraper settings",
@@ -95,8 +111,36 @@
       "No hardcoded fallbacks - configuration is mandatory",
       "Combined venue and parser configurations",
       "Real venue addresses and enhanced keyword detection",
-      "Support for all major bear event websites"
+      "Support for all major bear event websites",
+      "SCALABLE URL PROCESSING - Configurable patterns with intelligent defaults",
+      "Custom URL patterns per parser for unique website structures",
+      "URL filtering (include/exclude patterns) for precise control",
+      "Parser-specific overrides for complex cases like Bearracuda",
+      "Automatic website detection (Eventbrite, Facebook, Eagle sites, etc.)",
+      "Rate limiting and error handling for additional URL processing"
     ],
+    "bear_events": {
+      "always_bear": ["Furball NYC", "Bearracuda", "Megawoof America"],
+      "keyword_required": ["Rockbar NYC", "SF Eagle", "Eagle NY", "Precinct DTLA"],
+      "note": "Furball, Bearracuda, and Megawoof events are always considered bear events"
+    },
+    "scalability": {
+      "approach": "Hybrid system combining configurable patterns with parser-specific logic",
+      "benefits": [
+        "Works out-of-the-box for most websites with intelligent defaults",
+        "Easily customizable for unique website structures",
+        "Parser-specific overrides for complex multi-page sites",
+        "URL filtering prevents processing irrelevant pages",
+        "Rate limiting prevents server overload",
+        "Graceful error handling ensures scraping continues if detail pages fail"
+      ],
+      "configuration_levels": [
+        "Auto-detection (recommended) - Just add 'requireDetailPages': true",
+        "Custom patterns - Define 'urlPatterns' array for specific structures", 
+        "URL filtering - Use 'urlFilters' to include/exclude specific patterns",
+        "Parser-specific - Use 'urlExtractionMethod': 'parser-specific' for complex logic"
+      ]
+    },
     "safety": {
       "dryRun": "When true, no calendar changes will be made. Set to false to enable calendar modifications."
     }
