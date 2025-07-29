@@ -142,9 +142,6 @@ class BearEventScraper {
                 }
                 
                 console.log(`  ✓ Fetched ${rawData.html ? rawData.html.length : 0} characters of HTML`);
-                if (rawData.mock) {
-                    console.log('  ℹ Using mock data for testing');
-                }
                 
                 // 2. Processing - Parse and standardize using the actual EventProcessor
                 console.log(`  → Processing events with ${source.parser} parser`);

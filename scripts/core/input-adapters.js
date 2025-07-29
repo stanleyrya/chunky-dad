@@ -24,11 +24,7 @@ class WebInputAdapter extends InputAdapter {
     }
 
     async fetchData(config) {
-        // For web environment - use fetch API or mock data for testing
-        if (config.mockMode) {
-            return this.getMockData(config);
-        }
-        
+        // For web environment - use fetch API for real data
         try {
             const response = await fetch(config.url, {
                 method: 'GET',
@@ -59,23 +55,7 @@ class WebInputAdapter extends InputAdapter {
         }
     }
 
-    getMockData(config) {
-        // Return mock data for testing
-        const mockData = {
-            'furball': `<html><body><div class="event"><h3>Furball Dance Party</h3><time>2025-02-15</time></div></body></html>`,
-            'rockbar': `<html><body><div class="event-item"><h2>Rockstrap Night</h2><span class="date">Feb 20, 2025</span></div></body></html>`,
-            'sf-eagle': `<html><body><div class="event"><h4>Bear Happy Hour</h4><div class="date">March 1, 2025</div></div></body></html>`
-        };
-        
-        const parser = config.parser || 'generic';
-        return {
-            url: config.url,
-            html: mockData[parser] || mockData['generic'] || '<html><body><p>No events found</p></body></html>',
-            status: 200,
-            timestamp: new Date().toISOString(),
-            mock: true
-        };
-    }
+
 }
 
 class ScriptableInputAdapter extends InputAdapter {

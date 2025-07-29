@@ -4,9 +4,7 @@
 class EventProcessor {
     constructor(config = {}) {
         this.config = {
-            maxEvents: config.maxEvents || 100,
-            daysToLookAhead: config.daysToLookAhead || 90,
-            enableDebugMode: config.enableDebugMode || false,
+            daysToLookAhead: config.daysToLookAhead, // undefined by default
             ...config
         };
         
@@ -84,11 +82,6 @@ class EventProcessor {
                 const processedEvent = await this.processEvent(eventData, parserConfig);
                 if (processedEvent && this.isValidEvent(processedEvent)) {
                     events.push(processedEvent);
-                }
-                
-                // Respect max events limit
-                if (events.length >= this.config.maxEvents) {
-                    break;
                 }
             }
             
