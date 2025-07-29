@@ -593,3 +593,10 @@ if (typeof module !== 'undefined' && module.exports) {
         global.runWithConfig = runWithConfig;
     }
 }
+
+// Export for web environments
+if (typeof window !== 'undefined') {
+    window.BearEventScraper = BearEventScraper;
+    window.runWithConfig = runWithConfig;
+    window.loadConfiguration = loadConfiguration;
+}
