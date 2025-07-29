@@ -12,7 +12,7 @@ The unified event scraper that parses bear events from multiple websites and for
 - Smart bear event detection using keywords and allowlists
 - Duplicate prevention and event merging
 - City detection and calendar routing
-- Safety modes (dry run, preview, calendar sync controls)
+- Simple safety mode with dry run protection
 - Performance tracking and detailed reporting
 
 ## Core Components
@@ -24,42 +24,59 @@ The `core/` directory contains modular components:
 
 ## Configuration
 
-### Input Example
-Use `bear-event-parser-input-example.json` as a template for configuration. Key settings:
+### Input Configuration
+Use `scraper-input.json` as your main configuration file. Key settings:
 
 ```json
 {
   "config": {
-    "dryRun": true,           // Prevents calendar changes
-    "preview": true,          // Shows preview of operations
-    "calendarSync": false,    // Must enable to allow calendar sync
-    "safetyMode": true        // Enables all safety features
+    "dryRun": true,           // When false, allows calendar modifications
+    "timeout": 30000,         // HTTP request timeout in milliseconds
+    "retryAttempts": 3        // Number of retry attempts for failed requests
   },
   "parsers": [
     {
       "name": "Venue Name",
       "parser": "parser-type",
       "urls": ["https://venue.com/events"],
+      "city": "nyc",
       "allowlist": ["keyword1", "keyword2"],
+      "requireKeywords": true,
       "description": "Venue description"
     }
-  ]
+  ],
+  "calendarMappings": {
+    "nyc": "chunky-dad-nyc",
+    "la": "chunky-dad-la"
+  }
 }
 ```
 
-### Safety Modes
-- **Dry Run**: When enabled, no calendar modifications occur
-- **Preview Mode**: Shows detailed preview of operations
-- **Calendar Sync**: Must be explicitly enabled for calendar integration
-- **Safety Mode**: Enables all protective features
+### Safety Mode
+- **Dry Run**: When `dryRun: true`, no calendar modifications occur. Set to `false` to enable calendar writes.
+
+### Event Filtering
+- **Future Events Only**: Automatically filters out events in the past
+- **Optional Date Range**: Use `daysToLookAhead` parameter to limit how far ahead to look (unlimited by default)
 
 ## Installation & Usage
 
+### For Scriptable (iOS)
 1. Install [Scriptable](https://scriptable.app/) on iOS
 2. Copy `bear-event-scraper-unified.js` to Scriptable
-3. Configure using `bear-event-parser-input-example.json` as template
-4. Run with safety modes enabled for testing
-5. Enable calendar sync only when ready for live updates
+3. Copy `scraper-input.json` to **iCloud Drive/Scriptable/** folder
+4. Run the script - it will automatically load the JSON configuration
+5. Set `dryRun: false` in the JSON config when ready for live calendar updates
+
+### For Web Testing
+1. Open `../testing/test-unified-scraper.html` in a browser
+2. The script will automatically load `scraper-input.json` from the scripts folder
+3. Use the web interface to test different configurations
+
+### Configuration Loading
+- **Scriptable**: Requires `scraper-input.json` in iCloud Drive/Scriptable/ folder
+- **Web**: Requires `scraper-input.json` in the scripts directory
+- **Required**: Script will fail if JSON configuration file is not found
 
 ## Scriptable API Reference
 
@@ -74,7 +91,21 @@ Complete Scriptable API documentation is available in `scriptable-complete-api.m
 
 Use the testing environment at `../testing/test-unified-scraper.html` for development and validation. This provides a web-based interface for testing scraper functionality without requiring iOS.
 
-## Configuration Files
+## Supported Venues
 
-- `scraper-config.json` - Base scraper configuration
-- `bear-event-parser-input-example.json` - Input template with all supported venues
+The scraper currently supports these bear-friendly venues:
+- **Furball NYC** - Joe Fiore's dance parties (all events are bear-related)
+- **Rockbar NYC** - Leather/bear bar with keyword filtering
+- **Bearracuda** - Multi-city bear dance parties
+- **Megawoof America** - Bear weekend events via Eventbrite
+- **SF Eagle** - San Francisco's legendary leather/bear bar
+- **Eagle NY** - New York's Eagle Bar with keyword filtering
+- **Precinct DTLA** - Los Angeles downtown leather/bear venue
+
+## Calendar Integration
+
+Events are automatically mapped to city-specific calendars:
+- NYC events → `chunky-dad-nyc`
+- LA events → `chunky-dad-la`
+- SF events → `chunky-dad-sf`
+- And more cities as configured in `calendarMappings`
