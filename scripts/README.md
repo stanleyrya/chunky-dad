@@ -59,70 +59,131 @@ Use `scraper-input.json` as your main configuration file. Key settings:
 - **Future Events Only**: Automatically filters out events in the past
 - **Optional Date Range**: Use `daysToLookAhead` parameter to limit how far ahead to look (unlimited by default)
 
-## Enhanced Features (V7 - Additional Link Processing)
+## Enhanced Features (V7 - Scalable URL Processing)
 
-### 🔗 Additional Link Processing
-The event parser now supports processing additional links for event pages that require deeper scraping:
+### 🔗 Scalable Additional Link Processing
+The event parser now supports a **hybrid scalable system** that combines intelligent auto-detection with configurable patterns and parser-specific overrides for maximum flexibility:
 
-#### Supported Parsers with Detail Pages:
-- **Bearracuda** - Processes city-specific pages (`/sf/`, `/atlanta/`, `/vancouver-pride/`)
-- **Megawoof** - Processes individual Eventbrite event pages
-- **Generic parsers** - Looks for `/events/`, `/shows/`, `/calendar/` links
+#### 🎯 **Four Configuration Levels** (Choose Based on Complexity):
 
-#### Configuration:
+1. **Auto-Detection (Recommended)** - Just add `"requireDetailPages": true`
+   - System automatically detects website type (Eagle, Eventbrite, Facebook, etc.)
+   - Uses intelligent default patterns based on URL structure
+   - Works out-of-the-box for most websites
+
+2. **Custom Patterns** - Define `urlPatterns` array for unique structures
+   - Perfect for sites with non-standard URL structures
+   - Flexible regex patterns with individual limits
+   - Pattern-specific filtering options
+
+3. **URL Filtering** - Use `urlFilters` to include/exclude specific patterns
+   - Fine-tune which URLs get processed
+   - Prevent processing admin, login, or irrelevant pages
+   - Include only URLs matching specific criteria
+
+4. **Parser-Specific** - Use `"urlExtractionMethod": "parser-specific"` for complex logic
+   - Custom extraction logic for sites like Bearracuda
+   - Handles complex multi-page structures
+   - Full programmatic control over URL discovery
+
+#### 🚀 **Intelligent Auto-Detection**
+The system automatically recognizes common website patterns:
+
+- **Eagle Sites** (`eagle.com`) → Event pages, party pages, calendar links
+- **Eventbrite** (`eventbrite.com`) → Individual event pages (`/e/event-name`)
+- **Facebook** (`facebook.com`) → Event pages (`/events/123456`)
+- **WordPress** (generic) → Event posts, category pages, calendar pages
+- **Generic Sites** → Standard `/events/`, `/shows/`, `/calendar/` patterns
+
+#### 📋 **Configuration Examples**:
+
 ```json
+// 1. AUTO-DETECTION (Recommended)
+{
+  "name": "SF Eagle",
+  "parser": "sf-eagle",
+  "urls": ["https://sf-eagle.com/events/"],
+  "requireDetailPages": true,
+  "maxAdditionalUrls": 12
+}
+
+// 2. CUSTOM PATTERNS
+{
+  "name": "Custom Event Site",
+  "parser": "generic",
+  "urls": ["https://example.com/calendar"],
+  "requireDetailPages": true,
+  "urlPatterns": [
+    {
+      "name": "Monthly Pages",
+      "regex": "href=\"([^\"]*\\/calendar\\/\\d{4}-\\d{2}[^\"]*)\">",
+      "maxMatches": 12,
+      "description": "Monthly calendar pages"
+    }
+  ]
+}
+
+// 3. URL FILTERING
+{
+  "name": "Eventbrite Organizer",
+  "parser": "eventbrite",
+  "urls": ["https://www.eventbrite.com/o/organizer-12345"],
+  "requireDetailPages": true,
+  "urlFilters": {
+    "include": ["eventbrite\\.com\\/e\\/.*bear"],
+    "exclude": ["\\?discount=", "\\/register", "\\/tickets"]
+  }
+}
+
+// 4. PARSER-SPECIFIC
 {
   "name": "Bearracuda",
-  "parser": "bearracuda", 
+  "parser": "bearracuda",
   "urls": ["https://bearracuda.com/#events"],
-  "requireDetailPages": true,  // ← Enables additional link processing
-  "alwaysBear": true
+  "requireDetailPages": true,
+  "urlExtractionMethod": "parser-specific"
 }
 ```
 
-#### How It Works:
-1. **Main Page**: Parser extracts initial events and discovers additional URLs
-2. **URL Extraction**: Finds city-specific or event-specific detail pages
-3. **Detail Processing**: Fetches and parses each additional URL
-4. **Event Merging**: Combines events from main page and detail pages
-5. **Deduplication**: Removes duplicate events based on title/date/venue
-
-#### Bearracuda-Specific Enhancements:
-- **City Detection**: Automatically maps cities (NEW ORLEANS → nola, San Francisco → sf)
-- **Date Parsing**: Handles various date formats ("August 23, 2025")
-- **Multi-City Support**: Processes events across multiple cities
-- **Calendar Mapping**: Maps events to appropriate city calendars
-
-#### URL Extraction Patterns:
-```javascript
-// Bearracuda city pages
-/href="([^"]*\/(?:sf|atlanta|denver|la|nyc|seattle|portland|vancouver|chicago|new-orleans)[^"]*)"[^>]*>/gi
-
-// Generic event pages  
-/href="([^"]*\/event[s]?\/[^"]*)"[^>]*>/gi
-/href="([^"]*\/show[s]?\/[^"]*)"[^>]*>/gi
-/href="([^"]*\/calendar\/[^"]*)"[^>]*>/gi
-```
-
-#### Performance Considerations:
-- **Rate Limiting**: Limited to 8-15 additional URLs per parser
+#### ⚡ **Performance & Safety Features**:
+- **Rate Limiting**: Configurable limits (8-25 URLs per parser)
 - **Timeout Protection**: 10-second timeout per request
 - **Error Handling**: Graceful failure - continues if detail pages fail
-- **Logging**: Detailed progress logging for debugging
+- **URL Validation**: Automatic filtering of invalid/irrelevant URLs
+- **Deduplication**: Removes duplicate URLs automatically
+- **Smart Filtering**: Excludes admin, login, social media, and anchor links
 
-#### Example Output:
+#### 📊 **Example Output**:
 ```
-Processing: Bearracuda
-  → Fetching data from https://bearracuda.com/#events
-  ✓ Fetched 15,234 characters of HTML
-  → Processing events with bearracuda parser
-  → Found 4 additional URLs to process
-    → Processing detail page: https://bearracuda.com/sf/
+Processing: SF Eagle
+  → Fetching data from https://sf-eagle.com/events/
+  ✓ Fetched 12,847 characters of HTML
+  → Processing events with sf-eagle parser
+  → Using 6 URL patterns for extraction
+    → Pattern "Event Pages" found 3 URLs
+    → Pattern "Eagle Events" found 5 URLs
+    → Pattern "Calendar Pages" found 2 URLs
+  → Found 10 additional URLs to process
+    → Processing detail page: https://sf-eagle.com/event/bear-night
     ✓ Processed 1 events from detail page
-    → Processing detail page: https://bearracuda.com/atlanta/
-    ✓ Processed 1 events from detail page
-  ✓ Bearracuda: 6 events found (6 bear events)
+  ✓ SF Eagle: 8 events found (6 bear events)
 ```
+
+#### 🔄 **Migration Path**:
+1. **Existing parsers**: Add `"requireDetailPages": true` → Auto-detection activates
+2. **Test results**: Run scraper to see what URLs are discovered
+3. **Fine-tune**: Add `urlFilters` or `urlPatterns` if needed
+4. **Complex cases**: Use `"urlExtractionMethod": "parser-specific"` only if required
+
+#### 🎛️ **Available Configuration Options**:
+- `requireDetailPages`: Enable additional URL processing
+- `maxAdditionalUrls`: Limit number of URLs processed (default: 12)
+- `urlPatterns`: Array of custom regex patterns
+- `urlFilters.include`: Only process URLs matching these patterns
+- `urlFilters.exclude`: Skip URLs matching these patterns
+- `urlExtractionMethod`: Use "parser-specific" for custom logic
+
+This scalable system **works out-of-the-box** for most websites while providing **infinite customization** for unique cases, ensuring the parser can handle any website structure efficiently and reliably.
 
 ## Installation & Usage
 

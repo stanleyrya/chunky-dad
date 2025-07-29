@@ -174,17 +174,216 @@ class EventProcessor {
 
     // Extract additional URLs to process based on parser type
     extractAdditionalUrls(html, parserConfig) {
-        switch (parserConfig.parser) {
-            case 'bearracuda':
-                return this.extractBearracudaUrls(html);
-            case 'megawoof':
-                return this.extractMegawoofUrls(html);
-            default:
-                return this.extractGenericUrls(html, parserConfig);
+        // Use parser-specific extraction if available and configured
+        if (parserConfig.urlExtractionMethod === 'parser-specific') {
+            switch (parserConfig.parser) {
+                case 'bearracuda':
+                    return this.extractBearracudaUrls(html);
+                case 'megawoof':
+                    return this.extractMegawoofUrls(html);
+                default:
+                    // Fall back to configurable patterns
+                    return this.extractUrlsWithPatterns(html, parserConfig);
+            }
         }
+        
+        // Default: Use configurable pattern-based extraction
+        return this.extractUrlsWithPatterns(html, parserConfig);
     }
 
-    // Extract Bearracuda city-specific URLs
+    // Generic URL extraction using configurable patterns
+    extractUrlsWithPatterns(html, parserConfig) {
+        const urls = [];
+        const baseUrl = this.getBaseUrl(parserConfig);
+        
+        // Get URL patterns from config, with sensible defaults
+        const urlPatterns = this.getUrlPatterns(parserConfig);
+        
+        console.log(`    → Using ${urlPatterns.length} URL patterns for extraction`);
+        
+        for (const patternConfig of urlPatterns) {
+            const pattern = new RegExp(patternConfig.regex, patternConfig.flags || 'gi');
+            let match;
+            let matchCount = 0;
+            
+            while ((match = pattern.exec(html)) !== null && matchCount < (patternConfig.maxMatches || 10)) {
+                let url = match[1]; // Assume first capture group contains the URL
+                
+                // Convert relative URLs to absolute
+                if (url.startsWith('/')) {
+                    url = baseUrl + url;
+                } else if (!url.startsWith('http') && baseUrl) {
+                    url = baseUrl + '/' + url;
+                }
+                
+                // Apply filters
+                if (this.shouldIncludeUrl(url, patternConfig, parserConfig)) {
+                    urls.push(url);
+                    matchCount++;
+                }
+            }
+            
+            console.log(`    → Pattern "${patternConfig.name}" found ${matchCount} URLs`);
+        }
+        
+        // Remove duplicates and apply global limits
+        const uniqueUrls = [...new Set(urls)];
+        const maxUrls = parserConfig.maxAdditionalUrls || 12;
+        
+        return uniqueUrls.slice(0, maxUrls);
+    }
+
+    // Get base URL for converting relative URLs to absolute
+    getBaseUrl(parserConfig) {
+        if (parserConfig.urls && parserConfig.urls.length > 0) {
+            try {
+                const url = new URL(parserConfig.urls[0]);
+                return `${url.protocol}//${url.host}`;
+            } catch (e) {
+                console.warn(`Invalid base URL: ${parserConfig.urls[0]}`);
+            }
+        }
+        return null;
+    }
+
+    // Get URL patterns from config with intelligent defaults
+    getUrlPatterns(parserConfig) {
+        // Use custom patterns if provided
+        if (parserConfig.urlPatterns && parserConfig.urlPatterns.length > 0) {
+            return parserConfig.urlPatterns;
+        }
+        
+        // Generate intelligent default patterns based on parser type and website
+        return this.generateDefaultUrlPatterns(parserConfig);
+    }
+
+    // Generate default URL patterns based on the website structure
+    generateDefaultUrlPatterns(parserConfig) {
+        const patterns = [];
+        const baseUrl = this.getBaseUrl(parserConfig);
+        
+        // Common event page patterns (universal)
+        patterns.push({
+            name: 'Event Pages',
+            regex: 'href="([^"]*\\/events?\\/[^"]*)"[^>]*>',
+            maxMatches: 8,
+            description: 'Standard /events/ pages'
+        });
+        
+        patterns.push({
+            name: 'Show Pages', 
+            regex: 'href="([^"]*\\/shows?\\/[^"]*)"[^>]*>',
+            maxMatches: 6,
+            description: 'Standard /shows/ pages'
+        });
+        
+        patterns.push({
+            name: 'Calendar Pages',
+            regex: 'href="([^"]*\\/calendar\\/[^"]*)"[^>]*>',
+            maxMatches: 5,
+            description: 'Calendar detail pages'
+        });
+        
+        // Add website-specific patterns based on known structures
+        if (baseUrl) {
+            if (baseUrl.includes('bearracuda.com')) {
+                patterns.push({
+                    name: 'Bearracuda Cities',
+                    regex: 'href="([^"]*\\/(?:sf|atlanta|denver|la|nyc|seattle|portland|vancouver|chicago|new-orleans|miami)[^"]*)"[^>]*>',
+                    maxMatches: 15,
+                    description: 'Bearracuda city-specific pages'
+                });
+            } else if (baseUrl.includes('eventbrite.com')) {
+                patterns.push({
+                    name: 'Eventbrite Events',
+                    regex: 'href="(https:\\/\\/www\\.eventbrite\\.com\\/e\\/[^"]+)"',
+                    maxMatches: 20,
+                    description: 'Individual Eventbrite event pages'
+                });
+            } else if (baseUrl.includes('eagle')) {
+                patterns.push({
+                    name: 'Eagle Events',
+                    regex: 'href="([^"]*\\/(?:event|party|night)\\/[^"]*)"[^>]*>',
+                    maxMatches: 10,
+                    description: 'Eagle bar event pages'
+                });
+            } else if (baseUrl.includes('facebook.com')) {
+                patterns.push({
+                    name: 'Facebook Events',
+                    regex: 'href="([^"]*\\/events\\/\\d+[^"]*)"[^>]*>',
+                    maxMatches: 15,
+                    description: 'Facebook event pages'
+                });
+            }
+        }
+        
+        // Add generic patterns for common website structures
+        patterns.push({
+            name: 'Date-based URLs',
+            regex: 'href="([^"]*\\/\\d{4}\\/\\d{2}\\/[^"]*)"[^>]*>',
+            maxMatches: 8,
+            description: 'Date-based URLs (YYYY/MM/)'
+        });
+        
+        patterns.push({
+            name: 'ID-based Events',
+            regex: 'href="([^"]*\\/(?:event|show|party)[-_]?\\d+[^"]*)"[^>]*>',
+            maxMatches: 10,
+            description: 'ID-based event URLs'
+        });
+        
+        return patterns;
+    }
+
+    // Determine if a URL should be included based on filters
+    shouldIncludeUrl(url, patternConfig, parserConfig) {
+        // Basic validation
+        if (!url || url === parserConfig.urls?.[0]) {
+            return false; // Skip empty URLs or same as main URL
+        }
+        
+        // Skip anchors, javascript, mailto, etc.
+        if (url.includes('#') || url.startsWith('javascript:') || url.startsWith('mailto:')) {
+            return false;
+        }
+        
+        // Apply pattern-specific filters
+        if (patternConfig.excludePatterns) {
+            for (const excludePattern of patternConfig.excludePatterns) {
+                if (new RegExp(excludePattern, 'i').test(url)) {
+                    return false;
+                }
+            }
+        }
+        
+        // Apply parser-specific filters
+        if (parserConfig.urlFilters) {
+            if (parserConfig.urlFilters.exclude) {
+                for (const excludePattern of parserConfig.urlFilters.exclude) {
+                    if (new RegExp(excludePattern, 'i').test(url)) {
+                        return false;
+                    }
+                }
+            }
+            
+            if (parserConfig.urlFilters.include) {
+                let matchesInclude = false;
+                for (const includePattern of parserConfig.urlFilters.include) {
+                    if (new RegExp(includePattern, 'i').test(url)) {
+                        matchesInclude = true;
+                        break;
+                    }
+                }
+                if (!matchesInclude) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    // Keep parser-specific methods for complex cases that need custom logic
     extractBearracudaUrls(html) {
         const urls = [];
         const baseUrl = 'https://bearracuda.com';
@@ -248,37 +447,9 @@ class EventProcessor {
         return urls.slice(0, 15); // Limit to prevent excessive requests
     }
 
-    // Generic URL extraction for other parsers
+    // Legacy method - now delegates to the new pattern-based system
     extractGenericUrls(html, parserConfig) {
-        const urls = [];
-        
-        // Look for event detail links based on common patterns
-        const patterns = [
-            /href="([^"]*\/event[s]?\/[^"]*)"[^>]*>/gi,
-            /href="([^"]*\/show[s]?\/[^"]*)"[^>]*>/gi,
-            /href="([^"]*\/calendar\/[^"]*)"[^>]*>/gi
-        ];
-        
-        for (const pattern of patterns) {
-            let match;
-            while ((match = pattern.exec(html)) !== null) {
-                let url = match[1];
-                
-                // Convert relative URLs to absolute if we have a base URL
-                if (parserConfig.urls && parserConfig.urls.length > 0) {
-                    const baseUrl = new URL(parserConfig.urls[0]).origin;
-                    if (url.startsWith('/')) {
-                        url = baseUrl + url;
-                    }
-                }
-                
-                if (!urls.includes(url)) {
-                    urls.push(url);
-                }
-            }
-        }
-        
-        return urls.slice(0, 8); // Conservative limit
+        return this.extractUrlsWithPatterns(html, parserConfig);
     }
 
     async parseHTML(html, parserConfig) {

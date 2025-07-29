@@ -1,0 +1,175 @@
+{
+  "description": "Example configurations showing scalable URL extraction approaches",
+  "examples": [
+    {
+      "name": "Simple Auto-Detection (Recommended)",
+      "description": "Uses intelligent defaults based on website structure",
+      "config": {
+        "name": "SF Eagle",
+        "parser": "sf-eagle",
+        "urls": ["https://sf-eagle.com/events/"],
+        "city": "sf",
+        "requireDetailPages": true,
+        "maxAdditionalUrls": 10,
+        "allowlist": ["bear", "cub", "otter", "leather bears"],
+        "requireKeywords": true
+      },
+      "notes": "System automatically detects it's an Eagle site and uses appropriate patterns"
+    },
+    
+    {
+      "name": "Custom URL Patterns",
+      "description": "Define specific patterns for unique website structures",
+      "config": {
+        "name": "Custom Event Site",
+        "parser": "generic",
+        "urls": ["https://example-events.com/calendar"],
+        "city": "nyc",
+        "requireDetailPages": true,
+        "urlPatterns": [
+          {
+            "name": "Monthly Pages",
+            "regex": "href=\"([^\"]*\\/calendar\\/\\d{4}-\\d{2}[^\"]*)\">",
+            "maxMatches": 12,
+            "description": "Monthly calendar pages"
+          },
+          {
+            "name": "Event Details",
+            "regex": "href=\"([^\"]*\\/event\\/[a-z0-9-]+[^\"]*)\">",
+            "maxMatches": 20,
+            "description": "Individual event pages"
+          }
+        ],
+        "allowlist": ["bear", "leather", "daddy"]
+      }
+    },
+    
+    {
+      "name": "URL Filtering",
+      "description": "Include/exclude specific URL patterns",
+      "config": {
+        "name": "Eventbrite Organizer",
+        "parser": "eventbrite",
+        "urls": ["https://www.eventbrite.com/o/bear-events-12345"],
+        "city": "multi",
+        "requireDetailPages": true,
+        "urlFilters": {
+          "include": [
+            "eventbrite\\.com\\/e\\/.*bear",
+            "eventbrite\\.com\\/e\\/.*leather",
+            "eventbrite\\.com\\/e\\/.*daddy"
+          ],
+          "exclude": [
+            "\\?discount=",
+            "\\/register",
+            "\\/tickets"
+          ]
+        },
+        "maxAdditionalUrls": 25,
+        "alwaysBear": true
+      }
+    },
+    
+    {
+      "name": "Facebook Events",
+      "description": "Automatically handles Facebook event structures",
+      "config": {
+        "name": "Bear Group Facebook",
+        "parser": "facebook",
+        "urls": ["https://facebook.com/groups/bearevents/events"],
+        "city": "multi",
+        "requireDetailPages": true,
+        "maxAdditionalUrls": 15,
+        "alwaysBear": true
+      },
+      "notes": "System detects Facebook and uses appropriate event patterns"
+    },
+    
+    {
+      "name": "Parser-Specific Override",
+      "description": "Use custom parser logic for complex cases",
+      "config": {
+        "name": "Bearracuda",
+        "parser": "bearracuda", 
+        "urls": ["https://bearracuda.com/#events"],
+        "city": "multi",
+        "requireDetailPages": true,
+        "urlExtractionMethod": "parser-specific",
+        "alwaysBear": true
+      },
+      "notes": "Uses custom Bearracuda logic for complex city-specific extraction"
+    },
+    
+    {
+      "name": "WordPress Events Plugin",
+      "description": "Common pattern for WordPress event sites",
+      "config": {
+        "name": "WP Events Site",
+        "parser": "wordpress-events",
+        "urls": ["https://example.com/events"],
+        "city": "la",
+        "requireDetailPages": true,
+        "urlPatterns": [
+          {
+            "name": "Event Posts",
+            "regex": "href=\"([^\"]*\\/event\\/[^\"]*)\">",
+            "maxMatches": 15,
+            "description": "WordPress event posts"
+          },
+          {
+            "name": "Category Pages", 
+            "regex": "href=\"([^\"]*\\/category\\/events\\/[^\"]*)\">",
+            "maxMatches": 5,
+            "description": "Event category pages"
+          }
+        ],
+        "allowlist": ["bear", "leather", "gay", "lgbtq"]
+      }
+    }
+  ],
+  
+  "migration_guide": {
+    "description": "How to migrate existing parsers to the new system",
+    "steps": [
+      {
+        "step": 1,
+        "action": "Enable detail pages",
+        "change": "Add 'requireDetailPages': true to existing configs"
+      },
+      {
+        "step": 2, 
+        "action": "Test auto-detection",
+        "change": "Run scraper - system will use intelligent defaults based on website"
+      },
+      {
+        "step": 3,
+        "action": "Customize if needed",
+        "change": "Add urlPatterns or urlFilters if defaults don't work well"
+      },
+      {
+        "step": 4,
+        "action": "Complex cases only",
+        "change": "Add 'urlExtractionMethod': 'parser-specific' for sites needing custom logic"
+      }
+    ]
+  },
+  
+  "pattern_library": {
+    "description": "Common regex patterns for different website types",
+    "patterns": {
+      "eventbrite": "href=\"(https:\\/\\/www\\.eventbrite\\.com\\/e\\/[^\"]+)\"",
+      "facebook_events": "href=\"([^\"]*\\/events\\/\\d+[^\"]*)\">",
+      "wordpress_events": "href=\"([^\"]*\\/event\\/[^\"]*)\">",
+      "calendar_monthly": "href=\"([^\"]*\\/calendar\\/\\d{4}-\\d{2}[^\"]*)\">", 
+      "date_based": "href=\"([^\"]*\\/\\d{4}\\/\\d{2}\\/\\d{2}\\/[^\"]*)\">",
+      "venue_events": "href=\"([^\"]*\\/venues?\\/[^\"]*\\/events?\\/[^\"]*)\">",
+      "ticketing": "href=\"([^\"]*\\/(?:tickets|buy|purchase)\\/[^\"]*)\">",
+      "artist_shows": "href=\"([^\"]*\\/artist\\/[^\"]*\\/shows?\\/[^\"]*)\">",
+      "city_events": "href=\"([^\"]*\\/(?:city|location)\\/[^\"]*\\/events?\\/[^\"]*)\">",
+      "category_events": "href=\"([^\"]*\\/category\\/[^\"]*\\/events?\\/[^\"]*)\">",
+      "recurring_events": "href=\"([^\"]*\\/recurring\\/[^\"]*)\">",
+      "newsletter_signup": "href=\"([^\"]*\\/(?:newsletter|subscribe|signup)[^\"]*)\">",
+      "social_media": "href=\"(https:\\/\\/(?:facebook|instagram|twitter)\\.com\\/[^\"]*)\""
+    }
+  }
+}
