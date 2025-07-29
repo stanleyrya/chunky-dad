@@ -1,5 +1,5 @@
 {
-  "generated": "2025-07-29T14:15:55.068Z",
+  "generated": "2025-07-29T14:18:16.890Z",
   "files": [
     {
       "name": "breakpoint-test.html",
@@ -45,11 +45,6 @@
       "name": "test-map-icons.html",
       "size": 61258,
       "modified": "2025-07-29T14:06:55.562Z"
-    },
-    {
-      "name": "test-new-structure.html",
-      "size": 11257,
-      "modified": "2025-07-29T14:15:46.148Z"
     },
     {
       "name": "test-unified-scraper.html",
