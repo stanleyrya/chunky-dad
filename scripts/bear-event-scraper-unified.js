@@ -303,21 +303,72 @@ const DEFAULT_SOURCES = [
     }
 ];
 
+// Load configuration from JSON file
+async function loadConfiguration() {
+    const isScriptable = typeof importModule !== 'undefined';
+    
+    try {
+        if (isScriptable) {
+            // Scriptable environment - use FileManager
+            const fm = FileManager.iCloud();
+            const configPath = fm.joinPath(fm.documentsDirectory(), 'scraper-input.json');
+            
+            if (fm.fileExists(configPath)) {
+                const configData = fm.readString(configPath);
+                return JSON.parse(configData);
+            } else {
+                console.log('⚠️  scraper-input.json not found in Scriptable documents directory');
+                console.log('📂 Place the file in: iCloud Drive/Scriptable/');
+                return null;
+            }
+        } else {
+            // Web environment - try to fetch from same directory
+            try {
+                const response = await fetch('../scripts/scraper-input.json');
+                if (response.ok) {
+                    return await response.json();
+                } else {
+                    console.log('⚠️  scraper-input.json not found in scripts directory');
+                    return null;
+                }
+            } catch (error) {
+                console.log('⚠️  Could not load scraper-input.json:', error.message);
+                return null;
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading configuration:', error);
+        return null;
+    }
+}
+
 // Main execution function
 async function main() {
     console.log('🐻 Starting Bear Event Scraper (Unified Version)');
     console.log('Using actual downloaded core modules for full end-to-end flow');
     
-    const scraper = new BearEventScraper({
-        dryRun: true   // When false, will write to calendars
-    });
+    // Try to load configuration from JSON file
+    const config = await loadConfiguration();
+    let sources = DEFAULT_SOURCES; // Fallback to hardcoded sources
+    let scraperConfig = { dryRun: true };
+    
+    if (config) {
+        console.log('✅ Loaded configuration from scraper-input.json');
+        sources = config.parsers || DEFAULT_SOURCES;
+        scraperConfig = { ...scraperConfig, ...config.config };
+        console.log(`📋 Found ${sources.length} configured parsers`);
+    } else {
+        console.log('📋 Using default hardcoded sources');
+    }
+    
+    const scraper = new BearEventScraper(scraperConfig);
     
     try {
         // Validate we're using the real modules
         await scraper.initialize();
         scraper.validateModules();
         
-        const results = await scraper.scrapeEvents(DEFAULT_SOURCES);
+        const results = await scraper.scrapeEvents(sources);
         console.log('\n🎉 Scraping completed successfully!');
         console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`);
         
@@ -347,16 +398,51 @@ if (typeof importModule !== 'undefined') {
     // Web environment - expose BearEventScraper immediately
     window.BearEventScraper = BearEventScraper;
     window.runBearEventScraper = main;
+    window.runWithConfig = runWithConfig;
+    window.loadConfiguration = loadConfiguration;
     
     console.log('🌐 Bear Event Scraper loaded for web environment');
-    console.log('Use runBearEventScraper() to execute or create new BearEventScraper() instance');
+    console.log('Use runBearEventScraper() to execute with JSON config or runWithConfig({}) for custom config');
+}
+
+// Helper function to run with custom configuration
+async function runWithConfig(customConfig = {}) {
+    console.log('🐻 Starting Bear Event Scraper with custom configuration');
+    
+    const scraper = new BearEventScraper(customConfig);
+    
+    try {
+        await scraper.initialize();
+        scraper.validateModules();
+        
+        // Use custom sources if provided, otherwise try to load from JSON, then fallback to defaults
+        let sources = customConfig.sources || DEFAULT_SOURCES;
+        
+        if (!customConfig.sources) {
+            const config = await loadConfiguration();
+            if (config && config.parsers) {
+                sources = config.parsers;
+                console.log(`✅ Using ${sources.length} parsers from scraper-input.json`);
+            }
+        }
+        
+        const results = await scraper.scrapeEvents(sources);
+        console.log('\n🎉 Scraping completed successfully!');
+        console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`);
+        
+        return results;
+    } catch (error) {
+        console.error('💥 Scraping failed:', error);
+        throw error;
+    }
 }
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BearEventScraper, main, DEFAULT_SOURCES };
+    module.exports = { BearEventScraper, main, runWithConfig, loadConfiguration, DEFAULT_SOURCES };
     // Also expose globally for testing
     if (typeof global !== 'undefined') {
         global.BearEventScraper = BearEventScraper;
+        global.runWithConfig = runWithConfig;
     }
 }

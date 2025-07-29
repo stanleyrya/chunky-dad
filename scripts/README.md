@@ -61,11 +61,22 @@ Use `scraper-input.json` as your main configuration file. Key settings:
 
 ## Installation & Usage
 
+### For Scriptable (iOS)
 1. Install [Scriptable](https://scriptable.app/) on iOS
 2. Copy `bear-event-scraper-unified.js` to Scriptable
-3. Configure `scraper-input.json` with your desired venues and settings
-4. Run with `dryRun: true` for testing
-5. Set `dryRun: false` only when ready for live calendar updates
+3. Copy `scraper-input.json` to **iCloud Drive/Scriptable/** folder
+4. Run the script - it will automatically load the JSON configuration
+5. Set `dryRun: false` in the JSON config when ready for live calendar updates
+
+### For Web Testing
+1. Open `../testing/test-unified-scraper.html` in a browser
+2. The script will automatically load `scraper-input.json` from the scripts folder
+3. Use the web interface to test different configurations
+
+### Configuration Loading
+- **Scriptable**: Looks for `scraper-input.json` in iCloud Drive/Scriptable/ folder
+- **Web**: Loads `scraper-input.json` from the scripts directory
+- **Fallback**: Uses hardcoded default sources if JSON file not found
 
 ## Scriptable API Reference
 
