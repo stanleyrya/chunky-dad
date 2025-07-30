@@ -497,7 +497,7 @@ class BearEventScraper {
         
         // Check event parsers
         const parserChecks = [
-            { name: 'MegawoofEventParser', module: MegawoofEventParser },
+            { name: 'EventbriteEventParser', module: EventbriteEventParser },
             { name: 'BearraccudaEventParser', module: BearraccudaEventParser },
             { name: 'GenericEventParser', module: GenericEventParser }
         ];
