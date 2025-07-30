@@ -51,10 +51,44 @@ class EventbriteEventParser {
                 doc = this.parseHTMLForScriptable(html);
             }
             
-            // Eventbrite-specific selectors - updated for the provided HTML structure
-            const eventElements = doc.querySelectorAll('.event-card, .Container_root__4i85v, [data-testid="event-card-tracking-layer"], .event-card-link, [class*="event"]');
+            // Eventbrite-specific selectors - updated for current Eventbrite structure (2025)
+            // Try multiple selector strategies to find events
+            const selectors = [
+                // Modern Eventbrite selectors
+                '[data-testid="event-card-tracking-layer"]',
+                '[data-testid*="event"]',
+                '.search-event-card',
+                '.event-card',
+                '.event-card-link',
+                '.eds-event-card',
+                '.eds-event-card-content',
+                '[class*="event-card"]',
+                '[class*="EventCard"]',
+                '[class*="search-event"]',
+                // Generic link selectors for event pages
+                'a[href*="/e/"]',
+                'a[href*="/events/"]',
+                // Container selectors that might hold events
+                '[class*="Container_root"]',
+                '[class*="event"]'
+            ];
             
-            console.log(`🐻 Eventbrite: Found ${eventElements.length} elements with selector ".event-card, .Container_root__4i85v, [data-testid="event-card-tracking-layer"], .event-card-link, [class*="event"]"`);
+            let eventElements = [];
+            let usedSelector = '';
+            
+            // Try each selector until we find events
+            for (const selector of selectors) {
+                const elements = doc.querySelectorAll(selector);
+                console.log(`🐻 Eventbrite: Trying selector "${selector}" - found ${elements.length} elements`);
+                
+                if (elements.length > 0) {
+                    eventElements = elements;
+                    usedSelector = selector;
+                    break;
+                }
+            }
+            
+            console.log(`🐻 Eventbrite: Using selector "${usedSelector}" - found ${eventElements.length} total elements`);
             
             // Add detailed logging to see what we're actually finding
             if (eventElements.length > 0) {
@@ -63,18 +97,51 @@ class EventbriteEventParser {
                     console.log(`🐻 Eventbrite: Element ${index + 1} preview:`, preview);
                 });
             } else {
-                console.warn('🐻 Eventbrite: No event elements found. HTML preview:', html.substring(0, 500));
+                console.warn('🐻 Eventbrite: No event elements found with any selector');
+                
+                // Enhanced debugging - show more HTML structure
+                console.log('🐻 Eventbrite: HTML preview (first 1000 chars):', html.substring(0, 1000));
+                console.log('🐻 Eventbrite: HTML preview (middle section):', html.substring(Math.floor(html.length/2), Math.floor(html.length/2) + 1000));
                 
                 // Try to find what elements ARE available
                 if (!isWebBrowser) {
-                    const allDivs = html.match(/<div[^>]*>/gi) || [];
-                    console.log(`🐻 Eventbrite: Found ${allDivs.length} div elements in HTML`);
-                    allDivs.slice(0, 5).forEach((div, i) => {
-                        console.log(`🐻 Eventbrite: Div ${i + 1}:`, div);
+                    // Look for common Eventbrite patterns in HTML
+                    const patterns = [
+                        { name: 'div elements', regex: /<div[^>]*>/gi },
+                        { name: 'links with /e/', regex: /<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>/gi },
+                        { name: 'data-testid attributes', regex: /data-testid="[^"]*"/gi },
+                        { name: 'class attributes with "event"', regex: /class="[^"]*event[^"]*"/gi },
+                        { name: 'class attributes with "card"', regex: /class="[^"]*card[^"]*"/gi }
+                    ];
+                    
+                    patterns.forEach(pattern => {
+                        const matches = html.match(pattern.regex) || [];
+                        console.log(`🐻 Eventbrite: Found ${matches.length} ${pattern.name}`);
+                        if (matches.length > 0 && matches.length <= 10) {
+                            matches.forEach((match, i) => {
+                                console.log(`🐻 Eventbrite: ${pattern.name} ${i + 1}:`, match);
+                            });
+                        } else if (matches.length > 10) {
+                            console.log(`🐻 Eventbrite: First 5 ${pattern.name}:`);
+                            matches.slice(0, 5).forEach((match, i) => {
+                                console.log(`🐻 Eventbrite: ${pattern.name} ${i + 1}:`, match);
+                            });
+                        }
                     });
                 } else {
                     const allDivs = doc.querySelectorAll('div');
-                    console.log(`🐻 Eventbrite: Found ${allDivs.length} div elements in DOM`);
+                    const allLinks = doc.querySelectorAll('a');
+                    console.log(`🐻 Eventbrite: Found ${allDivs.length} div elements and ${allLinks.length} links in DOM`);
+                    
+                    // Look for any elements with event-related attributes
+                    const eventRelated = doc.querySelectorAll('[class*="event"], [data-testid*="event"], [href*="/e/"]');
+                    console.log(`🐻 Eventbrite: Found ${eventRelated.length} event-related elements`);
+                    
+                    if (eventRelated.length > 0 && eventRelated.length <= 5) {
+                        eventRelated.forEach((el, i) => {
+                            console.log(`🐻 Eventbrite: Event-related element ${i + 1}:`, el.outerHTML.substring(0, 200));
+                        });
+                    }
                 }
             }
             
@@ -116,6 +183,33 @@ class EventbriteEventParser {
             
             // Also look for additional event links
             const additionalLinks = this.extractAdditionalLinks(doc, htmlData.url);
+            
+            // If we found no events but found additional links, this might be a dynamically loaded page
+            // In this case, the additional links are probably the actual events we should process
+            if (events.length === 0 && additionalLinks.length > 0) {
+                console.log(`🐻 Eventbrite: No events found in main HTML, but found ${additionalLinks.length} event links. This appears to be a dynamically loaded page.`);
+                console.log(`🐻 Eventbrite: Event links found:`, additionalLinks.slice(0, 5));
+                
+                // Create placeholder events from the links we found
+                // These will be processed later when the links are followed
+                additionalLinks.forEach((link, index) => {
+                    const eventId = this.extractEventId(link);
+                    if (eventId) {
+                        const placeholderEvent = {
+                            id: eventId,
+                            title: `Event ${eventId}`,
+                            url: link,
+                            source: this.config.source,
+                            timestamp: new Date().toISOString(),
+                            isPlaceholder: true,
+                            isBearEvent: true, // Assume bear event for Megawoof organizer
+                            requiresDetailFetch: true
+                        };
+                        events.push(placeholderEvent);
+                        console.log(`🐻 Eventbrite: Created placeholder event for ${link}`);
+                    }
+                });
+            }
             
             console.log(`🐻 Eventbrite: Found ${events.length} events, ${additionalLinks.length} additional links`);
             
@@ -332,6 +426,14 @@ class EventbriteEventParser {
         return 'unknown';
     }
 
+    extractEventId(url) {
+        // Extract event ID from Eventbrite URLs like:
+        // https://www.eventbrite.com/e/event-name-123456789
+        // https://www.eventbrite.com/e/123456789
+        const match = url.match(/\/e\/(?:[^-]+-)*(\d+)(?:-\d+)?$/);
+        return match ? match[1] : null;
+    }
+
     // Scriptable-compatible HTML parsing using regex
     parseHTMLForScriptable(html) {
         console.log('🐻 Eventbrite: Parsing HTML with regex for Scriptable environment');
@@ -342,7 +444,8 @@ class EventbriteEventParser {
                 const elements = [];
                 
                 // Simple regex-based element extraction for common Eventbrite patterns
-                if (selector.includes('event-card') || selector.includes('Container_root') || selector.includes('event')) {
+                if (selector.includes('event-card') || selector.includes('Container_root') || selector.includes('event') || 
+                    selector.includes('data-testid') || selector.includes('href*="/e/"') || selector.includes('href*="/events/"')) {
                     // Look for actual event cards with links to individual events
                     const eventPatterns = [
                         // Look for links to individual events (most reliable for Eventbrite)

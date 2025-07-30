@@ -320,7 +320,8 @@
                 // Create scraper config
                 const config = {
                     dryRun: dryRun,
-                    daysToLookAhead: daysInput ? parseInt(daysInput) : undefined
+                    daysToLookAhead: daysInput ? parseInt(daysInput) : undefined,
+                    corsProxy: 'https://api.allorigins.win/raw?url=' // Public CORS proxy for testing
                 };
                 
                 console.log(`Configuration: ${JSON.stringify(config)}`);
@@ -347,8 +348,8 @@
                 
                 // Display the generated HTML
                 console.log('Generating HTML output...');
-                const displayAdapter = DisplayAdapters.createDisplayAdapter();
-                const displayResult = await displayAdapter.displayResults(results, { format: 'html' });
+                const displayHandler = new WebDisplayHandler();
+                const displayResult = await displayHandler.displayResults(results, { format: 'html' });
                 
                 if (displayResult.element) {
                     htmlOutput.innerHTML = '';
