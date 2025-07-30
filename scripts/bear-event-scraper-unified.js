@@ -706,8 +706,14 @@ async function main() {
         
         const results = await scraper.scrapeEvents(sources);
         
-        // Display results using enhanced formatting
-        await scraper.displayResults(results, { format: 'enhanced-console' });
+        // Display results with auto-detected environment and rich experience
+        await scraper.displayResults(results);
+        
+        // Complete script execution for Scriptable environment
+        const isScriptable = typeof importModule !== 'undefined';
+        if (isScriptable) {
+            Script.complete();
+        }
         
         return results;
     } catch (error) {

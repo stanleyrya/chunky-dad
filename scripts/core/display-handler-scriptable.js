@@ -220,8 +220,170 @@ class ScriptableDisplayHandler {
         }
     }
 
-    // Enhanced console display with visual formatting
+    // Legacy method - functionality moved to displayResults()
+    // Kept for backwards compatibility but just redirects to main method
     displayEnhancedConsole(results, options = {}) {
+        console.warn('⚠️ displayEnhancedConsole is deprecated - functionality moved to displayResults()');
+        return this.displayResults(results, options);
+    }
+    
+    // Display results as interactive table (for app environment)
+    async displayAsInteractiveTable(results, options = {}) {
+        try {
+            console.log('📱 Scriptable: Creating interactive table display');
+            
+            const table = new UITable();
+            table.showSeparators = true;
+            
+            // Header row
+            const headerRow = new UITableRow();
+            headerRow.isHeader = true;
+            headerRow.backgroundColor = Color.darkGray();
+            
+            const headerCell = headerRow.addText(`🐻 Found ${results.bearEventCount} Bear Events`);
+            headerCell.titleColor = Color.white();
+            headerCell.titleFont = Font.boldSystemFont(18);
+            table.addRow(headerRow);
+            
+            // Add events to table
+            if (results.bearEventCount > 0) {
+                const bearEvents = results.events.filter(event => event.isBearEvent);
+                
+                bearEvents.forEach((event, index) => {
+                    const row = new UITableRow();
+                    row.height = 80;
+                    
+                    // Event title and details
+                    const title = event.title || 'Untitled Event';
+                    const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
+                    const venue = event.venue || 'Venue TBD';
+                    const city = event.city ? event.city.toUpperCase() : 'Location TBD';
+                    
+                    const eventCell = row.addText(`${title}\n📅 ${date} • 📍 ${venue}\n🏙️ ${city}`);
+                    eventCell.titleFont = Font.boldSystemFont(14);
+                    eventCell.subtitleFont = Font.systemFont(12);
+                    eventCell.subtitleColor = Color.gray();
+                    
+                    // Add tap action to open event URL
+                    if (event.url) {
+                        row.onSelect = () => {
+                            Safari.open(event.url);
+                        };
+                        
+                        // Add arrow indicator
+                        const arrowCell = row.addText('→');
+                        arrowCell.titleColor = Color.blue();
+                        arrowCell.widthWeight = 10;
+                        arrowCell.rightAligned();
+                    }
+                    
+                    table.addRow(row);
+                });
+                
+                // Add summary row
+                if (results.bearEventCount > bearEvents.length) {
+                    const summaryRow = new UITableRow();
+                    const remaining = results.bearEventCount - bearEvents.length;
+                    const summaryCell = summaryRow.addText(`... and ${remaining} more events`);
+                    summaryCell.titleColor = Color.gray();
+                    summaryCell.titleFont = Font.italicSystemFont(14);
+                    table.addRow(summaryRow);
+                }
+            } else {
+                // No events row
+                const noEventsRow = new UITableRow();
+                const noEventsCell = noEventsRow.addText('😢 No bear events found\nTry expanding your search criteria');
+                noEventsCell.titleColor = Color.gray();
+                noEventsCell.titleFont = Font.systemFont(16);
+                table.addRow(noEventsRow);
+            }
+            
+            // Add action buttons row
+            const actionsRow = new UITableRow();
+            actionsRow.backgroundColor = Color.lightGray();
+            
+            const actionsCell = actionsRow.addText('📤 Export to Calendar  •  📋 Copy Summary  •  🔄 Refresh');
+            actionsCell.titleColor = Color.blue();
+            actionsCell.titleFont = Font.systemFont(14);
+            
+            actionsRow.onSelect = async () => {
+                const alert = new Alert();
+                alert.title = 'Actions';
+                alert.addAction('📤 Export to Calendar');
+                alert.addAction('📋 Copy Text Summary');
+                alert.addAction('🔄 Run Again');
+                alert.addCancelAction('Cancel');
+                
+                const actionIndex = await alert.present();
+                
+                if (actionIndex === 0) {
+                    // Export to calendar
+                    const calendarResult = await this.exportToCalendar(results.events.filter(e => e.isBearEvent), options);
+                    const successAlert = new Alert();
+                    successAlert.title = calendarResult.success ? '✅ Success' : '❌ Error';
+                    successAlert.message = calendarResult.success 
+                        ? `Exported ${calendarResult.exportedCount} events to calendar!`
+                        : `Failed to export: ${calendarResult.error}`;
+                    successAlert.addAction('OK');
+                    await successAlert.present();
+                } else if (actionIndex === 1) {
+                    // Copy text summary
+                    const textResult = this.generateTextSummary(results, options);
+                    if (textResult.success) {
+                        Pasteboard.copyString(textResult.content);
+                        const copyAlert = new Alert();
+                        copyAlert.title = '📋 Copied!';
+                        copyAlert.message = 'Event summary copied to clipboard';
+                        copyAlert.addAction('OK');
+                        await copyAlert.present();
+                    }
+                } else if (actionIndex === 2) {
+                    // This would trigger a re-run - for now just show info
+                    const infoAlert = new Alert();
+                    infoAlert.title = '🔄 Refresh';
+                    infoAlert.message = 'Run the script again to refresh results';
+                    infoAlert.addAction('OK');
+                    await infoAlert.present();
+                }
+            };
+            
+            table.addRow(actionsRow);
+            
+            // Present the table
+            await table.present();
+            
+            return {
+                success: true,
+                type: 'interactive-table',
+                eventsDisplayed: results.bearEventCount
+            };
+            
+        } catch (error) {
+            console.error('📱 Scriptable: Failed to create interactive table:', error);
+            return {
+                success: false,
+                type: 'interactive-table',
+                error: error.message
+            };
+        }
+    }
+    
+    // Get appropriate emoji for keywords
+    getKeywordEmoji(keyword) {
+        const keywordLower = keyword.toLowerCase();
+        if (keywordLower.includes('bear')) return '🐻';
+        if (keywordLower.includes('daddy')) return '👨‍🦳';
+        if (keywordLower.includes('cub')) return '🐻‍❄️';
+        if (keywordLower.includes('leather')) return '🖤';
+        if (keywordLower.includes('muscle')) return '💪';
+        if (keywordLower.includes('party') || keywordLower.includes('dance')) return '🎉';
+        if (keywordLower.includes('woof')) return '🐺';
+        return '🏷️';
+    }
+
+    // Main display method that chooses appropriate format based on environment
+    async displayResults(results, options = {}) {
+        // ALWAYS display enhanced console logs first
         console.log('\n' + '='.repeat(60));
         console.log('🐻 BEAR EVENT SCRAPER RESULTS 🐻');
         console.log('='.repeat(60));
@@ -306,46 +468,50 @@ class ScriptableDisplayHandler {
         console.log('\n' + '='.repeat(60));
         console.log('🎯 Scraping completed successfully!');
         console.log('='.repeat(60) + '\n');
+
+        // Now auto-detect environment and provide rich experience if possible
+        let richDisplayResult = null;
         
+        // Check if running in a widget environment
+        if (config.runsInWidget || config.runsInAccessoryWidget) {
+            console.log('🔧 Environment: Widget detected - creating rich widget display');
+            try {
+                const widgetResult = await this.displayAsWidget(results, options);
+                if (widgetResult.success && widgetResult.widget) {
+                    // Set the widget for display
+                    Script.setWidget(widgetResult.widget);
+                    richDisplayResult = widgetResult;
+                    console.log('✅ Widget display configured successfully');
+                } else {
+                    console.warn('⚠️ Widget creation failed, logs still available');
+                }
+            } catch (error) {
+                console.error('❌ Widget creation error:', error);
+                console.log('📋 Falling back to logs only');
+            }
+        } else {
+            // Running in app environment - can display rich interactive experience
+            console.log('🔧 Environment: App detected - creating rich interactive display');
+            try {
+                // Create and present a rich table view for interactive browsing
+                const tableResult = await this.displayAsInteractiveTable(results, options);
+                richDisplayResult = tableResult;
+                console.log('✅ Interactive table display presented successfully');
+            } catch (error) {
+                console.error('❌ Interactive display error:', error);
+                console.log('📋 Rich display failed, but logs are still available above');
+            }
+        }
+
+        // Return combined result
         return {
             success: true,
-            type: 'enhanced-console',
+            type: 'auto-detected',
+            environment: config.runsInWidget || config.runsInAccessoryWidget ? 'widget' : 'app',
+            logsDisplayed: true,
+            richDisplayResult: richDisplayResult,
             eventsDisplayed: results.bearEventCount
         };
-    }
-    
-    // Get appropriate emoji for keywords
-    getKeywordEmoji(keyword) {
-        const keywordLower = keyword.toLowerCase();
-        if (keywordLower.includes('bear')) return '🐻';
-        if (keywordLower.includes('daddy')) return '👨‍🦳';
-        if (keywordLower.includes('cub')) return '🐻‍❄️';
-        if (keywordLower.includes('leather')) return '🖤';
-        if (keywordLower.includes('muscle')) return '💪';
-        if (keywordLower.includes('party') || keywordLower.includes('dance')) return '🎉';
-        if (keywordLower.includes('woof')) return '🐺';
-        return '🏷️';
-    }
-
-    // Main display method that chooses appropriate format
-    async displayResults(results, options = {}) {
-        const format = options.format || 'enhanced-console';
-        
-        switch (format) {
-            case 'notification':
-                return await this.displayAsNotification(results, options);
-            case 'widget':
-                return await this.displayAsWidget(results, options);
-            case 'calendar':
-                return await this.exportToCalendar(results.events, options);
-            case 'text':
-                return this.generateTextSummary(results, options);
-            case 'enhanced-console':
-                return this.displayEnhancedConsole(results, options);
-            default:
-                console.warn(`📱 Scriptable: Unknown display format: ${format}, using enhanced-console`);
-                return this.displayEnhancedConsole(results, options);
-        }
     }
 }
 
