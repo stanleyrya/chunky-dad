@@ -25,12 +25,14 @@ async function loadModules() {
             const eventbriteModule = importModule('core/event-parser-eventbrite');
             const bearraccudaModule = importModule('core/event-parser-bearraccuda');
             const genericModule = importModule('core/event-parser-generic');
+            const megawoofModule = importModule('core/event-parser-megawoof');
             
             ScriptableInputHandler = inputModule.ScriptableInputHandler;
             ScriptableDisplayHandler = displayModule.ScriptableDisplayHandler;
             EventbriteEventParser = eventbriteModule.EventbriteEventParser;
             BearraccudaEventParser = bearraccudaModule.BearraccudaEventParser;
             GenericEventParser = genericModule.GenericEventParser;
+            MegawoofEventParser = megawoofModule.MegawoofEventParser;
             
             console.log('✓ Successfully loaded core modules for Scriptable');
         } catch (error) {
@@ -47,8 +49,9 @@ async function loadModules() {
             EventbriteEventParser = window.EventbriteEventParser;
             BearraccudaEventParser = window.BearraccudaEventParser;
             GenericEventParser = window.GenericEventParser;
+            MegawoofEventParser = window.MegawoofEventParser;
             
-            if (WebInputHandlerModule && WebDisplayHandlerModule && EventbriteEventParser && BearraccudaEventParser && GenericEventParser) {
+            if (WebInputHandlerModule && WebDisplayHandlerModule && EventbriteEventParser && BearraccudaEventParser && GenericEventParser && MegawoofEventParser) {
                 console.log('✓ Successfully loaded core modules for web');
             } else {
                 const missing = [];
@@ -57,6 +60,7 @@ async function loadModules() {
                 if (!EventbriteEventParser) missing.push('EventbriteEventParser');
                 if (!BearraccudaEventParser) missing.push('BearraccudaEventParser');
                 if (!GenericEventParser) missing.push('GenericEventParser');
+                if (!MegawoofEventParser) missing.push('MegawoofEventParser');
                 throw new Error(`Core modules not found: ${missing.join(', ')}. Ensure all handler and parser files are loaded via script tags.`);
             }
         } else {
@@ -116,6 +120,7 @@ class BearEventScraper {
             this.eventParsers = {
                 'eventbrite': new EventbriteEventParser(),
                 'bearraccuda': new BearraccudaEventParser(),
+                'megawoof': new MegawoofEventParser(),
                 'generic': new GenericEventParser()
             };
             
