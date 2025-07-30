@@ -36,11 +36,20 @@ class ScriptableInputHandler {
             console.log(`📱 Scriptable: Response length: ${response ? response.length : 0} characters`);
             
             if (response && response.length > 0) {
-                console.log(`📱 Scriptable: HTML preview (first 500 chars):`, response.substring(0, 500));
+                console.log(`📱 Scriptable: HTML preview (first 1000 chars):`, response.substring(0, 1000));
+                console.log(`📱 Scriptable: HTML preview (middle section):`, response.substring(Math.floor(response.length/2), Math.floor(response.length/2) + 1000));
                 console.log(`📱 Scriptable: HTML contains event-related content:`, 
                     response.toLowerCase().includes('event') || 
                     response.toLowerCase().includes('eventbrite') ||
                     response.toLowerCase().includes('data-testid'));
+                
+                // Log key sections for debugging
+                if (response.includes('window.__SERVER_DATA__')) {
+                    console.log(`📱 Scriptable: Found window.__SERVER_DATA__ in HTML`);
+                }
+                if (response.includes('future_events')) {
+                    console.log(`📱 Scriptable: Found future_events in HTML`);
+                }
             } else {
                 console.warn(`📱 Scriptable: Empty or null response received`);
             }

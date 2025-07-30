@@ -195,6 +195,12 @@ class BearEventScraper {
                     allSourceEvents.push(...additionalData);
                 }
                 
+                // Fetch event details if required
+                if (source.requireDetailPages) {
+                    console.log(`📄 Detail page fetching enabled for ${source.name}`);
+                    allSourceEvents = await this.fetchEventDetails(allSourceEvents, parser);
+                }
+                
                 // Filter for bear events
                 const bearEvents = allSourceEvents.filter(event => event.isBearEvent);
                 
@@ -295,7 +301,16 @@ class BearEventScraper {
         // First, check if the source specifies a parser type
         if (source.parser && this.eventParsers[source.parser]) {
             console.log(`🎯 Using configured parser: ${source.parser} for ${source.name}`);
-            return this.eventParsers[source.parser];
+            
+            // Create a new parser instance with source-specific configuration
+            const ParserClass = this.eventParsers[source.parser].constructor;
+            return new ParserClass({
+                source: source.name,
+                alwaysBear: source.alwaysBear,
+                requireDetailPages: source.requireDetailPages,
+                maxAdditionalUrls: source.maxAdditionalUrls,
+                urlFilters: source.urlFilters
+            });
         }
         
         // Fallback to name/URL-based detection for backward compatibility
@@ -305,16 +320,28 @@ class BearEventScraper {
         if (lowerName.includes('bearraccuda') || lowerName.includes('bearracuda') || 
             lowerUrl.includes('bearraccuda') || lowerUrl.includes('bearracuda')) {
             console.log(`🎯 Using bearraccuda parser for ${source.name} (name/URL match)`);
-            return this.eventParsers.bearraccuda;
+            return new BearraccudaEventParser({
+                source: source.name,
+                alwaysBear: source.alwaysBear,
+                requireDetailPages: source.requireDetailPages
+            });
         } else if (lowerUrl.includes('eventbrite.com')) {
             console.log(`🎯 Using eventbrite parser for ${source.name} (URL match)`);
-            return this.eventParsers.eventbrite;
+            return new EventbriteEventParser({
+                source: source.name,
+                alwaysBear: source.alwaysBear,
+                requireDetailPages: source.requireDetailPages,
+                maxAdditionalUrls: source.maxAdditionalUrls,
+                urlFilters: source.urlFilters
+            });
         } else {
             // Use generic parser with source-specific configuration
             console.log(`🎯 Using generic parser for ${source.name}`);
             return new GenericEventParser({
                 source: source.name,
-                baseUrl: new URL(url).origin
+                baseUrl: new URL(url).origin,
+                alwaysBear: source.alwaysBear,
+                requireDetailPages: source.requireDetailPages
             });
         }
     }
@@ -355,6 +382,91 @@ class BearEventScraper {
         }
         
         return additionalEvents;
+    }
+    
+    // Fetch detailed information for events that require it
+    async fetchEventDetails(events, parser) {
+        const eventsRequiringDetails = events.filter(event => event.requiresDetailFetch);
+        
+        if (eventsRequiringDetails.length === 0) {
+            console.log('📄 No events require detail fetching');
+            return events;
+        }
+        
+        console.log(`📄 Fetching details for ${eventsRequiringDetails.length} events`);
+        
+        const maxDetails = parser.config?.maxAdditionalUrls || 20;
+        const eventsToProcess = eventsRequiringDetails.slice(0, maxDetails);
+        
+        for (const event of eventsToProcess) {
+            // Skip if we've already visited this URL
+            if (this.visitedUrls.has(event.url)) {
+                console.log(`📄 Skipping already visited event URL: ${event.url}`);
+                continue;
+            }
+            
+            try {
+                // Mark as visited before fetching to prevent loops
+                this.visitedUrls.add(event.url);
+                
+                console.log(`📄 Fetching details for: ${event.title}`);
+                
+                // Fetch the event detail page
+                const detailData = await this.inputHandler.fetchData(event.url);
+                
+                if (detailData.success && detailData.html) {
+                    // Parse additional details from the event page
+                    const detailInfo = parser.parseEventDetails ? 
+                        parser.parseEventDetails(detailData, event) : 
+                        this.extractBasicEventDetails(detailData.html, event);
+                    
+                    // Merge detail information into the event
+                    if (detailInfo) {
+                        Object.assign(event, detailInfo);
+                        console.log(`📄 Enhanced event details for: ${event.title}`);
+                    }
+                } else {
+                    console.warn(`📄 Failed to fetch event details: ${event.url} - ${detailData.error}`);
+                }
+                
+            } catch (error) {
+                console.warn(`📄 Error fetching event details for ${event.title}:`, error);
+            }
+        }
+        
+        // Mark all events as no longer requiring detail fetch
+        events.forEach(event => {
+            if (event.requiresDetailFetch) {
+                event.requiresDetailFetch = false;
+            }
+        });
+        
+        return events;
+    }
+    
+    // Extract basic event details from HTML when parser doesn't have specific method
+    extractBasicEventDetails(html, event) {
+        const details = {};
+        
+        // Try to extract more detailed description
+        const descriptionMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"[^>]*>/i);
+        if (descriptionMatch && descriptionMatch[1] && descriptionMatch[1].length > (event.description || '').length) {
+            details.description = descriptionMatch[1];
+        }
+        
+        // Try to extract venue information
+        const venueMatch = html.match(/<meta[^>]*property="event:location"[^>]*content="([^"]*)"[^>]*>/i);
+        if (venueMatch && venueMatch[1]) {
+            details.venue = venueMatch[1];
+        }
+        
+        // Try to extract more precise datetime
+        const datetimeMatch = html.match(/<time[^>]*datetime="([^"]*)"[^>]*>/i);
+        if (datetimeMatch && datetimeMatch[1]) {
+            details.date = datetimeMatch[1];
+        }
+        
+        return Object.keys(details).length > 0 ? details : null;
     }
     
     // Display results using the appropriate display handler
