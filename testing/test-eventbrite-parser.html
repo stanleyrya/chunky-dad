@@ -147,8 +147,13 @@
                         <div class="event-details">
                             <h5>📅 Parsed Event:</h5>
                             <p><strong>Title:</strong> ${event.title || 'N/A'}</p>
-                            <p><strong>Date:</strong> ${event.dateString || 'N/A'}</p>
-                            <p><strong>Venue:</strong> ${event.venue || 'N/A'}</p>
+                            <p><strong>Date String:</strong> ${event.dateString || 'N/A'}</p>
+                            <p><strong>Start Date (ISO):</strong> ${event.startDate || event.date || 'N/A'}</p>
+                            <p><strong>End Date (ISO):</strong> ${event.endDate || 'N/A'}</p>
+                            <p><strong>Venue/Bar Name:</strong> ${event.venue || 'N/A'}</p>
+                            <p><strong>Address:</strong> ${event.address || 'N/A'}</p>
+                            <p><strong>GPS Coordinates:</strong> ${event.coordinates ? `${event.coordinates.lat}, ${event.coordinates.lng}` : 'N/A'}</p>
+                            <p><strong>Google Maps Link:</strong> ${event.googleMapsLink ? `<a href="${event.googleMapsLink}" target="_blank" class="event-link">🗺️ Open in Maps</a>` : 'N/A'}</p>
                             <p><strong>City:</strong> ${event.city || 'N/A'}</p>
                             <p><strong>Price:</strong> ${event.price || 'N/A'}</p>
                             <p><strong>Is Bear Event:</strong> ${event.isBearEvent ? '🐻 Yes' : '❌ No'}</p>

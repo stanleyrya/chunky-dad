@@ -323,6 +323,16 @@ class EventbriteEventParser {
             if (dateText.match(/\w+,\s+\w+\s+\d+|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2}/)) {
                 event.dateString = dateText;
                 event.date = this.parseDate(dateText);
+                event.startDate = event.date; // Set startDate for consistency
+                
+                // Try to extract end time from the same text
+                const endTimeMatch = dateText.match(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
+                if (endTimeMatch && endTimeMatch[2]) {
+                    // Parse end time
+                    const endTimeStr = endTimeMatch[2];
+                    const baseDateStr = dateText.replace(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)\s*-.*/, '').trim();
+                    event.endDate = this.parseDate(`${baseDateStr} ${endTimeStr}`);
+                }
             }
         }
 
@@ -331,6 +341,21 @@ class EventbriteEventParser {
         if (venueElements.length > 1) {
             // Usually the second Typography_body-md element is the venue
             event.venue = venueElements[1].textContent.trim();
+            event.location = event.venue; // For backward compatibility
+        }
+        
+        // Try to extract venue from data attributes
+        if (!event.venue) {
+            const venueFromData = element.getAttribute?.('data-event-location');
+            if (venueFromData) {
+                event.venue = venueFromData;
+                event.location = event.venue;
+            }
+        }
+        
+        // Create Google Maps link if we have venue info
+        if (event.venue) {
+            event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.venue)}`;
         }
 
         // Extract price
@@ -398,6 +423,8 @@ class EventbriteEventParser {
         if (!dateString) return null;
         
         try {
+            console.log(`🐻 Eventbrite: Parsing date string: "${dateString}"`);
+            
             // Clean up the date string
             let cleanDateString = dateString.replace(/[^\w\s:,-]/g, ' ').trim();
             
@@ -406,29 +433,51 @@ class EventbriteEventParser {
                 cleanDateString = cleanDateString.replace('•', '').trim();
             }
             
-            // Try to parse various date formats
-            const patterns = [
-                /(\w{3}),?\s+(\w{3})\s+(\d{1,2})\s+(\d{1,2}:\d{2}\s*(AM|PM)?)/i, // "Sat, Aug 23 9:00 PM"
-                /(\w+)\s+(\d{1,2}),?\s+(\d{4})/i, // "January 15, 2024"
-                /(\d{1,2})\/(\d{1,2})\/(\d{4})/,   // "01/15/2024"
-                /(\d{4})-(\d{1,2})-(\d{1,2})/,    // "2024-01-15"
-            ];
-            
             // For Eventbrite dates without year, assume current or next year
             if (cleanDateString.match(/\w{3},?\s+\w{3}\s+\d{1,2}/i) && !cleanDateString.match(/\d{4}/)) {
                 const currentYear = new Date().getFullYear();
-                cleanDateString += ` ${currentYear}`;
+                const currentMonth = new Date().getMonth();
+                
+                // Extract month from the date string to determine if we need next year
+                const monthMatch = cleanDateString.match(/\w{3},?\s+(\w{3})\s+\d{1,2}/i);
+                if (monthMatch) {
+                    const monthName = monthMatch[1];
+                    const monthMap = {
+                        'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+                        'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+                    };
+                    const eventMonth = monthMap[monthName.toLowerCase().substring(0, 3)];
+                    
+                    // If event month is before current month, assume next year
+                    const yearToUse = (eventMonth !== undefined && eventMonth < currentMonth) ? currentYear + 1 : currentYear;
+                    cleanDateString += ` ${yearToUse}`;
+                } else {
+                    cleanDateString += ` ${currentYear}`;
+                }
             }
+            
+            console.log(`🐻 Eventbrite: Cleaned date string: "${cleanDateString}"`);
             
             const parsed = new Date(cleanDateString);
             if (!isNaN(parsed.getTime())) {
-                return parsed.toISOString();
+                const isoString = parsed.toISOString();
+                console.log(`🐻 Eventbrite: Successfully parsed date: ${isoString}`);
+                return isoString;
             }
             
             // If that fails, try with a more aggressive cleanup
             const fallbackString = dateString.replace(/[^\w\s:]/g, ' ').replace(/\s+/g, ' ').trim();
+            console.log(`🐻 Eventbrite: Trying fallback parsing: "${fallbackString}"`);
+            
             const fallbackParsed = new Date(fallbackString);
-            return !isNaN(fallbackParsed.getTime()) ? fallbackParsed.toISOString() : null;
+            if (!isNaN(fallbackParsed.getTime())) {
+                const isoString = fallbackParsed.toISOString();
+                console.log(`🐻 Eventbrite: Fallback parsing successful: ${isoString}`);
+                return isoString;
+            }
+            
+            console.warn(`🐻 Eventbrite: Unable to parse date: "${dateString}"`);
+            return null;
             
         } catch (error) {
             console.warn(`🐻 Eventbrite: Failed to parse date "${dateString}":`, error);
@@ -906,27 +955,73 @@ class EventbriteEventParser {
                     
                     futureEvents.forEach(eventData => {
                         if (eventData.url && eventData.name && eventData.name.text) {
+                            // Enhanced venue processing
+                            let venue = null;
+                            let address = null;
+                            let coordinates = null;
+                            let googleMapsLink = null;
+                            
+                            if (eventData.venue) {
+                                venue = eventData.venue.name || null;
+                                if (eventData.venue.address) {
+                                    address = eventData.venue.address.localized_address_display || null;
+                                    
+                                    // Extract coordinates if available
+                                    if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
+                                        coordinates = {
+                                            lat: eventData.venue.address.latitude,
+                                            lng: eventData.venue.address.longitude
+                                        };
+                                        
+                                        // Create Google Maps link
+                                        googleMapsLink = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
+                                    } else if (address) {
+                                        // Create Google Maps link from address
+                                        googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+                                    }
+                                }
+                            }
+                            
+                            // Enhanced time parsing
+                            let startDate = null;
+                            let endDate = null;
+                            
+                            if (eventData.start) {
+                                startDate = eventData.start.utc;
+                                console.log(`🐻 Eventbrite: Parsed event start time: ${eventData.name.text} (${startDate})`);
+                            }
+                            
+                            if (eventData.end) {
+                                endDate = eventData.end.utc;
+                                console.log(`🐻 Eventbrite: Parsed event end time: ${eventData.name.text} (${endDate})`);
+                            }
+                            
                             const event = {
                                 id: eventData.id || this.extractEventId(eventData.url),
                                 title: eventData.name.text,
                                 url: eventData.url,
-                                date: eventData.start ? eventData.start.utc : null,
-                                location: eventData.venue ? eventData.venue.name : null,
-                                address: eventData.venue && eventData.venue.address ? 
-                                    eventData.venue.address.localized_address_display : null,
+                                date: startDate,
+                                startDate: startDate,
+                                endDate: endDate,
+                                venue: venue,
+                                location: venue, // For backward compatibility
+                                address: address,
+                                coordinates: coordinates,
+                                googleMapsLink: googleMapsLink,
                                 description: eventData.summary || '',
                                 source: this.config.source,
                                 timestamp: new Date().toISOString(),
                                 isPlaceholder: false,
                                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
-                                    name: eventData.name.text,
+                                    title: eventData.name.text,
                                     description: eventData.summary || '',
+                                    venue: venue || '',
                                     url: eventData.url
                                 }),
                                 requiresDetailFetch: this.config.requireDetailPages // JSON already has most details, but user may want more
                             };
                             
-                            console.log(`🐻 Eventbrite: Parsed event: ${event.title} (${event.date})`);
+                            console.log(`🐻 Eventbrite: Parsed event: ${event.title} (${event.startDate || event.date})`);
                             events.push(event);
                         }
                     });
@@ -1022,6 +1117,278 @@ class EventbriteEventParser {
         
         console.log(`🐻 Eventbrite: Extracted ${events.length} events from JSON data`);
         return events;
+    }
+
+    // Parse event details from individual event pages
+    parseEventDetails(htmlData, existingEvent) {
+        try {
+            console.log(`🐻 Eventbrite: Parsing event details from ${htmlData.url}`);
+            
+            const html = htmlData.html;
+            if (!html) {
+                console.warn('🐻 Eventbrite: No HTML content for event details');
+                return null;
+            }
+
+            const details = {};
+            
+            // Try to extract venue information from the event page
+            // Look for venue in structured data first
+            const jsonLdMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
+            
+            if (jsonLdMatch) {
+                jsonLdMatch.forEach(script => {
+                    const jsonContent = script.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
+                    try {
+                        const jsonData = JSON.parse(jsonContent);
+                        
+                        if (jsonData['@type'] === 'Event' && jsonData.location) {
+                            const location = jsonData.location;
+                            
+                            if (location.name && !existingEvent.venue) {
+                                details.venue = location.name;
+                                details.location = location.name; // For backward compatibility
+                                console.log(`🐻 Eventbrite: Found venue in JSON-LD: ${details.venue}`);
+                            }
+                            
+                            if (location.address) {
+                                let address = null;
+                                if (typeof location.address === 'string') {
+                                    address = location.address;
+                                } else if (location.address.streetAddress) {
+                                    // Construct full address from structured data
+                                    const parts = [
+                                        location.address.streetAddress,
+                                        location.address.addressLocality,
+                                        location.address.addressRegion,
+                                        location.address.postalCode
+                                    ].filter(Boolean);
+                                    address = parts.join(', ');
+                                }
+                                
+                                if (address && !existingEvent.address) {
+                                    details.address = address;
+                                    details.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+                                    console.log(`🐻 Eventbrite: Found address in JSON-LD: ${details.address}`);
+                                }
+                            }
+                            
+                            // Extract coordinates if available
+                            if (location.geo && location.geo.latitude && location.geo.longitude) {
+                                details.coordinates = {
+                                    lat: parseFloat(location.geo.latitude),
+                                    lng: parseFloat(location.geo.longitude)
+                                };
+                                details.googleMapsLink = `https://maps.google.com/?q=${details.coordinates.lat},${details.coordinates.lng}`;
+                                console.log(`🐻 Eventbrite: Found coordinates in JSON-LD: ${details.coordinates.lat}, ${details.coordinates.lng}`);
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('🐻 Eventbrite: Failed to parse JSON-LD for event details:', error);
+                    }
+                });
+            }
+            
+            // Fallback: Extract venue from HTML patterns if not found in JSON-LD
+            if (!details.venue) {
+                // Look for common venue patterns in Eventbrite event pages
+                const venuePatterns = [
+                    /<h2[^>]*class="[^"]*location[^"]*"[^>]*>([^<]+)<\/h2>/i,
+                    /<h3[^>]*class="[^"]*venue[^"]*"[^>]*>([^<]+)<\/h3>/i,
+                    /<div[^>]*class="[^"]*venue-name[^"]*"[^>]*>([^<]+)<\/div>/i,
+                    /<span[^>]*class="[^"]*location-info[^"]*"[^>]*>([^<]+)<\/span>/i,
+                    // Look for venue name in meta tags
+                    /<meta[^>]*property="event:location"[^>]*content="([^"]*)"[^>]*>/i,
+                    /<meta[^>]*name="event:location"[^>]*content="([^"]*)"[^>]*>/i
+                ];
+                
+                for (const pattern of venuePatterns) {
+                    const match = html.match(pattern);
+                    if (match && match[1].trim()) {
+                        details.venue = match[1].trim();
+                        details.location = details.venue; // For backward compatibility
+                        console.log(`🐻 Eventbrite: Found venue in HTML: ${details.venue}`);
+                        break;
+                    }
+                }
+            }
+            
+            // Extract address from HTML if not found in JSON-LD
+            if (!details.address) {
+                const addressPatterns = [
+                    /<div[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+(?:<[^>]*>[^<]*<\/[^>]*>[^<]*)*)<\/div>/i,
+                    /<p[^>]*class="[^"]*location[^"]*"[^>]*>([^<]+)<\/p>/i,
+                    // Look for address patterns like "123 Main St, City, State 12345"
+                    /([0-9]+\s+[^,]+,\s*[^,]+,\s*[A-Z]{2}\s+[0-9]{5})/i
+                ];
+                
+                for (const pattern of addressPatterns) {
+                    const match = html.match(pattern);
+                    if (match && match[1].trim()) {
+                        // Clean up HTML tags from address
+                        details.address = match[1].replace(/<[^>]*>/g, '').trim();
+                        details.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(details.address)}`;
+                        console.log(`🐻 Eventbrite: Found address in HTML: ${details.address}`);
+                        break;
+                    }
+                }
+            }
+            
+            // Extract enhanced time information
+            const timeMatch = html.match(/<time[^>]*datetime="([^"]*)"[^>]*>/i);
+            if (timeMatch && timeMatch[1] && !existingEvent.startDate) {
+                details.startDate = timeMatch[1];
+                details.date = timeMatch[1]; // For backward compatibility
+                console.log(`🐻 Eventbrite: Found start time: ${details.startDate}`);
+            }
+            
+            // Look for end time
+            const endTimeMatch = html.match(/<time[^>]*datetime="([^"]*)"[^>]*>[^<]*end/i);
+            if (endTimeMatch && endTimeMatch[1] && !existingEvent.endDate) {
+                details.endDate = endTimeMatch[1];
+                console.log(`🐻 Eventbrite: Found end time: ${details.endDate}`);
+            }
+            
+            // Try to geocode address if we have one but no coordinates
+            if (details.address && !details.coordinates && !existingEvent.coordinates) {
+                // Note: We'll add geocoding in a separate method to keep this clean
+                details.needsGeocoding = true;
+            }
+            
+            console.log(`🐻 Eventbrite: Extracted ${Object.keys(details).length} additional details`);
+            return Object.keys(details).length > 0 ? details : null;
+            
+        } catch (error) {
+            console.error('🐻 Eventbrite: Error parsing event details:', error);
+            return null;
+        }
+    }
+
+    // Geocode address to get GPS coordinates using free service (Nominatim/OpenStreetMap)
+    async geocodeAddress(address) {
+        try {
+            console.log(`🐻 Eventbrite: Geocoding address: ${address}`);
+            
+            // Use Nominatim (OpenStreetMap) free geocoding service
+            const encodedAddress = encodeURIComponent(address);
+            const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&addressdetails=1`;
+            
+            console.log(`🐻 Eventbrite: Geocoding URL: ${geocodeUrl}`);
+            
+            // Check environment and make appropriate HTTP request
+            const isScriptable = typeof importModule !== 'undefined';
+            const isWebBrowser = typeof window !== 'undefined' && typeof fetch !== 'undefined';
+            
+            let response;
+            
+            if (isScriptable) {
+                // Scriptable environment - use Request class
+                const request = new Request(geocodeUrl);
+                request.headers = {
+                    'User-Agent': 'ChunkyDad-BearEventScraper/1.0'
+                };
+                response = await request.loadJSON();
+            } else if (isWebBrowser) {
+                // Web browser environment - use fetch
+                const fetchResponse = await fetch(geocodeUrl, {
+                    headers: {
+                        'User-Agent': 'ChunkyDad-BearEventScraper/1.0'
+                    }
+                });
+                response = await fetchResponse.json();
+            } else {
+                // Fallback - return placeholder for manual geocoding
+                console.warn('🐻 Eventbrite: No HTTP client available, returning placeholder');
+                return {
+                    needsGeocoding: true,
+                    geocodeUrl: geocodeUrl,
+                    address: address
+                };
+            }
+            
+            if (response && Array.isArray(response) && response.length > 0) {
+                const result = response[0];
+                const coordinates = {
+                    lat: parseFloat(result.lat),
+                    lng: parseFloat(result.lon)
+                };
+                
+                console.log(`🐻 Eventbrite: Successfully geocoded "${address}" to ${coordinates.lat}, ${coordinates.lng}`);
+                
+                return {
+                    coordinates: coordinates,
+                    googleMapsLink: `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`,
+                    geocoded: true,
+                    address: address,
+                    displayName: result.display_name || address
+                };
+            } else {
+                console.warn(`🐻 Eventbrite: No geocoding results found for "${address}"`);
+                return {
+                    geocoded: false,
+                    address: address,
+                    googleMapsLink: `https://maps.google.com/?q=${encodeURIComponent(address)}`
+                };
+            }
+            
+        } catch (error) {
+            console.warn(`🐻 Eventbrite: Failed to geocode address "${address}":`, error);
+            return {
+                geocoded: false,
+                address: address,
+                googleMapsLink: `https://maps.google.com/?q=${encodeURIComponent(address)}`,
+                error: error.message
+            };
+        }
+    }
+
+    // Enhanced method to process events and add geocoding
+    async enhanceEventsWithGeodata(events) {
+        console.log(`🐻 Eventbrite: Enhancing ${events.length} events with geodata`);
+        
+        const enhancedEvents = [];
+        
+        for (const event of events) {
+            let enhancedEvent = { ...event };
+            
+            // If we have an address but no coordinates, try to geocode
+            if (event.address && !event.coordinates) {
+                console.log(`🐻 Eventbrite: Geocoding address for event: ${event.title}`);
+                
+                try {
+                    const geocodeResult = await this.geocodeAddress(event.address);
+                    
+                    if (geocodeResult && geocodeResult.coordinates) {
+                        enhancedEvent.coordinates = geocodeResult.coordinates;
+                        enhancedEvent.googleMapsLink = geocodeResult.googleMapsLink;
+                        enhancedEvent.geocoded = true;
+                        enhancedEvent.displayName = geocodeResult.displayName;
+                        
+                        console.log(`🐻 Eventbrite: Successfully enhanced "${event.title}" with coordinates`);
+                    } else if (geocodeResult && geocodeResult.googleMapsLink) {
+                        // Even if geocoding failed, we can still provide a maps link
+                        enhancedEvent.googleMapsLink = geocodeResult.googleMapsLink;
+                        enhancedEvent.geocoded = false;
+                    }
+                    
+                    // Add a small delay to respect rate limits
+                    await this.delay(1000); // 1 second delay between requests
+                    
+                } catch (error) {
+                    console.warn(`🐻 Eventbrite: Error enhancing event "${event.title}" with geodata:`, error);
+                }
+            }
+            
+            enhancedEvents.push(enhancedEvent);
+        }
+        
+        console.log(`🐻 Eventbrite: Enhanced ${enhancedEvents.length} events with geodata`);
+        return enhancedEvents;
+    }
+
+    // Simple delay utility for rate limiting
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 
