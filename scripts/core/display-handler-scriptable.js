@@ -93,18 +93,25 @@ class ScriptableDisplayHandler {
                     eventStack.layoutVertically();
                     
                     // Event title
-                    const titleText = eventStack.addText(event.title);
-                    titleText.textColor = Color.white();
+                    const titleText = eventStack.addText(event.title || '❌ No Title');
+                    titleText.textColor = event.title ? Color.white() : Color.red();
                     titleText.font = Font.boldSystemFont(10);
                     titleText.lineLimit = 1;
                     
-                    // Event details
-                    const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
-                    const venue = event.venue || 'Venue TBD';
-                    const detailsText = eventStack.addText(`${date} • ${venue}`);
-                    detailsText.textColor = Color.gray();
+                    // Event details with missing field indicators
+                    const date = event.date ? new Date(event.date).toLocaleDateString() : (event.dateString || '❌ No Date');
+                    const venue = event.venue || '❌ No Venue';
+                    const city = (event.city && event.city !== 'unknown') ? event.city.toUpperCase() : '❌ No City';
+                    
+                    const detailsText = eventStack.addText(`📅 ${date}`);
+                    detailsText.textColor = event.date ? Color.gray() : Color.orange();
                     detailsText.font = Font.systemFont(8);
                     detailsText.lineLimit = 1;
+                    
+                    const venueText = eventStack.addText(`📍 ${venue} • 🏙️ ${city}`);
+                    venueText.textColor = (event.venue && event.city && event.city !== 'unknown') ? Color.gray() : Color.orange();
+                    venueText.font = Font.systemFont(8);
+                    venueText.lineLimit = 1;
                     
                     widget.addSpacer(2);
                 }
@@ -219,9 +226,188 @@ class ScriptableDisplayHandler {
             };
         }
     }
+    
+    // Get appropriate emoji for keywords
+    getKeywordEmoji(keyword) {
+        const keywordLower = keyword.toLowerCase();
+        if (keywordLower.includes('bear')) return '🐻';
+        if (keywordLower.includes('daddy')) return '👨‍🦳';
+        if (keywordLower.includes('cub')) return '🐻‍❄️';
+        if (keywordLower.includes('leather')) return '🖤';
+        if (keywordLower.includes('muscle')) return '💪';
+        if (keywordLower.includes('party') || keywordLower.includes('dance')) return '🎉';
+        if (keywordLower.includes('woof')) return '🐺';
+        return '🏷️';
+    }
 
-    // Enhanced console display with visual formatting
-    displayEnhancedConsole(results, options = {}) {
+    // Display results as interactive table (for app environment)
+    async displayAsInteractiveTable(results, options = {}) {
+        try {
+            console.log('📱 Scriptable: Creating interactive table display');
+            
+            const table = new UITable();
+            table.showSeparators = true;
+            
+            // Header row
+            const headerRow = new UITableRow();
+            headerRow.isHeader = true;
+            headerRow.backgroundColor = Color.darkGray();
+            
+            const headerCell = headerRow.addText(`🐻 Found ${results.bearEventCount} Bear Events`);
+            headerCell.titleColor = Color.white();
+            headerCell.titleFont = Font.boldSystemFont(18);
+            table.addRow(headerRow);
+            
+            // Add events to table
+            if (results.bearEventCount > 0) {
+                const bearEvents = results.events.filter(event => event.isBearEvent);
+                
+                bearEvents.forEach((event, index) => {
+                    const row = new UITableRow();
+                    row.height = 100;
+                    
+                    // Event title and details with missing field indicators
+                    const title = event.title || '❌ No Title';
+                    const date = event.date 
+                        ? new Date(event.date).toLocaleDateString() + ' ' + new Date(event.date).toLocaleTimeString()
+                        : (event.dateString ? `${event.dateString} (unparsed)` : '❌ No Date');
+                    const venue = event.venue || '❌ No Venue';
+                    const city = (event.city && event.city !== 'unknown') ? event.city.toUpperCase() : '❌ No City';
+                    const price = event.price ? `💰 ${event.price}` : '💰 No Price';
+                    const source = event.source ? `📊 ${event.source}` : '';
+                    
+                    const eventCell = row.addText(`${title}\n📅 ${date}\n📍 ${venue} • 🏙️ ${city}\n${price} ${source}`);
+                    eventCell.titleFont = Font.boldSystemFont(14);
+                    eventCell.subtitleFont = Font.systemFont(11);
+                    eventCell.subtitleColor = Color.gray();
+                    
+                    // Add tap action to open event URL if available
+                    const eventUrl = event.eventUrl || event.url;
+                    if (eventUrl) {
+                        row.onSelect = () => {
+                            Safari.open(eventUrl);
+                        };
+                        
+                        // Add arrow indicator
+                        const arrowCell = row.addText('→');
+                        arrowCell.titleColor = Color.blue();
+                        arrowCell.widthWeight = 10;
+                        arrowCell.rightAligned();
+                    } else {
+                        // No URL available - show info icon
+                        const infoCell = row.addText('ℹ️');
+                        infoCell.titleColor = Color.gray();
+                        infoCell.widthWeight = 10;
+                        infoCell.rightAligned();
+                    }
+                    
+                    table.addRow(row);
+                });
+                
+                // Add summary row
+                if (results.bearEventCount > bearEvents.length) {
+                    const summaryRow = new UITableRow();
+                    const remaining = results.bearEventCount - bearEvents.length;
+                    const summaryCell = summaryRow.addText(`... and ${remaining} more events`);
+                    summaryCell.titleColor = Color.gray();
+                    summaryCell.titleFont = Font.italicSystemFont(14);
+                    table.addRow(summaryRow);
+                }
+            } else {
+                // No events row
+                const noEventsRow = new UITableRow();
+                const noEventsCell = noEventsRow.addText('😢 No bear events found\nTry expanding your search criteria');
+                noEventsCell.titleColor = Color.gray();
+                noEventsCell.titleFont = Font.systemFont(16);
+                table.addRow(noEventsRow);
+            }
+            
+            // Add action buttons row
+            const actionsRow = new UITableRow();
+            actionsRow.backgroundColor = Color.lightGray();
+            
+            const actionsCell = actionsRow.addText('📤 Export to Calendar  •  📋 Copy Summary  •  🔄 Refresh');
+            actionsCell.titleColor = Color.blue();
+            actionsCell.titleFont = Font.systemFont(14);
+            
+            actionsRow.onSelect = async () => {
+                const alert = new Alert();
+                alert.title = 'Actions';
+                alert.addAction('📤 Export to Calendar');
+                alert.addAction('📋 Copy Text Summary');
+                alert.addAction('🔄 Run Again');
+                alert.addCancelAction('Cancel');
+                
+                const actionIndex = await alert.present();
+                
+                if (actionIndex === 0) {
+                    // Export to calendar
+                    const calendarResult = await this.exportToCalendar(results.events.filter(e => e.isBearEvent), options);
+                    const successAlert = new Alert();
+                    successAlert.title = calendarResult.success ? '✅ Success' : '❌ Error';
+                    successAlert.message = calendarResult.success 
+                        ? `Exported ${calendarResult.exportedCount} events to calendar!`
+                        : `Failed to export: ${calendarResult.error}`;
+                    successAlert.addAction('OK');
+                    await successAlert.present();
+                } else if (actionIndex === 1) {
+                    // Copy text summary
+                    const textResult = this.generateTextSummary(results, options);
+                    if (textResult.success) {
+                        Pasteboard.copyString(textResult.content);
+                        const copyAlert = new Alert();
+                        copyAlert.title = '📋 Copied!';
+                        copyAlert.message = 'Event summary copied to clipboard';
+                        copyAlert.addAction('OK');
+                        await copyAlert.present();
+                    }
+                } else if (actionIndex === 2) {
+                    // This would trigger a re-run - for now just show info
+                    const infoAlert = new Alert();
+                    infoAlert.title = '🔄 Refresh';
+                    infoAlert.message = 'Run the script again to refresh results';
+                    infoAlert.addAction('OK');
+                    await infoAlert.present();
+                }
+            };
+            
+            table.addRow(actionsRow);
+            
+            // Present the table
+            await table.present();
+            
+            return {
+                success: true,
+                type: 'interactive-table',
+                eventsDisplayed: results.bearEventCount
+            };
+            
+        } catch (error) {
+            console.error('📱 Scriptable: Failed to create interactive table:', error);
+            return {
+                success: false,
+                type: 'interactive-table',
+                error: error.message
+            };
+        }
+    }
+    
+    // Get appropriate emoji for keywords
+    getKeywordEmoji(keyword) {
+        const keywordLower = keyword.toLowerCase();
+        if (keywordLower.includes('bear')) return '🐻';
+        if (keywordLower.includes('daddy')) return '👨‍🦳';
+        if (keywordLower.includes('cub')) return '🐻‍❄️';
+        if (keywordLower.includes('leather')) return '🖤';
+        if (keywordLower.includes('muscle')) return '💪';
+        if (keywordLower.includes('party') || keywordLower.includes('dance')) return '🎉';
+        if (keywordLower.includes('woof')) return '🐺';
+        return '🏷️';
+    }
+
+    // Main display method that chooses appropriate format based on environment
+    async displayResults(results, options = {}) {
+        // ALWAYS display enhanced console logs first
         console.log('\n' + '='.repeat(60));
         console.log('🐻 BEAR EVENT SCRAPER RESULTS 🐻');
         console.log('='.repeat(60));
@@ -249,16 +435,70 @@ class ScriptableDisplayHandler {
             
             upcomingEvents.forEach((event, index) => {
                 const eventNumber = `${index + 1}.`.padEnd(3);
-                const title = event.title || 'Untitled Event';
-                const venue = event.venue ? ` @ ${event.venue}` : '';
-                const city = event.city ? ` (${event.city.toUpperCase()})` : '';
-                const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
+                const title = event.title || '❌ NO TITLE';
                 
-                console.log(`   ${eventNumber}🎪 ${title}${venue}${city}`);
-                console.log(`      📅 ${date}`);
-                if (event.url) {
-                    console.log(`      🔗 ${event.url}`);
+                console.log(`   ${eventNumber}🎪 ${title}`);
+                
+                // Date information
+                if (event.date) {
+                    const date = new Date(event.date).toLocaleDateString();
+                    const time = new Date(event.date).toLocaleTimeString();
+                    console.log(`      📅 ${date} at ${time}`);
+                } else if (event.dateString) {
+                    console.log(`      📅 ${event.dateString} (⚠️ unparsed date)`);
+                } else {
+                    console.log(`      📅 ❌ NO DATE`);
                 }
+                
+                // Venue and location
+                if (event.venue) {
+                    console.log(`      📍 ${event.venue}`);
+                } else {
+                    console.log(`      📍 ❌ NO VENUE`);
+                }
+                
+                // City information
+                if (event.city && event.city !== 'unknown') {
+                    console.log(`      🏙️ ${event.city.toUpperCase()}`);
+                } else {
+                    console.log(`      🏙️ ❌ NO CITY`);
+                }
+                
+                // Price information
+                if (event.price) {
+                    console.log(`      💰 ${event.price}`);
+                } else {
+                    console.log(`      💰 ❌ NO PRICE INFO`);
+                }
+                
+                // Description
+                if (event.description) {
+                    const shortDesc = event.description.length > 100 
+                        ? event.description.substring(0, 100) + '...' 
+                        : event.description;
+                    console.log(`      📝 ${shortDesc}`);
+                } else {
+                    console.log(`      📝 ❌ NO DESCRIPTION`);
+                }
+                
+                // URL
+                if (event.eventUrl || event.url) {
+                    const url = event.eventUrl || event.url;
+                    console.log(`      🔗 ${url}`);
+                } else {
+                    console.log(`      🔗 ❌ NO URL`);
+                }
+                
+                // Source information
+                if (event.source) {
+                    console.log(`      📊 Source: ${event.source}`);
+                }
+                
+                // Bear event confidence (if available)
+                if (event.bearConfidence !== undefined) {
+                    console.log(`      🐻 Bear Confidence: ${event.bearConfidence}%`);
+                }
+                
                 console.log('');
             });
             
@@ -306,46 +546,50 @@ class ScriptableDisplayHandler {
         console.log('\n' + '='.repeat(60));
         console.log('🎯 Scraping completed successfully!');
         console.log('='.repeat(60) + '\n');
+
+        // Now auto-detect environment and provide rich experience if possible
+        let richDisplayResult = null;
         
+        // Check if running in a widget environment
+        if (config.runsInWidget || config.runsInAccessoryWidget) {
+            console.log('🔧 Environment: Widget detected - creating rich widget display');
+            try {
+                const widgetResult = await this.displayAsWidget(results, options);
+                if (widgetResult.success && widgetResult.widget) {
+                    // Set the widget for display
+                    Script.setWidget(widgetResult.widget);
+                    richDisplayResult = widgetResult;
+                    console.log('✅ Widget display configured successfully');
+                } else {
+                    console.warn('⚠️ Widget creation failed, logs still available');
+                }
+            } catch (error) {
+                console.error('❌ Widget creation error:', error);
+                console.log('📋 Falling back to logs only');
+            }
+        } else {
+            // Running in app environment - can display rich interactive experience
+            console.log('🔧 Environment: App detected - creating rich interactive display');
+            try {
+                // Create and present a rich table view for interactive browsing
+                const tableResult = await this.displayAsInteractiveTable(results, options);
+                richDisplayResult = tableResult;
+                console.log('✅ Interactive table display presented successfully');
+            } catch (error) {
+                console.error('❌ Interactive display error:', error);
+                console.log('📋 Rich display failed, but logs are still available above');
+            }
+        }
+
+        // Return combined result
         return {
             success: true,
-            type: 'enhanced-console',
+            type: 'auto-detected',
+            environment: config.runsInWidget || config.runsInAccessoryWidget ? 'widget' : 'app',
+            logsDisplayed: true,
+            richDisplayResult: richDisplayResult,
             eventsDisplayed: results.bearEventCount
         };
-    }
-    
-    // Get appropriate emoji for keywords
-    getKeywordEmoji(keyword) {
-        const keywordLower = keyword.toLowerCase();
-        if (keywordLower.includes('bear')) return '🐻';
-        if (keywordLower.includes('daddy')) return '👨‍🦳';
-        if (keywordLower.includes('cub')) return '🐻‍❄️';
-        if (keywordLower.includes('leather')) return '🖤';
-        if (keywordLower.includes('muscle')) return '💪';
-        if (keywordLower.includes('party') || keywordLower.includes('dance')) return '🎉';
-        if (keywordLower.includes('woof')) return '🐺';
-        return '🏷️';
-    }
-
-    // Main display method that chooses appropriate format
-    async displayResults(results, options = {}) {
-        const format = options.format || 'enhanced-console';
-        
-        switch (format) {
-            case 'notification':
-                return await this.displayAsNotification(results, options);
-            case 'widget':
-                return await this.displayAsWidget(results, options);
-            case 'calendar':
-                return await this.exportToCalendar(results.events, options);
-            case 'text':
-                return this.generateTextSummary(results, options);
-            case 'enhanced-console':
-                return this.displayEnhancedConsole(results, options);
-            default:
-                console.warn(`📱 Scriptable: Unknown display format: ${format}, using enhanced-console`);
-                return this.displayEnhancedConsole(results, options);
-        }
     }
 }
 

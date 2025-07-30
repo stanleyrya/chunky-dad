@@ -81,9 +81,22 @@ class WebDisplayHandler {
             ? Math.round((results.successfulSources / results.totalSources) * 100) 
             : 0;
         
+        // Calculate missing field statistics
+        const bearEvents = results.events.filter(event => event.isBearEvent);
+        const missingStats = {
+            noTitle: bearEvents.filter(e => !e.title).length,
+            noDate: bearEvents.filter(e => !e.date).length,
+            noVenue: bearEvents.filter(e => !e.venue).length,
+            noCity: bearEvents.filter(e => !e.city || e.city === 'unknown').length,
+            noPrice: bearEvents.filter(e => !e.price).length,
+            noDescription: bearEvents.filter(e => !e.description).length,
+            noUrl: bearEvents.filter(e => !e.eventUrl && !e.url).length
+        };
+        
         stats.innerHTML = `
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <!-- Main Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
                     <div style="text-align: center;">
                         <div style="font-size: 2em; font-weight: bold; color: #007cba;">${results.bearEventCount}</div>
                         <div style="color: #666;">Bear Events Found</div>
@@ -101,6 +114,57 @@ class WebDisplayHandler {
                         <div style="color: #666;">Last Updated</div>
                     </div>
                 </div>
+                
+                <!-- Data Quality Stats -->
+                ${results.bearEventCount > 0 ? `
+                    <div style="border-top: 1px solid #ddd; padding-top: 20px;">
+                        <h4 style="margin: 0 0 15px 0; color: #333; text-align: center;">📊 Data Quality Overview</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; font-size: 0.9em;">
+                            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                                <div style="font-weight: bold; color: ${missingStats.noTitle > 0 ? '#dc3545' : '#28a745'};">
+                                    ${results.bearEventCount - missingStats.noTitle}/${results.bearEventCount}
+                                </div>
+                                <div style="color: #666;">Have Titles</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                                <div style="font-weight: bold; color: ${missingStats.noDate > 0 ? '#dc3545' : '#28a745'};">
+                                    ${results.bearEventCount - missingStats.noDate}/${results.bearEventCount}
+                                </div>
+                                <div style="color: #666;">Have Dates</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                                <div style="font-weight: bold; color: ${missingStats.noVenue > 0 ? '#dc3545' : '#28a745'};">
+                                    ${results.bearEventCount - missingStats.noVenue}/${results.bearEventCount}
+                                </div>
+                                <div style="color: #666;">Have Venues</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                                <div style="font-weight: bold; color: ${missingStats.noCity > 0 ? '#dc3545' : '#28a745'};">
+                                    ${results.bearEventCount - missingStats.noCity}/${results.bearEventCount}
+                                </div>
+                                <div style="color: #666;">Have Cities</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                                <div style="font-weight: bold; color: ${missingStats.noPrice > 0 ? '#ffc107' : '#28a745'};">
+                                    ${results.bearEventCount - missingStats.noPrice}/${results.bearEventCount}
+                                </div>
+                                <div style="color: #666;">Have Prices</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                                <div style="font-weight: bold; color: ${missingStats.noDescription > 0 ? '#ffc107' : '#28a745'};">
+                                    ${results.bearEventCount - missingStats.noDescription}/${results.bearEventCount}
+                                </div>
+                                <div style="color: #666;">Have Descriptions</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                                <div style="font-weight: bold; color: ${missingStats.noUrl > 0 ? '#dc3545' : '#28a745'};">
+                                    ${results.bearEventCount - missingStats.noUrl}/${results.bearEventCount}
+                                </div>
+                                <div style="color: #666;">Have URLs</div>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
         
@@ -151,64 +215,110 @@ class WebDisplayHandler {
         const card = document.createElement('div');
         card.className = 'event-card';
         
-        const date = event.date ? new Date(event.date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }) : 'Date TBD';
+        // Enhanced date handling with missing indicators
+        let dateDisplay, timeDisplay;
+        if (event.date) {
+            dateDisplay = new Date(event.date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            timeDisplay = new Date(event.date).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        } else if (event.dateString) {
+            dateDisplay = `${event.dateString} <span style="color: #ff6b35;">(unparsed)</span>`;
+            timeDisplay = '';
+        } else {
+            dateDisplay = '<span style="color: #dc3545;">❌ No Date</span>';
+            timeDisplay = '';
+        }
         
-        const time = event.date ? new Date(event.date).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit'
-        }) : '';
+        // Title with missing indicator
+        const title = event.title || '<span style="color: #dc3545;">❌ No Title</span>';
+        
+        // Venue with missing indicator
+        const venue = event.venue || '<span style="color: #dc3545;">❌ No Venue</span>';
+        
+        // City with missing indicator
+        const city = (event.city && event.city !== 'unknown') 
+            ? event.city.toUpperCase() 
+            : '<span style="color: #dc3545;">❌ No City</span>';
+        
+        // Price with missing indicator
+        const price = event.price || '<span style="color: #dc3545;">❌ No Price</span>';
+        
+        // Description with missing indicator
+        const description = event.description || '<span style="color: #dc3545;">❌ No Description</span>';
+        
+        // URL handling
+        const eventUrl = event.eventUrl || event.url;
         
         card.innerHTML = `
             <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;">
                     <div>
-                        <h3 style="margin: 0 0 10px 0; color: #333; font-size: 1.3em;">${this.escapeHtml(event.title)}</h3>
+                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 1.3em;">${title}</h3>
                         
-                        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; color: #666;">
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <span>📅</span>
-                                <span>${date}${time ? ` at ${time}` : ''}</span>
-                            </div>
-                            ${event.venue ? `
-                                <div style="display: flex; align-items: center; gap: 5px;">
-                                    <span>📍</span>
-                                    <span>${this.escapeHtml(event.venue)}</span>
-                                </div>
-                            ` : ''}
-                            ${event.city && event.city !== 'unknown' ? `
-                                <div style="display: flex; align-items: center; gap: 5px;">
-                                    <span>🏙️</span>
-                                    <span>${event.city.toUpperCase()}</span>
-                                </div>
-                            ` : ''}
+                        <!-- Date and Time -->
+                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px;">
+                            <span>📅</span>
+                            <span>${dateDisplay}${timeDisplay ? ` at ${timeDisplay}` : ''}</span>
                         </div>
                         
-                        ${event.description ? `
-                            <p style="margin: 0 0 15px 0; color: #555; line-height: 1.5;">
-                                ${this.escapeHtml(event.description)}
-                            </p>
-                        ` : ''}
+                        <!-- Venue -->
+                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px;">
+                            <span>📍</span>
+                            <span>${venue}</span>
+                        </div>
                         
+                        <!-- City -->
+                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px;">
+                            <span>🏙️</span>
+                            <span>${city}</span>
+                        </div>
+                        
+                        <!-- Price -->
+                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 15px;">
+                            <span>💰</span>
+                            <span>${price}</span>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; align-items: flex-start; gap: 5px;">
+                                <span>📝</span>
+                                <div style="color: #555; line-height: 1.5; flex: 1;">
+                                    ${description}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Source and URL -->
                         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
                             <span style="background: #007cba; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
-                                ${this.escapeHtml(event.source)}
+                                📊 ${this.escapeHtml(event.source || 'Unknown Source')}
                             </span>
-                            ${event.eventUrl ? `
-                                <a href="${event.eventUrl}" target="_blank" style="color: #007cba; text-decoration: none; font-size: 0.9em;">
-                                    View Details →
+                            ${eventUrl ? `
+                                <a href="${eventUrl}" target="_blank" style="color: #007cba; text-decoration: none; font-size: 0.9em; display: flex; align-items: center; gap: 3px;">
+                                    🔗 View Details →
                                 </a>
+                            ` : `
+                                <span style="color: #dc3545; font-size: 0.9em;">❌ No URL</span>
+                            `}
+                            ${event.bearConfidence !== undefined ? `
+                                <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
+                                    🐻 ${event.bearConfidence}% confidence
+                                </span>
                             ` : ''}
                         </div>
                     </div>
                     
                     <div style="text-align: center; min-width: 60px;">
                         <div style="background: #f8f9fa; border-radius: 8px; padding: 10px; font-size: 0.8em; color: #666;">
-                            ${event.date ? new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
+                            ${event.date ? new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '❌'}
                         </div>
                     </div>
                 </div>
@@ -354,19 +464,65 @@ ${JSON.stringify({
         }
     }
 
-    // Main display method
+    // Main display method - always shows comprehensive information
     async displayResults(results, options = {}) {
-        const format = options.format || 'html';
+        console.log('🌐 Web: Displaying comprehensive results');
         
-        switch (format) {
-            case 'html':
-                return await this.displayAsHTML(results, options);
-            case 'json':
-                return this.generateJSONExport(results, options);
-            default:
-                console.warn(`🌐 Web: Unknown display format: ${format}, using HTML`);
-                return await this.displayAsHTML(results, options);
+        // Always show comprehensive HTML display
+        const htmlResult = await this.displayAsHTML(results, options);
+        
+        // Always show debug info in test environment
+        this.config.showDebugInfo = true;
+        
+        // Also log comprehensive console information for debugging
+        console.log('\n' + '='.repeat(60));
+        console.log('🐻 BEAR EVENT SCRAPER RESULTS (WEB) 🐻');
+        console.log('='.repeat(60));
+        
+        const statsEmoji = results.bearEventCount > 0 ? '🎉' : '😔';
+        console.log(`${statsEmoji} SUMMARY:`);
+        console.log(`   📅 Total Events Found: ${results.events.length}`);
+        console.log(`   🐻 Bear Events: ${results.bearEventCount}`);
+        console.log(`   📊 Sources: ${results.successfulSources}/${results.totalSources} successful`);
+        
+        if (results.processingStats) {
+            console.log(`   🔄 Duplicates Removed: ${results.processingStats.duplicatesRemoved}`);
+            console.log(`   ⏰ Past Events Filtered: ${results.processingStats.pastEventsFiltered}`);
         }
+        
+        // Log detailed event information
+        if (results.bearEventCount > 0) {
+            console.log('\n🗓️ BEAR EVENTS DETAILS:');
+            console.log('-'.repeat(40));
+            
+            const bearEvents = results.events.filter(event => event.isBearEvent).slice(0, 10);
+            bearEvents.forEach((event, index) => {
+                console.log(`${index + 1}. ${event.title || '❌ NO TITLE'}`);
+                console.log(`   📅 ${event.date ? new Date(event.date).toLocaleString() : (event.dateString || '❌ NO DATE')}`);
+                console.log(`   📍 ${event.venue || '❌ NO VENUE'}`);
+                console.log(`   🏙️ ${(event.city && event.city !== 'unknown') ? event.city.toUpperCase() : '❌ NO CITY'}`);
+                console.log(`   💰 ${event.price || '❌ NO PRICE'}`);
+                console.log(`   🔗 ${event.eventUrl || event.url || '❌ NO URL'}`);
+                console.log(`   📊 ${event.source || 'Unknown Source'}`);
+                console.log('');
+            });
+            
+            if (results.bearEventCount > 10) {
+                console.log(`... and ${results.bearEventCount - 10} more events!`);
+            }
+        }
+        
+        console.log('\n' + '='.repeat(60));
+        console.log('🎯 Web display completed successfully!');
+        console.log('='.repeat(60) + '\n');
+        
+        return {
+            success: htmlResult.success,
+            type: 'comprehensive-web',
+            htmlResult: htmlResult,
+            eventsDisplayed: results.bearEventCount,
+            debugEnabled: true
+        };
     }
 }
 
