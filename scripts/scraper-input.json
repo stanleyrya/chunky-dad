@@ -1,79 +1,19 @@
 {
   "config": {
     "dryRun": true,
-    "timeout": 30000,
-    "retryAttempts": 3
+    "daysToLookAhead": null
   },
   "parsers": [
     {
       "name": "Megawoof America",
       "parser": "eventbrite",
       "urls": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
-      "city": "multi",
       "alwaysBear": true,
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
-      "description": "Bear events across America via Eventbrite",
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
       }
     }
-  ],
-  "calendarMappings": {
-    "nyc": "chunky-dad-nyc",
-    "la": "chunky-dad-la",
-    "sf": "chunky-dad-sf",
-    "chicago": "chunky-dad-chicago",
-    "seattle": "chunky-dad-seattle",
-    "portland": "chunky-dad-portland",
-    "denver": "chunky-dad-denver",
-    "austin": "chunky-dad-austin",
-    "miami": "chunky-dad-miami",
-    "boston": "chunky-dad-boston",
-    "dc": "chunky-dad-dc"
-  },
-  "notes": {
-    "version": "V7 - Scalable URL Processing",
-    "created": "2025-01-27",
-    "features": [
-      "Single required configuration file for all scraper settings",
-      "Simplified safety with only dryRun mode",
-      "Automatic filtering of past events",
-      "No hardcoded fallbacks - configuration is mandatory",
-      "Combined venue and parser configurations",
-      "Real venue addresses and enhanced keyword detection",
-      "Support for all major bear event websites",
-      "SCALABLE URL PROCESSING - Configurable patterns with intelligent defaults",
-      "Custom URL patterns per parser for unique website structures",
-      "URL filtering (include/exclude patterns) for precise control",
-      "Parser-specific overrides for complex cases like Bearracuda",
-      "Automatic website detection (Eventbrite, Facebook, Eagle sites, etc.)",
-      "Rate limiting and error handling for additional URL processing"
-    ],
-    "bear_events": {
-      "always_bear": ["Furball NYC", "Bearracuda", "Megawoof America"],
-      "keyword_required": ["Rockbar NYC", "SF Eagle", "Eagle NY", "Precinct DTLA"],
-      "note": "Furball, Bearracuda, and Megawoof events are always considered bear events"
-    },
-    "scalability": {
-      "approach": "Hybrid system combining configurable patterns with parser-specific logic",
-      "benefits": [
-        "Works out-of-the-box for most websites with intelligent defaults",
-        "Easily customizable for unique website structures",
-        "Parser-specific overrides for complex multi-page sites",
-        "URL filtering prevents processing irrelevant pages",
-        "Rate limiting prevents server overload",
-        "Graceful error handling ensures scraping continues if detail pages fail"
-      ],
-      "configuration_levels": [
-        "Auto-detection (recommended) - Just add 'requireDetailPages': true",
-        "Custom patterns - Define 'urlPatterns' array for specific structures", 
-        "URL filtering - Use 'urlFilters' to include/exclude specific patterns",
-        "Parser-specific - Use 'urlExtractionMethod': 'parser-specific' for complex logic"
-      ]
-    },
-    "safety": {
-      "dryRun": "When true, no calendar changes will be made. Set to false to enable calendar modifications."
-    }
-  }
+  ]
 }
