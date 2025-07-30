@@ -93,18 +93,25 @@ class ScriptableDisplayHandler {
                     eventStack.layoutVertically();
                     
                     // Event title
-                    const titleText = eventStack.addText(event.title);
-                    titleText.textColor = Color.white();
+                    const titleText = eventStack.addText(event.title || '❌ No Title');
+                    titleText.textColor = event.title ? Color.white() : Color.red();
                     titleText.font = Font.boldSystemFont(10);
                     titleText.lineLimit = 1;
                     
-                    // Event details
-                    const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
-                    const venue = event.venue || 'Venue TBD';
-                    const detailsText = eventStack.addText(`${date} • ${venue}`);
-                    detailsText.textColor = Color.gray();
+                    // Event details with missing field indicators
+                    const date = event.date ? new Date(event.date).toLocaleDateString() : (event.dateString || '❌ No Date');
+                    const venue = event.venue || '❌ No Venue';
+                    const city = (event.city && event.city !== 'unknown') ? event.city.toUpperCase() : '❌ No City';
+                    
+                    const detailsText = eventStack.addText(`📅 ${date}`);
+                    detailsText.textColor = event.date ? Color.gray() : Color.orange();
                     detailsText.font = Font.systemFont(8);
                     detailsText.lineLimit = 1;
+                    
+                    const venueText = eventStack.addText(`📍 ${venue} • 🏙️ ${city}`);
+                    venueText.textColor = (event.venue && event.city && event.city !== 'unknown') ? Color.gray() : Color.orange();
+                    venueText.font = Font.systemFont(8);
+                    venueText.lineLimit = 1;
                     
                     widget.addSpacer(2);
                 }
@@ -219,14 +226,20 @@ class ScriptableDisplayHandler {
             };
         }
     }
-
-    // Legacy method - functionality moved to displayResults()
-    // Kept for backwards compatibility but just redirects to main method
-    displayEnhancedConsole(results, options = {}) {
-        console.warn('⚠️ displayEnhancedConsole is deprecated - functionality moved to displayResults()');
-        return this.displayResults(results, options);
-    }
     
+    // Get appropriate emoji for keywords
+    getKeywordEmoji(keyword) {
+        const keywordLower = keyword.toLowerCase();
+        if (keywordLower.includes('bear')) return '🐻';
+        if (keywordLower.includes('daddy')) return '👨‍🦳';
+        if (keywordLower.includes('cub')) return '🐻‍❄️';
+        if (keywordLower.includes('leather')) return '🖤';
+        if (keywordLower.includes('muscle')) return '💪';
+        if (keywordLower.includes('party') || keywordLower.includes('dance')) return '🎉';
+        if (keywordLower.includes('woof')) return '🐺';
+        return '🏷️';
+    }
+
     // Display results as interactive table (for app environment)
     async displayAsInteractiveTable(results, options = {}) {
         try {
@@ -251,23 +264,28 @@ class ScriptableDisplayHandler {
                 
                 bearEvents.forEach((event, index) => {
                     const row = new UITableRow();
-                    row.height = 80;
+                    row.height = 100;
                     
-                    // Event title and details
-                    const title = event.title || 'Untitled Event';
-                    const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
-                    const venue = event.venue || 'Venue TBD';
-                    const city = event.city ? event.city.toUpperCase() : 'Location TBD';
+                    // Event title and details with missing field indicators
+                    const title = event.title || '❌ No Title';
+                    const date = event.date 
+                        ? new Date(event.date).toLocaleDateString() + ' ' + new Date(event.date).toLocaleTimeString()
+                        : (event.dateString ? `${event.dateString} (unparsed)` : '❌ No Date');
+                    const venue = event.venue || '❌ No Venue';
+                    const city = (event.city && event.city !== 'unknown') ? event.city.toUpperCase() : '❌ No City';
+                    const price = event.price ? `💰 ${event.price}` : '💰 No Price';
+                    const source = event.source ? `📊 ${event.source}` : '';
                     
-                    const eventCell = row.addText(`${title}\n📅 ${date} • 📍 ${venue}\n🏙️ ${city}`);
+                    const eventCell = row.addText(`${title}\n📅 ${date}\n📍 ${venue} • 🏙️ ${city}\n${price} ${source}`);
                     eventCell.titleFont = Font.boldSystemFont(14);
-                    eventCell.subtitleFont = Font.systemFont(12);
+                    eventCell.subtitleFont = Font.systemFont(11);
                     eventCell.subtitleColor = Color.gray();
                     
-                    // Add tap action to open event URL
-                    if (event.url) {
+                    // Add tap action to open event URL if available
+                    const eventUrl = event.eventUrl || event.url;
+                    if (eventUrl) {
                         row.onSelect = () => {
-                            Safari.open(event.url);
+                            Safari.open(eventUrl);
                         };
                         
                         // Add arrow indicator
@@ -275,6 +293,12 @@ class ScriptableDisplayHandler {
                         arrowCell.titleColor = Color.blue();
                         arrowCell.widthWeight = 10;
                         arrowCell.rightAligned();
+                    } else {
+                        // No URL available - show info icon
+                        const infoCell = row.addText('ℹ️');
+                        infoCell.titleColor = Color.gray();
+                        infoCell.widthWeight = 10;
+                        infoCell.rightAligned();
                     }
                     
                     table.addRow(row);
@@ -411,16 +435,70 @@ class ScriptableDisplayHandler {
             
             upcomingEvents.forEach((event, index) => {
                 const eventNumber = `${index + 1}.`.padEnd(3);
-                const title = event.title || 'Untitled Event';
-                const venue = event.venue ? ` @ ${event.venue}` : '';
-                const city = event.city ? ` (${event.city.toUpperCase()})` : '';
-                const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
+                const title = event.title || '❌ NO TITLE';
                 
-                console.log(`   ${eventNumber}🎪 ${title}${venue}${city}`);
-                console.log(`      📅 ${date}`);
-                if (event.url) {
-                    console.log(`      🔗 ${event.url}`);
+                console.log(`   ${eventNumber}🎪 ${title}`);
+                
+                // Date information
+                if (event.date) {
+                    const date = new Date(event.date).toLocaleDateString();
+                    const time = new Date(event.date).toLocaleTimeString();
+                    console.log(`      📅 ${date} at ${time}`);
+                } else if (event.dateString) {
+                    console.log(`      📅 ${event.dateString} (⚠️ unparsed date)`);
+                } else {
+                    console.log(`      📅 ❌ NO DATE`);
                 }
+                
+                // Venue and location
+                if (event.venue) {
+                    console.log(`      📍 ${event.venue}`);
+                } else {
+                    console.log(`      📍 ❌ NO VENUE`);
+                }
+                
+                // City information
+                if (event.city && event.city !== 'unknown') {
+                    console.log(`      🏙️ ${event.city.toUpperCase()}`);
+                } else {
+                    console.log(`      🏙️ ❌ NO CITY`);
+                }
+                
+                // Price information
+                if (event.price) {
+                    console.log(`      💰 ${event.price}`);
+                } else {
+                    console.log(`      💰 ❌ NO PRICE INFO`);
+                }
+                
+                // Description
+                if (event.description) {
+                    const shortDesc = event.description.length > 100 
+                        ? event.description.substring(0, 100) + '...' 
+                        : event.description;
+                    console.log(`      📝 ${shortDesc}`);
+                } else {
+                    console.log(`      📝 ❌ NO DESCRIPTION`);
+                }
+                
+                // URL
+                if (event.eventUrl || event.url) {
+                    const url = event.eventUrl || event.url;
+                    console.log(`      🔗 ${url}`);
+                } else {
+                    console.log(`      🔗 ❌ NO URL`);
+                }
+                
+                // Source information
+                if (event.source) {
+                    console.log(`      📊 Source: ${event.source}`);
+                }
+                
+                // Bear event confidence (if available)
+                if (event.bearConfidence !== undefined) {
+                    console.log(`      🐻 Bear Confidence: ${event.bearConfidence}%`);
+                }
+                
                 console.log('');
             });
             
