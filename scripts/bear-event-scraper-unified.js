@@ -161,6 +161,18 @@ class BearEventScraper {
                 // Fetch initial data
                 const rawData = await this.inputHandler.fetchData(sourceUrl);
                 
+                // Enhanced debugging - log response details
+                console.log(`📡 ${source.name}: HTTP Status: ${rawData.status}`);
+                console.log(`📡 ${source.name}: Response Success: ${rawData.success}`);
+                console.log(`📡 ${source.name}: HTML Length: ${rawData.html ? rawData.html.length : 0} characters`);
+                
+                if (rawData.html && rawData.html.length > 0) {
+                    console.log(`📡 ${source.name}: HTML appears to be valid (contains tags):`, 
+                        rawData.html.includes('<') && rawData.html.includes('>'));
+                } else {
+                    console.warn(`📡 ${source.name}: No HTML content received or HTML is empty`);
+                }
+                
                 if (!rawData.success) {
                     throw new Error(`Failed to fetch data: ${rawData.error}`);
                 }

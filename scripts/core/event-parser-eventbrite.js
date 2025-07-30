@@ -35,6 +35,23 @@ class EventbriteEventParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
             
+            // First try to extract events from embedded JSON data (modern Eventbrite approach)
+            const jsonEvents = this.extractEventsFromJson(html);
+            if (jsonEvents.length > 0) {
+                console.log(`🐻 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
+                events.push(...jsonEvents);
+                
+                return {
+                    events: events,
+                    additionalLinks: [], // JSON data already contains full event details
+                    source: this.config.source,
+                    url: htmlData.url
+                };
+            }
+            
+            // Fallback to HTML parsing if no JSON data found
+            console.log('🐻 Eventbrite: No JSON data found, falling back to HTML parsing');
+            
             // Create a temporary DOM element to parse HTML
             let doc;
             const isScriptable = typeof importModule !== 'undefined';
@@ -100,8 +117,21 @@ class EventbriteEventParser {
                 console.warn('🐻 Eventbrite: No event elements found with any selector');
                 
                 // Enhanced debugging - show more HTML structure
-                console.log('🐻 Eventbrite: HTML preview (first 1000 chars):', html.substring(0, 1000));
-                console.log('🐻 Eventbrite: HTML preview (middle section):', html.substring(Math.floor(html.length/2), Math.floor(html.length/2) + 1000));
+                console.log(`🐻 Eventbrite: HTML length: ${html ? html.length : 0} characters`);
+                
+                if (html && html.length > 0) {
+                    console.log('🐻 Eventbrite: HTML preview (first 1000 chars):', html.substring(0, 1000));
+                    console.log('🐻 Eventbrite: HTML preview (middle section):', html.substring(Math.floor(html.length/2), Math.floor(html.length/2) + 1000));
+                    
+                    // Check if HTML contains expected Eventbrite patterns
+                    const hasEventbriteContent = html.toLowerCase().includes('eventbrite') || 
+                                               html.toLowerCase().includes('data-testid') ||
+                                               html.toLowerCase().includes('event-card');
+                    console.log('🐻 Eventbrite: HTML contains Eventbrite patterns:', hasEventbriteContent);
+                } else {
+                    console.error('🐻 Eventbrite: HTML is null, undefined, or empty');
+                    return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
+                }
                 
                 // Try to find what elements ARE available
                 if (!isWebBrowser) {
@@ -443,60 +473,111 @@ class EventbriteEventParser {
             querySelectorAll: (selector) => {
                 const elements = [];
                 
+                // Enhanced debugging - check what's actually in the HTML
+                console.log(`🐻 Eventbrite: Checking selector "${selector}" in HTML of length ${html.length}`);
+                
                 // Simple regex-based element extraction for common Eventbrite patterns
                 if (selector.includes('event-card') || selector.includes('Container_root') || selector.includes('event') || 
                     selector.includes('data-testid') || selector.includes('href*="/e/"') || selector.includes('href*="/events/"')) {
-                    // Look for actual event cards with links to individual events
+                    
+                    // Enhanced patterns for modern Eventbrite (2025)
                     const eventPatterns = [
                         // Look for links to individual events (most reliable for Eventbrite)
                         /<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
+                        /<a[^>]*href="[^"]*\/events\/[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
+                        // Modern Eventbrite event URLs
+                        /<a[^>]*href="[^"]*eventbrite\.com\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
+                        /<a[^>]*href="[^"]*eventbrite\.com\/events\/[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
                         // Look for div elements containing event links
                         /<div[^>]*>[\s\S]*?<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
+                        /<div[^>]*>[\s\S]*?<a[^>]*href="[^"]*\/events\/[^"]*"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
                         // Look for article tags which Eventbrite sometimes uses for events
                         /<article[^>]*>[\s\S]*?<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/article>/gi,
                         // Look for event cards with specific classes
                         /<div[^>]*class="[^"]*event-card[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
                         /<div[^>]*class="[^"]*Container_root__[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-                        /<div[^>]*data-testid="event-card-tracking-layer"[^>]*>[\s\S]*?<\/div>/gi
+                        /<div[^>]*data-testid="event-card-tracking-layer"[^>]*>[\s\S]*?<\/div>/gi,
+                        // New patterns for 2025 Eventbrite structure
+                        /<div[^>]*data-testid="[^"]*event[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+                        /<section[^>]*>[\s\S]*?<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/section>/gi
                     ];
                     
-                    // First, try to find elements that contain event links
-                    const eventLinkPattern = /href="[^"]*\/e\/[^"]*"/gi;
-                    const hasEventLinks = html.match(eventLinkPattern);
+                    // Enhanced debugging - check for various link patterns
+                    const linkPatterns = [
+                        { name: 'e/ links', pattern: /href="[^"]*\/e\/[^"]*"/gi },
+                        { name: 'events/ links', pattern: /href="[^"]*\/events\/[^"]*"/gi },
+                        { name: 'eventbrite.com links', pattern: /href="[^"]*eventbrite\.com[^"]*"/gi },
+                        { name: 'any href links', pattern: /href="[^"]*"/gi }
+                    ];
+                    
+                    linkPatterns.forEach(({ name, pattern }) => {
+                        const matches = html.match(pattern) || [];
+                        console.log(`🐻 Eventbrite: Found ${matches.length} ${name}`);
+                        if (matches.length > 0 && matches.length <= 3) {
+                            matches.forEach((match, i) => {
+                                console.log(`🐻 Eventbrite: ${name} ${i + 1}: ${match}`);
+                            });
+                        }
+                    });
+                    
+                    // First, try to find elements that contain event links (expanded patterns)
+                    const eventLinkPatterns = [
+                        /href="[^"]*\/e\/[^"]*"/gi,
+                        /href="[^"]*\/events\/[^"]*"/gi,
+                        /href="[^"]*eventbrite\.com\/e\/[^"]*"/gi,
+                        /href="[^"]*eventbrite\.com\/events\/[^"]*"/gi
+                    ];
+                    
+                    let hasEventLinks = false;
+                    eventLinkPatterns.forEach(pattern => {
+                        const matches = html.match(pattern);
+                        if (matches && matches.length > 0) {
+                            hasEventLinks = true;
+                            console.log(`🐻 Eventbrite: Found ${matches.length} event links with pattern ${pattern}`);
+                        }
+                    });
                     
                     if (hasEventLinks) {
-                        console.log(`🐻 Eventbrite: Found ${hasEventLinks.length} event links in HTML`);
+                        // Extract the surrounding HTML for each event link (enhanced patterns)
+                        const allEventLinkPatterns = [
+                            /<[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+                            /<[^>]*href="[^"]*\/events\/[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+                            /<[^>]*href="[^"]*eventbrite\.com\/e\/[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+                            /<[^>]*href="[^"]*eventbrite\.com\/events\/[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi
+                        ];
                         
-                        // Extract the surrounding HTML for each event link
-                        const eventLinkMatches = [...html.matchAll(/<[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi)];
-                        eventLinkMatches.forEach(match => {
-                            // Try to get the parent container that includes more event details
-                            const linkHtml = match[0];
-                            const linkStart = match.index;
-                            
-                            // Look backwards and forwards for a containing div/article
-                            let containerStart = linkStart;
-                            let containerEnd = match.index + linkHtml.length;
-                            
-                            // Find the opening tag of a container (div, article, etc.)
-                            const beforeHtml = html.substring(Math.max(0, linkStart - 1000), linkStart);
-                            const containerMatch = beforeHtml.match(/<(div|article|section)[^>]*>(?!.*<\/\1>)/gi);
-                            if (containerMatch) {
-                                const lastContainer = containerMatch[containerMatch.length - 1];
-                                containerStart = linkStart - (beforeHtml.length - beforeHtml.lastIndexOf(lastContainer));
-                            }
-                            
-                            // Find the closing tag
-                            const afterHtml = html.substring(containerEnd, Math.min(html.length, containerEnd + 1000));
-                            const closingMatch = afterHtml.match(/<\/(div|article|section)>/i);
-                            if (closingMatch) {
-                                containerEnd = containerEnd + afterHtml.indexOf(closingMatch[0]) + closingMatch[0].length;
-                            }
-                            
-                            const containerHtml = html.substring(containerStart, containerEnd);
-                            elements.push(this.createScriptableElement(containerHtml));
+                        allEventLinkPatterns.forEach(pattern => {
+                            const eventLinkMatches = [...html.matchAll(pattern)];
+                            eventLinkMatches.forEach(match => {
+                                // Try to get the parent container that includes more event details
+                                const linkHtml = match[0];
+                                const linkStart = match.index;
+                                
+                                // Look backwards and forwards for a containing div/article
+                                let containerStart = linkStart;
+                                let containerEnd = match.index + linkHtml.length;
+                                
+                                // Find the opening tag of a container (div, article, etc.)
+                                const beforeHtml = html.substring(Math.max(0, linkStart - 1000), linkStart);
+                                const containerMatch = beforeHtml.match(/<(div|article|section)[^>]*>(?!.*<\/\1>)/gi);
+                                if (containerMatch) {
+                                    const lastContainer = containerMatch[containerMatch.length - 1];
+                                    containerStart = linkStart - (beforeHtml.length - beforeHtml.lastIndexOf(lastContainer));
+                                }
+                                
+                                // Find the closing tag
+                                const afterHtml = html.substring(containerEnd, Math.min(html.length, containerEnd + 1000));
+                                const closingMatch = afterHtml.match(/<\/(div|article|section)>/i);
+                                if (closingMatch) {
+                                    containerEnd = containerEnd + afterHtml.indexOf(closingMatch[0]) + closingMatch[0].length;
+                                }
+                                
+                                const containerHtml = html.substring(containerStart, containerEnd);
+                                elements.push(this.createScriptableElement(containerHtml));
+                            });
                         });
                     } else {
+                        console.log('🐻 Eventbrite: No event links found, trying fallback patterns');
                         // Fallback to original patterns if no event links found
                         eventPatterns.forEach(pattern => {
                             const matches = html.match(pattern) || [];
@@ -504,6 +585,24 @@ class EventbriteEventParser {
                                 elements.push(this.createScriptableElement(match));
                             });
                         });
+                        
+                        // If still no elements, try to extract any divs that might contain events
+                        if (elements.length === 0) {
+                            console.log('🐻 Eventbrite: No elements found with event patterns, trying generic div extraction');
+                            const genericDivPattern = /<div[^>]*class="[^"]*"[^>]*>[\s\S]*?<\/div>/gi;
+                            const divMatches = html.match(genericDivPattern) || [];
+                            console.log(`🐻 Eventbrite: Found ${divMatches.length} generic divs`);
+                            
+                            // Take first few divs that might contain events
+                            divMatches.slice(0, 10).forEach(match => {
+                                if (match.toLowerCase().includes('event') || 
+                                    match.toLowerCase().includes('date') || 
+                                    match.toLowerCase().includes('time') ||
+                                    match.includes('href=')) {
+                                    elements.push(this.createScriptableElement(match));
+                                }
+                            });
+                        }
                     }
                 }
                 
@@ -777,6 +876,143 @@ class EventbriteEventParser {
         
         console.log(`🐻 Eventbrite: Extracted ${links.length} additional event links`);
         return links.slice(0, 20); // Limit to 20 additional links per page
+    }
+
+    // Extract events from embedded JSON data (modern Eventbrite approach)
+    extractEventsFromJson(html) {
+        const events = [];
+        
+        // Look for window.__SERVER_DATA__ which contains the event information
+        const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
+        
+        if (serverDataMatch && serverDataMatch[1]) {
+            try {
+                const serverData = JSON.parse(serverDataMatch[1]);
+                console.log('🐻 Eventbrite: Found window.__SERVER_DATA__');
+                
+                // Check for events in view_data.events.future_events
+                if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
+                    const futureEvents = serverData.view_data.events.future_events;
+                    console.log(`🐻 Eventbrite: Found ${futureEvents.length} future events in JSON data`);
+                    
+                    futureEvents.forEach(eventData => {
+                        if (eventData.url && eventData.name && eventData.name.text) {
+                            const event = {
+                                id: eventData.id || this.extractEventId(eventData.url),
+                                title: eventData.name.text,
+                                url: eventData.url,
+                                date: eventData.start ? eventData.start.utc : null,
+                                location: eventData.venue ? eventData.venue.name : null,
+                                address: eventData.venue && eventData.venue.address ? 
+                                    eventData.venue.address.localized_address_display : null,
+                                description: eventData.summary || '',
+                                source: this.config.source,
+                                timestamp: new Date().toISOString(),
+                                isPlaceholder: false,
+                                isBearEvent: this.isBearEvent({
+                                    name: eventData.name.text,
+                                    description: eventData.summary || '',
+                                    url: eventData.url
+                                }),
+                                requiresDetailFetch: false // JSON already has most details
+                            };
+                            
+                            console.log(`🐻 Eventbrite: Parsed event: ${event.title} (${event.date})`);
+                            events.push(event);
+                        }
+                    });
+                }
+                
+                // Also check for past events if needed for debugging
+                if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.past_events) {
+                    const pastEvents = serverData.view_data.events.past_events;
+                    console.log(`🐻 Eventbrite: Found ${pastEvents.length} past events in JSON data (not included)`);
+                }
+                
+            } catch (error) {
+                console.warn('🐻 Eventbrite: Failed to parse window.__SERVER_DATA__:', error);
+            }
+        }
+        
+        // Fallback: Look for JSON-LD structured data
+        if (events.length === 0) {
+            const jsonLdMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
+            
+            if (jsonLdMatch) {
+                jsonLdMatch.forEach(script => {
+                    const jsonContent = script.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
+                    try {
+                        const jsonData = JSON.parse(jsonContent);
+                        
+                        // Handle array of events
+                        if (Array.isArray(jsonData)) {
+                            jsonData.forEach(item => {
+                                if (item['@type'] === 'Event' && item.name && item.startDate && item.url) {
+                                    const event = {
+                                        id: this.extractEventId(item.url),
+                                        title: item.name,
+                                        url: item.url,
+                                        date: item.startDate,
+                                        location: item.location ? item.location.name : null,
+                                        description: item.description || '',
+                                        source: this.config.source,
+                                        timestamp: new Date().toISOString(),
+                                        isPlaceholder: false,
+                                        isBearEvent: this.isBearEvent(item),
+                                        requiresDetailFetch: true
+                                    };
+                                    events.push(event);
+                                }
+                            });
+                        }
+                        // Handle single event or ItemList
+                        else if (jsonData['@type'] === 'Event' && jsonData.name && jsonData.startDate && jsonData.url) {
+                            const event = {
+                                id: this.extractEventId(jsonData.url),
+                                title: jsonData.name,
+                                url: jsonData.url,
+                                date: jsonData.startDate,
+                                location: jsonData.location ? jsonData.location.name : null,
+                                description: jsonData.description || '',
+                                source: this.config.source,
+                                timestamp: new Date().toISOString(),
+                                isPlaceholder: false,
+                                isBearEvent: this.isBearEvent(jsonData),
+                                requiresDetailFetch: true
+                            };
+                            events.push(event);
+                        }
+                        // Handle ItemList structure
+                        else if (jsonData['@type'] === 'ItemList' && jsonData.itemListElement) {
+                            jsonData.itemListElement.forEach(listItem => {
+                                const item = listItem.item;
+                                if (item && item['@type'] === 'Event' && item.name && item.startDate && item.url) {
+                                    const event = {
+                                        id: this.extractEventId(item.url),
+                                        title: item.name,
+                                        url: item.url,
+                                        date: item.startDate,
+                                        location: item.location ? item.location.name : null,
+                                        description: item.description || '',
+                                        source: this.config.source,
+                                        timestamp: new Date().toISOString(),
+                                        isPlaceholder: false,
+                                        isBearEvent: this.isBearEvent(item),
+                                        requiresDetailFetch: true
+                                    };
+                                    events.push(event);
+                                }
+                            });
+                        }
+                    } catch (error) {
+                        console.warn('🐻 Eventbrite: Failed to parse JSON-LD data:', error);
+                    }
+                });
+            }
+        }
+        
+        console.log(`🐻 Eventbrite: Extracted ${events.length} events from JSON data`);
+        return events;
     }
 }
 
