@@ -12,9 +12,15 @@ cat > .git/hooks/pre-commit << 'EOF'
 if git diff --cached --name-only | grep -q "^testing/.*\.html$"; then
     echo "Testing directory HTML files modified, updating manifest..."
     
-    # Generate the manifest
-    cd testing && node generate-manifest.js
-    cd ..
+    # Generate the manifest (check if node is available)
+    if command -v node >/dev/null 2>&1; then
+        cd testing && node generate-manifest.js
+        cd ..
+        echo "Manifest generated using Node.js"
+    else
+        echo "Node.js not available - skipping manifest generation"
+        echo "Run 'npm run update-test-manifest' manually when Node.js is available"
+    fi
     
     # Add the updated manifest to the commit
     git add testing/manifest.json
