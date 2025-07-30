@@ -6,7 +6,7 @@ console.log('bear-event-scraper-unified.js is loading...');
 
 // Import core modules (environment-specific loading)
 let ScriptableInputHandler, WebInputHandlerModule;
-let EventbriteEventParser, BearraccudaEventParser, GenericEventParser;
+let EventbriteEventParser, BearraccudaEventParser, GenericEventParser, MegawoofEventParser;
 let ScriptableDisplayHandler, WebDisplayHandlerModule;
 
 async function loadModules() {
