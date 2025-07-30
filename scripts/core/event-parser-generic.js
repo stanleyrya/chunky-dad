@@ -1,6 +1,11 @@
 // Event Parser - Generic
 // General-purpose parser for various bear event websites
 
+// Prevent duplicate class declaration
+if (typeof GenericEventParser !== 'undefined') {
+    console.warn('GenericEventParser already defined, skipping redefinition');
+} else {
+
 class GenericEventParser {
     constructor(config = {}) {
         this.config = {
@@ -284,3 +289,5 @@ if (typeof window !== 'undefined') {
     // Scriptable environment
     this.GenericEventParser = GenericEventParser;
 }
+
+} // End of conditional class declaration
