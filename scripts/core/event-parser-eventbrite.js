@@ -2,8 +2,8 @@
 // Specialized parser for Eventbrite event website structure
 // Works with all Eventbrite events, not just Megawoof
 
-// Prevent duplicate class declaration
-if (typeof EventbriteEventParser !== 'undefined') {
+// Prevent duplicate class declaration in browser environment only
+if (typeof window !== 'undefined' && typeof EventbriteEventParser !== 'undefined') {
     console.warn('EventbriteEventParser already defined, skipping redefinition');
 } else {
 
@@ -38,25 +38,44 @@ class EventbriteEventParser {
             // Create a temporary DOM element to parse HTML
             let doc;
             const isScriptable = typeof importModule !== 'undefined';
+            const isWebBrowser = typeof window !== 'undefined' && typeof DOMParser !== 'undefined';
             
-            if (isScriptable) {
-                // Scriptable environment - use regex-based parsing
-                console.log('🐻 Eventbrite: Using Scriptable-compatible HTML parsing');
-                doc = this.parseHTMLForScriptable(html);
-            } else {
-                // Web environment - use DOMParser
+            if (isWebBrowser) {
+                // Web browser environment - use DOMParser
                 console.log('🐻 Eventbrite: Using DOMParser for web environment');
                 const parser = new DOMParser();
                 doc = parser.parseFromString(html, 'text/html');
+            } else {
+                // Scriptable or Node.js environment - use regex-based parsing
+                console.log('🐻 Eventbrite: Using Scriptable-compatible HTML parsing');
+                doc = this.parseHTMLForScriptable(html);
             }
             
             // Eventbrite-specific selectors - updated for the provided HTML structure
             const eventElements = doc.querySelectorAll('.event-card, .Container_root__4i85v, [data-testid="event-card-tracking-layer"], .event-card-link, [class*="event"]');
             
-            console.log(`🐻 Eventbrite: Found ${eventElements.length} potential event elements`);
+            console.log(`🐻 Eventbrite: Found ${eventElements.length} elements with selector ".event-card, .Container_root__4i85v, [data-testid="event-card-tracking-layer"], .event-card-link, [class*="event"]"`);
             
-            if (eventElements.length === 0) {
+            // Add detailed logging to see what we're actually finding
+            if (eventElements.length > 0) {
+                eventElements.forEach((element, index) => {
+                    const preview = isScriptable ? element.innerHTML?.substring(0, 200) : element.outerHTML?.substring(0, 200);
+                    console.log(`🐻 Eventbrite: Element ${index + 1} preview:`, preview);
+                });
+            } else {
                 console.warn('🐻 Eventbrite: No event elements found. HTML preview:', html.substring(0, 500));
+                
+                // Try to find what elements ARE available
+                if (!isWebBrowser) {
+                    const allDivs = html.match(/<div[^>]*>/gi) || [];
+                    console.log(`🐻 Eventbrite: Found ${allDivs.length} div elements in HTML`);
+                    allDivs.slice(0, 5).forEach((div, i) => {
+                        console.log(`🐻 Eventbrite: Div ${i + 1}:`, div);
+                    });
+                } else {
+                    const allDivs = doc.querySelectorAll('div');
+                    console.log(`🐻 Eventbrite: Found ${allDivs.length} div elements in DOM`);
+                }
             }
             
             eventElements.forEach((element, index) => {
@@ -70,9 +89,21 @@ class EventbriteEventParser {
                         isValidTitle: event?.title && event.title !== 'Untitled Event'
                     });
                     if (event && event.title && event.title !== 'Untitled Event') {
-                        // For eventbrite, we consider all events as potentially bear events
-                        // but still run the bear check for proper classification
-                        event.isBearEvent = this.isBearEvent(event);
+                        // Check if this is from a source that should always be considered bear events
+                        const alwaysBearSources = ['megawoof', 'furball', 'bearraccuda'];
+                        const isAlwaysBearSource = alwaysBearSources.some(source => 
+                            htmlData.url.toLowerCase().includes(source) || 
+                            this.config.source.toLowerCase().includes(source)
+                        );
+                        
+                        if (isAlwaysBearSource) {
+                            event.isBearEvent = true;
+                            console.log(`🐻 Eventbrite: Event "${event.title}" marked as bear event (always-bear source)`);
+                        } else {
+                            event.isBearEvent = this.isBearEvent(event);
+                            console.log(`🐻 Eventbrite: Event "${event.title}" bear check result: ${event.isBearEvent}`);
+                        }
+                        
                         events.push(event);
                         console.log(`🐻 Eventbrite: Added event "${event.title}" (bear event: ${event.isBearEvent})`);
                     } else {
@@ -114,13 +145,21 @@ class EventbriteEventParser {
             timestamp: new Date().toISOString()
         };
 
+        // Add detailed logging for debugging
+        const isWebBrowser = typeof window !== 'undefined' && typeof DOMParser !== 'undefined';
+        const elementPreview = !isWebBrowser ? element.innerHTML?.substring(0, 300) : element.outerHTML?.substring(0, 300);
+        console.log(`🐻 Eventbrite: Parsing element with content:`, elementPreview);
+
         // Extract title - Eventbrite specific selectors
         const titleElement = element.querySelector('h3, .Typography_body-lg__487rx, .event-card__clamp-line--two, [aria-label*="View"], [class*="title"]');
+        console.log(`🐻 Eventbrite: Title element found:`, titleElement ? (titleElement.textContent || titleElement.getAttribute?.('aria-label')) : 'null');
+        
         if (titleElement) {
             event.title = titleElement.textContent.trim();
         } else {
             // Try to get title from aria-label if available
             const linkElement = element.querySelector('a[aria-label]');
+            console.log(`🐻 Eventbrite: Fallback link element:`, linkElement ? linkElement.getAttribute('aria-label') : 'null');
             if (linkElement) {
                 const ariaLabel = linkElement.getAttribute('aria-label');
                 if (ariaLabel && ariaLabel.startsWith('View ')) {
@@ -128,6 +167,20 @@ class EventbriteEventParser {
                 }
             }
         }
+
+        // If still no title, try to extract from any text content
+        if (!event.title) {
+            const textContent = element.textContent || '';
+            console.log(`🐻 Eventbrite: Raw text content:`, textContent.substring(0, 100));
+            // Look for meaningful text that could be a title
+            const lines = textContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            if (lines.length > 0) {
+                // Take the first non-empty line as a potential title
+                event.title = lines[0];
+            }
+        }
+
+        console.log(`🐻 Eventbrite: Extracted title:`, event.title);
 
         // Extract date/time - Eventbrite specific
         const dateElement = element.querySelector('.Typography_body-md__487rx, [class*="date"], time, p');
@@ -154,26 +207,48 @@ class EventbriteEventParser {
         }
 
         // Extract event URL - This is crucial for Eventbrite
-        const linkElement = element.querySelector('a[href*="eventbrite.com/e/"]') || 
-                          element.querySelector('a[data-event-id]') ||
-                          element.closest('a[href*="eventbrite.com/e/"]');
+        // For Scriptable environment, directly extract from HTML
+        let linkElement = null;
+        let href = null;
         
-        if (linkElement) {
-            let href = linkElement.getAttribute('href');
-            if (href) {
-                // Clean up the URL - remove query parameters that aren't needed
-                if (href.includes('?')) {
-                    href = href.split('?')[0];
-                }
-                
-                if (href.startsWith('http')) {
-                    event.eventUrl = href;
-                } else if (href.startsWith('/')) {
-                    event.eventUrl = `https://www.eventbrite.com${href}`;
-                } else {
-                    event.eventUrl = `https://www.eventbrite.com/${href}`;
-                }
+        if (!isWebBrowser) {
+            // Use regex to find href in the element HTML
+            const hrefMatch = element.innerHTML?.match(/href="([^"]*\/e\/[^"]*)"/i);
+            if (hrefMatch) {
+                href = hrefMatch[1];
+                console.log(`🐻 Eventbrite: Found event link via regex:`, href);
+            } else {
+                console.log(`🐻 Eventbrite: No /e/ link found in element HTML`);
             }
+        } else {
+            // Web browser environment
+            linkElement = element.querySelector('a[href*="/e/"]') || 
+                         element.querySelector('a[href*="eventbrite.com/e/"]') || 
+                         element.querySelector('a[data-event-id]') ||
+                         element.closest('a[href*="/e/"]');
+            
+            if (linkElement) {
+                href = linkElement.getAttribute('href');
+                console.log(`🐻 Eventbrite: Found event link via querySelector:`, href);
+            } else {
+                console.log(`🐻 Eventbrite: No event link found via querySelector`);
+            }
+        }
+        
+        if (href) {
+            // Clean up the URL - remove query parameters that aren't needed
+            if (href.includes('?')) {
+                href = href.split('?')[0];
+            }
+            
+            if (href.startsWith('http')) {
+                event.eventUrl = href;
+            } else if (href.startsWith('/')) {
+                event.eventUrl = `https://www.eventbrite.com${href}`;
+            } else {
+                event.eventUrl = `https://www.eventbrite.com/${href}`;
+            }
+            console.log(`🐻 Eventbrite: Final event URL:`, event.eventUrl);
         }
 
         // Extract city from venue, URL, or other indicators
@@ -268,24 +343,65 @@ class EventbriteEventParser {
                 
                 // Simple regex-based element extraction for common Eventbrite patterns
                 if (selector.includes('event-card') || selector.includes('Container_root') || selector.includes('event')) {
-                    // Look for div elements with event-related classes or data attributes
+                    // Look for actual event cards with links to individual events
                     const eventPatterns = [
+                        // Look for links to individual events (most reliable for Eventbrite)
+                        /<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
+                        // Look for div elements containing event links
+                        /<div[^>]*>[\s\S]*?<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
+                        // Look for article tags which Eventbrite sometimes uses for events
+                        /<article[^>]*>[\s\S]*?<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/article>/gi,
+                        // Look for event cards with specific classes
                         /<div[^>]*class="[^"]*event-card[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
                         /<div[^>]*class="[^"]*Container_root__[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-                        /<div[^>]*data-testid="event-card-tracking-layer"[^>]*>[\s\S]*?<\/div>/gi,
-                        /<a[^>]*class="[^"]*event-card-link[^"]*"[^>]*>[\s\S]*?<\/a>/gi,
-                        // Look for any div with "event" in the class name
-                        /<div[^>]*class="[^"]*event[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
-                        // Look for article tags which Eventbrite sometimes uses
-                        /<article[^>]*>[\s\S]*?<\/article>/gi
+                        /<div[^>]*data-testid="event-card-tracking-layer"[^>]*>[\s\S]*?<\/div>/gi
                     ];
                     
-                    eventPatterns.forEach(pattern => {
-                        const matches = html.match(pattern) || [];
-                        matches.forEach(match => {
-                            elements.push(this.createScriptableElement(match));
+                    // First, try to find elements that contain event links
+                    const eventLinkPattern = /href="[^"]*\/e\/[^"]*"/gi;
+                    const hasEventLinks = html.match(eventLinkPattern);
+                    
+                    if (hasEventLinks) {
+                        console.log(`🐻 Eventbrite: Found ${hasEventLinks.length} event links in HTML`);
+                        
+                        // Extract the surrounding HTML for each event link
+                        const eventLinkMatches = [...html.matchAll(/<[^>]*href="[^"]*\/e\/[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi)];
+                        eventLinkMatches.forEach(match => {
+                            // Try to get the parent container that includes more event details
+                            const linkHtml = match[0];
+                            const linkStart = match.index;
+                            
+                            // Look backwards and forwards for a containing div/article
+                            let containerStart = linkStart;
+                            let containerEnd = match.index + linkHtml.length;
+                            
+                            // Find the opening tag of a container (div, article, etc.)
+                            const beforeHtml = html.substring(Math.max(0, linkStart - 1000), linkStart);
+                            const containerMatch = beforeHtml.match(/<(div|article|section)[^>]*>(?!.*<\/\1>)/gi);
+                            if (containerMatch) {
+                                const lastContainer = containerMatch[containerMatch.length - 1];
+                                containerStart = linkStart - (beforeHtml.length - beforeHtml.lastIndexOf(lastContainer));
+                            }
+                            
+                            // Find the closing tag
+                            const afterHtml = html.substring(containerEnd, Math.min(html.length, containerEnd + 1000));
+                            const closingMatch = afterHtml.match(/<\/(div|article|section)>/i);
+                            if (closingMatch) {
+                                containerEnd = containerEnd + afterHtml.indexOf(closingMatch[0]) + closingMatch[0].length;
+                            }
+                            
+                            const containerHtml = html.substring(containerStart, containerEnd);
+                            elements.push(this.createScriptableElement(containerHtml));
                         });
-                    });
+                    } else {
+                        // Fallback to original patterns if no event links found
+                        eventPatterns.forEach(pattern => {
+                            const matches = html.match(pattern) || [];
+                            matches.forEach(match => {
+                                elements.push(this.createScriptableElement(match));
+                            });
+                        });
+                    }
                 }
                 
                 console.log(`🐻 Eventbrite: Found ${elements.length} elements with selector "${selector}"`);
@@ -361,6 +477,17 @@ class EventbriteEventParser {
                             return null;
                         },
                         textContent: this.stripHtmlTags(linkMatch[2])
+                    };
+                }
+            }
+            
+            // Look for links with /e/ in href (event links)
+            if (selector.includes('/e/')) {
+                const eventLinkMatch = htmlString.match(/<a[^>]*href="([^"]*\/e\/[^"]*)"[^>]*>(.*?)<\/a>/i);
+                if (eventLinkMatch) {
+                    return {
+                        getAttribute: (attr) => attr === 'href' ? eventLinkMatch[1] : null,
+                        textContent: this.stripHtmlTags(eventLinkMatch[2])
                     };
                 }
             }
@@ -460,44 +587,72 @@ class EventbriteEventParser {
 
     extractAdditionalLinks(doc, baseUrl) {
         const links = [];
-        const isScriptable = typeof importModule !== 'undefined';
+        const isWebBrowser = typeof window !== 'undefined' && typeof DOMParser !== 'undefined';
         
-        if (isScriptable) {
+        if (!isWebBrowser) {
             // Scriptable environment - use regex to find links
             console.log('🐻 Eventbrite: Extracting additional links using regex for Scriptable');
-            const linkPattern = /<a[^>]*href="([^"]*eventbrite\.com\/e\/[^"]*)"[^>]*>/gi;
-            const htmlContent = doc.innerHTML || '';
-            let match;
             
-            while ((match = linkPattern.exec(htmlContent)) !== null) {
-                const href = match[1];
-                if (href) {
-                    try {
-                        let fullUrl = href.startsWith('http') ? href : baseUrl + href;
-                        
-                        // Clean up URL - remove query parameters except event ID
-                        if (fullUrl.includes('?')) {
-                            const [baseEventUrl] = fullUrl.split('?');
-                            fullUrl = baseEventUrl;
+            // More comprehensive patterns for Eventbrite event links
+            const linkPatterns = [
+                // Direct eventbrite.com/e/ links
+                /href="([^"]*eventbrite\.com\/e\/[^"]*?)"/gi,
+                // Relative /e/ links
+                /href="(\/e\/[^"]*?)"/gi,
+                // Links with event IDs
+                /href="([^"]*\/events\/[^"]*?)"/gi
+            ];
+            
+            const htmlContent = typeof doc === 'string' ? doc : (doc.innerHTML || '');
+            
+            linkPatterns.forEach(pattern => {
+                let match;
+                while ((match = pattern.exec(htmlContent)) !== null) {
+                    const href = match[1];
+                    if (href) {
+                        try {
+                            let fullUrl;
+                            if (href.startsWith('http')) {
+                                fullUrl = href;
+                            } else if (href.startsWith('/')) {
+                                fullUrl = `https://www.eventbrite.com${href}`;
+                            } else {
+                                fullUrl = `${baseUrl}/${href}`;
+                            }
+                            
+                            // Clean up URL - remove query parameters except event ID
+                            if (fullUrl.includes('?')) {
+                                const [baseEventUrl] = fullUrl.split('?');
+                                fullUrl = baseEventUrl;
+                            }
+                            
+                            // Only add if it's actually an event URL and not already included
+                            if ((fullUrl.includes('/e/') || fullUrl.includes('/events/')) && !links.includes(fullUrl)) {
+                                links.push(fullUrl);
+                                console.log(`🐻 Eventbrite: Found event link: ${fullUrl}`);
+                            }
+                        } catch (error) {
+                            console.warn(`🐻 Eventbrite: Invalid link found: ${href}`);
                         }
-                        
-                        if (!links.includes(fullUrl)) {
-                            links.push(fullUrl);
-                        }
-                    } catch (error) {
-                        console.warn(`🐻 Eventbrite: Invalid link found: ${href}`);
                     }
                 }
-            }
+            });
         } else {
             // Web environment - use querySelectorAll
-            const linkElements = doc.querySelectorAll('a[href*="eventbrite.com/e/"]');
+            const linkElements = doc.querySelectorAll('a[href*="eventbrite.com/e/"], a[href*="/e/"], a[href*="/events/"]');
             
             linkElements.forEach(link => {
                 const href = link.getAttribute('href');
                 if (href) {
                     try {
-                        let fullUrl = href.startsWith('http') ? href : new URL(href, baseUrl).href;
+                        let fullUrl;
+                        if (href.startsWith('http')) {
+                            fullUrl = href;
+                        } else if (href.startsWith('/')) {
+                            fullUrl = `https://www.eventbrite.com${href}`;
+                        } else {
+                            fullUrl = new URL(href, baseUrl).href;
+                        }
                         
                         // Clean up URL - remove query parameters except event ID
                         if (fullUrl.includes('?')) {
@@ -505,8 +660,10 @@ class EventbriteEventParser {
                             fullUrl = baseEventUrl;
                         }
                         
-                        if (!links.includes(fullUrl)) {
+                        // Only add if it's actually an event URL and not already included
+                        if ((fullUrl.includes('/e/') || fullUrl.includes('/events/')) && !links.includes(fullUrl)) {
                             links.push(fullUrl);
+                            console.log(`🐻 Eventbrite: Found event link: ${fullUrl}`);
                         }
                     } catch (error) {
                         console.warn(`🐻 Eventbrite: Invalid link found: ${href}`);
@@ -515,18 +672,19 @@ class EventbriteEventParser {
             });
         }
         
+        console.log(`🐻 Eventbrite: Extracted ${links.length} additional event links`);
         return links.slice(0, 20); // Limit to 20 additional links per page
     }
 }
 
-// Export for both environments
-if (typeof window !== 'undefined') {
-    window.EventbriteEventParser = EventbriteEventParser;
-} else if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { EventbriteEventParser };
-} else {
-    // Scriptable environment
-    this.EventbriteEventParser = EventbriteEventParser;
-}
+    // Export for both environments
+    if (typeof window !== 'undefined') {
+        window.EventbriteEventParser = EventbriteEventParser;
+    } else if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { EventbriteEventParser };
+    } else {
+        // Scriptable environment
+        this.EventbriteEventParser = EventbriteEventParser;
+    }
 
 } // End of conditional class declaration

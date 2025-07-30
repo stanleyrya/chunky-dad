@@ -1,8 +1,8 @@
 // Event Parser - Generic
 // General-purpose parser for various bear event websites
 
-// Prevent duplicate class declaration
-if (typeof GenericEventParser !== 'undefined') {
+// Prevent duplicate class declaration in browser environment only
+if (typeof window !== 'undefined' && typeof GenericEventParser !== 'undefined') {
     console.warn('GenericEventParser already defined, skipping redefinition');
 } else {
 
@@ -280,14 +280,14 @@ class GenericEventParser {
     }
 }
 
-// Export for both environments
-if (typeof window !== 'undefined') {
-    window.GenericEventParser = GenericEventParser;
-} else if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { GenericEventParser };
-} else {
-    // Scriptable environment
-    this.GenericEventParser = GenericEventParser;
-}
+    // Export for both environments
+    if (typeof window !== 'undefined') {
+        window.GenericEventParser = GenericEventParser;
+    } else if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { GenericEventParser };
+    } else {
+        // Scriptable environment
+        this.GenericEventParser = GenericEventParser;
+    }
 
 } // End of conditional class declaration
