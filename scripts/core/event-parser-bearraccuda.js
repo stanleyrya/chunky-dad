@@ -1,8 +1,8 @@
 // Event Parser - Bearraccuda
 // Specialized parser for Bearraccuda event website structure
 
-// Prevent duplicate class declaration
-if (typeof BearraccudaEventParser !== 'undefined') {
+// Prevent duplicate class declaration in browser environment only
+if (typeof window !== 'undefined' && typeof BearraccudaEventParser !== 'undefined') {
     console.warn('BearraccudaEventParser already defined, skipping redefinition');
 } else {
 
@@ -221,14 +221,14 @@ class BearraccudaEventParser {
     }
 }
 
-// Export for both environments
-if (typeof window !== 'undefined') {
-    window.BearraccudaEventParser = BearraccudaEventParser;
-} else if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BearraccudaEventParser };
-} else {
-    // Scriptable environment
-    this.BearraccudaEventParser = BearraccudaEventParser;
-}
+    // Export for both environments
+    if (typeof window !== 'undefined') {
+        window.BearraccudaEventParser = BearraccudaEventParser;
+    } else if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { BearraccudaEventParser };
+    } else {
+        // Scriptable environment
+        this.BearraccudaEventParser = BearraccudaEventParser;
+    }
 
 } // End of conditional class declaration
