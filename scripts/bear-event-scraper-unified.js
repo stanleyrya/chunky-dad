@@ -6,7 +6,7 @@ console.log('bear-event-scraper-unified.js is loading...');
 
 // Import core modules (environment-specific loading)
 let ScriptableInputHandler, WebInputHandlerModule;
-let EventbriteEventParser, BearraccudaEventParser, GenericEventParser, MegawoofEventParser;
+let EventbriteEventParser, BearraccudaEventParser, GenericEventParser;
 let ScriptableDisplayHandler, WebDisplayHandlerModule;
 
 async function loadModules() {
@@ -25,14 +25,12 @@ async function loadModules() {
             const eventbriteModule = importModule('core/event-parser-eventbrite');
             const bearraccudaModule = importModule('core/event-parser-bearraccuda');
             const genericModule = importModule('core/event-parser-generic');
-            const megawoofModule = importModule('core/event-parser-megawoof');
             
             ScriptableInputHandler = inputModule.ScriptableInputHandler;
             ScriptableDisplayHandler = displayModule.ScriptableDisplayHandler;
             EventbriteEventParser = eventbriteModule.EventbriteEventParser;
             BearraccudaEventParser = bearraccudaModule.BearraccudaEventParser;
             GenericEventParser = genericModule.GenericEventParser;
-            MegawoofEventParser = megawoofModule.MegawoofEventParser;
             
             console.log('✓ Successfully loaded core modules for Scriptable');
         } catch (error) {
@@ -49,9 +47,8 @@ async function loadModules() {
             EventbriteEventParser = window.EventbriteEventParser;
             BearraccudaEventParser = window.BearraccudaEventParser;
             GenericEventParser = window.GenericEventParser;
-            MegawoofEventParser = window.MegawoofEventParser;
             
-            if (WebInputHandlerModule && WebDisplayHandlerModule && EventbriteEventParser && BearraccudaEventParser && GenericEventParser && MegawoofEventParser) {
+            if (WebInputHandlerModule && WebDisplayHandlerModule && EventbriteEventParser && BearraccudaEventParser && GenericEventParser) {
                 console.log('✓ Successfully loaded core modules for web');
             } else {
                 const missing = [];
@@ -60,7 +57,6 @@ async function loadModules() {
                 if (!EventbriteEventParser) missing.push('EventbriteEventParser');
                 if (!BearraccudaEventParser) missing.push('BearraccudaEventParser');
                 if (!GenericEventParser) missing.push('GenericEventParser');
-                if (!MegawoofEventParser) missing.push('MegawoofEventParser');
                 throw new Error(`Core modules not found: ${missing.join(', ')}. Ensure all handler and parser files are loaded via script tags.`);
             }
         } else {
@@ -120,7 +116,6 @@ class BearEventScraper {
             this.eventParsers = {
                 'eventbrite': new EventbriteEventParser(),
                 'bearraccuda': new BearraccudaEventParser(),
-                'megawoof': new MegawoofEventParser(),
                 'generic': new GenericEventParser()
             };
             
@@ -174,7 +169,7 @@ class BearEventScraper {
                 this.visitedUrls.add(sourceUrl);
                 
                 // Choose appropriate parser based on source
-                const parser = this.chooseParser(source.name, sourceUrl);
+                const parser = this.chooseParser(source, sourceUrl);
                 
                 // Parse events from the main page
                 const parseResult = parser.parseEvents(rawData);
@@ -283,20 +278,30 @@ class BearEventScraper {
         };
     }
     
-    // Choose appropriate parser based on source name and URL
-    chooseParser(sourceName, url) {
-        const lowerName = sourceName.toLowerCase();
+    // Choose appropriate parser based on source configuration
+    chooseParser(source, url) {
+        // First, check if the source specifies a parser type
+        if (source.parser && this.eventParsers[source.parser]) {
+            console.log(`🎯 Using configured parser: ${source.parser} for ${source.name}`);
+            return this.eventParsers[source.parser];
+        }
+        
+        // Fallback to name/URL-based detection for backward compatibility
+        const lowerName = source.name.toLowerCase();
         const lowerUrl = url.toLowerCase();
         
-        if (lowerName.includes('megawoof') || lowerUrl.includes('megawoof')) {
-            return this.eventParsers.megawoof;
-        } else if (lowerName.includes('bearraccuda') || lowerName.includes('bearracuda') || 
-                   lowerUrl.includes('bearraccuda') || lowerUrl.includes('bearracuda')) {
+        if (lowerName.includes('bearraccuda') || lowerName.includes('bearracuda') || 
+            lowerUrl.includes('bearraccuda') || lowerUrl.includes('bearracuda')) {
+            console.log(`🎯 Using bearraccuda parser for ${source.name} (name/URL match)`);
             return this.eventParsers.bearraccuda;
+        } else if (lowerUrl.includes('eventbrite.com')) {
+            console.log(`🎯 Using eventbrite parser for ${source.name} (URL match)`);
+            return this.eventParsers.eventbrite;
         } else {
             // Use generic parser with source-specific configuration
+            console.log(`🎯 Using generic parser for ${source.name}`);
             return new GenericEventParser({
-                source: sourceName,
+                source: source.name,
                 baseUrl: new URL(url).origin
             });
         }
@@ -523,6 +528,7 @@ class BearEventScraper {
 // Load configuration from JSON file
 async function loadConfiguration() {
     const isScriptable = typeof importModule !== 'undefined';
+    const isNode = typeof require !== 'undefined' && typeof window === 'undefined';
     
     try {
         if (isScriptable) {
@@ -535,6 +541,18 @@ async function loadConfiguration() {
                 return JSON.parse(configData);
             } else {
                 throw new Error('❌ scraper-input.json not found in Scriptable documents directory. Place the file in: iCloud Drive/Scriptable/');
+            }
+        } else if (isNode) {
+            // Node.js environment - use fs to read file
+            const fs = require('fs');
+            const path = require('path');
+            const configPath = path.join(__dirname, 'scraper-input.json');
+            
+            if (fs.existsSync(configPath)) {
+                const configData = fs.readFileSync(configPath, 'utf8');
+                return JSON.parse(configData);
+            } else {
+                throw new Error('❌ scraper-input.json not found in scripts directory');
             }
         } else {
             // Web environment - try to fetch from same directory
@@ -576,47 +594,9 @@ async function main() {
         scraper.validateModules();
         
         const results = await scraper.scrapeEvents(sources);
-        console.log('🎉 Scraping completed successfully!')
-        console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`)
         
-        // Log comprehensive statistics if available
-        if (results.comprehensiveStats) {
-            const stats = results.comprehensiveStats;
-            console.log('\n📈 Comprehensive Statistics:');
-            console.log(`   Total Events Found: ${stats.totals.totalEventsFound}`);
-            console.log(`   Processing Success Rate: ${stats.overallSuccessRate}%`);
-            console.log(`   Bear Event Rate: ${stats.overallBearEventRate}%`);
-            console.log(`   Duplicates Removed: ${stats.totals.duplicatesRemoved}`);
-            console.log(`   Past Events Filtered: ${stats.totals.pastEventsFiltered}`);
-            console.log(`   Total Discarded: ${stats.totals.discardedEventsTotal}`);
-            
-            // Log source performance
-            if (stats.sourcePerformance && stats.sourcePerformance.length > 0) {
-                console.log('\n🔍 Source Performance:');
-                stats.sourcePerformance.forEach(source => {
-                    console.log(`   ${source.source}: ${source.validEvents}/${source.totalParsed} events (${source.successRate}% success, ${source.bearEventRate}% bear)`);
-                });
-            }
-            
-            // Log top bear keywords
-            if (stats.bearKeywordMatches && Object.keys(stats.bearKeywordMatches).length > 0) {
-                console.log('\n🐻 Top Bear Keywords:');
-                const topKeywords = Object.entries(stats.bearKeywordMatches)
-                    .sort(([,a], [,b]) => b - a)
-                    .slice(0, 5);
-                topKeywords.forEach(([keyword, count]) => {
-                    console.log(`   "${keyword}": ${count} matches`);
-                });
-            }
-            
-            // Log discard reasons
-            if (stats.discardReasons && Object.keys(stats.discardReasons).length > 0) {
-                console.log('\n🗑️ Discard Reasons:');
-                Object.entries(stats.discardReasons).forEach(([reason, count]) => {
-                    console.log(`   ${reason}: ${count} events`);
-                });
-            }
-        }
+        // Display results using enhanced formatting
+        await scraper.displayResults(results, { format: 'enhanced-console' });
         
         return results;
     } catch (error) {
@@ -715,4 +695,12 @@ if (typeof window !== 'undefined') {
     window.runWithConfig = runWithConfig;
     window.loadConfiguration = loadConfiguration;
     console.log('BearEventScraper exported successfully:', typeof window.BearEventScraper);
+}
+
+// Auto-run main function when script is executed directly
+if (typeof require !== 'undefined' && require.main === module) {
+    main().catch(error => {
+        console.error('Fatal error:', error);
+        process.exit(1);
+    });
 }
