@@ -186,13 +186,7 @@
             Source:
             <select id="sourceSelect">
                 <option value="all">All Sources</option>
-                <option value="furball">Furball NYC</option>
-                <option value="rockbar">Rockbar NYC</option>
-                <option value="bearracuda">Bearracuda</option>
-                <option value="megawoof">Megawoof America</option>
-                <option value="sf-eagle">SF Eagle</option>
-                <option value="eagle-ny">Eagle NY</option>
-                <option value="precinct">Precinct DTLA</option>
+                <option value="eventbrite">Eventbrite (Megawoof America)</option>
             </select>
         </label>
         
@@ -231,7 +225,7 @@
     <!-- New modular architecture -->
     <script src="../scripts/core/input-handler-web.js" onerror="console.error('Failed to load input-handler-web.js')"></script>
     <script src="../scripts/core/display-handler-web.js" onerror="console.error('Failed to load display-handler-web.js')"></script>
-    <script src="../scripts/core/event-parser-megawoof.js" onerror="console.error('Failed to load event-parser-megawoof.js')"></script>
+    <script src="../scripts/core/event-parser-eventbrite.js" onerror="console.error('Failed to load event-parser-eventbrite.js')"></script>
     <script src="../scripts/core/event-parser-bearraccuda.js" onerror="console.error('Failed to load event-parser-bearraccuda.js')"></script>
     <script src="../scripts/core/event-parser-generic.js" onerror="console.error('Failed to load event-parser-generic.js')"></script>
     <script src="../scripts/bear-event-scraper-unified.js" onerror="console.error('Failed to load bear-event-scraper-unified.js')"></script>
@@ -466,7 +460,7 @@
             const moduleStatus = {
                 WebInputHandler: typeof WebInputHandler !== 'undefined',
                 WebDisplayHandler: typeof WebDisplayHandler !== 'undefined',
-                MegawoofEventParser: typeof MegawoofEventParser !== 'undefined',
+                EventbriteEventParser: typeof EventbriteEventParser !== 'undefined',
                 BearraccudaEventParser: typeof BearraccudaEventParser !== 'undefined',
                 GenericEventParser: typeof GenericEventParser !== 'undefined',
                 BearEventScraper: typeof BearEventScraper !== 'undefined'
