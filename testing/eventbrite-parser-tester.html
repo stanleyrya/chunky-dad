@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eventbrite Parser - Enhanced Test</title>
+    <title>🎫 Dynamic Eventbrite Parser Tester</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -95,12 +95,64 @@
             border-radius: 3px;
             margin: 5px 0;
         }
+
+        .dynamic-input {
+            margin: 20px 0;
+        }
+
+        .html-input {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .preset-buttons {
+            margin: 10px 0;
+        }
+
+        .preset-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px 5px 5px 0;
+        }
+
+        .preset-btn:hover {
+            background: #218838;
+        }
+
+        .live-results {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎫 Enhanced Eventbrite Parser Test</h1>
-        <p>Testing venue extraction, GPS coordinates, and time parsing improvements</p>
+        <h1>🎫 Dynamic Eventbrite Parser Tester</h1>
+        <p>Interactive testing for venue extraction, GPS coordinates, and time parsing</p>
+        <p><strong>Features:</strong> Real-time HTML input, live parsing, geocoding, and Google Maps integration</p>
     </div>
     
     <div class="test-section">
@@ -120,9 +172,35 @@
             <div>Expected Address: <strong>2069 Cheshire Bridge Road Northeast Atlanta, GA 30324</strong></div>
         </div>
         
+        <div class="dynamic-input">
+            <h4>🔧 Dynamic HTML Input</h4>
+            <p>Paste any Eventbrite HTML below and see real-time parsing results:</p>
+            
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="loadPreset('denver')">Load Denver Example</button>
+                <button class="preset-btn" onclick="loadPreset('atlanta')">Load Atlanta Example</button>
+                <button class="preset-btn" onclick="loadPreset('structured')">Load JSON-LD Example</button>
+                <button class="preset-btn" onclick="clearInput()">Clear Input</button>
+            </div>
+            
+            <label for="urlInput">Event URL (optional):</label>
+            <input type="text" id="urlInput" class="url-input" placeholder="https://www.eventbrite.com/e/..." 
+                   value="https://www.eventbrite.com/o/megawoof-america-18118978189">
+            
+            <label for="htmlInput">HTML Content:</label>
+            <textarea id="htmlInput" class="html-input" placeholder="Paste Eventbrite HTML here..." 
+                      oninput="parseHtmlLive()"></textarea>
+            
+            <div id="liveResults" class="live-results" style="display: none;">
+                <h5>🔄 Live Parsing Results:</h5>
+                <div id="liveContent"></div>
+            </div>
+        </div>
+
         <button onclick="testWithSampleHTML()">Test with Sample HTML</button>
         <button onclick="testTimeParsingExample()">Test Time Parsing</button>
         <button onclick="testGeocodingExample()">Test Geocoding</button>
+        <button onclick="testDynamicInput()">Parse Current Input</button>
         <button onclick="clearResults()">Clear Results</button>
         
         <div id="results"></div>
@@ -132,8 +210,9 @@
     <script src="../scripts/core/event-parser-eventbrite.js"></script>
     
     <script>
-        // Sample HTML with venue information (based on the examples)
-        const sampleHtmlDenver = `
+        // Preset HTML samples for dynamic loading
+        const presets = {
+            denver: `
         <div class="Container_root__4i85v NestedActionContainer_root__1jtfr event-card event-card__vertical" 
              data-event-location="Denver, CO">
             <a href="https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849" 
@@ -157,10 +236,35 @@
                     </div>
                 </section>
             </a>
-        </div>`;
+                 </div>`,
+         
+         atlanta: `
+         <div class="Container_root__4i85v NestedActionContainer_root__1jtfr event-card event-card__vertical" 
+              data-event-location="Atlanta, GA">
+             <a href="https://www.eventbrite.com/e/megawoof-america-atlanta-tickets-1433358025439" 
+                rel="noopener" target="_blank" class="event-card-link" 
+                aria-label="View MEGAWOOF AMERICA ATLANTA" 
+                data-event-id="1433358025439">
+                 <section class="event-card-details">
+                     <div class="Stack_root__1ksk7">
+                         <h3 class="Typography_root__487rx Typography_body-lg__487rx">
+                             MEGAWOOF AMERICA ATLANTA
+                         </h3>
+                         <p class="Typography_root__487rx Typography_body-md__487rx">
+                             Sat, Nov 15 • 10:00 PM - 4:00 AM
+                         </p>
+                         <p class="Typography_root__487rx Typography_body-md__487rx">
+                             The Heretic Atlanta
+                         </p>
+                         <p class="Typography_root__487rx Typography_body-md-bold__487rx">
+                             From $25.00
+                         </p>
+                     </div>
+                 </section>
+             </a>
+         </div>`,
 
-        // Sample with JSON-LD structured data
-        const sampleWithStructuredData = `
+         structured: `
         <script type="application/ld+json">
         {
             "@type": "Event",
@@ -177,8 +281,162 @@
             },
             "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849"
         }
-        </script>
-        <div>Event content here...</div>`;
+                 </script>
+         <div>Event content here...</div>`
+         };
+
+         // Dynamic functionality
+         function loadPreset(type) {
+             const htmlInput = document.getElementById('htmlInput');
+             const urlInput = document.getElementById('urlInput');
+             
+             if (presets[type]) {
+                 htmlInput.value = presets[type].trim();
+                 
+                 // Set appropriate URL
+                 if (type === 'denver') {
+                     urlInput.value = 'https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849';
+                 } else if (type === 'atlanta') {
+                     urlInput.value = 'https://www.eventbrite.com/e/megawoof-america-atlanta-tickets-1433358025439';
+                 } else if (type === 'structured') {
+                     urlInput.value = 'https://www.eventbrite.com/e/test-event-with-structured-data';
+                 }
+                 
+                 parseHtmlLive();
+             }
+         }
+
+         function clearInput() {
+             document.getElementById('htmlInput').value = '';
+             document.getElementById('urlInput').value = 'https://www.eventbrite.com/o/megawoof-america-18118978189';
+             document.getElementById('liveResults').style.display = 'none';
+         }
+
+         let parseTimeout;
+         function parseHtmlLive() {
+             // Debounce parsing for performance
+             clearTimeout(parseTimeout);
+             parseTimeout = setTimeout(() => {
+                 const htmlInput = document.getElementById('htmlInput');
+                 const urlInput = document.getElementById('urlInput');
+                 const liveResults = document.getElementById('liveResults');
+                 const liveContent = document.getElementById('liveContent');
+                 
+                 if (!htmlInput.value.trim()) {
+                     liveResults.style.display = 'none';
+                     return;
+                 }
+                 
+                 try {
+                     const parser = new EventbriteEventParser({
+                         alwaysBear: true,
+                         requireDetailPages: false
+                     });
+                     
+                     const htmlData = {
+                         html: htmlInput.value,
+                         url: urlInput.value || 'https://www.eventbrite.com/test'
+                     };
+                     
+                     const result = parser.parseEvents(htmlData);
+                     
+                     let content = '';
+                     if (result.events && result.events.length > 0) {
+                         const event = result.events[0];
+                         content = `
+                             <div style="background: #e8f5e8; padding: 10px; border-radius: 4px;">
+                                 <strong>✅ Parsed Successfully!</strong><br>
+                                 📅 <strong>${event.title}</strong><br>
+                                 🏢 Venue: ${event.venue || 'N/A'}<br>
+                                 📍 Address: ${event.address || 'N/A'}<br>
+                                 🕐 Time: ${event.dateString || event.startDate || 'N/A'}<br>
+                                 🗺️ Maps: ${event.googleMapsLink ? '<a href="' + event.googleMapsLink + '" target="_blank">Open</a>' : 'N/A'}
+                             </div>
+                         `;
+                     } else {
+                         content = '<div style="background: #ffebee; padding: 10px; border-radius: 4px; color: #c62828;"><strong>❌ No events found</strong></div>';
+                     }
+                     
+                     liveContent.innerHTML = content;
+                     liveResults.style.display = 'block';
+                     
+                 } catch (error) {
+                     liveContent.innerHTML = `<div style="background: #ffebee; padding: 10px; border-radius: 4px; color: #c62828;"><strong>❌ Error:</strong> ${error.message}</div>`;
+                     liveResults.style.display = 'block';
+                 }
+             }, 500); // 500ms debounce
+         }
+
+         function testDynamicInput() {
+             const htmlInput = document.getElementById('htmlInput');
+             const urlInput = document.getElementById('urlInput');
+             
+             if (!htmlInput.value.trim()) {
+                 alert('Please enter some HTML content first!');
+                 return;
+             }
+             
+             // Use the dynamic input for full testing
+             const htmlData = {
+                 html: htmlInput.value,
+                 url: urlInput.value || 'https://www.eventbrite.com/test'
+             };
+             
+             testWithCustomHTML(htmlData);
+         }
+
+         function testWithCustomHTML(htmlData) {
+             const resultsDiv = document.getElementById('results');
+             resultsDiv.innerHTML = '<p>Testing with custom HTML...</p>';
+             
+             try {
+                 const parser = new EventbriteEventParser({
+                     alwaysBear: true,
+                     requireDetailPages: false
+                 });
+                 
+                 const result = parser.parseEvents(htmlData);
+                 
+                 let resultHtml = '<div class="results"><h4>✅ Custom HTML Test Results</h4>';
+                 
+                 if (result.events && result.events.length > 0) {
+                     result.events.forEach((event, index) => {
+                         resultHtml += `
+                             <div class="event-details">
+                                 <h5>📅 Event ${index + 1}:</h5>
+                                 <p><strong>Title:</strong> ${event.title || 'N/A'}</p>
+                                 <p><strong>Date String:</strong> ${event.dateString || 'N/A'}</p>
+                                 <p><strong>Start Date (ISO):</strong> ${event.startDate || event.date || 'N/A'}</p>
+                                 <p><strong>End Date (ISO):</strong> ${event.endDate || 'N/A'}</p>
+                                 <p><strong>Venue/Bar Name:</strong> ${event.venue || 'N/A'}</p>
+                                 <p><strong>Address:</strong> ${event.address || 'N/A'}</p>
+                                 <p><strong>GPS Coordinates:</strong> ${event.coordinates ? `${event.coordinates.lat}, ${event.coordinates.lng}` : 'N/A'}</p>
+                                 <p><strong>Google Maps Link:</strong> ${event.googleMapsLink ? `<a href="${event.googleMapsLink}" target="_blank" class="event-link">🗺️ Open in Maps</a>` : 'N/A'}</p>
+                                 <p><strong>City:</strong> ${event.city || 'N/A'}</p>
+                                 <p><strong>Price:</strong> ${event.price || 'N/A'}</p>
+                                 <p><strong>Is Bear Event:</strong> ${event.isBearEvent ? '🐻 Yes' : '❌ No'}</p>
+                             </div>
+                         `;
+                     });
+                 } else {
+                     resultHtml += '<p style="color: red;">❌ No events parsed from the custom HTML</p>';
+                 }
+                 
+                 resultHtml += `
+                     <p><strong>Events Found:</strong> ${result.events ? result.events.length : 0}</p>
+                     <p><strong>Additional Links:</strong> ${result.additionalLinks ? result.additionalLinks.length : 0}</p>
+                     <p><strong>Source:</strong> ${result.source}</p>
+                 </div>`;
+                 
+                 resultsDiv.innerHTML = resultHtml;
+                 
+             } catch (error) {
+                 resultsDiv.innerHTML = `<div class="results error">
+                     <h4>❌ Custom HTML Test Failed</h4>
+                     <p><strong>Error:</strong> ${error.message}</p>
+                 </div>`;
+             }
+         }
         
         function testWithSampleHTML() {
             const resultsDiv = document.getElementById('results');
@@ -196,7 +454,7 @@
                 
                 // Test with sample HTML
                 const htmlData = {
-                    html: sampleHtmlDenver,
+                    html: presets.denver,
                     url: 'https://www.eventbrite.com/o/megawoof-america-18118978189'
                 };
                 
@@ -240,7 +498,7 @@
                 
                 // Now test with structured data
                 const structuredDataTest = {
-                    html: sampleWithStructuredData,
+                    html: presets.structured,
                     url: 'https://www.eventbrite.com/e/test-event'
                 };
                 
@@ -386,8 +644,9 @@
         
         // Auto-run test when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Enhanced Eventbrite Parser Test Ready');
-            testWithSampleHTML(); // Auto-run the test
+            console.log('🎫 Dynamic Eventbrite Parser Tester Ready');
+            // Load Denver preset by default
+            loadPreset('denver');
         });
     </script>
 </body>

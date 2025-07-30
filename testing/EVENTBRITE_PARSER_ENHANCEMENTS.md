@@ -166,9 +166,8 @@ const enhancedEvents = await parser.enhanceEventsWithGeodata(events);
 ## 📋 Files Modified
 
 1. `scripts/core/event-parser-eventbrite.js` - Main parser enhancements
-2. `testing/test-eventbrite-parser.html` - Updated test interface
-3. `testing/test-eventbrite-simple.html` - New comprehensive test page
-4. `testing/test-eventbrite-node.js` - Node.js test script
+2. `testing/eventbrite-parser-tester.html` - Dynamic interactive test page
+3. `.github/hooks/setup-hooks.sh` - Updated git hook for static hosting compatibility
 
 ## 🎯 Success Metrics
 
