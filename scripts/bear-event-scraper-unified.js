@@ -528,7 +528,6 @@ class BearEventScraper {
 // Load configuration from JSON file
 async function loadConfiguration() {
     const isScriptable = typeof importModule !== 'undefined';
-    const isNode = typeof require !== 'undefined' && typeof window === 'undefined';
     
     try {
         if (isScriptable) {
@@ -541,18 +540,6 @@ async function loadConfiguration() {
                 return JSON.parse(configData);
             } else {
                 throw new Error('❌ scraper-input.json not found in Scriptable documents directory. Place the file in: iCloud Drive/Scriptable/');
-            }
-        } else if (isNode) {
-            // Node.js environment - use fs to read file
-            const fs = require('fs');
-            const path = require('path');
-            const configPath = path.join(__dirname, 'scraper-input.json');
-            
-            if (fs.existsSync(configPath)) {
-                const configData = fs.readFileSync(configPath, 'utf8');
-                return JSON.parse(configData);
-            } else {
-                throw new Error('❌ scraper-input.json not found in scripts directory');
             }
         } else {
             // Web environment - try to fetch from same directory
@@ -697,10 +684,3 @@ if (typeof window !== 'undefined') {
     console.log('BearEventScraper exported successfully:', typeof window.BearEventScraper);
 }
 
-// Auto-run main function when script is executed directly
-if (typeof require !== 'undefined' && require.main === module) {
-    main().catch(error => {
-        console.error('Fatal error:', error);
-        process.exit(1);
-    });
-}
