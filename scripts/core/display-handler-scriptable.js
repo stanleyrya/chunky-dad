@@ -220,9 +220,116 @@ class ScriptableDisplayHandler {
         }
     }
 
+    // Enhanced console display with visual formatting
+    displayEnhancedConsole(results, options = {}) {
+        console.log('\n' + '='.repeat(60));
+        console.log('🐻 BEAR EVENT SCRAPER RESULTS 🐻');
+        console.log('='.repeat(60));
+        
+        // Main stats with visual formatting
+        const statsEmoji = results.bearEventCount > 0 ? '🎉' : '😔';
+        console.log(`${statsEmoji} SUMMARY:`);
+        console.log(`   📅 Total Events Found: ${results.events.length}`);
+        console.log(`   🐻 Bear Events: ${results.bearEventCount}`);
+        console.log(`   📊 Sources: ${results.successfulSources}/${results.totalSources} successful`);
+        
+        if (results.processingStats) {
+            console.log(`   🔄 Duplicates Removed: ${results.processingStats.duplicatesRemoved}`);
+            console.log(`   ⏰ Past Events Filtered: ${results.processingStats.pastEventsFiltered}`);
+        }
+        
+        // Show upcoming events with enhanced formatting
+        if (results.bearEventCount > 0) {
+            console.log('\n🗓️ UPCOMING BEAR EVENTS:');
+            console.log('-'.repeat(40));
+            
+            const upcomingEvents = results.events
+                .filter(event => event.isBearEvent)
+                .slice(0, 5); // Show top 5
+            
+            upcomingEvents.forEach((event, index) => {
+                const eventNumber = `${index + 1}.`.padEnd(3);
+                const title = event.title || 'Untitled Event';
+                const venue = event.venue ? ` @ ${event.venue}` : '';
+                const city = event.city ? ` (${event.city.toUpperCase()})` : '';
+                const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
+                
+                console.log(`   ${eventNumber}🎪 ${title}${venue}${city}`);
+                console.log(`      📅 ${date}`);
+                if (event.url) {
+                    console.log(`      🔗 ${event.url}`);
+                }
+                console.log('');
+            });
+            
+            if (results.bearEventCount > 5) {
+                console.log(`   ... and ${results.bearEventCount - 5} more events! 🎊`);
+            }
+        } else {
+            console.log('\n😢 No bear events found in this search.');
+            console.log('   Try expanding your search criteria or check back later!');
+        }
+        
+        // Enhanced statistics display
+        if (results.comprehensiveStats) {
+            console.log('\n📈 DETAILED STATISTICS:');
+            console.log('-'.repeat(40));
+            const stats = results.comprehensiveStats;
+            
+            if (stats.totals) {
+                console.log(`   🔍 Processing Success: ${stats.overallSuccessRate || 0}%`);
+                console.log(`   🐻 Bear Event Rate: ${stats.overallBearEventRate || 0}%`);
+            }
+            
+            // Source performance with visual indicators
+            if (stats.sourcePerformance && stats.sourcePerformance.length > 0) {
+                console.log('\n🏆 SOURCE PERFORMANCE:');
+                stats.sourcePerformance.forEach(source => {
+                    const successIcon = source.successRate > 80 ? '🟢' : source.successRate > 50 ? '🟡' : '🔴';
+                    console.log(`   ${successIcon} ${source.source}: ${source.validEvents}/${source.totalParsed} events (${source.successRate}% success)`);
+                });
+            }
+            
+            // Top bear keywords with fun emojis
+            if (stats.bearKeywordMatches && Object.keys(stats.bearKeywordMatches).length > 0) {
+                console.log('\n🐻 TOP BEAR KEYWORDS:');
+                const topKeywords = Object.entries(stats.bearKeywordMatches)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5);
+                topKeywords.forEach(([keyword, count]) => {
+                    const keywordEmoji = this.getKeywordEmoji(keyword);
+                    console.log(`   ${keywordEmoji} "${keyword}": ${count} matches`);
+                });
+            }
+        }
+        
+        console.log('\n' + '='.repeat(60));
+        console.log('🎯 Scraping completed successfully!');
+        console.log('='.repeat(60) + '\n');
+        
+        return {
+            success: true,
+            type: 'enhanced-console',
+            eventsDisplayed: results.bearEventCount
+        };
+    }
+    
+    // Get appropriate emoji for keywords
+    getKeywordEmoji(keyword) {
+        const keywordLower = keyword.toLowerCase();
+        if (keywordLower.includes('bear')) return '🐻';
+        if (keywordLower.includes('daddy')) return '👨‍🦳';
+        if (keywordLower.includes('cub')) return '🐻‍❄️';
+        if (keywordLower.includes('leather')) return '🖤';
+        if (keywordLower.includes('muscle')) return '💪';
+        if (keywordLower.includes('party') || keywordLower.includes('dance')) return '🎉';
+        if (keywordLower.includes('woof')) return '🐺';
+        return '🏷️';
+    }
+
     // Main display method that chooses appropriate format
     async displayResults(results, options = {}) {
-        const format = options.format || 'notification';
+        const format = options.format || 'enhanced-console';
         
         switch (format) {
             case 'notification':
@@ -233,9 +340,11 @@ class ScriptableDisplayHandler {
                 return await this.exportToCalendar(results.events, options);
             case 'text':
                 return this.generateTextSummary(results, options);
+            case 'enhanced-console':
+                return this.displayEnhancedConsole(results, options);
             default:
-                console.warn(`📱 Scriptable: Unknown display format: ${format}, using notification`);
-                return await this.displayAsNotification(results, options);
+                console.warn(`📱 Scriptable: Unknown display format: ${format}, using enhanced-console`);
+                return this.displayEnhancedConsole(results, options);
         }
     }
 }

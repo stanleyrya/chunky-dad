@@ -169,7 +169,7 @@ class BearEventScraper {
                 this.visitedUrls.add(sourceUrl);
                 
                 // Choose appropriate parser based on source
-                const parser = this.chooseParser(source.name, sourceUrl);
+                const parser = this.chooseParser(source, sourceUrl);
                 
                 // Parse events from the main page
                 const parseResult = parser.parseEvents(rawData);
@@ -278,20 +278,30 @@ class BearEventScraper {
         };
     }
     
-    // Choose appropriate parser based on source name and URL
-    chooseParser(sourceName, url) {
-        const lowerName = sourceName.toLowerCase();
+    // Choose appropriate parser based on source configuration
+    chooseParser(source, url) {
+        // First, check if the source specifies a parser type
+        if (source.parser && this.eventParsers[source.parser]) {
+            console.log(`🎯 Using configured parser: ${source.parser} for ${source.name}`);
+            return this.eventParsers[source.parser];
+        }
+        
+        // Fallback to name/URL-based detection for backward compatibility
+        const lowerName = source.name.toLowerCase();
         const lowerUrl = url.toLowerCase();
         
-        if (lowerName.includes('megawoof') || lowerUrl.includes('megawoof')) {
-            return this.eventParsers.megawoof;
-        } else if (lowerName.includes('bearraccuda') || lowerName.includes('bearracuda') || 
-                   lowerUrl.includes('bearraccuda') || lowerUrl.includes('bearracuda')) {
+        if (lowerName.includes('bearraccuda') || lowerName.includes('bearracuda') || 
+            lowerUrl.includes('bearraccuda') || lowerUrl.includes('bearracuda')) {
+            console.log(`🎯 Using bearraccuda parser for ${source.name} (name/URL match)`);
             return this.eventParsers.bearraccuda;
+        } else if (lowerUrl.includes('eventbrite.com')) {
+            console.log(`🎯 Using eventbrite parser for ${source.name} (URL match)`);
+            return this.eventParsers.eventbrite;
         } else {
             // Use generic parser with source-specific configuration
+            console.log(`🎯 Using generic parser for ${source.name}`);
             return new GenericEventParser({
-                source: sourceName,
+                source: source.name,
                 baseUrl: new URL(url).origin
             });
         }
@@ -571,47 +581,9 @@ async function main() {
         scraper.validateModules();
         
         const results = await scraper.scrapeEvents(sources);
-        console.log('🎉 Scraping completed successfully!')
-        console.log(`📊 Final Results: ${results.events.length} events (${results.bearEventCount} bear events) from ${results.successfulSources}/${results.totalSources} sources`)
         
-        // Log comprehensive statistics if available
-        if (results.comprehensiveStats) {
-            const stats = results.comprehensiveStats;
-            console.log('\n📈 Comprehensive Statistics:');
-            console.log(`   Total Events Found: ${stats.totals.totalEventsFound}`);
-            console.log(`   Processing Success Rate: ${stats.overallSuccessRate}%`);
-            console.log(`   Bear Event Rate: ${stats.overallBearEventRate}%`);
-            console.log(`   Duplicates Removed: ${stats.totals.duplicatesRemoved}`);
-            console.log(`   Past Events Filtered: ${stats.totals.pastEventsFiltered}`);
-            console.log(`   Total Discarded: ${stats.totals.discardedEventsTotal}`);
-            
-            // Log source performance
-            if (stats.sourcePerformance && stats.sourcePerformance.length > 0) {
-                console.log('\n🔍 Source Performance:');
-                stats.sourcePerformance.forEach(source => {
-                    console.log(`   ${source.source}: ${source.validEvents}/${source.totalParsed} events (${source.successRate}% success, ${source.bearEventRate}% bear)`);
-                });
-            }
-            
-            // Log top bear keywords
-            if (stats.bearKeywordMatches && Object.keys(stats.bearKeywordMatches).length > 0) {
-                console.log('\n🐻 Top Bear Keywords:');
-                const topKeywords = Object.entries(stats.bearKeywordMatches)
-                    .sort(([,a], [,b]) => b - a)
-                    .slice(0, 5);
-                topKeywords.forEach(([keyword, count]) => {
-                    console.log(`   "${keyword}": ${count} matches`);
-                });
-            }
-            
-            // Log discard reasons
-            if (stats.discardReasons && Object.keys(stats.discardReasons).length > 0) {
-                console.log('\n🗑️ Discard Reasons:');
-                Object.entries(stats.discardReasons).forEach(([reason, count]) => {
-                    console.log(`   ${reason}: ${count} events`);
-                });
-            }
-        }
+        // Display results using enhanced formatting
+        await scraper.displayResults(results, { format: 'enhanced-console' });
         
         return results;
     } catch (error) {
@@ -711,3 +683,4 @@ if (typeof window !== 'undefined') {
     window.loadConfiguration = loadConfiguration;
     console.log('BearEventScraper exported successfully:', typeof window.BearEventScraper);
 }
+
