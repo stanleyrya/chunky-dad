@@ -28,11 +28,28 @@ class ScriptableInputHandler {
             
             const response = await request.loadString();
             
+            // Enhanced debugging - log response details
+            const statusCode = request.response ? request.response.statusCode : 200;
+            const responseHeaders = request.response ? request.response.headers : {};
+            
+            console.log(`📱 Scriptable: Response status: ${statusCode}`);
+            console.log(`📱 Scriptable: Response length: ${response ? response.length : 0} characters`);
+            
+            if (response && response.length > 0) {
+                console.log(`📱 Scriptable: HTML preview (first 500 chars):`, response.substring(0, 500));
+                console.log(`📱 Scriptable: HTML contains event-related content:`, 
+                    response.toLowerCase().includes('event') || 
+                    response.toLowerCase().includes('eventbrite') ||
+                    response.toLowerCase().includes('data-testid'));
+            } else {
+                console.warn(`📱 Scriptable: Empty or null response received`);
+            }
+            
             return {
                 url: url,
                 html: response,
-                status: request.response ? request.response.statusCode : 200,
-                headers: request.response ? request.response.headers : {},
+                status: statusCode,
+                headers: responseHeaders,
                 timestamp: new Date().toISOString(),
                 success: true
             };
