@@ -5,9 +5,9 @@
 console.log('bear-event-scraper-unified.js is loading...');
 
 // Import core modules (environment-specific loading)
-let ScriptableInputHandler, WebInputHandler;
-let MegawoofEventParser, BearraccudaEventParser, GenericEventParser;
-let ScriptableDisplayHandler, WebDisplayHandler;
+let ScriptableInputHandler, WebInputHandlerModule;
+let EventbriteEventParser, BearraccudaEventParser, GenericEventParser;
+let ScriptableDisplayHandler, WebDisplayHandlerModule;
 
 async function loadModules() {
     const isScriptable = typeof importModule !== 'undefined';
@@ -22,13 +22,13 @@ async function loadModules() {
             const displayModule = importModule('core/display-handler-scriptable');
             
             // Import event parsers
-            const megawoofModule = importModule('core/event-parser-megawoof');
+            const eventbriteModule = importModule('core/event-parser-eventbrite');
             const bearraccudaModule = importModule('core/event-parser-bearraccuda');
             const genericModule = importModule('core/event-parser-generic');
             
             ScriptableInputHandler = inputModule.ScriptableInputHandler;
             ScriptableDisplayHandler = displayModule.ScriptableDisplayHandler;
-            MegawoofEventParser = megawoofModule.MegawoofEventParser;
+            EventbriteEventParser = eventbriteModule.EventbriteEventParser;
             BearraccudaEventParser = bearraccudaModule.BearraccudaEventParser;
             GenericEventParser = genericModule.GenericEventParser;
             
@@ -42,19 +42,19 @@ async function loadModules() {
         if (typeof window !== 'undefined') {
             console.log('Loading core modules for web environment...');
             
-            WebInputHandler = window.WebInputHandler;
-            WebDisplayHandler = window.WebDisplayHandler;
-            MegawoofEventParser = window.MegawoofEventParser;
+            WebInputHandlerModule = window.WebInputHandler;
+            WebDisplayHandlerModule = window.WebDisplayHandler;
+            EventbriteEventParser = window.EventbriteEventParser;
             BearraccudaEventParser = window.BearraccudaEventParser;
             GenericEventParser = window.GenericEventParser;
             
-            if (WebInputHandler && WebDisplayHandler && MegawoofEventParser && BearraccudaEventParser && GenericEventParser) {
+            if (WebInputHandlerModule && WebDisplayHandlerModule && EventbriteEventParser && BearraccudaEventParser && GenericEventParser) {
                 console.log('✓ Successfully loaded core modules for web');
             } else {
                 const missing = [];
-                if (!WebInputHandler) missing.push('WebInputHandler');
-                if (!WebDisplayHandler) missing.push('WebDisplayHandler');
-                if (!MegawoofEventParser) missing.push('MegawoofEventParser');
+                if (!WebInputHandlerModule) missing.push('WebInputHandler');
+                if (!WebDisplayHandlerModule) missing.push('WebDisplayHandler');
+                if (!EventbriteEventParser) missing.push('EventbriteEventParser');
                 if (!BearraccudaEventParser) missing.push('BearraccudaEventParser');
                 if (!GenericEventParser) missing.push('GenericEventParser');
                 throw new Error(`Core modules not found: ${missing.join(', ')}. Ensure all handler and parser files are loaded via script tags.`);
@@ -108,13 +108,13 @@ class BearEventScraper {
                 this.inputHandler = new ScriptableInputHandler(this.config);
                 this.displayHandler = new ScriptableDisplayHandler(this.config);
             } else {
-                this.inputHandler = new WebInputHandler(this.config);
-                this.displayHandler = new WebDisplayHandler(this.config);
+                this.inputHandler = new WebInputHandlerModule(this.config);
+                this.displayHandler = new WebDisplayHandlerModule(this.config);
             }
             
             // Initialize event parsers
             this.eventParsers = {
-                'megawoof': new MegawoofEventParser(),
+                'eventbrite': new EventbriteEventParser(),
                 'bearraccuda': new BearraccudaEventParser(),
                 'generic': new GenericEventParser()
             };
@@ -649,9 +649,9 @@ if (typeof importModule !== 'undefined') {
     console.log('🌐 Bear Event Scraper loaded for web environment');
     console.log('Available classes:', {
         BearEventScraper: typeof BearEventScraper !== 'undefined',
-        WebInputHandler: typeof WebInputHandler !== 'undefined',
-        WebDisplayHandler: typeof WebDisplayHandler !== 'undefined',
-        MegawoofEventParser: typeof MegawoofEventParser !== 'undefined',
+        WebInputHandler: typeof window.WebInputHandler !== 'undefined',
+        WebDisplayHandler: typeof window.WebDisplayHandler !== 'undefined',
+        EventbriteEventParser: typeof EventbriteEventParser !== 'undefined',
         BearraccudaEventParser: typeof BearraccudaEventParser !== 'undefined',
         GenericEventParser: typeof GenericEventParser !== 'undefined'
     });

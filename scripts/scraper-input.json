@@ -6,44 +6,8 @@
   },
   "parsers": [
     {
-      "name": "Furball NYC",
-      "parser": "furball",
-      "urls": [
-        "https://www.furball.nyc",
-        "https://www.furball.nyc/ticket-information",
-        "https://www.furball.nyc/upcoming-schedule"
-      ],
-      "city": "nyc",
-      "alwaysBear": true,
-      "description": "Joe Fiore's infamous furry dance parties across multiple cities"
-    },
-    {
-      "name": "Rockbar NYC",
-      "parser": "rockbar",
-      "urls": ["https://www.rockbarnyc.com/calendar"],
-      "city": "nyc",
-      "requireDetailPages": true,
-      "maxAdditionalUrls": 8,
-      "allowlist": ["rockstrap", "underbear", "bears night out", "leather night", "bear happy hour", "woof"],
-      "requireKeywords": true,
-      "description": "NYC leather/bear bar with regular themed nights",
-      "urlFilters": {
-        "exclude": ["\\?", "#", "facebook\\.com", "instagram\\.com"]
-      }
-    },
-    {
-      "name": "Bearracuda",
-      "parser": "bearracuda",
-      "urls": ["https://bearracuda.com/#events"],
-      "city": "multi",
-      "alwaysBear": true,
-      "requireDetailPages": true,
-      "urlExtractionMethod": "parser-specific",
-      "description": "Multi-city bear dance parties and events"
-    },
-    {
       "name": "Megawoof America",
-      "parser": "megawoof",
+      "parser": "eventbrite",
       "urls": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       "city": "multi",
       "alwaysBear": true,
@@ -53,39 +17,6 @@
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
       }
-    },
-    {
-      "name": "SF Eagle",
-      "parser": "sf-eagle",
-      "urls": ["https://sf-eagle.com/events/"],
-      "city": "sf",
-      "requireDetailPages": true,
-      "maxAdditionalUrls": 12,
-      "allowlist": ["bear", "cub", "otter", "leather bears"],
-      "requireKeywords": true,
-      "description": "San Francisco's legendary leather/bear bar"
-    },
-    {
-      "name": "Eagle NY",
-      "parser": "eagle-ny",
-      "urls": ["https://www.eagle-ny.com/events/"],
-      "city": "nyc",
-      "requireDetailPages": true,
-      "maxAdditionalUrls": 10,
-      "allowlist": ["bear", "cub", "otter", "woof", "furball"],
-      "requireKeywords": true,
-      "description": "New York's Eagle Bar events and parties"
-    },
-    {
-      "name": "Precinct DTLA",
-      "parser": "precinct",
-      "urls": ["https://www.precinctdtla.com/events/"],
-      "city": "la",
-      "requireDetailPages": true,
-      "maxAdditionalUrls": 8,
-      "allowlist": ["bear", "cub", "bearracuda", "woof"],
-      "requireKeywords": true,
-      "description": "Los Angeles downtown leather/bear venue"
     }
   ],
   "calendarMappings": {
