@@ -1,6 +1,11 @@
 // Event Parser - Bearraccuda
 // Specialized parser for Bearraccuda event website structure
 
+// Prevent duplicate class declaration
+if (typeof BearraccudaEventParser !== 'undefined') {
+    console.warn('BearraccudaEventParser already defined, skipping redefinition');
+} else {
+
 class BearraccudaEventParser {
     constructor(config = {}) {
         this.config = {
@@ -225,3 +230,5 @@ if (typeof window !== 'undefined') {
     // Scriptable environment
     this.BearraccudaEventParser = BearraccudaEventParser;
 }
+
+} // End of conditional class declaration
