@@ -12,6 +12,9 @@ class EventbriteEventParser {
         this.config = {
             source: 'Eventbrite',
             baseUrl: 'https://www.eventbrite.com',
+            alwaysBear: false,
+            requireDetailPages: false,
+            maxAdditionalUrls: 20,
             ...config
         };
         
@@ -187,18 +190,24 @@ class EventbriteEventParser {
                     });
                     if (event && event.title && event.title !== 'Untitled Event') {
                         // Check if this is from a source that should always be considered bear events
-                        const alwaysBearSources = ['megawoof', 'furball', 'bearraccuda'];
-                        const isAlwaysBearSource = alwaysBearSources.some(source => 
-                            htmlData.url.toLowerCase().includes(source) || 
-                            this.config.source.toLowerCase().includes(source)
-                        );
-                        
-                        if (isAlwaysBearSource) {
+                        if (this.config.alwaysBear) {
                             event.isBearEvent = true;
-                            console.log(`🐻 Eventbrite: Event "${event.title}" marked as bear event (always-bear source)`);
+                            console.log(`🐻 Eventbrite: Event "${event.title}" marked as bear event (alwaysBear config)`);
                         } else {
-                            event.isBearEvent = this.isBearEvent(event);
-                            console.log(`🐻 Eventbrite: Event "${event.title}" bear check result: ${event.isBearEvent}`);
+                            // Fallback to legacy alwaysBear detection for backward compatibility
+                            const alwaysBearSources = ['megawoof', 'furball', 'bearraccuda'];
+                            const isAlwaysBearSource = alwaysBearSources.some(source => 
+                                htmlData.url.toLowerCase().includes(source) || 
+                                this.config.source.toLowerCase().includes(source)
+                            );
+                            
+                            if (isAlwaysBearSource) {
+                                event.isBearEvent = true;
+                                console.log(`🐻 Eventbrite: Event "${event.title}" marked as bear event (legacy always-bear source)`);
+                            } else {
+                                event.isBearEvent = this.isBearEvent(event);
+                                console.log(`🐻 Eventbrite: Event "${event.title}" bear check result: ${event.isBearEvent}`);
+                            }
                         }
                         
                         events.push(event);
@@ -233,7 +242,7 @@ class EventbriteEventParser {
                             timestamp: new Date().toISOString(),
                             isPlaceholder: true,
                             isBearEvent: true, // Assume bear event for Megawoof organizer
-                            requiresDetailFetch: true
+                            requiresDetailFetch: this.config.requireDetailPages
                         };
                         events.push(placeholderEvent);
                         console.log(`🐻 Eventbrite: Created placeholder event for ${link}`);
@@ -909,12 +918,12 @@ class EventbriteEventParser {
                                 source: this.config.source,
                                 timestamp: new Date().toISOString(),
                                 isPlaceholder: false,
-                                isBearEvent: this.isBearEvent({
+                                isBearEvent: this.config.alwaysBear || this.isBearEvent({
                                     name: eventData.name.text,
                                     description: eventData.summary || '',
                                     url: eventData.url
                                 }),
-                                requiresDetailFetch: false // JSON already has most details
+                                requiresDetailFetch: this.config.requireDetailPages // JSON already has most details, but user may want more
                             };
                             
                             console.log(`🐻 Eventbrite: Parsed event: ${event.title} (${event.date})`);
@@ -959,7 +968,7 @@ class EventbriteEventParser {
                                         timestamp: new Date().toISOString(),
                                         isPlaceholder: false,
                                         isBearEvent: this.isBearEvent(item),
-                                        requiresDetailFetch: true
+                                        requiresDetailFetch: this.config.requireDetailPages
                                     };
                                     events.push(event);
                                 }
@@ -978,7 +987,7 @@ class EventbriteEventParser {
                                 timestamp: new Date().toISOString(),
                                 isPlaceholder: false,
                                 isBearEvent: this.isBearEvent(jsonData),
-                                requiresDetailFetch: true
+                                requiresDetailFetch: this.config.requireDetailPages
                             };
                             events.push(event);
                         }
@@ -998,7 +1007,7 @@ class EventbriteEventParser {
                                         timestamp: new Date().toISOString(),
                                         isPlaceholder: false,
                                         isBearEvent: this.isBearEvent(item),
-                                        requiresDetailFetch: true
+                                        requiresDetailFetch: this.config.requireDetailPages
                                     };
                                     events.push(event);
                                 }
