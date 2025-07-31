@@ -30,7 +30,8 @@ class ScriptableAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
-            console.log(`📱 Scriptable: Fetching data from ${url}`);
+            console.log(`📱 Scriptable: Starting HTTP request to ${url}`);
+            console.log(`📱 Scriptable: Request options:`, options);
             
             const request = new Request(url);
             request.method = options.method || 'GET';
@@ -40,58 +41,112 @@ class ScriptableAdapter {
                 ...options.headers
             };
             
+            console.log(`📱 Scriptable: Request method: ${request.method}`);
+            console.log(`📱 Scriptable: Request headers:`, request.headers);
+            
             if (options.body) {
                 request.body = options.body;
+                console.log(`📱 Scriptable: Request body length: ${options.body.length}`);
             }
             
+            console.log(`📱 Scriptable: Executing HTTP request...`);
             const response = await request.loadString();
             
             // Enhanced debugging - log response details
             const statusCode = request.response ? request.response.statusCode : 200;
+            const headers = request.response ? request.response.headers : {};
             
+            console.log(`📱 Scriptable: Response received`);
             console.log(`📱 Scriptable: Response status: ${statusCode}`);
+            console.log(`📱 Scriptable: Response headers:`, headers);
             console.log(`📱 Scriptable: Response length: ${response ? response.length : 0} characters`);
             
+            if (statusCode >= 400) {
+                throw new Error(`HTTP ${statusCode} error from ${url}`);
+            }
+            
             if (response && response.length > 0) {
-                console.log(`📱 Scriptable: ✓ Fetched ${response.length} characters of HTML`);
+                console.log(`📱 Scriptable: ✓ Successfully fetched ${response.length} characters of HTML from ${url}`);
+                // Log first 200 characters for debugging (truncated)
+                const preview = response.substring(0, 200).replace(/\s+/g, ' ');
+                console.log(`📱 Scriptable: Response preview: ${preview}...`);
+                
                 return {
                     html: response,
                     url: url,
-                    statusCode: statusCode
+                    statusCode: statusCode,
+                    headers: headers
                 };
             } else {
+                console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);
             }
             
         } catch (error) {
-            console.error(`📱 Scriptable: ✗ Failed to fetch ${url}:`, error);
-            throw new Error(`HTTP request failed: ${error.message}`);
+            console.error(`📱 Scriptable: ✗ HTTP request failed for ${url}:`, error);
+            console.error(`📱 Scriptable: ✗ HTTP error stack trace:`, error.stack);
+            console.error(`📱 Scriptable: ✗ HTTP error name: ${error.name}, message: ${error.message}`);
+            throw new Error(`HTTP request failed for ${url}: ${error.message}`);
         }
     }
 
     // Configuration Loading
     async loadConfiguration() {
         try {
+            console.log('📱 Scriptable: Starting configuration loading process...');
             console.log('📱 Scriptable: Loading configuration from iCloud Drive/Scriptable/scraper-input.json');
             
             const fm = FileManager.iCloud();
+            console.log('📱 Scriptable: ✓ FileManager.iCloud() created');
+            
             const scriptableDir = fm.documentsDirectory();
+            console.log(`📱 Scriptable: Documents directory: ${scriptableDir}`);
+            
             const configPath = fm.joinPath(scriptableDir, 'scraper-input.json');
+            console.log(`📱 Scriptable: Configuration path: ${configPath}`);
             
             if (!fm.fileExists(configPath)) {
+                console.error(`📱 Scriptable: ✗ Configuration file not found at: ${configPath}`);
+                // List files in directory for debugging
+                try {
+                    const files = fm.listContents(scriptableDir);
+                    console.log(`📱 Scriptable: Files in ${scriptableDir}:`, files);
+                } catch (listError) {
+                    console.error('📱 Scriptable: ✗ Failed to list directory contents:', listError);
+                }
                 throw new Error('Configuration file not found at iCloud Drive/Scriptable/scraper-input.json');
             }
             
+            console.log('📱 Scriptable: ✓ Configuration file exists, reading...');
             const configText = fm.readString(configPath);
+            console.log(`📱 Scriptable: Configuration text length: ${configText?.length || 0} characters`);
+            
+            if (!configText || configText.trim().length === 0) {
+                throw new Error('Configuration file is empty');
+            }
+            
+            console.log('📱 Scriptable: Parsing JSON configuration...');
             const config = JSON.parse(configText);
+            console.log('📱 Scriptable: ✓ JSON parsed successfully');
+            
+            // Validate configuration structure
+            if (!config.parsers || !Array.isArray(config.parsers)) {
+                throw new Error('Configuration missing parsers array');
+            }
             
             console.log('📱 Scriptable: ✓ Configuration loaded successfully');
             console.log(`📱 Scriptable: Found ${config.parsers?.length || 0} parser configurations`);
+            
+            // Log parser details
+            config.parsers.forEach((parser, i) => {
+                console.log(`📱 Scriptable: Parser ${i + 1}: ${parser.name} (${parser.parser}) - ${parser.urls?.length || 0} URLs`);
+            });
             
             return config;
             
         } catch (error) {
             console.error('📱 Scriptable: ✗ Failed to load configuration:', error);
+            console.error('📱 Scriptable: ✗ Configuration loading stack trace:', error.stack);
             throw new Error(`Configuration loading failed: ${error.message}`);
         }
     }

@@ -127,45 +127,86 @@ class BearEventScraperOrchestrator {
         try {
             // Initialize if not already done
             if (!this.isInitialized) {
+                console.log('🐻 Orchestrator: Not initialized, initializing now...');
                 await this.initialize();
             }
 
             console.log('🐻 Orchestrator: Starting event scraping process...');
 
             // Create adapter instance
+            console.log('🐻 Orchestrator: Creating adapter instance...');
             const adapter = new this.modules.adapter();
+            console.log('🐻 Orchestrator: ✓ Adapter instance created');
             
             // Load configuration
+            console.log('🐻 Orchestrator: Loading configuration...');
             const config = await adapter.loadConfiguration();
-            console.log(`🐻 Orchestrator: Loaded configuration with ${config.parsers?.length || 0} parsers`);
-
-            // Create shared core instance
-            const sharedCore = new this.modules.SharedCore();
-
-            // Create parser instances
-            const parsers = {};
-            for (const [name, ParserClass] of Object.entries(this.modules.parsers)) {
-                parsers[name] = new ParserClass();
+            console.log(`🐻 Orchestrator: ✓ Configuration loaded with ${config.parsers?.length || 0} parsers`);
+            
+            // Create adapter with calendar mappings if available
+            let finalAdapter = adapter;
+            if (config.calendarMappings) {
+                console.log('🐻 Orchestrator: Creating adapter with calendar mappings...');
+                finalAdapter = new this.modules.adapter({
+                    calendarMappings: config.calendarMappings,
+                    ...this.config
+                });
+                console.log('🐻 Orchestrator: ✓ Adapter with calendar mappings created');
+            }
+            
+            // Log configuration details
+            if (config.parsers) {
+                config.parsers.forEach((parser, i) => {
+                    console.log(`🐻 Orchestrator: Parser ${i + 1}: ${parser.name} (${parser.parser})`);
+                });
             }
 
-            console.log(`🐻 Orchestrator: Created ${Object.keys(parsers).length} parser instances`);
+            // Create shared core instance
+            console.log('🐻 Orchestrator: Creating shared core instance...');
+            const sharedCore = new this.modules.SharedCore();
+            console.log('🐻 Orchestrator: ✓ Shared core instance created');
+
+            // Create parser instances
+            console.log('🐻 Orchestrator: Creating parser instances...');
+            const parsers = {};
+            for (const [name, ParserClass] of Object.entries(this.modules.parsers)) {
+                try {
+                    parsers[name] = new ParserClass();
+                    console.log(`🐻 Orchestrator: ✓ Created ${name} parser`);
+                } catch (error) {
+                    console.error(`🐻 Orchestrator: ✗ Failed to create ${name} parser:`, error);
+                    throw new Error(`Failed to create ${name} parser: ${error.message}`);
+                }
+            }
+
+            console.log(`🐻 Orchestrator: ✓ Created ${Object.keys(parsers).length} parser instances: ${Object.keys(parsers).join(', ')}`);
 
             // Process events using shared core
-            const results = await sharedCore.processEvents(config, adapter, adapter, parsers);
+            console.log('🐻 Orchestrator: Calling sharedCore.processEvents...');
+            const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
+            console.log('🐻 Orchestrator: ✓ Event processing completed');
 
             // Display results
-            await adapter.displayResults(results);
+            console.log('🐻 Orchestrator: Displaying results...');
+            await finalAdapter.displayResults(results);
 
             console.log('🐻 Orchestrator: ✓ Event scraping completed successfully');
             return results;
 
         } catch (error) {
             console.error('🐻 Orchestrator: ✗ Event scraping failed:', error);
+            console.error('🐻 Orchestrator: ✗ Error stack trace:', error.stack);
+            console.error('🐻 Orchestrator: ✗ Error name:', error.name);
+            console.error('🐻 Orchestrator: ✗ Error message:', error.message);
             
             // Try to show user-friendly error
-            if (this.modules.adapter) {
-                const adapter = new this.modules.adapter();
-                await adapter.showError('Bear Event Scraper Error', error.message);
+            if (this.modules?.adapter) {
+                try {
+                    const adapter = new this.modules.adapter();
+                    await adapter.showError('Bear Event Scraper Error', `${error.name}: ${error.message}\n\nCheck console for full details.`);
+                } catch (displayError) {
+                    console.error('🐻 Orchestrator: ✗ Failed to show error dialog:', displayError);
+                }
             }
             
             throw error;
