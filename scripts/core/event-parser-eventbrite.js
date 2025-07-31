@@ -536,6 +536,64 @@ class EventbriteEventParser {
         if (metadata.overrideTitle && metadata.title) {
             console.log(`🐻 Eventbrite: Overriding title "${event.title}" with "${metadata.title}"`);
             event.originalTitle = event.title; // Preserve original title
+            
+            // Extract city from address
+            let extractedCity = null;
+            
+            console.log(`🐻 Eventbrite: Attempting city extraction for "${event.title}":`, {
+                address: event.address,
+                venue: event.venue,
+                originalTitle: event.title
+            });
+            
+            if (event.address) {
+                // Extract city from full address - look for common patterns
+                // Addresses usually have format: "Venue Name, Street, City, State ZIP"
+                const addressParts = event.address.split(',').map(part => part.trim());
+                console.log(`🐻 Eventbrite: Address parts:`, addressParts);
+                
+                // Try to find city in address parts or full address
+                const cityPattern = /\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|New York|Chicago|Miami|San Francisco|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington)\b/i;
+                
+                // Check each part of the address
+                for (const part of addressParts) {
+                    const match = part.match(cityPattern);
+                    if (match) {
+                        extractedCity = match[1];
+                        console.log(`🐻 Eventbrite: Found city "${extractedCity}" in address part: "${part}"`);
+                        break;
+                    }
+                }
+                
+                // If no city found in parts, check the full address
+                if (!extractedCity) {
+                    const fullMatch = event.address.match(cityPattern);
+                    if (fullMatch) {
+                        extractedCity = fullMatch[1];
+                        console.log(`🐻 Eventbrite: Found city "${extractedCity}" in full address: "${event.address}"`);
+                    }
+                }
+            }
+            
+            // Apply city mappings
+            if (extractedCity) {
+                const cityMappings = {
+                    'Long Beach': 'LA',
+                    'Los Angeles': 'LA',
+                    'Las Vegas': 'Las Vegas',
+                    'Atlanta': 'Atlanta',
+                    'Denver': 'Denver',
+                    'New York': 'NYC',
+                    'San Francisco': 'SF',
+                    'Washington': 'DC'
+                };
+                
+                event.city = cityMappings[extractedCity] || extractedCity;
+                console.log(`🐻 Eventbrite: Final city mapping: "${extractedCity}" → "${event.city}"`);
+            } else {
+                console.log(`🐻 Eventbrite: No city found in address for "${event.title}"`);
+            }
+            
             event.title = metadata.title;
         }
         
@@ -1010,6 +1068,11 @@ class EventbriteEventParser {
                                 venue = eventData.venue.name || null;
                                 if (eventData.venue.address) {
                                     address = eventData.venue.address.localized_address_display || null;
+                                    console.log(`🐻 Eventbrite: Venue details for "${eventData.name.text}":`, {
+                                        venue: venue,
+                                        address: address,
+                                        fullAddressData: eventData.venue.address
+                                    });
                                     
                                     // Extract coordinates if available
                                     if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
@@ -1053,7 +1116,7 @@ class EventbriteEventParser {
                                 address: address,
                                 coordinates: coordinates,
                                 googleMapsLink: googleMapsLink,
-                                description: eventData.summary || '',
+                                // description removed to avoid mapping to real event description
                                 source: this.config.source,
                                 timestamp: new Date().toISOString(),
                                 isPlaceholder: false,
@@ -1103,7 +1166,7 @@ class EventbriteEventParser {
                                         url: item.url,
                                         date: item.startDate,
                                         location: item.location ? item.location.name : null,
-                                        description: item.description || '',
+                                        // description removed to avoid mapping to real event description
                                         source: this.config.source,
                                         timestamp: new Date().toISOString(),
                                         isPlaceholder: false,
@@ -1122,7 +1185,7 @@ class EventbriteEventParser {
                                 url: jsonData.url,
                                 date: jsonData.startDate,
                                 location: jsonData.location ? jsonData.location.name : null,
-                                description: jsonData.description || '',
+                                // description removed to avoid mapping to real event description
                                 source: this.config.source,
                                 timestamp: new Date().toISOString(),
                                 isPlaceholder: false,
@@ -1142,7 +1205,7 @@ class EventbriteEventParser {
                                         url: item.url,
                                         date: item.startDate,
                                         location: item.location ? item.location.name : null,
-                                        description: item.description || '',
+                                        // description removed to avoid mapping to real event description
                                         source: this.config.source,
                                         timestamp: new Date().toISOString(),
                                         isPlaceholder: false,
