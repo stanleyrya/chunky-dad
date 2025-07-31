@@ -536,6 +536,23 @@ class EventbriteEventParser {
         if (metadata.overrideTitle && metadata.title) {
             console.log(`🐻 Eventbrite: Overriding title "${event.title}" with "${metadata.title}"`);
             event.originalTitle = event.title; // Preserve original title
+            
+            // Extract city from original title for calendar association
+            const cityMatch = event.title.match(/(?:MEGAWOOF\s+AMERICA\s*-?\s*)?([A-Z\s]+?)(?:\s*[-:]|$)/i);
+            if (cityMatch) {
+                const extractedCity = cityMatch[1].trim().replace(/\s+/g, ' ');
+                // Clean up common patterns
+                const cleanCity = extractedCity
+                    .replace(/^(MEGAWOOF\s+AMERICA\s*-?\s*)/i, '')
+                    .replace(/\s*(MASSIVE|LABOR\s+DAY|BEAR\s+WATCHERS).*$/i, '')
+                    .trim();
+                
+                if (cleanCity && cleanCity.length > 0 && cleanCity !== 'AMERICA') {
+                    event.city = cleanCity;
+                    console.log(`🐻 Eventbrite: Extracted city "${cleanCity}" from title`);
+                }
+            }
+            
             event.title = metadata.title;
         }
         
@@ -1053,7 +1070,7 @@ class EventbriteEventParser {
                                 address: address,
                                 coordinates: coordinates,
                                 googleMapsLink: googleMapsLink,
-                                description: eventData.summary || '',
+                                // description removed to avoid mapping to real event description
                                 source: this.config.source,
                                 timestamp: new Date().toISOString(),
                                 isPlaceholder: false,
@@ -1103,7 +1120,7 @@ class EventbriteEventParser {
                                         url: item.url,
                                         date: item.startDate,
                                         location: item.location ? item.location.name : null,
-                                        description: item.description || '',
+                                        // description removed to avoid mapping to real event description
                                         source: this.config.source,
                                         timestamp: new Date().toISOString(),
                                         isPlaceholder: false,
@@ -1122,7 +1139,7 @@ class EventbriteEventParser {
                                 url: jsonData.url,
                                 date: jsonData.startDate,
                                 location: jsonData.location ? jsonData.location.name : null,
-                                description: jsonData.description || '',
+                                // description removed to avoid mapping to real event description
                                 source: this.config.source,
                                 timestamp: new Date().toISOString(),
                                 isPlaceholder: false,
@@ -1142,7 +1159,7 @@ class EventbriteEventParser {
                                         url: item.url,
                                         date: item.startDate,
                                         location: item.location ? item.location.name : null,
-                                        description: item.description || '',
+                                        // description removed to avoid mapping to real event description
                                         source: this.config.source,
                                         timestamp: new Date().toISOString(),
                                         isPlaceholder: false,
