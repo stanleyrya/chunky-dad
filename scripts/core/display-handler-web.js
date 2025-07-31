@@ -216,7 +216,7 @@ class WebDisplayHandler {
         card.className = 'event-card';
         
         // Enhanced date handling with missing indicators
-        let dateDisplay, timeDisplay;
+        let dateDisplay, timeDisplay, endTimeDisplay = '';
         if (event.date) {
             dateDisplay = new Date(event.date).toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -228,6 +228,14 @@ class WebDisplayHandler {
                 hour: 'numeric',
                 minute: '2-digit'
             });
+            
+            // Add end time if available
+            if (event.endDate) {
+                endTimeDisplay = ` - ${new Date(event.endDate).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit'
+                })}`;
+            }
         } else if (event.dateString) {
             dateDisplay = `${event.dateString} <span style="color: #ff6b35;">(unparsed)</span>`;
             timeDisplay = '';
@@ -236,8 +244,14 @@ class WebDisplayHandler {
             timeDisplay = '';
         }
         
-        // Title with missing indicator
+        // Title with missing indicator and metadata
         const title = event.title || '<span style="color: #dc3545;">❌ No Title</span>';
+        const originalTitle = event.originalTitle && event.originalTitle !== event.title 
+            ? `<div style="font-size: 0.9em; color: #666; margin-top: 5px;">📝 Original: ${event.originalTitle}</div>` 
+            : '';
+        const shortTitle = event.shortTitle 
+            ? `<div style="font-size: 0.9em; color: #666; margin-top: 5px;">🏷️ Short: ${event.shortTitle}</div>` 
+            : '';
         
         // Venue with missing indicator
         const venue = event.venue || '<span style="color: #dc3545;">❌ No Venue</span>';
@@ -247,11 +261,20 @@ class WebDisplayHandler {
             ? event.city.toUpperCase() 
             : '<span style="color: #dc3545;">❌ No City</span>';
         
-        // Price with missing indicator
-        const price = event.price || '<span style="color: #dc3545;">❌ No Price</span>';
+        // Price with missing indicator and details
+        let priceDisplay = event.price || '<span style="color: #dc3545;">❌ No Price</span>';
+        if (event.priceDetails && event.priceDetails.length > 1) {
+            const additionalPrices = event.priceDetails.slice(1).join(', ');
+            priceDisplay += `<div style="font-size: 0.85em; color: #666; margin-top: 3px;">Additional: ${additionalPrices}</div>`;
+        }
         
         // Description with missing indicator
         const description = event.description || '<span style="color: #dc3545;">❌ No Description</span>';
+        
+        // Instagram link
+        const instagramLink = event.instagram 
+            ? `<div style="margin-top: 10px;"><a href="${event.instagram}" target="_blank" style="color: #E4405F; text-decoration: none;">📸 Instagram</a></div>` 
+            : '';
         
         // URL handling
         const eventUrl = event.eventUrl || event.url;
@@ -261,11 +284,13 @@ class WebDisplayHandler {
                 <div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;">
                     <div>
                         <h3 style="margin: 0 0 15px 0; color: #333; font-size: 1.3em;">${title}</h3>
+                        ${originalTitle}
+                        ${shortTitle}
                         
                         <!-- Date and Time -->
                         <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px;">
                             <span>📅</span>
-                            <span>${dateDisplay}${timeDisplay ? ` at ${timeDisplay}` : ''}</span>
+                            <span>${dateDisplay}${timeDisplay ? ` at ${timeDisplay}${endTimeDisplay}` : ''}</span>
                         </div>
                         
                         <!-- Venue -->
@@ -281,9 +306,9 @@ class WebDisplayHandler {
                         </div>
                         
                         <!-- Price -->
-                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: flex-start; gap: 5px; margin-bottom: 15px;">
                             <span>💰</span>
-                            <span>${price}</span>
+                            <div>${priceDisplay}</div>
                         </div>
                         
                         <!-- Description -->
@@ -295,6 +320,8 @@ class WebDisplayHandler {
                                 </div>
                             </div>
                         </div>
+                        
+                        ${instagramLink}
                         
                         <!-- Source and URL -->
                         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
