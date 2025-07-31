@@ -69,8 +69,7 @@ class WebAdapter {
             }
             
         } catch (error) {
-            console.error(`🌐 Web: ✗ Failed to fetch ${url}:`);
-            this._logErrorDetails(error, '🌐 Web: ✗');
+            console.log(`🌐 Web: ✗ Failed to fetch ${url}: ${error.message}`);
             throw new Error(`HTTP request failed: ${error.message}`);
         }
     }
@@ -95,8 +94,7 @@ class WebAdapter {
             return config;
             
         } catch (error) {
-            console.error('🌐 Web: ✗ Failed to load configuration:');
-            this._logErrorDetails(error, '🌐 Web: ✗');
+            console.log(`🌐 Web: ✗ Failed to load configuration: ${error.message}`);
             throw new Error(`Configuration loading failed: ${error.message}`);
         }
     }
@@ -119,8 +117,7 @@ class WebAdapter {
             return events.length;
             
         } catch (error) {
-            console.error('🌐 Web: ✗ Calendar display error:');
-            this._logErrorDetails(error, '🌐 Web: ✗');
+            console.log(`🌐 Web: ✗ Calendar display error: ${error.message}`);
             throw new Error(`Calendar display failed: ${error.message}`);
         }
     }
@@ -186,56 +183,22 @@ class WebAdapter {
     }
 
     // Display/Logging Adapter Implementation
-    async logInfo(component, message, data = null) {
-        const logMessage = `ℹ️ ${component}: ${message}`;
-        console.log(`%c${logMessage}`, 'color: #2196F3');
-        if (data) {
-            console.log(data);
-        }
+    async logInfo(message) {
+        console.log(`%cℹ️ ${message}`, 'color: #2196F3');
     }
 
-    async logSuccess(component, message, data = null) {
-        const logMessage = `✅ ${component}: ${message}`;
-        console.log(`%c${logMessage}`, 'color: #4CAF50');
-        if (data) {
-            console.log(data);
-        }
+    async logSuccess(message) {
+        console.log(`%c✅ ${message}`, 'color: #4CAF50');
     }
 
-    async logWarn(component, message, data = null) {
-        const logMessage = `⚠️ ${component}: ${message}`;
-        console.log(`%c${logMessage}`, 'color: #FF9800');
-        if (data) {
-            console.log(data);
-        }
+    async logWarn(message) {
+        console.warn(`%c⚠️ ${message}`, 'color: #FF9800');
     }
 
-    // Helper method to properly log error objects in web environment
-    _logErrorDetails(error, prefix = '') {
-        if (!error) return;
-        
-        const errorPrefix = prefix ? `${prefix} ` : '';
-        console.error(`${errorPrefix}Error name: ${error.name || 'Unknown'}`);
-        console.error(`${errorPrefix}Error message: ${error.message || 'No message'}`);
-        console.error(`${errorPrefix}Error stack: ${error.stack || 'No stack trace'}`);
-        
-        // Also log the error object in case there are additional properties
-        try {
-            const errorObj = JSON.stringify(error, Object.getOwnPropertyNames(error));
-            if (errorObj !== '{}') {
-                console.error(`${errorPrefix}Error object: ${errorObj}`);
-            }
-        } catch (stringifyError) {
-            console.error(`${errorPrefix}Error object could not be stringified`);
-        }
-    }
 
-    async logError(component, message, error = null) {
-        const logMessage = `❌ ${component}: ${message}`;
-        console.error(`%c${logMessage}`, 'color: #F44336');
-        if (error) {
-            this._logErrorDetails(error);
-        }
+
+    async logError(message) {
+        console.error(`%c❌ ${message}`, 'color: #F44336');
     }
 
     // Results Display
@@ -274,8 +237,7 @@ class WebAdapter {
             }
             
         } catch (error) {
-            console.error('🌐 Web: Error displaying results:');
-            this._logErrorDetails(error, '🌐 Web: ✗');
+            console.log(`🌐 Web: Error displaying results: ${error.message}`);
         }
     }
 
@@ -324,8 +286,7 @@ class WebAdapter {
             `;
             
         } catch (error) {
-            console.error('🌐 Web: Error creating results display:');
-            this._logErrorDetails(error, '🌐 Web: ✗');
+            console.log(`🌐 Web: Error creating results display: ${error.message}`);
         }
     }
 
@@ -338,8 +299,7 @@ class WebAdapter {
             // Could also create a custom modal here
             console.error(`🌐 Web: ${title} - ${message}`);
         } catch (error) {
-            console.error('Failed to show error alert:');
-            this._logErrorDetails(error, '🌐 Web: ✗');
+            console.log(`Failed to show error alert: ${error.message}`);
         }
     }
 }
