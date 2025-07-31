@@ -61,10 +61,13 @@ class SharedCore {
                 await displayAdapter.logSuccess('SYSTEM', `Completed parser ${parserConfig.name}: ${parserResult.bearEvents} bear events found`);
                 
             } catch (error) {
-                const errorMsg = `Failed to process ${parserConfig.name}: ${error.message}`;
+                const errorMsg = `Failed to process ${parserConfig.name}: ${error.message || 'Unknown error'}`;
                 results.errors.push(errorMsg);
                 await displayAdapter.logError('SYSTEM', errorMsg, error);
-                await displayAdapter.logError('SYSTEM', `Stack trace for ${parserConfig.name}:`, error.stack);
+                // Only log stack trace if it exists and is meaningful
+                if (error.stack && error.stack.trim()) {
+                    await displayAdapter.logError('SYSTEM', `Stack trace for ${parserConfig.name}:`, error.stack);
+                }
             }
         }
 
@@ -135,8 +138,11 @@ class SharedCore {
                     await displayAdapter.logSuccess('SYSTEM', `Added ${additionalEvents.length} events from detail pages`);
                 }
             } catch (error) {
-                await displayAdapter.logError('SYSTEM', `Failed to process URL ${url}: ${error.message}`, error);
-                await displayAdapter.logError('SYSTEM', `URL processing stack trace:`, error.stack);
+                await displayAdapter.logError('SYSTEM', `Failed to process URL ${url}: ${error.message || 'Unknown error'}`, error);
+                // Only log stack trace if it exists and is meaningful
+                if (error.stack && error.stack.trim()) {
+                    await displayAdapter.logError('SYSTEM', `URL processing stack trace:`, error.stack);
+                }
             }
         }
 

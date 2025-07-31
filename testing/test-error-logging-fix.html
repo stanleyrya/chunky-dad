@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐻 Bear Event Scraper - Error Logging Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #1976D2;
+        }
+        .log-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        .log-error {
+            color: #f44336;
+        }
+        .log-info {
+            color: #4caf50;
+        }
+        .clear-button {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐻 Bear Event Scraper - Error Logging Fix Test</h1>
+        <p>This test verifies that the error logging fix prevents empty error messages from being logged.</p>
+        
+        <div>
+            <button class="test-button" onclick="testNormalError()">Test Normal Error</button>
+            <button class="test-button" onclick="testEmptyError()">Test Empty Error Properties</button>
+            <button class="test-button" onclick="testUndefinedError()">Test Undefined Error Properties</button>
+            <button class="test-button" onclick="testNullError()">Test Null Error</button>
+            <button class="clear-button" onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="log-output" id="logOutput">
+            <div class="log-entry log-info">🧪 Error logging test ready. Click buttons above to test different error scenarios.</div>
+        </div>
+        
+        <h3>Expected Results:</h3>
+        <ul>
+            <li><strong>Normal Error:</strong> Should log all error details</li>
+            <li><strong>Empty Error Properties:</strong> Should skip empty/whitespace-only properties</li>
+            <li><strong>Undefined Error Properties:</strong> Should skip undefined properties</li>
+            <li><strong>Null Error:</strong> Should handle gracefully with fallback messages</li>
+        </ul>
+    </div>
+
+    <script>
+        // Simulate the improved error logging function from bear-event-scraper-unified.js
+        function logErrorWithFix(error, prefix = '🐻 Test') {
+            addLogEntry(`${prefix}: ✗ Event scraping failed:`, 'error');
+            addLogEntry(JSON.stringify(error), 'error');
+            
+            // Only log error details if they exist and are meaningful
+            if (error.stack && error.stack.trim()) {
+                addLogEntry(`${prefix}: ✗ Error stack trace: ${error.stack}`, 'error');
+            } else {
+                addLogEntry(`${prefix}: ✗ Error stack trace: (skipped - empty or undefined)`, 'info');
+            }
+            
+            if (error.name && error.name.trim()) {
+                addLogEntry(`${prefix}: ✗ Error name: ${error.name}`, 'error');
+            } else {
+                addLogEntry(`${prefix}: ✗ Error name: (skipped - empty or undefined)`, 'info');
+            }
+            
+            if (error.message && error.message.trim()) {
+                addLogEntry(`${prefix}: ✗ Error message: ${error.message}`, 'error');
+            } else {
+                addLogEntry(`${prefix}: ✗ Error message: (skipped - empty or undefined)`, 'info');
+            }
+            
+            // Show user-friendly error handling
+            const errorName = error.name || 'Unknown Error';
+            const errorMessage = error.message || 'An unexpected error occurred';
+            addLogEntry(`${prefix}: User-friendly error: ${errorName}: ${errorMessage}`, 'info');
+            
+            addLogEntry('─'.repeat(60), 'info');
+        }
+
+        function testNormalError() {
+            addLogEntry('🧪 Testing normal error with all properties...', 'info');
+            const error = new Error('Something went wrong');
+            error.name = 'TestError';
+            logErrorWithFix(error);
+        }
+
+        function testEmptyError() {
+            addLogEntry('🧪 Testing error with empty properties...', 'info');
+            const error = {
+                name: '',
+                message: '   ',  // whitespace only
+                stack: ''
+            };
+            logErrorWithFix(error);
+        }
+
+        function testUndefinedError() {
+            addLogEntry('🧪 Testing error with undefined properties...', 'info');
+            const error = {
+                name: undefined,
+                message: undefined,
+                stack: undefined
+            };
+            logErrorWithFix(error);
+        }
+
+        function testNullError() {
+            addLogEntry('🧪 Testing null error...', 'info');
+            const error = null;
+            try {
+                logErrorWithFix(error);
+            } catch (e) {
+                addLogEntry(`🧪 Null error handling failed: ${e.message}`, 'error');
+            }
+        }
+
+        function addLogEntry(message, type = 'info') {
+            const logOutput = document.getElementById('logOutput');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearLog() {
+            const logOutput = document.getElementById('logOutput');
+            logOutput.innerHTML = '<div class="log-entry log-info">🧪 Log cleared. Ready for new tests.</div>';
+        }
+
+        // Log page ready
+        addLogEntry('🧪 Error logging test page loaded successfully', 'info');
+    </script>
+</body>
+</html>

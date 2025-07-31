@@ -195,15 +195,25 @@ class BearEventScraperOrchestrator {
 
         } catch (error) {
             console.error('🐻 Orchestrator: ✗ Event scraping failed:', error);
-            console.error('🐻 Orchestrator: ✗ Error stack trace:', error.stack);
-            console.error('🐻 Orchestrator: ✗ Error name:', error.name);
-            console.error('🐻 Orchestrator: ✗ Error message:', error.message);
+            
+            // Only log error details if they exist and are meaningful
+            if (error.stack && error.stack.trim()) {
+                console.error('🐻 Orchestrator: ✗ Error stack trace:', error.stack);
+            }
+            if (error.name && error.name.trim()) {
+                console.error('🐻 Orchestrator: ✗ Error name:', error.name);
+            }
+            if (error.message && error.message.trim()) {
+                console.error('🐻 Orchestrator: ✗ Error message:', error.message);
+            }
             
             // Try to show user-friendly error
             if (this.modules?.adapter) {
                 try {
                     const adapter = new this.modules.adapter();
-                    await adapter.showError('Bear Event Scraper Error', `${error.name}: ${error.message}\n\nCheck console for full details.`);
+                    const errorName = error.name || 'Unknown Error';
+                    const errorMessage = error.message || 'An unexpected error occurred';
+                    await adapter.showError('Bear Event Scraper Error', `${errorName}: ${errorMessage}\n\nCheck console for full details.`);
                 } catch (displayError) {
                     console.error('🐻 Orchestrator: ✗ Failed to show error dialog:', displayError);
                 }
