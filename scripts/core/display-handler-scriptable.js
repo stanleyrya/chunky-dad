@@ -200,11 +200,20 @@ class ScriptableDisplayHandler {
             if (results.bearEventCount > 0) {
                 results.events.forEach((event, index) => {
                     const date = event.date ? new Date(event.date).toLocaleDateString() : 'TBD';
+                    const endDate = event.endDate ? ` - ${new Date(event.endDate).toLocaleTimeString()}` : '';
                     summary += `${index + 1}. ${event.title}\n`;
-                    summary += `   📅 ${date}\n`;
+                    if (event.originalTitle && event.originalTitle !== event.title) {
+                        summary += `   📝 Original: ${event.originalTitle}\n`;
+                    }
+                    if (event.shortTitle) summary += `   🏷️ Short: ${event.shortTitle}\n`;
+                    summary += `   📅 ${date}${endDate}\n`;
                     if (event.venue) summary += `   📍 ${event.venue}\n`;
                     if (event.city && event.city !== 'unknown') summary += `   🏙️ ${event.city.toUpperCase()}\n`;
-                    summary += `   🔗 ${event.source}\n\n`;
+                    if (event.price) summary += `   💰 ${event.price}\n`;
+                    if (event.instagram) summary += `   📸 ${event.instagram}\n`;
+                    summary += `   🔗 ${event.source}\n`;
+                    if (event.eventUrl) summary += `   🌐 ${event.eventUrl}\n`;
+                    summary += '\n';
                 });
             }
             
@@ -268,15 +277,19 @@ class ScriptableDisplayHandler {
                     
                     // Event title and details with missing field indicators
                     const title = event.title || '❌ No Title';
+                    const originalTitle = event.originalTitle && event.originalTitle !== event.title ? `\n📝 Original: ${event.originalTitle}` : '';
+                    const shortTitle = event.shortTitle ? `\n🏷️ Short: ${event.shortTitle}` : '';
                     const date = event.date 
                         ? new Date(event.date).toLocaleDateString() + ' ' + new Date(event.date).toLocaleTimeString()
                         : (event.dateString ? `${event.dateString} (unparsed)` : '❌ No Date');
+                    const endDate = event.endDate ? ` - ${new Date(event.endDate).toLocaleTimeString()}` : '';
                     const venue = event.venue || '❌ No Venue';
                     const city = (event.city && event.city !== 'unknown') ? event.city.toUpperCase() : '❌ No City';
                     const price = event.price ? `💰 ${event.price}` : '💰 No Price';
+                    const instagram = event.instagram ? `\n📸 Instagram` : '';
                     const source = event.source ? `📊 ${event.source}` : '';
                     
-                    const eventCell = row.addText(`${title}\n📅 ${date}\n📍 ${venue} • 🏙️ ${city}\n${price} ${source}`);
+                    const eventCell = row.addText(`${title}${originalTitle}${shortTitle}\n📅 ${date}${endDate}\n📍 ${venue} • 🏙️ ${city}\n${price} ${source}${instagram}`);
                     eventCell.titleFont = Font.boldSystemFont(14);
                     eventCell.subtitleFont = Font.systemFont(11);
                     eventCell.subtitleColor = Color.gray();

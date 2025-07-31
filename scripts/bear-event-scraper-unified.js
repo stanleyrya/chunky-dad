@@ -309,7 +309,8 @@ class BearEventScraper {
                 alwaysBear: source.alwaysBear,
                 requireDetailPages: source.requireDetailPages,
                 maxAdditionalUrls: source.maxAdditionalUrls,
-                urlFilters: source.urlFilters
+                urlFilters: source.urlFilters,
+                metadata: source.metadata
             });
         }
         
@@ -323,7 +324,8 @@ class BearEventScraper {
             return new BearraccudaEventParser({
                 source: source.name,
                 alwaysBear: source.alwaysBear,
-                requireDetailPages: source.requireDetailPages
+                requireDetailPages: source.requireDetailPages,
+                metadata: source.metadata
             });
         } else if (lowerUrl.includes('eventbrite.com')) {
             console.log(`🎯 Using eventbrite parser for ${source.name} (URL match)`);
@@ -332,7 +334,8 @@ class BearEventScraper {
                 alwaysBear: source.alwaysBear,
                 requireDetailPages: source.requireDetailPages,
                 maxAdditionalUrls: source.maxAdditionalUrls,
-                urlFilters: source.urlFilters
+                urlFilters: source.urlFilters,
+                metadata: source.metadata
             });
         } else {
             // Use generic parser with source-specific configuration
@@ -341,7 +344,8 @@ class BearEventScraper {
                 source: source.name,
                 baseUrl: new URL(url).origin,
                 alwaysBear: source.alwaysBear,
-                requireDetailPages: source.requireDetailPages
+                requireDetailPages: source.requireDetailPages,
+                metadata: source.metadata
             });
         }
     }

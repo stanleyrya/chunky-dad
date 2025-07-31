@@ -358,10 +358,19 @@ class EventbriteEventParser {
             event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.venue)}`;
         }
 
-        // Extract price
-        const priceElement = element.querySelector('.Typography_body-md-bold__487rx, [class*="price"]');
+        // Extract price - Enhanced to look for various price patterns
+        const priceElement = element.querySelector('.Typography_body-md-bold__487rx, [class*="price"], [class*="cost"], .ticket-price, .price-display');
         if (priceElement) {
             event.price = priceElement.textContent.trim();
+        } else {
+            // Look for price patterns in text content
+            const textContent = element.textContent || '';
+            const priceMatch = textContent.match(/(?:from\s+)?\$[\d,]+\.?\d*/i) || 
+                             textContent.match(/(?:starting\s+at\s+)?\$[\d,]+\.?\d*/i) ||
+                             textContent.match(/(?:price:\s*)?\$[\d,]+\.?\d*/i);
+            if (priceMatch) {
+                event.price = priceMatch[0].trim();
+            }
         }
 
         // Extract event URL - This is crucial for Eventbrite
@@ -409,12 +418,17 @@ class EventbriteEventParser {
             console.log(`🐻 Eventbrite: Final event URL:`, event.eventUrl);
         }
 
-        // Extract city from venue, URL, or other indicators
-        event.city = this.extractCity(event.venue + ' ' + (event.description || '') + ' ' + sourceUrl);
+        // Extract city from venue, URL, title, and other indicators
+        event.city = this.extractCity(event.title + ' ' + event.venue + ' ' + (event.description || '') + ' ' + sourceUrl);
 
         // Extract description from various possible elements
         const descElement = element.querySelector('.event-description, .summary, p:not([class*="Typography"])');
         event.description = descElement ? descElement.textContent.trim() : '';
+
+        // Apply source-specific metadata if configured
+        if (this.config.metadata) {
+            this.applyMetadata(event, this.config.metadata);
+        }
 
         return event;
     }
@@ -512,6 +526,37 @@ class EventbriteEventParser {
         }
         
         return 'unknown';
+    }
+
+    // Apply source-specific metadata to events
+    applyMetadata(event, metadata) {
+        console.log(`🐻 Eventbrite: Applying metadata to event: ${event.title}`);
+        
+        // Override title if configured
+        if (metadata.overrideTitle && metadata.title) {
+            console.log(`🐻 Eventbrite: Overriding title "${event.title}" with "${metadata.title}"`);
+            event.originalTitle = event.title; // Preserve original title
+            event.title = metadata.title;
+        }
+        
+        // Add short title if provided
+        if (metadata.shortTitle) {
+            event.shortTitle = metadata.shortTitle;
+        }
+        
+        // Add Instagram link if provided
+        if (metadata.instagram) {
+            event.instagram = metadata.instagram;
+        }
+        
+        // Apply any other metadata fields
+        Object.keys(metadata).forEach(key => {
+            if (!['overrideTitle', 'title', 'shortTitle', 'instagram'].includes(key)) {
+                event[key] = metadata[key];
+            }
+        });
+        
+        console.log(`🐻 Eventbrite: Applied metadata to event: ${event.title}`);
     }
 
     extractEventId(url) {
@@ -1247,6 +1292,48 @@ class EventbriteEventParser {
             if (endTimeMatch && endTimeMatch[1] && !existingEvent.endDate) {
                 details.endDate = endTimeMatch[1];
                 console.log(`🐻 Eventbrite: Found end time: ${details.endDate}`);
+            }
+            
+            // Extract detailed pricing information from event page
+            if (!existingEvent.price || !existingEvent.priceDetails) {
+                const pricePatterns = [
+                    // Eventbrite pricing patterns
+                    /<div[^>]*class="[^"]*price[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+                    /<span[^>]*class="[^"]*cost[^"]*"[^>]*>[\s\S]*?<\/span>/gi,
+                    // Look for "From $XX.XX" patterns
+                    /from\s+\$[\d,]+\.?\d*/gi,
+                    /starting\s+at\s+\$[\d,]+\.?\d*/gi,
+                    // Ticket tier pricing
+                    /(GA\d?|General\s+Admission|Early\s+Bird|VIP|Last\s+Tier)[\s\S]*?\$[\d,]+\.?\d*[\s\S]*?(?:incl\.\s+\$[\d,]+\.?\d*\s+Fee)?/gi
+                ];
+                
+                const priceInfo = [];
+                pricePatterns.forEach(pattern => {
+                    const matches = html.match(pattern);
+                    if (matches) {
+                        matches.forEach(match => {
+                            const cleanMatch = match.replace(/<[^>]*>/g, '').trim();
+                            if (cleanMatch && !priceInfo.includes(cleanMatch)) {
+                                priceInfo.push(cleanMatch);
+                            }
+                        });
+                    }
+                });
+                
+                if (priceInfo.length > 0) {
+                    // Set main price to the first found price
+                    if (!existingEvent.price) {
+                        const firstPrice = priceInfo.find(p => p.match(/\$[\d,]+\.?\d*/));
+                        if (firstPrice) {
+                            details.price = firstPrice;
+                            console.log(`🐻 Eventbrite: Found price in event details: ${details.price}`);
+                        }
+                    }
+                    
+                    // Store all price details for reference
+                    details.priceDetails = priceInfo;
+                    console.log(`🐻 Eventbrite: Found ${priceInfo.length} price details`);
+                }
             }
             
             // Try to geocode address if we have one but no coordinates

@@ -107,6 +107,11 @@ class MegawoofEventParser {
         // Check if this is a bear event
         event.isBearEvent = this.isBearEvent(event);
 
+        // Apply source-specific metadata if configured
+        if (this.config.metadata) {
+            this.applyMetadata(event, this.config.metadata);
+        }
+
         return event;
     }
 

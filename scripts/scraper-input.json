@@ -13,6 +13,12 @@
       "maxAdditionalUrls": 20,
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
+      },
+      "metadata": {
+        "title": "MEGAWOOF",
+        "shortTitle": "MEGA-WOOF",
+        "instagram": "https://www.instagram.com/megawoof_america",
+        "overrideTitle": true
       }
     }
   ]

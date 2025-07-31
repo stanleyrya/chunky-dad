@@ -119,6 +119,11 @@ class BearraccudaEventParser {
         // Bearraccuda events are inherently bear events
         event.isBearEvent = true;
 
+        // Apply source-specific metadata if configured
+        if (this.config.metadata) {
+            this.applyMetadata(event, this.config.metadata);
+        }
+
         return event;
     }
 
@@ -193,6 +198,37 @@ class BearraccudaEventParser {
         const searchText = `${event.title} ${event.description} ${event.venue}`.toLowerCase();
         return this.bearKeywords.some(keyword => searchText.includes(keyword.toLowerCase())) || 
                event.source === 'Bearraccuda';
+    }
+
+    // Apply source-specific metadata to events
+    applyMetadata(event, metadata) {
+        console.log(`🐻 Bearraccuda: Applying metadata to event: ${event.title}`);
+        
+        // Override title if configured
+        if (metadata.overrideTitle && metadata.title) {
+            console.log(`🐻 Bearraccuda: Overriding title "${event.title}" with "${metadata.title}"`);
+            event.originalTitle = event.title; // Preserve original title
+            event.title = metadata.title;
+        }
+        
+        // Add short title if provided
+        if (metadata.shortTitle) {
+            event.shortTitle = metadata.shortTitle;
+        }
+        
+        // Add Instagram link if provided
+        if (metadata.instagram) {
+            event.instagram = metadata.instagram;
+        }
+        
+        // Apply any other metadata fields
+        Object.keys(metadata).forEach(key => {
+            if (!['overrideTitle', 'title', 'shortTitle', 'instagram'].includes(key)) {
+                event[key] = metadata[key];
+            }
+        });
+        
+        console.log(`🐻 Bearraccuda: Applied metadata to event: ${event.title}`);
     }
 
     extractAdditionalLinks(doc, baseUrl) {
