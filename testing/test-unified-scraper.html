@@ -256,6 +256,7 @@
         <p>Test the enhanced Eventbrite parser with custom HTML (venue extraction, GPS coordinates, time parsing)</p>
         
         <div style="margin: 15px 0;">
+            <button class="preset-btn" onclick="loadEventbritePreset('addressParsing')">📍 Load Address Parsing Test</button>
             <button class="preset-btn" onclick="loadEventbritePreset('denver')">Load Denver Example</button>
             <button class="preset-btn" onclick="loadEventbritePreset('atlanta')">Load Atlanta Example</button>
             <button class="preset-btn" onclick="loadEventbritePreset('structured')">Load JSON-LD Example</button>
@@ -620,7 +621,39 @@
     "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849"
 }
 </script>
-<div>Event content here...</div>`
+<div>Event content here...</div>`,
+
+            addressParsing: `<div class="Container_root__4i85v NestedActionContainer_root__1jtfr event-card event-card__vertical">
+        <a href="https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019" 
+           rel="noopener" target="_blank" class="event-card-link" 
+           aria-label="View Duro Summer Night Foam Edition" 
+           data-event-id="1446957562019">
+            <section class="event-card-details">
+                <div class="Stack_root__1ksk7">
+                    <h3 class="Typography_root__487rx Typography_body-lg__487rx">
+                        Duro Summer Night Foam Edition
+                    </h3>
+                    <p class="Typography_root__487rx Typography_body-md__487rx">
+                        Sat, Aug 23 • 9:00 PM
+                    </p>
+                    <p class="Typography_root__487rx Typography_body-md__487rx">
+                        TBA
+
+DTLA Los Angeles, CA 90013
+                    </p>
+                    <p class="Typography_root__487rx Typography_body-md-bold__487rx">
+                        From $25.00
+                    </p>
+                </div>
+            </section>
+        </a>
+    </div>
+    
+    <div>Location
+    TBA
+    
+    DTLA Los Angeles, CA 90013
+    Get directions</div>`
         };
 
         function loadEventbritePreset(type) {
