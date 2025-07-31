@@ -643,6 +643,78 @@ class EventbriteEventParser {
         return null;
     }
 
+    extractCityFromTitle(title) {
+        if (!title) return null;
+        
+        console.log(`🐻 Eventbrite: Extracting city from title: "${title}"`);
+        
+        // Enhanced city extraction from event titles - look for city names in titles
+        const cityPatterns = {
+            'atlanta': /\batlanta\b/i,
+            'denver': /\bdenver\b/i,
+            'vegas': /\b(las vegas|vegas)\b/i,
+            'la': /\b(long beach|los angeles|la\b|l\.a\.)\b/i,
+            'nyc': /\b(new york|nyc|ny\b|n\.y\.)\b/i,
+            'sf': /\b(san francisco|sf\b|s\.f\.)\b/i,
+            'chicago': /\b(chicago|chi)\b/i,
+            'seattle': /\bseattle\b/i,
+            'dc': /\b(washington|dc|d\.c\.)\b/i,
+            'boston': /\bboston\b/i,
+            'miami': /\bmiami\b/i,
+            'dallas': /\bdallas\b/i,
+            'portland': /\bportland\b/i,
+            'philadelphia': /\b(philadelphia|philly)\b/i,
+            'phoenix': /\bphoenix\b/i,
+            'austin': /\baustin\b/i
+        };
+
+        for (const [city, pattern] of Object.entries(cityPatterns)) {
+            if (pattern.test(title)) {
+                console.log(`🐻 Eventbrite: Found city "${city}" in title`);
+                return city;
+            }
+        }
+        
+        console.log(`🐻 Eventbrite: No city found in title`);
+        return null;
+    }
+
+    extractCityFromText(text, source = 'text') {
+        if (!text) return null;
+        
+        console.log(`🐻 Eventbrite: Extracting city from ${source}: "${text}"`);
+        
+        // Comprehensive city extraction patterns
+        const cityPatterns = {
+            'atlanta': /\batlanta\b/i,
+            'denver': /\bdenver\b/i,
+            'vegas': /\b(las vegas|vegas)\b/i,
+            'la': /\b(long beach|los angeles|la\b|l\.a\.)\b/i,
+            'nyc': /\b(new york|nyc|ny\b|n\.y\.)\b/i,
+            'sf': /\b(san francisco|sf\b|s\.f\.)\b/i,
+            'chicago': /\b(chicago|chi)\b/i,
+            'seattle': /\bseattle\b/i,
+            'dc': /\b(washington|dc|d\.c\.)\b/i,
+            'boston': /\bboston\b/i,
+            'miami': /\bmiami\b/i,
+            'dallas': /\bdallas\b/i,
+            'portland': /\bportland\b/i,
+            'philadelphia': /\b(philadelphia|philly)\b/i,
+            'phoenix': /\bphoenix\b/i,
+            'austin': /\baustin\b/i
+        };
+
+        for (const [city, pattern] of Object.entries(cityPatterns)) {
+            if (pattern.test(text)) {
+                console.log(`🐻 Eventbrite: Found city "${city}" in ${source}`);
+                return city;
+            }
+        }
+        
+        console.log(`🐻 Eventbrite: No city found in ${source}`);
+        return null;
+    }
+
     // Apply source-specific metadata to events
     applyMetadata(event, metadata) {
         console.log(`🐻 Eventbrite: Applying metadata to event: ${event.title}`);
@@ -699,7 +771,28 @@ class EventbriteEventParser {
                 }
             }
             
-            // Apply city mappings
+            // If no city found in address, try to extract from title
+            if (!extractedCity && event.title) {
+                console.log(`🐻 Eventbrite: No city in address, trying title: "${event.title}"`);
+                extractedCity = this.extractCityFromTitle(event.title);
+                if (extractedCity) {
+                    console.log(`🐻 Eventbrite: Found city "${extractedCity}" from title`);
+                }
+            }
+            
+            // Special handling for Megawoof America events without explicit city
+            if (!extractedCity && event.title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(event.title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia|washington)/i.test(event.title)) {
+                console.log(`🐻 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${event.title}"`);
+                extractedCity = 'la';
+            }
+            
+            // If still no city found, check if we already have a valid city from main parsing
+            if (!extractedCity && event.city && event.city !== 'unknown') {
+                console.log(`🐻 Eventbrite: Using existing city from main parsing: "${event.city}"`);
+                extractedCity = event.city;
+            }
+            
+            // Apply city mappings only if we found a city
             if (extractedCity) {
                 const cityMappings = {
                     'Long Beach': 'LA',
@@ -709,13 +802,21 @@ class EventbriteEventParser {
                     'Denver': 'Denver',
                     'New York': 'NYC',
                     'San Francisco': 'SF',
-                    'Washington': 'DC'
+                    'Washington': 'DC',
+                    // Add mappings for our internal city codes
+                    'la': 'LA',
+                    'vegas': 'Las Vegas',
+                    'atlanta': 'Atlanta',
+                    'denver': 'Denver',
+                    'nyc': 'NYC',
+                    'sf': 'SF',
+                    'dc': 'DC'
                 };
                 
-                event.city = cityMappings[extractedCity] || extractedCity;
+                event.city = cityMappings[extractedCity] || extractedCity.toUpperCase();
                 console.log(`🐻 Eventbrite: Final city mapping: "${extractedCity}" → "${event.city}"`);
             } else {
-                console.log(`🐻 Eventbrite: No city found in address for "${event.title}"`);
+                console.log(`🐻 Eventbrite: No city found for "${event.title}"`);
             }
             
             event.title = metadata.title;
