@@ -69,7 +69,8 @@ class WebAdapter {
             }
             
         } catch (error) {
-            console.error(`🌐 Web: ✗ Failed to fetch ${url}:`, error);
+            console.error(`🌐 Web: ✗ Failed to fetch ${url}:`);
+            this._logErrorDetails(error, '🌐 Web: ✗');
             throw new Error(`HTTP request failed: ${error.message}`);
         }
     }
@@ -94,7 +95,8 @@ class WebAdapter {
             return config;
             
         } catch (error) {
-            console.error('🌐 Web: ✗ Failed to load configuration:', error);
+            console.error('🌐 Web: ✗ Failed to load configuration:');
+            this._logErrorDetails(error, '🌐 Web: ✗');
             throw new Error(`Configuration loading failed: ${error.message}`);
         }
     }
@@ -117,7 +119,8 @@ class WebAdapter {
             return events.length;
             
         } catch (error) {
-            console.error('🌐 Web: ✗ Calendar display error:', error);
+            console.error('🌐 Web: ✗ Calendar display error:');
+            this._logErrorDetails(error, '🌐 Web: ✗');
             throw new Error(`Calendar display failed: ${error.message}`);
         }
     }
@@ -207,11 +210,31 @@ class WebAdapter {
         }
     }
 
+    // Helper method to properly log error objects in web environment
+    _logErrorDetails(error, prefix = '') {
+        if (!error) return;
+        
+        const errorPrefix = prefix ? `${prefix} ` : '';
+        console.error(`${errorPrefix}Error name: ${error.name || 'Unknown'}`);
+        console.error(`${errorPrefix}Error message: ${error.message || 'No message'}`);
+        console.error(`${errorPrefix}Error stack: ${error.stack || 'No stack trace'}`);
+        
+        // Also log the error object in case there are additional properties
+        try {
+            const errorObj = JSON.stringify(error, Object.getOwnPropertyNames(error));
+            if (errorObj !== '{}') {
+                console.error(`${errorPrefix}Error object: ${errorObj}`);
+            }
+        } catch (stringifyError) {
+            console.error(`${errorPrefix}Error object could not be stringified`);
+        }
+    }
+
     async logError(component, message, error = null) {
         const logMessage = `❌ ${component}: ${message}`;
         console.error(`%c${logMessage}`, 'color: #F44336');
         if (error) {
-            console.error(error);
+            this._logErrorDetails(error);
         }
     }
 
@@ -251,7 +274,8 @@ class WebAdapter {
             }
             
         } catch (error) {
-            console.error('🌐 Web: Error displaying results:', error);
+            console.error('🌐 Web: Error displaying results:');
+            this._logErrorDetails(error, '🌐 Web: ✗');
         }
     }
 
@@ -300,7 +324,8 @@ class WebAdapter {
             `;
             
         } catch (error) {
-            console.error('🌐 Web: Error creating results display:', error);
+            console.error('🌐 Web: Error creating results display:');
+            this._logErrorDetails(error, '🌐 Web: ✗');
         }
     }
 
@@ -313,7 +338,8 @@ class WebAdapter {
             // Could also create a custom modal here
             console.error(`🌐 Web: ${title} - ${message}`);
         } catch (error) {
-            console.error('Failed to show error alert:', error);
+            console.error('Failed to show error alert:');
+            this._logErrorDetails(error, '🌐 Web: ✗');
         }
     }
 }
