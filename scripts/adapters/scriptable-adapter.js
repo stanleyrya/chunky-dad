@@ -278,18 +278,11 @@ class ScriptableAdapter {
     }
 
     async logWarn(message) {
-        console.log(message);
+        console.warn(message);
     }
 
-
-
     async logError(message) {
-        // For Scriptable, errors must be the only thing printed or JSON.stringify'd
-        if (typeof message === 'object') {
-            console.log(JSON.stringify(message));
-        } else {
-            console.log(message);
-        }
+        console.error(message);
     }
 
     // Results Display
