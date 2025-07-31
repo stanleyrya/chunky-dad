@@ -1719,6 +1719,22 @@ class EventbriteEventParser {
                 if (cityFromAddress) {
                     details.city = cityFromAddress;
                     console.log(`🐻 Eventbrite: Updated city from address extraction: ${details.city}`);
+                } else {
+                    // If address extraction failed, try extracting from title
+                    console.log(`🐻 Eventbrite: No city in address, trying title: "${existingEvent.title}"`);
+                    const cityFromTitle = this.extractCityFromTitle(existingEvent.title);
+                    if (cityFromTitle) {
+                        details.city = cityFromTitle;
+                        console.log(`🐻 Eventbrite: Updated city from title extraction: ${details.city}`);
+                    }
+                }
+            } else if (!existingEvent.city || existingEvent.city === 'unknown') {
+                // If we don't have an address but also don't have a city, try extracting from title
+                console.log(`🐻 Eventbrite: No address available, trying to extract city from title: "${existingEvent.title}"`);
+                const cityFromTitle = this.extractCityFromTitle(existingEvent.title);
+                if (cityFromTitle) {
+                    details.city = cityFromTitle;
+                    console.log(`🐻 Eventbrite: Updated city from title extraction: ${details.city}`);
                 }
             }
             
