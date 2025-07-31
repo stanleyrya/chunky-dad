@@ -1561,6 +1561,13 @@ class EventbriteEventParser {
             // Extract address from HTML if not found in JSON-LD
             if (!details.address) {
                 const addressPatterns = [
+                    // PRIORITY PATTERNS - Look for content after venue names or TBA first
+                    // TBA followed by anything in next div (most common case)
+                    /TBA[^>]*<\/div>[^<]*<div[^>]*>([^<]+)<\/div>/i,
+                    
+                    // Specific venue names followed by address in next div
+                    /(?:Trade|Falcon North|The Heretic Atlanta|Dust Las Vegas|Heretic)[^>]*<\/div>[^<]*<div[^>]*>([^<]+)<\/div>/i,
+                    
                     // Eventbrite-specific address containers
                     /<div[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+(?:<[^>]*>[^<]*<\/[^>]*>[^<]*)*)<\/div>/i,
                     /<p[^>]*class="[^"]*location[^"]*"[^>]*>([^<]+)<\/p>/i,
@@ -1588,7 +1595,11 @@ class EventbriteEventParser {
                     // Pattern 5: City, State ZIP without street number (like "DTLA Los Angeles, CA 90013")
                     /([A-Za-z\s]+[A-Za-z],\s*[A-Z]{2}\s+[0-9]{5})/i,
                     // Pattern 6: Neighborhood/Area + City, State ZIP
-                    /((?:DTLA|Downtown|Midtown|Uptown|[A-Za-z\s]+)\s+[A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i
+                    /((?:DTLA|Downtown|Midtown|Uptown|[A-Za-z\s]+)\s+[A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    
+                    // FLEXIBLE PATTERNS - City, State without ZIP requirement (for venues like "West Hollywood, CA")
+                    /TBA[^>]*<\/div>[^<]*<div[^>]*>([A-Za-z\s]+,\s*[A-Z]{2}[^<]*)<\/div>/i,
+                    /<div[^>]*>([A-Za-z\s]+,\s*[A-Z]{2})<\/div>/i
                 ];
                 
                 console.log(`🐻 Eventbrite: Searching for address patterns in HTML content (length: ${html.length})`);
@@ -1613,18 +1624,32 @@ class EventbriteEventParser {
                     console.log(`🐻 Eventbrite: No address found with standard patterns. Searching for venue-related text...`);
                     // Fallback: Look for any text that looks like an address near venue information
                     const venueAddressPatterns = [
+                        // AGGRESSIVE PATTERNS - Look for content after venue names or TBA
+                        // TBA followed by anything in next div (most common case)
+                        /TBA[^>]*<\/div>[^<]*<div[^>]*>([^<]+)<\/div>/i,
+                        
+                        // Specific venue names followed by address in next div
+                        /(?:Trade|Falcon North|The Heretic Atlanta|Dust Las Vegas|Heretic)[^>]*<\/div>[^<]*<div[^>]*>([^<]+)<\/div>/i,
+                        
+                        // Generic: any venue name followed by address-like content
+                        /<div[^>]*>[^<]+<\/div>[^<]*<div[^>]*>([^<]*(?:[0-9]+\s+[A-Za-z]|[A-Za-z\s]+,\s*[A-Z]{2})[^<]*)<\/div>/i,
+                        
                         // Look for text after "Get directions" or similar
                         /Get directions[^0-9A-Za-z]*([0-9]+[^<\n]+[A-Z]{2}\s+[0-9]{5})/i,
                         /Get directions[^A-Za-z]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
                         // Look for address-like text in venue sections
                         /<div[^>]*>[^<]*([0-9]+\s+[^<\n]+[A-Z]{2}\s+[0-9]{5})[^<]*<\/div>/i,
-                        // Look for location patterns near TBA
+                        // Look for location patterns near TBA (old pattern)
                         /TBA[^A-Za-z]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
                         // Look for location text in div elements
                         /<div[^>]*>([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})<\/div>/i,
                         // Look for text patterns like "Location" followed by address
                         /Location[^A-Za-z0-9]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
-                        /Where[^A-Za-z0-9]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i
+                        /Where[^A-Za-z0-9]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                        
+                        // FLEXIBLE PATTERNS - City, State without ZIP requirement
+                        /TBA[^>]*<\/div>[^<]*<div[^>]*>([A-Za-z\s]+,\s*[A-Z]{2}[^<]*)<\/div>/i,
+                        /<div[^>]*>([A-Za-z\s]+,\s*[A-Z]{2})<\/div>/i,
                     ];
                     
                     for (let i = 0; i < venueAddressPatterns.length; i++) {
@@ -1719,6 +1744,34 @@ class EventbriteEventParser {
                 if (cityFromAddress) {
                     details.city = cityFromAddress;
                     console.log(`🐻 Eventbrite: Updated city from address extraction: ${details.city}`);
+                } else {
+                    // If address extraction failed, try extracting from title
+                    console.log(`🐻 Eventbrite: No city in address, trying title: "${existingEvent.title}"`);
+                    const cityFromTitle = this.extractCityFromTitle(existingEvent.title);
+                    if (cityFromTitle) {
+                        details.city = cityFromTitle;
+                        console.log(`🐻 Eventbrite: Updated city from title extraction: ${details.city}`);
+                    } else {
+                        // Special handling for Megawoof America events without explicit city
+                        if (existingEvent.title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(existingEvent.title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia|washington)/i.test(existingEvent.title)) {
+                            console.log(`🐻 Eventbrite: Megawoof/DURO event without explicit city, defaulting to LA: "${existingEvent.title}"`);
+                            details.city = 'la';
+                        }
+                    }
+                }
+            } else if (!existingEvent.city || existingEvent.city === 'unknown') {
+                // If we don't have an address but also don't have a city, try extracting from title
+                console.log(`🐻 Eventbrite: No address available, trying to extract city from title: "${existingEvent.title}"`);
+                const cityFromTitle = this.extractCityFromTitle(existingEvent.title);
+                if (cityFromTitle) {
+                    details.city = cityFromTitle;
+                    console.log(`🐻 Eventbrite: Updated city from title extraction: ${details.city}`);
+                } else {
+                    // Special handling for Megawoof America events without explicit city
+                    if (existingEvent.title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(existingEvent.title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia|washington)/i.test(existingEvent.title)) {
+                        console.log(`🐻 Eventbrite: Megawoof/DURO event without explicit city, defaulting to LA: "${existingEvent.title}"`);
+                        details.city = 'la';
+                    }
                 }
             }
             
