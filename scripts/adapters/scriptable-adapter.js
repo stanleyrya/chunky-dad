@@ -83,9 +83,8 @@ class ScriptableAdapter {
             }
             
         } catch (error) {
-            console.error(`📱 Scriptable: ✗ HTTP request failed for ${url}:`, error);
-            console.error(`📱 Scriptable: ✗ HTTP error stack trace:`, error.stack);
-            console.error(`📱 Scriptable: ✗ HTTP error name: ${error.name}, message: ${error.message}`);
+            console.error(`📱 Scriptable: ✗ HTTP request failed for ${url}:`);
+            this._logErrorDetails(error, '📱 Scriptable: ✗');
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);
         }
     }
@@ -112,7 +111,8 @@ class ScriptableAdapter {
                     const files = fm.listContents(scriptableDir);
                     console.log(`📱 Scriptable: Files in ${scriptableDir}:`, files);
                 } catch (listError) {
-                    console.error('📱 Scriptable: ✗ Failed to list directory contents:', listError);
+                    console.error('📱 Scriptable: ✗ Failed to list directory contents:');
+                    this._logErrorDetails(listError, '📱 Scriptable: ✗');
                 }
                 throw new Error('Configuration file not found at iCloud Drive/Scriptable/scraper-input.json');
             }
@@ -145,8 +145,8 @@ class ScriptableAdapter {
             return config;
             
         } catch (error) {
-            console.error('📱 Scriptable: ✗ Failed to load configuration:', error);
-            console.error('📱 Scriptable: ✗ Configuration loading stack trace:', error.stack);
+            console.error('📱 Scriptable: ✗ Failed to load configuration:');
+            this._logErrorDetails(error, '📱 Scriptable: ✗');
             throw new Error(`Configuration loading failed: ${error.message}`);
         }
     }
@@ -205,7 +205,8 @@ class ScriptableAdapter {
                     console.log(`📱 Scriptable: ✓ Added event: ${event.title}`);
                     
                 } catch (error) {
-                    console.error(`📱 Scriptable: ✗ Failed to add event "${event.title}":`, error);
+                    console.error(`📱 Scriptable: ✗ Failed to add event "${event.title}":`);
+                    this._logErrorDetails(error, '📱 Scriptable: ✗');
                 }
             }
             
@@ -213,7 +214,8 @@ class ScriptableAdapter {
             return addedCount;
             
         } catch (error) {
-            console.error('📱 Scriptable: ✗ Calendar integration error:', error);
+            console.error('📱 Scriptable: ✗ Calendar integration error:');
+            this._logErrorDetails(error, '📱 Scriptable: ✗');
             throw new Error(`Calendar integration failed: ${error.message}`);
         }
     }
@@ -237,7 +239,8 @@ class ScriptableAdapter {
             return calendar;
             
         } catch (error) {
-            console.error(`📱 Scriptable: ✗ Failed to get/create calendar "${calendarName}":`, error);
+            console.error(`📱 Scriptable: ✗ Failed to get/create calendar "${calendarName}":`);
+            this._logErrorDetails(error, '📱 Scriptable: ✗');
             throw error;
         }
     }
@@ -295,11 +298,31 @@ class ScriptableAdapter {
         }
     }
 
+    // Helper method to properly log error objects in Scriptable
+    _logErrorDetails(error, prefix = '') {
+        if (!error) return;
+        
+        const errorPrefix = prefix ? `${prefix} ` : '';
+        console.error(`${errorPrefix}Error name: ${error.name || 'Unknown'}`);
+        console.error(`${errorPrefix}Error message: ${error.message || 'No message'}`);
+        console.error(`${errorPrefix}Error stack: ${error.stack || 'No stack trace'}`);
+        
+        // Also log the error object in case there are additional properties
+        try {
+            const errorObj = JSON.stringify(error, Object.getOwnPropertyNames(error));
+            if (errorObj !== '{}') {
+                console.error(`${errorPrefix}Error object: ${errorObj}`);
+            }
+        } catch (stringifyError) {
+            console.error(`${errorPrefix}Error object could not be stringified`);
+        }
+    }
+
     async logError(component, message, error = null) {
         const logMessage = `❌ ${component}: ${message}`;
         console.error(logMessage);
         if (error) {
-            console.error(error);
+            this._logErrorDetails(error);
         }
     }
 
@@ -336,7 +359,8 @@ class ScriptableAdapter {
             }
             
         } catch (error) {
-            console.error('📱 Scriptable: Error displaying results:', error);
+            console.error('📱 Scriptable: Error displaying results:');
+            this._logErrorDetails(error, '📱 Scriptable: ✗');
         }
     }
 
@@ -349,7 +373,8 @@ class ScriptableAdapter {
             alert.addAction('OK');
             await alert.present();
         } catch (error) {
-            console.error('Failed to show error alert:', error);
+            console.error('Failed to show error alert:');
+            this._logErrorDetails(error, '📱 Scriptable: ✗');
         }
     }
 }
