@@ -1726,6 +1726,12 @@ class EventbriteEventParser {
                     if (cityFromTitle) {
                         details.city = cityFromTitle;
                         console.log(`🐻 Eventbrite: Updated city from title extraction: ${details.city}`);
+                    } else {
+                        // Special handling for Megawoof America events without explicit city
+                        if (existingEvent.title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(existingEvent.title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia|washington)/i.test(existingEvent.title)) {
+                            console.log(`🐻 Eventbrite: Megawoof/DURO event without explicit city, defaulting to LA: "${existingEvent.title}"`);
+                            details.city = 'la';
+                        }
                     }
                 }
             } else if (!existingEvent.city || existingEvent.city === 'unknown') {
@@ -1735,6 +1741,12 @@ class EventbriteEventParser {
                 if (cityFromTitle) {
                     details.city = cityFromTitle;
                     console.log(`🐻 Eventbrite: Updated city from title extraction: ${details.city}`);
+                } else {
+                    // Special handling for Megawoof America events without explicit city
+                    if (existingEvent.title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(existingEvent.title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia|washington)/i.test(existingEvent.title)) {
+                        console.log(`🐻 Eventbrite: Megawoof/DURO event without explicit city, defaulting to LA: "${existingEvent.title}"`);
+                        details.city = 'la';
+                    }
                 }
             }
             
