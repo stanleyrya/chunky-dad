@@ -192,17 +192,13 @@ class WebAdapter {
     }
 
     async logWarn(message) {
-        console.log(`%c⚠️ ${message}`, 'color: #FF9800');
+        console.warn(`%c⚠️ ${message}`, 'color: #FF9800');
     }
 
 
 
     async logError(message) {
-        if (typeof message === 'object') {
-            console.error(`%c❌ ${JSON.stringify(message)}`, 'color: #F44336');
-        } else {
-            console.error(`%c❌ ${message}`, 'color: #F44336');
-        }
+        console.error(`%c❌ ${message}`, 'color: #F44336');
     }
 
     // Results Display
