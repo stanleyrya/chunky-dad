@@ -31,6 +31,9 @@ class SharedCore {
 
     // Pure business logic for processing events
     async processEvents(config, httpAdapter, displayAdapter, parsers) {
+        await displayAdapter.logInfo('SYSTEM', 'Starting event processing...');
+        await displayAdapter.logInfo('SYSTEM', `Processing ${config.parsers?.length || 0} parser configurations`);
+        
         const results = {
             totalEvents: 0,
             bearEvents: 0,
@@ -39,20 +42,33 @@ class SharedCore {
             parserResults: []
         };
 
-        for (const parserConfig of config.parsers) {
+        if (!config.parsers || config.parsers.length === 0) {
+            await displayAdapter.logWarn('SYSTEM', 'No parser configurations found in config');
+            return results;
+        }
+
+        for (let i = 0; i < config.parsers.length; i++) {
+            const parserConfig = config.parsers[i];
             try {
+                await displayAdapter.logInfo('SYSTEM', `Processing parser ${i + 1}/${config.parsers.length}: ${parserConfig.name}`);
+                
                 const parserResult = await this.processParser(parserConfig, httpAdapter, displayAdapter, parsers);
                 results.parserResults.push(parserResult);
                 results.totalEvents += parserResult.totalEvents;
                 results.bearEvents += parserResult.bearEvents;
                 results.calendarEvents += parserResult.calendarEvents;
+                
+                await displayAdapter.logSuccess('SYSTEM', `Completed parser ${parserConfig.name}: ${parserResult.bearEvents} bear events found`);
+                
             } catch (error) {
                 const errorMsg = `Failed to process ${parserConfig.name}: ${error.message}`;
                 results.errors.push(errorMsg);
                 await displayAdapter.logError('SYSTEM', errorMsg, error);
+                await displayAdapter.logError('SYSTEM', `Stack trace for ${parserConfig.name}:`, error.stack);
             }
         }
 
+        await displayAdapter.logInfo('SYSTEM', `Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}, Calendar: ${results.calendarEvents}`);
         return results;
     }
 
@@ -61,29 +77,52 @@ class SharedCore {
         const parser = parsers[parserName];
         
         if (!parser) {
+            await displayAdapter.logError('SYSTEM', `Parser '${parserName}' not found in available parsers: ${Object.keys(parsers).join(', ')}`);
             throw new Error(`Parser '${parserName}' not found`);
         }
 
-        await displayAdapter.logInfo('SYSTEM', `Processing: ${parserConfig.name}`);
+        await displayAdapter.logInfo('SYSTEM', `Processing: ${parserConfig.name} using ${parserName} parser`);
+        await displayAdapter.logInfo('SYSTEM', `URLs to process: ${parserConfig.urls?.length || 0}`);
+        if (parserConfig.urls) {
+            parserConfig.urls.forEach((url, i) => {
+                displayAdapter.logInfo('SYSTEM', `  URL ${i + 1}: ${url}`);
+            });
+        }
         
         const allEvents = [];
         const processedUrls = new Set();
 
         // Process main URLs
-        for (const url of parserConfig.urls) {
-            if (processedUrls.has(url)) continue;
+        for (let i = 0; i < (parserConfig.urls || []).length; i++) {
+            const url = parserConfig.urls[i];
+            if (processedUrls.has(url)) {
+                await displayAdapter.logWarn('SYSTEM', `Skipping duplicate URL: ${url}`);
+                continue;
+            }
             processedUrls.add(url);
 
             try {
+                await displayAdapter.logInfo('SYSTEM', `Fetching URL ${i + 1}/${parserConfig.urls.length}: ${url}`);
                 const htmlData = await httpAdapter.fetchData(url);
+                
+                await displayAdapter.logInfo('SYSTEM', `HTML data received: ${htmlData?.html?.length || 0} characters`);
+                
+                await displayAdapter.logInfo('SYSTEM', `Parsing events with ${parserName} parser...`);
                 const parseResult = parser.parseEvents(htmlData, parserConfig);
+                
+                await displayAdapter.logInfo('SYSTEM', `Parse result: ${parseResult?.events?.length || 0} events found`);
+                if (parseResult?.additionalLinks) {
+                    await displayAdapter.logInfo('SYSTEM', `Additional links found: ${parseResult.additionalLinks.length}`);
+                }
                 
                 if (parseResult.events) {
                     allEvents.push(...parseResult.events);
+                    await displayAdapter.logSuccess('SYSTEM', `Added ${parseResult.events.length} events from ${url}`);
                 }
 
                 // Process additional URLs if required
                 if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
+                    await displayAdapter.logInfo('SYSTEM', `Processing ${parseResult.additionalLinks.length} additional URLs for detail pages...`);
                     const additionalEvents = await this.processAdditionalUrls(
                         parseResult.additionalLinks, 
                         parser, 
@@ -93,25 +132,40 @@ class SharedCore {
                         processedUrls
                     );
                     allEvents.push(...additionalEvents);
+                    await displayAdapter.logSuccess('SYSTEM', `Added ${additionalEvents.length} events from detail pages`);
                 }
             } catch (error) {
-                await displayAdapter.logError('SYSTEM', `Failed to process URL ${url}`, error);
+                await displayAdapter.logError('SYSTEM', `Failed to process URL ${url}: ${error.message}`, error);
+                await displayAdapter.logError('SYSTEM', `URL processing stack trace:`, error.stack);
             }
         }
 
+        await displayAdapter.logInfo('SYSTEM', `Total events collected: ${allEvents.length}`);
+
         // Filter and process events
+        await displayAdapter.logInfo('SYSTEM', 'Filtering future events...');
         const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead);
+        await displayAdapter.logInfo('SYSTEM', `Future events: ${futureEvents.length}/${allEvents.length}`);
+        
+        await displayAdapter.logInfo('SYSTEM', 'Filtering bear events...');
         const bearEvents = this.filterBearEvents(futureEvents, parserConfig);
+        await displayAdapter.logInfo('SYSTEM', `Bear events: ${bearEvents.length}/${futureEvents.length}`);
+        
+        await displayAdapter.logInfo('SYSTEM', 'Deduplicating events...');
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
+        await displayAdapter.logInfo('SYSTEM', `Deduplicated events: ${deduplicatedEvents.length}/${bearEvents.length}`);
 
         // Add to calendar if not dry run
         let calendarEvents = 0;
         if (!parserConfig.dryRun && displayAdapter.addToCalendar) {
+            await displayAdapter.logInfo('SYSTEM', `Adding ${deduplicatedEvents.length} events to calendar (not dry run)...`);
             calendarEvents = await displayAdapter.addToCalendar(deduplicatedEvents, parserConfig);
+        } else {
+            await displayAdapter.logInfo('SYSTEM', `Dry run mode: would add ${deduplicatedEvents.length} events to calendar`);
         }
 
         await displayAdapter.logSuccess('SYSTEM', 
-            `${parserConfig.name}: ${deduplicatedEvents.length} bear events found`);
+            `${parserConfig.name}: ${deduplicatedEvents.length} bear events found, ${calendarEvents} added to calendar`);
 
         return {
             name: parserConfig.name,
