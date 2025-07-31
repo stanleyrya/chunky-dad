@@ -493,6 +493,12 @@ class EventbriteEventParser {
         const descElement = element.querySelector('.event-description, .summary, p:not([class*="Typography"])');
         event.description = descElement ? descElement.textContent.trim() : '';
 
+        // Transfer _potentialAddress to main address field if we have one
+        if (event._potentialAddress && !event.address) {
+            event.address = event._potentialAddress;
+            console.log(`🐻 Eventbrite: Transferred potential address to main address field: "${event.address}"`);
+        }
+
         // Apply source-specific metadata if configured
         if (this.config.metadata) {
             this.applyMetadata(event, this.config.metadata);
