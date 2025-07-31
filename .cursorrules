@@ -85,6 +85,8 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 - **Clean architecture**: When updating systems, replace old functionality rather than maintaining parallel systems
 
 ## Scriptable Development
+- **CRITICAL**: When editing ANY file in `scripts/` directory, ALWAYS read `scripts/README.md` first
+- **Architecture Rules**: The scripts directory uses STRICT separation of concerns - see README for details
 - **API Reference**: Complete Scriptable API documentation available at `scripts/scriptable-complete-api.md`
 - **54 documented classes**: All Scriptable APIs from Alert to XMLParser with full method signatures
 - **Bear Event Scrapers**: iOS automation scripts for scraping bear community events
@@ -94,6 +96,7 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
   - File operations (FileManager class)
   - Data parsing (Data, XMLParser classes)
   - UI components (Alert, Notification classes)
+- **AI-Proofing**: Each file has specific restrictions - read file headers before editing
 
 ## Project-Specific Notes
 - Bear community focus - inclusive, welcoming tone

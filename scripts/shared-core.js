@@ -1,5 +1,23 @@
-// Shared Core - Pure JavaScript Business Logic
-// No environment-specific code - works in both Scriptable and web environments
+// ============================================================================
+// SHARED CORE - PURE JAVASCRIPT BUSINESS LOGIC
+// ============================================================================
+// ⚠️  AI ASSISTANT WARNING: This file contains PURE JavaScript business logic
+// 
+// 🚨 CRITICAL RESTRICTIONS - NEVER ADD THESE TO THIS FILE:
+// ❌ NO environment detection (typeof importModule, typeof window, typeof DOMParser)
+// ❌ NO Scriptable APIs (Request, Calendar, FileManager, Alert, Notification)
+// ❌ NO DOM APIs (DOMParser, document, window, fetch)
+// ❌ NO HTTP requests (parsers receive data, they don't fetch it)
+// ❌ NO calendar operations (return event objects, don't save them)
+//
+// ✅ THIS FILE SHOULD ONLY CONTAIN:
+// ✅ Pure JavaScript functions that work in any environment
+// ✅ Event processing, filtering, deduplication logic
+// ✅ Date/string utilities and validation
+// ✅ Business logic that calls adapter interfaces
+//
+// 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
+// ============================================================================
 
 class SharedCore {
     constructor() {

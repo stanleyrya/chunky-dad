@@ -1,5 +1,20 @@
-// Scriptable Adapter - iOS Environment Specific Code
-// Handles HTTP requests, calendar integration, file operations, and display for Scriptable
+// ============================================================================
+// SCRIPTABLE ADAPTER - iOS ENVIRONMENT SPECIFIC CODE
+// ============================================================================
+// ⚠️  AI ASSISTANT WARNING: This file contains iOS/Scriptable ONLY code
+//
+// ✅ THIS FILE SHOULD CONTAIN:
+// ✅ Scriptable APIs (Request, Calendar, FileManager, Alert, Notification)
+// ✅ iOS-specific HTTP requests and calendar operations
+// ✅ Scriptable-specific file operations and UI
+//
+// ❌ NEVER ADD THESE TO THIS FILE:
+// ❌ Web APIs (fetch, DOMParser, localStorage, document, window)
+// ❌ Business logic (that belongs in shared-core.js)
+// ❌ Parsing logic (that belongs in parsers/)
+//
+// 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
+// ============================================================================
 
 class ScriptableAdapter {
     constructor(config = {}) {
