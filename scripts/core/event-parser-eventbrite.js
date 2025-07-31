@@ -340,7 +340,26 @@ class EventbriteEventParser {
         const venueElements = element.querySelectorAll('.Typography_body-md__487rx');
         if (venueElements.length > 1) {
             // Usually the second Typography_body-md element is the venue
-            event.venue = venueElements[1].textContent.trim();
+            let venueText = venueElements[1].textContent.trim();
+            
+            // Try to separate venue name from address if they're combined
+            // Look for patterns like "Venue Name\n123 Street Address" or "Venue Name, 123 Street"
+            const venueParts = venueText.split(/\n|(?=\d+\s+\w+)/);
+            if (venueParts.length > 1 && venueParts[0].trim().length > 0) {
+                // First part is likely the venue name
+                event.venue = venueParts[0].trim();
+                console.log(`🐻 Eventbrite: Extracted venue name from combined text: "${event.venue}"`);
+                
+                // Check if the remaining part looks like an address
+                const remainingText = venueParts.slice(1).join(' ').trim();
+                if (remainingText.match(/^\d+\s+/)) {
+                    console.log(`🐻 Eventbrite: Found potential address in venue text: "${remainingText}"`);
+                    // Store this for potential address extraction if no other address is found
+                    event._potentialAddress = remainingText;
+                }
+            } else {
+                event.venue = venueText;
+            }
             event.location = event.venue; // For backward compatibility
         }
         
@@ -350,6 +369,27 @@ class EventbriteEventParser {
             if (venueFromData) {
                 event.venue = venueFromData;
                 event.location = event.venue;
+            }
+        }
+        
+        // Additional venue extraction patterns for Eventbrite
+        if (!event.venue) {
+            const additionalVenueSelectors = [
+                '[data-testid="event-venue"]',
+                '.venue-name',
+                '.location-name',
+                'h2:contains("Where")',
+                '.event-venue-name'
+            ];
+            
+            for (const selector of additionalVenueSelectors) {
+                const venueElement = element.querySelector(selector);
+                if (venueElement && venueElement.textContent.trim()) {
+                    event.venue = venueElement.textContent.trim();
+                    event.location = event.venue;
+                    console.log(`🐻 Eventbrite: Found venue with selector "${selector}": ${event.venue}`);
+                    break;
+                }
             }
         }
         
@@ -418,8 +458,17 @@ class EventbriteEventParser {
             console.log(`🐻 Eventbrite: Final event URL:`, event.eventUrl);
         }
 
-        // Extract city from venue, URL, title, and other indicators
-        event.city = this.extractCity(event.title + ' ' + event.venue + ' ' + (event.description || '') + ' ' + sourceUrl);
+        // Extract city from venue, URL, title, address, and other indicators
+        const citySearchText = [
+            event.title,
+            event.venue,
+            event.description || '',
+            event._potentialAddress || '',
+            sourceUrl
+        ].join(' ');
+        
+        event.city = this.extractCity(citySearchText);
+        console.log(`🐻 Eventbrite: City extraction from text: "${citySearchText.substring(0, 200)}..." -> "${event.city}"`);
 
         // Extract description from various possible elements
         const descElement = element.querySelector('.event-description, .summary, p:not([class*="Typography"])');
@@ -503,7 +552,7 @@ class EventbriteEventParser {
         const cityPatterns = {
             'nyc': /new york|nyc|manhattan|brooklyn|queens|bronx/i,
             'sf': /san francisco|sf|bay area/i,
-            'la': /los angeles|la|hollywood|west hollywood/i,
+            'la': /los angeles|la|hollywood|west hollywood|long beach/i,
             'chicago': /chicago/i,
             'seattle': /seattle/i,
             'dc': /washington|dc|district of columbia/i,
@@ -519,13 +568,60 @@ class EventbriteEventParser {
             'vegas': /las vegas|vegas/i
         };
 
+        console.log(`🐻 Eventbrite: Extracting city from text: "${text.substring(0, 150)}..."`);
+
         for (const [city, pattern] of Object.entries(cityPatterns)) {
             if (pattern.test(text)) {
+                console.log(`🐻 Eventbrite: Matched city pattern "${city}" with pattern: ${pattern}`);
                 return city;
             }
         }
         
+        console.log(`🐻 Eventbrite: No city pattern matched, returning 'unknown'`);
         return 'unknown';
+    }
+
+    extractCityFromAddress(address) {
+        if (!address) return null;
+        
+        console.log(`🐻 Eventbrite: Extracting city from address: "${address}"`);
+        
+        // Enhanced city extraction specifically from addresses
+        const cityPattern = /\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|New York|Chicago|Miami|San Francisco|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington)\b/i;
+        
+        // Check the full address for city names
+        const match = address.match(cityPattern);
+        if (match) {
+            const foundCity = match[1];
+            console.log(`🐻 Eventbrite: Found city "${foundCity}" in address`);
+            
+            // Map to our city codes
+            const cityMappings = {
+                'Long Beach': 'la',
+                'Los Angeles': 'la',
+                'New York': 'nyc',
+                'San Francisco': 'sf',
+                'Las Vegas': 'vegas',
+                'Chicago': 'chicago',
+                'Seattle': 'seattle',
+                'Washington': 'dc',
+                'Boston': 'boston',
+                'Atlanta': 'atlanta',
+                'Miami': 'miami',
+                'Dallas': 'dallas',
+                'Denver': 'denver',
+                'Portland': 'portland',
+                'Philadelphia': 'philadelphia',
+                'Phoenix': 'phoenix',
+                'Austin': 'austin',
+                'Houston': 'dallas' // Group Houston with Dallas for now
+            };
+            
+            return cityMappings[foundCity] || foundCity.toLowerCase();
+        }
+        
+        console.log(`🐻 Eventbrite: No city found in address`);
+        return null;
     }
 
     // Apply source-specific metadata to events
@@ -572,6 +668,15 @@ class EventbriteEventParser {
                         extractedCity = fullMatch[1];
                         console.log(`🐻 Eventbrite: Found city "${extractedCity}" in full address: "${event.address}"`);
                     }
+                }
+            }
+            
+            // Re-extract city from address if we have one
+            if (event.address && !extractedCity) {
+                console.log(`🐻 Eventbrite: Re-extracting city from address: "${event.address}"`);
+                extractedCity = this.extractCityFromAddress(event.address);
+                if (extractedCity) {
+                    console.log(`🐻 Eventbrite: Found city "${extractedCity}" from address`);
                 }
             }
             
@@ -1324,20 +1429,70 @@ class EventbriteEventParser {
             // Extract address from HTML if not found in JSON-LD
             if (!details.address) {
                 const addressPatterns = [
+                    // Eventbrite-specific address containers
                     /<div[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+(?:<[^>]*>[^<]*<\/[^>]*>[^<]*)*)<\/div>/i,
                     /<p[^>]*class="[^"]*location[^"]*"[^>]*>([^<]+)<\/p>/i,
-                    // Look for address patterns like "123 Main St, City, State 12345"
-                    /([0-9]+\s+[^,]+,\s*[^,]+,\s*[A-Z]{2}\s+[0-9]{5})/i
+                    /<div[^>]*class="[^"]*venue-address[^"]*"[^>]*>([^<]+)<\/div>/i,
+                    /<span[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/span>/i,
+                    
+                    // Look for address patterns - more flexible patterns
+                    // Pattern 1: "123 Main St, City, State 12345" (original)
+                    /([0-9]+\s+[^,]+,\s*[^,]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    // Pattern 2: "2020 East Artesia Boulevard Long Beach, CA 90805" (without comma before city)
+                    /([0-9]+\s+[^,\n]+\s+[A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    // Pattern 3: Street address with city and state (more general)
+                    /([0-9]+\s+[^,\n]+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd|Drive|Dr|Lane|Ln|Way|Place|Pl)[^,\n]*[^,\n]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    // Pattern 4: Any street number followed by text and state/zip
+                    /([0-9]+\s+[^0-9\n]+[A-Za-z\s]+,?\s*[A-Z]{2}\s+[0-9]{5})/i
                 ];
                 
-                for (const pattern of addressPatterns) {
+                console.log(`🐻 Eventbrite: Searching for address patterns in HTML content (length: ${html.length})`);
+                
+                for (let i = 0; i < addressPatterns.length; i++) {
+                    const pattern = addressPatterns[i];
                     const match = html.match(pattern);
                     if (match && match[1].trim()) {
                         // Clean up HTML tags from address
-                        details.address = match[1].replace(/<[^>]*>/g, '').trim();
-                        details.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(details.address)}`;
-                        console.log(`🐻 Eventbrite: Found address in HTML: ${details.address}`);
+                        let address = match[1].replace(/<[^>]*>/g, '').trim();
+                        // Clean up extra whitespace
+                        address = address.replace(/\s+/g, ' ').trim();
+                        
+                        details.address = address;
+                        details.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+                        console.log(`🐻 Eventbrite: Found address in HTML (pattern ${i + 1}): ${details.address}`);
                         break;
+                    }
+                }
+                
+                if (!details.address) {
+                    console.log(`🐻 Eventbrite: No address found with standard patterns. Searching for venue-related text...`);
+                    // Fallback: Look for any text that looks like an address near venue information
+                    const venueAddressPatterns = [
+                        // Look for text after "Get directions" or similar
+                        /Get directions[^0-9]*([0-9]+[^<\n]+[A-Z]{2}\s+[0-9]{5})/i,
+                        // Look for address-like text in venue sections
+                        /<div[^>]*>[^<]*([0-9]+\s+[^<\n]+[A-Z]{2}\s+[0-9]{5})[^<]*<\/div>/i
+                    ];
+                    
+                    for (let i = 0; i < venueAddressPatterns.length; i++) {
+                        const pattern = venueAddressPatterns[i];
+                        const match = html.match(pattern);
+                        if (match && match[1].trim()) {
+                            let address = match[1].replace(/<[^>]*>/g, '').trim();
+                            address = address.replace(/\s+/g, ' ').trim();
+                            
+                            details.address = address;
+                            details.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+                            console.log(`🐻 Eventbrite: Found address with fallback pattern ${i + 1}: ${details.address}`);
+                            break;
+                        }
+                    }
+                    
+                    // Final fallback: Use potential address from venue text if available
+                    if (!details.address && existingEvent._potentialAddress) {
+                        console.log(`🐻 Eventbrite: Using potential address from venue text: "${existingEvent._potentialAddress}"`);
+                        details.address = existingEvent._potentialAddress;
+                        details.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(details.address)}`;
                     }
                 }
             }
@@ -1403,6 +1558,15 @@ class EventbriteEventParser {
             if (details.address && !details.coordinates && !existingEvent.coordinates) {
                 // Note: We'll add geocoding in a separate method to keep this clean
                 details.needsGeocoding = true;
+            }
+            
+            // Re-extract city if we found an address and don't have a good city yet
+            if (details.address && (!existingEvent.city || existingEvent.city === 'unknown')) {
+                const cityFromAddress = this.extractCityFromAddress(details.address);
+                if (cityFromAddress) {
+                    details.city = cityFromAddress;
+                    console.log(`🐻 Eventbrite: Updated city from address extraction: ${details.city}`);
+                }
             }
             
             console.log(`🐻 Eventbrite: Extracted ${Object.keys(details).length} additional details`);
