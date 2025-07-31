@@ -606,7 +606,7 @@ class EventbriteEventParser {
         console.log(`🐻 Eventbrite: Extracting city from address: "${address}"`);
         
         // Enhanced city extraction specifically from addresses
-        const cityPattern = /\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|New York|Chicago|Miami|San Francisco|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington|DTLA)\b/i;
+        const cityPattern = /\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|New York|Chicago|Miami|San Francisco|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington)\b/i;
         
         // Check the full address for city names
         const match = address.match(cityPattern);
@@ -618,7 +618,6 @@ class EventbriteEventParser {
             const cityMappings = {
                 'Long Beach': 'la',
                 'Los Angeles': 'la',
-                'DTLA': 'la',
                 'New York': 'nyc',
                 'San Francisco': 'sf',
                 'Las Vegas': 'vegas',
