@@ -537,63 +537,61 @@ class EventbriteEventParser {
             console.log(`🐻 Eventbrite: Overriding title "${event.title}" with "${metadata.title}"`);
             event.originalTitle = event.title; // Preserve original title
             
-            // Extract city from venue/address first, then fallback to title
+            // Extract city from address
             let extractedCity = null;
             
-            // Method 1: Extract from address if available
+            console.log(`🐻 Eventbrite: Attempting city extraction for "${event.title}":`, {
+                address: event.address,
+                venue: event.venue,
+                originalTitle: event.title
+            });
+            
             if (event.address) {
-                // Look for city names in the address
-                const addressCityMatch = event.address.match(/\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|LA|NYC|New York|Chicago|Miami|San Francisco|SF|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington|DC)\b/i);
-                if (addressCityMatch) {
-                    extractedCity = addressCityMatch[1];
-                    console.log(`🐻 Eventbrite: Extracted city "${extractedCity}" from address: ${event.address}`);
+                // Extract city from full address - look for common patterns
+                // Addresses usually have format: "Venue Name, Street, City, State ZIP"
+                const addressParts = event.address.split(',').map(part => part.trim());
+                console.log(`🐻 Eventbrite: Address parts:`, addressParts);
+                
+                // Try to find city in address parts or full address
+                const cityPattern = /\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|New York|Chicago|Miami|San Francisco|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington)\b/i;
+                
+                // Check each part of the address
+                for (const part of addressParts) {
+                    const match = part.match(cityPattern);
+                    if (match) {
+                        extractedCity = match[1];
+                        console.log(`🐻 Eventbrite: Found city "${extractedCity}" in address part: "${part}"`);
+                        break;
+                    }
                 }
-            }
-            
-            // Method 2: Extract from venue name if no city from address
-            if (!extractedCity && event.venue) {
-                const venueCityMatch = event.venue.match(/\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|LA|NYC|New York|Chicago|Miami|San Francisco|SF|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington|DC)\b/i);
-                if (venueCityMatch) {
-                    extractedCity = venueCityMatch[1];
-                    console.log(`🐻 Eventbrite: Extracted city "${extractedCity}" from venue: ${event.venue}`);
-                }
-            }
-            
-            // Method 3: Fallback to title parsing
-            if (!extractedCity) {
-                const titleCityMatch = event.title.match(/(?:MEGAWOOF\s+AMERICA\s*-?\s*)?([A-Z\s]+?)(?:\s*[-:]|$)/i);
-                if (titleCityMatch) {
-                    const titleCity = titleCityMatch[1].trim().replace(/\s+/g, ' ');
-                    // Clean up common patterns
-                    const cleanCity = titleCity
-                        .replace(/^(MEGAWOOF\s+AMERICA\s*-?\s*)/i, '')
-                        .replace(/\s*(MASSIVE|LABOR\s+DAY|BEAR\s+WATCHERS).*$/i, '')
-                        .trim();
-                    
-                    if (cleanCity && cleanCity.length > 0 && cleanCity !== 'AMERICA') {
-                        extractedCity = cleanCity;
-                        console.log(`🐻 Eventbrite: Extracted city "${extractedCity}" from title`);
+                
+                // If no city found in parts, check the full address
+                if (!extractedCity) {
+                    const fullMatch = event.address.match(cityPattern);
+                    if (fullMatch) {
+                        extractedCity = fullMatch[1];
+                        console.log(`🐻 Eventbrite: Found city "${extractedCity}" in full address: "${event.address}"`);
                     }
                 }
             }
             
             // Apply city mappings
             if (extractedCity) {
-                // Normalize city names
                 const cityMappings = {
-                    'LONG BEACH': 'LA',
-                    'LOS ANGELES': 'LA',
-                    'LAS VEGAS': 'Las Vegas',
-                    'ATLANTA': 'Atlanta',
-                    'DENVER': 'Denver',
-                    'NEW YORK': 'NYC',
-                    'SAN FRANCISCO': 'SF',
-                    'WASHINGTON': 'DC'
+                    'Long Beach': 'LA',
+                    'Los Angeles': 'LA',
+                    'Las Vegas': 'Las Vegas',
+                    'Atlanta': 'Atlanta',
+                    'Denver': 'Denver',
+                    'New York': 'NYC',
+                    'San Francisco': 'SF',
+                    'Washington': 'DC'
                 };
                 
-                const normalizedCity = extractedCity.toUpperCase();
-                event.city = cityMappings[normalizedCity] || extractedCity;
+                event.city = cityMappings[extractedCity] || extractedCity;
                 console.log(`🐻 Eventbrite: Final city mapping: "${extractedCity}" → "${event.city}"`);
+            } else {
+                console.log(`🐻 Eventbrite: No city found in address for "${event.title}"`);
             }
             
             event.title = metadata.title;
@@ -1070,6 +1068,11 @@ class EventbriteEventParser {
                                 venue = eventData.venue.name || null;
                                 if (eventData.venue.address) {
                                     address = eventData.venue.address.localized_address_display || null;
+                                    console.log(`🐻 Eventbrite: Venue details for "${eventData.name.text}":`, {
+                                        venue: venue,
+                                        address: address,
+                                        fullAddressData: eventData.venue.address
+                                    });
                                     
                                     // Extract coordinates if available
                                     if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
