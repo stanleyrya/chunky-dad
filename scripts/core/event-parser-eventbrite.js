@@ -342,24 +342,43 @@ class EventbriteEventParser {
             // Usually the second Typography_body-md element is the venue
             let venueText = venueElements[1].textContent.trim();
             
-            // Try to separate venue name from address if they're combined
-            // Look for patterns like "Venue Name\n123 Street Address" or "Venue Name, 123 Street"
-            const venueParts = venueText.split(/\n|(?=\d+\s+\w+)/);
-            if (venueParts.length > 1 && venueParts[0].trim().length > 0) {
-                // First part is likely the venue name
-                event.venue = venueParts[0].trim();
-                console.log(`🐻 Eventbrite: Extracted venue name from combined text: "${event.venue}"`);
+            // Enhanced venue/address separation
+            // Look for patterns like "Venue Name\nAddress" or "TBA\nDTLA Los Angeles, CA 90013"
+            const venueParts = venueText.split(/\n+/);
+            
+            if (venueParts.length > 1) {
+                const firstPart = venueParts[0].trim();
+                const secondPart = venueParts[1].trim();
                 
-                // Check if the remaining part looks like an address
-                const remainingText = venueParts.slice(1).join(' ').trim();
-                if (remainingText.match(/^\d+\s+/)) {
-                    console.log(`🐻 Eventbrite: Found potential address in venue text: "${remainingText}"`);
-                    // Store this for potential address extraction if no other address is found
-                    event._potentialAddress = remainingText;
+                // If first part is "TBA" or similar, and second part looks like a location
+                if (firstPart.toLowerCase() === 'tba' || firstPart.toLowerCase() === 'to be announced') {
+                    event.venue = firstPart;
+                    // Check if second part is an address or city/state
+                    if (secondPart.match(/[A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5}/)) {
+                        event._potentialAddress = secondPart;
+                        console.log(`🐻 Eventbrite: Found TBA venue with location: "${secondPart}"`);
+                    }
+                } else if (secondPart.match(/^\d+\s+/) || secondPart.match(/[A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5}/)) {
+                    // First part is venue name, second part is address
+                    event.venue = firstPart;
+                    event._potentialAddress = secondPart;
+                    console.log(`🐻 Eventbrite: Separated venue "${firstPart}" from address "${secondPart}"`);
+                } else {
+                    // Both parts might be venue-related info
+                    event.venue = `${firstPart} - ${secondPart}`;
                 }
             } else {
-                event.venue = venueText;
+                // Single text - check if it contains address patterns
+                const addressMatch = venueText.match(/^([^,\n]+?)[\s\n]+([0-9]+\s+[^,\n]+,\s*[A-Z]{2}\s+[0-9]{5})/);
+                if (addressMatch) {
+                    event.venue = addressMatch[1].trim();
+                    event._potentialAddress = addressMatch[2].trim();
+                    console.log(`🐻 Eventbrite: Extracted venue "${event.venue}" and address "${event._potentialAddress}" from single text`);
+                } else {
+                    event.venue = venueText;
+                }
             }
+            
             event.location = event.venue; // For backward compatibility
         }
         
@@ -552,7 +571,7 @@ class EventbriteEventParser {
         const cityPatterns = {
             'nyc': /new york|nyc|manhattan|brooklyn|queens|bronx/i,
             'sf': /san francisco|sf|bay area/i,
-            'la': /los angeles|la|hollywood|west hollywood|long beach/i,
+            'la': /los angeles|la|hollywood|west hollywood|long beach|dtla|downtown la/i,
             'chicago': /chicago/i,
             'seattle': /seattle/i,
             'dc': /washington|dc|district of columbia/i,
@@ -587,7 +606,7 @@ class EventbriteEventParser {
         console.log(`🐻 Eventbrite: Extracting city from address: "${address}"`);
         
         // Enhanced city extraction specifically from addresses
-        const cityPattern = /\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|New York|Chicago|Miami|San Francisco|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington)\b/i;
+        const cityPattern = /\b(Atlanta|Denver|Las Vegas|Long Beach|Los Angeles|New York|Chicago|Miami|San Francisco|Seattle|Portland|Austin|Dallas|Houston|Phoenix|Boston|Philadelphia|Washington|DTLA)\b/i;
         
         // Check the full address for city names
         const match = address.match(cityPattern);
@@ -599,6 +618,7 @@ class EventbriteEventParser {
             const cityMappings = {
                 'Long Beach': 'la',
                 'Los Angeles': 'la',
+                'DTLA': 'la',
                 'New York': 'nyc',
                 'San Francisco': 'sf',
                 'Las Vegas': 'vegas',
@@ -1435,6 +1455,15 @@ class EventbriteEventParser {
                     /<div[^>]*class="[^"]*venue-address[^"]*"[^>]*>([^<]+)<\/div>/i,
                     /<span[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/span>/i,
                     
+                    // Enhanced patterns for Eventbrite location sections
+                    /<div[^>]*>[^<]*Location[^<]*<\/div>[^<]*<div[^>]*>([^<]+)<\/div>/i,
+                    /<h\d[^>]*>[^<]*Location[^<]*<\/h\d>[^<]*<div[^>]*>([^<]+)<\/div>/i,
+                    /<div[^>]*>[^<]*Where[^<]*<\/div>[^<]*<div[^>]*>([^<]+)<\/div>/i,
+                    
+                    // Pattern for "TBA" followed by address like "DTLA Los Angeles, CA 90013"
+                    /TBA\s*\n?\s*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    /TBA[^0-9A-Za-z]*([A-Za-z\s]+[A-Za-z],\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    
                     // Look for address patterns - more flexible patterns
                     // Pattern 1: "123 Main St, City, State 12345" (original)
                     /([0-9]+\s+[^,]+,\s*[^,]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
@@ -1443,7 +1472,11 @@ class EventbriteEventParser {
                     // Pattern 3: Street address with city and state (more general)
                     /([0-9]+\s+[^,\n]+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd|Drive|Dr|Lane|Ln|Way|Place|Pl)[^,\n]*[^,\n]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
                     // Pattern 4: Any street number followed by text and state/zip
-                    /([0-9]+\s+[^0-9\n]+[A-Za-z\s]+,?\s*[A-Z]{2}\s+[0-9]{5})/i
+                    /([0-9]+\s+[^0-9\n]+[A-Za-z\s]+,?\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    // Pattern 5: City, State ZIP without street number (like "DTLA Los Angeles, CA 90013")
+                    /([A-Za-z\s]+[A-Za-z],\s*[A-Z]{2}\s+[0-9]{5})/i,
+                    // Pattern 6: Neighborhood/Area + City, State ZIP
+                    /((?:DTLA|Downtown|Midtown|Uptown|[A-Za-z\s]+)\s+[A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i
                 ];
                 
                 console.log(`🐻 Eventbrite: Searching for address patterns in HTML content (length: ${html.length})`);
@@ -1469,9 +1502,17 @@ class EventbriteEventParser {
                     // Fallback: Look for any text that looks like an address near venue information
                     const venueAddressPatterns = [
                         // Look for text after "Get directions" or similar
-                        /Get directions[^0-9]*([0-9]+[^<\n]+[A-Z]{2}\s+[0-9]{5})/i,
+                        /Get directions[^0-9A-Za-z]*([0-9]+[^<\n]+[A-Z]{2}\s+[0-9]{5})/i,
+                        /Get directions[^A-Za-z]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
                         // Look for address-like text in venue sections
-                        /<div[^>]*>[^<]*([0-9]+\s+[^<\n]+[A-Z]{2}\s+[0-9]{5})[^<]*<\/div>/i
+                        /<div[^>]*>[^<]*([0-9]+\s+[^<\n]+[A-Z]{2}\s+[0-9]{5})[^<]*<\/div>/i,
+                        // Look for location patterns near TBA
+                        /TBA[^A-Za-z]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                        // Look for location text in div elements
+                        /<div[^>]*>([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})<\/div>/i,
+                        // Look for text patterns like "Location" followed by address
+                        /Location[^A-Za-z0-9]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i,
+                        /Where[^A-Za-z0-9]*([A-Za-z\s]+,\s*[A-Z]{2}\s+[0-9]{5})/i
                     ];
                     
                     for (let i = 0; i < venueAddressPatterns.length; i++) {
