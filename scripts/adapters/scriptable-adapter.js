@@ -25,6 +25,7 @@ class ScriptableAdapter {
         };
         
         this.calendarMappings = config.calendarMappings || {};
+        this.lastResults = null; // Store last results for calendar display
     }
 
     // HTTP Adapter Implementation
@@ -212,7 +213,10 @@ class ScriptableAdapter {
                         if (mergedData.url && !similarEvent.url) {
                             similarEvent.url = mergedData.url;
                         }
-                        if (mergedData.location && !similarEvent.location) {
+                        // Update location to GPS coordinates if available
+                        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                            similarEvent.location = `${event.coordinates.lat}, ${event.coordinates.lng}`;
+                        } else if (mergedData.location && !similarEvent.location) {
                             similarEvent.location = mergedData.location;
                         }
                         
@@ -249,7 +253,10 @@ class ScriptableAdapter {
                             if (mergedData.url && !shouldMergeConflict.url) {
                                 shouldMergeConflict.url = mergedData.url;
                             }
-                            if (mergedData.location && !shouldMergeConflict.location) {
+                            // Update location to GPS coordinates if available
+                            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                                shouldMergeConflict.location = `${event.coordinates.lat}, ${event.coordinates.lng}`;
+                            } else if (mergedData.location && !shouldMergeConflict.location) {
                                 shouldMergeConflict.location = mergedData.location;
                             }
                             
@@ -270,7 +277,14 @@ class ScriptableAdapter {
                     calendarEvent.title = event.title;
                     calendarEvent.startDate = startDate;
                     calendarEvent.endDate = endDate;
-                    calendarEvent.location = event.venue || '';
+                    
+                    // Set location to GPS coordinates if available, without parentheses
+                    if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                        calendarEvent.location = `${event.coordinates.lat}, ${event.coordinates.lng}`;
+                    } else {
+                        calendarEvent.location = '';
+                    }
+                    
                     calendarEvent.notes = this.formatEventNotes(event);
                     calendarEvent.calendar = calendar;
                     
@@ -328,23 +342,78 @@ class ScriptableAdapter {
     formatEventNotes(event) {
         const notes = [];
         
+        // Add bar/venue name first if available
+        if (event.venue || event.bar) {
+            notes.push(`Bar: ${event.venue || event.bar}`);
+        }
+        
+        // Add description
         if (event.description) {
             notes.push(event.description);
         }
         
-        if (event.price) {
-            notes.push(`Price: ${event.price}`);
+        // Add metadata section
+        const metadata = [];
+        
+        // Add event key if available
+        if (event.key) {
+            metadata.push(`Key: ${event.key}`);
         }
         
+        // Add price/cover
+        if (event.price || event.cover) {
+            metadata.push(`Price: ${event.price || event.cover}`);
+        }
+        
+        // Add recurrence info
+        if (event.recurring && event.recurrence) {
+            metadata.push(`Recurrence: ${event.recurrence}`);
+        }
+        
+        // Add event type
+        if (event.eventType) {
+            metadata.push(`Type: ${event.eventType}`);
+        }
+        
+        // Add timezone if different from device
+        if (event.timezone) {
+            metadata.push(`Timezone: ${event.timezone}`);
+        }
+        
+        // Add city
+        if (event.city) {
+            metadata.push(`City: ${event.city}`);
+        }
+        
+        // Add source
         if (event.source) {
-            notes.push(`Source: ${event.source}`);
+            metadata.push(`Source: ${event.source}`);
         }
         
+        // Add social media links
+        if (event.instagram) {
+            metadata.push(`Instagram: ${event.instagram}`);
+        }
+        
+        // Add metadata section if we have any
+        if (metadata.length > 0) {
+            notes.push('--- Event Details ---');
+            notes.push(...metadata);
+        }
+        
+        // Add URL at the end
         if (event.url && !notes.join(' ').includes(event.url)) {
+            notes.push('');
             notes.push(`More info: ${event.url}`);
         }
         
-        return notes.join('\n\n');
+        // Add debug info if we have original title
+        if (event.originalTitle && event.originalTitle !== event.title) {
+            notes.push('');
+            notes.push(`[Debug] Original title: ${event.originalTitle}`);
+        }
+        
+        return notes.join('\n');
     }
 
     // Display/Logging Adapter Implementation
@@ -367,6 +436,9 @@ class ScriptableAdapter {
     // Results Display - Enhanced with calendar preview and comparison
     async displayResults(results) {
         try {
+            // Store results for use in other methods
+            this.lastResults = results;
+            
             // First show the enhanced display features in console for debugging
             await this.displayCalendarProperties(results);
             await this.compareWithExistingCalendars(results);
@@ -585,7 +657,7 @@ class ScriptableAdapter {
 
     async displayAvailableCalendars() {
         console.log('\n' + '='.repeat(60));
-        console.log('📅 AVAILABLE CALENDARS (DEBUG INFO)');
+        console.log('📅 CALENDAR STATUS');
         console.log('='.repeat(60));
         
         try {
@@ -596,24 +668,38 @@ class ScriptableAdapter {
                 return;
             }
             
-            console.log(`📊 Total calendars: ${availableCalendars.length}\n`);
-            
-            availableCalendars.forEach((calendar, i) => {
-                console.log(`📅 Calendar ${i + 1}: "${calendar.title}"`);
-                console.log(`   ID: ${calendar.identifier}`);
-                console.log(`   Color: ${calendar.color.hex}`);
-                console.log(`   Subscribed: ${calendar.isSubscribed ? 'Yes' : 'No'}`);
-                console.log(`   Modifications: ${calendar.allowsContentModifications ? 'Allowed' : 'Read-only'}`);
-                console.log('');
+            // Get all events to see which calendars we need
+            const allEvents = this.getAllEventsFromResults(this.lastResults);
+            const neededCalendars = new Set();
+            allEvents.forEach(event => {
+                const calendarName = this.getCalendarName(event, null);
+                neededCalendars.add(calendarName);
             });
             
-            // Show which calendars are mapped
-            console.log('🗺️  Calendar Mappings:');
-            Object.entries(this.calendarMappings).forEach(([city, calendarName]) => {
+            console.log(`📊 Calendars needed for events: ${neededCalendars.size}`);
+            
+            // Show only the calendars we need and their status
+            const foundCalendars = [];
+            const missingCalendars = [];
+            
+            neededCalendars.forEach(calendarName => {
                 const exists = availableCalendars.find(cal => cal.title === calendarName);
-                const status = exists ? '✅ Exists' : '❌ Missing (create manually)';
-                console.log(`   ${city} → "${calendarName}" ${status}`);
+                if (exists) {
+                    foundCalendars.push(calendarName);
+                } else {
+                    missingCalendars.push(calendarName);
+                }
             });
+            
+            if (foundCalendars.length > 0) {
+                console.log(`\n✅ Found calendars (${foundCalendars.length}):`);
+                foundCalendars.forEach(cal => console.log(`   • ${cal}`));
+            }
+            
+            if (missingCalendars.length > 0) {
+                console.log(`\n❌ Missing calendars (${missingCalendars.length}) - create manually:`);
+                missingCalendars.forEach(cal => console.log(`   • ${cal}`));
+            }
             
         } catch (error) {
             console.error(`❌ Failed to load calendars: ${error}`);
@@ -758,13 +844,550 @@ class ScriptableAdapter {
         console.log('\n' + '='.repeat(60));
     }
 
-    // Rich UI presentation using UITable
+    // Rich UI presentation using WebView with HTML
     async presentRichResults(results) {
         try {
-            console.log('📱 Scriptable: Preparing rich UI display...');
+            console.log('📱 Scriptable: Preparing rich HTML UI display...');
             
-            const table = new UITable();
-            table.showSeparators = true;
+            // Generate HTML for rich display
+            const html = await this.generateRichHTML(results);
+            
+            // Present using WebView
+            await WebView.loadHTML(html, null, null, true);
+            
+            console.log('📱 Scriptable: ✓ Rich HTML display completed');
+            
+        } catch (error) {
+            console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
+            // Fallback to UITable
+            try {
+                console.log('📱 Scriptable: Attempting UITable fallback...');
+                await this.presentUITableFallback(results);
+            } catch (tableError) {
+                console.log(`📱 Scriptable: ✗ UITable fallback also failed: ${tableError.message}`);
+                // Final fallback to QuickLook
+                try {
+                    console.log('📱 Scriptable: Attempting QuickLook fallback...');
+                    const summary = this.createResultsSummary(results);
+                    await QuickLook.present(summary, false);
+                    console.log('📱 Scriptable: ✓ QuickLook display completed');
+                } catch (quickLookError) {
+                    console.log(`📱 Scriptable: ✗ All display methods failed: ${quickLookError.message}`);
+                }
+            }
+        }
+    }
+
+    // Generate rich HTML for WebView display
+    async generateRichHTML(results) {
+        const allEvents = this.getAllEventsFromResults(results);
+        const availableCalendars = await Calendar.forEvents();
+        
+        // Group events by proposed action
+        const newEvents = [];
+        const updatedEvents = [];
+        const conflictEvents = [];
+        
+        for (const event of allEvents) {
+            const calendarName = this.getCalendarName(event, null);
+            const calendar = availableCalendars.find(cal => cal.title === calendarName);
+            
+            if (!calendar) {
+                event._action = 'missing_calendar';
+                conflictEvents.push(event);
+                continue;
+            }
+            
+            // Check for existing events
+            const startDate = new Date(event.startDate);
+            const endDate = new Date(event.endDate || event.startDate);
+            const searchStart = new Date(startDate);
+            searchStart.setHours(0, 0, 0, 0);
+            const searchEnd = new Date(endDate);
+            searchEnd.setHours(23, 59, 59, 999);
+            
+            try {
+                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                
+                // Check for duplicates or updates
+                const exactMatch = existingEvents.find(existing => 
+                    existing.title === event.title &&
+                    this.areDatesEqual(existing.startDate, startDate, 1)
+                );
+                
+                if (exactMatch) {
+                    event._action = 'update';
+                    event._existingEvent = exactMatch;
+                    updatedEvents.push(event);
+                } else {
+                    const conflicts = existingEvents.filter(existing => 
+                        this.doDatesOverlap(existing.startDate, existing.endDate, startDate, endDate)
+                    );
+                    
+                    if (conflicts.length > 0) {
+                        event._action = 'conflict';
+                        event._conflicts = conflicts;
+                        conflictEvents.push(event);
+                    } else {
+                        event._action = 'new';
+                        newEvents.push(event);
+                    }
+                }
+            } catch (error) {
+                event._action = 'new';
+                newEvents.push(event);
+            }
+        }
+        
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bear Event Scraper Results</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .section-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            flex: 1;
+        }
+        
+        .section-count {
+            background: #e0e0e0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .event-card {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.2s ease;
+        }
+        
+        .event-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .event-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+        
+        .event-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .event-detail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .event-metadata {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .metadata-item {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        
+        .metadata-label {
+            font-weight: 500;
+            margin-right: 8px;
+            color: #666;
+            min-width: 80px;
+        }
+        
+        .action-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .badge-new {
+            background: #34c759;
+            color: white;
+        }
+        
+        .badge-update {
+            background: #007aff;
+            color: white;
+        }
+        
+        .badge-conflict {
+            background: #ff9500;
+            color: white;
+        }
+        
+        .badge-error {
+            background: #ff3b30;
+            color: white;
+        }
+        
+        .conflict-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .existing-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error-item {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #c62828;
+        }
+        
+        .calendar-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .status-icon {
+            font-size: 20px;
+        }
+        
+        .notes-preview {
+            background: #f8f8f8;
+            border-left: 3px solid #007aff;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .coordinates {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐻 Bear Event Scraper Results</h1>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">${results.totalEvents}</div>
+                <div class="stat-label">Total Events</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">${results.bearEvents}</div>
+                <div class="stat-label">Bear Events</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">${results.calendarEvents}</div>
+                <div class="stat-label">Calendar Actions</div>
+            </div>
+        </div>
+    </div>
+    
+    ${newEvents.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">✨</span>
+            <span class="section-title">New Events to Add</span>
+            <span class="section-count">${newEvents.length}</span>
+        </div>
+        ${newEvents.map(event => this.generateEventCard(event)).join('')}
+    </div>
+    ` : ''}
+    
+    ${updatedEvents.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🔄</span>
+            <span class="section-title">Events to Update</span>
+            <span class="section-count">${updatedEvents.length}</span>
+        </div>
+        ${updatedEvents.map(event => this.generateEventCard(event)).join('')}
+    </div>
+    ` : ''}
+    
+    ${conflictEvents.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">⚠️</span>
+            <span class="section-title">Events with Conflicts</span>
+            <span class="section-count">${conflictEvents.length}</span>
+        </div>
+        ${conflictEvents.map(event => this.generateEventCard(event)).join('')}
+    </div>
+    ` : ''}
+    
+    ${results.errors && results.errors.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">❌</span>
+            <span class="section-title">Errors</span>
+            <span class="section-count">${results.errors.length}</span>
+        </div>
+        ${results.errors.map(error => `
+            <div class="error-item">${this.escapeHtml(error)}</div>
+        `).join('')}
+    </div>
+    ` : ''}
+    
+    ${allEvents.length === 0 ? `
+    <div class="section">
+        <div class="empty-state">
+            <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+            <div>No events found to process</div>
+        </div>
+    </div>
+    ` : ''}
+</body>
+</html>
+        `;
+        
+        return html;
+    }
+    
+    // Generate HTML for individual event card
+    generateEventCard(event) {
+        const actionBadge = {
+            'new': '<span class="action-badge badge-new">NEW</span>',
+            'update': '<span class="action-badge badge-update">UPDATE</span>',
+            'conflict': '<span class="action-badge badge-conflict">CONFLICT</span>',
+            'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
+        }[event._action] || '';
+        
+        const eventDate = new Date(event.startDate);
+        const dateStr = eventDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        const timeStr = eventDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+        });
+        
+        const notes = this.formatEventNotes(event);
+        const calendarName = this.getCalendarName(event, null);
+        
+        let html = `
+        <div class="event-card">
+            ${actionBadge}
+            <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
+            <div class="event-details">
+                ${event.venue || event.bar ? `
+                    <div class="event-detail">
+                        <span>📍</span>
+                        <span>${this.escapeHtml(event.venue || event.bar)}</span>
+                    </div>
+                ` : ''}
+                <div class="event-detail">
+                    <span>📅</span>
+                    <span>${dateStr} at ${timeStr}</span>
+                </div>
+                ${event.city ? `
+                    <div class="event-detail">
+                        <span>🌍</span>
+                        <span>${this.escapeHtml(event.city.toUpperCase())}</span>
+                    </div>
+                ` : ''}
+                <div class="event-detail">
+                    <span>📱</span>
+                    <span>${this.escapeHtml(calendarName)}</span>
+                </div>
+            </div>
+            
+            <div class="event-metadata">
+                ${event.coordinates && event.coordinates.lat && event.coordinates.lng ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Location:</span>
+                        <span class="coordinates">${event.coordinates.lat}, ${event.coordinates.lng}</span>
+                    </div>
+                ` : ''}
+                ${event.key ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Key:</span>
+                        <span>${this.escapeHtml(event.key)}</span>
+                    </div>
+                ` : ''}
+                ${event.price || event.cover ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Price:</span>
+                        <span>${this.escapeHtml(event.price || event.cover)}</span>
+                    </div>
+                ` : ''}
+                ${event.recurring ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Recurring:</span>
+                        <span>${event.recurrence || 'Yes'}</span>
+                    </div>
+                ` : ''}
+            </div>
+            
+            ${event._action === 'update' && event._existingEvent ? `
+                <div class="existing-info">
+                    <strong>Existing Event:</strong> Will update with missing metadata
+                    ${!event._existingEvent.url && event.url ? '<br>• Add URL' : ''}
+                    ${!event._existingEvent.notes?.includes('Key:') && event.key ? '<br>• Add event key' : ''}
+                    ${event.coordinates ? '<br>• Update location to GPS coordinates' : ''}
+                </div>
+            ` : ''}
+            
+            ${event._action === 'conflict' && event._conflicts ? `
+                <div class="conflict-info">
+                    <strong>Time conflicts with:</strong>
+                    ${event._conflicts.map(c => `<br>• ${this.escapeHtml(c.title)} at ${c.startDate.toLocaleTimeString()}`).join('')}
+                </div>
+            ` : ''}
+            
+            ${event._action === 'missing_calendar' ? `
+                <div class="conflict-info">
+                    <strong>Calendar "${this.escapeHtml(calendarName)}" not found!</strong>
+                    <br>Please create this calendar manually before running the scraper.
+                </div>
+            ` : ''}
+            
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; font-size: 13px; color: #007aff;">View Calendar Notes Preview</summary>
+                <div class="notes-preview">${this.escapeHtml(notes)}</div>
+            </details>
+        </div>
+        `;
+        
+        return html;
+    }
+    
+    // Helper to escape HTML
+    escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Fallback to UITable if WebView fails
+    async presentUITableFallback(results) {
+        const table = new UITable();
+        table.showSeparators = true;
             
             // Header row
             const headerRow = new UITableRow();
@@ -907,19 +1530,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             console.log('📱 Scriptable: Presenting rich UI table...');
             await table.present(false); // Present in normal mode (not fullscreen)
             
-            console.log('📱 Scriptable: ✓ Rich UI display completed');
+            console.log('📱 Scriptable: ✓ UITable display completed');
             
         } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
-            // Fallback to QuickLook if UITable fails
-            try {
-                console.log('📱 Scriptable: Attempting QuickLook fallback...');
-                const summary = this.createResultsSummary(results);
-                await QuickLook.present(summary, false);
-                console.log('📱 Scriptable: ✓ QuickLook display completed');
-            } catch (quickLookError) {
-                console.log(`📱 Scriptable: ✗ QuickLook fallback also failed: ${quickLookError.message}`);
-            }
+            console.log(`📱 Scriptable: ✗ Failed to present UITable: ${error.message}`);
+            throw error;
         }
     }
 
@@ -1149,13 +1764,68 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     // Helper method to merge event data
     mergeEventData(existingEvent, newEvent) {
         const existingNotes = existingEvent.notes || '';
-        const newNotes = this.formatEventNotes(newEvent);
         
-        // Combine notes if they're different
-        let mergedNotes = existingNotes;
-        if (newNotes && newNotes !== existingNotes) {
-            mergedNotes = existingNotes ? `${existingNotes}\n\n--- Additional Info ---\n${newNotes}` : newNotes;
+        // Parse existing notes to check what metadata we already have
+        const hasKey = existingNotes.includes('Key:');
+        const hasUrl = existingNotes.includes('More info:') || existingEvent.url;
+        const hasBar = existingNotes.includes('Bar:');
+        const hasPrice = existingNotes.includes('Price:');
+        const hasRecurrence = existingNotes.includes('Recurrence:');
+        const hasInstagram = existingNotes.includes('Instagram:');
+        
+        // Build updated notes with missing info
+        const updatedNotesLines = existingNotes.split('\n');
+        const metadataIndex = updatedNotesLines.findIndex(line => line.includes('--- Event Details ---'));
+        
+        // Add missing metadata
+        const newMetadata = [];
+        
+        if (!hasKey && newEvent.key) {
+            newMetadata.push(`Key: ${newEvent.key}`);
         }
+        
+        if (!hasPrice && (newEvent.price || newEvent.cover)) {
+            newMetadata.push(`Price: ${newEvent.price || newEvent.cover}`);
+        }
+        
+        if (!hasRecurrence && newEvent.recurring && newEvent.recurrence) {
+            newMetadata.push(`Recurrence: ${newEvent.recurrence}`);
+        }
+        
+        if (!hasInstagram && newEvent.instagram) {
+            newMetadata.push(`Instagram: ${newEvent.instagram}`);
+        }
+        
+        if (!hasBar && (newEvent.venue || newEvent.bar)) {
+            // Add bar at the beginning if missing
+            updatedNotesLines.unshift(`Bar: ${newEvent.venue || newEvent.bar}`);
+        }
+        
+        // Insert new metadata into existing notes
+        if (newMetadata.length > 0) {
+            if (metadataIndex >= 0) {
+                // Insert after the metadata header
+                updatedNotesLines.splice(metadataIndex + 1, 0, ...newMetadata);
+            } else {
+                // Add metadata section if it doesn't exist
+                const urlIndex = updatedNotesLines.findIndex(line => line.includes('More info:'));
+                if (urlIndex >= 0) {
+                    updatedNotesLines.splice(urlIndex, 0, '', '--- Event Details ---', ...newMetadata);
+                } else {
+                    updatedNotesLines.push('', '--- Event Details ---', ...newMetadata);
+                }
+            }
+        }
+        
+        // Add URL if missing
+        if (!hasUrl && newEvent.url) {
+            const urlIndex = updatedNotesLines.findIndex(line => line.includes('More info:'));
+            if (urlIndex === -1) {
+                updatedNotesLines.push('', `More info: ${newEvent.url}`);
+            }
+        }
+        
+        const mergedNotes = updatedNotesLines.join('\n');
         
         return {
             title: existingEvent.title, // Keep existing title
