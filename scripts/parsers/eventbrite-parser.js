@@ -440,57 +440,91 @@ class EventbriteParser {
         }
     }
 
-    // Extract additional URLs for detail page processing (enhanced from reference implementation)
+    // Extract additional URLs for detail page processing (from JSON data, not HTML links)
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
         const urls = new Set();
         
         try {
-            console.log(`🎫 Eventbrite: Extracting additional links using regex for Scriptable`);
+            console.log(`🎫 Eventbrite: Extracting additional event URLs from JSON data`);
             
-            // More comprehensive patterns for Eventbrite event links (from reference implementation)
-            const linkPatterns = [
-                // Direct eventbrite.com/e/ links
-                /href="([^"]*eventbrite\.com\/e\/[^"]*?)"/gi,
-                // Relative /e/ links
-                /href="(\/e\/[^"]*?)"/gi,
-                // Links with event IDs
-                /href="([^"]*\/events\/[^"]*?)"/gi
-            ];
+            // Look for window.__SERVER_DATA__ which contains the event information
+            const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
             
-            linkPatterns.forEach(pattern => {
-                let match;
-                while ((match = pattern.exec(html)) !== null) {
-                    const href = match[1];
-                    if (href) {
-                        try {
-                            let fullUrl;
-                            if (href.startsWith('http')) {
-                                fullUrl = href;
-                            } else if (href.startsWith('/')) {
-                                fullUrl = `https://www.eventbrite.com${href}`;
-                            } else {
-                                fullUrl = `${sourceUrl}/${href}`;
+            if (serverDataMatch && serverDataMatch[1]) {
+                try {
+                    const serverData = JSON.parse(serverDataMatch[1]);
+                    
+                    // Extract URLs from future_events
+                    if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
+                        const futureEvents = serverData.view_data.events.future_events;
+                        console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data for URL extraction`);
+                        
+                        futureEvents.forEach(eventData => {
+                            if (eventData.url) {
+                                let eventUrl = eventData.url;
+                                
+                                // Ensure it's a full URL
+                                if (!eventUrl.startsWith('http')) {
+                                    eventUrl = `https://www.eventbrite.com${eventUrl}`;
+                                }
+                                
+                                // Only add if it's actually an event URL and passes validation
+                                if (eventUrl.includes('/e/') && this.isValidEventUrl(eventUrl, parserConfig)) {
+                                    urls.add(eventUrl);
+                                    console.log(`🎫 Eventbrite: Found event detail URL: ${eventUrl}`);
+                                }
                             }
-                            
-                            // Clean up URL - remove query parameters except event ID
-                            if (fullUrl.includes('?')) {
-                                const [baseEventUrl] = fullUrl.split('?');
-                                fullUrl = baseEventUrl;
-                            }
-                            
-                            // Only add if it's actually an event URL and not already included
-                            if ((fullUrl.includes('/e/') || fullUrl.includes('/events/')) && !urls.has(fullUrl) && this.isValidEventUrl(fullUrl, parserConfig)) {
-                                urls.add(fullUrl);
-                                console.log(`🎫 Eventbrite: Found event link: ${fullUrl}`);
-                            }
-                        } catch (error) {
-                            console.warn(`🎫 Eventbrite: Invalid link found: ${href}`);
-                        }
+                        });
                     }
+                    
+                    // Also extract URLs from past_events if needed
+                    if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.past_events) {
+                        const pastEvents = serverData.view_data.events.past_events;
+                        console.log(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (checking for additional URLs)`);
+                        
+                        pastEvents.forEach(eventData => {
+                            if (eventData.url && urls.size < 20) { // Limit total URLs
+                                let eventUrl = eventData.url;
+                                
+                                // Ensure it's a full URL
+                                if (!eventUrl.startsWith('http')) {
+                                    eventUrl = `https://www.eventbrite.com${eventUrl}`;
+                                }
+                                
+                                // Only add if it's actually an event URL and passes validation
+                                if (eventUrl.includes('/e/') && this.isValidEventUrl(eventUrl, parserConfig)) {
+                                    urls.add(eventUrl);
+                                    console.log(`🎫 Eventbrite: Found past event detail URL: ${eventUrl}`);
+                                }
+                            }
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction:', error);
                 }
-            });
+            }
             
-            console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links`);
+            // Fallback: Try to extract URLs from JSON-LD structured data
+            if (urls.size === 0) {
+                console.log('🎫 Eventbrite: No URLs found in server data, trying JSON-LD fallback');
+                const jsonLdMatch = html.match(/"url":"(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"/g);
+                
+                if (jsonLdMatch) {
+                    jsonLdMatch.forEach(match => {
+                        const urlMatch = match.match(/"url":"([^"]+)"/);
+                        if (urlMatch && urlMatch[1]) {
+                            const eventUrl = urlMatch[1];
+                            if (this.isValidEventUrl(eventUrl, parserConfig)) {
+                                urls.add(eventUrl);
+                                console.log(`🎫 Eventbrite: Found event URL in JSON-LD: ${eventUrl}`);
+                            }
+                        }
+                    });
+                }
+            }
+            
+            console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting additional URLs: ${error}`);
