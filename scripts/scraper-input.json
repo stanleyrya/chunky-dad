@@ -27,6 +27,7 @@
   "calendarMappings": {
     "nyc": "chunky-dad-nyc",
     "la": "chunky-dad-la",
+    "palm springs": "chunky-dad-palm-springs",
     "default": "chunky-dad-events"
   }
 }

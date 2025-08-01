@@ -48,7 +48,7 @@ class SharedCore {
             'phoenix': 'phoenix',
             'long beach': 'la',  // Long Beach is part of LA metro area
             'santa monica': 'la',
-            'palm springs': 'la',  // Close enough to LA for bear events
+            'palm springs': 'palm springs',  // Palm Springs gets its own area
             'san diego': 'san diego',
             'sacramento': 'sacramento',
             'san jose': 'sf',  // Bay Area
