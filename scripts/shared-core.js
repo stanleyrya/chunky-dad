@@ -25,8 +25,37 @@ class SharedCore {
         this.bearKeywords = [
             'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
             'otter', 'leather', 'muscle bear', 'bearracuda', 'furball', 'megawoof',
-            'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly', 'duro'
+            'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
+        
+        // City mapping for consistent location detection across all parsers
+        this.cityMappings = {
+            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
+            'los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles': 'la',
+            'san francisco|sf|castro': 'sf',
+            'chicago|chi': 'chicago',
+            'atlanta|atl': 'atlanta',
+            'miami|south beach|miami beach': 'miami',
+            'seattle': 'seattle',
+            'portland': 'portland',
+            'denver': 'denver',
+            'las vegas|vegas': 'vegas',
+            'boston': 'boston',
+            'philadelphia|philly': 'philadelphia',
+            'austin': 'austin',
+            'dallas': 'dallas',
+            'houston': 'houston',
+            'phoenix': 'phoenix',
+            'long beach': 'la',  // Long Beach is part of LA metro area
+            'santa monica': 'la',
+            'palm springs': 'la',  // Close enough to LA for bear events
+            'san diego': 'san diego',
+            'sacramento': 'sacramento',
+            'san jose': 'sf',  // Bay Area
+            'oakland': 'sf',   // Bay Area
+            'fort lauderdale': 'miami',
+            'key west': 'miami'
+        };
     }
 
     // Pure business logic for processing events
@@ -389,6 +418,107 @@ class SharedCore {
         if (!date) return null;
         if (typeof date === 'string') date = new Date(date);
         return date.toISOString();
+    }
+    
+    // ============================================================================
+    // CITY UTILITIES - Shared location detection and mapping
+    // ============================================================================
+    
+    // Extract city from address string
+    extractCityFromAddress(address) {
+        if (!address || typeof address !== 'string') return null;
+        
+        const lowerAddress = address.toLowerCase();
+        
+        // First try exact matches in address
+        for (const [patterns, city] of Object.entries(this.cityMappings)) {
+            const patternList = patterns.split('|');
+            for (const pattern of patternList) {
+                // Use word boundaries to avoid substring matches (e.g., "la" in "Atlanta")
+                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                if (regex.test(lowerAddress)) {
+                    return city;
+                }
+            }
+        }
+        
+        // Try to extract city name from address components
+        const addressParts = address.split(',').map(part => part.trim());
+        if (addressParts.length >= 2) {
+            const cityName = addressParts[1].toLowerCase(); // Usually city is second component
+            
+            // Check if the extracted city matches our mappings
+            for (const [patterns, city] of Object.entries(this.cityMappings)) {
+                const patternList = patterns.split('|');
+                for (const pattern of patternList) {
+                    // Use word boundaries to avoid substring matches
+                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                    if (regex.test(cityName)) {
+                        return city;
+                    }
+                }
+            }
+            
+            // Return normalized city name if no mapping found
+            return this.normalizeCityName(cityName);
+        }
+        
+        return null;
+    }
+    
+    // Extract city from text content (titles, descriptions, etc.)
+    extractCityFromText(text) {
+        if (!text || typeof text !== 'string') return null;
+        
+        const lowerText = text.toLowerCase();
+        
+        // Check each city mapping pattern
+        for (const [patterns, city] of Object.entries(this.cityMappings)) {
+            const patternList = patterns.split('|');
+            for (const pattern of patternList) {
+                // Use word boundaries for precise matching
+                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                if (regex.test(lowerText)) {
+                    return city;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    // Extract city from event data or URL
+    extractCityFromEvent(eventData, url) {
+        // Try venue address first
+        if (eventData.venue?.address) {
+            const address = eventData.venue.address;
+            const cityFromAddress = address.city || address.localized_area_display || '';
+            if (cityFromAddress) {
+                return this.normalizeCityName(cityFromAddress);
+            }
+        }
+        
+        // Try extracting from text
+        const searchText = `${eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
+        return this.extractCityFromText(searchText);
+    }
+    
+    // Normalize city name to lowercase, handle common variations
+    normalizeCityName(cityName) {
+        if (!cityName || typeof cityName !== 'string') return null;
+        
+        const normalized = cityName.toLowerCase().trim();
+        
+        // Check if normalized name matches any of our mappings
+        for (const [patterns, city] of Object.entries(this.cityMappings)) {
+            const patternList = patterns.split('|');
+            if (patternList.includes(normalized)) {
+                return city;
+            }
+        }
+        
+        // Return as-is if no mapping found
+        return normalized;
     }
 }
 

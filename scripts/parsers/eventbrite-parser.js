@@ -14,7 +14,7 @@
 // ❌ HTTP requests (receive HTML data, don't fetch it)
 // ❌ Calendar operations (return event objects, don't save them)
 // ❌ Scriptable APIs (Request, Calendar, FileManager, Alert)
-// ❌ DOM APIs (DOMParser, document, window) - use regex instead
+// ❌ DOM APIs that don't work in all environments
 //
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
@@ -22,62 +22,26 @@
 class EventbriteParser {
     constructor(config = {}) {
         this.config = {
-            source: 'Eventbrite',
-            baseUrl: 'https://www.eventbrite.com',
-            alwaysBear: false,
+            source: 'eventbrite',
             requireDetailPages: false,
             maxAdditionalUrls: 20,
+            alwaysBear: false,
             ...config
         };
-        
-        // Initialize city utilities
-        this.initializeCityUtils();
         
         this.bearKeywords = [
             'megawoof', 'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
-            'furball', 'leather bears', 'bear night', 'bear party', 'duro'
+            'furball', 'leather bears', 'bear night', 'bear party'
         ];
         
-        // URL patterns for additional link extraction
-        this.urlPatterns = [
-            {
-                name: 'Event Pages',
-                regex: 'href="([^"]*\\/e\\/[^"]*)"',
-                maxMatches: 15,
-                description: 'Individual event pages'
-            },
-            {
-                name: 'Eventbrite Events',
-                regex: 'href="(https?:\\/\\/[^"]*eventbrite\\.com\\/e\\/[^"]*)"',
-                maxMatches: 15,
-                description: 'Full Eventbrite event URLs'
-            }
-        ];
+        // Shared city utilities will be injected by shared-core
+        this.sharedCore = null;
     }
-
-    // Initialize city utilities based on environment
-    initializeCityUtils() {
-        try {
-            // Try to load CityUtils based on environment
-            if (typeof require !== 'undefined') {
-                // Node.js environment
-                const { CityUtils } = require('../utils/city-utils');
-                this.cityUtils = new CityUtils();
-            } else if (typeof importModule !== 'undefined') {
-                // Scriptable environment
-                const cityUtilsModule = importModule('utils/city-utils');
-                this.cityUtils = new cityUtilsModule.CityUtils();
-            } else if (typeof window !== 'undefined' && window.CityUtils) {
-                // Web environment
-                this.cityUtils = new window.CityUtils();
-            } else {
-                throw new Error('CityUtils not available');
-            }
-        } catch (error) {
-            console.warn('🎫 Eventbrite: Could not load CityUtils, using fallback city extraction');
-            this.cityUtils = null;
-        }
+    
+    // Initialize with shared-core instance for city utilities
+    initialize(sharedCore) {
+        this.sharedCore = sharedCore;
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
@@ -316,36 +280,25 @@ class EventbriteParser {
             // Enhanced city extraction using shared city utilities
             let city = null;
             
-            if (this.cityUtils) {
+            if (this.sharedCore) {
                 // Use shared city utilities for consistent extraction
-                city = this.cityUtils.extractCityFromEvent(eventData, url);
+                city = this.sharedCore.extractCityFromEvent(eventData, url);
                 
                 if (address && !city) {
-                    city = this.cityUtils.extractCityFromAddress(address);
+                    city = this.sharedCore.extractCityFromAddress(address);
                 }
                 
                 if (!city) {
                     const searchText = `${title} ${venue || ''}`;
-                    city = this.cityUtils.extractCityFromText(searchText);
+                    city = this.sharedCore.extractCityFromText(searchText);
                 }
                 
                 if (!city && url) {
-                    city = this.cityUtils.extractCityFromText(url);
+                    city = this.sharedCore.extractCityFromText(url);
                 }
             } else {
-                // Fallback to old method if city utils not available
-                if (address) {
-                    city = this.extractCityFromAddress(address);
-                }
-                
-                if (!city) {
-                    const searchText = `${title} ${venue || ''}`;
-                    city = this.extractCityFromText(searchText);
-                }
-                
-                if (!city && url) {
-                    city = this.extractCityFromText(url);
-                }
+                // Fallback to simple text extraction if shared-core not available
+                city = this.extractCityFromText(`${title} ${venue || ''} ${url || ''}`);
             }
             
             // Special handling for Megawoof America events without explicit city
@@ -459,8 +412,8 @@ class EventbriteParser {
             
             // Extract city using shared utilities
             let city = null;
-            if (this.cityUtils) {
-                city = this.cityUtils.extractCityFromText(title + ' ' + venue + ' ' + url);
+            if (this.sharedCore) {
+                city = this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + url);
             } else {
                 city = this.extractCityFromText(title + ' ' + venue + ' ' + url);
             }
@@ -621,50 +574,23 @@ class EventbriteParser {
 
     // Extract city from text content
     extractCityFromText(text) {
-        if (!this.cityUtils) {
-            console.warn('🎫 Eventbrite: CityUtils not initialized, falling back to simple text extraction.');
-            const cityMappings = {
-                'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-                'los angeles|la|hollywood|west hollywood|weho': 'la',
-                'san francisco|sf|castro': 'sf',
-                'chicago|chi': 'chicago',
-                'atlanta|atl': 'atlanta',
-                'miami|south beach': 'miami',
-                'seattle': 'seattle',
-                'portland': 'portland',
-                'denver': 'denver',
-                'las vegas|vegas': 'vegas',
-                'boston': 'boston',
-                'philadelphia|philly': 'philadelphia',
-                'austin': 'austin',
-                'dallas': 'dallas',
-                'houston': 'houston',
-                'phoenix': 'phoenix'
-            };
-            
+        if (!this.sharedCore) {
+            console.warn('🎫 Eventbrite: SharedCore not initialized, using basic city extraction.');
+            // Very basic fallback - just look for common city names
             const lowerText = text.toLowerCase();
-            
-            for (const [patterns, city] of Object.entries(cityMappings)) {
-                const patternList = patterns.split('|');
-                if (patternList.some(pattern => lowerText.includes(pattern))) {
-                    return city;
-                }
-            }
-            
+            if (lowerText.includes('new york') || lowerText.includes('nyc')) return 'nyc';
+            if (lowerText.includes('los angeles') || lowerText.includes('hollywood')) return 'la';
+            if (lowerText.includes('san francisco') || lowerText.includes(' sf ')) return 'sf';
+            if (lowerText.includes('chicago')) return 'chicago';
+            if (lowerText.includes('atlanta')) return 'atlanta';
+            if (lowerText.includes('miami')) return 'miami';
+            if (lowerText.includes('seattle')) return 'seattle';
+            if (lowerText.includes('denver')) return 'denver';
+            if (lowerText.includes('las vegas') || lowerText.includes('vegas')) return 'vegas';
             return null;
         }
 
-        return this.cityUtils.extractCityFromText(text);
-    }
-
-    // Extract city from address (fallback method)
-    extractCityFromAddress(address) {
-        if (!this.cityUtils) {
-            // Simple fallback extraction
-            return this.extractCityFromText(address);
-        }
-        
-        return this.cityUtils.extractCityFromAddress(address);
+        return this.sharedCore.extractCityFromText(text);
     }
 
     // Normalize city names

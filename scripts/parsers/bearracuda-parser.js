@@ -22,38 +22,26 @@
 class BearraccudaParser {
     constructor(config = {}) {
         this.config = {
-            source: 'Bearraccuda',
-            baseUrl: 'https://bearracuda.com',
-            alwaysBear: true, // Bearraccuda events are always bear events
+            source: 'bearracuda',
+            requireDetailPages: false,
+            maxAdditionalUrls: 10,
+            alwaysBear: true, // Bearracuda events are always bear events
             ...config
         };
         
         this.bearKeywords = [
-            'bearraccuda', 'bearracuda', 'bear', 'bears', 'woof', 'grr', 
-            'dance party', 'go-go', 'dj', 'furry', 'hairy', 'muscle'
+            'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
+            'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
+            'furball', 'leather bears', 'bear night', 'bear party'
         ];
-
-        // URL patterns for additional link extraction
-        this.urlPatterns = [
-            {
-                name: 'Event Pages',
-                regex: 'href="([^"]*\\/events?\\/[^"]*)"',
-                maxMatches: 10,
-                description: 'Event detail pages'
-            },
-            {
-                name: 'Party Pages',
-                regex: 'href="([^"]*\\/parties?\\/[^"]*)"',
-                maxMatches: 10,
-                description: 'Party detail pages'
-            },
-            {
-                name: 'City Pages',
-                regex: 'href="([^"]*\\/(nyc|la|sf|chicago|atlanta|miami)[^"]*)"',
-                maxMatches: 8,
-                description: 'City-specific event pages'
-            }
-        ];
+        
+        // Shared city utilities will be injected by shared-core
+        this.sharedCore = null;
+    }
+    
+    // Initialize with shared-core instance for city utilities
+    initialize(sharedCore) {
+        this.sharedCore = sharedCore;
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
@@ -189,8 +177,10 @@ class BearraccudaParser {
             
             const eventUrl = urlMatch ? this.normalizeUrl(urlMatch[1], sourceUrl) : sourceUrl;
             
-            // Extract city from content
-            const city = this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
+            // Extract city from text
+            const city = this.sharedCore ? 
+                this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl) :
+                this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
             
             // Combine description with performer info
             let fullDescription = description;
@@ -273,35 +263,11 @@ class BearraccudaParser {
 
     // Extract city from text content
     extractCityFromText(text) {
-        const cityMappings = {
-            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-            'los angeles|la|hollywood|west hollywood|weho': 'la',
-            'san francisco|sf|castro': 'sf',
-            'chicago|chi': 'chicago',
-            'atlanta|atl': 'atlanta',
-            'miami|south beach': 'miami',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'denver': 'denver',
-            'las vegas|vegas': 'vegas',
-            'boston': 'boston',
-            'philadelphia|philly': 'philadelphia',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix'
-        };
-        
-        const lowerText = text.toLowerCase();
-        
-        for (const [patterns, city] of Object.entries(cityMappings)) {
-            const patternList = patterns.split('|');
-            if (patternList.some(pattern => lowerText.includes(pattern))) {
-                return city;
-            }
+        if (!this.sharedCore) {
+            console.warn('🐻 Bearraccuda: Shared core utilities not initialized. Cannot extract city.');
+            return null;
         }
-        
-        return null;
+        return this.sharedCore.extractCityFromText(text);
     }
 
     // Parse date string into ISO format
