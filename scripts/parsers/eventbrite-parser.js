@@ -71,23 +71,16 @@ class EventbriteParser {
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
+            } else {
+                // Fallback to HTML parsing if no JSON data found
+                console.log('🎫 Eventbrite: No JSON data found, falling back to HTML parsing');
                 
-                return {
-                    events: events,
-                    additionalLinks: [], // JSON data already contains full event details
-                    source: this.config.source,
-                    url: htmlData.url
-                };
+                // Parse HTML using regex (works in all environments)
+                const htmlEvents = this.parseHTMLEvents(html, htmlData.url);
+                events.push(...htmlEvents);
             }
             
-            // Fallback to HTML parsing if no JSON data found
-            console.log('🎫 Eventbrite: No JSON data found, falling back to HTML parsing');
-            
-            // Parse HTML using regex (works in all environments)
-            const htmlEvents = this.parseHTMLEvents(html, htmlData.url);
-            events.push(...htmlEvents);
-            
-            // Extract additional URLs if required
+            // Extract additional URLs if required (regardless of JSON vs HTML parsing)
             let additionalLinks = [];
             if (parserConfig.requireDetailPages) {
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
@@ -113,10 +106,55 @@ class EventbriteParser {
         const events = [];
         
         try {
-            // Look for various JSON data patterns in Eventbrite pages
+            // Look for window.__SERVER_DATA__ which contains the event information (from old working script)
+            const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
+            
+            if (serverDataMatch && serverDataMatch[1]) {
+                try {
+                    const serverData = JSON.parse(serverDataMatch[1]);
+                    console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
+                    
+                    // Check for events in view_data.events.future_events (prioritize future events)
+                    if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
+                        const futureEvents = serverData.view_data.events.future_events;
+                        console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data`);
+                        
+                        futureEvents.forEach(eventData => {
+                            if (eventData.url && eventData.name && eventData.name.text) {
+                                // Double-check that it's actually a future event
+                                if (this.isFutureEvent(eventData)) {
+                                    const event = this.parseJsonEvent(eventData);
+                                    if (event) {
+                                        events.push(event);
+                                        console.log(`🎫 Eventbrite: Parsed future event: ${event.title} (${event.startDate || event.date})`);
+                                    }
+                                } else {
+                                    console.log(`🎫 Eventbrite: Skipping non-future event from future_events: ${eventData.name.text}`);
+                                }
+                            }
+                        });
+                        
+                        // If we found future events, return them and skip other patterns
+                        if (events.length > 0) {
+                            console.log(`🎫 Eventbrite: Successfully extracted ${events.length} future events from JSON data`);
+                            return events;
+                        }
+                    }
+                    
+                    // Also check for past events if needed for debugging (but don't include them)
+                    if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.past_events) {
+                        const pastEvents = serverData.view_data.events.past_events;
+                        console.log(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (not included)`);
+                    }
+                    
+                } catch (parseError) {
+                    console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__:', parseError);
+                }
+            }
+            
+            // Fallback: Look for other JSON patterns if __SERVER_DATA__ didn't work
             const jsonPatterns = [
-                /__SERVER_DATA__\s*=\s*({.+?});/,
-                /window\.__INITIAL_STATE__\s*=\s*({.+?});/,
+                /__INITIAL_STATE__\s*=\s*({.+?});/,
                 /"events":\s*(\[.+?\])/,
                 /"future_events":\s*(\[.+?\])/
             ];
@@ -132,9 +170,9 @@ class EventbriteParser {
                             console.log(`🎫 Eventbrite: Extracted ${extractedEvents.length} events from JSON pattern`);
                             break;
                         }
-                                } catch (parseError) {
-                console.warn(`🎫 Eventbrite: Failed to parse JSON data: ${parseError}`);
-            }
+                    } catch (parseError) {
+                        console.warn(`🎫 Eventbrite: Failed to parse JSON data: ${parseError}`);
+                    }
                 }
             }
             
@@ -151,9 +189,14 @@ class EventbriteParser {
         
         // Check if this object looks like an event
         if (this.isEventObject(data)) {
-            const event = this.parseJsonEvent(data);
-            if (event) {
-                events.push(event);
+            // Only process future events
+            if (this.isFutureEvent(data)) {
+                const event = this.parseJsonEvent(data);
+                if (event) {
+                    events.push(event);
+                }
+            } else {
+                console.log(`🎫 Eventbrite: Skipping past event: ${data.name || data.title || 'Unknown'}`);
             }
         }
         
@@ -180,6 +223,25 @@ class EventbriteParser {
                !Array.isArray(obj);
     }
 
+    // Check if an event is in the future (not past)
+    isFutureEvent(eventData) {
+        const now = new Date();
+        const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
+        
+        if (!startDate) {
+            // If no start date, assume it might be future and let it through
+            return true;
+        }
+        
+        try {
+            const eventDate = new Date(startDate);
+            return eventDate > now;
+        } catch (error) {
+            console.warn(`🎫 Eventbrite: Invalid date format: ${startDate}`);
+            return true; // If we can't parse the date, let it through
+        }
+    }
+
     // Parse a JSON event object into our standard format
     parseJsonEvent(eventData) {
         try {
@@ -188,12 +250,63 @@ class EventbriteParser {
             const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
             const endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
             const url = eventData.url || eventData.vanity_url || '';
-            const venue = eventData.venue?.name || eventData.venue?.address?.localized_area_display || '';
+            
+            // Enhanced venue processing - get both name and address
+            let venue = null;
+            let address = null;
+            let coordinates = null;
+            let googleMapsLink = null;
+            
+            if (eventData.venue) {
+                venue = eventData.venue.name || null;
+                if (eventData.venue.address) {
+                    address = eventData.venue.address.localized_address_display || null;
+                    console.log(`🎫 Eventbrite: Venue details for "${title}":`, {
+                        venue: venue,
+                        address: address,
+                        fullAddressData: eventData.venue.address
+                    });
+                    
+                    // Extract coordinates if available
+                    if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
+                        coordinates = {
+                            lat: eventData.venue.address.latitude,
+                            lng: eventData.venue.address.longitude
+                        };
+                        
+                        // Create Google Maps link
+                        googleMapsLink = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
+                    } else if (address) {
+                        // Create Google Maps link from address
+                        googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+                    }
+                }
+            }
+            
             const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
             const image = eventData.logo?.url || eventData.image?.url || '';
             
-            // Extract city from venue or URL
-            let city = this.extractCityFromEvent(eventData, url);
+            // Enhanced city extraction using address first, then fallback methods
+            let city = null;
+            
+            // Method 1: Extract from address if available
+            if (address) {
+                city = this.extractCityFromAddress(address);
+                console.log(`🎫 Eventbrite: Extracted city from address "${address}": ${city}`);
+            }
+            
+            // Method 2: Extract from venue name and title if no address
+            if (!city) {
+                const searchText = `${title} ${venue || ''}`;
+                city = this.extractCityFromText(searchText);
+                console.log(`🎫 Eventbrite: Extracted city from text "${searchText}": ${city}`);
+            }
+            
+            // Method 3: Extract from URL
+            if (!city && url) {
+                city = this.extractCityFromText(url);
+                console.log(`🎫 Eventbrite: Extracted city from URL "${url}": ${city}`);
+            }
             
             // Special handling for Megawoof America events without explicit city
             if (!city && title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia)/i.test(title)) {
@@ -207,12 +320,17 @@ class EventbriteParser {
                 startDate: startDate,
                 endDate: endDate,
                 venue: venue,
+                location: venue, // For backward compatibility
+                address: address,
+                coordinates: coordinates,
+                googleMapsLink: googleMapsLink,
                 city: city,
                 url: url,
                 price: price,
                 image: image,
                 source: this.config.source,
-                isBearEvent: true // Assume bear event for Megawoof organizer
+                isBearEvent: true, // Assume bear event for Megawoof organizer
+                requiresDetailFetch: this.config.requireDetailPages // JSON already has most details, but user may want more
             };
             
         } catch (error) {
@@ -322,22 +440,58 @@ class EventbriteParser {
         const urls = new Set();
         
         try {
-            // Use configured URL patterns or defaults
-            const patterns = parserConfig.urlPatterns || this.urlPatterns;
+            console.log(`🎫 Eventbrite: Extracting additional links using regex patterns`);
             
-            for (const pattern of patterns) {
-                const regex = new RegExp(pattern.regex, 'gi');
+            // More comprehensive patterns for Eventbrite event links (from old working script)
+            const linkPatterns = [
+                // Direct eventbrite.com/e/ links
+                /href="([^"]*eventbrite\.com\/e\/[^"]*?)"/gi,
+                // Relative /e/ links
+                /href="(\/e\/[^"]*?)"/gi,
+                // Links with event IDs
+                /href="([^"]*\/events\/[^"]*?)"/gi,
+                // Additional patterns for various link formats
+                /href="([^"]*\/e\/[^"]*?)"[^>]*>/gi,
+                /href='([^']*eventbrite\.com\/e\/[^']*?)'/gi,
+                /href='(\/e\/[^']*?)'/gi
+            ];
+            
+            linkPatterns.forEach((pattern, index) => {
                 let match;
                 let matchCount = 0;
+                const maxMatches = parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls || 20;
                 
-                while ((match = regex.exec(html)) !== null && matchCount < (pattern.maxMatches || 10)) {
-                    const url = this.normalizeUrl(match[1], sourceUrl);
-                    if (this.isValidEventUrl(url, parserConfig)) {
-                        urls.add(url);
-                        matchCount++;
+                while ((match = pattern.exec(html)) !== null && matchCount < maxMatches) {
+                    const href = match[1];
+                    if (href) {
+                        try {
+                            let fullUrl;
+                            if (href.startsWith('http')) {
+                                fullUrl = href;
+                            } else if (href.startsWith('/')) {
+                                fullUrl = `https://www.eventbrite.com${href}`;
+                            } else {
+                                fullUrl = `${sourceUrl}/${href}`;
+                            }
+                            
+                            // Clean up URL - remove query parameters except event ID
+                            if (fullUrl.includes('?')) {
+                                const [baseEventUrl] = fullUrl.split('?');
+                                fullUrl = baseEventUrl;
+                            }
+                            
+                            // Only add if it's actually an event URL and not already included
+                            if ((fullUrl.includes('/e/') || fullUrl.includes('/events/')) && this.isValidEventUrl(fullUrl, parserConfig)) {
+                                urls.add(fullUrl);
+                                matchCount++;
+                                console.log(`🎫 Eventbrite: Found event link (pattern ${index + 1}): ${fullUrl}`);
+                            }
+                        } catch (error) {
+                            console.warn(`🎫 Eventbrite: Invalid link found: ${href}`);
+                        }
                     }
                 }
-            }
+            });
             
             console.log(`🎫 Eventbrite: Extracted ${urls.size} additional URLs`);
             
@@ -345,7 +499,7 @@ class EventbriteParser {
             console.warn(`🎫 Eventbrite: Error extracting additional URLs: ${error}`);
         }
         
-        return Array.from(urls);
+        return Array.from(urls).slice(0, parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls || 20);
     }
 
     // Validate if URL is a valid event URL
@@ -407,6 +561,94 @@ class EventbriteParser {
         // Try extracting from text
         const searchText = `${eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
         return this.extractCityFromText(searchText);
+    }
+
+    // Extract city from address string
+    extractCityFromAddress(address) {
+        if (!address || typeof address !== 'string') return null;
+        
+        const lowerAddress = address.toLowerCase();
+        
+        // Enhanced city mappings for address parsing
+        const cityMappings = {
+            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
+            'los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles': 'la',
+            'san francisco|sf|castro': 'sf',
+            'chicago|chi': 'chicago',
+            'atlanta|atl': 'atlanta',
+            'miami|south beach|miami beach': 'miami',
+            'seattle': 'seattle',
+            'portland': 'portland',
+            'denver': 'denver',
+            'las vegas|vegas': 'vegas',
+            'boston': 'boston',
+            'philadelphia|philly': 'philadelphia',
+            'austin': 'austin',
+            'dallas': 'dallas',
+            'houston': 'houston',
+            'phoenix': 'phoenix',
+            'long beach': 'la' // Long Beach is part of LA area for bear events
+        };
+        
+        // Special case for "LA" - only match if it's standalone or followed by comma/space
+        if (/\bla\b[,\s]|^la[,\s]|[,\s]la$/i.test(lowerAddress)) {
+            console.log(`🎫 Eventbrite: City matched standalone "LA" pattern -> la`);
+            return 'la';
+        }
+        
+        // First try exact matches in address - use word boundaries for precision
+        for (const [patterns, city] of Object.entries(cityMappings)) {
+            const patternList = patterns.split('|');
+            for (const pattern of patternList) {
+                // Use word boundaries to avoid substring matches (e.g., "la" in "Atlanta")
+                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                if (regex.test(lowerAddress)) {
+                    console.log(`🎫 Eventbrite: City matched pattern "${pattern}" -> ${city}`);
+                    return city;
+                }
+            }
+        }
+        
+        // Try to extract city from standard address format: "City, State ZIP"
+        const cityStateMatch = address.match(/([^,]+),\s*([A-Z]{2})\s*\d{5}/i);
+        if (cityStateMatch) {
+            const cityName = cityStateMatch[1].trim().toLowerCase();
+            const stateName = cityStateMatch[2].trim().toUpperCase();
+            
+            console.log(`🎫 Eventbrite: Extracted city/state from address: "${cityName}, ${stateName}"`);
+            
+            // Check if the extracted city matches our mappings
+            for (const [patterns, city] of Object.entries(cityMappings)) {
+                const patternList = patterns.split('|');
+                for (const pattern of patternList) {
+                    // Use word boundaries to avoid substring matches
+                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                    if (regex.test(cityName)) {
+                        console.log(`🎫 Eventbrite: City name "${cityName}" matched pattern "${pattern}" -> ${city}`);
+                        return city;
+                    }
+                }
+            }
+            
+            // State-specific mappings for cities not in main list
+            const stateSpecificMappings = {
+                'GA': { 'atlanta': 'atlanta' },
+                'NV': { 'las vegas': 'vegas' },
+                'CO': { 'denver': 'denver' },
+                'CA': { 'los angeles': 'la', 'long beach': 'la' }
+            };
+            
+            if (stateSpecificMappings[stateName] && stateSpecificMappings[stateName][cityName]) {
+                const mappedCity = stateSpecificMappings[stateName][cityName];
+                console.log(`🎫 Eventbrite: State-specific mapping: "${cityName}, ${stateName}" -> ${mappedCity}`);
+                return mappedCity;
+            }
+            
+            // Return normalized city name if not in mappings
+            return this.normalizeCityName(cityName);
+        }
+        
+        return null;
     }
 
     // Extract city from text content
