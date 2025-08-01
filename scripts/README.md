@@ -145,7 +145,12 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
   "calendarMappings": {
     "nyc": "chunky-dad-nyc",
     "la": "chunky-dad-la",
-    "palm springs": "chunky-dad-palm-springs",
+    "palm-springs": "chunky-dad-palm-springs",
+    "seattle": "chunky-dad-seattle",
+    "chicago": "chunky-dad-chicago",
+    "toronto": "chunky-dad-toronto",
+    "london": "chunky-dad-london",
+    "berlin": "chunky-dad-berlin",
     "default": "chunky-dad-events"
   }
 }

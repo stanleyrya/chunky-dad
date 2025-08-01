@@ -48,13 +48,16 @@ class SharedCore {
             'phoenix': 'phoenix',
             'long beach': 'la',  // Long Beach is part of LA metro area
             'santa monica': 'la',
-            'palm springs': 'palm springs',  // Palm Springs gets its own area
+            'palm springs': 'palm-springs',  // Palm Springs gets its own area
             'san diego': 'san diego',
             'sacramento': 'sacramento',
             'san jose': 'sf',  // Bay Area
             'oakland': 'sf',   // Bay Area
             'fort lauderdale': 'miami',
-            'key west': 'miami'
+            'key west': 'miami',
+            'toronto': 'toronto',
+            'london': 'london',
+            'berlin': 'berlin'
         };
     }
 

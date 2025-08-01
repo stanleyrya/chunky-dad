@@ -62,6 +62,15 @@ const CITY_CONFIG = {
         coordinates: { lat: 52.5200, lng: 13.4050 },
         mapZoom: 10,
         visible: true
+    },
+    'palm-springs': {
+        name: 'Palm Springs',
+        emoji: '🌴',
+        tagline: 'Desert bear oasis',
+        calendarId: 'placeholder-palm-springs-calendar-id@group.calendar.google.com',
+        coordinates: { lat: 33.8303, lng: -116.5453 },
+        mapZoom: 10,
+        visible: true
     }
 };
 
