@@ -56,18 +56,13 @@ class EventbriteParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
             
-            // First try to extract events from embedded JSON data (modern Eventbrite approach)
+            // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
             const jsonEvents = this.extractEventsFromJson(html);
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
             } else {
-                // Fallback to HTML parsing if no JSON data found
-                console.log('🎫 Eventbrite: No JSON data found, falling back to HTML parsing');
-                
-                // Parse HTML using regex (works in all environments)
-                const htmlEvents = this.parseHTMLEvents(html, htmlData.url);
-                events.push(...htmlEvents);
+                console.log('🎫 Eventbrite: No events found in JSON data - this may be an individual event page or empty organizer page');
             }
             
             // Extract additional URLs if required (regardless of JSON vs HTML parsing)
@@ -104,10 +99,10 @@ class EventbriteParser {
                     const serverData = JSON.parse(serverDataMatch[1]);
                     console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
                     
-                    // Check for events in view_data.events.future_events (prioritize future events)
+                    // Check for events in view_data.events.future_events (organizer pages)
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
                         const futureEvents = serverData.view_data.events.future_events;
-                        console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data`);
+                        console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data (organizer page)`);
                         
                         futureEvents.forEach(eventData => {
                             if (eventData.url && eventData.name && eventData.name.text) {
@@ -127,6 +122,27 @@ class EventbriteParser {
                         // If we found future events, return them and skip other patterns
                         if (events.length > 0) {
                             console.log(`🎫 Eventbrite: Successfully extracted ${events.length} future events from JSON data`);
+                            return events;
+                        }
+                    }
+                    
+                    // Check for individual event data (individual event pages)
+                    if (serverData.event) {
+                        console.log('🎫 Eventbrite: Found individual event data in JSON');
+                        const eventData = serverData.event;
+                        
+                        if (eventData.url && eventData.name && this.isFutureEvent(eventData)) {
+                            const event = this.parseJsonEvent(eventData);
+                            if (event) {
+                                events.push(event);
+                                console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
+                            }
+                        } else {
+                            console.log('🎫 Eventbrite: Individual event is not a future event or missing required data');
+                        }
+                        
+                        if (events.length > 0) {
+                            console.log(`🎫 Eventbrite: Successfully extracted individual event from JSON data`);
                             return events;
                         }
                     }
