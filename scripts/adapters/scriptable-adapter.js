@@ -25,6 +25,8 @@ class ScriptableAdapter {
         };
         
         this.calendarMappings = config.calendarMappings || {};
+        this.lastResults = null; // Store last results for calendar display
+        this.sharedCore = null; // Will be set by orchestrator
     }
 
     // HTTP Adapter Implementation
@@ -149,39 +151,42 @@ class ScriptableAdapter {
         }
     }
 
-    // Calendar Integration
-    async addToCalendar(events, parserConfig) {
-        if (!events || events.length === 0) {
+    // Calendar Integration - receives pre-formatted calendar events
+    async addToCalendar(calendarEvents, config) {
+        if (!calendarEvents || calendarEvents.length === 0) {
             console.log('📱 Scriptable: No events to add to calendar');
             return 0;
         }
 
         try {
-            console.log(`📱 Scriptable: Adding ${events.length} events to calendar`);
+            console.log(`📱 Scriptable: Adding ${calendarEvents.length} events to calendar`);
             
             let addedCount = 0;
+            const calendarMappings = config.calendarMappings || this.calendarMappings;
             
-            for (const event of events) {
+            for (const event of calendarEvents) {
                 try {
-                    const calendarName = this.getCalendarName(event, parserConfig);
+                    // Determine calendar name from city
+                    const city = event.city || 'default';
+                    const calendarName = calendarMappings[city] || `chunky-dad-${city}`;
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
-                    // Check for existing events in a broader time range for better conflict detection
+                    // Parse dates from formatted event
                     const startDate = new Date(event.startDate);
-                    const endDate = new Date(event.endDate || event.startDate);
+                    const endDate = new Date(event.endDate);
                     
-                    // Expand search range to catch potential conflicts
+                    // Expand search range for conflict detection
                     const searchStart = new Date(startDate);
-                    searchStart.setHours(0, 0, 0, 0); // Start of day
+                    searchStart.setHours(0, 0, 0, 0);
                     const searchEnd = new Date(endDate);
-                    searchEnd.setHours(23, 59, 59, 999); // End of day
+                    searchEnd.setHours(23, 59, 59, 999);
                     
                     const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                     
                     // Check for exact duplicates first (same title and time within 1 minute)
                     const exactDuplicate = existingEvents.find(existing => 
                         existing.title === event.title &&
-                        this.areDatesEqual(existing.startDate, startDate, 1) // Within 1 minute, timezone-aware
+                        this.areDatesEqual(existing.startDate, startDate, 1)
                     );
                     
                     if (exactDuplicate) {
@@ -189,92 +194,37 @@ class ScriptableAdapter {
                         continue;
                     }
                     
-                    // Check for similar events that should be merged (using same logic as shared-core deduplication)
-                    const similarEvent = existingEvents.find(existing => {
-                        const existingKey = this.createEventKey({
-                            title: existing.title,
-                            startDate: existing.startDate,
-                            venue: existing.location || ''
-                        });
-                        const newEventKey = this.createEventKey(event);
-                        return existingKey === newEventKey;
+                    // Check if we should update an existing event
+                    const existingEvent = existingEvents.find(existing => {
+                        // Check if this is the same event that needs updating
+                        return existing.title === event.title || 
+                               (existing.location === event.location && 
+                                this.areDatesEqual(existing.startDate, startDate, 60)); // Within 1 hour
                     });
                     
-                    if (similarEvent) {
-                        console.log(`📱 Scriptable: Found similar event to merge: "${similarEvent.title}" with "${event.title}"`);
-                        
-                        // Update the existing event with merged data
-                        const mergedData = this.mergeEventData(similarEvent, event);
-                        
-                        // Update existing calendar event
-                        similarEvent.title = mergedData.title;
-                        similarEvent.notes = mergedData.notes;
-                        if (mergedData.url && !similarEvent.url) {
-                            similarEvent.url = mergedData.url;
+                    if (existingEvent) {
+                        // Update existing event
+                        console.log(`📱 Scriptable: Updating existing event: ${event.title}`);
+                        existingEvent.title = event.title;
+                        existingEvent.notes = event.notes;
+                        existingEvent.location = event.location;
+                        if (event.url) {
+                            existingEvent.url = event.url;
                         }
-                        if (mergedData.location && !similarEvent.location) {
-                            similarEvent.location = mergedData.location;
-                        }
-                        
-                        await similarEvent.save();
-                        console.log(`📱 Scriptable: ✓ Merged event: ${similarEvent.title}`);
-                        addedCount++; // Count as an update
+                        await existingEvent.save();
+                        addedCount++;
                         continue;
                     }
                     
-                    // Check for time conflicts (overlapping events) that might need merging
-                    const timeConflicts = existingEvents.filter(existing => {
-                        return this.doDatesOverlap(
-                            existing.startDate, 
-                            existing.endDate, 
-                            startDate, 
-                            endDate
-                        );
-                    });
-                    
-                    // For MEGAWOOF/DURO events, check if time conflicts should be merged
-                    if (timeConflicts.length > 0) {
-                        const shouldMergeConflict = timeConflicts.find(conflict => {
-                            return this.shouldMergeTimeConflict(conflict, event);
-                        });
-                        
-                        if (shouldMergeConflict) {
-                            console.log(`📱 Scriptable: Merging time conflict: "${shouldMergeConflict.title}" with "${event.title}"`);
-                            
-                            // Update the existing event with merged data
-                            const mergedData = this.mergeEventData(shouldMergeConflict, event);
-                            
-                            shouldMergeConflict.title = mergedData.title;
-                            shouldMergeConflict.notes = mergedData.notes;
-                            if (mergedData.url && !shouldMergeConflict.url) {
-                                shouldMergeConflict.url = mergedData.url;
-                            }
-                            if (mergedData.location && !shouldMergeConflict.location) {
-                                shouldMergeConflict.location = mergedData.location;
-                            }
-                            
-                            await shouldMergeConflict.save();
-                            console.log(`📱 Scriptable: ✓ Merged time conflict: ${shouldMergeConflict.title}`);
-                            addedCount++; // Count as an update
-                            continue;
-                        } else {
-                            console.log(`📱 Scriptable: ⚠️ Time conflict detected but not merging: ${event.title}`);
-                            timeConflicts.forEach(conflict => {
-                                console.log(`   - Conflicts with: "${conflict.title}": ${conflict.startDate.toLocaleString()} - ${conflict.endDate.toLocaleString()}`);
-                            });
-                        }
-                    }
-                    
-                    // Create new calendar event if no conflicts or merges
+                    // Create new calendar event
                     const calendarEvent = new CalendarEvent();
                     calendarEvent.title = event.title;
                     calendarEvent.startDate = startDate;
                     calendarEvent.endDate = endDate;
-                    calendarEvent.location = event.venue || '';
-                    calendarEvent.notes = this.formatEventNotes(event);
+                    calendarEvent.location = event.location;
+                    calendarEvent.notes = event.notes;
                     calendarEvent.calendar = calendar;
                     
-                    // Set URL if available
                     if (event.url) {
                         calendarEvent.url = event.url;
                     }
@@ -319,33 +269,9 @@ class ScriptableAdapter {
         }
     }
 
-    getCalendarName(event, parserConfig) {
-        // Use calendar mapping from config
-        const city = event.city || 'default';
-        return this.calendarMappings[city] || `chunky-dad-${city}`;
-    }
 
-    formatEventNotes(event) {
-        const notes = [];
-        
-        if (event.description) {
-            notes.push(event.description);
-        }
-        
-        if (event.price) {
-            notes.push(`Price: ${event.price}`);
-        }
-        
-        if (event.source) {
-            notes.push(`Source: ${event.source}`);
-        }
-        
-        if (event.url && !notes.join(' ').includes(event.url)) {
-            notes.push(`More info: ${event.url}`);
-        }
-        
-        return notes.join('\n\n');
-    }
+
+
 
     // Display/Logging Adapter Implementation
     async logInfo(message) {
@@ -367,6 +293,9 @@ class ScriptableAdapter {
     // Results Display - Enhanced with calendar preview and comparison
     async displayResults(results) {
         try {
+            // Store results for use in other methods
+            this.lastResults = results;
+            
             // First show the enhanced display features in console for debugging
             await this.displayCalendarProperties(results);
             await this.compareWithExistingCalendars(results);
@@ -440,7 +369,7 @@ class ScriptableAdapter {
             console.log('─'.repeat(40));
             
             // Calendar assignment
-            const calendarName = this.getCalendarName(event, null);
+            const calendarName = this.getCalendarNameForDisplay(event);
             console.log(`📅 Target Calendar: "${calendarName}"`);
             
             // Check if calendar exists
@@ -471,7 +400,7 @@ class ScriptableAdapter {
             }
             
             // Notes field content
-            const notes = this.formatEventNotes(event);
+            const notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
             console.log(`\n📝 Notes field content (${notes.length} chars):`);
             console.log(`"${notes.substring(0, 100)}${notes.length > 100 ? '...' : ''}"`);
             
@@ -505,7 +434,7 @@ class ScriptableAdapter {
         const availableCalendars = await Calendar.forEvents();
         
         for (const event of allEvents) {
-            const calendarName = this.getCalendarName(event, null);
+            const calendarName = this.getCalendarNameForDisplay(event);
             const calendar = availableCalendars.find(cal => cal.title === calendarName);
             
             console.log(`\n🐻 Checking: ${event.title || event.name}`);
@@ -518,8 +447,9 @@ class ScriptableAdapter {
             
             try {
                 // Check for existing events in the time range
-                const startDate = new Date(event.startDate);
-                const endDate = new Date(event.endDate || event.startDate);
+                const { startDate, endDate } = this.sharedCore ? 
+                    this.sharedCore.getEventDateRange(event, false) :
+                    { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
                 
                 // Expand search range for recurring events
                 const searchStart = new Date(startDate);
@@ -585,7 +515,7 @@ class ScriptableAdapter {
 
     async displayAvailableCalendars() {
         console.log('\n' + '='.repeat(60));
-        console.log('📅 AVAILABLE CALENDARS (DEBUG INFO)');
+        console.log('📅 CALENDAR STATUS');
         console.log('='.repeat(60));
         
         try {
@@ -596,24 +526,38 @@ class ScriptableAdapter {
                 return;
             }
             
-            console.log(`📊 Total calendars: ${availableCalendars.length}\n`);
-            
-            availableCalendars.forEach((calendar, i) => {
-                console.log(`📅 Calendar ${i + 1}: "${calendar.title}"`);
-                console.log(`   ID: ${calendar.identifier}`);
-                console.log(`   Color: ${calendar.color.hex}`);
-                console.log(`   Subscribed: ${calendar.isSubscribed ? 'Yes' : 'No'}`);
-                console.log(`   Modifications: ${calendar.allowsContentModifications ? 'Allowed' : 'Read-only'}`);
-                console.log('');
+            // Get all events to see which calendars we need
+            const allEvents = this.getAllEventsFromResults(this.lastResults);
+            const neededCalendars = new Set();
+            allEvents.forEach(event => {
+                const calendarName = this.getCalendarNameForDisplay(event);
+                neededCalendars.add(calendarName);
             });
             
-            // Show which calendars are mapped
-            console.log('🗺️  Calendar Mappings:');
-            Object.entries(this.calendarMappings).forEach(([city, calendarName]) => {
+            console.log(`📊 Calendars needed for events: ${neededCalendars.size}`);
+            
+            // Show only the calendars we need and their status
+            const foundCalendars = [];
+            const missingCalendars = [];
+            
+            neededCalendars.forEach(calendarName => {
                 const exists = availableCalendars.find(cal => cal.title === calendarName);
-                const status = exists ? '✅ Exists' : '❌ Missing (create manually)';
-                console.log(`   ${city} → "${calendarName}" ${status}`);
+                if (exists) {
+                    foundCalendars.push(calendarName);
+                } else {
+                    missingCalendars.push(calendarName);
+                }
             });
+            
+            if (foundCalendars.length > 0) {
+                console.log(`\n✅ Found calendars (${foundCalendars.length}):`);
+                foundCalendars.forEach(cal => console.log(`   • ${cal}`));
+            }
+            
+            if (missingCalendars.length > 0) {
+                console.log(`\n❌ Missing calendars (${missingCalendars.length}) - create manually:`);
+                missingCalendars.forEach(cal => console.log(`   • ${cal}`));
+            }
             
         } catch (error) {
             console.error(`❌ Failed to load calendars: ${error}`);
@@ -697,7 +641,8 @@ class ScriptableAdapter {
             console.log(`   Start: ${new Date(event.startDate).toLocaleString()}`);
             console.log(`   End: ${new Date(event.endDate || event.startDate).toLocaleString()}`);
             console.log(`   Location: "${event.venue || event.bar || ''}"`);
-            console.log(`   Notes: ${this.formatEventNotes(event).length} characters`);
+            const eventNotes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
+            console.log(`   Notes: ${eventNotes.length} characters`);
         });
         
         console.log('\n' + '='.repeat(60));
@@ -720,7 +665,7 @@ class ScriptableAdapter {
             cities: [...new Set(allEvents.map(e => e.city).filter(Boolean))],
             recurringEvents: allEvents.filter(e => e.recurring).length,
             oneTimeEvents: allEvents.filter(e => !e.recurring).length,
-            calendarsNeeded: [...new Set(allEvents.map(e => this.getCalendarName(e, null)))],
+            calendarsNeeded: [...new Set(allEvents.map(e => this.getCalendarNameForDisplay(e)))],
             timezones: [...new Set(allEvents.map(e => e.timezone).filter(Boolean))]
         };
         
@@ -758,13 +703,547 @@ class ScriptableAdapter {
         console.log('\n' + '='.repeat(60));
     }
 
-    // Rich UI presentation using UITable
+    // Rich UI presentation using WebView with HTML
     async presentRichResults(results) {
         try {
-            console.log('📱 Scriptable: Preparing rich UI display...');
+            console.log('📱 Scriptable: Preparing rich HTML UI display...');
             
-            const table = new UITable();
-            table.showSeparators = true;
+            // Generate HTML for rich display
+            const html = await this.generateRichHTML(results);
+            
+            // Present using WebView
+            await WebView.loadHTML(html, null, null, true);
+            
+            console.log('📱 Scriptable: ✓ Rich HTML display completed');
+            
+        } catch (error) {
+            console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
+            // Fallback to UITable
+            try {
+                console.log('📱 Scriptable: Attempting UITable fallback...');
+                await this.presentUITableFallback(results);
+            } catch (tableError) {
+                console.log(`📱 Scriptable: ✗ UITable fallback also failed: ${tableError.message}`);
+                // Final fallback to QuickLook
+                try {
+                    console.log('📱 Scriptable: Attempting QuickLook fallback...');
+                    const summary = this.createResultsSummary(results);
+                    await QuickLook.present(summary, false);
+                    console.log('📱 Scriptable: ✓ QuickLook display completed');
+                } catch (quickLookError) {
+                    console.log(`📱 Scriptable: ✗ All display methods failed: ${quickLookError.message}`);
+                }
+            }
+        }
+    }
+
+    // Generate rich HTML for WebView display
+    async generateRichHTML(results) {
+        const allEvents = this.getAllEventsFromResults(results);
+        const availableCalendars = await Calendar.forEvents();
+        
+        // Group events by proposed action
+        const newEvents = [];
+        const updatedEvents = [];
+        const conflictEvents = [];
+        
+        for (const event of allEvents) {
+            const calendarName = this.getCalendarNameForDisplay(event);
+            const calendar = availableCalendars.find(cal => cal.title === calendarName);
+            
+            if (!calendar) {
+                event._action = 'missing_calendar';
+                conflictEvents.push(event);
+                continue;
+            }
+            
+            // Check for existing events
+            const { startDate, endDate, searchStart, searchEnd } = this.sharedCore ?
+                this.sharedCore.getEventDateRange(event, true) :
+                { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
+            
+            try {
+                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                
+                // Check for duplicates or updates
+                const exactMatch = existingEvents.find(existing => 
+                    existing.title === event.title &&
+                    this.areDatesEqual(existing.startDate, startDate, 1)
+                );
+                
+                if (exactMatch) {
+                    event._action = 'update';
+                    event._existingEvent = exactMatch;
+                    updatedEvents.push(event);
+                } else {
+                    const conflicts = existingEvents.filter(existing => 
+                        this.doDatesOverlap(existing.startDate, existing.endDate, startDate, endDate)
+                    );
+                    
+                    if (conflicts.length > 0) {
+                        event._action = 'conflict';
+                        event._conflicts = conflicts;
+                        conflictEvents.push(event);
+                    } else {
+                        event._action = 'new';
+                        newEvents.push(event);
+                    }
+                }
+            } catch (error) {
+                event._action = 'new';
+                newEvents.push(event);
+            }
+        }
+        
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bear Event Scraper Results</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .section-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            flex: 1;
+        }
+        
+        .section-count {
+            background: #e0e0e0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .event-card {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.2s ease;
+        }
+        
+        .event-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .event-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+        
+        .event-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .event-detail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .event-metadata {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .metadata-item {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        
+        .metadata-label {
+            font-weight: 500;
+            margin-right: 8px;
+            color: #666;
+            min-width: 80px;
+        }
+        
+        .action-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .badge-new {
+            background: #34c759;
+            color: white;
+        }
+        
+        .badge-update {
+            background: #007aff;
+            color: white;
+        }
+        
+        .badge-conflict {
+            background: #ff9500;
+            color: white;
+        }
+        
+        .badge-error {
+            background: #ff3b30;
+            color: white;
+        }
+        
+        .conflict-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .existing-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error-item {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #c62828;
+        }
+        
+        .calendar-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .status-icon {
+            font-size: 20px;
+        }
+        
+        .notes-preview {
+            background: #f8f8f8;
+            border-left: 3px solid #007aff;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .coordinates {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐻 Bear Event Scraper Results</h1>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">${results.totalEvents}</div>
+                <div class="stat-label">Total Events</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">${results.bearEvents}</div>
+                <div class="stat-label">Bear Events</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">${results.calendarEvents}</div>
+                <div class="stat-label">Calendar Actions</div>
+            </div>
+        </div>
+    </div>
+    
+    ${newEvents.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">✨</span>
+            <span class="section-title">New Events to Add</span>
+            <span class="section-count">${newEvents.length}</span>
+        </div>
+        ${newEvents.map(event => this.generateEventCard(event)).join('')}
+    </div>
+    ` : ''}
+    
+    ${updatedEvents.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🔄</span>
+            <span class="section-title">Events to Update</span>
+            <span class="section-count">${updatedEvents.length}</span>
+        </div>
+        ${updatedEvents.map(event => this.generateEventCard(event)).join('')}
+    </div>
+    ` : ''}
+    
+    ${conflictEvents.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">⚠️</span>
+            <span class="section-title">Events with Conflicts</span>
+            <span class="section-count">${conflictEvents.length}</span>
+        </div>
+        ${conflictEvents.map(event => this.generateEventCard(event)).join('')}
+    </div>
+    ` : ''}
+    
+    ${results.errors && results.errors.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">❌</span>
+            <span class="section-title">Errors</span>
+            <span class="section-count">${results.errors.length}</span>
+        </div>
+        ${results.errors.map(error => `
+            <div class="error-item">${this.escapeHtml(error)}</div>
+        `).join('')}
+    </div>
+    ` : ''}
+    
+    ${allEvents.length === 0 ? `
+    <div class="section">
+        <div class="empty-state">
+            <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+            <div>No events found to process</div>
+        </div>
+    </div>
+    ` : ''}
+</body>
+</html>
+        `;
+        
+        return html;
+    }
+    
+    // Generate HTML for individual event card
+    generateEventCard(event) {
+        const actionBadge = {
+            'new': '<span class="action-badge badge-new">NEW</span>',
+            'update': '<span class="action-badge badge-update">UPDATE</span>',
+            'conflict': '<span class="action-badge badge-conflict">CONFLICT</span>',
+            'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
+        }[event._action] || '';
+        
+        const eventDate = new Date(event.startDate);
+        const dateStr = eventDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        const timeStr = eventDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+        });
+        
+        const notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
+        const calendarName = this.getCalendarNameForDisplay(event);
+        
+        let html = `
+        <div class="event-card">
+            ${actionBadge}
+            <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
+            <div class="event-details">
+                ${event.venue || event.bar ? `
+                    <div class="event-detail">
+                        <span>📍</span>
+                        <span>${this.escapeHtml(event.venue || event.bar)}</span>
+                    </div>
+                ` : ''}
+                <div class="event-detail">
+                    <span>📅</span>
+                    <span>${dateStr} at ${timeStr}</span>
+                </div>
+                ${event.city ? `
+                    <div class="event-detail">
+                        <span>🌍</span>
+                        <span>${this.escapeHtml(event.city.toUpperCase())}</span>
+                    </div>
+                ` : ''}
+                <div class="event-detail">
+                    <span>📱</span>
+                    <span>${this.escapeHtml(calendarName)}</span>
+                </div>
+            </div>
+            
+            <div class="event-metadata">
+                ${event.coordinates && event.coordinates.lat && event.coordinates.lng ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Location:</span>
+                        <span class="coordinates">${event.coordinates.lat}, ${event.coordinates.lng}</span>
+                    </div>
+                ` : ''}
+                ${event.key ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Key:</span>
+                        <span>${this.escapeHtml(event.key)}</span>
+                    </div>
+                ` : ''}
+                ${event.price || event.cover ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Price:</span>
+                        <span>${this.escapeHtml(event.price || event.cover)}</span>
+                    </div>
+                ` : ''}
+                ${event.recurring ? `
+                    <div class="metadata-item">
+                        <span class="metadata-label">Recurring:</span>
+                        <span>${event.recurrence || 'Yes'}</span>
+                    </div>
+                ` : ''}
+            </div>
+            
+            ${event._action === 'update' && event._existingEvent ? `
+                <div class="existing-info">
+                    <strong>Existing Event:</strong> Will update with missing metadata
+                    ${!event._existingEvent.url && event.url ? '<br>• Add URL' : ''}
+                    ${!event._existingEvent.notes?.includes('Key:') && event.key ? '<br>• Add event key' : ''}
+                    ${event.coordinates ? '<br>• Update location to GPS coordinates' : ''}
+                </div>
+            ` : ''}
+            
+            ${event._action === 'conflict' && event._conflicts ? `
+                <div class="conflict-info">
+                    <strong>Time conflicts with:</strong>
+                    ${event._conflicts.map(c => `<br>• ${this.escapeHtml(c.title)} at ${c.startDate.toLocaleTimeString()}`).join('')}
+                </div>
+            ` : ''}
+            
+            ${event._action === 'missing_calendar' ? `
+                <div class="conflict-info">
+                    <strong>Calendar "${this.escapeHtml(calendarName)}" not found!</strong>
+                    <br>Please create this calendar manually before running the scraper.
+                </div>
+            ` : ''}
+            
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; font-size: 13px; color: #007aff;">View Calendar Notes Preview</summary>
+                <div class="notes-preview">${this.escapeHtml(notes)}</div>
+            </details>
+        </div>
+        `;
+        
+        return html;
+    }
+    
+    // Helper to escape HTML
+    escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Fallback to UITable if WebView fails
+    async presentUITableFallback(results) {
+        const table = new UITable();
+        table.showSeparators = true;
             
             // Header row
             const headerRow = new UITableRow();
@@ -907,19 +1386,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             console.log('📱 Scriptable: Presenting rich UI table...');
             await table.present(false); // Present in normal mode (not fullscreen)
             
-            console.log('📱 Scriptable: ✓ Rich UI display completed');
+            console.log('📱 Scriptable: ✓ UITable display completed');
             
         } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
-            // Fallback to QuickLook if UITable fails
-            try {
-                console.log('📱 Scriptable: Attempting QuickLook fallback...');
-                const summary = this.createResultsSummary(results);
-                await QuickLook.present(summary, false);
-                console.log('📱 Scriptable: ✓ QuickLook display completed');
-            } catch (quickLookError) {
-                console.log(`📱 Scriptable: ✗ QuickLook fallback also failed: ${quickLookError.message}`);
-            }
+            console.log(`📱 Scriptable: ✗ Failed to present UITable: ${error.message}`);
+            throw error;
         }
     }
 
@@ -996,54 +1467,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return allEvents;
     }
 
-    // Helper method to create event keys for comparison (same logic as shared-core)
-    createEventKey(event) {
-        let title = String(event.title || event.name || '').toLowerCase().trim();
-        const originalTitle = title;
-        
-        // Normalize Megawoof/DURO event titles for better deduplication
-        if (/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(title) || /megawoof/i.test(title)) {
-            const duroMatch = title.match(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i);
-            if (duroMatch) {
-                title = title.replace(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o[^\w]*/i, 'megawoof-duro');
-                console.log(`📱 Scriptable: DURO title normalized: "${originalTitle}" → "${title}"`);
-            } else if (/megawoof/i.test(title)) {
-                title = title.replace(/megawoof[:\s\-]*/i, 'megawoof-');
-                console.log(`📱 Scriptable: Megawoof title normalized: "${originalTitle}" → "${title}"`);
-            }
-        }
-        
-        // Use a more robust date comparison that handles timezones better
-        const date = this.normalizeEventDate(event.startDate);
-        const venue = String(event.venue || event.location || '').toLowerCase().trim();
-        
-        const key = `${title}|${date}|${venue}`;
-        console.log(`📱 Scriptable: Created event key: "${key}" for event "${originalTitle}"`);
-        
-        return key;
-    }
 
-    // Helper method to normalize event dates for consistent comparison
-    normalizeEventDate(dateInput) {
-        if (!dateInput) return '';
-        
-        try {
-            const date = new Date(dateInput);
-            if (isNaN(date.getTime())) return '';
-            
-            // Use a consistent date format that ignores time zone differences
-            // This uses the local date components to create a date string
-            // that will be the same regardless of the device's timezone
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            
-            return `${year}-${month}-${day}`;
-        } catch (error) {
-            console.log(`📱 Scriptable: Warning - Failed to normalize date: ${dateInput}, error: ${error.message}`);
-            return '';
-        }
-    }
 
     // Helper method to compare dates with timezone awareness
     areDatesEqual(date1, date2, toleranceMinutes = 1) {
@@ -1149,20 +1573,86 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     // Helper method to merge event data
     mergeEventData(existingEvent, newEvent) {
         const existingNotes = existingEvent.notes || '';
-        const newNotes = this.formatEventNotes(newEvent);
         
-        // Combine notes if they're different
-        let mergedNotes = existingNotes;
-        if (newNotes && newNotes !== existingNotes) {
-            mergedNotes = existingNotes ? `${existingNotes}\n\n--- Additional Info ---\n${newNotes}` : newNotes;
+        // Parse existing notes to check what metadata we already have
+        const hasKey = existingNotes.includes('Key:');
+        const hasUrl = existingNotes.includes('More info:') || existingEvent.url;
+        const hasBar = existingNotes.includes('Bar:');
+        const hasPrice = existingNotes.includes('Price:');
+        const hasRecurrence = existingNotes.includes('Recurrence:');
+        const hasInstagram = existingNotes.includes('Instagram:');
+        
+        // Build updated notes with missing info
+        const updatedNotesLines = existingNotes.split('\n');
+        const metadataIndex = updatedNotesLines.findIndex(line => line.includes('--- Event Details ---'));
+        
+        // Add missing metadata
+        const newMetadata = [];
+        
+        if (!hasKey && newEvent.key) {
+            newMetadata.push(`Key: ${newEvent.key}`);
         }
+        
+        if (!hasPrice && (newEvent.price || newEvent.cover)) {
+            newMetadata.push(`Price: ${newEvent.price || newEvent.cover}`);
+        }
+        
+        if (!hasRecurrence && newEvent.recurring && newEvent.recurrence) {
+            newMetadata.push(`Recurrence: ${newEvent.recurrence}`);
+        }
+        
+        if (!hasInstagram && newEvent.instagram) {
+            newMetadata.push(`Instagram: ${newEvent.instagram}`);
+        }
+        
+        if (!hasBar && (newEvent.venue || newEvent.bar)) {
+            // Add bar at the beginning if missing
+            updatedNotesLines.unshift(`Bar: ${newEvent.venue || newEvent.bar}`);
+        }
+        
+        // Insert new metadata into existing notes
+        if (newMetadata.length > 0) {
+            if (metadataIndex >= 0) {
+                // Insert after the metadata header
+                updatedNotesLines.splice(metadataIndex + 1, 0, ...newMetadata);
+            } else {
+                // Add metadata section if it doesn't exist
+                const urlIndex = updatedNotesLines.findIndex(line => line.includes('More info:'));
+                if (urlIndex >= 0) {
+                    updatedNotesLines.splice(urlIndex, 0, '', '--- Event Details ---', ...newMetadata);
+                } else {
+                    updatedNotesLines.push('', '--- Event Details ---', ...newMetadata);
+                }
+            }
+        }
+        
+        // Add URL if missing
+        if (!hasUrl && newEvent.url) {
+            const urlIndex = updatedNotesLines.findIndex(line => line.includes('More info:'));
+            if (urlIndex === -1) {
+                updatedNotesLines.push('', `More info: ${newEvent.url}`);
+            }
+        }
+        
+        const mergedNotes = updatedNotesLines.join('\n');
         
         return {
             title: existingEvent.title, // Keep existing title
             notes: mergedNotes,
-            url: existingEvent.url || newEvent.url,
-            location: existingEvent.location || newEvent.venue
+            url: existingEvent.url || newEvent.url
+            // location is handled separately using formatLocationForCalendar
         };
+    }
+
+    // Set shared core reference
+    setSharedCore(sharedCore) {
+        this.sharedCore = sharedCore;
+    }
+
+    // Helper to get calendar name for display purposes only
+    getCalendarNameForDisplay(event) {
+        const city = event.city || 'default';
+        return this.calendarMappings[city] || `chunky-dad-${city}`;
     }
 }
 

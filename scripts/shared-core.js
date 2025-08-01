@@ -69,9 +69,9 @@ class SharedCore {
         const results = {
             totalEvents: 0,
             bearEvents: 0,
-            calendarEvents: 0,
             errors: [],
-            parserResults: []
+            parserResults: [],
+            allProcessedEvents: [] // All events ready for calendar
         };
 
         if (!config.parsers || config.parsers.length === 0) {
@@ -88,7 +88,11 @@ class SharedCore {
                 results.parserResults.push(parserResult);
                 results.totalEvents += parserResult.totalEvents;
                 results.bearEvents += parserResult.bearEvents;
-                results.calendarEvents += parserResult.calendarEvents;
+                
+                // Collect all processed events
+                if (parserResult.events && parserResult.events.length > 0) {
+                    results.allProcessedEvents.push(...parserResult.events);
+                }
                 
                 await displayAdapter.logSuccess(`SYSTEM: Completed parser ${parserConfig.name}: ${parserResult.bearEvents} bear events found`);
                 
@@ -103,7 +107,7 @@ class SharedCore {
             }
         }
 
-        await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}, Calendar: ${results.calendarEvents}`);
+        await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}`);
         return results;
     }
 
@@ -200,23 +204,14 @@ class SharedCore {
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
         await displayAdapter.logInfo(`SYSTEM: Deduplicated events: ${deduplicatedEvents.length}/${bearEvents.length}`);
 
-        // Add to calendar if not dry run
-        let calendarEvents = 0;
-        if (!parserConfig.dryRun && displayAdapter.addToCalendar) {
-            await displayAdapter.logInfo(`SYSTEM: Adding ${deduplicatedEvents.length} events to calendar (not dry run)...`);
-            calendarEvents = await displayAdapter.addToCalendar(deduplicatedEvents, parserConfig);
-        } else {
-            await displayAdapter.logInfo(`SYSTEM: Dry run mode: would add ${deduplicatedEvents.length} events to calendar`);
-        }
-
-        await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${deduplicatedEvents.length} bear events found, ${calendarEvents} added to calendar`);
+        await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${deduplicatedEvents.length} bear events found`);
 
         return {
             name: parserConfig.name,
             totalEvents: allEvents.length,
             bearEvents: deduplicatedEvents.length,
-            calendarEvents: calendarEvents,
-            events: deduplicatedEvents
+            events: deduplicatedEvents,
+            config: parserConfig // Include config for orchestrator to use
         };
     }
 
@@ -651,6 +646,156 @@ class SharedCore {
         
         // Return as-is if no mapping found
         return normalized;
+    }
+
+    // Check if two events should be merged based on key similarity
+    shouldMergeEvents(event1, event2) {
+        const key1 = this.createEventKey(event1);
+        const key2 = this.createEventKey(event2);
+        return key1 === key2;
+    }
+    
+    // Format event for calendar integration
+    formatEventForCalendar(event) {
+        const calendarEvent = {
+            title: event.title || event.name || 'Untitled Event',
+            startDate: event.startDate,
+            endDate: event.endDate || event.startDate,
+            location: this.formatLocationForCalendar(event),
+            notes: this.formatEventNotes(event),
+            url: event.url || null,
+            city: event.city || 'default' // Include city for calendar selection
+        };
+        
+        return calendarEvent;
+    }
+    
+    // Format location for calendar (GPS coordinates only)
+    formatLocationForCalendar(event) {
+        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+            return `${event.coordinates.lat}, ${event.coordinates.lng}`;
+        }
+        return ''; // Never use bar name in location field
+    }
+    
+    // Format event notes with all metadata in key-value format
+    formatEventNotes(event) {
+        const notes = [];
+        
+        // Add bar/venue name first if available
+        if (event.venue || event.bar) {
+            notes.push(`Bar: ${event.venue || event.bar}`);
+        }
+        
+        // Add description/tea
+        if (event.description || event.tea) {
+            notes.push(event.description || event.tea);
+        }
+        
+        // Add metadata section
+        const metadata = [];
+        
+        // Add event key if available
+        if (event.key) {
+            metadata.push(`Key: ${event.key}`);
+        }
+        
+        // Add price/cover
+        if (event.price || event.cover) {
+            metadata.push(`Price: ${event.price || event.cover}`);
+        }
+        
+        // Add recurrence info
+        if (event.recurring && event.recurrence) {
+            metadata.push(`Recurrence: ${event.recurrence}`);
+        }
+        
+        // Add event type
+        if (event.eventType) {
+            metadata.push(`Type: ${event.eventType}`);
+        }
+        
+        // Add timezone if different from device
+        if (event.timezone) {
+            metadata.push(`Timezone: ${event.timezone}`);
+        }
+        
+        // Add city
+        if (event.city) {
+            metadata.push(`City: ${event.city}`);
+        }
+        
+        // Add source
+        if (event.source) {
+            metadata.push(`Source: ${event.source}`);
+        }
+        
+        // Add social media links
+        if (event.instagram) {
+            metadata.push(`Instagram: ${event.instagram}`);
+        }
+        
+        if (event.facebook) {
+            metadata.push(`Facebook: ${event.facebook}`);
+        }
+        
+        if (event.website) {
+            metadata.push(`Website: ${event.website}`);
+        }
+        
+        if (event.gmaps) {
+            metadata.push(`Gmaps: ${event.gmaps}`);
+        }
+        
+        // Add short names if available
+        if (event.shortName) {
+            metadata.push(`ShortName: ${event.shortName}`);
+        }
+        
+        if (event.shorterName) {
+            metadata.push(`ShorterName: ${event.shorterName}`);
+        }
+        
+        // Add metadata section if we have any
+        if (metadata.length > 0) {
+            notes.push('--- Event Details ---');
+            notes.push(...metadata);
+        }
+        
+        // Add URL at the end
+        if (event.url && !notes.join(' ').includes(event.url)) {
+            notes.push('');
+            notes.push(`More info: ${event.url}`);
+        }
+        
+        // Add debug info if we have original title
+        if (event.originalTitle && event.originalTitle !== event.title) {
+            notes.push('');
+            notes.push(`[Debug] Original title: ${event.originalTitle}`);
+        }
+        
+        return notes.join('\n');
+    }
+    
+    // Get event date ranges with optional expansion
+    getEventDateRange(event, expandRange = false) {
+        const startDate = new Date(event.startDate);
+        const endDate = new Date(event.endDate || event.startDate);
+        
+        if (expandRange) {
+            const searchStart = new Date(startDate);
+            searchStart.setHours(0, 0, 0, 0);
+            const searchEnd = new Date(endDate);
+            searchEnd.setHours(23, 59, 59, 999);
+            return { startDate, endDate, searchStart, searchEnd };
+        }
+        
+        return { startDate, endDate };
+    }
+
+    // Prepare events for calendar integration
+    prepareEventsForCalendar(events) {
+        return events.map(event => this.formatEventForCalendar(event));
     }
 }
 
