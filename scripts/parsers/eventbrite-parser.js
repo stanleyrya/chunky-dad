@@ -235,7 +235,7 @@ class EventbriteParser {
     // Parse a JSON event object into our standard format
     parseJsonEvent(eventData) {
         try {
-            const title = eventData.name || eventData.title || '';
+            const title = eventData.name?.text || eventData.name || eventData.title || '';
             const description = eventData.description || eventData.summary || '';
             const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
             const endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
@@ -251,11 +251,8 @@ class EventbriteParser {
                 venue = eventData.venue.name || null;
                 if (eventData.venue.address) {
                     address = eventData.venue.address.localized_address_display || null;
-                    console.log(`🎫 Eventbrite: Venue details for "${title}":`, {
-                        venue: venue,
-                        address: address,
-                        fullAddressData: eventData.venue.address
-                    });
+                    console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
+                    console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
                     // Extract coordinates if available
                     if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
@@ -443,33 +440,26 @@ class EventbriteParser {
         }
     }
 
-    // Extract additional URLs for detail page processing
+    // Extract additional URLs for detail page processing (enhanced from reference implementation)
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
         const urls = new Set();
         
         try {
-            console.log(`🎫 Eventbrite: Extracting additional links using regex patterns`);
+            console.log(`🎫 Eventbrite: Extracting additional links using regex for Scriptable`);
             
-            // More comprehensive patterns for Eventbrite event links (from old working script)
+            // More comprehensive patterns for Eventbrite event links (from reference implementation)
             const linkPatterns = [
                 // Direct eventbrite.com/e/ links
                 /href="([^"]*eventbrite\.com\/e\/[^"]*?)"/gi,
                 // Relative /e/ links
                 /href="(\/e\/[^"]*?)"/gi,
                 // Links with event IDs
-                /href="([^"]*\/events\/[^"]*?)"/gi,
-                // Additional patterns for various link formats
-                /href="([^"]*\/e\/[^"]*?)"[^>]*>/gi,
-                /href='([^']*eventbrite\.com\/e\/[^']*?)'/gi,
-                /href='(\/e\/[^']*?)'/gi
+                /href="([^"]*\/events\/[^"]*?)"/gi
             ];
             
-            linkPatterns.forEach((pattern, index) => {
+            linkPatterns.forEach(pattern => {
                 let match;
-                let matchCount = 0;
-                const maxMatches = parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls || 20;
-                
-                while ((match = pattern.exec(html)) !== null && matchCount < maxMatches) {
+                while ((match = pattern.exec(html)) !== null) {
                     const href = match[1];
                     if (href) {
                         try {
@@ -489,10 +479,9 @@ class EventbriteParser {
                             }
                             
                             // Only add if it's actually an event URL and not already included
-                            if ((fullUrl.includes('/e/') || fullUrl.includes('/events/')) && this.isValidEventUrl(fullUrl, parserConfig)) {
+                            if ((fullUrl.includes('/e/') || fullUrl.includes('/events/')) && !urls.has(fullUrl) && this.isValidEventUrl(fullUrl, parserConfig)) {
                                 urls.add(fullUrl);
-                                matchCount++;
-                                console.log(`🎫 Eventbrite: Found event link (pattern ${index + 1}): ${fullUrl}`);
+                                console.log(`🎫 Eventbrite: Found event link: ${fullUrl}`);
                             }
                         } catch (error) {
                             console.warn(`🎫 Eventbrite: Invalid link found: ${href}`);
@@ -501,13 +490,13 @@ class EventbriteParser {
                 }
             });
             
-            console.log(`🎫 Eventbrite: Extracted ${urls.size} additional URLs`);
+            console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links`);
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting additional URLs: ${error}`);
         }
         
-        return Array.from(urls).slice(0, parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls || 20);
+        return Array.from(urls).slice(0, 20); // Limit to 20 additional links per page
     }
 
     // Validate if URL is a valid event URL
@@ -567,7 +556,7 @@ class EventbriteParser {
         }
         
         // Try extracting from text
-        const searchText = `${eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
+        const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
         return this.extractCityFromText(searchText);
     }
 

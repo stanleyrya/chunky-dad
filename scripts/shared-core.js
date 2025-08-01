@@ -317,7 +317,7 @@ class SharedCore {
     createEventKey(event) {
         // Debug the event structure
         if (typeof event.title !== 'string') {
-            console.log(`🔍 DEBUG: event.title type: ${typeof event.title}, value:`, event.title);
+            console.log(`🔍 DEBUG: event.title type: ${typeof event.title}, value: ${JSON.stringify(event.title)}`);
             console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
         }
         
