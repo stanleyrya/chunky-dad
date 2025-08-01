@@ -155,10 +155,11 @@ class SharedCore {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} events from ${url}`);
                 }
 
-                // Process additional URLs if required
+                // Process additional URLs if required (for enriching existing events, not creating new ones)
                 if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs for detail pages...`);
-                    const additionalEvents = await this.processAdditionalUrls(
+                    await this.enrichEventsWithDetailPages(
+                        allEvents,
                         parseResult.additionalLinks, 
                         parser, 
                         parserConfig, 
@@ -166,8 +167,7 @@ class SharedCore {
                         displayAdapter,
                         processedUrls
                     );
-                    allEvents.push(...additionalEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${additionalEvents.length} events from detail pages`);
+                    await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
                 }
             } catch (error) {
                 await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${error.message || 'Unknown error'}`);
@@ -213,6 +213,51 @@ class SharedCore {
         };
     }
 
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls) {
+        const maxUrls = parserConfig.maxAdditionalUrls || 12;
+        const urlsToProcess = additionalLinks.slice(0, maxUrls);
+
+        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment`);
+
+        for (const url of urlsToProcess) {
+            if (processedUrls.has(url)) continue;
+            processedUrls.add(url);
+
+            try {
+                const htmlData = await httpAdapter.fetchData(url);
+                const parseResult = parser.parseEvents(htmlData, parserConfig);
+                
+                // Instead of adding new events, use detail page data to enrich existing events
+                if (parseResult.events && parseResult.events.length > 0) {
+                    const detailEvent = parseResult.events[0]; // Detail pages should only have one event
+                    
+                    // Find the matching existing event by URL
+                    const matchingEvent = existingEvents.find(event => 
+                        event.url === detailEvent.url || 
+                        event.url === url ||
+                        (event.title && detailEvent.title && event.title.trim() === detailEvent.title.trim())
+                    );
+                    
+                    if (matchingEvent) {
+                        // Enrich the existing event with additional details from the detail page
+                        Object.keys(detailEvent).forEach(key => {
+                            // Only update if the existing event doesn't have this property or it's empty/null
+                            if (!matchingEvent[key] || matchingEvent[key] === '' || matchingEvent[key] === null) {
+                                matchingEvent[key] = detailEvent[key];
+                            }
+                        });
+                        await displayAdapter.logInfo(`SYSTEM: Enriched event "${matchingEvent.title}" with detail page data`);
+                    } else {
+                        await displayAdapter.logWarn(`SYSTEM: Could not match detail page ${url} to existing event`);
+                    }
+                }
+            } catch (error) {
+                await displayAdapter.logWarn(`SYSTEM: Failed to process detail page URL: ${url}`);
+            }
+        }
+    }
+
+    // Legacy method kept for backward compatibility (but not used for detail pages anymore)
     async processAdditionalUrls(additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls) {
         const maxUrls = parserConfig.maxAdditionalUrls || 12;
         const urlsToProcess = additionalLinks.slice(0, maxUrls);

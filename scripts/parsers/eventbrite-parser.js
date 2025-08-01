@@ -319,7 +319,7 @@ class EventbriteParser {
                 city = 'la';
             }
             
-            return {
+            const event = {
                 title: title,
                 description: description,
                 startDate: startDate,
@@ -331,6 +331,7 @@ class EventbriteParser {
                 googleMapsLink: googleMapsLink,
                 city: city,
                 url: url,
+                website: url, // Add website property for calendar integrations
                 price: price,
                 image: image,
                 source: this.config.source,
@@ -342,6 +343,11 @@ class EventbriteParser {
                     url: url
                 })
             };
+            
+            // Log event creation with URL for verification
+            console.log(`🎫 Eventbrite: Created event "${title}" with URL: ${url}`);
+            
+            return event;
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse JSON event: ${error}`);
@@ -493,28 +499,8 @@ class EventbriteParser {
                         });
                     }
                     
-                    // Also extract URLs from past_events if needed
-                    if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.past_events) {
-                        const pastEvents = serverData.view_data.events.past_events;
-                        console.log(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (checking for additional URLs)`);
-                        
-                        pastEvents.forEach(eventData => {
-                            if (eventData.url && urls.size < 20) { // Limit total URLs
-                                let eventUrl = eventData.url;
-                                
-                                // Ensure it's a full URL
-                                if (!eventUrl.startsWith('http')) {
-                                    eventUrl = `https://www.eventbrite.com${eventUrl}`;
-                                }
-                                
-                                // Only add if it's actually an event URL and passes validation
-                                if (eventUrl.includes('/e/') && this.isValidEventUrl(eventUrl, parserConfig)) {
-                                    urls.add(eventUrl);
-                                    console.log(`🎫 Eventbrite: Found past event detail URL: ${eventUrl}`);
-                                }
-                            }
-                        });
-                    }
+                    // Note: We only extract URLs from future events that we actually found
+                    // Past events are not relevant for detail page processing
                     
                 } catch (error) {
                     console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction:', error);
