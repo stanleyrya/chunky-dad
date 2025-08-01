@@ -404,11 +404,18 @@ class SharedCore {
             console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
         }
         
-        let title = String(event.title || '').toLowerCase().trim();
+        // Use original title if available (before metadata override), otherwise use current title
+        let title = String(event.originalTitle || event.title || '').toLowerCase().trim();
+        const wasOverridden = event.originalTitle && event.originalTitle !== event.title;
+        
+        if (wasOverridden) {
+            console.log(`🔄 SharedCore: Using original title for deduplication: "${event.title}" → "${title}"`);
+        }
         
         // Normalize Megawoof/DURO event titles for better deduplication
         // Convert variations like "D>U>R>O!", "DURO", "D U R O" to a standard form
         if (/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(title) || /megawoof/i.test(title)) {
+            const originalTitle = title;
             // Extract the core event identifier (DURO) and normalize it
             const duroMatch = title.match(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i);
             if (duroMatch) {
@@ -416,13 +423,16 @@ class SharedCore {
             } else if (/megawoof/i.test(title)) {
                 title = title.replace(/megawoof[:\s\-]*/i, 'megawoof-');
             }
-            console.log(`🔄 SharedCore: Normalized Megawoof title for deduplication: "${event.title}" → "${title}"`);
+            console.log(`🔄 SharedCore: Normalized Megawoof title for deduplication: "${originalTitle}" → "${title}"`);
         }
         
         const date = this.normalizeEventDate(event.startDate);
         const venue = String(event.venue || '').toLowerCase().trim();
         
-        return `${title}|${date}|${venue}`;
+        const key = `${title}|${date}|${venue}`;
+        console.log(`🔄 SharedCore: Created event key: "${key}" for event "${event.title}"`);
+        
+        return key;
     }
 
     mergeEvents(existing, newEvent) {

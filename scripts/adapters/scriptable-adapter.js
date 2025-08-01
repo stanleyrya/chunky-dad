@@ -367,13 +367,13 @@ class ScriptableAdapter {
     // Results Display - Enhanced with calendar preview and comparison
     async displayResults(results) {
         try {
-            // First show the enhanced display features
+            // First show the enhanced display features in console for debugging
             await this.displayCalendarProperties(results);
             await this.compareWithExistingCalendars(results);
             await this.displayAvailableCalendars();
             await this.displayEnrichedEvents(results);
             
-            // Then show the standard results summary
+            // Show console summary
             console.log('\n' + '='.repeat(60));
             console.log('🐻 BEAR EVENT SCRAPER RESULTS');
             console.log('='.repeat(60));
@@ -396,6 +396,9 @@ class ScriptableAdapter {
             await this.displaySummaryAndActions(results);
             
             console.log('\n' + '='.repeat(60));
+            
+            // Present rich UI display
+            await this.presentRichResults(results);
             
         } catch (error) {
             console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
@@ -559,6 +562,14 @@ class ScriptableAdapter {
                     console.log(`⏰ Found ${conflicts.length} time conflict(s):`);
                     conflicts.forEach(conflict => {
                         console.log(`   - "${conflict.title}": ${conflict.startDate.toLocaleString()} - ${conflict.endDate.toLocaleString()}`);
+                        
+                        // Check if this conflict should be merged
+                        const shouldMerge = this.shouldMergeTimeConflict(conflict, event);
+                        if (shouldMerge) {
+                            console.log(`     🔄 This conflict SHOULD BE MERGED based on merge rules`);
+                        } else {
+                            console.log(`     ⚠️  This conflict will NOT be merged - different events`);
+                        }
                     });
                 } else {
                     console.log(`✅ No time conflicts found`);
@@ -747,6 +758,228 @@ class ScriptableAdapter {
         console.log('\n' + '='.repeat(60));
     }
 
+    // Rich UI presentation using UITable
+    async presentRichResults(results) {
+        try {
+            console.log('📱 Scriptable: Preparing rich UI display...');
+            
+            const table = new UITable();
+            table.showSeparators = true;
+            
+            // Header row
+            const headerRow = new UITableRow();
+            headerRow.isHeader = true;
+            headerRow.height = 50;
+            
+            const headerCell = headerRow.addText('🐻 Bear Event Scraper Results');
+            headerCell.titleFont = Font.boldSystemFont(18);
+            headerCell.titleColor = Color.white();
+            headerCell.backgroundColor = Color.brown();
+            
+            table.addRow(headerRow);
+            
+            // Summary section
+            const summaryRow = new UITableRow();
+            summaryRow.height = 80;
+            
+            const summaryText = `📊 Total Events: ${results.totalEvents}
+🐻 Bear Events: ${results.bearEvents}
+📅 Added to Calendar: ${results.calendarEvents}
+${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No errors'}`;
+            
+            const summaryCell = summaryRow.addText(summaryText);
+            summaryCell.titleFont = Font.systemFont(14);
+            summaryCell.subtitleColor = Color.gray();
+            
+            table.addRow(summaryRow);
+            
+            // Parser results section
+            if (results.parserResults && results.parserResults.length > 0) {
+                const parserHeaderRow = new UITableRow();
+                parserHeaderRow.height = 40;
+                
+                const parserHeaderCell = parserHeaderRow.addText('📋 Parser Results');
+                parserHeaderCell.titleFont = Font.boldSystemFont(16);
+                parserHeaderCell.titleColor = Color.blue();
+                
+                table.addRow(parserHeaderRow);
+                
+                results.parserResults.forEach(result => {
+                    const parserRow = new UITableRow();
+                    parserRow.height = 50;
+                    
+                    const parserCell = parserRow.addText(`${result.name}`);
+                    parserCell.titleFont = Font.systemFont(14);
+                    parserCell.subtitleText = `${result.bearEvents} bear events found`;
+                    parserCell.subtitleColor = Color.gray();
+                    
+                    table.addRow(parserRow);
+                });
+            }
+            
+            // Events section
+            const allEvents = this.getAllEventsFromResults(results);
+            if (allEvents && allEvents.length > 0) {
+                const eventsHeaderRow = new UITableRow();
+                eventsHeaderRow.height = 40;
+                
+                const eventsHeaderCell = eventsHeaderRow.addText('🎉 Found Events');
+                eventsHeaderCell.titleFont = Font.boldSystemFont(16);
+                eventsHeaderCell.titleColor = Color.green();
+                
+                table.addRow(eventsHeaderRow);
+                
+                allEvents.slice(0, 10).forEach((event, i) => { // Show first 10 events
+                    const eventRow = new UITableRow();
+                    eventRow.height = 60;
+                    
+                    const eventCell = eventRow.addText(event.title || event.name || `Event ${i + 1}`);
+                    eventCell.titleFont = Font.systemFont(14);
+                    
+                    const subtitle = [];
+                    if (event.venue || event.bar) {
+                        subtitle.push(`📍 ${event.venue || event.bar}`);
+                    }
+                    if (event.day || event.time) {
+                        subtitle.push(`📅 ${event.day || ''} ${event.time || ''}`.trim());
+                    }
+                    if (event.city) {
+                        subtitle.push(`🌍 ${event.city.toUpperCase()}`);
+                    }
+                    
+                    eventCell.subtitleText = subtitle.join(' • ') || 'Event details';
+                    eventCell.subtitleColor = Color.gray();
+                    
+                    table.addRow(eventRow);
+                });
+                
+                if (allEvents.length > 10) {
+                    const moreRow = new UITableRow();
+                    moreRow.height = 40;
+                    
+                    const moreCell = moreRow.addText(`... and ${allEvents.length - 10} more events`);
+                    moreCell.titleFont = Font.italicSystemFont(12);
+                    moreCell.titleColor = Color.gray();
+                    
+                    table.addRow(moreRow);
+                }
+            }
+            
+            // Errors section
+            if (results.errors && results.errors.length > 0) {
+                const errorsHeaderRow = new UITableRow();
+                errorsHeaderRow.height = 40;
+                
+                const errorsHeaderCell = errorsHeaderRow.addText('❌ Errors');
+                errorsHeaderCell.titleFont = Font.boldSystemFont(16);
+                errorsHeaderCell.titleColor = Color.red();
+                
+                table.addRow(errorsHeaderRow);
+                
+                results.errors.slice(0, 5).forEach(error => { // Show first 5 errors
+                    const errorRow = new UITableRow();
+                    errorRow.height = 50;
+                    
+                    const errorCell = errorRow.addText(error);
+                    errorCell.titleFont = Font.systemFont(12);
+                    errorCell.titleColor = Color.red();
+                    
+                    table.addRow(errorRow);
+                });
+            }
+            
+            // Actions section
+            const actionsRow = new UITableRow();
+            actionsRow.height = 80;
+            
+            const actionsText = `🎯 Next Steps:
+• Review calendar conflicts above
+• Check calendar permissions
+• Set dryRun: false to add events
+• Verify timezone settings`;
+            
+            const actionsCell = actionsRow.addText(actionsText);
+            actionsCell.titleFont = Font.systemFont(12);
+            actionsCell.titleColor = Color.blue();
+            
+            table.addRow(actionsRow);
+            
+            console.log('📱 Scriptable: Presenting rich UI table...');
+            await table.present(false); // Present in normal mode (not fullscreen)
+            
+            console.log('📱 Scriptable: ✓ Rich UI display completed');
+            
+        } catch (error) {
+            console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
+            // Fallback to QuickLook if UITable fails
+            try {
+                console.log('📱 Scriptable: Attempting QuickLook fallback...');
+                const summary = this.createResultsSummary(results);
+                await QuickLook.present(summary, false);
+                console.log('📱 Scriptable: ✓ QuickLook display completed');
+            } catch (quickLookError) {
+                console.log(`📱 Scriptable: ✗ QuickLook fallback also failed: ${quickLookError.message}`);
+            }
+        }
+    }
+
+    // Helper method to create a text summary for QuickLook
+    createResultsSummary(results) {
+        const lines = [];
+        lines.push('🐻 BEAR EVENT SCRAPER RESULTS');
+        lines.push('='.repeat(40));
+        lines.push('');
+        lines.push(`📊 Total Events Found: ${results.totalEvents}`);
+        lines.push(`🐻 Bear Events: ${results.bearEvents}`);
+        lines.push(`📅 Added to Calendar: ${results.calendarEvents}`);
+        
+        if (results.errors && results.errors.length > 0) {
+            lines.push(`❌ Errors: ${results.errors.length}`);
+        }
+        
+        lines.push('');
+        lines.push('📋 Parser Results:');
+        if (results.parserResults) {
+            results.parserResults.forEach(result => {
+                lines.push(`  • ${result.name}: ${result.bearEvents} bear events`);
+            });
+        }
+        
+        const allEvents = this.getAllEventsFromResults(results);
+        if (allEvents && allEvents.length > 0) {
+            lines.push('');
+            lines.push('🎉 Found Events:');
+            allEvents.slice(0, 5).forEach((event, i) => {
+                const title = event.title || event.name || `Event ${i + 1}`;
+                const venue = event.venue || event.bar || '';
+                const city = event.city || '';
+                lines.push(`  • ${title}`);
+                if (venue) lines.push(`    📍 ${venue}`);
+                if (city) lines.push(`    🌍 ${city.toUpperCase()}`);
+            });
+            
+            if (allEvents.length > 5) {
+                lines.push(`  ... and ${allEvents.length - 5} more events`);
+            }
+        }
+        
+        if (results.errors && results.errors.length > 0) {
+            lines.push('');
+            lines.push('❌ Errors:');
+            results.errors.slice(0, 3).forEach(error => {
+                lines.push(`  • ${error}`);
+            });
+        }
+        
+        lines.push('');
+        lines.push('🎯 Next Steps:');
+        lines.push('  • Review calendar conflicts');
+        lines.push('  • Check calendar permissions');
+        lines.push('  • Set dryRun: false to add events');
+        
+        return lines.join('\n');
+    }
+
     // Helper method to extract all events from parser results
     getAllEventsFromResults(results) {
         if (!results || !results.parserResults) {
@@ -765,15 +998,18 @@ class ScriptableAdapter {
 
     // Helper method to create event keys for comparison (same logic as shared-core)
     createEventKey(event) {
-        let title = String(event.title || '').toLowerCase().trim();
+        let title = String(event.title || event.name || '').toLowerCase().trim();
+        const originalTitle = title;
         
         // Normalize Megawoof/DURO event titles for better deduplication
         if (/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(title) || /megawoof/i.test(title)) {
             const duroMatch = title.match(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i);
             if (duroMatch) {
                 title = title.replace(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o[^\w]*/i, 'megawoof-duro');
+                console.log(`📱 Scriptable: DURO title normalized: "${originalTitle}" → "${title}"`);
             } else if (/megawoof/i.test(title)) {
                 title = title.replace(/megawoof[:\s\-]*/i, 'megawoof-');
+                console.log(`📱 Scriptable: Megawoof title normalized: "${originalTitle}" → "${title}"`);
             }
         }
         
@@ -781,7 +1017,10 @@ class ScriptableAdapter {
         const date = this.normalizeEventDate(event.startDate);
         const venue = String(event.venue || event.location || '').toLowerCase().trim();
         
-        return `${title}|${date}|${venue}`;
+        const key = `${title}|${date}|${venue}`;
+        console.log(`📱 Scriptable: Created event key: "${key}" for event "${originalTitle}"`);
+        
+        return key;
     }
 
     // Helper method to normalize event dates for consistent comparison
@@ -846,26 +1085,52 @@ class ScriptableAdapter {
     shouldMergeTimeConflict(existingEvent, newEvent) {
         // Check if both events are similar enough to be the same event
         const existingTitle = existingEvent.title.toLowerCase().trim();
-        const newTitle = newEvent.title.toLowerCase().trim();
         
-        // For MEGAWOOF/DURO events, be more aggressive about merging
+        // For new events, check both the current title and original title (if title was overridden)
+        const newTitle = (newEvent.title || newEvent.name || '').toLowerCase().trim();
+        const newOriginalTitle = (newEvent.originalTitle || '').toLowerCase().trim();
+        
+        console.log(`📱 Scriptable: Checking merge eligibility:`);
+        console.log(`   Existing: "${existingTitle}"`);
+        console.log(`   New: "${newTitle}"`);
+        if (newOriginalTitle) {
+            console.log(`   New (original): "${newOriginalTitle}"`);
+        }
+        
+        // Check both current and original titles for MEGAWOOF/DURO patterns
+        const existingHasMegawoof = /megawoof/i.test(existingTitle);
+        const existingHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle);
+        
+        const newHasMegawoof = /megawoof/i.test(newTitle) || /megawoof/i.test(newOriginalTitle);
+        const newHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle) || /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newOriginalTitle);
+        
         const isMegawoofConflict = (
-            (/megawoof|d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle) && 
-             /megawoof|d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle))
+            (existingHasMegawoof || existingHasDuro) && 
+            (newHasMegawoof || newHasDuro)
         );
         
         if (isMegawoofConflict) {
-            console.log(`📱 Scriptable: MEGAWOOF conflict detected - should merge: "${existingEvent.title}" vs "${newEvent.title}"`);
+            console.log(`📱 Scriptable: MEGAWOOF/DURO conflict detected - should merge: "${existingEvent.title}" vs "${newTitle}" (orig: "${newOriginalTitle}")`);
             return true;
         }
         
-        // Check for other similar event patterns
+        // Check for exact title matches (case insensitive) - check both titles
+        if (existingTitle === newTitle || (newOriginalTitle && existingTitle === newOriginalTitle)) {
+            console.log(`📱 Scriptable: Exact title match - should merge: "${existingEvent.title}" vs "${newTitle}"`);
+            return true;
+        }
+        
+        // Check for similarity with both current and original titles
         const titleSimilarity = this.calculateTitleSimilarity(existingTitle, newTitle);
-        if (titleSimilarity > 0.8) { // 80% similarity threshold
-            console.log(`📱 Scriptable: High title similarity (${Math.round(titleSimilarity * 100)}%) - should merge: "${existingEvent.title}" vs "${newEvent.title}"`);
+        const originalTitleSimilarity = newOriginalTitle ? this.calculateTitleSimilarity(existingTitle, newOriginalTitle) : 0;
+        const maxSimilarity = Math.max(titleSimilarity, originalTitleSimilarity);
+        
+        if (maxSimilarity > 0.8) { // 80% similarity threshold
+            console.log(`📱 Scriptable: High title similarity (${Math.round(maxSimilarity * 100)}%) - should merge: "${existingEvent.title}" vs "${newTitle}"`);
             return true;
         }
         
+        console.log(`📱 Scriptable: No merge criteria met - similarity: ${Math.round(maxSimilarity * 100)}%`);
         return false;
     }
 
