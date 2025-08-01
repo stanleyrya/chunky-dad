@@ -30,6 +30,9 @@ class EventbriteParser {
             ...config
         };
         
+        // Initialize city utilities
+        this.initializeCityUtils();
+        
         this.bearKeywords = [
             'megawoof', 'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
@@ -51,6 +54,30 @@ class EventbriteParser {
                 description: 'Full Eventbrite event URLs'
             }
         ];
+    }
+
+    // Initialize city utilities based on environment
+    initializeCityUtils() {
+        try {
+            // Try to load CityUtils based on environment
+            if (typeof require !== 'undefined') {
+                // Node.js environment
+                const { CityUtils } = require('../utils/city-utils');
+                this.cityUtils = new CityUtils();
+            } else if (typeof importModule !== 'undefined') {
+                // Scriptable environment
+                const cityUtilsModule = importModule('utils/city-utils');
+                this.cityUtils = new cityUtilsModule.CityUtils();
+            } else if (typeof window !== 'undefined' && window.CityUtils) {
+                // Web environment
+                this.cityUtils = new window.CityUtils();
+            } else {
+                throw new Error('CityUtils not available');
+            }
+        } catch (error) {
+            console.warn('🎫 Eventbrite: Could not load CityUtils, using fallback city extraction');
+            this.cityUtils = null;
+        }
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
@@ -286,26 +313,39 @@ class EventbriteParser {
             const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
             const image = eventData.logo?.url || eventData.image?.url || '';
             
-            // Enhanced city extraction using address first, then fallback methods
+            // Enhanced city extraction using shared city utilities
             let city = null;
             
-            // Method 1: Extract from address if available
-            if (address) {
-                city = this.extractCityFromAddress(address);
-                console.log(`🎫 Eventbrite: Extracted city from address "${address}": ${city}`);
-            }
-            
-            // Method 2: Extract from venue name and title if no address
-            if (!city) {
-                const searchText = `${title} ${venue || ''}`;
-                city = this.extractCityFromText(searchText);
-                console.log(`🎫 Eventbrite: Extracted city from text "${searchText}": ${city}`);
-            }
-            
-            // Method 3: Extract from URL
-            if (!city && url) {
-                city = this.extractCityFromText(url);
-                console.log(`🎫 Eventbrite: Extracted city from URL "${url}": ${city}`);
+            if (this.cityUtils) {
+                // Use shared city utilities for consistent extraction
+                city = this.cityUtils.extractCityFromEvent(eventData, url);
+                
+                if (address && !city) {
+                    city = this.cityUtils.extractCityFromAddress(address);
+                }
+                
+                if (!city) {
+                    const searchText = `${title} ${venue || ''}`;
+                    city = this.cityUtils.extractCityFromText(searchText);
+                }
+                
+                if (!city && url) {
+                    city = this.cityUtils.extractCityFromText(url);
+                }
+            } else {
+                // Fallback to old method if city utils not available
+                if (address) {
+                    city = this.extractCityFromAddress(address);
+                }
+                
+                if (!city) {
+                    const searchText = `${title} ${venue || ''}`;
+                    city = this.extractCityFromText(searchText);
+                }
+                
+                if (!city && url) {
+                    city = this.extractCityFromText(url);
+                }
             }
             
             // Special handling for Megawoof America events without explicit city
@@ -329,8 +369,8 @@ class EventbriteParser {
                 price: price,
                 image: image,
                 source: this.config.source,
-                isBearEvent: true, // Assume bear event for Megawoof organizer
-                requiresDetailFetch: this.config.requireDetailPages // JSON already has most details, but user may want more
+                // Since alwaysBear is true in config, this will be overridden by shared-core anyway
+                isBearEvent: this.config.alwaysBear
             };
             
         } catch (error) {
@@ -412,8 +452,13 @@ class EventbriteParser {
                 return null;
             }
             
-            // Extract city
-            const city = this.extractCityFromText(title + ' ' + venue + ' ' + url);
+            // Extract city using shared utilities
+            let city = null;
+            if (this.cityUtils) {
+                city = this.cityUtils.extractCityFromText(title + ' ' + venue + ' ' + url);
+            } else {
+                city = this.extractCityFromText(title + ' ' + venue + ' ' + url);
+            }
             
             return {
                 title: title,
@@ -426,7 +471,8 @@ class EventbriteParser {
                 price: '',
                 image: '',
                 source: this.config.source,
-                isBearEvent: false // Will be filtered later
+                // Since alwaysBear is true in config, this will be overridden by shared-core anyway
+                isBearEvent: this.config.alwaysBear
             };
             
         } catch (error) {
@@ -563,125 +609,52 @@ class EventbriteParser {
         return this.extractCityFromText(searchText);
     }
 
-    // Extract city from address string
-    extractCityFromAddress(address) {
-        if (!address || typeof address !== 'string') return null;
-        
-        const lowerAddress = address.toLowerCase();
-        
-        // Enhanced city mappings for address parsing
-        const cityMappings = {
-            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-            'los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles': 'la',
-            'san francisco|sf|castro': 'sf',
-            'chicago|chi': 'chicago',
-            'atlanta|atl': 'atlanta',
-            'miami|south beach|miami beach': 'miami',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'denver': 'denver',
-            'las vegas|vegas': 'vegas',
-            'boston': 'boston',
-            'philadelphia|philly': 'philadelphia',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix',
-            'long beach': 'la' // Long Beach is part of LA area for bear events
-        };
-        
-        // Special case for "LA" - only match if it's standalone or followed by comma/space
-        if (/\bla\b[,\s]|^la[,\s]|[,\s]la$/i.test(lowerAddress)) {
-            console.log(`🎫 Eventbrite: City matched standalone "LA" pattern -> la`);
-            return 'la';
-        }
-        
-        // First try exact matches in address - use word boundaries for precision
-        for (const [patterns, city] of Object.entries(cityMappings)) {
-            const patternList = patterns.split('|');
-            for (const pattern of patternList) {
-                // Use word boundaries to avoid substring matches (e.g., "la" in "Atlanta")
-                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                if (regex.test(lowerAddress)) {
-                    console.log(`🎫 Eventbrite: City matched pattern "${pattern}" -> ${city}`);
+    // Extract city from text content
+    extractCityFromText(text) {
+        if (!this.cityUtils) {
+            console.warn('🎫 Eventbrite: CityUtils not initialized, falling back to simple text extraction.');
+            const cityMappings = {
+                'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
+                'los angeles|la|hollywood|west hollywood|weho': 'la',
+                'san francisco|sf|castro': 'sf',
+                'chicago|chi': 'chicago',
+                'atlanta|atl': 'atlanta',
+                'miami|south beach': 'miami',
+                'seattle': 'seattle',
+                'portland': 'portland',
+                'denver': 'denver',
+                'las vegas|vegas': 'vegas',
+                'boston': 'boston',
+                'philadelphia|philly': 'philadelphia',
+                'austin': 'austin',
+                'dallas': 'dallas',
+                'houston': 'houston',
+                'phoenix': 'phoenix'
+            };
+            
+            const lowerText = text.toLowerCase();
+            
+            for (const [patterns, city] of Object.entries(cityMappings)) {
+                const patternList = patterns.split('|');
+                if (patternList.some(pattern => lowerText.includes(pattern))) {
                     return city;
                 }
             }
+            
+            return null;
         }
-        
-        // Try to extract city from standard address format: "City, State ZIP"
-        const cityStateMatch = address.match(/([^,]+),\s*([A-Z]{2})\s*\d{5}/i);
-        if (cityStateMatch) {
-            const cityName = cityStateMatch[1].trim().toLowerCase();
-            const stateName = cityStateMatch[2].trim().toUpperCase();
-            
-            console.log(`🎫 Eventbrite: Extracted city/state from address: "${cityName}, ${stateName}"`);
-            
-            // Check if the extracted city matches our mappings
-            for (const [patterns, city] of Object.entries(cityMappings)) {
-                const patternList = patterns.split('|');
-                for (const pattern of patternList) {
-                    // Use word boundaries to avoid substring matches
-                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                    if (regex.test(cityName)) {
-                        console.log(`🎫 Eventbrite: City name "${cityName}" matched pattern "${pattern}" -> ${city}`);
-                        return city;
-                    }
-                }
-            }
-            
-            // State-specific mappings for cities not in main list
-            const stateSpecificMappings = {
-                'GA': { 'atlanta': 'atlanta' },
-                'NV': { 'las vegas': 'vegas' },
-                'CO': { 'denver': 'denver' },
-                'CA': { 'los angeles': 'la', 'long beach': 'la' }
-            };
-            
-            if (stateSpecificMappings[stateName] && stateSpecificMappings[stateName][cityName]) {
-                const mappedCity = stateSpecificMappings[stateName][cityName];
-                console.log(`🎫 Eventbrite: State-specific mapping: "${cityName}, ${stateName}" -> ${mappedCity}`);
-                return mappedCity;
-            }
-            
-            // Return normalized city name if not in mappings
-            return this.normalizeCityName(cityName);
-        }
-        
-        return null;
+
+        return this.cityUtils.extractCityFromText(text);
     }
 
-    // Extract city from text content
-    extractCityFromText(text) {
-        const cityMappings = {
-            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-            'los angeles|la|hollywood|west hollywood|weho': 'la',
-            'san francisco|sf|castro': 'sf',
-            'chicago|chi': 'chicago',
-            'atlanta|atl': 'atlanta',
-            'miami|south beach': 'miami',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'denver': 'denver',
-            'las vegas|vegas': 'vegas',
-            'boston': 'boston',
-            'philadelphia|philly': 'philadelphia',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix'
-        };
-        
-        const lowerText = text.toLowerCase();
-        
-        for (const [patterns, city] of Object.entries(cityMappings)) {
-            const patternList = patterns.split('|');
-            if (patternList.some(pattern => lowerText.includes(pattern))) {
-                return city;
-            }
+    // Extract city from address (fallback method)
+    extractCityFromAddress(address) {
+        if (!this.cityUtils) {
+            // Simple fallback extraction
+            return this.extractCityFromText(address);
         }
         
-        return null;
+        return this.cityUtils.extractCityFromAddress(address);
     }
 
     // Normalize city names
@@ -719,6 +692,31 @@ class EventbriteParser {
         }
         
         return url;
+    }
+
+    // Check if an event is a bear event based on keywords and title
+    isBearEvent(event) {
+        const title = event.title || '';
+        const description = event.description || '';
+        const venue = event.venue || '';
+        const url = event.url || '';
+
+        // Check if the title or description contains bear keywords
+        if (this.bearKeywords.some(keyword => 
+            title.toLowerCase().includes(keyword) || 
+            description.toLowerCase().includes(keyword) || 
+            venue.toLowerCase().includes(keyword) || 
+            url.toLowerCase().includes(keyword)
+        )) {
+            return true;
+        }
+
+        // Check if the URL itself contains bear keywords (e.g., megawoof.com)
+        if (url.toLowerCase().includes('megawoof.com')) {
+            return true;
+        }
+
+        return false;
     }
 }
 
