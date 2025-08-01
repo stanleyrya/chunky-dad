@@ -166,28 +166,110 @@ class ScriptableAdapter {
                     const calendarName = this.getCalendarName(event, parserConfig);
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
-                    // Check if event already exists
-                    const existingEvents = await CalendarEvent.between(
-                        new Date(event.startDate),
-                        new Date(event.endDate || event.startDate),
-                        [calendar]
-                    );
+                    // Check for existing events in a broader time range for better conflict detection
+                    const startDate = new Date(event.startDate);
+                    const endDate = new Date(event.endDate || event.startDate);
                     
-                    const isDuplicate = existingEvents.some(existing => 
+                    // Expand search range to catch potential conflicts
+                    const searchStart = new Date(startDate);
+                    searchStart.setHours(0, 0, 0, 0); // Start of day
+                    const searchEnd = new Date(endDate);
+                    searchEnd.setHours(23, 59, 59, 999); // End of day
+                    
+                    const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                    
+                    // Check for exact duplicates first (same title and time within 1 minute)
+                    const exactDuplicate = existingEvents.find(existing => 
                         existing.title === event.title &&
-                        Math.abs(existing.startDate.getTime() - new Date(event.startDate).getTime()) < 60000 // Within 1 minute
+                        this.areDatesEqual(existing.startDate, startDate, 1) // Within 1 minute, timezone-aware
                     );
                     
-                    if (isDuplicate) {
-                        console.log(`📱 Scriptable: Skipping duplicate event: ${event.title}`);
+                    if (exactDuplicate) {
+                        console.log(`📱 Scriptable: Skipping exact duplicate event: ${event.title}`);
                         continue;
                     }
                     
-                    // Create new calendar event
+                    // Check for similar events that should be merged (using same logic as shared-core deduplication)
+                    const similarEvent = existingEvents.find(existing => {
+                        const existingKey = this.createEventKey({
+                            title: existing.title,
+                            startDate: existing.startDate,
+                            venue: existing.location || ''
+                        });
+                        const newEventKey = this.createEventKey(event);
+                        return existingKey === newEventKey;
+                    });
+                    
+                    if (similarEvent) {
+                        console.log(`📱 Scriptable: Found similar event to merge: "${similarEvent.title}" with "${event.title}"`);
+                        
+                        // Update the existing event with merged data
+                        const mergedData = this.mergeEventData(similarEvent, event);
+                        
+                        // Update existing calendar event
+                        similarEvent.title = mergedData.title;
+                        similarEvent.notes = mergedData.notes;
+                        if (mergedData.url && !similarEvent.url) {
+                            similarEvent.url = mergedData.url;
+                        }
+                        if (mergedData.location && !similarEvent.location) {
+                            similarEvent.location = mergedData.location;
+                        }
+                        
+                        await similarEvent.save();
+                        console.log(`📱 Scriptable: ✓ Merged event: ${similarEvent.title}`);
+                        addedCount++; // Count as an update
+                        continue;
+                    }
+                    
+                    // Check for time conflicts (overlapping events) that might need merging
+                    const timeConflicts = existingEvents.filter(existing => {
+                        return this.doDatesOverlap(
+                            existing.startDate, 
+                            existing.endDate, 
+                            startDate, 
+                            endDate
+                        );
+                    });
+                    
+                    // For MEGAWOOF/DURO events, check if time conflicts should be merged
+                    if (timeConflicts.length > 0) {
+                        const shouldMergeConflict = timeConflicts.find(conflict => {
+                            return this.shouldMergeTimeConflict(conflict, event);
+                        });
+                        
+                        if (shouldMergeConflict) {
+                            console.log(`📱 Scriptable: Merging time conflict: "${shouldMergeConflict.title}" with "${event.title}"`);
+                            
+                            // Update the existing event with merged data
+                            const mergedData = this.mergeEventData(shouldMergeConflict, event);
+                            
+                            shouldMergeConflict.title = mergedData.title;
+                            shouldMergeConflict.notes = mergedData.notes;
+                            if (mergedData.url && !shouldMergeConflict.url) {
+                                shouldMergeConflict.url = mergedData.url;
+                            }
+                            if (mergedData.location && !shouldMergeConflict.location) {
+                                shouldMergeConflict.location = mergedData.location;
+                            }
+                            
+                            await shouldMergeConflict.save();
+                            console.log(`📱 Scriptable: ✓ Merged time conflict: ${shouldMergeConflict.title}`);
+                            addedCount++; // Count as an update
+                            continue;
+                        } else {
+                            console.log(`📱 Scriptable: ⚠️ Time conflict detected but not merging: ${event.title}`);
+                            timeConflicts.forEach(conflict => {
+                                console.log(`   - Conflicts with: "${conflict.title}": ${conflict.startDate.toLocaleString()} - ${conflict.endDate.toLocaleString()}`);
+                            });
+                        }
+                    }
+                    
+                    // Create new calendar event if no conflicts or merges
                     const calendarEvent = new CalendarEvent();
                     calendarEvent.title = event.title;
-                    calendarEvent.startDate = new Date(event.startDate);
-                    calendarEvent.endDate = new Date(event.endDate || event.startDate);
+                    calendarEvent.startDate = startDate;
+                    calendarEvent.endDate = endDate;
                     calendarEvent.location = event.venue || '';
                     calendarEvent.notes = this.formatEventNotes(event);
                     calendarEvent.calendar = calendar;
@@ -207,7 +289,7 @@ class ScriptableAdapter {
                 }
             }
             
-            console.log(`📱 Scriptable: ✓ Successfully added ${addedCount} events to calendar`);
+            console.log(`📱 Scriptable: ✓ Successfully processed ${addedCount} events to calendar`);
             return addedCount;
             
         } catch (error) {
@@ -679,6 +761,143 @@ class ScriptableAdapter {
         }
         
         return allEvents;
+    }
+
+    // Helper method to create event keys for comparison (same logic as shared-core)
+    createEventKey(event) {
+        let title = String(event.title || '').toLowerCase().trim();
+        
+        // Normalize Megawoof/DURO event titles for better deduplication
+        if (/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(title) || /megawoof/i.test(title)) {
+            const duroMatch = title.match(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i);
+            if (duroMatch) {
+                title = title.replace(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o[^\w]*/i, 'megawoof-duro');
+            } else if (/megawoof/i.test(title)) {
+                title = title.replace(/megawoof[:\s\-]*/i, 'megawoof-');
+            }
+        }
+        
+        // Use a more robust date comparison that handles timezones better
+        const date = this.normalizeEventDate(event.startDate);
+        const venue = String(event.venue || event.location || '').toLowerCase().trim();
+        
+        return `${title}|${date}|${venue}`;
+    }
+
+    // Helper method to normalize event dates for consistent comparison
+    normalizeEventDate(dateInput) {
+        if (!dateInput) return '';
+        
+        try {
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+            
+            // Use a consistent date format that ignores time zone differences
+            // This uses the local date components to create a date string
+            // that will be the same regardless of the device's timezone
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+        } catch (error) {
+            console.log(`📱 Scriptable: Warning - Failed to normalize date: ${dateInput}, error: ${error.message}`);
+            return '';
+        }
+    }
+
+    // Helper method to compare dates with timezone awareness
+    areDatesEqual(date1, date2, toleranceMinutes = 1) {
+        try {
+            const d1 = new Date(date1);
+            const d2 = new Date(date2);
+            
+            if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+                return false;
+            }
+            
+            const diffMs = Math.abs(d1.getTime() - d2.getTime());
+            const toleranceMs = toleranceMinutes * 60 * 1000;
+            
+            return diffMs <= toleranceMs;
+        } catch (error) {
+            console.log(`📱 Scriptable: Warning - Failed to compare dates: ${error.message}`);
+            return false;
+        }
+    }
+
+    // Helper method to check if two dates overlap (for time conflict detection)
+    doDatesOverlap(start1, end1, start2, end2) {
+        try {
+            const s1 = new Date(start1).getTime();
+            const e1 = new Date(end1).getTime();
+            const s2 = new Date(start2).getTime();
+            const e2 = new Date(end2).getTime();
+            
+            // Check for any overlap
+            return s1 < e2 && s2 < e1;
+        } catch (error) {
+            console.log(`📱 Scriptable: Warning - Failed to check date overlap: ${error.message}`);
+            return false;
+        }
+    }
+
+    // Helper method to determine if time conflicts should be merged
+    shouldMergeTimeConflict(existingEvent, newEvent) {
+        // Check if both events are similar enough to be the same event
+        const existingTitle = existingEvent.title.toLowerCase().trim();
+        const newTitle = newEvent.title.toLowerCase().trim();
+        
+        // For MEGAWOOF/DURO events, be more aggressive about merging
+        const isMegawoofConflict = (
+            (/megawoof|d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle) && 
+             /megawoof|d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle))
+        );
+        
+        if (isMegawoofConflict) {
+            console.log(`📱 Scriptable: MEGAWOOF conflict detected - should merge: "${existingEvent.title}" vs "${newEvent.title}"`);
+            return true;
+        }
+        
+        // Check for other similar event patterns
+        const titleSimilarity = this.calculateTitleSimilarity(existingTitle, newTitle);
+        if (titleSimilarity > 0.8) { // 80% similarity threshold
+            console.log(`📱 Scriptable: High title similarity (${Math.round(titleSimilarity * 100)}%) - should merge: "${existingEvent.title}" vs "${newEvent.title}"`);
+            return true;
+        }
+        
+        return false;
+    }
+
+    // Helper method to calculate title similarity
+    calculateTitleSimilarity(title1, title2) {
+        // Simple Jaccard similarity based on words
+        const words1 = new Set(title1.split(/\s+/));
+        const words2 = new Set(title2.split(/\s+/));
+        
+        const intersection = new Set([...words1].filter(x => words2.has(x)));
+        const union = new Set([...words1, ...words2]);
+        
+        return intersection.size / union.size;
+    }
+
+    // Helper method to merge event data
+    mergeEventData(existingEvent, newEvent) {
+        const existingNotes = existingEvent.notes || '';
+        const newNotes = this.formatEventNotes(newEvent);
+        
+        // Combine notes if they're different
+        let mergedNotes = existingNotes;
+        if (newNotes && newNotes !== existingNotes) {
+            mergedNotes = existingNotes ? `${existingNotes}\n\n--- Additional Info ---\n${newNotes}` : newNotes;
+        }
+        
+        return {
+            title: existingEvent.title, // Keep existing title
+            notes: mergedNotes,
+            url: existingEvent.url || newEvent.url,
+            location: existingEvent.location || newEvent.venue
+        };
     }
 }
 

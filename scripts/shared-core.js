@@ -419,7 +419,7 @@ class SharedCore {
             console.log(`🔄 SharedCore: Normalized Megawoof title for deduplication: "${event.title}" → "${title}"`);
         }
         
-        const date = event.startDate ? new Date(event.startDate).toDateString() : '';
+        const date = this.normalizeEventDate(event.startDate);
         const venue = String(event.venue || '').toLowerCase().trim();
         
         return `${title}|${date}|${venue}`;
@@ -434,6 +434,28 @@ class SharedCore {
             price: existing.price || newEvent.price,
             // Keep the most complete event data
         };
+    }
+
+    // Helper method to normalize event dates for consistent comparison across timezones
+    normalizeEventDate(dateInput) {
+        if (!dateInput) return '';
+        
+        try {
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+            
+            // Use a consistent date format that ignores time zone differences
+            // This uses the local date components to create a date string
+            // that will be the same regardless of the device's timezone
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+        } catch (error) {
+            console.log(`🔄 SharedCore: Warning - Failed to normalize date: ${dateInput}, error: ${error.message}`);
+            return '';
+        }
     }
 
     // URL processing utilities
