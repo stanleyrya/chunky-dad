@@ -17,6 +17,8 @@ scripts/
 ├── adapters/                           # Environment-specific implementations
 │   ├── scriptable-adapter.js           # iOS/Scriptable ONLY code
 │   └── web-adapter.js                  # Browser/Web ONLY code
+├── utils/                              # Shared utility functions (NO environment code)
+│   └── city-utils.js                   # City mapping and location extraction utilities
 └── parsers/                            # Pure parsing logic (NO environment code)
     ├── eventbrite-parser.js            # Eventbrite venue parsing
     ├── bearracuda-parser.js            # Bearracuda venue parsing
@@ -67,6 +69,12 @@ scripts/
 - **Purpose**: Venue-specific HTML/JSON parsing
 - **Environment**: Pure JavaScript - works everywhere
 - **Contains**: Regex patterns, JSON parsing, text extraction, date parsing
+- **Cannot contain**: HTTP requests, environment detection, calendar operations, DOM APIs
+
+### `utils/*.js` (Shared Utilities)
+- **Purpose**: Common utility functions used across parsers and shared-core
+- **Environment**: Pure JavaScript - works everywhere
+- **Contains**: City mapping, text processing, data normalization, validation helpers
 - **Cannot contain**: HTTP requests, environment detection, calendar operations, DOM APIs
 
 ## 🔄 DATA FLOW
