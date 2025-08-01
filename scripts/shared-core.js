@@ -69,9 +69,9 @@ class SharedCore {
         const results = {
             totalEvents: 0,
             bearEvents: 0,
-            calendarEvents: 0,
             errors: [],
-            parserResults: []
+            parserResults: [],
+            allProcessedEvents: [] // All events ready for calendar
         };
 
         if (!config.parsers || config.parsers.length === 0) {
@@ -88,7 +88,11 @@ class SharedCore {
                 results.parserResults.push(parserResult);
                 results.totalEvents += parserResult.totalEvents;
                 results.bearEvents += parserResult.bearEvents;
-                results.calendarEvents += parserResult.calendarEvents;
+                
+                // Collect all processed events
+                if (parserResult.events && parserResult.events.length > 0) {
+                    results.allProcessedEvents.push(...parserResult.events);
+                }
                 
                 await displayAdapter.logSuccess(`SYSTEM: Completed parser ${parserConfig.name}: ${parserResult.bearEvents} bear events found`);
                 
@@ -103,7 +107,7 @@ class SharedCore {
             }
         }
 
-        await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}, Calendar: ${results.calendarEvents}`);
+        await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}`);
         return results;
     }
 
@@ -200,23 +204,14 @@ class SharedCore {
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
         await displayAdapter.logInfo(`SYSTEM: Deduplicated events: ${deduplicatedEvents.length}/${bearEvents.length}`);
 
-        // Add to calendar if not dry run
-        let calendarEvents = 0;
-        if (!parserConfig.dryRun && displayAdapter.addToCalendar) {
-            await displayAdapter.logInfo(`SYSTEM: Adding ${deduplicatedEvents.length} events to calendar (not dry run)...`);
-            calendarEvents = await displayAdapter.addToCalendar(deduplicatedEvents, parserConfig);
-        } else {
-            await displayAdapter.logInfo(`SYSTEM: Dry run mode: would add ${deduplicatedEvents.length} events to calendar`);
-        }
-
-        await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${deduplicatedEvents.length} bear events found, ${calendarEvents} added to calendar`);
+        await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${deduplicatedEvents.length} bear events found`);
 
         return {
             name: parserConfig.name,
             totalEvents: allEvents.length,
             bearEvents: deduplicatedEvents.length,
-            calendarEvents: calendarEvents,
-            events: deduplicatedEvents
+            events: deduplicatedEvents,
+            config: parserConfig // Include config for orchestrator to use
         };
     }
 
@@ -668,7 +663,8 @@ class SharedCore {
             endDate: event.endDate || event.startDate,
             location: this.formatLocationForCalendar(event),
             notes: this.formatEventNotes(event),
-            url: event.url || null
+            url: event.url || null,
+            city: event.city || 'default' // Include city for calendar selection
         };
         
         return calendarEvent;
@@ -795,6 +791,11 @@ class SharedCore {
         }
         
         return { startDate, endDate };
+    }
+
+    // Prepare events for calendar integration
+    prepareEventsForCalendar(events) {
+        return events.map(event => this.formatEventForCalendar(event));
     }
 }
 

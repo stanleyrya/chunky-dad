@@ -241,6 +241,34 @@ class BearEventScraperOrchestrator {
             console.log('🐻 Orchestrator: Calling sharedCore.processEvents...');
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
             console.log('🐻 Orchestrator: ✓ Event processing completed');
+            
+            // Add to calendar if not dry run and we have events
+            if (results.allProcessedEvents && results.allProcessedEvents.length > 0) {
+                console.log(`🐻 Orchestrator: Processing ${results.allProcessedEvents.length} events for calendar...`);
+                
+                let calendarEvents = 0;
+                
+                // Check if we should add to calendar
+                const isDryRun = config.parsers.some(p => p.dryRun === true);
+                
+                if (!isDryRun && typeof finalAdapter.addToCalendar === 'function') {
+                    console.log('🐻 Orchestrator: Adding events to calendar (not dry run)...');
+                    try {
+                        // Prepare events for calendar using SharedCore
+                        const calendarReadyEvents = sharedCore.prepareEventsForCalendar(results.allProcessedEvents);
+                        calendarEvents = await finalAdapter.addToCalendar(calendarReadyEvents, config);
+                        console.log(`🐻 Orchestrator: ✓ Added ${calendarEvents} events to calendar`);
+                    } catch (error) {
+                        console.error(`🐻 Orchestrator: ✗ Failed to add events to calendar: ${error.message}`);
+                        results.errors.push(`Calendar integration failed: ${error.message}`);
+                    }
+                } else {
+                    console.log('🐻 Orchestrator: Dry run mode or calendar not supported - skipping calendar integration');
+                }
+                
+                // Add calendar count to results
+                results.calendarEvents = calendarEvents;
+            }
 
             // Display results
             console.log('🐻 Orchestrator: Displaying results...');

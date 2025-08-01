@@ -151,34 +151,42 @@ class ScriptableAdapter {
         }
     }
 
-    // Calendar Integration
-    async addToCalendar(events, parserConfig) {
-        if (!events || events.length === 0) {
+    // Calendar Integration - receives pre-formatted calendar events
+    async addToCalendar(calendarEvents, config) {
+        if (!calendarEvents || calendarEvents.length === 0) {
             console.log('📱 Scriptable: No events to add to calendar');
             return 0;
         }
 
         try {
-            console.log(`📱 Scriptable: Adding ${events.length} events to calendar`);
+            console.log(`📱 Scriptable: Adding ${calendarEvents.length} events to calendar`);
             
             let addedCount = 0;
+            const calendarMappings = config.calendarMappings || this.calendarMappings;
             
-            for (const event of events) {
+            for (const event of calendarEvents) {
                 try {
-                    const calendarName = this.getCalendarName(event, parserConfig);
+                    // Determine calendar name from city
+                    const city = event.city || 'default';
+                    const calendarName = calendarMappings[city] || `chunky-dad-${city}`;
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
-                    // Check for existing events in a broader time range for better conflict detection
-                    const { startDate, endDate, searchStart, searchEnd } = this.sharedCore ? 
-                        this.sharedCore.getEventDateRange(event, true) : 
-                        { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
+                    // Parse dates from formatted event
+                    const startDate = new Date(event.startDate);
+                    const endDate = new Date(event.endDate);
+                    
+                    // Expand search range for conflict detection
+                    const searchStart = new Date(startDate);
+                    searchStart.setHours(0, 0, 0, 0);
+                    const searchEnd = new Date(endDate);
+                    searchEnd.setHours(23, 59, 59, 999);
                     
                     const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                     
                     // Check for exact duplicates first (same title and time within 1 minute)
                     const exactDuplicate = existingEvents.find(existing => 
                         existing.title === event.title &&
-                        this.areDatesEqual(existing.startDate, startDate, 1) // Within 1 minute, timezone-aware
+                        this.areDatesEqual(existing.startDate, startDate, 1)
                     );
                     
                     if (exactDuplicate) {
@@ -186,75 +194,37 @@ class ScriptableAdapter {
                         continue;
                     }
                     
-                    // Check for similar events that should be merged (using same logic as shared-core deduplication)
-                    const similarEvent = existingEvents.find(existing => {
-                        const existingKey = this.sharedCore ? this.sharedCore.createEventKey({
-                            title: existing.title,
-                            startDate: existing.startDate,
-                            venue: existing.location || ''
-                        }) : '';
-                        const newEventKey = this.sharedCore ? this.sharedCore.createEventKey(event) : '';
-                        return existingKey === newEventKey;
+                    // Check if we should update an existing event
+                    const existingEvent = existingEvents.find(existing => {
+                        // Check if this is the same event that needs updating
+                        return existing.title === event.title || 
+                               (existing.location === event.location && 
+                                this.areDatesEqual(existing.startDate, startDate, 60)); // Within 1 hour
                     });
                     
-                    if (similarEvent) {
-                        console.log(`📱 Scriptable: Found similar event to merge: "${similarEvent.title}" with "${event.title}"`);
-                        
-                        // Update the existing event with merged data
-                        const mergedData = this.mergeEventData(similarEvent, event);
-                        
-                        // Update existing calendar event
-                        await this.updateCalendarEvent(similarEvent, mergedData, event, 'Merged');
-                        addedCount++; // Count as an update
+                    if (existingEvent) {
+                        // Update existing event
+                        console.log(`📱 Scriptable: Updating existing event: ${event.title}`);
+                        existingEvent.title = event.title;
+                        existingEvent.notes = event.notes;
+                        existingEvent.location = event.location;
+                        if (event.url) {
+                            existingEvent.url = event.url;
+                        }
+                        await existingEvent.save();
+                        addedCount++;
                         continue;
                     }
                     
-                    // Check for time conflicts (overlapping events) that might need merging
-                    const timeConflicts = existingEvents.filter(existing => {
-                        return this.doDatesOverlap(
-                            existing.startDate, 
-                            existing.endDate, 
-                            startDate, 
-                            endDate
-                        );
-                    });
-                    
-                    // For MEGAWOOF/DURO events, check if time conflicts should be merged
-                    if (timeConflicts.length > 0) {
-                        const shouldMergeConflict = timeConflicts.find(conflict => {
-                            return this.shouldMergeTimeConflict(conflict, event);
-                        });
-                        
-                        if (shouldMergeConflict) {
-                            console.log(`📱 Scriptable: Merging time conflict: "${shouldMergeConflict.title}" with "${event.title}"`);
-                            
-                            // Update the existing event with merged data
-                            const mergedData = this.mergeEventData(shouldMergeConflict, event);
-                            
-                            await this.updateCalendarEvent(shouldMergeConflict, mergedData, event, 'Merged time conflict');
-                            addedCount++; // Count as an update
-                            continue;
-                        } else {
-                            console.log(`📱 Scriptable: ⚠️ Time conflict detected but not merging: ${event.title}`);
-                            timeConflicts.forEach(conflict => {
-                                console.log(`   - Conflicts with: "${conflict.title}": ${conflict.startDate.toLocaleString()} - ${conflict.endDate.toLocaleString()}`);
-                            });
-                        }
-                    }
-                    
-                    // Create new calendar event if no conflicts or merges
+                    // Create new calendar event
                     const calendarEvent = new CalendarEvent();
                     calendarEvent.title = event.title;
                     calendarEvent.startDate = startDate;
                     calendarEvent.endDate = endDate;
-                    
-                    // Set location to GPS coordinates only
-                    calendarEvent.location = this.sharedCore ? this.sharedCore.formatLocationForCalendar(event) : '';
-                    
-                    calendarEvent.notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
+                    calendarEvent.location = event.location;
+                    calendarEvent.notes = event.notes;
                     calendarEvent.calendar = calendar;
                     
-                    // Set URL if available
                     if (event.url) {
                         calendarEvent.url = event.url;
                     }
@@ -299,33 +269,7 @@ class ScriptableAdapter {
         }
     }
 
-    getCalendarName(event, parserConfig) {
-        // Use calendar mapping from config
-        const city = event.city || 'default';
-        return this.calendarMappings[city] || `chunky-dad-${city}`;
-    }
-    
 
-    
-    // Helper method to update calendar event with merged data
-    async updateCalendarEvent(calendarEvent, mergedData, event, actionType) {
-        calendarEvent.title = mergedData.title;
-        calendarEvent.notes = mergedData.notes;
-        if (mergedData.url && !calendarEvent.url) {
-            calendarEvent.url = mergedData.url;
-        }
-        calendarEvent.location = this.sharedCore ? this.sharedCore.formatLocationForCalendar(event) : '';
-        await calendarEvent.save();
-        console.log(`📱 Scriptable: ✓ ${actionType} event: ${calendarEvent.title}`);
-        return true;
-    }
-    
-    // Helper method to validate calendar exists
-    async validateCalendarExists(event, availableCalendars) {
-        const calendarName = this.getCalendarName(event, null);
-        const calendar = availableCalendars.find(cal => cal.title === calendarName);
-        return { calendarName, calendar, exists: !!calendar };
-    }
 
 
 
@@ -425,7 +369,7 @@ class ScriptableAdapter {
             console.log('─'.repeat(40));
             
             // Calendar assignment
-            const calendarName = this.getCalendarName(event, null);
+            const calendarName = this.getCalendarNameForDisplay(event);
             console.log(`📅 Target Calendar: "${calendarName}"`);
             
             // Check if calendar exists
@@ -490,7 +434,7 @@ class ScriptableAdapter {
         const availableCalendars = await Calendar.forEvents();
         
         for (const event of allEvents) {
-            const calendarName = this.getCalendarName(event, null);
+            const calendarName = this.getCalendarNameForDisplay(event);
             const calendar = availableCalendars.find(cal => cal.title === calendarName);
             
             console.log(`\n🐻 Checking: ${event.title || event.name}`);
@@ -586,7 +530,7 @@ class ScriptableAdapter {
             const allEvents = this.getAllEventsFromResults(this.lastResults);
             const neededCalendars = new Set();
             allEvents.forEach(event => {
-                const calendarName = this.getCalendarName(event, null);
+                const calendarName = this.getCalendarNameForDisplay(event);
                 neededCalendars.add(calendarName);
             });
             
@@ -721,7 +665,7 @@ class ScriptableAdapter {
             cities: [...new Set(allEvents.map(e => e.city).filter(Boolean))],
             recurringEvents: allEvents.filter(e => e.recurring).length,
             oneTimeEvents: allEvents.filter(e => !e.recurring).length,
-            calendarsNeeded: [...new Set(allEvents.map(e => this.getCalendarName(e, null)))],
+            calendarsNeeded: [...new Set(allEvents.map(e => this.getCalendarNameForDisplay(e)))],
             timezones: [...new Set(allEvents.map(e => e.timezone).filter(Boolean))]
         };
         
@@ -804,7 +748,7 @@ class ScriptableAdapter {
         const conflictEvents = [];
         
         for (const event of allEvents) {
-            const calendarName = this.getCalendarName(event, null);
+            const calendarName = this.getCalendarNameForDisplay(event);
             const calendar = availableCalendars.find(cal => cal.title === calendarName);
             
             if (!calendar) {
@@ -1194,7 +1138,7 @@ class ScriptableAdapter {
         });
         
         const notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
-        const calendarName = this.getCalendarName(event, null);
+        const calendarName = this.getCalendarNameForDisplay(event);
         
         let html = `
         <div class="event-card">
@@ -1703,6 +1647,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     // Set shared core reference
     setSharedCore(sharedCore) {
         this.sharedCore = sharedCore;
+    }
+
+    // Helper to get calendar name for display purposes only
+    getCalendarNameForDisplay(event) {
+        const city = event.city || 'default';
+        return this.calendarMappings[city] || `chunky-dad-${city}`;
     }
 }
 
