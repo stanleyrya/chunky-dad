@@ -8,7 +8,7 @@
       "name": "Megawoof America",
       "parser": "eventbrite",
       "urls": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
-      "alwaysBear": true,
+      "alwaysBear": false,
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "dryRun": true,

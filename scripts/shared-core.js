@@ -25,7 +25,7 @@ class SharedCore {
         this.bearKeywords = [
             'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
             'otter', 'leather', 'muscle bear', 'bearracuda', 'furball', 'megawoof',
-            'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
+            'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly', 'duro'
         ];
     }
 

@@ -36,7 +36,7 @@ class EventbriteParser {
         this.bearKeywords = [
             'megawoof', 'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
-            'furball', 'leather bears', 'bear night', 'bear party'
+            'furball', 'leather bears', 'bear night', 'bear party', 'duro'
         ];
         
         // URL patterns for additional link extraction
@@ -369,8 +369,13 @@ class EventbriteParser {
                 price: price,
                 image: image,
                 source: this.config.source,
-                // Since alwaysBear is true in config, this will be overridden by shared-core anyway
-                isBearEvent: this.config.alwaysBear
+                // Properly handle bear event detection based on configuration
+                isBearEvent: this.config.alwaysBear || this.isBearEvent({
+                    title: title,
+                    description: '',
+                    venue: venue,
+                    url: url
+                })
             };
             
         } catch (error) {
@@ -471,8 +476,13 @@ class EventbriteParser {
                 price: '',
                 image: '',
                 source: this.config.source,
-                // Since alwaysBear is true in config, this will be overridden by shared-core anyway
-                isBearEvent: this.config.alwaysBear
+                // Properly handle bear event detection based on configuration
+                isBearEvent: this.config.alwaysBear || this.isBearEvent({
+                    title: title,
+                    description: '',
+                    venue: venue,
+                    url: url
+                })
             };
             
         } catch (error) {
@@ -696,7 +706,8 @@ class EventbriteParser {
 
     // Check if an event is a bear event based on keywords and title
     isBearEvent(event) {
-        const title = event.title || '';
+        // Handle title objects (from Eventbrite JSON) vs strings
+        const title = typeof event.title === 'object' && event.title.text ? event.title.text : (event.title || '');
         const description = event.description || '';
         const venue = event.venue || '';
         const url = event.url || '';
