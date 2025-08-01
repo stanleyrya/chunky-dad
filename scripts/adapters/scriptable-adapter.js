@@ -168,14 +168,7 @@ class ScriptableAdapter {
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
                     // Check for existing events in a broader time range for better conflict detection
-                    const startDate = new Date(event.startDate);
-                    const endDate = new Date(event.endDate || event.startDate);
-                    
-                    // Expand search range to catch potential conflicts
-                    const searchStart = new Date(startDate);
-                    searchStart.setHours(0, 0, 0, 0); // Start of day
-                    const searchEnd = new Date(endDate);
-                    searchEnd.setHours(23, 59, 59, 999); // End of day
+                    const { startDate, endDate, searchStart, searchEnd } = this.getEventDateRange(event, true);
                     
                     const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                     
@@ -208,16 +201,7 @@ class ScriptableAdapter {
                         const mergedData = this.mergeEventData(similarEvent, event);
                         
                         // Update existing calendar event
-                        similarEvent.title = mergedData.title;
-                        similarEvent.notes = mergedData.notes;
-                        if (mergedData.url && !similarEvent.url) {
-                            similarEvent.url = mergedData.url;
-                        }
-                        // Update location to GPS coordinates if available
-                        similarEvent.location = this.formatLocationForCalendar(event);
-                        
-                        await similarEvent.save();
-                        console.log(`📱 Scriptable: ✓ Merged event: ${similarEvent.title}`);
+                        await this.updateCalendarEvent(similarEvent, mergedData, event, 'Merged');
                         addedCount++; // Count as an update
                         continue;
                     }
@@ -244,16 +228,7 @@ class ScriptableAdapter {
                             // Update the existing event with merged data
                             const mergedData = this.mergeEventData(shouldMergeConflict, event);
                             
-                            shouldMergeConflict.title = mergedData.title;
-                            shouldMergeConflict.notes = mergedData.notes;
-                            if (mergedData.url && !shouldMergeConflict.url) {
-                                shouldMergeConflict.url = mergedData.url;
-                            }
-                            // Update location to GPS coordinates if available
-                            shouldMergeConflict.location = this.formatLocationForCalendar(event);
-                            
-                            await shouldMergeConflict.save();
-                            console.log(`📱 Scriptable: ✓ Merged time conflict: ${shouldMergeConflict.title}`);
+                            await this.updateCalendarEvent(shouldMergeConflict, mergedData, event, 'Merged time conflict');
                             addedCount++; // Count as an update
                             continue;
                         } else {
@@ -334,6 +309,42 @@ class ScriptableAdapter {
         }
         return ''; // Never use bar name in location field
     }
+    
+    // Helper method to get event date ranges
+    getEventDateRange(event, expandRange = false) {
+        const startDate = new Date(event.startDate);
+        const endDate = new Date(event.endDate || event.startDate);
+        
+        if (expandRange) {
+            const searchStart = new Date(startDate);
+            searchStart.setHours(0, 0, 0, 0);
+            const searchEnd = new Date(endDate);
+            searchEnd.setHours(23, 59, 59, 999);
+            return { startDate, endDate, searchStart, searchEnd };
+        }
+        
+        return { startDate, endDate };
+    }
+    
+    // Helper method to update calendar event with merged data
+    async updateCalendarEvent(calendarEvent, mergedData, event, actionType) {
+        calendarEvent.title = mergedData.title;
+        calendarEvent.notes = mergedData.notes;
+        if (mergedData.url && !calendarEvent.url) {
+            calendarEvent.url = mergedData.url;
+        }
+        calendarEvent.location = this.formatLocationForCalendar(event);
+        await calendarEvent.save();
+        console.log(`📱 Scriptable: ✓ ${actionType} event: ${calendarEvent.title}`);
+        return true;
+    }
+    
+    // Helper method to validate calendar exists
+    async validateCalendarExists(event, availableCalendars) {
+        const calendarName = this.getCalendarName(event, null);
+        const calendar = availableCalendars.find(cal => cal.title === calendarName);
+        return { calendarName, calendar, exists: !!calendar };
+    }
 
     formatEventNotes(event) {
         const notes = [];
@@ -343,9 +354,9 @@ class ScriptableAdapter {
             notes.push(`Bar: ${event.venue || event.bar}`);
         }
         
-        // Add description
-        if (event.description) {
-            notes.push(event.description);
+        // Add description/tea
+        if (event.description || event.tea) {
+            notes.push(event.description || event.tea);
         }
         
         // Add metadata section
@@ -389,6 +400,27 @@ class ScriptableAdapter {
         // Add social media links
         if (event.instagram) {
             metadata.push(`Instagram: ${event.instagram}`);
+        }
+        
+        if (event.facebook) {
+            metadata.push(`Facebook: ${event.facebook}`);
+        }
+        
+        if (event.website) {
+            metadata.push(`Website: ${event.website}`);
+        }
+        
+        if (event.gmaps) {
+            metadata.push(`Gmaps: ${event.gmaps}`);
+        }
+        
+        // Add short names if available
+        if (event.shortName) {
+            metadata.push(`ShortName: ${event.shortName}`);
+        }
+        
+        if (event.shorterName) {
+            metadata.push(`ShorterName: ${event.shorterName}`);
         }
         
         // Add metadata section if we have any
@@ -586,8 +618,7 @@ class ScriptableAdapter {
             
             try {
                 // Check for existing events in the time range
-                const startDate = new Date(event.startDate);
-                const endDate = new Date(event.endDate || event.startDate);
+                const { startDate, endDate } = this.getEventDateRange(event, false);
                 
                 // Expand search range for recurring events
                 const searchStart = new Date(startDate);
@@ -895,12 +926,7 @@ class ScriptableAdapter {
             }
             
             // Check for existing events
-            const startDate = new Date(event.startDate);
-            const endDate = new Date(event.endDate || event.startDate);
-            const searchStart = new Date(startDate);
-            searchStart.setHours(0, 0, 0, 0);
-            const searchEnd = new Date(endDate);
-            searchEnd.setHours(23, 59, 59, 999);
+            const { startDate, endDate, searchStart, searchEnd } = this.getEventDateRange(event, true);
             
             try {
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
