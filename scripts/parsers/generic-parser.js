@@ -25,7 +25,6 @@ class GenericParser {
             source: 'generic',
             requireDetailPages: true,
             maxAdditionalUrls: 15,
-            alwaysBear: false,
             ...config
         };
         

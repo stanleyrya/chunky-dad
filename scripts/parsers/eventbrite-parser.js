@@ -25,7 +25,6 @@ class EventbriteParser {
             source: 'eventbrite',
             requireDetailPages: false,
             maxAdditionalUrls: 20,
-            alwaysBear: false,
             ...config
         };
         

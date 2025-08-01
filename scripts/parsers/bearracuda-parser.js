@@ -25,7 +25,6 @@ class BearraccudaParser {
             source: 'bearracuda',
             requireDetailPages: false,
             maxAdditionalUrls: 10,
-            alwaysBear: true, // Bearracuda events are always bear events
             ...config
         };
         
