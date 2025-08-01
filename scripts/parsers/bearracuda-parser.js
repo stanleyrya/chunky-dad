@@ -89,7 +89,7 @@ class BearraccudaParser {
             };
             
         } catch (error) {
-            console.error('🐻 Bearraccuda: Error parsing events:', error);
+            console.error(`🐻 Bearraccuda: Error parsing events: ${error}`);
             return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
         }
     }
@@ -121,7 +121,7 @@ class BearraccudaParser {
                             events.push(event);
                         }
                     } catch (error) {
-                        console.warn('🐻 Bearraccuda: Failed to parse HTML event element:', error);
+                        console.warn(`🐻 Bearraccuda: Failed to parse HTML event element: ${error}`);
                     }
                 }
                 
@@ -132,7 +132,7 @@ class BearraccudaParser {
             }
             
         } catch (error) {
-            console.warn('🐻 Bearraccuda: Error parsing HTML events:', error);
+            console.warn(`🐻 Bearraccuda: Error parsing HTML events: ${error}`);
         }
         
         return events;
@@ -213,7 +213,7 @@ class BearraccudaParser {
             };
             
         } catch (error) {
-            console.warn('🐻 Bearraccuda: Failed to parse HTML event element:', error);
+            console.warn(`🐻 Bearraccuda: Failed to parse HTML event element: ${error}`);
             return null;
         }
     }
@@ -243,7 +243,7 @@ class BearraccudaParser {
             console.log(`🐻 Bearraccuda: Extracted ${urls.size} additional URLs`);
             
         } catch (error) {
-            console.warn('🐻 Bearraccuda: Error extracting additional URLs:', error);
+            console.warn(`🐻 Bearraccuda: Error extracting additional URLs: ${error}`);
         }
         
         return Array.from(urls);
@@ -368,7 +368,7 @@ class BearraccudaParser {
             }
             
         } catch (error) {
-            console.warn(`🐻 Bearraccuda: Failed to parse date "${dateString}":`, error);
+            console.warn(`🐻 Bearraccuda: Failed to parse date "${dateString}": ${error}`);
         }
         
         return null;

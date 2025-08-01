@@ -31,7 +31,7 @@ class ScriptableAdapter {
     async fetchData(url, options = {}) {
         try {
             console.log(`📱 Scriptable: Starting HTTP request to ${url}`);
-            console.log(`📱 Scriptable: Request options:`, options);
+            console.log(`📱 Scriptable: Request options: ${JSON.stringify(options)}`);
             
             const request = new Request(url);
             request.method = options.method || 'GET';
@@ -42,7 +42,7 @@ class ScriptableAdapter {
             };
             
             console.log(`📱 Scriptable: Request method: ${request.method}`);
-            console.log(`📱 Scriptable: Request headers:`, request.headers);
+            console.log(`📱 Scriptable: Request headers: ${JSON.stringify(request.headers)}`);
             
             if (options.body) {
                 request.body = options.body;
@@ -58,7 +58,7 @@ class ScriptableAdapter {
             
             console.log(`📱 Scriptable: Response received`);
             console.log(`📱 Scriptable: Response status: ${statusCode}`);
-            console.log(`📱 Scriptable: Response headers:`, headers);
+            console.log(`📱 Scriptable: Response headers: ${JSON.stringify(headers)}`);
             console.log(`📱 Scriptable: Response length: ${response ? response.length : 0} characters`);
             
             if (statusCode >= 400) {
@@ -109,7 +109,7 @@ class ScriptableAdapter {
                 // List files in directory for debugging
                 try {
                     const files = fm.listContents(scriptableDir);
-                    console.log(`📱 Scriptable: Files in ${scriptableDir}:`, files);
+                    console.log(`📱 Scriptable: Files in ${scriptableDir}: ${JSON.stringify(files)}`);
                 } catch (listError) {
                     console.log(`📱 Scriptable: ✗ Failed to list directory contents: ${listError.message}`);
                 }
