@@ -43,7 +43,7 @@ class BearEventScraperOrchestrator {
             console.log('🐻 Orchestrator: ✓ Initialization complete');
             
         } catch (error) {
-            console.error('🐻 Orchestrator: ✗ Initialization failed:', error);
+            console.error(`🐻 Orchestrator: ✗ Initialization failed: ${error}`);
             throw new Error(`Initialization failed: ${error.message}`);
         }
     }
@@ -83,7 +83,7 @@ class BearEventScraperOrchestrator {
             console.log('📱 ✓ Scriptable modules loaded successfully');
             
         } catch (error) {
-            console.error('📱 ✗ Failed to load Scriptable modules:', error);
+            console.error(`📱 ✗ Failed to load Scriptable modules: ${error}`);
             throw new Error(`Scriptable module loading failed: ${error.message}`);
         }
     }
@@ -118,7 +118,7 @@ class BearEventScraperOrchestrator {
             console.log('🌐 ✓ Web modules loaded successfully');
             
         } catch (error) {
-            console.error('🌐 ✗ Failed to load web modules:', error);
+            console.error(`🌐 ✗ Failed to load web modules: ${error}`);
             throw new Error(`Web module loading failed: ${error.message}`);
         }
     }
@@ -174,7 +174,7 @@ class BearEventScraperOrchestrator {
                     parsers[name] = new ParserClass();
                     console.log(`🐻 Orchestrator: ✓ Created ${name} parser`);
                 } catch (error) {
-                    console.error(`🐻 Orchestrator: ✗ Failed to create ${name} parser:`, error);
+                    console.error(`🐻 Orchestrator: ✗ Failed to create ${name} parser: ${error}`);
                     throw new Error(`Failed to create ${name} parser: ${error.message}`);
                 }
             }
@@ -194,17 +194,17 @@ class BearEventScraperOrchestrator {
             return results;
 
         } catch (error) {
-            console.error('🐻 Orchestrator: ✗ Event scraping failed:', error);
+            console.error(`🐻 Orchestrator: ✗ Event scraping failed: ${error}`);
             
             // Only log error details if they exist and are meaningful
             if (error.stack && error.stack.trim()) {
-                console.error('🐻 Orchestrator: ✗ Error stack trace:', error.stack);
+                console.error(`🐻 Orchestrator: ✗ Error stack trace: ${error.stack}`);
             }
             if (error.name && error.name.trim()) {
-                console.error('🐻 Orchestrator: ✗ Error name:', error.name);
+                console.error(`🐻 Orchestrator: ✗ Error name: ${error.name}`);
             }
             if (error.message && error.message.trim()) {
-                console.error('🐻 Orchestrator: ✗ Error message:', error.message);
+                console.error(`🐻 Orchestrator: ✗ Error message: ${error.message}`);
             }
             
             // Try to show user-friendly error
@@ -214,9 +214,9 @@ class BearEventScraperOrchestrator {
                     const errorName = error.name || 'Unknown Error';
                     const errorMessage = error.message || 'An unexpected error occurred';
                     await adapter.showError('Bear Event Scraper Error', `${errorName}: ${errorMessage}\n\nCheck console for full details.`);
-                } catch (displayError) {
-                    console.error('🐻 Orchestrator: ✗ Failed to show error dialog:', displayError);
-                }
+                            } catch (displayError) {
+                console.error(`🐻 Orchestrator: ✗ Failed to show error dialog: ${displayError}`);
+            }
             }
             
             throw error;
@@ -237,8 +237,8 @@ class BearEventScraperOrchestrator {
         const results = await BearEventScraperOrchestrator.execute();
         console.log('🐻 Bear Event Scraper: Execution completed successfully');
     } catch (error) {
-        console.error('🐻 Bear Event Scraper: Execution failed:', error);
-    }
+    console.error(`🐻 Bear Event Scraper: Execution failed: ${error}`);
+}
 })();
 
 // Export for manual execution if needed

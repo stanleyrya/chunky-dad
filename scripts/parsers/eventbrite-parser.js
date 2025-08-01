@@ -103,7 +103,7 @@ class EventbriteParser {
             };
             
         } catch (error) {
-            console.error('🎫 Eventbrite: Error parsing events:', error);
+            console.error(`🎫 Eventbrite: Error parsing events: ${error}`);
             return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
         }
     }
@@ -132,14 +132,14 @@ class EventbriteParser {
                             console.log(`🎫 Eventbrite: Extracted ${extractedEvents.length} events from JSON pattern`);
                             break;
                         }
-                    } catch (parseError) {
-                        console.warn('🎫 Eventbrite: Failed to parse JSON data:', parseError);
-                    }
+                                } catch (parseError) {
+                console.warn(`🎫 Eventbrite: Failed to parse JSON data: ${parseError}`);
+            }
                 }
             }
             
         } catch (error) {
-            console.warn('🎫 Eventbrite: Error extracting JSON events:', error);
+            console.warn(`🎫 Eventbrite: Error extracting JSON events: ${error}`);
         }
         
         return events;
@@ -216,7 +216,7 @@ class EventbriteParser {
             };
             
         } catch (error) {
-            console.warn('🎫 Eventbrite: Failed to parse JSON event:', error);
+            console.warn(`🎫 Eventbrite: Failed to parse JSON event: ${error}`);
             return null;
         }
     }
@@ -246,7 +246,7 @@ class EventbriteParser {
                             events.push(event);
                         }
                     } catch (error) {
-                        console.warn('🎫 Eventbrite: Failed to parse HTML event element:', error);
+                        console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
                     }
                 }
                 
@@ -257,7 +257,7 @@ class EventbriteParser {
             }
             
         } catch (error) {
-            console.warn('🎫 Eventbrite: Error parsing HTML events:', error);
+            console.warn(`🎫 Eventbrite: Error parsing HTML events: ${error}`);
         }
         
         return events;
@@ -312,7 +312,7 @@ class EventbriteParser {
             };
             
         } catch (error) {
-            console.warn('🎫 Eventbrite: Failed to parse HTML event element:', error);
+            console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
             return null;
         }
     }
@@ -342,7 +342,7 @@ class EventbriteParser {
             console.log(`🎫 Eventbrite: Extracted ${urls.size} additional URLs`);
             
         } catch (error) {
-            console.warn('🎫 Eventbrite: Error extracting additional URLs:', error);
+            console.warn(`🎫 Eventbrite: Error extracting additional URLs: ${error}`);
         }
         
         return Array.from(urls);

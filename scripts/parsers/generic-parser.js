@@ -102,7 +102,7 @@ class GenericParser {
             };
             
         } catch (error) {
-            console.error('🔧 Generic: Error parsing events:', error);
+            console.error(`🔧 Generic: Error parsing events: ${error}`);
             return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
         }
     }
@@ -138,7 +138,7 @@ class GenericParser {
                             events.push(event);
                         }
                     } catch (error) {
-                        console.warn('🔧 Generic: Failed to parse HTML event element:', error);
+                        console.warn(`🔧 Generic: Failed to parse HTML event element: ${error}`);
                     }
                 }
                 
@@ -149,7 +149,7 @@ class GenericParser {
             }
             
         } catch (error) {
-            console.warn('🔧 Generic: Error parsing HTML events:', error);
+            console.warn(`🔧 Generic: Error parsing HTML events: ${error}`);
         }
         
         return events;
@@ -283,7 +283,7 @@ class GenericParser {
             };
             
         } catch (error) {
-            console.warn('🔧 Generic: Failed to parse HTML event element:', error);
+            console.warn(`🔧 Generic: Failed to parse HTML event element: ${error}`);
             return null;
         }
     }
@@ -313,7 +313,7 @@ class GenericParser {
             console.log(`🔧 Generic: Extracted ${urls.size} additional URLs`);
             
         } catch (error) {
-            console.warn('🔧 Generic: Error extracting additional URLs:', error);
+            console.warn(`🔧 Generic: Error extracting additional URLs: ${error}`);
         }
         
         return Array.from(urls);
@@ -458,7 +458,7 @@ class GenericParser {
             }
             
         } catch (error) {
-            console.warn(`🔧 Generic: Failed to parse date "${dateString}":`, error);
+            console.warn(`🔧 Generic: Failed to parse date "${dateString}": ${error}`);
         }
         
         return null;
