@@ -285,12 +285,19 @@ class ScriptableAdapter {
         console.error(message);
     }
 
-    // Results Display
+    // Results Display - Enhanced with calendar preview and comparison
     async displayResults(results) {
         try {
-            console.log('\n' + '='.repeat(50));
+            // First show the enhanced display features
+            await this.displayCalendarProperties(results);
+            await this.compareWithExistingCalendars(results);
+            await this.displayAvailableCalendars();
+            await this.displayEnrichedEvents(results);
+            
+            // Then show the standard results summary
+            console.log('\n' + '='.repeat(60));
             console.log('🐻 BEAR EVENT SCRAPER RESULTS');
-            console.log('='.repeat(50));
+            console.log('='.repeat(60));
             
             console.log(`📊 Total Events Found: ${results.totalEvents}`);
             console.log(`🐻 Bear Events: ${results.bearEvents}`);
@@ -306,7 +313,10 @@ class ScriptableAdapter {
                 console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
             });
             
-            console.log('\n' + '='.repeat(50));
+            // Show summary and recommended actions
+            await this.displaySummaryAndActions(results);
+            
+            console.log('\n' + '='.repeat(60));
             
             // Show notification if significant events found
             if (results.bearEvents > 0) {
