@@ -337,4 +337,4 @@ class ScriptableAdapter {
 }
 
 // Export for Scriptable environment
-this.ScriptableAdapter = ScriptableAdapter;
+module.exports = { ScriptableAdapter };
