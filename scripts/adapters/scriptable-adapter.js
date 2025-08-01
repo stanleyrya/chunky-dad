@@ -26,6 +26,7 @@ class ScriptableAdapter {
         
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
+        this.sharedCore = null; // Will be set by orchestrator
     }
 
     // HTTP Adapter Implementation
@@ -168,7 +169,9 @@ class ScriptableAdapter {
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
                     // Check for existing events in a broader time range for better conflict detection
-                    const { startDate, endDate, searchStart, searchEnd } = this.getEventDateRange(event, true);
+                    const { startDate, endDate, searchStart, searchEnd } = this.sharedCore ? 
+                        this.sharedCore.getEventDateRange(event, true) : 
+                        { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
                     
                     const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                     
@@ -185,12 +188,12 @@ class ScriptableAdapter {
                     
                     // Check for similar events that should be merged (using same logic as shared-core deduplication)
                     const similarEvent = existingEvents.find(existing => {
-                        const existingKey = this.createEventKey({
+                        const existingKey = this.sharedCore ? this.sharedCore.createEventKey({
                             title: existing.title,
                             startDate: existing.startDate,
                             venue: existing.location || ''
-                        });
-                        const newEventKey = this.createEventKey(event);
+                        }) : '';
+                        const newEventKey = this.sharedCore ? this.sharedCore.createEventKey(event) : '';
                         return existingKey === newEventKey;
                     });
                     
@@ -246,9 +249,9 @@ class ScriptableAdapter {
                     calendarEvent.endDate = endDate;
                     
                     // Set location to GPS coordinates only
-                    calendarEvent.location = this.formatLocationForCalendar(event);
+                    calendarEvent.location = this.sharedCore ? this.sharedCore.formatLocationForCalendar(event) : '';
                     
-                    calendarEvent.notes = this.formatEventNotes(event);
+                    calendarEvent.notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
                     calendarEvent.calendar = calendar;
                     
                     // Set URL if available
@@ -302,29 +305,7 @@ class ScriptableAdapter {
         return this.calendarMappings[city] || `chunky-dad-${city}`;
     }
     
-    // Helper method to format location as GPS coordinates
-    formatLocationForCalendar(event) {
-        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-            return `${event.coordinates.lat}, ${event.coordinates.lng}`;
-        }
-        return ''; // Never use bar name in location field
-    }
-    
-    // Helper method to get event date ranges
-    getEventDateRange(event, expandRange = false) {
-        const startDate = new Date(event.startDate);
-        const endDate = new Date(event.endDate || event.startDate);
-        
-        if (expandRange) {
-            const searchStart = new Date(startDate);
-            searchStart.setHours(0, 0, 0, 0);
-            const searchEnd = new Date(endDate);
-            searchEnd.setHours(23, 59, 59, 999);
-            return { startDate, endDate, searchStart, searchEnd };
-        }
-        
-        return { startDate, endDate };
-    }
+
     
     // Helper method to update calendar event with merged data
     async updateCalendarEvent(calendarEvent, mergedData, event, actionType) {
@@ -333,7 +314,7 @@ class ScriptableAdapter {
         if (mergedData.url && !calendarEvent.url) {
             calendarEvent.url = mergedData.url;
         }
-        calendarEvent.location = this.formatLocationForCalendar(event);
+        calendarEvent.location = this.sharedCore ? this.sharedCore.formatLocationForCalendar(event) : '';
         await calendarEvent.save();
         console.log(`📱 Scriptable: ✓ ${actionType} event: ${calendarEvent.title}`);
         return true;
@@ -346,103 +327,7 @@ class ScriptableAdapter {
         return { calendarName, calendar, exists: !!calendar };
     }
 
-    formatEventNotes(event) {
-        const notes = [];
-        
-        // Add bar/venue name first if available
-        if (event.venue || event.bar) {
-            notes.push(`Bar: ${event.venue || event.bar}`);
-        }
-        
-        // Add description/tea
-        if (event.description || event.tea) {
-            notes.push(event.description || event.tea);
-        }
-        
-        // Add metadata section
-        const metadata = [];
-        
-        // Add event key if available
-        if (event.key) {
-            metadata.push(`Key: ${event.key}`);
-        }
-        
-        // Add price/cover
-        if (event.price || event.cover) {
-            metadata.push(`Price: ${event.price || event.cover}`);
-        }
-        
-        // Add recurrence info
-        if (event.recurring && event.recurrence) {
-            metadata.push(`Recurrence: ${event.recurrence}`);
-        }
-        
-        // Add event type
-        if (event.eventType) {
-            metadata.push(`Type: ${event.eventType}`);
-        }
-        
-        // Add timezone if different from device
-        if (event.timezone) {
-            metadata.push(`Timezone: ${event.timezone}`);
-        }
-        
-        // Add city
-        if (event.city) {
-            metadata.push(`City: ${event.city}`);
-        }
-        
-        // Add source
-        if (event.source) {
-            metadata.push(`Source: ${event.source}`);
-        }
-        
-        // Add social media links
-        if (event.instagram) {
-            metadata.push(`Instagram: ${event.instagram}`);
-        }
-        
-        if (event.facebook) {
-            metadata.push(`Facebook: ${event.facebook}`);
-        }
-        
-        if (event.website) {
-            metadata.push(`Website: ${event.website}`);
-        }
-        
-        if (event.gmaps) {
-            metadata.push(`Gmaps: ${event.gmaps}`);
-        }
-        
-        // Add short names if available
-        if (event.shortName) {
-            metadata.push(`ShortName: ${event.shortName}`);
-        }
-        
-        if (event.shorterName) {
-            metadata.push(`ShorterName: ${event.shorterName}`);
-        }
-        
-        // Add metadata section if we have any
-        if (metadata.length > 0) {
-            notes.push('--- Event Details ---');
-            notes.push(...metadata);
-        }
-        
-        // Add URL at the end
-        if (event.url && !notes.join(' ').includes(event.url)) {
-            notes.push('');
-            notes.push(`More info: ${event.url}`);
-        }
-        
-        // Add debug info if we have original title
-        if (event.originalTitle && event.originalTitle !== event.title) {
-            notes.push('');
-            notes.push(`[Debug] Original title: ${event.originalTitle}`);
-        }
-        
-        return notes.join('\n');
-    }
+
 
     // Display/Logging Adapter Implementation
     async logInfo(message) {
@@ -571,7 +456,7 @@ class ScriptableAdapter {
             }
             
             // Notes field content
-            const notes = this.formatEventNotes(event);
+            const notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
             console.log(`\n📝 Notes field content (${notes.length} chars):`);
             console.log(`"${notes.substring(0, 100)}${notes.length > 100 ? '...' : ''}"`);
             
@@ -618,7 +503,9 @@ class ScriptableAdapter {
             
             try {
                 // Check for existing events in the time range
-                const { startDate, endDate } = this.getEventDateRange(event, false);
+                const { startDate, endDate } = this.sharedCore ? 
+                    this.sharedCore.getEventDateRange(event, false) :
+                    { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
                 
                 // Expand search range for recurring events
                 const searchStart = new Date(startDate);
@@ -810,7 +697,8 @@ class ScriptableAdapter {
             console.log(`   Start: ${new Date(event.startDate).toLocaleString()}`);
             console.log(`   End: ${new Date(event.endDate || event.startDate).toLocaleString()}`);
             console.log(`   Location: "${event.venue || event.bar || ''}"`);
-            console.log(`   Notes: ${this.formatEventNotes(event).length} characters`);
+            const eventNotes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
+            console.log(`   Notes: ${eventNotes.length} characters`);
         });
         
         console.log('\n' + '='.repeat(60));
@@ -926,7 +814,9 @@ class ScriptableAdapter {
             }
             
             // Check for existing events
-            const { startDate, endDate, searchStart, searchEnd } = this.getEventDateRange(event, true);
+            const { startDate, endDate, searchStart, searchEnd } = this.sharedCore ?
+                this.sharedCore.getEventDateRange(event, true) :
+                { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
             
             try {
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
@@ -1303,7 +1193,7 @@ class ScriptableAdapter {
             minute: '2-digit' 
         });
         
-        const notes = this.formatEventNotes(event);
+        const notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
         const calendarName = this.getCalendarName(event, null);
         
         let html = `
@@ -1633,54 +1523,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return allEvents;
     }
 
-    // Helper method to create event keys for comparison (same logic as shared-core)
-    createEventKey(event) {
-        let title = String(event.title || event.name || '').toLowerCase().trim();
-        const originalTitle = title;
-        
-        // Normalize Megawoof/DURO event titles for better deduplication
-        if (/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(title) || /megawoof/i.test(title)) {
-            const duroMatch = title.match(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i);
-            if (duroMatch) {
-                title = title.replace(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o[^\w]*/i, 'megawoof-duro');
-                console.log(`📱 Scriptable: DURO title normalized: "${originalTitle}" → "${title}"`);
-            } else if (/megawoof/i.test(title)) {
-                title = title.replace(/megawoof[:\s\-]*/i, 'megawoof-');
-                console.log(`📱 Scriptable: Megawoof title normalized: "${originalTitle}" → "${title}"`);
-            }
-        }
-        
-        // Use a more robust date comparison that handles timezones better
-        const date = this.normalizeEventDate(event.startDate);
-        const venue = String(event.venue || event.location || '').toLowerCase().trim();
-        
-        const key = `${title}|${date}|${venue}`;
-        console.log(`📱 Scriptable: Created event key: "${key}" for event "${originalTitle}"`);
-        
-        return key;
-    }
 
-    // Helper method to normalize event dates for consistent comparison
-    normalizeEventDate(dateInput) {
-        if (!dateInput) return '';
-        
-        try {
-            const date = new Date(dateInput);
-            if (isNaN(date.getTime())) return '';
-            
-            // Use a consistent date format that ignores time zone differences
-            // This uses the local date components to create a date string
-            // that will be the same regardless of the device's timezone
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            
-            return `${year}-${month}-${day}`;
-        } catch (error) {
-            console.log(`📱 Scriptable: Warning - Failed to normalize date: ${dateInput}, error: ${error.message}`);
-            return '';
-        }
-    }
 
     // Helper method to compare dates with timezone awareness
     areDatesEqual(date1, date2, toleranceMinutes = 1) {
@@ -1855,6 +1698,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             url: existingEvent.url || newEvent.url
             // location is handled separately using formatLocationForCalendar
         };
+    }
+
+    // Set shared core reference
+    setSharedCore(sharedCore) {
+        this.sharedCore = sharedCore;
     }
 }
 

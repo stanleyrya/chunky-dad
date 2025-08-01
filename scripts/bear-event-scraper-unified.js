@@ -206,6 +206,12 @@ class BearEventScraperOrchestrator {
             console.log('🐻 Orchestrator: Creating shared core instance...');
             const sharedCore = new this.modules.SharedCore();
             console.log('🐻 Orchestrator: ✓ Shared core instance created');
+            
+            // Set shared core reference in adapter if supported
+            if (typeof finalAdapter.setSharedCore === 'function') {
+                finalAdapter.setSharedCore(sharedCore);
+                console.log('🐻 Orchestrator: ✓ Set shared core reference in adapter');
+            }
 
             // Create parser instances
             console.log('🐻 Orchestrator: Creating parser instances...');
