@@ -3,135 +3,288 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐻 Bear Event Scraper - Enhanced Test</title>
+    <title>🐻 Bear Event Scraper - Ultimate Test Suite</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
         
         .header {
-            background: #333;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
             margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        .header p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .status-bar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .status-item {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+        
+        .status-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        .status-success {
+            background: linear-gradient(135deg, #4caf50, #45a049);
+            color: white;
+        }
+        
+        .status-error {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+        
+        .status-warning {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+        }
+        
+        .status-info {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
         }
         
         .controls {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 25px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
         
-        .controls label {
-            display: inline-block;
-            margin-right: 20px;
-            margin-bottom: 10px;
+        .controls h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #FF6B35;
+            padding-bottom: 10px;
         }
         
-        .controls select, .controls input {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-left: 10px;
+        .control-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .control-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .control-item label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        
+        .control-item select,
+        .control-item input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .control-item select:focus,
+        .control-item input:focus {
+            outline: none;
+            border-color: #FF6B35;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #FF6B35;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
         }
         
         button {
-            background: #007cba;
+            background: linear-gradient(135deg, #FF6B35, #e55a2b);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 4px;
+            padding: 15px 25px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
-            margin: 10px 10px 10px 0;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
         }
         
         button:hover {
-            background: #005a87;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
         }
         
         button:disabled {
             background: #ccc;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        button.secondary {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #28a745, #218838);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .console-container {
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .console-header {
+            background: #2d2d2d;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+        
+        .console-title {
+            color: #fff;
+            font-weight: 600;
+            margin: 0;
         }
         
         .console-output {
-            background: #1e1e1e;
             color: #ffffff;
             padding: 20px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 400px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 13px;
+            max-height: 500px;
             overflow-y: auto;
             white-space: pre-wrap;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            line-height: 1.5;
         }
         
         .results-container {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 25px;
             margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
         
-        .html-output-container {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .html-output-container h2 {
+        .results-container h3 {
             margin-top: 0;
             color: #333;
-            border-bottom: 2px solid #007cba;
+            border-bottom: 2px solid #4caf50;
             padding-bottom: 10px;
         }
         
-        #htmlOutput {
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .event-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
             padding: 20px;
-            background: #fafafa;
-            min-height: 200px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         }
         
-        .status.success {
-            background: #e8f5e8;
-            color: #2e7d32;
-            border: 1px solid #4caf50;
+        .event-card h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.2em;
         }
         
-        .status.error {
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #f44336;
+        .event-detail {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 14px;
+            color: #666;
         }
         
-        .status.info {
-            background: #e3f2fd;
-            color: #1565c0;
-            border: 1px solid #2196f3;
+        .event-detail strong {
+            min-width: 80px;
+            color: #333;
         }
         
         .log-entry {
-            margin: 2px 0;
+            margin: 3px 0;
+            padding: 2px 0;
         }
         
         .log-entry.error {
@@ -149,662 +302,552 @@
         .log-entry.warn {
             color: #ffd93d;
         }
-
-        .eventbrite-section {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-left: 4px solid #ff6600;
-        }
-
-        .html-input {
-            width: 100%;
-            height: 150px;
-            font-family: monospace;
-            font-size: 12px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            resize: vertical;
-        }
-
-        .preset-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin: 5px 5px 5px 0;
-        }
-
-        .preset-btn:hover {
-            background: #218838;
-        }
-
-        .live-results {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 10px 0;
+        
+        .log-entry.debug {
+            color: #a0a0a0;
         }
         
-        /* Make the generated HTML display nicely */
-        #htmlOutput .event-grid {
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        #htmlOutput .event-card {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        #htmlOutput .stats-container {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #FF6B35;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .environment-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+        
+        .env-web {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .env-node {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .env-scriptable {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .control-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .event-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🐻 Bear Event Scraper - Enhanced Test</h1>
-        <p>Test the bear event scraper with live data, including enhanced Eventbrite parsing</p>
-        <p><strong>New Features:</strong> Venue extraction, GPS coordinates, Google Maps links, improved time parsing</p>
+        <h1>🐻 Bear Event Scraper</h1>
+        <h2>Ultimate Test Suite</h2>
+        <p>Test the unified Bear Event Scraper with live data, environment detection, and comprehensive debugging</p>
+        <div>
+            <span class="environment-badge env-web" id="envWeb">🌐 Web Browser</span>
+            <span class="environment-badge env-node" id="envNode">🟢 Node.js</span>
+            <span class="environment-badge env-scriptable" id="envScriptable">📱 Scriptable</span>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <h3>🔧 System Status</h3>
+        <div class="status-grid" id="statusGrid">
+            <div class="status-item status-info">
+                <div>Environment Detection</div>
+                <div id="envStatus">Checking...</div>
+            </div>
+            <div class="status-item status-info">
+                <div>Module Loading</div>
+                <div id="moduleStatus">Checking...</div>
+            </div>
+            <div class="status-item status-info">
+                <div>Configuration</div>
+                <div id="configStatus">Not loaded</div>
+            </div>
+            <div class="status-item status-info">
+                <div>Last Test</div>
+                <div id="lastTestStatus">Not run</div>
+            </div>
+        </div>
     </div>
     
     <div class="controls">
-        <h3>Test Options</h3>
-        <label>
-            Source:
-            <select id="sourceSelect">
-                <option value="all">All Sources</option>
-                <option value="eventbrite">Eventbrite (Megawoof America)</option>
-            </select>
-        </label>
-        
-        <label>
-            Days to Look Ahead:
-            <input type="number" id="daysInput" value="" placeholder="All future events">
-        </label>
-        
-        <label>
-            <input type="checkbox" id="dryRunCheckbox" checked>
-            Dry Run Mode (no calendar changes)
-        </label>
-        
-        <br>
-        
-        <button onclick="runTest()" id="testBtn">Run Scraper Test</button>
-        <button onclick="clearConsole()">Clear Console</button>
-        <button onclick="testMockData()">Test with Mock Data</button>
-    </div>
-
-    <div class="eventbrite-section">
-        <h3>🎫 Enhanced Eventbrite Parser Testing</h3>
-        <p>Test the enhanced Eventbrite parser with custom HTML (venue extraction, GPS coordinates, time parsing)</p>
-        
-        <div style="margin: 15px 0;">
-            <button class="preset-btn" onclick="loadEventbritePreset('addressParsing')">📍 Load Address Parsing Test</button>
-            <button class="preset-btn" onclick="loadEventbritePreset('denver')">Load Denver Example</button>
-            <button class="preset-btn" onclick="loadEventbritePreset('atlanta')">Load Atlanta Example</button>
-            <button class="preset-btn" onclick="loadEventbritePreset('structured')">Load JSON-LD Example</button>
-            <button class="preset-btn" onclick="clearEventbriteInput()">Clear</button>
+        <h3>🎛️ Test Configuration</h3>
+        <div class="control-group">
+            <div class="control-item">
+                <label for="sourceSelect">Event Source:</label>
+                <select id="sourceSelect">
+                    <option value="all">🌐 All Sources</option>
+                    <option value="eventbrite">🎫 Eventbrite (Megawoof America)</option>
+                    <option value="bearracuda">🐻 Bearracuda</option>
+                    <option value="generic">🔧 Generic Parser</option>
+                </select>
+            </div>
+            
+            <div class="control-item">
+                <label for="daysInput">Days to Look Ahead:</label>
+                <input type="number" id="daysInput" placeholder="All future events" min="1" max="365">
+            </div>
+            
+            <div class="control-item">
+                <label for="corsProxy">CORS Proxy (for web testing):</label>
+                <select id="corsProxy">
+                    <option value="">No proxy (may cause CORS errors)</option>
+                    <option value="https://api.allorigins.win/raw?url=">AllOrigins (Free)</option>
+                    <option value="https://corsproxy.io/?">CorsProxy.io</option>
+                </select>
+            </div>
         </div>
         
-        <label for="eventbriteHtml">Paste Eventbrite HTML:</label>
-        <textarea id="eventbriteHtml" class="html-input" placeholder="Paste Eventbrite HTML here..." 
-                  oninput="parseEventbriteLive()"></textarea>
-        
-        <div id="eventbriteLiveResults" class="live-results" style="display: none;">
-            <h5>🔄 Live Parsing Results:</h5>
-            <div id="eventbriteLiveContent"></div>
+        <div class="control-group">
+            <div class="control-item">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="dryRunCheckbox" checked>
+                    <label for="dryRunCheckbox">🔒 Dry Run Mode (no calendar changes)</label>
+                </div>
+            </div>
+            
+            <div class="control-item">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="debugMode" checked>
+                    <label for="debugMode">🐛 Debug Mode (verbose logging)</label>
+                </div>
+            </div>
+            
+            <div class="control-item">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="showRawData">
+                    <label for="showRawData">📄 Show Raw Data</label>
+                </div>
+            </div>
         </div>
         
-        <button onclick="testEventbriteParser()">🧪 Test Eventbrite Parser</button>
+        <div class="button-group">
+            <button onclick="runFullTest()" id="testBtn">🚀 Run Full Test</button>
+            <button onclick="testEnvironment()" class="secondary">🔍 Test Environment</button>
+            <button onclick="testModules()" class="secondary">📦 Test Modules</button>
+            <button onclick="testMockData()" class="success">🧪 Test Mock Data</button>
+            <button onclick="clearConsole()" class="secondary">🗑️ Clear Console</button>
+        </div>
     </div>
     
-    <div class="console-output" id="console"></div>
+    <div class="console-container">
+        <div class="console-header">
+            <h4 class="console-title">📟 Console Output</h4>
+            <button onclick="clearConsole()" class="secondary" style="padding: 5px 10px; font-size: 12px;">Clear</button>
+        </div>
+        <div class="console-output" id="console"></div>
+    </div>
     
     <div class="results-container" id="resultsContainer" style="display: none;">
-        <h3>📊 Scraping Results</h3>
+        <h3>📊 Test Results</h3>
         <div id="results"></div>
     </div>
     
-    <div class="html-output-container">
-        <h2>🎨 Generated HTML Output</h2>
-        <div id="htmlOutput">
-            <p style="color: #666; text-align: center;">Run the scraper to see the generated HTML output here...</p>
-        </div>
-    </div>
-    
-    <!-- Load the core modules -->
-    <!-- New modular architecture -->
-    <script src="../scripts/core/input-handler-web.js" onerror="console.error('Failed to load input-handler-web.js')"></script>
-    <script src="../scripts/core/display-handler-web.js" onerror="console.error('Failed to load display-handler-web.js')"></script>
-    <script src="../scripts/core/event-parser-eventbrite.js" onerror="console.error('Failed to load event-parser-eventbrite.js')"></script>
-    <script src="../scripts/core/event-parser-bearraccuda.js" onerror="console.error('Failed to load event-parser-bearraccuda.js')"></script>
-    <script src="../scripts/core/event-parser-generic.js" onerror="console.error('Failed to load event-parser-generic.js')"></script>
-    <script src="../scripts/bear-event-scraper-unified.js" onerror="console.error('Failed to load bear-event-scraper-unified.js')"></script>
-    
+    <!-- Load all required modules in correct order -->
+    <script src="../scripts/shared-core.js" onerror="handleScriptError('shared-core.js', event)"></script>
+    <script src="../scripts/adapters/web-adapter.js" onerror="handleScriptError('web-adapter.js', event)"></script>
+    <script src="../scripts/parsers/eventbrite-parser.js" onerror="handleScriptError('eventbrite-parser.js', event)"></script>
+    <script src="../scripts/parsers/bearracuda-parser.js" onerror="handleScriptError('bearracuda-parser.js', event)"></script>
+    <script src="../scripts/parsers/generic-parser.js" onerror="handleScriptError('generic-parser.js', event)"></script>
+    <script src="../scripts/bear-event-scraper-unified.js" onerror="handleScriptError('bear-event-scraper-unified.js', event)"></script>
+
     <script>
-        // Add global error handler to catch any script errors
-        window.addEventListener('error', function(event) {
-            console.error('Global error:', event.message, 'in', event.filename, 'line', event.lineno);
-        });
-        // Custom console logging
+        // Global error tracking
+        let scriptErrors = [];
+        
+        function handleScriptError(scriptName, event) {
+            const error = `Failed to load ${scriptName}`;
+            scriptErrors.push(error);
+            console.error(error);
+        }
+        
+        // Enhanced console logging with colors and timestamps
         const consoleDiv = document.getElementById('console');
         const originalConsole = {
             log: console.log,
             error: console.error,
             warn: console.warn,
-            info: console.info
+            info: console.info,
+            debug: console.debug
         };
         
         function addLogEntry(message, type = 'log') {
             const timestamp = new Date().toLocaleTimeString();
             const entry = document.createElement('div');
             entry.className = `log-entry ${type}`;
-            entry.textContent = `[${timestamp}] ${message}`;
+            
+            // Format the message with emoji prefixes
+            const prefixes = {
+                error: '❌',
+                warn: '⚠️',
+                success: '✅',
+                info: 'ℹ️',
+                debug: '🔍',
+                log: '📄'
+            };
+            
+            const prefix = prefixes[type] || prefixes.log;
+            entry.textContent = `[${timestamp}] ${prefix} ${message}`;
+            
             consoleDiv.appendChild(entry);
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
             
             // Also log to real console
-            originalConsole[type](message);
+            if (originalConsole[type]) {
+                originalConsole[type](message);
+            } else {
+                originalConsole.log(message);
+            }
         }
         
         // Override console methods
-        console.log = (message) => addLogEntry(message, 'info');
+        console.log = (message) => addLogEntry(message, 'log');
         console.error = (message) => addLogEntry(message, 'error');
         console.warn = (message) => addLogEntry(message, 'warn');
         console.info = (message) => addLogEntry(message, 'info');
+        console.debug = (message) => addLogEntry(message, 'debug');
+        
+        // Add success logging
+        console.success = (message) => addLogEntry(message, 'success');
         
         function clearConsole() {
             consoleDiv.innerHTML = '';
+            addLogEntry('Console cleared', 'info');
         }
         
-        async function loadScraperConfig() {
+        function updateStatus(elementId, text, type = 'info') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = text;
+                element.parentElement.className = `status-item status-${type}`;
+            }
+        }
+        
+        async function testEnvironment() {
+            console.info('🔍 Testing environment detection...');
+            
             try {
+                // Test environment detection
+                const isWeb = typeof window !== 'undefined';
+                const isNode = typeof module !== 'undefined' && module.exports && typeof window === 'undefined';
+                const isScriptable = typeof importModule !== 'undefined';
+                
+                console.success(`Environment detection: Web=${isWeb}, Node=${isNode}, Scriptable=${isScriptable}`);
+                
+                // Update environment badges
+                document.getElementById('envWeb').style.opacity = isWeb ? '1' : '0.3';
+                document.getElementById('envNode').style.opacity = isNode ? '1' : '0.3';
+                document.getElementById('envScriptable').style.opacity = isScriptable ? '1' : '0.3';
+                
+                const envName = isScriptable ? 'Scriptable' : isNode ? 'Node.js' : 'Web Browser';
+                updateStatus('envStatus', envName, 'success');
+                
+                // Test orchestrator if available
+                if (typeof BearEventScraperOrchestrator !== 'undefined') {
+                    const orchestrator = new BearEventScraperOrchestrator();
+                    console.success(`Orchestrator created: isWeb=${orchestrator.isWeb}, isNode=${orchestrator.isNode}, isScriptable=${orchestrator.isScriptable}`);
+                } else {
+                    console.warn('BearEventScraperOrchestrator not available');
+                }
+                
+            } catch (error) {
+                console.error(`Environment test failed: ${error.message}`);
+                updateStatus('envStatus', 'Error', 'error');
+            }
+        }
+        
+        async function testModules() {
+            console.info('📦 Testing module availability...');
+            
+            const requiredModules = {
+                'SharedCore': typeof SharedCore !== 'undefined',
+                'WebAdapter': typeof WebAdapter !== 'undefined',
+                'EventbriteParser': typeof EventbriteParser !== 'undefined',
+                'BearraccudaParser': typeof BearraccudaParser !== 'undefined',
+                'GenericParser': typeof GenericParser !== 'undefined',
+                'BearEventScraperOrchestrator': typeof BearEventScraperOrchestrator !== 'undefined'
+            };
+            
+            const loadedModules = Object.entries(requiredModules).filter(([name, loaded]) => loaded);
+            const missingModules = Object.entries(requiredModules).filter(([name, loaded]) => !loaded);
+            
+            console.success(`Loaded modules (${loadedModules.length}): ${loadedModules.map(([name]) => name).join(', ')}`);
+            
+            if (missingModules.length > 0) {
+                console.error(`Missing modules (${missingModules.length}): ${missingModules.map(([name]) => name).join(', ')}`);
+                updateStatus('moduleStatus', `${loadedModules.length}/${Object.keys(requiredModules).length} loaded`, 'warning');
+            } else {
+                updateStatus('moduleStatus', 'All loaded', 'success');
+            }
+            
+            // Show script loading errors if any
+            if (scriptErrors.length > 0) {
+                console.error(`Script loading errors: ${scriptErrors.join(', ')}`);
+            }
+        }
+        
+        async function loadConfiguration() {
+            try {
+                console.info('📋 Loading scraper configuration...');
+                
                 const response = await fetch('../scripts/scraper-input.json');
                 if (!response.ok) {
-                    throw new Error(`Failed to load config: ${response.status}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                return await response.json();
+                
+                const config = await response.json();
+                console.success(`Configuration loaded: ${config.parsers?.length || 0} parsers configured`);
+                updateStatus('configStatus', `${config.parsers?.length || 0} parsers`, 'success');
+                
+                return config;
             } catch (error) {
-                console.error(`Failed to load scraper configuration: ${error.message}`);
+                console.error(`Failed to load configuration: ${error.message}`);
+                updateStatus('configStatus', 'Failed to load', 'error');
                 return null;
             }
         }
         
-        async function runTest() {
+        async function runFullTest() {
             const testBtn = document.getElementById('testBtn');
             const resultsContainer = document.getElementById('resultsContainer');
             const resultsDiv = document.getElementById('results');
-            const htmlOutput = document.getElementById('htmlOutput');
-            
-            // Check if BearEventScraper is available
-            if (typeof BearEventScraper === 'undefined') {
-                console.error('BearEventScraper is not loaded yet. Please refresh the page and try again.');
-                alert('BearEventScraper is not loaded. Please refresh the page and try again.');
-                return;
-            }
             
             testBtn.disabled = true;
-            testBtn.textContent = 'Running Test...';
+            testBtn.textContent = '🔄 Running Test...';
             resultsContainer.style.display = 'none';
             
-            clearConsole();
-            console.log('🐻 Starting Bear Event Scraper Test');
-            
             try {
-                // Load configuration
-                const configData = await loadScraperConfig();
-                if (!configData) {
-                    throw new Error('Failed to load scraper configuration');
+                console.info('🚀 Starting full Bear Event Scraper test...');
+                
+                // Check if orchestrator is available
+                if (typeof BearEventScraperOrchestrator === 'undefined') {
+                    throw new Error('BearEventScraperOrchestrator is not loaded. Please refresh the page.');
                 }
                 
-                // Get test options
+                // Get test configuration
                 const sourceSelect = document.getElementById('sourceSelect').value;
-                const daysInput = document.getElementById('daysInput').value;
+                const daysInput = parseInt(document.getElementById('daysInput').value) || null;
+                const corsProxy = document.getElementById('corsProxy').value;
                 const dryRun = document.getElementById('dryRunCheckbox').checked;
+                const debugMode = document.getElementById('debugMode').checked;
                 
-                // Filter sources if specific one selected
-                let sources = configData.parsers;
-                if (sourceSelect !== 'all') {
-                    sources = sources.filter(s => s.parser === sourceSelect);
-                }
+                console.info(`Test config: source=${sourceSelect}, days=${daysInput}, dryRun=${dryRun}, debug=${debugMode}`);
                 
-                // Create scraper config
-                const config = {
-                    dryRun: dryRun,
-                    daysToLookAhead: daysInput ? parseInt(daysInput) : undefined,
-                    corsProxy: 'https://api.allorigins.win/raw?url=' // Public CORS proxy for testing
-                };
+                // Create and run orchestrator
+                const orchestrator = new BearEventScraperOrchestrator();
                 
-                console.log(`Configuration: ${JSON.stringify(config)}`);
-                console.log(`Testing ${sources.length} source(s)`);
+                console.info('🔧 Initializing orchestrator...');
+                await orchestrator.initialize();
                 
-                // Create and run scraper
-                const scraper = new BearEventScraper(config);
-                await scraper.initialize();
+                console.info('▶️ Running scraper...');
+                const startTime = Date.now();
+                const results = await orchestrator.run();
+                const duration = Date.now() - startTime;
                 
-                const results = await scraper.scrapeEvents(sources);
+                console.success(`✅ Test completed in ${duration}ms`);
+                updateStatus('lastTestStatus', `${results.bearEvents} events (${duration}ms)`, 'success');
                 
-                // Display results summary
-                resultsContainer.style.display = 'block';
-                resultsDiv.innerHTML = `
-                    <div class="status ${results.success ? 'success' : 'error'}">
-                        <strong>${results.success ? '✅ Success' : '❌ Failed'}</strong>
-                        <br>Total Events: ${results.events.length}
-                        <br>Bear Events: ${results.bearEventCount}
-                        <br>Sources: ${results.successfulSources}/${results.totalSources} successful
-                        <br>Duplicates Removed: ${results.processingStats.duplicatesRemoved}
-                        <br>Past Events Filtered: ${results.processingStats.pastEventsFiltered}
-                    </div>
-                `;
-                
-                // Display the generated HTML
-                console.log('Generating HTML output...');
-                const displayHandler = new WebDisplayHandler();
-                const displayResult = await displayHandler.displayResults(results, { format: 'html' });
-                
-                if (displayResult.element) {
-                    htmlOutput.innerHTML = '';
-                    htmlOutput.appendChild(displayResult.element);
-                    console.log('✅ HTML output generated successfully');
-                } else {
-                    htmlOutput.innerHTML = '<p style="color: red;">Failed to generate HTML output</p>';
-                }
+                // Display results
+                displayTestResults(results, duration);
                 
             } catch (error) {
-                console.error(`Test failed: ${error.message}`);
+                console.error(`❌ Full test failed: ${error.message}`);
+                updateStatus('lastTestStatus', 'Failed', 'error');
+                
                 resultsContainer.style.display = 'block';
                 resultsDiv.innerHTML = `
-                    <div class="status error">
-                        <strong>❌ Test Failed</strong>
-                        <br>Error: ${error.message}
+                    <div class="status-item status-error">
+                        <strong>❌ Test Failed</strong><br>
+                        ${error.message}
                     </div>
                 `;
-                htmlOutput.innerHTML = '<p style="color: red;">Test failed - no output generated</p>';
             } finally {
                 testBtn.disabled = false;
-                testBtn.textContent = 'Run Scraper Test';
+                testBtn.textContent = '🚀 Run Full Test';
             }
         }
         
+        function displayTestResults(results, duration) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsDiv = document.getElementById('results');
+            
+            // Create stats grid
+            const statsHtml = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">${results.totalEvents || 0}</div>
+                        <div class="stat-label">Total Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${results.bearEvents || 0}</div>
+                        <div class="stat-label">Bear Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${results.calendarEvents || 0}</div>
+                        <div class="stat-label">Calendar Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${duration}ms</div>
+                        <div class="stat-label">Duration</div>
+                    </div>
+                </div>
+            `;
+            
+            // Create events display if any
+            let eventsHtml = '';
+            if (results.parserResults && results.parserResults.length > 0) {
+                const allEvents = results.parserResults.flatMap(r => r.events || []);
+                
+                if (allEvents.length > 0) {
+                    eventsHtml = `
+                        <h4>📅 Found Events (${allEvents.length})</h4>
+                        <div class="event-grid">
+                            ${allEvents.slice(0, 12).map(event => `
+                                <div class="event-card">
+                                    <h4>${event.title || 'Untitled Event'}</h4>
+                                    <div class="event-detail">
+                                        <strong>📅</strong> ${event.startDate ? new Date(event.startDate).toLocaleDateString() : 'No date'}
+                                    </div>
+                                    <div class="event-detail">
+                                        <strong>📍</strong> ${event.venue || 'No venue'}
+                                    </div>
+                                    <div class="event-detail">
+                                        <strong>🌆</strong> ${event.city || 'No city'}
+                                    </div>
+                                    <div class="event-detail">
+                                        <strong>🐻</strong> ${event.isBearEvent ? 'Yes' : 'No'}
+                                    </div>
+                                    <div class="event-detail">
+                                        <strong>📊</strong> ${event.source || 'Unknown'}
+                                    </div>
+                                    ${event.url ? `<div class="event-detail"><strong>🔗</strong> <a href="${event.url}" target="_blank">View Event</a></div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${allEvents.length > 12 ? `<p style="text-align: center; color: #666; margin-top: 20px;">... and ${allEvents.length - 12} more events</p>` : ''}
+                    `;
+                }
+            }
+            
+            // Show errors if any
+            let errorsHtml = '';
+            if (results.errors && results.errors.length > 0) {
+                errorsHtml = `
+                    <h4>⚠️ Errors (${results.errors.length})</h4>
+                    <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        ${results.errors.map(error => `<div style="color: #c62828; margin: 5px 0;">• ${error}</div>`).join('')}
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = statsHtml + eventsHtml + errorsHtml;
+            resultsContainer.style.display = 'block';
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+        
         async function testMockData() {
-            const htmlOutput = document.getElementById('htmlOutput');
+            console.info('🧪 Testing with mock data...');
             
-            console.log('🧪 Testing with mock data...');
-            
-            try {
-                // Create mock results
-                const mockResults = {
-                    success: true,
+            const mockResults = {
+                totalEvents: 15,
+                bearEvents: 8,
+                calendarEvents: 0,
+                errors: [],
+                parserResults: [{
+                    name: 'Mock Parser',
                     events: [
                         {
-                            title: 'Bear Night Out',
-                            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                            title: 'Bear Night Out NYC',
+                            startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                             venue: 'Rockbar',
                             city: 'nyc',
-                            description: 'Monthly bear gathering with drink specials',
                             isBearEvent: true,
-                            source: 'Rockbar NYC',
+                            source: 'Mock Data',
                             url: 'https://example.com/event1'
                         },
                         {
-                            title: 'Furball NYC',
-                            date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                            title: 'Furball Dance Party',
+                            startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
                             venue: 'Terminal 5',
                             city: 'nyc',
-                            description: 'The biggest bear dance party in NYC',
                             isBearEvent: true,
-                            source: 'Furball NYC',
+                            source: 'Mock Data',
                             url: 'https://example.com/event2'
                         },
                         {
                             title: 'Bearracuda SF',
-                            date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+                            startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
                             venue: 'SF Eagle',
                             city: 'sf',
-                            description: 'Bear dance party with go-go dancers',
                             isBearEvent: true,
-                            source: 'Bearracuda',
+                            source: 'Mock Data',
                             url: 'https://example.com/event3'
                         }
-                    ],
-                    totalSources: 3,
-                    successfulSources: 3,
-                    bearEventCount: 3,
-                    processingStats: {
-                        totalEventsFound: 5,
-                        duplicatesRemoved: 1,
-                        pastEventsFiltered: 1,
-                        finalEventCount: 3
-                    },
-                    comprehensiveStats: {
-                        totalParsed: 5,
-                        validEvents: 3,
-                        bearEvents: 3,
-                        processingSuccess: 100,
-                        bearEventRate: 100
-                    },
-                    timestamp: new Date().toISOString()
-                };
-                
-                // Generate HTML display
-                const displayHandler = new WebDisplayHandler({ showDebugInfo: true });
-                const displayResult = await displayHandler.displayResults(mockResults, { format: 'html' });
-                
-                if (displayResult.element) {
-                    htmlOutput.innerHTML = '';
-                    htmlOutput.appendChild(displayResult.element);
-                    console.log('✅ Mock data HTML generated successfully');
-                } else {
-                    htmlOutput.innerHTML = '<p style="color: red;">Failed to generate HTML from mock data</p>';
-                }
-                
-            } catch (error) {
-                console.error(`Mock test failed: ${error.message}`);
-                htmlOutput.innerHTML = '<p style="color: red;">Mock test failed</p>';
-            }
-        }
-        
-        // Run mock test on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Page loaded - Bear Event Scraper Test Ready');
-            
-            // Check module availability
-            const moduleStatus = {
-                WebInputHandler: typeof WebInputHandler !== 'undefined',
-                WebDisplayHandler: typeof WebDisplayHandler !== 'undefined',
-                EventbriteEventParser: typeof EventbriteEventParser !== 'undefined',
-                BearraccudaEventParser: typeof BearraccudaEventParser !== 'undefined',
-                GenericEventParser: typeof GenericEventParser !== 'undefined',
-                BearEventScraper: typeof BearEventScraper !== 'undefined'
+                    ]
+                }]
             };
             
-            console.log('Available modules:', moduleStatus);
+            console.success('✅ Mock data generated successfully');
+            displayTestResults(mockResults, 42);
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.info('🌟 Bear Event Scraper Test Suite initialized');
             
-            // If any module is missing, show an error
-            const missingModules = Object.entries(moduleStatus)
-                .filter(([name, loaded]) => !loaded)
-                .map(([name]) => name);
+            // Run initial tests
+            await testEnvironment();
+            await testModules();
+            await loadConfiguration();
             
-            if (missingModules.length > 0) {
-                console.error('Missing modules:', missingModules.join(', '));
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'status error';
-                errorDiv.innerHTML = `<strong>⚠️ Module Loading Error</strong><br>Missing modules: ${missingModules.join(', ')}<br>Please check the console for errors.`;
-                document.getElementById('resultsContainer').style.display = 'block';
-                document.getElementById('results').appendChild(errorDiv);
-            }
+            console.success('✅ Test suite ready!');
+            console.info('💡 Use the controls above to run tests, or click "Run Full Test" to test the scraper with live data');
         });
-
-        // Enhanced Eventbrite Parser Testing Functions
-        const eventbritePresets = {
-            denver: `<div class="Container_root__4i85v NestedActionContainer_root__1jtfr event-card event-card__vertical" 
-         data-event-location="Denver, CO">
-        <a href="https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849" 
-           rel="noopener" target="_blank" class="event-card-link" 
-           aria-label="View MEGAWOOF AMERICA DENVER : MASSIVE 2 Parties 1 Ticket" 
-           data-event-id="1381219547849">
-            <section class="event-card-details">
-                <div class="Stack_root__1ksk7">
-                    <h3 class="Typography_root__487rx Typography_body-lg__487rx">
-                        MEGAWOOF AMERICA DENVER : MASSIVE 2 Parties 1 Ticket
-                    </h3>
-                    <p class="Typography_root__487rx Typography_body-md__487rx">
-                        Sat, Aug 23 • 9:00 PM - 2:00 AM
-                    </p>
-                    <p class="Typography_root__487rx Typography_body-md__487rx">
-                        Trade
-                    </p>
-                    <p class="Typography_root__487rx Typography_body-md-bold__487rx">
-                        From $16.84
-                    </p>
-                </div>
-            </section>
-        </a>
-    </div>`,
-            
-            atlanta: `<div class="Container_root__4i85v NestedActionContainer_root__1jtfr event-card event-card__vertical" 
-         data-event-location="Atlanta, GA">
-        <a href="https://www.eventbrite.com/e/megawoof-america-atlanta-tickets-1433358025439" 
-           rel="noopener" target="_blank" class="event-card-link" 
-           aria-label="View MEGAWOOF AMERICA ATLANTA" 
-           data-event-id="1433358025439">
-            <section class="event-card-details">
-                <div class="Stack_root__1ksk7">
-                    <h3 class="Typography_root__487rx Typography_body-lg__487rx">
-                        MEGAWOOF AMERICA ATLANTA
-                    </h3>
-                    <p class="Typography_root__487rx Typography_body-md__487rx">
-                        Sat, Nov 15 • 10:00 PM - 4:00 AM
-                    </p>
-                    <p class="Typography_root__487rx Typography_body-md__487rx">
-                        The Heretic Atlanta
-                    </p>
-                    <p class="Typography_root__487rx Typography_body-md-bold__487rx">
-                        From $25.00
-                    </p>
-                </div>
-            </section>
-        </a>
-    </div>`,
-
-            structured: `<script type="application/ld+json">
-{
-    "@type": "Event",
-    "name": "MEGAWOOF AMERICA DENVER : MASSIVE 2 Parties 1 Ticket",
-    "startDate": "2025-08-23T21:00:00-06:00",
-    "endDate": "2025-08-24T02:00:00-06:00",
-    "location": {
-        "name": "Trade",
-        "address": "475 Santa Fe Drive, Denver, CO 80204",
-        "geo": {
-            "latitude": "39.7392",
-            "longitude": "-105.0178"
-        }
-    },
-    "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849"
-}
-</script>
-<div>Event content here...</div>`,
-
-            addressParsing: `<div class="Container_root__4i85v NestedActionContainer_root__1jtfr event-card event-card__vertical">
-        <a href="https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019" 
-           rel="noopener" target="_blank" class="event-card-link" 
-           aria-label="View Duro Summer Night Foam Edition" 
-           data-event-id="1446957562019">
-            <section class="event-card-details">
-                <div class="Stack_root__1ksk7">
-                    <h3 class="Typography_root__487rx Typography_body-lg__487rx">
-                        Duro Summer Night Foam Edition
-                    </h3>
-                    <p class="Typography_root__487rx Typography_body-md__487rx">
-                        Sat, Aug 23 • 9:00 PM
-                    </p>
-                    <p class="Typography_root__487rx Typography_body-md__487rx">
-                        TBA
-
-DTLA Los Angeles, CA 90013
-                    </p>
-                    <p class="Typography_root__487rx Typography_body-md-bold__487rx">
-                        From $25.00
-                    </p>
-                </div>
-            </section>
-        </a>
-    </div>
-    
-    <div>Location
-    TBA
-    
-    DTLA Los Angeles, CA 90013
-    Get directions</div>`
-        };
-
-        function loadEventbritePreset(type) {
-            const htmlInput = document.getElementById('eventbriteHtml');
-            if (eventbritePresets[type]) {
-                htmlInput.value = eventbritePresets[type].trim();
-                parseEventbriteLive();
-            }
-        }
-
-        function clearEventbriteInput() {
-            document.getElementById('eventbriteHtml').value = '';
-            document.getElementById('eventbriteLiveResults').style.display = 'none';
-        }
-
-        let eventbriteParseTimeout;
-        function parseEventbriteLive() {
-            clearTimeout(eventbriteParseTimeout);
-            eventbriteParseTimeout = setTimeout(() => {
-                const htmlInput = document.getElementById('eventbriteHtml');
-                const liveResults = document.getElementById('eventbriteLiveResults');
-                const liveContent = document.getElementById('eventbriteLiveContent');
-                
-                if (!htmlInput.value.trim()) {
-                    liveResults.style.display = 'none';
-                    return;
-                }
-                
-                try {
-                    if (typeof EventbriteEventParser === 'undefined') {
-                        throw new Error('EventbriteEventParser not loaded');
-                    }
-                    
-                    const parser = new EventbriteEventParser({
-                        alwaysBear: true,
-                        requireDetailPages: false
-                    });
-                    
-                    const htmlData = {
-                        html: htmlInput.value,
-                        url: 'https://www.eventbrite.com/test'
-                    };
-                    
-                    const result = parser.parseEvents(htmlData);
-                    
-                    let content = '';
-                    if (result.events && result.events.length > 0) {
-                        const event = result.events[0];
-                        content = `
-                            <div style="background: #e8f5e8; padding: 10px; border-radius: 4px;">
-                                <strong>✅ Parsed Successfully!</strong><br>
-                                📅 <strong>${event.title}</strong><br>
-                                🏢 Venue: ${event.venue || 'N/A'}<br>
-                                📍 Address: ${event.address || 'N/A'}<br>
-                                🕐 Time: ${event.dateString || event.startDate || 'N/A'}<br>
-                                🗺️ Maps: ${event.googleMapsLink ? '<a href="' + event.googleMapsLink + '" target="_blank">Open</a>' : 'N/A'}<br>
-                                📍 GPS: ${event.coordinates ? event.coordinates.lat + ', ' + event.coordinates.lng : 'N/A'}
-                            </div>
-                        `;
-                    } else {
-                        content = '<div style="background: #ffebee; padding: 10px; border-radius: 4px; color: #c62828;"><strong>❌ No events found</strong></div>';
-                    }
-                    
-                    liveContent.innerHTML = content;
-                    liveResults.style.display = 'block';
-                    
-                } catch (error) {
-                    liveContent.innerHTML = `<div style="background: #ffebee; padding: 10px; border-radius: 4px; color: #c62828;"><strong>❌ Error:</strong> ${error.message}</div>`;
-                    liveResults.style.display = 'block';
-                }
-            }, 500);
-        }
-
-        function testEventbriteParser() {
-            const htmlInput = document.getElementById('eventbriteHtml');
-            
-            if (!htmlInput.value.trim()) {
-                alert('Please enter some HTML content first!');
-                return;
-            }
-            
-            try {
-                if (typeof EventbriteEventParser === 'undefined') {
-                    throw new Error('EventbriteEventParser not loaded');
-                }
-                
-                const parser = new EventbriteEventParser({
-                    alwaysBear: true,
-                    requireDetailPages: false
-                });
-                
-                const htmlData = {
-                    html: htmlInput.value,
-                    url: 'https://www.eventbrite.com/test'
-                };
-                
-                const result = parser.parseEvents(htmlData);
-                
-                // Display results in the main results area
-                const resultsContainer = document.getElementById('resultsContainer');
-                const results = document.getElementById('results');
-                
-                let resultHtml = '<div class="status success"><h4>🎫 Eventbrite Parser Test Results</h4></div>';
-                
-                if (result.events && result.events.length > 0) {
-                    result.events.forEach((event, index) => {
-                        resultHtml += `
-                            <div class="event-card">
-                                <h5>📅 Event ${index + 1}: ${event.title}</h5>
-                                <p><strong>Date String:</strong> ${event.dateString || 'N/A'}</p>
-                                <p><strong>Start Date (ISO):</strong> ${event.startDate || event.date || 'N/A'}</p>
-                                <p><strong>End Date (ISO):</strong> ${event.endDate || 'N/A'}</p>
-                                <p><strong>Venue/Bar Name:</strong> ${event.venue || 'N/A'}</p>
-                                <p><strong>Address:</strong> ${event.address || 'N/A'}</p>
-                                <p><strong>GPS Coordinates:</strong> ${event.coordinates ? `${event.coordinates.lat}, ${event.coordinates.lng}` : 'N/A'}</p>
-                                <p><strong>Google Maps Link:</strong> ${event.googleMapsLink ? `<a href="${event.googleMapsLink}" target="_blank">🗺️ Open in Maps</a>` : 'N/A'}</p>
-                                <p><strong>City:</strong> ${event.city || 'N/A'}</p>
-                                <p><strong>Price:</strong> ${event.price || 'N/A'}</p>
-                                <p><strong>Is Bear Event:</strong> ${event.isBearEvent ? '🐻 Yes' : '❌ No'}</p>
-                            </div>
-                        `;
-                    });
-                } else {
-                    resultHtml += '<div class="status error">❌ No events parsed from the HTML</div>';
-                }
-                
-                resultHtml += `<div class="stats-container">
-                    <p><strong>Events Found:</strong> ${result.events ? result.events.length : 0}</p>
-                    <p><strong>Additional Links:</strong> ${result.additionalLinks ? result.additionalLinks.length : 0}</p>
-                    <p><strong>Source:</strong> ${result.source}</p>
-                </div>`;
-                
-                results.innerHTML = resultHtml;
-                resultsContainer.style.display = 'block';
-                
-                // Scroll to results
-                resultsContainer.scrollIntoView({ behavior: 'smooth' });
-                
-            } catch (error) {
-                const resultsContainer = document.getElementById('resultsContainer');
-                const results = document.getElementById('results');
-                
-                results.innerHTML = `<div class="status error">
-                    <h4>❌ Eventbrite Parser Test Failed</h4>
-                    <p><strong>Error:</strong> ${error.message}</p>
-                </div>`;
-                
-                resultsContainer.style.display = 'block';
-                resultsContainer.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
     </script>
 </body>
 </html>

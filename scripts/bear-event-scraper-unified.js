@@ -27,6 +27,8 @@ console.log('🐻 Bear Event Scraper - Unified Version Starting...');
 class BearEventScraperOrchestrator {
     constructor() {
         this.isScriptable = typeof importModule !== 'undefined';
+        this.isNode = typeof module !== 'undefined' && module.exports && typeof window === 'undefined';
+        this.isWeb = typeof window !== 'undefined';
         this.isInitialized = false;
         this.modules = {};
     }
@@ -38,7 +40,8 @@ class BearEventScraperOrchestrator {
         }
 
         try {
-            console.log(`🐻 Orchestrator: Initializing for ${this.isScriptable ? 'Scriptable' : 'Web'} environment`);
+            const envName = this.isScriptable ? 'Scriptable' : this.isNode ? 'Node.js' : 'Web';
+            console.log(`🐻 Orchestrator: Initializing for ${envName} environment`);
             
             // Load modules based on environment
             await this.loadModules();
@@ -55,6 +58,8 @@ class BearEventScraperOrchestrator {
     async loadModules() {
         if (this.isScriptable) {
             await this.loadScriptableModules();
+        } else if (this.isNode) {
+            await this.loadNodeModules();
         } else {
             await this.loadWebModules();
         }
@@ -89,6 +94,38 @@ class BearEventScraperOrchestrator {
         } catch (error) {
             console.error(`📱 ✗ Failed to load Scriptable modules: ${error}`);
             throw new Error(`Scriptable module loading failed: ${error.message}`);
+        }
+    }
+
+    async loadNodeModules() {
+        try {
+            console.log('🟢 Loading Node.js modules...');
+            
+            // Load core modules using require
+            const sharedCoreModule = require('./shared-core');
+            const webAdapterModule = require('./adapters/web-adapter');
+            
+            // Load parsers
+            const eventbriteParserModule = require('./parsers/eventbrite-parser');
+            const bearracudaParserModule = require('./parsers/bearracuda-parser');
+            const genericParserModule = require('./parsers/generic-parser');
+            
+            // Store modules
+            this.modules = {
+                SharedCore: sharedCoreModule.SharedCore,
+                adapter: webAdapterModule.WebAdapter,
+                parsers: {
+                    eventbrite: eventbriteParserModule.EventbriteParser,
+                    bearracuda: bearracudaParserModule.BearraccudaParser,
+                    generic: genericParserModule.GenericParser
+                }
+            };
+            
+            console.log('🟢 ✓ Node.js modules loaded successfully');
+            
+        } catch (error) {
+            console.error(`🟢 ✗ Failed to load Node.js modules: ${error}`);
+            throw new Error(`Node.js module loading failed: ${error.message}`);
         }
     }
 

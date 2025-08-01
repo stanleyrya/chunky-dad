@@ -283,9 +283,15 @@ class SharedCore {
     }
 
     createEventKey(event) {
-        const title = (event.title || '').toLowerCase().trim();
+        // Debug the event structure
+        if (typeof event.title !== 'string') {
+            console.log(`🔍 DEBUG: event.title type: ${typeof event.title}, value:`, event.title);
+            console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
+        }
+        
+        const title = String(event.title || '').toLowerCase().trim();
         const date = event.startDate ? new Date(event.startDate).toDateString() : '';
-        const venue = (event.venue || '').toLowerCase().trim();
+        const venue = String(event.venue || '').toLowerCase().trim();
         
         return `${title}|${date}|${venue}`;
     }

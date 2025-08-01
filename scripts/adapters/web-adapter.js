@@ -79,14 +79,26 @@ class WebAdapter {
         try {
             console.log('🌐 Web: Loading configuration from scraper-input.json');
             
-            // Try to load from same directory as script
-            const response = await fetch('./scraper-input.json');
+            let config;
             
-            if (!response.ok) {
-                throw new Error(`Configuration file not found: ${response.status} ${response.statusText}`);
+            // Check if we're in Node.js environment
+            if (typeof window === 'undefined' && typeof require !== 'undefined') {
+                // Node.js environment - use file system
+                const fs = require('fs');
+                const path = require('path');
+                const configPath = path.join(__dirname, '..', 'scraper-input.json');
+                const configData = fs.readFileSync(configPath, 'utf8');
+                config = JSON.parse(configData);
+            } else {
+                // Browser environment - use fetch
+                const response = await fetch('./scraper-input.json');
+                
+                if (!response.ok) {
+                    throw new Error(`Configuration file not found: ${response.status} ${response.statusText}`);
+                }
+                
+                config = await response.json();
             }
-            
-            const config = await response.json();
             
             console.log('🌐 Web: ✓ Configuration loaded successfully');
             console.log(`🌐 Web: Found ${config.parsers?.length || 0} parser configurations`);
@@ -243,6 +255,12 @@ class WebAdapter {
 
     createResultsDisplay(results) {
         try {
+            // Skip DOM manipulation in Node.js environment
+            if (typeof document === 'undefined') {
+                console.log('🟢 Node.js: Skipping DOM results display (not available in Node.js)');
+                return;
+            }
+            
             // Create or update results display in DOM
             let resultsDiv = document.getElementById('scraper-results');
             if (!resultsDiv) {
@@ -293,8 +311,12 @@ class WebAdapter {
     // Error handling with browser alerts
     async showError(title, message) {
         try {
-            // Use browser alert as fallback
-            alert(`${title}\n\n${message}`);
+            // Skip alert in Node.js environment
+            if (typeof alert !== 'undefined') {
+                alert(`${title}\n\n${message}`);
+            } else {
+                console.log(`🟢 Node.js: ${title} - ${message}`);
+            }
             
             // Could also create a custom modal here
             console.error(`🌐 Web: ${title} - ${message}`);
@@ -304,9 +326,12 @@ class WebAdapter {
     }
 }
 
-// Export for web environment
-if (typeof window !== 'undefined') {
-    window.WebAdapter = WebAdapter;
-} else if (typeof module !== 'undefined' && module.exports) {
+// Export for both environments
+if (typeof module !== 'undefined' && module.exports) {
     module.exports = { WebAdapter };
+} else if (typeof window !== 'undefined') {
+    window.WebAdapter = WebAdapter;
+} else {
+    // Scriptable environment
+    this.WebAdapter = WebAdapter;
 }
