@@ -22,51 +22,25 @@
 class GenericParser {
     constructor(config = {}) {
         this.config = {
-            source: config.source || 'Generic',
-            baseUrl: config.baseUrl || '',
-            alwaysBear: false,
-            requireDetailPages: false,
+            source: 'generic',
+            requireDetailPages: true,
             maxAdditionalUrls: 15,
             ...config
         };
         
         this.bearKeywords = [
-            'bear', 'bears', 'cub', 'cubs', 'otter', 'otters',
-            'daddy', 'daddies', 'woof', 'grr', 'furry', 'hairy',
-            'beef', 'chunk', 'chub', 'muscle bear', 'leather bear',
-            'polar bear', 'grizzly', 'bearracuda', 'furball', 'megawoof',
-            'diaper happy hour', 'bears night out', 'rockstrap', 'underbear',
-            'filth', 'jizznasium', 'club chub', 'young hearts', 'xl',
-            'blufsf', 'adonis', 'beer bust', 'disco daddy'
+            'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
+            'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
+            'furball', 'leather bears', 'bear night', 'bear party'
         ];
-
-        // Generic URL patterns that work for most event sites
-        this.urlPatterns = [
-            {
-                name: 'Event Pages',
-                regex: 'href="([^"]*\\/events?\\/[^"]*)"',
-                maxMatches: 12,
-                description: 'Standard event pages'
-            },
-            {
-                name: 'Calendar Pages',
-                regex: 'href="([^"]*\\/calendar[^"]*)"',
-                maxMatches: 8,
-                description: 'Calendar pages'
-            },
-            {
-                name: 'Show Pages',
-                regex: 'href="([^"]*\\/shows?\\/[^"]*)"',
-                maxMatches: 10,
-                description: 'Show or performance pages'
-            },
-            {
-                name: 'Party Pages',
-                regex: 'href="([^"]*\\/parties?\\/[^"]*)"',
-                maxMatches: 10,
-                description: 'Party pages'
-            }
-        ];
+        
+        // Shared city utilities will be injected by shared-core
+        this.sharedCore = null;
+    }
+    
+    // Initialize with shared-core instance for city utilities
+    initialize(sharedCore) {
+        this.sharedCore = sharedCore;
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
@@ -265,8 +239,10 @@ class GenericParser {
                 }
             }
             
-            // Extract city from content
-            const city = this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
+            // Extract city from text
+            const city = this.sharedCore ? 
+                this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl) :
+                this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
             
             return {
                 title: title,
@@ -355,35 +331,11 @@ class GenericParser {
 
     // Extract city from text content
     extractCityFromText(text) {
-        const cityMappings = {
-            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-            'los angeles|la|hollywood|west hollywood|weho': 'la',
-            'san francisco|sf|castro': 'sf',
-            'chicago|chi': 'chicago',
-            'atlanta|atl': 'atlanta',
-            'miami|south beach': 'miami',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'denver': 'denver',
-            'las vegas|vegas': 'vegas',
-            'boston': 'boston',
-            'philadelphia|philly': 'philadelphia',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix'
-        };
-        
-        const lowerText = text.toLowerCase();
-        
-        for (const [patterns, city] of Object.entries(cityMappings)) {
-            const patternList = patterns.split('|');
-            if (patternList.some(pattern => lowerText.includes(pattern))) {
-                return city;
-            }
+        if (!this.sharedCore) {
+            console.warn('🔧 Generic: SharedCore not initialized, cannot extract city.');
+            return null;
         }
-        
-        return null;
+        return this.sharedCore.extractCityFromText(text);
     }
 
     // Parse date string into ISO format
@@ -403,7 +355,7 @@ class GenericParser {
                 // YYYY-MM-DD (ISO format)
                 /(\d{4})-(\d{2})-(\d{2})/,
                 // Month DD, YYYY
-                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})/i,
+                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i,
                 // DD Month YYYY
                 /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i
             ];

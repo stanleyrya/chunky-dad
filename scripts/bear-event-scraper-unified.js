@@ -221,6 +221,15 @@ class BearEventScraperOrchestrator {
             }
 
             console.log(`🐻 Orchestrator: ✓ Created ${Object.keys(parsers).length} parser instances: ${Object.keys(parsers).join(', ')}`);
+            
+            // Initialize parsers with shared-core for city utilities
+            console.log('🐻 Orchestrator: Initializing parsers with shared-core...');
+            for (const [name, parser] of Object.entries(parsers)) {
+                if (typeof parser.initialize === 'function') {
+                    parser.initialize(sharedCore);
+                    console.log(`🐻 Orchestrator: ✓ Initialized ${name} parser with shared-core`);
+                }
+            }
 
             // Process events using shared core
             console.log('🐻 Orchestrator: Calling sharedCore.processEvents...');

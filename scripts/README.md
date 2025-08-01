@@ -50,7 +50,7 @@ scripts/
 ### `shared-core.js` (Pure Business Logic)
 - **Purpose**: Core event processing, filtering, deduplication, utilities
 - **Environment**: Pure JavaScript - works everywhere
-- **Contains**: Event filtering, bear detection, date utilities, URL processing
+- **Contains**: Event filtering, bear detection, date utilities, URL processing, city mapping and location detection
 - **Cannot contain**: HTTP requests, calendar operations, DOM manipulation, environment detection
 
 ### `adapters/scriptable-adapter.js` (iOS Only)
@@ -144,7 +144,14 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
   ],
   "calendarMappings": {
     "nyc": "chunky-dad-nyc",
-    "la": "chunky-dad-la"
+    "la": "chunky-dad-la",
+    "palm-springs": "chunky-dad-palm-springs",
+    "seattle": "chunky-dad-seattle",
+    "chicago": "chunky-dad-chicago",
+    "toronto": "chunky-dad-toronto",
+    "london": "chunky-dad-london",
+    "berlin": "chunky-dad-berlin",
+    "default": "chunky-dad-events"
   }
 }
 ```
