@@ -31,6 +31,7 @@ scripts/
 3. **NO DOM APIs in shared files** - No `DOMParser`, `document`, `window` in `shared-core.js` or `parsers/`
 4. **NO HTTP requests in parsers** - Parsers receive HTML/JSON, they don't fetch it
 5. **NO calendar operations in parsers** - Parsers return event objects, they don't save them
+6. **NO multi-parameter console calls** - Scriptable console methods only accept ONE parameter
 
 ### ✅ ALWAYS DO THESE:
 1. **Keep business logic pure** - `shared-core.js` and `parsers/` contain only pure JavaScript functions
@@ -103,6 +104,7 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 - [ ] Parsers receive data, don't fetch it
 - [ ] Adapters implement abstract interfaces
 - [ ] Business logic is environment-agnostic
+- [ ] All console calls use single parameter (Scriptable compatibility)
 
 ## 📋 CURRENT FUNCTIONALITY
 
@@ -194,6 +196,10 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 - Check Scriptable app console for colored log output
 - Verify `scraper-input.json` exists in iCloud Drive/Scriptable/
 - Test calendar permissions and access
+- **CRITICAL**: Scriptable console methods (log, warn, error) only accept ONE parameter
+  - ❌ `console.log('message:', error)` - BREAKS in Scriptable
+  - ✅ `console.log(`message: ${error}`)` - Works in Scriptable
+  - ✅ `console.log(`data: ${JSON.stringify(obj)}`)` - Works for objects
 
 ### Web Environment  
 - Open browser DevTools → Console
