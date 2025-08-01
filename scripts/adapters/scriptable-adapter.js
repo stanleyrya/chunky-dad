@@ -223,19 +223,16 @@ class ScriptableAdapter {
             let calendar = calendars.find(cal => cal.title === calendarName);
             
             if (!calendar) {
-                // Create new calendar
-                console.log(`📱 Scriptable: Creating new calendar: ${calendarName}`);
-                calendar = new Calendar();
-                calendar.title = calendarName;
-                calendar.color = Color.orange(); // Bear-themed color
-                await calendar.save();
-                console.log(`📱 Scriptable: ✓ Created calendar: ${calendarName}`);
+                // NEVER create new calendars - throw error instead
+                const errorMsg = `Calendar "${calendarName}" does not exist. Please create it manually first.`;
+                console.log(`📱 Scriptable: ✗ ${errorMsg}`);
+                throw new Error(errorMsg);
             }
             
             return calendar;
             
         } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to get/create calendar "${calendarName}": ${error.message}`);
+            console.log(`📱 Scriptable: ✗ Failed to get calendar "${calendarName}": ${error.message}`);
             throw error;
         }
     }
@@ -342,7 +339,9 @@ class ScriptableAdapter {
         console.log('📅 CALENDAR PROPERTIES & STORAGE PREVIEW');
         console.log('='.repeat(60));
         
-        if (!results.events || !results.events.length) {
+        // Get all events from all parser results
+        const allEvents = this.getAllEventsFromResults(results);
+        if (!allEvents || !allEvents.length) {
             console.log('❌ No event data available for preview');
             return;
         }
@@ -351,7 +350,7 @@ class ScriptableAdapter {
         const availableCalendars = await Calendar.forEvents();
 
         // Show how events will be stored
-        results.events.forEach((event, i) => {
+        allEvents.forEach((event, i) => {
             console.log(`\n🐻 Event ${i + 1}: ${event.title || event.name}`);
             console.log('─'.repeat(40));
             
@@ -366,7 +365,7 @@ class ScriptableAdapter {
                 console.log(`   Color: ${existingCalendar.color.hex}`);
                 console.log(`   Modifications allowed: ${existingCalendar.allowsContentModifications}`);
             } else {
-                console.log(`🆕 Calendar will be created with orange color`);
+                console.log(`❌ Calendar does not exist - must be created manually first`);
             }
             
             // Event properties that will be stored
@@ -411,14 +410,16 @@ class ScriptableAdapter {
         console.log('🔍 CALENDAR COMPARISON & CONFLICT DETECTION');
         console.log('='.repeat(60));
         
-        if (!results.events || !results.events.length) {
+        // Get all events from all parser results
+        const allEvents = this.getAllEventsFromResults(results);
+        if (!allEvents || !allEvents.length) {
             console.log('❌ No events to compare');
             return;
         }
 
         const availableCalendars = await Calendar.forEvents();
         
-        for (const event of results.events) {
+        for (const event of allEvents) {
             const calendarName = this.getCalendarName(event, null);
             const calendar = availableCalendars.find(cal => cal.title === calendarName);
             
@@ -426,7 +427,7 @@ class ScriptableAdapter {
             console.log(`📅 Target Calendar: ${calendarName}`);
             
             if (!calendar) {
-                console.log(`🆕 Calendar "${calendarName}" doesn't exist - will be created`);
+                console.log(`❌ Calendar "${calendarName}" doesn't exist - must be created manually first`);
                 continue;
             }
             
@@ -517,7 +518,7 @@ class ScriptableAdapter {
             console.log('🗺️  Calendar Mappings:');
             Object.entries(this.calendarMappings).forEach(([city, calendarName]) => {
                 const exists = availableCalendars.find(cal => cal.title === calendarName);
-                const status = exists ? '✅ Exists' : '🆕 Will be created';
+                const status = exists ? '✅ Exists' : '❌ Missing (create manually)';
                 console.log(`   ${city} → "${calendarName}" ${status}`);
             });
             
@@ -533,12 +534,14 @@ class ScriptableAdapter {
         console.log('🐻 ENRICHED EVENT INFORMATION');
         console.log('='.repeat(60));
         
-        if (!results.events || !results.events.length) {
+        // Get all events from all parser results
+        const allEvents = this.getAllEventsFromResults(results);
+        if (!allEvents || !allEvents.length) {
             console.log('❌ No events to display');
             return;
         }
         
-        results.events.forEach((event, i) => {
+        allEvents.forEach((event, i) => {
             console.log(`\n🎉 Event ${i + 1}: ${event.title || event.name}`);
             console.log('─'.repeat(50));
             
@@ -612,18 +615,20 @@ class ScriptableAdapter {
         console.log('📊 SUMMARY & RECOMMENDED ACTIONS');
         console.log('='.repeat(60));
         
-        if (!results.events) {
+        // Get all events from all parser results
+        const allEvents = this.getAllEventsFromResults(results);
+        if (!allEvents || !allEvents.length) {
             console.log('❌ No event data available for summary');
             return;
         }
         
         const summary = {
-            totalEvents: results.events.length,
-            cities: [...new Set(results.events.map(e => e.city).filter(Boolean))],
-            recurringEvents: results.events.filter(e => e.recurring).length,
-            oneTimeEvents: results.events.filter(e => !e.recurring).length,
-            calendarsNeeded: [...new Set(results.events.map(e => this.getCalendarName(e, null)))],
-            timezones: [...new Set(results.events.map(e => e.timezone).filter(Boolean))]
+            totalEvents: allEvents.length,
+            cities: [...new Set(allEvents.map(e => e.city).filter(Boolean))],
+            recurringEvents: allEvents.filter(e => e.recurring).length,
+            oneTimeEvents: allEvents.filter(e => !e.recurring).length,
+            calendarsNeeded: [...new Set(allEvents.map(e => this.getCalendarName(e, null)))],
+            timezones: [...new Set(allEvents.map(e => e.timezone).filter(Boolean))]
         };
         
         console.log(`📊 Events: ${summary.totalEvents} total`);
@@ -658,6 +663,22 @@ class ScriptableAdapter {
         console.log(`   4. Set dryRun: false in config to actually add events`);
         
         console.log('\n' + '='.repeat(60));
+    }
+
+    // Helper method to extract all events from parser results
+    getAllEventsFromResults(results) {
+        if (!results || !results.parserResults) {
+            return [];
+        }
+        
+        const allEvents = [];
+        for (const parserResult of results.parserResults) {
+            if (parserResult.events && parserResult.events.length > 0) {
+                allEvents.push(...parserResult.events);
+            }
+        }
+        
+        return allEvents;
     }
 }
 
