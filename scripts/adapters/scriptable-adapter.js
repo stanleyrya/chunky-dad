@@ -214,11 +214,7 @@ class ScriptableAdapter {
                             similarEvent.url = mergedData.url;
                         }
                         // Update location to GPS coordinates if available
-                        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-                            similarEvent.location = `${event.coordinates.lat}, ${event.coordinates.lng}`;
-                        } else if (mergedData.location && !similarEvent.location) {
-                            similarEvent.location = mergedData.location;
-                        }
+                        similarEvent.location = this.formatLocationForCalendar(event);
                         
                         await similarEvent.save();
                         console.log(`📱 Scriptable: ✓ Merged event: ${similarEvent.title}`);
@@ -254,11 +250,7 @@ class ScriptableAdapter {
                                 shouldMergeConflict.url = mergedData.url;
                             }
                             // Update location to GPS coordinates if available
-                            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-                                shouldMergeConflict.location = `${event.coordinates.lat}, ${event.coordinates.lng}`;
-                            } else if (mergedData.location && !shouldMergeConflict.location) {
-                                shouldMergeConflict.location = mergedData.location;
-                            }
+                            shouldMergeConflict.location = this.formatLocationForCalendar(event);
                             
                             await shouldMergeConflict.save();
                             console.log(`📱 Scriptable: ✓ Merged time conflict: ${shouldMergeConflict.title}`);
@@ -278,12 +270,8 @@ class ScriptableAdapter {
                     calendarEvent.startDate = startDate;
                     calendarEvent.endDate = endDate;
                     
-                    // Set location to GPS coordinates if available, without parentheses
-                    if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-                        calendarEvent.location = `${event.coordinates.lat}, ${event.coordinates.lng}`;
-                    } else {
-                        calendarEvent.location = '';
-                    }
+                    // Set location to GPS coordinates only
+                    calendarEvent.location = this.formatLocationForCalendar(event);
                     
                     calendarEvent.notes = this.formatEventNotes(event);
                     calendarEvent.calendar = calendar;
@@ -337,6 +325,14 @@ class ScriptableAdapter {
         // Use calendar mapping from config
         const city = event.city || 'default';
         return this.calendarMappings[city] || `chunky-dad-${city}`;
+    }
+    
+    // Helper method to format location as GPS coordinates
+    formatLocationForCalendar(event) {
+        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+            return `${event.coordinates.lat}, ${event.coordinates.lng}`;
+        }
+        return ''; // Never use bar name in location field
     }
 
     formatEventNotes(event) {
@@ -1830,8 +1826,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return {
             title: existingEvent.title, // Keep existing title
             notes: mergedNotes,
-            url: existingEvent.url || newEvent.url,
-            location: existingEvent.location || newEvent.venue
+            url: existingEvent.url || newEvent.url
+            // location is handled separately using formatLocationForCalendar
         };
     }
 }
