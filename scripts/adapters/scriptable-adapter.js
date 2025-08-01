@@ -285,12 +285,19 @@ class ScriptableAdapter {
         console.error(message);
     }
 
-    // Results Display
+    // Results Display - Enhanced with calendar preview and comparison
     async displayResults(results) {
         try {
-            console.log('\n' + '='.repeat(50));
+            // First show the enhanced display features
+            await this.displayCalendarProperties(results);
+            await this.compareWithExistingCalendars(results);
+            await this.displayAvailableCalendars();
+            await this.displayEnrichedEvents(results);
+            
+            // Then show the standard results summary
+            console.log('\n' + '='.repeat(60));
             console.log('🐻 BEAR EVENT SCRAPER RESULTS');
-            console.log('='.repeat(50));
+            console.log('='.repeat(60));
             
             console.log(`📊 Total Events Found: ${results.totalEvents}`);
             console.log(`🐻 Bear Events: ${results.bearEvents}`);
@@ -306,16 +313,10 @@ class ScriptableAdapter {
                 console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
             });
             
-            console.log('\n' + '='.repeat(50));
+            // Show summary and recommended actions
+            await this.displaySummaryAndActions(results);
             
-            // Show notification if significant events found
-            if (results.bearEvents > 0) {
-                const notification = new Notification();
-                notification.title = '🐻 Bear Events Found!';
-                notification.body = `Found ${results.bearEvents} bear events${results.calendarEvents > 0 ? `, added ${results.calendarEvents} to calendar` : ''}`;
-                notification.sound = 'default';
-                await notification.schedule();
-            }
+            console.log('\n' + '='.repeat(60));
             
         } catch (error) {
             console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
@@ -333,6 +334,330 @@ class ScriptableAdapter {
         } catch (error) {
             console.log(`Failed to show error alert: ${error.message}`);
         }
+    }
+
+    // Enhanced Display Methods
+    async displayCalendarProperties(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('📅 CALENDAR PROPERTIES & STORAGE PREVIEW');
+        console.log('='.repeat(60));
+        
+        if (!results.events || !results.events.length) {
+            console.log('❌ No event data available for preview');
+            return;
+        }
+
+        // Get available calendars for comparison
+        const availableCalendars = await Calendar.forEvents();
+
+        // Show how events will be stored
+        results.events.forEach((event, i) => {
+            console.log(`\n🐻 Event ${i + 1}: ${event.title || event.name}`);
+            console.log('─'.repeat(40));
+            
+            // Calendar assignment
+            const calendarName = this.getCalendarName(event, null);
+            console.log(`📅 Target Calendar: "${calendarName}"`);
+            
+            // Check if calendar exists
+            const existingCalendar = availableCalendars.find(cal => cal.title === calendarName);
+            if (existingCalendar) {
+                console.log(`✅ Calendar exists: ${existingCalendar.identifier}`);
+                console.log(`   Color: ${existingCalendar.color.hex}`);
+                console.log(`   Modifications allowed: ${existingCalendar.allowsContentModifications}`);
+            } else {
+                console.log(`🆕 Calendar will be created with orange color`);
+            }
+            
+            // Event properties that will be stored
+            console.log(`\n📋 CalendarEvent Properties:`);
+            console.log(`   title: "${event.title || event.name}"`);
+            console.log(`   startDate: ${new Date(event.startDate).toLocaleString()}`);
+            console.log(`   endDate: ${new Date(event.endDate || event.startDate).toLocaleString()}`);
+            console.log(`   location: "${event.venue || event.bar || ''}"`);
+            console.log(`   timeZone: "${event.timezone || 'device default'}"`);
+            console.log(`   isAllDay: false`);
+            
+            // Recurrence handling
+            if (event.recurring && event.recurrence) {
+                console.log(`   🔄 Recurrence: ${event.recurrence}`);
+                console.log(`   Event Type: ${event.eventType || 'recurring'}`);
+            } else {
+                console.log(`   🔄 Recurrence: None (one-time event)`);
+            }
+            
+            // Notes field content
+            const notes = this.formatEventNotes(event);
+            console.log(`\n📝 Notes field content (${notes.length} chars):`);
+            console.log(`"${notes.substring(0, 100)}${notes.length > 100 ? '...' : ''}"`);
+            
+            // Availability setting
+            console.log(`\n⏰ Availability: busy`);
+            
+            // City and timezone info
+            console.log(`\n🌍 Location Data:`);
+            console.log(`   City: ${event.city || 'unknown'}`);
+            if (event.coordinates) {
+                console.log(`   Coordinates: ${event.coordinates.lat}, ${event.coordinates.lng}`);
+            }
+            console.log(`   Timezone: ${event.timezone || 'device default'}`);
+        });
+        
+        console.log('\n' + '='.repeat(60));
+    }
+
+    async compareWithExistingCalendars(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('🔍 CALENDAR COMPARISON & CONFLICT DETECTION');
+        console.log('='.repeat(60));
+        
+        if (!results.events || !results.events.length) {
+            console.log('❌ No events to compare');
+            return;
+        }
+
+        const availableCalendars = await Calendar.forEvents();
+        
+        for (const event of results.events) {
+            const calendarName = this.getCalendarName(event, null);
+            const calendar = availableCalendars.find(cal => cal.title === calendarName);
+            
+            console.log(`\n🐻 Checking: ${event.title || event.name}`);
+            console.log(`📅 Target Calendar: ${calendarName}`);
+            
+            if (!calendar) {
+                console.log(`🆕 Calendar "${calendarName}" doesn't exist - will be created`);
+                continue;
+            }
+            
+            try {
+                // Check for existing events in the time range
+                const startDate = new Date(event.startDate);
+                const endDate = new Date(event.endDate || event.startDate);
+                
+                // Expand search range for recurring events
+                const searchStart = new Date(startDate);
+                searchStart.setDate(searchStart.getDate() - 7); // Look back a week
+                const searchEnd = new Date(endDate);
+                searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
+                
+                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                
+                console.log(`📊 Found ${existingEvents.length} existing events in calendar`);
+                
+                // Check for exact duplicates
+                const duplicates = existingEvents.filter(existing => {
+                    const titleMatch = existing.title === (event.title || event.name);
+                    const timeMatch = Math.abs(existing.startDate.getTime() - startDate.getTime()) < 60000; // Within 1 minute
+                    return titleMatch && timeMatch;
+                });
+                
+                if (duplicates.length > 0) {
+                    console.log(`⚠️  Found ${duplicates.length} potential duplicate(s):`);
+                    duplicates.forEach(dup => {
+                        console.log(`   - "${dup.title}" at ${dup.startDate.toLocaleString()}`);
+                    });
+                } else {
+                    console.log(`✅ No duplicates found - safe to add`);
+                }
+                
+                // Check for time conflicts (overlapping events)
+                const conflicts = existingEvents.filter(existing => {
+                    const existingStart = existing.startDate.getTime();
+                    const existingEnd = existing.endDate.getTime();
+                    const newStart = startDate.getTime();
+                    const newEnd = endDate.getTime();
+                    
+                    // Check for overlap
+                    return (newStart < existingEnd && newEnd > existingStart);
+                });
+                
+                if (conflicts.length > 0) {
+                    console.log(`⏰ Found ${conflicts.length} time conflict(s):`);
+                    conflicts.forEach(conflict => {
+                        console.log(`   - "${conflict.title}": ${conflict.startDate.toLocaleString()} - ${conflict.endDate.toLocaleString()}`);
+                    });
+                } else {
+                    console.log(`✅ No time conflicts found`);
+                }
+                
+            } catch (error) {
+                console.error(`❌ Failed to check calendar "${calendarName}": ${error}`);
+            }
+        }
+        
+        console.log('\n' + '='.repeat(60));
+    }
+
+    async displayAvailableCalendars() {
+        console.log('\n' + '='.repeat(60));
+        console.log('📅 AVAILABLE CALENDARS (DEBUG INFO)');
+        console.log('='.repeat(60));
+        
+        try {
+            const availableCalendars = await Calendar.forEvents();
+            
+            if (availableCalendars.length === 0) {
+                console.log('❌ No calendars found or failed to load');
+                return;
+            }
+            
+            console.log(`📊 Total calendars: ${availableCalendars.length}\n`);
+            
+            availableCalendars.forEach((calendar, i) => {
+                console.log(`📅 Calendar ${i + 1}: "${calendar.title}"`);
+                console.log(`   ID: ${calendar.identifier}`);
+                console.log(`   Color: ${calendar.color.hex}`);
+                console.log(`   Subscribed: ${calendar.isSubscribed ? 'Yes' : 'No'}`);
+                console.log(`   Modifications: ${calendar.allowsContentModifications ? 'Allowed' : 'Read-only'}`);
+                console.log('');
+            });
+            
+            // Show which calendars are mapped
+            console.log('🗺️  Calendar Mappings:');
+            Object.entries(this.calendarMappings).forEach(([city, calendarName]) => {
+                const exists = availableCalendars.find(cal => cal.title === calendarName);
+                const status = exists ? '✅ Exists' : '🆕 Will be created';
+                console.log(`   ${city} → "${calendarName}" ${status}`);
+            });
+            
+        } catch (error) {
+            console.error(`❌ Failed to load calendars: ${error}`);
+        }
+        
+        console.log('\n' + '='.repeat(60));
+    }
+
+    async displayEnrichedEvents(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('🐻 ENRICHED EVENT INFORMATION');
+        console.log('='.repeat(60));
+        
+        if (!results.events || !results.events.length) {
+            console.log('❌ No events to display');
+            return;
+        }
+        
+        results.events.forEach((event, i) => {
+            console.log(`\n🎉 Event ${i + 1}: ${event.title || event.name}`);
+            console.log('─'.repeat(50));
+            
+            // Basic info
+            console.log(`📍 Venue: ${event.venue || event.bar || 'TBD'}`);
+            console.log(`📅 When: ${event.day || 'TBD'} ${event.time || 'TBD'}`);
+            console.log(`🌍 City: ${(event.city || 'unknown').toUpperCase()}`);
+            console.log(`🕐 Timezone: ${event.timezone || 'device default'}`);
+            
+            // Event type and recurrence
+            if (event.recurring) {
+                console.log(`🔄 Type: ${event.eventType || 'recurring'} recurring event`);
+                if (event.recurrence) {
+                    console.log(`📋 Pattern: ${event.recurrence}`);
+                }
+            } else {
+                console.log(`📅 Type: One-time event`);
+            }
+            
+            // Cover and pricing
+            if (event.price || event.cover) {
+                const price = event.price || event.cover;
+                const coverIcon = price.toLowerCase().includes('free') ? '🆓' : '💰';
+                console.log(`${coverIcon} Cover: ${price}`);
+            }
+            
+            // Location with coordinates
+            if (event.coordinates) {
+                console.log(`🗺️  Coordinates: ${event.coordinates.lat}, ${event.coordinates.lng}`);
+            }
+            
+            // Description
+            if (event.description || event.tea) {
+                console.log(`\n☕ Description:`);
+                console.log(`   ${event.description || event.tea}`);
+            }
+            
+            // Links and social media
+            if (event.links && event.links.length > 0) {
+                console.log(`\n🔗 Links:`);
+                event.links.forEach(link => {
+                    console.log(`   ${link.label}: ${link.url}`);
+                });
+            } else if (event.url) {
+                console.log(`\n🔗 URL: ${event.url}`);
+            }
+            
+            // Short names for display optimization
+            if (event.shortName && event.shortName !== (event.title || event.name)) {
+                console.log(`\n📱 Display Names:`);
+                console.log(`   Short: "${event.shortName}"`);
+                if (event.shorterName) {
+                    console.log(`   Shorter: "${event.shorterName}"`);
+                }
+            }
+            
+            // Calendar event preview
+            console.log(`\n📅 Calendar Event Preview:`);
+            console.log(`   Title: "${event.title || event.name}"`);
+            console.log(`   Start: ${new Date(event.startDate).toLocaleString()}`);
+            console.log(`   End: ${new Date(event.endDate || event.startDate).toLocaleString()}`);
+            console.log(`   Location: "${event.venue || event.bar || ''}"`);
+            console.log(`   Notes: ${this.formatEventNotes(event).length} characters`);
+        });
+        
+        console.log('\n' + '='.repeat(60));
+    }
+
+    async displaySummaryAndActions(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('📊 SUMMARY & RECOMMENDED ACTIONS');
+        console.log('='.repeat(60));
+        
+        if (!results.events) {
+            console.log('❌ No event data available for summary');
+            return;
+        }
+        
+        const summary = {
+            totalEvents: results.events.length,
+            cities: [...new Set(results.events.map(e => e.city).filter(Boolean))],
+            recurringEvents: results.events.filter(e => e.recurring).length,
+            oneTimeEvents: results.events.filter(e => !e.recurring).length,
+            calendarsNeeded: [...new Set(results.events.map(e => this.getCalendarName(e, null)))],
+            timezones: [...new Set(results.events.map(e => e.timezone).filter(Boolean))]
+        };
+        
+        console.log(`📊 Events: ${summary.totalEvents} total`);
+        console.log(`   🔄 Recurring: ${summary.recurringEvents}`);
+        console.log(`   📅 One-time: ${summary.oneTimeEvents}`);
+        
+        if (summary.cities.length > 0) {
+            console.log(`\n🌍 Cities: ${summary.cities.join(', ')}`);
+        }
+        
+        console.log(`📅 Calendars needed: ${summary.calendarsNeeded.length}`);
+        try {
+            const availableCalendars = await Calendar.forEvents();
+            summary.calendarsNeeded.forEach(cal => {
+                const exists = availableCalendars.find(c => c.title === cal);
+                console.log(`   - "${cal}" ${exists ? '(exists)' : '(will create)'}`);
+            });
+        } catch (error) {
+            summary.calendarsNeeded.forEach(cal => {
+                console.log(`   - "${cal}" (status unknown)`);
+            });
+        }
+        
+        if (summary.timezones.length > 0) {
+            console.log(`\n🕐 Timezones: ${summary.timezones.join(', ')}`);
+        }
+        
+        console.log(`\n🎯 Recommended Actions:`);
+        console.log(`   1. Review calendar properties above`);
+        console.log(`   2. Check for conflicts in comparison section`);
+        console.log(`   3. Verify calendar permissions and settings`);
+        console.log(`   4. Set dryRun: false in config to actually add events`);
+        
+        console.log('\n' + '='.repeat(60));
     }
 }
 
