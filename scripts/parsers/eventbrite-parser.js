@@ -319,7 +319,7 @@ class EventbriteParser {
                 city = 'la';
             }
             
-            return {
+            const event = {
                 title: title,
                 description: description,
                 startDate: startDate,
@@ -331,6 +331,7 @@ class EventbriteParser {
                 googleMapsLink: googleMapsLink,
                 city: city,
                 url: url,
+                website: url, // Add website property for calendar integrations
                 price: price,
                 image: image,
                 source: this.config.source,
@@ -342,6 +343,11 @@ class EventbriteParser {
                     url: url
                 })
             };
+            
+            // Log event creation with URL for verification
+            console.log(`🎫 Eventbrite: Created event "${title}" with URL: ${url}`);
+            
+            return event;
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse JSON event: ${error}`);
