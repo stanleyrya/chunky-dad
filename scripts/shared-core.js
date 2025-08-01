@@ -180,6 +180,13 @@ class SharedCore {
 
         await displayAdapter.logInfo(`SYSTEM: Total events collected: ${allEvents.length}`);
 
+        // Apply metadata overrides if configured
+        if (parserConfig.metadata && parserConfig.metadata.overrideTitle) {
+            await displayAdapter.logInfo('SYSTEM: Applying metadata overrides...');
+            this.applyMetadataOverrides(allEvents, parserConfig.metadata);
+            await displayAdapter.logInfo(`SYSTEM: Applied metadata overrides to ${allEvents.length} events`);
+        }
+
         // Filter and process events
         await displayAdapter.logInfo('SYSTEM: Filtering future events...');
         const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead);
@@ -284,6 +291,37 @@ class SharedCore {
         return events;
     }
 
+    // Apply metadata overrides to events (for hardcoded titles, etc.)
+    applyMetadataOverrides(events, metadata) {
+        if (!metadata || !events) return;
+        
+        events.forEach(event => {
+            // Store original title for debugging if we're overriding
+            if (metadata.overrideTitle && metadata.title && event.title !== metadata.title) {
+                event.originalTitle = event.title;
+                event.title = metadata.title;
+                console.log(`🔄 SharedCore: Override title applied - Original: "${event.originalTitle}" → New: "${event.title}"`);
+            }
+            
+            // Apply short title if provided
+            if (metadata.shortTitle) {
+                event.shortTitle = metadata.shortTitle;
+            }
+            
+            // Apply other metadata properties
+            if (metadata.instagram) {
+                event.instagram = metadata.instagram;
+            }
+            
+            // Add any other metadata properties that might be useful
+            Object.keys(metadata).forEach(key => {
+                if (!['overrideTitle', 'title', 'shortTitle'].includes(key)) {
+                    event[key] = metadata[key];
+                }
+            });
+        });
+    }
+
     // Pure utility functions
     filterFutureEvents(events, daysToLookAhead = null) {
         const now = new Date();
@@ -366,7 +404,21 @@ class SharedCore {
             console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
         }
         
-        const title = String(event.title || '').toLowerCase().trim();
+        let title = String(event.title || '').toLowerCase().trim();
+        
+        // Normalize Megawoof/DURO event titles for better deduplication
+        // Convert variations like "D>U>R>O!", "DURO", "D U R O" to a standard form
+        if (/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(title) || /megawoof/i.test(title)) {
+            // Extract the core event identifier (DURO) and normalize it
+            const duroMatch = title.match(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i);
+            if (duroMatch) {
+                title = title.replace(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o[^\w]*/i, 'megawoof-duro');
+            } else if (/megawoof/i.test(title)) {
+                title = title.replace(/megawoof[:\s\-]*/i, 'megawoof-');
+            }
+            console.log(`🔄 SharedCore: Normalized Megawoof title for deduplication: "${event.title}" → "${title}"`);
+        }
+        
         const date = event.startDate ? new Date(event.startDate).toDateString() : '';
         const venue = String(event.venue || '').toLowerCase().trim();
         
