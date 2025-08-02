@@ -708,7 +708,9 @@ class SharedCore {
         }
         
         // Add description/tea in key-value format
-        if (event.description || event.tea) {
+        // Only add description if setDescription is not explicitly false and description is not empty
+        if (event.setDescription !== false && 
+            ((event.description && event.description.trim()) || (event.tea && event.tea.trim()))) {
             notes.push(`Description: ${event.description || event.tea}`);
         }
         
