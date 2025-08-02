@@ -1,8 +1,7 @@
 {
   "config": {
     "dryRun": true,
-    "daysToLookAhead": null,
-    "mergeMode": "upsert"
+    "daysToLookAhead": null
   },
   "parsers": [
     {
@@ -14,6 +13,7 @@
       "maxAdditionalUrls": 20,
       "dryRun": true,
       "daysToLookAhead": null,
+      "mergeMode": "upsert",
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
       },

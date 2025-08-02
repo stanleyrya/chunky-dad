@@ -137,8 +137,7 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 {
   "config": {
     "dryRun": true,           // When false, allows calendar modifications
-    "daysToLookAhead": null,  // Limit future events (null = unlimited)
-    "mergeMode": "upsert"     // "upsert" (default) or "clobber" - how to handle existing events
+    "daysToLookAhead": null   // Limit future events (null = unlimited)
   },
   "parsers": [
     {
@@ -149,7 +148,8 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "allowlist": ["keyword1", "keyword2"],
-      "city": "nyc"
+      "city": "nyc",
+      "mergeMode": "upsert"   // Per-parser merge mode: "upsert" or "clobber"
     }
   ],
   "calendarMappings": {

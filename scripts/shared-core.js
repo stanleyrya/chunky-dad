@@ -91,6 +91,10 @@ class SharedCore {
                 
                 // Collect all processed events
                 if (parserResult.events && parserResult.events.length > 0) {
+                    // Add parser config reference to each event for later use
+                    parserResult.events.forEach(event => {
+                        event._parserConfig = parserConfig;
+                    });
                     results.allProcessedEvents.push(...parserResult.events);
                 }
                 
@@ -669,7 +673,8 @@ class SharedCore {
             notes: this.formatEventNotes(event),
             url: event.url || null,
             city: event.city || 'default', // Include city for calendar selection
-            key: event.key // Key should already be set during deduplication
+            key: event.key, // Key should already be set during deduplication
+            _parserConfig: event._parserConfig // Preserve parser config
         };
         
         return calendarEvent;
@@ -776,7 +781,7 @@ class SharedCore {
             'instagram', 'facebook', 'website', 'gmaps', 'googleMapsLink', 
             'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
             'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts'
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig'
         ]);
         
         // Add any custom fields from metadata
@@ -809,13 +814,15 @@ class SharedCore {
 
     // Prepare events for calendar integration with conflict analysis
     async prepareEventsForCalendar(events, calendarAdapter, config = {}) {
-        const mergeMode = config.mergeMode || 'upsert'; // Default to upsert for backward compatibility
         const preparedEvents = events.map(event => this.formatEventForCalendar(event));
         
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
         
         for (const event of preparedEvents) {
+            // Get merge mode from parser config if available, otherwise use global default
+            const mergeMode = event._parserConfig?.mergeMode || config.mergeMode || 'upsert';
+            
             // Get existing events from the adapter
             const existingEvents = await calendarAdapter.getExistingEvents(event);
             
