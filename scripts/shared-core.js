@@ -768,13 +768,23 @@ class SharedCore {
             notes.push(`Timezone: ${event.timezone}`);
         }
         
-        // Add short names if available
+        // Add short names if available - using the keys that calendar-core.js expects
         if (event.shortName) {
             notes.push(`Short Name: ${event.shortName}`);
         }
         
         if (event.shorterName) {
             notes.push(`Shorter Name: ${event.shorterName}`);
+        }
+        
+        // Add shortTitle as Short Name (which calendar-core.js understands)
+        if (event.shortTitle && !event.shortName) {
+            notes.push(`Short Name: ${event.shortTitle}`);
+        }
+        
+        // Add image URL if available
+        if (event.image || event.imageUrl) {
+            notes.push(`Image: ${event.image || event.imageUrl}`);
         }
         
         // Add URL at the end
@@ -789,7 +799,8 @@ class SharedCore {
             'instagram', 'facebook', 'website', 'gmaps', 'googleMapsLink', 
             'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
             'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies'
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
+            'shortName', 'shorterName', 'shortTitle', 'image', 'imageUrl'
         ]);
         
         // Add any custom fields from metadata
