@@ -330,9 +330,11 @@ class EventbriteParser {
                 city = 'la';
             }
             
+            // Check if description should be included based on merge strategy
+            const shouldIncludeDescription = !(parserConfig.metadata?.description?.merge === 'preserve');
+            
             const event = {
                 title: title,
-                description: description,
                 startDate: startDate,
                 endDate: endDate,
                 venue: venue,
@@ -354,6 +356,11 @@ class EventbriteParser {
                     url: url
                 })
             };
+            
+            // Only add description if it's not set to preserve
+            if (shouldIncludeDescription) {
+                event.description = description;
+            }
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {

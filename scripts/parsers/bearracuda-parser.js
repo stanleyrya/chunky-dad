@@ -187,9 +187,11 @@ class BearraccudaParser {
                 fullDescription = fullDescription ? `${fullDescription}\n\nPerformers: ${performers}` : `Performers: ${performers}`;
             }
             
+            // Check if description should be included based on merge strategy
+            const shouldIncludeDescription = !(parserConfig.metadata?.description?.merge === 'preserve');
+            
             let event = {
                 title: title,
-                description: fullDescription,
                 startDate: startDate,
                 endDate: null,
                 venue: venue,
@@ -201,6 +203,11 @@ class BearraccudaParser {
                 source: this.config.source,
                 isBearEvent: true // Bearraccuda events are always bear events
             };
+            
+            // Only add description if it's not set to preserve
+            if (shouldIncludeDescription) {
+                event.description = fullDescription;
+            }
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {
