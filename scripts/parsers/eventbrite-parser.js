@@ -330,11 +330,9 @@ class EventbriteParser {
                 city = 'la';
             }
             
-            // Check if description should be included based on merge strategy
-            const shouldIncludeDescription = !(parserConfig.metadata?.description?.merge === 'preserve');
-            
             const event = {
                 title: title,
+                description: description,
                 startDate: startDate,
                 endDate: endDate,
                 venue: venue,
@@ -356,11 +354,6 @@ class EventbriteParser {
                     url: url
                 })
             };
-            
-            // Only add description if it's not set to preserve
-            if (shouldIncludeDescription) {
-                event.description = description;
-            }
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {
@@ -385,10 +378,15 @@ class EventbriteParser {
                 });
             }
             
+            // Apply field merge strategies to filter out preserved fields
+            const filteredEvent = this.sharedCore ? 
+                this.sharedCore.applyFieldMergeStrategies(event, parserConfig) : 
+                event;
+            
             // Log event creation with URL for verification
             console.log(`🎫 Eventbrite: Created event "${title}" with URL: ${url}`);
             
-            return event;
+            return filteredEvent;
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse JSON event: ${error}`);
@@ -497,6 +495,13 @@ class EventbriteParser {
                     url: url
                 })
             };
+            
+            // Apply field merge strategies to filter out preserved fields
+            const filteredEvent = this.sharedCore ? 
+                this.sharedCore.applyFieldMergeStrategies(event, this.config) : 
+                event;
+            
+            return filteredEvent;
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);

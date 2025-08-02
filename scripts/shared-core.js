@@ -655,6 +655,45 @@ class SharedCore {
         // Return as-is if no mapping found
         return normalized;
     }
+    
+    // Apply field-level merge strategies to filter out fields that should be preserved
+    // This prevents parsers from including fields that should be kept from existing events
+    applyFieldMergeStrategies(event, parserConfig) {
+        if (!parserConfig?.metadata) {
+            return event;
+        }
+        
+        // Create a new event object without fields that have 'preserve' strategy
+        const filteredEvent = {};
+        
+        // First, copy all fields that aren't in metadata or don't have preserve strategy
+        Object.keys(event).forEach(key => {
+            const metadataField = parserConfig.metadata[key];
+            
+            // If field is not in metadata config, include it
+            if (!metadataField) {
+                filteredEvent[key] = event[key];
+                return;
+            }
+            
+            // If field has a merge strategy that's not 'preserve', include it
+            if (metadataField.merge !== 'preserve') {
+                filteredEvent[key] = event[key];
+            }
+            
+            // Note: If merge is 'preserve', we don't include the field at all
+        });
+        
+        // Always preserve internal fields
+        if (event._fieldMergeStrategies) {
+            filteredEvent._fieldMergeStrategies = event._fieldMergeStrategies;
+        }
+        if (event._parserConfig) {
+            filteredEvent._parserConfig = event._parserConfig;
+        }
+        
+        return filteredEvent;
+    }
 
     // Check if two events should be merged based on key similarity
     shouldMergeEvents(event1, event2) {
