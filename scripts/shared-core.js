@@ -372,6 +372,9 @@ class SharedCore {
         for (const event of events) {
             const key = this.createEventKey(event);
             
+            // Set the key on the event for later use
+            event.key = key;
+            
             if (!seen.has(key)) {
                 seen.set(key, event);
                 deduplicated.push(event);
@@ -379,10 +382,11 @@ class SharedCore {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
                 const merged = this.mergeEvents(existing, event);
+                merged.key = key; // Ensure merged event has the key
                 seen.set(key, merged);
                 
                 // Update in deduplicated array
-                const index = deduplicated.findIndex(e => this.createEventKey(e) === key);
+                const index = deduplicated.findIndex(e => e.key === key);
                 if (index !== -1) {
                     deduplicated[index] = merged;
                 }
@@ -657,11 +661,6 @@ class SharedCore {
     
     // Format event for calendar integration
     formatEventForCalendar(event) {
-        // Ensure event has a key for merging logic
-        if (!event.key) {
-            event.key = this.createEventKey(event);
-        }
-        
         const calendarEvent = {
             title: event.title || event.name || 'Untitled Event',
             startDate: event.startDate,
@@ -670,7 +669,7 @@ class SharedCore {
             notes: this.formatEventNotes(event),
             url: event.url || null,
             city: event.city || 'default', // Include city for calendar selection
-            key: event.key // Include key for merging logic
+            key: event.key // Key should already be set during deduplication
         };
         
         return calendarEvent;
