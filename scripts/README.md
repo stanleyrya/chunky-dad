@@ -125,11 +125,11 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 
 ### Merge Modes
 - **`upsert`** (default): Intelligently merges new data with existing events
-  - Preserves existing descriptions when `setDescription: false`
   - Adds missing metadata fields without overwriting existing ones
+  - Preserves existing data while adding new information
   - Updates coordinates only if new ones are available
 - **`clobber`**: Completely replaces existing events with new data
-  - Overwrites all fields including descriptions
+  - Overwrites all fields with new data
   - Useful for fixing corrupted data or forcing updates
 
 ### Main Configuration (`scraper-input.json`)
@@ -167,18 +167,12 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 ```
 
 ### Metadata Fields
-The `metadata` object in parser configuration supports any custom fields:
-- **Special fields with behavior:**
-  - `overrideTitle`: When true, replaces event title with `metadata.title`
-  - `setDescription`: When false, preserves existing calendar descriptions
-- **Any other field**: Automatically added to event notes (e.g., `shortTitle`, `instagram`, `customInfo`)
+The `metadata` object in parser configuration supports any custom fields. All fields are passed through to the event and added to the event notes.
 
 Example:
 ```json
 "metadata": {
   "title": "MEGAWOOF",
-  "overrideTitle": true,
-  "setDescription": false,
   "instagram": "https://www.instagram.com/megawoof_america",
   "shortTitle": "MEGA-WOOF",
   "customField": "Any value you want"

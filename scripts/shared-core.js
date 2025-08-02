@@ -692,8 +692,8 @@ class SharedCore {
             notes.push(`Bar: ${event.venue || event.bar}`);
         }
         
-        // Add description/tea in key-value format (only if setDescription is not explicitly false)
-        if ((event.description || event.tea) && event.setDescription !== false) {
+        // Add description/tea in key-value format
+        if (event.description || event.tea) {
             notes.push(`Description: ${event.description || event.tea}`);
         }
         

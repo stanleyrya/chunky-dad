@@ -244,7 +244,7 @@ class GenericParser {
                 this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl) :
                 this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
             
-            return {
+            const event = {
                 title: title,
                 description: description,
                 startDate: startDate,
@@ -260,17 +260,9 @@ class GenericParser {
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {
-                // Handle special metadata fields that need processing
-                if (parserConfig.metadata.overrideTitle && parserConfig.metadata.title) {
-                    event.title = parserConfig.metadata.title;
-                }
-                
                 // Pass through all metadata fields to the event
                 Object.keys(parserConfig.metadata).forEach(key => {
-                    // Skip special fields that are already handled
-                    if (key !== 'overrideTitle' && key !== 'title') {
-                        event[key] = parserConfig.metadata[key];
-                    }
+                    event[key] = parserConfig.metadata[key];
                 });
             }
             

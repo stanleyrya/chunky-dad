@@ -1967,8 +1967,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             newMetadata.push(`Gmaps: ${newEvent.gmaps || newEvent.googleMapsLink}`);
         }
         
-        // Only add description if it doesn't exist AND setDescription is not false
-        if (!hasDescription && newEvent.description && newEvent.setDescription !== false) {
+        // Add description if it doesn't exist
+        if (!hasDescription && newEvent.description) {
             newMetadata.push(`Description: ${newEvent.description}`);
         }
         
@@ -2057,10 +2057,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 inMetadata = true;
             }
             if (inMetadata) {
-                // Skip Description lines if setDescription is false
-                if (line.startsWith('Description:') && event && event.setDescription === false) {
-                    continue;
-                }
                 newMetadataLines.push(line);
             }
         }
