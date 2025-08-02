@@ -734,8 +734,9 @@ class SharedCore {
             notes.push(`Facebook: ${event.facebook}`);
         }
         
-        if (event.website) {
-            notes.push(`Website: ${event.website}`);
+        // Add website URL - prefer event.website, fallback to event.url
+        if (event.website || event.url) {
+            notes.push(`Website: ${event.website || event.url}`);
         }
         
         // Handle both gmaps and googleMapsLink fields
@@ -780,11 +781,6 @@ class SharedCore {
         // Add image URL if available
         if (event.image || event.imageUrl) {
             notes.push(`Image: ${event.image || event.imageUrl}`);
-        }
-        
-        // Add URL at the end (we don't use the calendar URL field)
-        if (event.url) {
-            notes.push('', `More info: ${event.url}`);
         }
         
         // Add any additional custom metadata fields that aren't already handled
