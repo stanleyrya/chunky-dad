@@ -346,7 +346,7 @@ class EventbriteParser {
                 price: price,
                 image: image,
                 source: this.config.source,
-                setDescription: parserConfig.setDescription !== false, // Default to true unless explicitly false
+                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
                     title: title,
@@ -459,7 +459,7 @@ class EventbriteParser {
                 price: '',
                 image: '',
                 source: this.config.source,
-                setDescription: parserConfig.setDescription !== false, // Default to true unless explicitly false
+                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
                     title: title,

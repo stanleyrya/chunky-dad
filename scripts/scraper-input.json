@@ -13,7 +13,6 @@
       "maxAdditionalUrls": 20,
       "dryRun": true,
       "daysToLookAhead": null,
-      "setDescription": false,
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
       },
@@ -21,7 +20,8 @@
         "title": "MEGAWOOF",
         "shortTitle": "MEGA-WOOF",
         "instagram": "https://www.instagram.com/megawoof_america",
-        "overrideTitle": true
+        "overrideTitle": true,
+        "setDescription": false
       }
     }
   ],

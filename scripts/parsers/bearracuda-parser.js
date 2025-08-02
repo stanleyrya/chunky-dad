@@ -198,7 +198,7 @@ class BearraccudaParser {
                 price: '',
                 image: '',
                 source: this.config.source,
-                setDescription: parserConfig.setDescription !== false, // Default to true unless explicitly false
+                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
                 isBearEvent: true // Bearraccuda events are always bear events
             };
             
