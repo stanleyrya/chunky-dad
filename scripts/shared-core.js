@@ -791,6 +791,146 @@ class SharedCore {
     prepareEventsForCalendar(events) {
         return events.map(event => this.formatEventForCalendar(event));
     }
+    
+    // Analyze events against existing calendar events and determine actions
+    // This is pure business logic - adapters provide the existing events data
+    analyzeEventActions(newEvents, existingEventsData) {
+        const actions = {
+            newEvents: [],
+            updateEvents: [],
+            mergeEvents: [],
+            conflictEvents: []
+        };
+        
+        for (const event of newEvents) {
+            const analysis = this.analyzeEventAction(event, existingEventsData);
+            
+            switch (analysis.action) {
+                case 'new':
+                    actions.newEvents.push({ event, analysis });
+                    break;
+                case 'update':
+                    actions.updateEvents.push({ event, analysis });
+                    break;
+                case 'merge':
+                    actions.mergeEvents.push({ event, analysis });
+                    break;
+                case 'conflict':
+                    actions.conflictEvents.push({ event, analysis });
+                    break;
+            }
+        }
+        
+        return actions;
+    }
+    
+    // Analyze a single event against existing events
+    analyzeEventAction(event, existingEventsData) {
+        if (!existingEventsData || existingEventsData.length === 0) {
+            return { action: 'new', reason: 'No existing events found' };
+        }
+        
+        // Check for key-based merging first
+        const keyBasedMatch = this.findEventByKey(existingEventsData, event.key);
+        
+        if (keyBasedMatch) {
+            const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
+            if (existingKey === event.key) {
+                return {
+                    action: 'merge',
+                    reason: 'Key match found',
+                    existingEvent: keyBasedMatch,
+                    existingKey: existingKey
+                };
+            } else if (existingKey && existingKey !== event.key) {
+                return {
+                    action: 'conflict',
+                    reason: 'Key conflict detected',
+                    conflictType: 'key_conflict',
+                    existingEvent: keyBasedMatch,
+                    existingKey: existingKey
+                };
+            }
+        }
+        
+        // Check for exact duplicates
+        const exactMatch = existingEventsData.find(existing => 
+            existing.title === event.title &&
+            this.areDatesEqual(existing.startDate, new Date(event.startDate), 1)
+        );
+        
+        if (exactMatch) {
+            return {
+                action: 'update',
+                reason: 'Exact duplicate found',
+                existingEvent: exactMatch
+            };
+        }
+        
+        // Check for time conflicts that can be merged
+        const timeConflicts = existingEventsData.filter(existing => 
+            this.doDatesOverlap(existing.startDate, existing.endDate, 
+                               new Date(event.startDate), new Date(event.endDate || event.startDate))
+        );
+        
+        if (timeConflicts.length > 0) {
+            // Check if these are mergeable conflicts (adding info to existing events)
+            const mergeableConflict = timeConflicts.find(existing => 
+                existing.title === event.title || 
+                (existing.location === (event.venue || event.bar) && 
+                 this.areDatesEqual(existing.startDate, new Date(event.startDate), 60))
+            );
+            
+            if (mergeableConflict) {
+                return {
+                    action: 'merge',
+                    reason: 'Mergeable time conflict',
+                    existingEvent: mergeableConflict
+                };
+            } else {
+                return {
+                    action: 'conflict',
+                    reason: 'Time conflict detected',
+                    conflictType: 'time_conflict',
+                    conflicts: timeConflicts
+                };
+            }
+        }
+        
+        return { action: 'new', reason: 'No conflicts found' };
+    }
+    
+    // Find event by key in existing events (pure logic, no calendar APIs)
+    findEventByKey(existingEvents, targetKey) {
+        if (!targetKey) return null;
+        
+        for (const event of existingEvents) {
+            const eventKey = this.extractKeyFromNotes(event.notes);
+            if (eventKey === targetKey) {
+                return event;
+            }
+        }
+        return null;
+    }
+    
+    // Extract key from event notes (pure string processing)
+    extractKeyFromNotes(notes) {
+        if (!notes) return null;
+        
+        const keyMatch = notes.match(/^Key: (.+)$/m);
+        return keyMatch ? keyMatch[1] : null;
+    }
+    
+    // Check if two dates are equal within a tolerance (pure logic)
+    areDatesEqual(date1, date2, toleranceMinutes) {
+        const diff = Math.abs(date1.getTime() - date2.getTime());
+        return diff <= (toleranceMinutes * 60 * 1000);
+    }
+    
+    // Check if two date ranges overlap (pure logic)
+    doDatesOverlap(start1, end1, start2, end2) {
+        return start1 < end2 && end1 > start2;
+    }
 }
 
 // Export for both environments

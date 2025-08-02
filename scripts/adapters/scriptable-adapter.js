@@ -183,64 +183,35 @@ class ScriptableAdapter {
                     
                     const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                     
-                    // Check for key-based merging first
-                    const keyBasedMatch = await this.findEventByKey(existingEvents, event.key);
+                    // Use shared-core to analyze what action to take
+                    const analysis = this.sharedCore.analyzeEventAction(event, existingEvents);
                     
-                    if (keyBasedMatch) {
-                        // Check if keys match exactly - safe to merge
-                        const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
-                        if (existingKey === event.key) {
-                            console.log(`📱 Scriptable: Key match found, updating event: ${event.title}`);
-                            keyBasedMatch.title = event.title;
-                            keyBasedMatch.notes = event.notes;
-                            keyBasedMatch.location = event.location;
+                    switch (analysis.action) {
+                        case 'merge':
+                        case 'update':
+                            console.log(`📱 Scriptable: ${analysis.action === 'merge' ? 'Merging' : 'Updating'} event: ${event.title} (${analysis.reason})`);
+                            const targetEvent = analysis.existingEvent;
+                            targetEvent.title = event.title;
+                            targetEvent.notes = event.notes;
+                            targetEvent.location = event.location;
                             if (event.url) {
-                                keyBasedMatch.url = event.url;
+                                targetEvent.url = event.url;
                             }
-                            await keyBasedMatch.save();
+                            await targetEvent.save();
                             addedCount++;
                             continue;
-                        } else if (existingKey && existingKey !== event.key) {
-                            console.log(`📱 Scriptable: Key conflict detected - cannot merge without override: ${event.title}`);
-                            console.log(`  Existing key: ${existingKey}`);
-                            console.log(`  New key: ${event.key}`);
-                            // Skip this event due to key conflict
+                            
+                        case 'conflict':
+                            console.log(`📱 Scriptable: Skipping conflicted event: ${event.title} (${analysis.reason})`);
+                            if (analysis.conflictType === 'key_conflict') {
+                                console.log(`  Existing key: ${analysis.existingKey}`);
+                                console.log(`  New key: ${event.key}`);
+                            }
                             continue;
-                        }
-                        // If no existing key, treat as mergeable
-                    }
-                    
-                    // Check for exact duplicates (same title and time within 1 minute)
-                    const exactDuplicate = existingEvents.find(existing => 
-                        existing.title === event.title &&
-                        this.areDatesEqual(existing.startDate, startDate, 1)
-                    );
-                    
-                    if (exactDuplicate) {
-                        console.log(`📱 Scriptable: Skipping exact duplicate event: ${event.title}`);
-                        continue;
-                    }
-                    
-                    // Check for other potential matches to update
-                    const existingEvent = existingEvents.find(existing => {
-                        // Check if this is the same event that needs updating
-                        return existing.title === event.title || 
-                               (existing.location === event.location && 
-                                this.areDatesEqual(existing.startDate, startDate, 60)); // Within 1 hour
-                    });
-                    
-                    if (existingEvent) {
-                        // Update existing event (no existing key found, safe to merge)
-                        console.log(`📱 Scriptable: Updating existing event: ${event.title}`);
-                        existingEvent.title = event.title;
-                        existingEvent.notes = event.notes;
-                        existingEvent.location = event.location;
-                        if (event.url) {
-                            existingEvent.url = event.url;
-                        }
-                        await existingEvent.save();
-                        addedCount++;
-                        continue;
+                            
+                        case 'new':
+                            // Fall through to create new event
+                            break;
                     }
                     
                     // Create new calendar event
@@ -769,7 +740,7 @@ class ScriptableAdapter {
         const allEvents = this.getAllEventsFromResults(results);
         const availableCalendars = await Calendar.forEvents();
         
-        // Group events by proposed action
+        // Group events by proposed action using shared-core analysis
         const newEvents = [];
         const updatedEvents = [];
         const mergeEvents = [];
@@ -781,11 +752,12 @@ class ScriptableAdapter {
             
             if (!calendar) {
                 event._action = 'missing_calendar';
+                event._analysis = { reason: 'Calendar not found' };
                 conflictEvents.push(event);
                 continue;
             }
             
-            // Check for existing events
+            // Get existing events for analysis
             const { startDate, endDate, searchStart, searchEnd } = this.sharedCore ?
                 this.sharedCore.getEventDateRange(event, true) :
                 { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
@@ -793,64 +765,43 @@ class ScriptableAdapter {
             try {
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
-                // Check for key-based merging first
-                const keyBasedMatch = await this.findEventByKey(existingEvents, event.key);
+                // Use shared-core to analyze the action
+                const analysis = this.sharedCore.analyzeEventAction(event, existingEvents);
+                event._analysis = analysis;
                 
-                if (keyBasedMatch) {
-                    const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
-                    if (existingKey === event.key) {
-                        event._action = 'merge';
-                        event._existingEvent = keyBasedMatch;
-                        mergeEvents.push(event);
-                        continue;
-                    } else if (existingKey && existingKey !== event.key) {
-                        event._action = 'key_conflict';
-                        event._existingEvent = keyBasedMatch;
-                        event._existingKey = existingKey;
-                        conflictEvents.push(event);
-                        continue;
-                    }
-                }
-                
-                // Check for exact duplicates
-                const exactMatch = existingEvents.find(existing => 
-                    existing.title === event.title &&
-                    this.areDatesEqual(existing.startDate, startDate, 1)
-                );
-                
-                if (exactMatch) {
-                    event._action = 'update';
-                    event._existingEvent = exactMatch;
-                    updatedEvents.push(event);
-                } else {
-                    // Check for time conflicts that can be merged
-                    const timeConflicts = existingEvents.filter(existing => 
-                        this.doDatesOverlap(existing.startDate, existing.endDate, startDate, endDate)
-                    );
-                    
-                    if (timeConflicts.length > 0) {
-                        // Check if these are mergeable conflicts (adding info to existing events)
-                        const mergeableConflict = timeConflicts.find(existing => 
-                            existing.title === event.title || 
-                            (existing.location === event.location && this.areDatesEqual(existing.startDate, startDate, 60))
-                        );
-                        
-                        if (mergeableConflict) {
-                            event._action = 'merge';
-                            event._existingEvent = mergeableConflict;
-                            mergeEvents.push(event);
-                        } else {
-                            event._action = 'time_conflict';
-                            event._conflicts = timeConflicts;
-                            conflictEvents.push(event);
-                        }
-                    } else {
+                switch (analysis.action) {
+                    case 'new':
                         event._action = 'new';
                         newEvents.push(event);
-                    }
+                        break;
+                    case 'update':
+                        event._action = 'update';
+                        event._existingEvent = analysis.existingEvent;
+                        updatedEvents.push(event);
+                        break;
+                    case 'merge':
+                        event._action = 'merge';
+                        event._existingEvent = analysis.existingEvent;
+                        if (analysis.existingKey) {
+                            event._existingKey = analysis.existingKey;
+                        }
+                        mergeEvents.push(event);
+                        break;
+                    case 'conflict':
+                        event._action = analysis.conflictType || 'conflict';
+                        event._existingEvent = analysis.existingEvent;
+                        if (analysis.existingKey) {
+                            event._existingKey = analysis.existingKey;
+                        }
+                        if (analysis.conflicts) {
+                            event._conflicts = analysis.conflicts;
+                        }
+                        conflictEvents.push(event);
+                        break;
                 }
             } catch (error) {
                 event._action = 'new';
+                event._analysis = { reason: 'Error checking existing events' };
                 newEvents.push(event);
             }
         }
@@ -1898,26 +1849,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         this.sharedCore = sharedCore;
     }
     
-    // Find event by key in existing events
-    async findEventByKey(existingEvents, targetKey) {
-        if (!targetKey) return null;
-        
-        for (const event of existingEvents) {
-            const eventKey = this.extractKeyFromNotes(event.notes);
-            if (eventKey === targetKey) {
-                return event;
-            }
-        }
-        return null;
-    }
-    
-    // Extract key from event notes
-    extractKeyFromNotes(notes) {
-        if (!notes) return null;
-        
-        const keyMatch = notes.match(/^Key: (.+)$/m);
-        return keyMatch ? keyMatch[1] : null;
-    }
+
 
     // Helper to get calendar name for display purposes only
     getCalendarNameForDisplay(event) {
