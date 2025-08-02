@@ -194,6 +194,13 @@ class WebAdapter {
         return lines.filter(line => line).join('\r\n');
     }
 
+    // Get existing events for a specific event (called by shared-core for analysis)
+    // In web environment, we can't access real calendar data, so return empty array
+    async getExistingEvents(event) {
+        console.log(`🌐 Web: getExistingEvents called for "${event.title}" (returning empty - no calendar access in web)`);
+        return [];
+    }
+
     // Display/Logging Adapter Implementation
     async logInfo(message) {
         console.log(`%cℹ️ ${message}`, 'color: #2196F3');
@@ -223,6 +230,38 @@ class WebAdapter {
             console.log(`📊 Total Events Found: ${results.totalEvents}`);
             console.log(`🐻 Bear Events: ${results.bearEvents}`);
             console.log(`📅 Calendar Events: ${results.calendarEvents}`);
+            
+            // Show event actions summary if available
+            const allEvents = this.getAllEventsFromResults(results);
+            if (allEvents && allEvents.length > 0) {
+                const actionsCount = {
+                    new: 0, add: 0, merge: 0, update: 0, conflict: 0, enriched: 0
+                };
+                
+                let hasActions = false;
+                allEvents.forEach(event => {
+                    if (event._action) {
+                        hasActions = true;
+                        const action = event._action.toLowerCase();
+                        if (actionsCount.hasOwnProperty(action)) {
+                            actionsCount[action]++;
+                        }
+                    }
+                });
+                
+                if (hasActions) {
+                    console.log('\n🎯 Event Actions:');
+                    Object.entries(actionsCount).forEach(([action, count]) => {
+                        if (count > 0) {
+                            const actionIcon = {
+                                'new': '➕', 'add': '➕', 'merge': '🔄', 
+                                'update': '📝', 'conflict': '⚠️', 'enriched': '✨'
+                            }[action] || '❓';
+                            console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count}`);
+                        }
+                    });
+                }
+            }
             
             if (results.errors.length > 0) {
                 console.log(`❌ Errors: ${results.errors.length}`);
@@ -323,6 +362,28 @@ class WebAdapter {
         } catch (error) {
             console.log(`Failed to show error alert: ${error.message}`);
         }
+    }
+
+    // Helper method to extract all events from parser results
+    getAllEventsFromResults(results) {
+        // Prefer analyzed events if available (they have action types)
+        if (results && results.analyzedEvents && Array.isArray(results.analyzedEvents)) {
+            return results.analyzedEvents;
+        }
+        
+        // Fall back to original events
+        if (!results || !results.parserResults) {
+            return [];
+        }
+        
+        const allEvents = [];
+        for (const parserResult of results.parserResults) {
+            if (parserResult.events && parserResult.events.length > 0) {
+                allEvents.push(...parserResult.events);
+            }
+        }
+        
+        return allEvents;
     }
 }
 

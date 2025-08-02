@@ -247,11 +247,24 @@ class BearEventScraperOrchestrator {
                 // Check if we should add to calendar
                 const isDryRun = config.parsers.some(p => p.dryRun === true);
                 
-                if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function') {
+                // Always prepare events for analysis (even in dry run mode) to show action types
+                console.log('🐻 Orchestrator: Analyzing events for calendar actions...');
+                let analyzedEvents = null;
+                try {
+                    analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter);
+                    console.log(`🐻 Orchestrator: ✓ Analyzed ${analyzedEvents.length} events for calendar actions`);
+                    
+                    // Store analyzed events back into results for display
+                    results.analyzedEvents = analyzedEvents;
+                    
+                } catch (error) {
+                    console.error(`🐻 Orchestrator: ✗ Failed to analyze events: ${error.message}`);
+                    results.errors.push(`Event analysis failed: ${error.message}`);
+                }
+
+                if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function' && analyzedEvents) {
                     console.log('🐻 Orchestrator: Processing events for calendar (not dry run)...');
                     try {
-                        // Prepare and analyze events for calendar using SharedCore
-                        const analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter);
                         calendarEvents = await finalAdapter.executeCalendarActions(analyzedEvents, config);
                         console.log(`🐻 Orchestrator: ✓ Processed ${calendarEvents} events to calendar`);
                     } catch (error) {

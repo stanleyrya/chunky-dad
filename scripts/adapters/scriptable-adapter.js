@@ -311,6 +311,38 @@ class ScriptableAdapter {
             console.log(`🐻 Bear Events: ${results.bearEvents}`);
             console.log(`📅 Added to Calendar: ${results.calendarEvents}`);
             
+            // Show event actions summary if available
+            const allEvents = this.getAllEventsFromResults(results);
+            if (allEvents && allEvents.length > 0) {
+                const actionsCount = {
+                    new: 0, add: 0, merge: 0, update: 0, conflict: 0, enriched: 0
+                };
+                
+                let hasActions = false;
+                allEvents.forEach(event => {
+                    if (event._action) {
+                        hasActions = true;
+                        const action = event._action.toLowerCase();
+                        if (actionsCount.hasOwnProperty(action)) {
+                            actionsCount[action]++;
+                        }
+                    }
+                });
+                
+                if (hasActions) {
+                    console.log('\n🎯 Event Actions:');
+                    Object.entries(actionsCount).forEach(([action, count]) => {
+                        if (count > 0) {
+                            const actionIcon = {
+                                'new': '➕', 'add': '➕', 'merge': '🔄', 
+                                'update': '📝', 'conflict': '⚠️', 'enriched': '✨'
+                            }[action] || '❓';
+                            console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count}`);
+                        }
+                    });
+                }
+            }
+            
             if (results.errors.length > 0) {
                 console.log(`❌ Errors: ${results.errors.length}`);
                 results.errors.forEach(error => console.log(`   • ${error}`));
@@ -634,6 +666,40 @@ class ScriptableAdapter {
                 }
             }
             
+            // Calendar action information
+            if (event._action || event._analysis) {
+                console.log(`\n🎯 Calendar Action:`);
+                const actionIcon = {
+                    'new': '➕',
+                    'add': '➕', 
+                    'merge': '🔄',
+                    'update': '📝',
+                    'conflict': '⚠️',
+                    'enriched': '✨'
+                }[event._action] || '❓';
+                
+                console.log(`   ${actionIcon} Action: ${(event._action || 'unknown').toUpperCase()}`);
+                
+                if (event._analysis?.reason) {
+                    console.log(`   📋 Reason: ${event._analysis.reason}`);
+                }
+                
+                if (event._existingEvent) {
+                    console.log(`   🔗 Existing Event: "${event._existingEvent.title}"`);
+                }
+                
+                if (event._existingKey) {
+                    console.log(`   🔑 Existing Key: ${event._existingKey}`);
+                }
+                
+                if (event._conflicts && event._conflicts.length > 0) {
+                    console.log(`   ⚠️ Conflicts: ${event._conflicts.length} found`);
+                    event._conflicts.forEach(conflict => {
+                        console.log(`      - "${conflict.title}"`);
+                    });
+                }
+            }
+
             // Calendar event preview
             console.log(`\n📅 Calendar Event Preview:`);
             console.log(`   Title: "${event.title || event.name}"`);
@@ -693,6 +759,49 @@ class ScriptableAdapter {
             console.log(`\n🕐 Timezones: ${summary.timezones.join(', ')}`);
         }
         
+        // Show action breakdown if events have been analyzed
+        const actionsCount = {
+            new: 0,
+            add: 0,
+            merge: 0,
+            update: 0,
+            conflict: 0,
+            enriched: 0,
+            unknown: 0
+        };
+        
+        let hasActions = false;
+        allEvents.forEach(event => {
+            if (event._action) {
+                hasActions = true;
+                const action = event._action.toLowerCase();
+                if (actionsCount.hasOwnProperty(action)) {
+                    actionsCount[action]++;
+                } else {
+                    actionsCount.unknown++;
+                }
+            }
+        });
+        
+        if (hasActions) {
+            console.log(`\n🎯 Event Actions Analysis:`);
+            Object.entries(actionsCount).forEach(([action, count]) => {
+                if (count > 0) {
+                    const actionIcon = {
+                        'new': '➕',
+                        'add': '➕',
+                        'merge': '🔄',
+                        'update': '📝',
+                        'conflict': '⚠️',
+                        'enriched': '✨',
+                        'unknown': '❓'
+                    }[action] || '❓';
+                    
+                    console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count} events`);
+                }
+            });
+        }
+
         console.log(`\n🎯 Recommended Actions:`);
         console.log(`   1. Review calendar properties above`);
         console.log(`   2. Check for conflicts in comparison section`);
@@ -1619,6 +1728,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     // Helper method to extract all events from parser results
     getAllEventsFromResults(results) {
+        // Prefer analyzed events if available (they have action types)
+        if (results && results.analyzedEvents && Array.isArray(results.analyzedEvents)) {
+            return results.analyzedEvents;
+        }
+        
+        // Fall back to original events
         if (!results || !results.parserResults) {
             return [];
         }
