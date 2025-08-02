@@ -1242,7 +1242,8 @@ class ScriptableAdapter {
 
     // Fallback to UITable if WebView fails
     async presentUITableFallback(results) {
-        const table = new UITable();
+        try {
+            const table = new UITable();
         table.showSeparators = true;
             
             // Header row
@@ -1656,12 +1657,5 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 }
 
-// Export for both environments
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ScriptableAdapter };
-} else if (typeof window !== 'undefined') {
-    window.ScriptableAdapter = ScriptableAdapter;
-} else {
-    // Scriptable environment
-    this.ScriptableAdapter = ScriptableAdapter;
-}
+// Export for Scriptable environment
+module.exports = { ScriptableAdapter };
