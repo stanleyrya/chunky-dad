@@ -164,18 +164,16 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 
 ## 🚀 INSTALLATION & USAGE
 
-**⚠️ IMPORTANT**: While this codebase maintains a clean directory structure for development, Scriptable's `importModule()` function doesn't support subdirectories. All files must be copied to Scriptable's root directory with their original filenames.
-
 ### For Scriptable (iOS)
 1. Install [Scriptable](https://scriptable.app/) on iOS
-2. Copy ALL files to Scriptable **root directory** (7 files total - Scriptable doesn't support subdirectories):
+2. Copy ALL files to Scriptable (7 files total):
    - `bear-event-scraper-unified.js`
    - `shared-core.js`
-   - `scriptable-adapter.js` (from adapters/ folder)
-   - `web-adapter.js` (from adapters/ folder - needed for unified script)
-   - `eventbrite-parser.js` (from parsers/ folder)
-   - `bearracuda-parser.js` (from parsers/ folder)
-   - `generic-parser.js` (from parsers/ folder)
+   - `adapters/scriptable-adapter.js`
+   - `adapters/web-adapter.js` (needed for unified script)
+   - `parsers/eventbrite-parser.js`
+   - `parsers/bearracuda-parser.js`
+   - `parsers/generic-parser.js`
 3. Copy `scraper-input.json` to **iCloud Drive/Scriptable/** folder
 4. Run `bear-event-scraper-unified.js`
 5. Set `dryRun: false` when ready for live calendar updates

@@ -71,12 +71,12 @@ class BearEventScraperOrchestrator {
             
             // Load core modules
             const sharedCoreModule = importModule('shared-core');
-            const scriptableAdapterModule = importModule('scriptable-adapter');
+            const scriptableAdapterModule = importModule('adapters/scriptable-adapter');
             
             // Load parsers
-            const eventbriteParserModule = importModule('eventbrite-parser');
-            const bearracudaParserModule = importModule('bearracuda-parser');
-            const genericParserModule = importModule('generic-parser');
+            const eventbriteParserModule = importModule('parsers/eventbrite-parser');
+            const bearracudaParserModule = importModule('parsers/bearracuda-parser');
+            const genericParserModule = importModule('parsers/generic-parser');
             
             // Store modules
             this.modules = {

@@ -1656,12 +1656,5 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 }
 
-// Export for both environments
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ScriptableAdapter };
-} else if (typeof window !== 'undefined') {
-    window.ScriptableAdapter = ScriptableAdapter;
-} else {
-    // Scriptable environment
-    this.ScriptableAdapter = ScriptableAdapter;
-}
+// Export for Scriptable environment
+module.exports = { ScriptableAdapter };
