@@ -165,16 +165,15 @@ ShortTitle: MEGA-WOOF</pre>
                 <div class="field-name">Notes Field Content:</div>
                 <pre class="field-value">Bar: TBA
 Description: D>U>R>O!  L O S   A N G E L E S.    S U M M E R
-Key: megawoof-|2025-08-17|tba
-DebugCity: la
-DebugSource: eventbrite
+<span class="added">Short Name: MEGA-WOOF</span>
 Instagram: https://www.instagram.com/megawoof_america
 Website: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019
 Gmaps: https://maps.google.com/?q=34.043925,-118.24242909999998
-<span class="added">Short Name: MEGA-WOOF</span>
-Image: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1074412243%2F185013722403%2F1%2Foriginal.20250716-002220?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=59b8e3f4c9f6ab9142960372a78ee67d
 
-More info: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019</pre>
+Key: megawoof-|2025-08-17|tba
+DebugCity: la
+DebugSource: eventbrite
+<span class="added">DebugImage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1074412243%2F185013722403%2F1%2Foriginal.20250716-002220?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=59b8e3f4c9f6ab9142960372a78ee67d</span></pre>
             </div>
         </div>
     </div>
@@ -186,15 +185,35 @@ More info: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1
             <li><strong>URL field:</strong> Removed from calendar event properties (now only in notes)</li>
             <li><strong>Coordinates in notes:</strong> Removed (redundant since they're now in the location field)</li>
             <li><strong>ShortTitle → Short Name:</strong> Renamed to match calendar-core.js expected format</li>
+            <li><strong>More info:</strong> Removed (redundant with Website field)</li>
+            <li><strong>Notes organization:</strong> Parsed properties first, then debug properties grouped together</li>
         </ul>
         
         <h3>Key Points:</h3>
         <ul>
             <li>GPS coordinates are properly placed in the calendar's location field</li>
-            <li>URL remains in the notes field as "More info:" link</li>
-            <li>Debug properties (DebugCity, DebugSource) remain for troubleshooting</li>
-            <li>All social media links and additional metadata preserved in notes</li>
+            <li>URL is in notes as "Website:" (which calendar-core.js can parse)</li>
+            <li>All debug properties grouped together with "Debug" prefix (except Key which needs specific format)</li>
+            <li>Clear separation between parsed and unparsed properties</li>
         </ul>
+        
+        <h3>Notes Field Organization:</h3>
+        <ol>
+            <li><strong>Parsed Properties</strong> (used by calendar-core.js):
+                <ul>
+                    <li>Bar, Description, Price, Type, Recurrence</li>
+                    <li>Short Name, Shorter Name</li>
+                    <li>Instagram, Facebook, Website, Gmaps</li>
+                </ul>
+            </li>
+            <li><strong>Debug Properties</strong> (not parsed, for troubleshooting):
+                <ul>
+                    <li>Key (special format for merging logic)</li>
+                    <li>DebugCity, DebugSource, DebugTimezone</li>
+                    <li>DebugImage, and any other custom Debug* fields</li>
+                </ul>
+            </li>
+        </ol>
     </div>
 </body>
 </html>

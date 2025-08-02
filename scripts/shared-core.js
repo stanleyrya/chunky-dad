@@ -700,6 +700,8 @@ class SharedCore {
     formatEventNotes(event) {
         const notes = [];
         
+        // === PARSED PROPERTIES (used by calendar-core.js) ===
+        
         // Add bar/venue name first if available
         if (event.venue || event.bar) {
             notes.push(`Bar: ${event.venue || event.bar}`);
@@ -710,19 +712,33 @@ class SharedCore {
             notes.push(`Description: ${event.description || event.tea}`);
         }
         
-        // Add event key if available (for merging logic)
-        if (event.key) {
-            notes.push(`Key: ${event.key}`);
+        // Add price/cover
+        if (event.price || event.cover) {
+            notes.push(`Price: ${event.price || event.cover}`);
         }
         
-        // Add city (renamed to debugCity)
-        if (event.city) {
-            notes.push(`DebugCity: ${event.city}`);
+        // Add event type
+        if (event.eventType) {
+            notes.push(`Type: ${event.eventType}`);
         }
         
-        // Add source (renamed to debugSource)
-        if (event.source) {
-            notes.push(`DebugSource: ${event.source}`);
+        // Add recurrence info
+        if (event.recurring && event.recurrence) {
+            notes.push(`Recurrence: ${event.recurrence}`);
+        }
+        
+        // Add short names if available - using the keys that calendar-core.js expects
+        if (event.shortName) {
+            notes.push(`Short Name: ${event.shortName}`);
+        }
+        
+        if (event.shorterName) {
+            notes.push(`Shorter Name: ${event.shorterName}`);
+        }
+        
+        // Add shortTitle as Short Name (which calendar-core.js understands)
+        if (event.shortTitle && !event.shortName) {
+            notes.push(`Short Name: ${event.shortTitle}`);
         }
         
         // Add social media links
@@ -744,43 +760,36 @@ class SharedCore {
             notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
         }
         
-        // Add price/cover
-        if (event.price || event.cover) {
-            notes.push(`Price: ${event.price || event.cover}`);
+        // === DEBUG PROPERTIES (not parsed by calendar-core.js) ===
+        // Add blank line before debug section if we have any parsed properties
+        if (notes.length > 0) {
+            notes.push('');
         }
         
-        // Add recurrence info
-        if (event.recurring && event.recurrence) {
-            notes.push(`Recurrence: ${event.recurrence}`);
+        // Add event key if available (for merging logic)
+        // Note: Must use "Key:" format for extractKeyFromNotes to work
+        if (event.key) {
+            notes.push(`Key: ${event.key}`);
         }
         
-        // Add event type
-        if (event.eventType) {
-            notes.push(`Type: ${event.eventType}`);
+        // Add city
+        if (event.city) {
+            notes.push(`DebugCity: ${event.city}`);
+        }
+        
+        // Add source
+        if (event.source) {
+            notes.push(`DebugSource: ${event.source}`);
         }
         
         // Add timezone if different from device
         if (event.timezone) {
-            notes.push(`Timezone: ${event.timezone}`);
-        }
-        
-        // Add short names if available - using the keys that calendar-core.js expects
-        if (event.shortName) {
-            notes.push(`Short Name: ${event.shortName}`);
-        }
-        
-        if (event.shorterName) {
-            notes.push(`Shorter Name: ${event.shorterName}`);
-        }
-        
-        // Add shortTitle as Short Name (which calendar-core.js understands)
-        if (event.shortTitle && !event.shortName) {
-            notes.push(`Short Name: ${event.shortTitle}`);
+            notes.push(`DebugTimezone: ${event.timezone}`);
         }
         
         // Add image URL if available
         if (event.image || event.imageUrl) {
-            notes.push(`Image: ${event.image || event.imageUrl}`);
+            notes.push(`DebugImage: ${event.image || event.imageUrl}`);
         }
         
         // Add any additional custom metadata fields that aren't already handled
@@ -797,8 +806,8 @@ class SharedCore {
         // Add any custom fields from metadata
         Object.keys(event).forEach(key => {
             if (!handledFields.has(key) && event[key] !== undefined && event[key] !== null && event[key] !== '') {
-                // Format the key nicely (capitalize first letter)
-                const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
+                // Format the key nicely (capitalize first letter) and prefix with Debug
+                const formattedKey = 'Debug' + key.charAt(0).toUpperCase() + key.slice(1);
                 notes.push(`${formattedKey}: ${event[key]}`);
             }
         });
