@@ -198,26 +198,62 @@ class ScriptableAdapter {
                     
                     switch (event._action) {
                         case 'merge':
-                        case 'update':
-                            console.log(`📱 Scriptable: ${event._action === 'merge' ? 'Merging' : 'Updating'} event: ${event.title}`);
+                            console.log(`📱 Scriptable: Merging event: ${event.title}`);
                             const targetEvent = event._existingEvent;
-                            targetEvent.title = event.title;
+                            const mergedData = this.mergeEventData(targetEvent, event);
                             
-                            // For merge operations, preserve existing description if it exists
-                            // Only override notes completely for update operations (exact duplicates)
-                            if (event._action === 'merge' && targetEvent.notes) {
-                                // Merge notes intelligently - preserve existing description but update metadata
-                                targetEvent.notes = this.mergeEventNotes(targetEvent.notes, event.notes, event);
-                            } else {
-                                // For updates or when no existing notes, use new notes
-                                targetEvent.notes = event.notes;
+                            // Log what's being changed
+                            const changes = [];
+                            if (targetEvent.notes !== mergedData.notes) {
+                                changes.push('notes');
+                            }
+                            if (!targetEvent.url && event.url) {
+                                changes.push('url (added)');
+                            }
+                            if (targetEvent.location !== event.location && event.location) {
+                                changes.push('location (updated)');
                             }
                             
-                            targetEvent.location = event.location;
-                            if (event.url) {
+                            console.log(`📱 Scriptable: Changes to apply: ${changes.length > 0 ? changes.join(', ') : 'none'}`);
+                            
+                            targetEvent.notes = mergedData.notes;
+                            if (!targetEvent.url && event.url) {
                                 targetEvent.url = event.url;
                             }
+                            // Update location only if new event has coordinates
+                            if (event.location && event.location.includes(',')) {
+                                targetEvent.location = event.location;
+                            }
                             await targetEvent.save();
+                            processedCount++;
+                            break;
+                            
+                        case 'update':
+                            console.log(`📱 Scriptable: Updating event: ${event.title}`);
+                            const updateTarget = event._existingEvent;
+                            
+                            // For updates (exact duplicates), replace everything
+                            const updateChanges = [];
+                            if (updateTarget.title !== event.title) {
+                                updateChanges.push('title');
+                                updateTarget.title = event.title;
+                            }
+                            if (updateTarget.notes !== event.notes) {
+                                updateChanges.push('notes (replaced)');
+                                updateTarget.notes = event.notes;
+                            }
+                            if (updateTarget.location !== event.location) {
+                                updateChanges.push('location (replaced)');
+                                updateTarget.location = event.location;
+                            }
+                            if (updateTarget.url !== event.url && event.url) {
+                                updateChanges.push('url (replaced)');
+                                updateTarget.url = event.url;
+                            }
+                            
+                            console.log(`📱 Scriptable: Changes to apply: ${updateChanges.length > 0 ? updateChanges.join(', ') : 'none'}`);
+                            
+                            await updateTarget.save();
                             processedCount++;
                             break;
                             
@@ -1896,6 +1932,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const hasPrice = existingNotes.includes('Price:');
         const hasRecurrence = existingNotes.includes('Recurrence:');
         const hasInstagram = existingNotes.includes('Instagram:');
+        const hasDescription = existingNotes.includes('Description:');
+        const hasCoordinates = existingNotes.includes('Coordinates:');
+        const hasGmaps = existingNotes.includes('Gmaps:');
         
         // Build updated notes with missing info
         const updatedNotesLines = existingNotes.split('\n');
@@ -1918,6 +1957,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         if (!hasInstagram && newEvent.instagram) {
             newMetadata.push(`Instagram: ${newEvent.instagram}`);
+        }
+        
+        if (!hasCoordinates && newEvent.coordinates && newEvent.coordinates.lat && newEvent.coordinates.lng) {
+            newMetadata.push(`Coordinates: ${newEvent.coordinates.lat}, ${newEvent.coordinates.lng}`);
+        }
+        
+        if (!hasGmaps && (newEvent.gmaps || newEvent.googleMapsLink)) {
+            newMetadata.push(`Gmaps: ${newEvent.gmaps || newEvent.googleMapsLink}`);
+        }
+        
+        // Only add description if it doesn't exist AND setDescription is not false
+        if (!hasDescription && newEvent.description && newEvent.setDescription !== false) {
+            newMetadata.push(`Description: ${newEvent.description}`);
         }
         
         if (!hasBar && (newEvent.venue || newEvent.bar)) {
@@ -1998,8 +2050,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         let inMetadata = false;
         
         for (const line of newLines) {
-            if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('City:') || 
-                line.startsWith('Source:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+            if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('DebugCity:') || 
+                line.startsWith('DebugSource:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.startsWith('Coordinates:') || line.startsWith('Gmaps:') ||
                 line.includes('More info:')) {
                 inMetadata = true;
             }

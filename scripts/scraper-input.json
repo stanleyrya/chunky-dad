@@ -1,7 +1,8 @@
 {
   "config": {
     "dryRun": true,
-    "daysToLookAhead": null
+    "daysToLookAhead": null,
+    "mergeMode": "upsert"
   },
   "parsers": [
     {

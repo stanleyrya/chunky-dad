@@ -123,12 +123,22 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 
 ## 🔧 CONFIGURATION
 
+### Merge Modes
+- **`upsert`** (default): Intelligently merges new data with existing events
+  - Preserves existing descriptions when `setDescription: false`
+  - Adds missing metadata fields without overwriting existing ones
+  - Updates coordinates only if new ones are available
+- **`clobber`**: Completely replaces existing events with new data
+  - Overwrites all fields including descriptions
+  - Useful for fixing corrupted data or forcing updates
+
 ### Main Configuration (`scraper-input.json`)
 ```json
 {
   "config": {
     "dryRun": true,           // When false, allows calendar modifications
-    "daysToLookAhead": null   // Limit future events (null = unlimited)
+    "daysToLookAhead": null,  // Limit future events (null = unlimited)
+    "mergeMode": "upsert"     // "upsert" (default) or "clobber" - how to handle existing events
   },
   "parsers": [
     {
@@ -153,6 +163,25 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
     "berlin": "chunky-dad-berlin",
     "default": "chunky-dad-events"
   }
+}
+```
+
+### Metadata Fields
+The `metadata` object in parser configuration supports any custom fields:
+- **Special fields with behavior:**
+  - `overrideTitle`: When true, replaces event title with `metadata.title`
+  - `setDescription`: When false, preserves existing calendar descriptions
+- **Any other field**: Automatically added to event notes (e.g., `shortTitle`, `instagram`, `customInfo`)
+
+Example:
+```json
+"metadata": {
+  "title": "MEGAWOOF",
+  "overrideTitle": true,
+  "setDescription": false,
+  "instagram": "https://www.instagram.com/megawoof_america",
+  "shortTitle": "MEGA-WOOF",
+  "customField": "Any value you want"
 }
 ```
 

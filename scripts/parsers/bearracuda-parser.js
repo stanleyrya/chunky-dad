@@ -187,20 +187,38 @@ class BearraccudaParser {
                 fullDescription = fullDescription ? `${fullDescription}\n\nPerformers: ${performers}` : `Performers: ${performers}`;
             }
             
-            return {
+            let event = {
                 title: title,
                 description: fullDescription,
                 startDate: startDate,
                 endDate: null,
                 venue: venue,
-                city: city,
+                address: '', // Assuming address is not directly available in this regex
+                city: city || 'default',
                 url: eventUrl,
                 price: '',
                 image: '',
                 source: this.config.source,
-                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
                 isBearEvent: true // Bearraccuda events are always bear events
             };
+            
+            // Apply all metadata fields from config
+            if (parserConfig.metadata) {
+                // Handle special metadata fields that need processing
+                if (parserConfig.metadata.overrideTitle && parserConfig.metadata.title) {
+                    event.title = parserConfig.metadata.title;
+                }
+                
+                // Pass through all metadata fields to the event
+                Object.keys(parserConfig.metadata).forEach(key => {
+                    // Skip special fields that are already handled
+                    if (key !== 'overrideTitle' && key !== 'title') {
+                        event[key] = parserConfig.metadata[key];
+                    }
+                });
+            }
+            
+            return event;
             
         } catch (error) {
             console.warn(`🐻 Bearraccuda: Failed to parse HTML event element: ${error}`);

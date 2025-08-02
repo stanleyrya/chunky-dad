@@ -346,7 +346,6 @@ class EventbriteParser {
                 price: price,
                 image: image,
                 source: this.config.source,
-                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
                     title: title,
@@ -355,6 +354,22 @@ class EventbriteParser {
                     url: url
                 })
             };
+            
+            // Apply all metadata fields from config
+            if (parserConfig.metadata) {
+                // Handle special metadata fields that need processing
+                if (parserConfig.metadata.overrideTitle && parserConfig.metadata.title) {
+                    event.title = parserConfig.metadata.title;
+                }
+                
+                // Pass through all metadata fields to the event
+                Object.keys(parserConfig.metadata).forEach(key => {
+                    // Skip special fields that are already handled
+                    if (key !== 'overrideTitle' && key !== 'title') {
+                        event[key] = parserConfig.metadata[key];
+                    }
+                });
+            }
             
             // Log event creation with URL for verification
             console.log(`🎫 Eventbrite: Created event "${title}" with URL: ${url}`);

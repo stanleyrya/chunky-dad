@@ -251,7 +251,7 @@ class BearEventScraperOrchestrator {
                 console.log('🐻 Orchestrator: Analyzing events for calendar actions...');
                 let analyzedEvents = null;
                 try {
-                    analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter);
+                    analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter, config.config);
                     console.log(`🐻 Orchestrator: ✓ Analyzed ${analyzedEvents.length} events for calendar actions`);
                     
                     // Store analyzed events back into results for display

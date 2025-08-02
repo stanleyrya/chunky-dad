@@ -702,14 +702,19 @@ class SharedCore {
             notes.push(`Key: ${event.key}`);
         }
         
-        // Add city
-        if (event.city) {
-            notes.push(`City: ${event.city}`);
+        // Add coordinates if available (for visibility)
+        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+            notes.push(`Coordinates: ${event.coordinates.lat}, ${event.coordinates.lng}`);
         }
         
-        // Add source
+        // Add city (renamed to debugCity)
+        if (event.city) {
+            notes.push(`DebugCity: ${event.city}`);
+        }
+        
+        // Add source (renamed to debugSource)
         if (event.source) {
-            notes.push(`Source: ${event.source}`);
+            notes.push(`DebugSource: ${event.source}`);
         }
         
         // Add social media links
@@ -725,8 +730,9 @@ class SharedCore {
             notes.push(`Website: ${event.website}`);
         }
         
-        if (event.gmaps) {
-            notes.push(`Gmaps: ${event.gmaps}`);
+        // Handle both gmaps and googleMapsLink fields
+        if (event.gmaps || event.googleMapsLink) {
+            notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
         }
         
         // Add price/cover
@@ -758,15 +764,29 @@ class SharedCore {
             notes.push(`Shorter Name: ${event.shorterName}`);
         }
         
-        // Add URL 
-        if (event.url && !notes.join(' ').includes(event.url)) {
-            notes.push(`More Info: ${event.url}`);
+        // Add URL at the end
+        if (event.url) {
+            notes.push('', `More info: ${event.url}`);
         }
         
-        // Add debug info if we have original title
-        if (event.originalTitle && event.originalTitle !== event.title) {
-            notes.push(`Debug Original Title: ${event.originalTitle}`);
-        }
+        // Add any additional custom metadata fields that aren't already handled
+        const handledFields = new Set([
+            'title', 'description', 'tea', 'startDate', 'endDate', 'venue', 'bar', 
+            'location', 'address', 'coordinates', 'city', 'source', 'key', 
+            'instagram', 'facebook', 'website', 'gmaps', 'googleMapsLink', 
+            'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
+            'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
+            '_existingEvent', '_existingKey', '_conflicts'
+        ]);
+        
+        // Add any custom fields from metadata
+        Object.keys(event).forEach(key => {
+            if (!handledFields.has(key) && event[key] !== undefined && event[key] !== null && event[key] !== '') {
+                // Format the key nicely (capitalize first letter)
+                const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
+                notes.push(`${formattedKey}: ${event[key]}`);
+            }
+        });
         
         return notes.join('\n');
     }
@@ -788,7 +808,8 @@ class SharedCore {
     }
 
     // Prepare events for calendar integration with conflict analysis
-    async prepareEventsForCalendar(events, calendarAdapter) {
+    async prepareEventsForCalendar(events, calendarAdapter, config = {}) {
+        const mergeMode = config.mergeMode || 'upsert'; // Default to upsert for backward compatibility
         const preparedEvents = events.map(event => this.formatEventForCalendar(event));
         
         // Analyze each event against existing calendar events
@@ -799,7 +820,7 @@ class SharedCore {
             const existingEvents = await calendarAdapter.getExistingEvents(event);
             
             // Analyze what action to take
-            const analysis = this.analyzeEventAction(event, existingEvents);
+            const analysis = this.analyzeEventAction(event, existingEvents, mergeMode);
             
             // Add analysis to event
             event._analysis = analysis;
@@ -853,7 +874,7 @@ class SharedCore {
     }
     
     // Analyze a single event against existing events
-    analyzeEventAction(event, existingEventsData) {
+    analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
         if (!existingEventsData || existingEventsData.length === 0) {
             return { action: 'new', reason: 'No existing events found' };
         }
@@ -864,8 +885,9 @@ class SharedCore {
         if (keyBasedMatch) {
             const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
             if (existingKey === event.key) {
+                // In clobber mode, we update instead of merge
                 return {
-                    action: 'merge',
+                    action: mergeMode === 'clobber' ? 'update' : 'merge',
                     reason: 'Key match found',
                     existingEvent: keyBasedMatch,
                     existingKey: existingKey
@@ -910,8 +932,9 @@ class SharedCore {
             );
             
             if (mergeableConflict) {
+                // In clobber mode, we update instead of merge
                 return {
-                    action: 'merge',
+                    action: mergeMode === 'clobber' ? 'update' : 'merge',
                     reason: 'Mergeable time conflict',
                     existingEvent: mergeableConflict
                 };
