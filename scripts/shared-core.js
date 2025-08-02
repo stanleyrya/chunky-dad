@@ -657,6 +657,11 @@ class SharedCore {
     
     // Format event for calendar integration
     formatEventForCalendar(event) {
+        // Ensure event has a key for merging logic
+        if (!event.key) {
+            event.key = this.createEventKey(event);
+        }
+        
         const calendarEvent = {
             title: event.title || event.name || 'Untitled Event',
             startDate: event.startDate,
@@ -664,7 +669,8 @@ class SharedCore {
             location: this.formatLocationForCalendar(event),
             notes: this.formatEventNotes(event),
             url: event.url || null,
-            city: event.city || 'default' // Include city for calendar selection
+            city: event.city || 'default', // Include city for calendar selection
+            key: event.key // Include key for merging logic
         };
         
         return calendarEvent;
@@ -687,91 +693,80 @@ class SharedCore {
             notes.push(`Bar: ${event.venue || event.bar}`);
         }
         
-        // Add description/tea
+        // Add description/tea in key-value format
         if (event.description || event.tea) {
-            notes.push(event.description || event.tea);
+            notes.push(`Description: ${event.description || event.tea}`);
         }
         
-        // Add metadata section
-        const metadata = [];
-        
-        // Add event key if available
+        // Add event key if available (for merging logic)
         if (event.key) {
-            metadata.push(`Key: ${event.key}`);
-        }
-        
-        // Add price/cover
-        if (event.price || event.cover) {
-            metadata.push(`Price: ${event.price || event.cover}`);
-        }
-        
-        // Add recurrence info
-        if (event.recurring && event.recurrence) {
-            metadata.push(`Recurrence: ${event.recurrence}`);
-        }
-        
-        // Add event type
-        if (event.eventType) {
-            metadata.push(`Type: ${event.eventType}`);
-        }
-        
-        // Add timezone if different from device
-        if (event.timezone) {
-            metadata.push(`Timezone: ${event.timezone}`);
+            notes.push(`Key: ${event.key}`);
         }
         
         // Add city
         if (event.city) {
-            metadata.push(`City: ${event.city}`);
+            notes.push(`City: ${event.city}`);
         }
         
         // Add source
         if (event.source) {
-            metadata.push(`Source: ${event.source}`);
+            notes.push(`Source: ${event.source}`);
         }
         
         // Add social media links
         if (event.instagram) {
-            metadata.push(`Instagram: ${event.instagram}`);
+            notes.push(`Instagram: ${event.instagram}`);
         }
         
         if (event.facebook) {
-            metadata.push(`Facebook: ${event.facebook}`);
+            notes.push(`Facebook: ${event.facebook}`);
         }
         
         if (event.website) {
-            metadata.push(`Website: ${event.website}`);
+            notes.push(`Website: ${event.website}`);
         }
         
         if (event.gmaps) {
-            metadata.push(`Gmaps: ${event.gmaps}`);
+            notes.push(`Gmaps: ${event.gmaps}`);
+        }
+        
+        // Add price/cover
+        if (event.price || event.cover) {
+            notes.push(`Price: ${event.price || event.cover}`);
+        }
+        
+        // Add recurrence info
+        if (event.recurring && event.recurrence) {
+            notes.push(`Recurrence: ${event.recurrence}`);
+        }
+        
+        // Add event type
+        if (event.eventType) {
+            notes.push(`Type: ${event.eventType}`);
+        }
+        
+        // Add timezone if different from device
+        if (event.timezone) {
+            notes.push(`Timezone: ${event.timezone}`);
         }
         
         // Add short names if available
         if (event.shortName) {
-            metadata.push(`ShortName: ${event.shortName}`);
+            notes.push(`Short Name: ${event.shortName}`);
         }
         
         if (event.shorterName) {
-            metadata.push(`ShorterName: ${event.shorterName}`);
+            notes.push(`Shorter Name: ${event.shorterName}`);
         }
         
-        // Add metadata section if we have any
-        if (metadata.length > 0) {
-            notes.push('--- Event Details ---');
-            notes.push(...metadata);
-        }
-        
-        // Add URL at the end
+        // Add URL 
         if (event.url && !notes.join(' ').includes(event.url)) {
-            notes.push('');
-            notes.push(`More info: ${event.url}`);
+            notes.push(`More Info: ${event.url}`);
         }
         
         // Add debug info if we have original title
         if (event.originalTitle && event.originalTitle !== event.title) {
-            notes.push('');
-            notes.push(`[Debug] Original title: ${event.originalTitle}`);
+            notes.push(`Debug Original Title: ${event.originalTitle}`);
         }
         
         return notes.join('\n');

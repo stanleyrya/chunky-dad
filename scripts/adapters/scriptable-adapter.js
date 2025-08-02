@@ -183,7 +183,34 @@ class ScriptableAdapter {
                     
                     const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                     
-                    // Check for exact duplicates first (same title and time within 1 minute)
+                    // Check for key-based merging first
+                    const keyBasedMatch = await this.findEventByKey(existingEvents, event.key);
+                    
+                    if (keyBasedMatch) {
+                        // Check if keys match exactly - safe to merge
+                        const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
+                        if (existingKey === event.key) {
+                            console.log(`📱 Scriptable: Key match found, updating event: ${event.title}`);
+                            keyBasedMatch.title = event.title;
+                            keyBasedMatch.notes = event.notes;
+                            keyBasedMatch.location = event.location;
+                            if (event.url) {
+                                keyBasedMatch.url = event.url;
+                            }
+                            await keyBasedMatch.save();
+                            addedCount++;
+                            continue;
+                        } else if (existingKey && existingKey !== event.key) {
+                            console.log(`📱 Scriptable: Key conflict detected - cannot merge without override: ${event.title}`);
+                            console.log(`  Existing key: ${existingKey}`);
+                            console.log(`  New key: ${event.key}`);
+                            // Skip this event due to key conflict
+                            continue;
+                        }
+                        // If no existing key, treat as mergeable
+                    }
+                    
+                    // Check for exact duplicates (same title and time within 1 minute)
                     const exactDuplicate = existingEvents.find(existing => 
                         existing.title === event.title &&
                         this.areDatesEqual(existing.startDate, startDate, 1)
@@ -194,7 +221,7 @@ class ScriptableAdapter {
                         continue;
                     }
                     
-                    // Check if we should update an existing event
+                    // Check for other potential matches to update
                     const existingEvent = existingEvents.find(existing => {
                         // Check if this is the same event that needs updating
                         return existing.title === event.title || 
@@ -203,7 +230,7 @@ class ScriptableAdapter {
                     });
                     
                     if (existingEvent) {
-                        // Update existing event
+                        // Update existing event (no existing key found, safe to merge)
                         console.log(`📱 Scriptable: Updating existing event: ${event.title}`);
                         existingEvent.title = event.title;
                         existingEvent.notes = event.notes;
@@ -745,6 +772,7 @@ class ScriptableAdapter {
         // Group events by proposed action
         const newEvents = [];
         const updatedEvents = [];
+        const mergeEvents = [];
         const conflictEvents = [];
         
         for (const event of allEvents) {
@@ -765,7 +793,26 @@ class ScriptableAdapter {
             try {
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
-                // Check for duplicates or updates
+                // Check for key-based merging first
+                const keyBasedMatch = await this.findEventByKey(existingEvents, event.key);
+                
+                if (keyBasedMatch) {
+                    const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
+                    if (existingKey === event.key) {
+                        event._action = 'merge';
+                        event._existingEvent = keyBasedMatch;
+                        mergeEvents.push(event);
+                        continue;
+                    } else if (existingKey && existingKey !== event.key) {
+                        event._action = 'key_conflict';
+                        event._existingEvent = keyBasedMatch;
+                        event._existingKey = existingKey;
+                        conflictEvents.push(event);
+                        continue;
+                    }
+                }
+                
+                // Check for exact duplicates
                 const exactMatch = existingEvents.find(existing => 
                     existing.title === event.title &&
                     this.areDatesEqual(existing.startDate, startDate, 1)
@@ -776,14 +823,27 @@ class ScriptableAdapter {
                     event._existingEvent = exactMatch;
                     updatedEvents.push(event);
                 } else {
-                    const conflicts = existingEvents.filter(existing => 
+                    // Check for time conflicts that can be merged
+                    const timeConflicts = existingEvents.filter(existing => 
                         this.doDatesOverlap(existing.startDate, existing.endDate, startDate, endDate)
                     );
                     
-                    if (conflicts.length > 0) {
-                        event._action = 'conflict';
-                        event._conflicts = conflicts;
-                        conflictEvents.push(event);
+                    if (timeConflicts.length > 0) {
+                        // Check if these are mergeable conflicts (adding info to existing events)
+                        const mergeableConflict = timeConflicts.find(existing => 
+                            existing.title === event.title || 
+                            (existing.location === event.location && this.areDatesEqual(existing.startDate, startDate, 60))
+                        );
+                        
+                        if (mergeableConflict) {
+                            event._action = 'merge';
+                            event._existingEvent = mergeableConflict;
+                            mergeEvents.push(event);
+                        } else {
+                            event._action = 'time_conflict';
+                            event._conflicts = timeConflicts;
+                            conflictEvents.push(event);
+                        }
                     } else {
                         event._action = 'new';
                         newEvents.push(event);
@@ -954,9 +1014,26 @@ class ScriptableAdapter {
             color: white;
         }
         
+        .badge-new::before {
+            content: "➕ ";
+        }
+        
         .badge-update {
             background: #007aff;
             color: white;
+        }
+        
+        .badge-update::before {
+            content: "🔄 ";
+        }
+        
+        .badge-merge {
+            background: #32d74b;
+            color: white;
+        }
+        
+        .badge-merge::before {
+            content: "🔀 ";
         }
         
         .badge-conflict {
@@ -964,9 +1041,17 @@ class ScriptableAdapter {
             color: white;
         }
         
+        .badge-conflict::before {
+            content: "⚠️ ";
+        }
+        
         .badge-error {
             background: #ff3b30;
             color: white;
+        }
+        
+        .badge-error::before {
+            content: "❌ ";
         }
         
         .conflict-info {
@@ -1034,6 +1119,85 @@ class ScriptableAdapter {
             font-size: 12px;
             color: #666;
         }
+        
+        .display-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #007aff;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .raw-display {
+            display: none;
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .event-card.raw-mode .event-metadata {
+            display: none;
+        }
+        
+        .event-card.raw-mode .raw-display {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -1055,6 +1219,16 @@ class ScriptableAdapter {
         </div>
     </div>
     
+    <div class="display-toggle">
+        <span style="font-weight: 500;">Display Mode:</span>
+        <span>Pretty</span>
+        <label class="toggle-switch">
+            <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
+            <span class="slider"></span>
+        </label>
+        <span>Raw</span>
+    </div>
+    
     ${newEvents.length > 0 ? `
     <div class="section">
         <div class="section-header">
@@ -1074,6 +1248,17 @@ class ScriptableAdapter {
             <span class="section-count">${updatedEvents.length}</span>
         </div>
         ${updatedEvents.map(event => this.generateEventCard(event)).join('')}
+    </div>
+    ` : ''}
+    
+    ${mergeEvents.length > 0 ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🔀</span>
+            <span class="section-title">Events to Merge (Adding Info)</span>
+            <span class="section-count">${mergeEvents.length}</span>
+        </div>
+        ${mergeEvents.map(event => this.generateEventCard(event)).join('')}
     </div>
     ` : ''}
     
@@ -1109,6 +1294,21 @@ class ScriptableAdapter {
         </div>
     </div>
     ` : ''}
+    
+    <script>
+        function toggleDisplayMode() {
+            const toggle = document.getElementById('displayToggle');
+            const eventCards = document.querySelectorAll('.event-card');
+            
+            eventCards.forEach(card => {
+                if (toggle.checked) {
+                    card.classList.add('raw-mode');
+                } else {
+                    card.classList.remove('raw-mode');
+                }
+            });
+        }
+    </script>
 </body>
 </html>
         `;
@@ -1121,7 +1321,9 @@ class ScriptableAdapter {
         const actionBadge = {
             'new': '<span class="action-badge badge-new">NEW</span>',
             'update': '<span class="action-badge badge-update">UPDATE</span>',
-            'conflict': '<span class="action-badge badge-conflict">CONFLICT</span>',
+            'merge': '<span class="action-badge badge-merge">MERGE</span>',
+            'key_conflict': '<span class="action-badge badge-conflict">KEY CONFLICT</span>',
+            'time_conflict': '<span class="action-badge badge-conflict">TIME CONFLICT</span>',
             'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
         }[event._action] || '';
         
@@ -1203,10 +1405,29 @@ class ScriptableAdapter {
                 </div>
             ` : ''}
             
-            ${event._action === 'conflict' && event._conflicts ? `
+            ${event._action === 'merge' && event._existingEvent ? `
+                <div class="existing-info">
+                    <strong>Merging With:</strong> "${this.escapeHtml(event._existingEvent.title)}"
+                    <br>• Will add missing information and update metadata
+                    ${event.key ? `<br>• Key match confirmed: ${this.escapeHtml(event.key)}` : ''}
+                </div>
+            ` : ''}
+            
+            ${(event._action === 'key_conflict' || event._action === 'time_conflict') && event._conflicts ? `
                 <div class="conflict-info">
-                    <strong>Time conflicts with:</strong>
-                    ${event._conflicts.map(c => `<br>• ${this.escapeHtml(c.title)} at ${c.startDate.toLocaleTimeString()}`).join('')}
+                    <strong>Conflicts:</strong> ${event._conflicts.length} overlapping event(s)
+                    ${event._conflicts.map(conflict => `
+                        <br>• "${this.escapeHtml(conflict.title)}" - ${conflict.startDate.toLocaleString()}
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            ${event._action === 'key_conflict' && event._existingKey ? `
+                <div class="conflict-info">
+                    <strong>Key Conflict:</strong>
+                    <br>• Existing key: ${this.escapeHtml(event._existingKey)}
+                    <br>• New key: ${this.escapeHtml(event.key)}
+                    <br>• Cannot merge without override
                 </div>
             ` : ''}
             
@@ -1221,6 +1442,33 @@ class ScriptableAdapter {
                 <summary style="cursor: pointer; font-size: 13px; color: #007aff;">View Calendar Notes Preview</summary>
                 <div class="notes-preview">${this.escapeHtml(notes)}</div>
             </details>
+            
+            <div class="raw-display">
+<strong>Raw Calendar Event Data:</strong>
+
+Title: ${this.escapeHtml(event.title || event.name)}
+Start Date: ${new Date(event.startDate).toISOString()}
+End Date: ${new Date(event.endDate || event.startDate).toISOString()}
+Location: ${this.escapeHtml(event.venue || event.bar || '')}
+Calendar: ${this.escapeHtml(calendarName)}
+URL: ${event.url || 'None'}
+
+Notes Field Content:
+${this.escapeHtml(notes)}
+
+Event Object (JSON):
+${this.escapeHtml(JSON.stringify({
+    title: event.title || event.name,
+    startDate: event.startDate,
+    endDate: event.endDate || event.startDate,
+    location: event.venue || event.bar || '',
+    city: event.city,
+    key: event.key,
+    url: event.url,
+    source: event.source,
+    coordinates: event.coordinates
+}, null, 2))}
+            </div>
         </div>
         `;
         
@@ -1648,6 +1896,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     // Set shared core reference
     setSharedCore(sharedCore) {
         this.sharedCore = sharedCore;
+    }
+    
+    // Find event by key in existing events
+    async findEventByKey(existingEvents, targetKey) {
+        if (!targetKey) return null;
+        
+        for (const event of existingEvents) {
+            const eventKey = this.extractKeyFromNotes(event.notes);
+            if (eventKey === targetKey) {
+                return event;
+            }
+        }
+        return null;
+    }
+    
+    // Extract key from event notes
+    extractKeyFromNotes(notes) {
+        if (!notes) return null;
+        
+        const keyMatch = notes.match(/^Key: (.+)$/m);
+        return keyMatch ? keyMatch[1] : null;
     }
 
     // Helper to get calendar name for display purposes only
