@@ -57,7 +57,7 @@ class EventbriteParser {
             }
             
             // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
-            const jsonEvents = this.extractEventsFromJson(html);
+            const jsonEvents = this.extractEventsFromJson(html, parserConfig);
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
@@ -87,7 +87,7 @@ class EventbriteParser {
     }
 
     // Extract events from embedded JSON data (modern Eventbrite)
-    extractEventsFromJson(html) {
+    extractEventsFromJson(html, parserConfig = {}) {
         const events = [];
         
         try {
@@ -108,7 +108,7 @@ class EventbriteParser {
                             if (eventData.url && eventData.name && eventData.name.text) {
                                 // Double-check that it's actually a future event
                                 if (this.isFutureEvent(eventData)) {
-                                    const event = this.parseJsonEvent(eventData);
+                                    const event = this.parseJsonEvent(eventData, null, parserConfig);
                                     if (event) {
                                         events.push(event);
                                         console.log(`🎫 Eventbrite: Parsed future event: ${event.title} (${event.startDate || event.date})`);
@@ -132,7 +132,7 @@ class EventbriteParser {
                         const eventData = serverData.event;
                         
                         if (eventData.url && eventData.name && this.isFutureEvent(eventData)) {
-                            const event = this.parseJsonEvent(eventData);
+                            const event = this.parseJsonEvent(eventData, null, parserConfig);
                             if (event) {
                                 events.push(event);
                                 console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
@@ -170,7 +170,7 @@ class EventbriteParser {
                 if (match) {
                     try {
                         const jsonData = JSON.parse(match[1]);
-                        const extractedEvents = this.extractEventsFromJsonData(jsonData);
+                        const extractedEvents = this.extractEventsFromJsonData(jsonData, [], parserConfig);
                         if (extractedEvents.length > 0) {
                             events.push(...extractedEvents);
                             console.log(`🎫 Eventbrite: Extracted ${extractedEvents.length} events from JSON pattern`);
@@ -190,14 +190,14 @@ class EventbriteParser {
     }
 
     // Recursively search JSON data for event objects
-    extractEventsFromJsonData(data, events = []) {
+    extractEventsFromJsonData(data, events = [], parserConfig = {}) {
         if (!data || typeof data !== 'object') return events;
         
         // Check if this object looks like an event
         if (this.isEventObject(data)) {
             // Only process future events
             if (this.isFutureEvent(data)) {
-                const event = this.parseJsonEvent(data);
+                const event = this.parseJsonEvent(data, null, parserConfig);
                 if (event) {
                     events.push(event);
                 }
@@ -209,11 +209,11 @@ class EventbriteParser {
         // Recursively search nested objects and arrays
         if (Array.isArray(data)) {
             for (const item of data) {
-                this.extractEventsFromJsonData(item, events);
+                this.extractEventsFromJsonData(item, events, parserConfig);
             }
         } else if (typeof data === 'object') {
             for (const value of Object.values(data)) {
-                this.extractEventsFromJsonData(value, events);
+                this.extractEventsFromJsonData(value, events, parserConfig);
             }
         }
         
@@ -249,7 +249,7 @@ class EventbriteParser {
     }
 
     // Parse a JSON event object into our standard format
-    parseJsonEvent(eventData, htmlContext = null) {
+    parseJsonEvent(eventData, htmlContext = null, parserConfig = {}) {
         try {
             const title = eventData.name?.text || eventData.name || eventData.title || '';
             const description = eventData.description || eventData.summary || '';
