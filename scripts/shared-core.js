@@ -671,7 +671,7 @@ class SharedCore {
             endDate: event.endDate || event.startDate,
             location: this.formatLocationForCalendar(event),
             notes: this.formatEventNotes(event),
-            url: event.url || null,
+            // Don't use url field - it goes in notes instead
             city: event.city || 'default', // Include city for calendar selection
             key: event.key, // Key should already be set during deduplication
             _parserConfig: event._parserConfig, // Preserve parser config
@@ -700,6 +700,8 @@ class SharedCore {
     formatEventNotes(event) {
         const notes = [];
         
+        // === PARSED PROPERTIES (used by calendar-core.js) ===
+        
         // Add bar/venue name first if available
         if (event.venue || event.bar) {
             notes.push(`Bar: ${event.venue || event.bar}`);
@@ -710,24 +712,33 @@ class SharedCore {
             notes.push(`Description: ${event.description || event.tea}`);
         }
         
-        // Add event key if available (for merging logic)
-        if (event.key) {
-            notes.push(`Key: ${event.key}`);
+        // Add price/cover
+        if (event.price || event.cover) {
+            notes.push(`Price: ${event.price || event.cover}`);
         }
         
-        // Add coordinates if available (for visibility)
-        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-            notes.push(`Coordinates: ${event.coordinates.lat}, ${event.coordinates.lng}`);
+        // Add event type
+        if (event.eventType) {
+            notes.push(`Type: ${event.eventType}`);
         }
         
-        // Add city (renamed to debugCity)
-        if (event.city) {
-            notes.push(`DebugCity: ${event.city}`);
+        // Add recurrence info
+        if (event.recurring && event.recurrence) {
+            notes.push(`Recurrence: ${event.recurrence}`);
         }
         
-        // Add source (renamed to debugSource)
-        if (event.source) {
-            notes.push(`DebugSource: ${event.source}`);
+        // Add short names if available - using the keys that calendar-core.js expects
+        if (event.shortName) {
+            notes.push(`Short Name: ${event.shortName}`);
+        }
+        
+        if (event.shorterName) {
+            notes.push(`Shorter Name: ${event.shorterName}`);
+        }
+        
+        // Add shortTitle as Short Name (which calendar-core.js understands)
+        if (event.shortTitle && !event.shortName) {
+            notes.push(`Short Name: ${event.shortTitle}`);
         }
         
         // Add social media links
@@ -739,8 +750,9 @@ class SharedCore {
             notes.push(`Facebook: ${event.facebook}`);
         }
         
-        if (event.website) {
-            notes.push(`Website: ${event.website}`);
+        // Add website URL - prefer event.website, fallback to event.url
+        if (event.website || event.url) {
+            notes.push(`Website: ${event.website || event.url}`);
         }
         
         // Handle both gmaps and googleMapsLink fields
@@ -748,38 +760,36 @@ class SharedCore {
             notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
         }
         
-        // Add price/cover
-        if (event.price || event.cover) {
-            notes.push(`Price: ${event.price || event.cover}`);
+        // === DEBUG PROPERTIES (not parsed by calendar-core.js) ===
+        // Add blank line before debug section if we have any parsed properties
+        if (notes.length > 0) {
+            notes.push('');
         }
         
-        // Add recurrence info
-        if (event.recurring && event.recurrence) {
-            notes.push(`Recurrence: ${event.recurrence}`);
+        // Add event key if available (for merging logic)
+        // Note: Must use "Key:" format for extractKeyFromNotes to work
+        if (event.key) {
+            notes.push(`Key: ${event.key}`);
         }
         
-        // Add event type
-        if (event.eventType) {
-            notes.push(`Type: ${event.eventType}`);
+        // Add city
+        if (event.city) {
+            notes.push(`DebugCity: ${event.city}`);
+        }
+        
+        // Add source
+        if (event.source) {
+            notes.push(`DebugSource: ${event.source}`);
         }
         
         // Add timezone if different from device
         if (event.timezone) {
-            notes.push(`Timezone: ${event.timezone}`);
+            notes.push(`DebugTimezone: ${event.timezone}`);
         }
         
-        // Add short names if available
-        if (event.shortName) {
-            notes.push(`Short Name: ${event.shortName}`);
-        }
-        
-        if (event.shorterName) {
-            notes.push(`Shorter Name: ${event.shorterName}`);
-        }
-        
-        // Add URL at the end
-        if (event.url) {
-            notes.push('', `More info: ${event.url}`);
+        // Add image URL if available
+        if (event.image || event.imageUrl) {
+            notes.push(`DebugImage: ${event.image || event.imageUrl}`);
         }
         
         // Add any additional custom metadata fields that aren't already handled
@@ -789,15 +799,16 @@ class SharedCore {
             'instagram', 'facebook', 'website', 'gmaps', 'googleMapsLink', 
             'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
             'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies'
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
+            'shortName', 'shorterName', 'shortTitle', 'image', 'imageUrl'
         ]);
         
         // Add any custom fields from metadata
-        Object.keys(event).forEach(key => {
-            if (!handledFields.has(key) && event[key] !== undefined && event[key] !== null && event[key] !== '') {
-                // Format the key nicely (capitalize first letter)
-                const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
-                notes.push(`${formattedKey}: ${event[key]}`);
+        Object.keys(event).forEach(fieldName => {
+            if (!handledFields.has(fieldName) && event[fieldName] !== undefined && event[fieldName] !== null && event[fieldName] !== '') {
+                // Format the field name nicely (capitalize first letter) and prefix with Debug
+                const formattedFieldName = 'Debug' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                notes.push(`${formattedFieldName}: ${event[fieldName]}`);
             }
         });
         
