@@ -185,7 +185,7 @@ The `metadata` object in parser configuration requires explicit merge strategies
 ```
 
 #### Merge Strategies:
-- **`preserve`** (default): Keep existing value, only add if field doesn't exist
+- **`preserve`** (default): Do nothing - don't add, don't update
 - **`upsert`**: Add if missing, keep existing if present  
 - **`clobber`**: Always replace existing value with new value
 

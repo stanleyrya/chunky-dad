@@ -1962,10 +1962,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     
                 case 'preserve':
                 default:
-                    // Keep existing value if it exists, only add if missing
-                    if (!existingFields[key] && value) {
-                        updatedFields[key] = value;
-                    }
+                    // Do nothing - keep existing value as is
+                    // Don't add if missing, don't update if exists
                     break;
             }
         });
