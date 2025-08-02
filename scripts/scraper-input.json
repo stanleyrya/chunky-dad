@@ -18,9 +18,22 @@
         "include": ["eventbrite\\.com\\/e\\/"]
       },
       "metadata": {
-        "title": "MEGAWOOF",
-        "shortTitle": "MEGA-WOOF",
-        "instagram": "https://www.instagram.com/megawoof_america"
+        "title": {
+          "value": "MEGAWOOF",
+          "merge": "upsert"
+        },
+        "shortTitle": {
+          "value": "MEGA-WOOF",
+          "merge": "clobber"
+        },
+        "instagram": {
+          "value": "https://www.instagram.com/megawoof_america",
+          "merge": "clobber"
+        },
+        "description": {
+          "value": "",
+          "merge": "preserve"
+        }
       }
     }
   ],

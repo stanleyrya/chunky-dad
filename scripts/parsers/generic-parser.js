@@ -262,7 +262,21 @@ class GenericParser {
             if (parserConfig.metadata) {
                 // Pass through all metadata fields to the event
                 Object.keys(parserConfig.metadata).forEach(key => {
-                    event[key] = parserConfig.metadata[key];
+                    const metaValue = parserConfig.metadata[key];
+                    
+                    // Handle both simple values and {value, merge} objects
+                    if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
+                        // New format: {value: "...", merge: "..."}
+                        event[key] = metaValue.value;
+                        // Store merge strategy for later use
+                        if (!event._fieldMergeStrategies) {
+                            event._fieldMergeStrategies = {};
+                        }
+                        event._fieldMergeStrategies[key] = metaValue.merge || 'upsert';
+                    } else {
+                        // Old format: just the value
+                        event[key] = metaValue;
+                    }
                 });
             }
             

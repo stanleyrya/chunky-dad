@@ -674,8 +674,16 @@ class SharedCore {
             url: event.url || null,
             city: event.city || 'default', // Include city for calendar selection
             key: event.key, // Key should already be set during deduplication
-            _parserConfig: event._parserConfig // Preserve parser config
+            _parserConfig: event._parserConfig, // Preserve parser config
+            _fieldMergeStrategies: event._fieldMergeStrategies // Preserve field strategies
         };
+        
+        // Copy over all other fields that might have merge strategies
+        Object.keys(event).forEach(key => {
+            if (!key.startsWith('_') && !(key in calendarEvent)) {
+                calendarEvent[key] = event[key];
+            }
+        });
         
         return calendarEvent;
     }
@@ -781,7 +789,7 @@ class SharedCore {
             'instagram', 'facebook', 'website', 'gmaps', 'googleMapsLink', 
             'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
             'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig'
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies'
         ]);
         
         // Add any custom fields from metadata

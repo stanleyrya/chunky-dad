@@ -124,13 +124,18 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 ## 🔧 CONFIGURATION
 
 ### Merge Modes
-- **`upsert`** (default): Intelligently merges new data with existing events
-  - Adds missing metadata fields without overwriting existing ones
-  - Preserves existing data while adding new information
-  - Updates coordinates only if new ones are available
-- **`clobber`**: Completely replaces existing events with new data
-  - Overwrites all fields with new data
-  - Useful for fixing corrupted data or forcing updates
+Merge strategies can be configured at multiple levels:
+
+1. **Per-field** (most specific): Each metadata field can have its own merge strategy
+2. **Per-parser**: Set `mergeMode` in parser config for all fields in that parser
+3. **Global**: Default fallback if not specified elsewhere
+
+#### Available Merge Strategies:
+- **`upsert`** (default): Add if missing, keep existing if present
+- **`clobber`**: Always replace with new value
+- **`preserve`**: Keep existing value, only add if field doesn't exist
+
+The most specific merge strategy wins. For example, if a parser has `mergeMode: "clobber"` but a field has `merge: "preserve"`, that field will be preserved while others are clobbered.
 
 ### Main Configuration (`scraper-input.json`)
 ```json
@@ -167,15 +172,31 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 ```
 
 ### Metadata Fields
-The `metadata` object in parser configuration supports any custom fields. All fields are passed through to the event and added to the event notes.
+The `metadata` object in parser configuration supports per-field merge strategies. Each field can be either:
+- A simple value (string/number/boolean) - uses default merge strategy
+- An object with `value` and `merge` properties
+
+#### Merge Strategies per Field:
+- **`clobber`**: Always replace existing value with new value
+- **`upsert`**: Add if missing, keep existing if present (default)
+- **`preserve`**: Keep existing value, only add if field doesn't exist
 
 Example:
 ```json
 "metadata": {
-  "title": "MEGAWOOF",
-  "instagram": "https://www.instagram.com/megawoof_america",
-  "shortTitle": "MEGA-WOOF",
-  "customField": "Any value you want"
+  "title": {
+    "value": "MEGAWOOF",
+    "merge": "clobber"        // Always use this title
+  },
+  "description": {
+    "value": "",
+    "merge": "preserve"       // Keep existing description
+  },
+  "instagram": {
+    "value": "https://www.instagram.com/megawoof_america",
+    "merge": "clobber"        // Always update to this Instagram
+  },
+  "shortTitle": "MEGA-WOOF"   // Simple value, uses default 'upsert'
 }
 ```
 
