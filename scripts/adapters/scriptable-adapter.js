@@ -2184,6 +2184,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         for (const line of existingLines) {
             if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('City:') || 
                 line.startsWith('Source:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.startsWith('Description:') || line.startsWith('Price:') || line.startsWith('Type:') ||
+                line.startsWith('Recurrence:') || line.startsWith('ShortName:') || line.startsWith('ShortTitle:') ||
+                line.startsWith('Coordinates:') || line.startsWith('Gmaps:') ||
                 line.includes('More info:')) {
                 foundMetadata = true;
                 break;
@@ -2200,6 +2203,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         for (const line of newLines) {
             if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('DebugCity:') || 
                 line.startsWith('DebugSource:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.startsWith('Description:') || line.startsWith('Price:') || line.startsWith('Type:') ||
+                line.startsWith('Recurrence:') || line.startsWith('ShortName:') || line.startsWith('ShortTitle:') ||
                 line.startsWith('Coordinates:') || line.startsWith('Gmaps:') ||
                 line.includes('More info:')) {
                 inMetadata = true;

@@ -677,7 +677,26 @@ class SharedCore {
             return event;
         }
         
-        // Create a new event object without fields that have 'preserve' strategy
+        // For new events (no existing event to preserve from), include all fields
+        // The 'preserve' strategy only applies when merging with existing events
+        if (!event._existingEvent) {
+            // Attach parser config and field merge strategies
+            if (parserConfig.metadata) {
+                Object.keys(parserConfig.metadata).forEach(key => {
+                    const metaValue = parserConfig.metadata[key];
+                    if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
+                        if (!event._fieldMergeStrategies) {
+                            event._fieldMergeStrategies = {};
+                        }
+                        event._fieldMergeStrategies[key] = metaValue.merge || 'preserve';
+                    }
+                });
+            }
+            event._parserConfig = parserConfig;
+            return event;
+        }
+        
+        // For existing events being updated, filter out fields with 'preserve' strategy
         const filteredEvent = {};
         
         // First, copy all fields that aren't in metadata or don't have preserve strategy
@@ -701,6 +720,9 @@ class SharedCore {
         // Always preserve internal fields and attach parser config
         if (event._fieldMergeStrategies) {
             filteredEvent._fieldMergeStrategies = event._fieldMergeStrategies;
+        }
+        if (event._existingEvent) {
+            filteredEvent._existingEvent = event._existingEvent;
         }
         filteredEvent._parserConfig = parserConfig;
         
