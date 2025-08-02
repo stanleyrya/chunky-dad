@@ -388,7 +388,15 @@ class CalendarCore {
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
             'gmaps': 'gmaps', 'google maps': 'gmaps',
             'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
-            'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName'
+            'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName',
+            // New mappings for properties from scripts
+            'key': 'eventKey',
+            'coordinates': 'coordinatesText',
+            'debugcity': 'debugCity',
+            'debugsource': 'debugSource',
+            'image': 'imageUrl',
+            'shorttitle': 'shortTitle',
+            'more info': 'moreInfoUrl'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing
