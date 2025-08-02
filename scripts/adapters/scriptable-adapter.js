@@ -26,7 +26,6 @@ class ScriptableAdapter {
         
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
-        this.sharedCore = null; // Will be set by orchestrator
     }
 
     // HTTP Adapter Implementation
@@ -151,46 +150,57 @@ class ScriptableAdapter {
         }
     }
 
-    // Calendar Integration - receives pre-formatted calendar events
-    async addToCalendar(calendarEvents, config) {
-        if (!calendarEvents || calendarEvents.length === 0) {
-            console.log('📱 Scriptable: No events to add to calendar');
+    // Get existing events for a specific event (called by shared-core)
+    async getExistingEvents(event) {
+        try {
+            // Determine calendar name from city
+            const city = event.city || 'default';
+            const calendarName = this.calendarMappings[city] || `chunky-dad-${city}`;
+            const calendar = await this.getOrCreateCalendar(calendarName);
+            
+            // Parse dates from formatted event
+            const startDate = new Date(event.startDate);
+            const endDate = new Date(event.endDate);
+            
+            // Expand search range for conflict detection
+            const searchStart = new Date(startDate);
+            searchStart.setHours(0, 0, 0, 0);
+            const searchEnd = new Date(endDate);
+            searchEnd.setHours(23, 59, 59, 999);
+            
+            const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+            return existingEvents;
+            
+        } catch (error) {
+            console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
+            return [];
+        }
+    }
+    
+    // Execute calendar actions determined by shared-core
+    async executeCalendarActions(analyzedEvents, config) {
+        if (!analyzedEvents || analyzedEvents.length === 0) {
+            console.log('📱 Scriptable: No events to process');
             return 0;
         }
 
         try {
-            console.log(`📱 Scriptable: Adding ${calendarEvents.length} events to calendar`);
+            console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
             
-            let addedCount = 0;
+            let processedCount = 0;
             const calendarMappings = config.calendarMappings || this.calendarMappings;
             
-            for (const event of calendarEvents) {
+            for (const event of analyzedEvents) {
                 try {
-                    // Determine calendar name from city
                     const city = event.city || 'default';
                     const calendarName = calendarMappings[city] || `chunky-dad-${city}`;
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
-                    // Parse dates from formatted event
-                    const startDate = new Date(event.startDate);
-                    const endDate = new Date(event.endDate);
-                    
-                    // Expand search range for conflict detection
-                    const searchStart = new Date(startDate);
-                    searchStart.setHours(0, 0, 0, 0);
-                    const searchEnd = new Date(endDate);
-                    searchEnd.setHours(23, 59, 59, 999);
-                    
-                    const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-                    
-                    // Use shared-core to analyze what action to take
-                    const analysis = this.sharedCore.analyzeEventAction(event, existingEvents);
-                    
-                    switch (analysis.action) {
+                    switch (event._action) {
                         case 'merge':
                         case 'update':
-                            console.log(`📱 Scriptable: ${analysis.action === 'merge' ? 'Merging' : 'Updating'} event: ${event.title} (${analysis.reason})`);
-                            const targetEvent = analysis.existingEvent;
+                            console.log(`📱 Scriptable: ${event._action === 'merge' ? 'Merging' : 'Updating'} event: ${event.title}`);
+                            const targetEvent = event._existingEvent;
                             targetEvent.title = event.title;
                             targetEvent.notes = event.notes;
                             targetEvent.location = event.location;
@@ -198,51 +208,43 @@ class ScriptableAdapter {
                                 targetEvent.url = event.url;
                             }
                             await targetEvent.save();
-                            addedCount++;
-                            continue;
+                            processedCount++;
+                            break;
                             
                         case 'conflict':
-                            console.log(`📱 Scriptable: Skipping conflicted event: ${event.title} (${analysis.reason})`);
-                            if (analysis.conflictType === 'key_conflict') {
-                                console.log(`  Existing key: ${analysis.existingKey}`);
-                                console.log(`  New key: ${event.key}`);
-                            }
-                            continue;
+                            console.log(`📱 Scriptable: Skipping conflicted event: ${event.title} (${event._analysis?.reason || 'conflict detected'})`);
+                            break;
                             
                         case 'new':
-                            // Fall through to create new event
+                            console.log(`📱 Scriptable: Creating new event: ${event.title}`);
+                            const calendarEvent = new CalendarEvent();
+                            calendarEvent.title = event.title;
+                            calendarEvent.startDate = new Date(event.startDate);
+                            calendarEvent.endDate = new Date(event.endDate);
+                            calendarEvent.location = event.location;
+                            calendarEvent.notes = event.notes;
+                            calendarEvent.calendar = calendar;
+                            
+                            if (event.url) {
+                                calendarEvent.url = event.url;
+                            }
+                            
+                            await calendarEvent.save();
+                            processedCount++;
                             break;
                     }
                     
-                    // Create new calendar event
-                    const calendarEvent = new CalendarEvent();
-                    calendarEvent.title = event.title;
-                    calendarEvent.startDate = startDate;
-                    calendarEvent.endDate = endDate;
-                    calendarEvent.location = event.location;
-                    calendarEvent.notes = event.notes;
-                    calendarEvent.calendar = calendar;
-                    
-                    if (event.url) {
-                        calendarEvent.url = event.url;
-                    }
-                    
-                    await calendarEvent.save();
-                    addedCount++;
-                    
-                    console.log(`📱 Scriptable: ✓ Added event: ${event.title}`);
-                    
                 } catch (error) {
-                    console.log(`📱 Scriptable: ✗ Failed to add event "${event.title}": ${error.message}`);
+                    console.log(`📱 Scriptable: ✗ Failed to process event "${event.title}": ${error.message}`);
                 }
             }
             
-            console.log(`📱 Scriptable: ✓ Successfully processed ${addedCount} events to calendar`);
-            return addedCount;
+            console.log(`📱 Scriptable: ✓ Successfully processed ${processedCount} events to calendar`);
+            return processedCount;
             
         } catch (error) {
-            console.log(`📱 Scriptable: ✗ Calendar integration error: ${error.message}`);
-            throw new Error(`Calendar integration failed: ${error.message}`);
+            console.log(`📱 Scriptable: ✗ Calendar execution error: ${error.message}`);
+            throw new Error(`Calendar execution failed: ${error.message}`);
         }
     }
 
@@ -397,8 +399,8 @@ class ScriptableAdapter {
                 console.log(`   🔄 Recurrence: None (one-time event)`);
             }
             
-            // Notes field content
-            const notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
+            // Notes field content (should already be formatted by shared-core)
+            const notes = event.notes || '';
             console.log(`\n📝 Notes field content (${notes.length} chars):`);
             console.log(`"${notes.substring(0, 100)}${notes.length > 100 ? '...' : ''}"`);
             
@@ -445,9 +447,8 @@ class ScriptableAdapter {
             
             try {
                 // Check for existing events in the time range
-                const { startDate, endDate } = this.sharedCore ? 
-                    this.sharedCore.getEventDateRange(event, false) :
-                    { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
+                const startDate = new Date(event.startDate);
+                const endDate = new Date(event.endDate || event.startDate);
                 
                 // Expand search range for recurring events
                 const searchStart = new Date(startDate);
@@ -639,7 +640,7 @@ class ScriptableAdapter {
             console.log(`   Start: ${new Date(event.startDate).toLocaleString()}`);
             console.log(`   End: ${new Date(event.endDate || event.startDate).toLocaleString()}`);
             console.log(`   Location: "${event.venue || event.bar || ''}"`);
-            const eventNotes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
+            const eventNotes = event.notes || '';
             console.log(`   Notes: ${eventNotes.length} characters`);
         });
         
@@ -740,69 +741,34 @@ class ScriptableAdapter {
         const allEvents = this.getAllEventsFromResults(results);
         const availableCalendars = await Calendar.forEvents();
         
-        // Group events by proposed action using shared-core analysis
+        // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
         const updatedEvents = [];
         const mergeEvents = [];
         const conflictEvents = [];
         
         for (const event of allEvents) {
-            const calendarName = this.getCalendarNameForDisplay(event);
-            const calendar = availableCalendars.find(cal => cal.title === calendarName);
-            
-            if (!calendar) {
-                event._action = 'missing_calendar';
-                event._analysis = { reason: 'Calendar not found' };
-                conflictEvents.push(event);
-                continue;
-            }
-            
-            // Get existing events for analysis
-            const { startDate, endDate, searchStart, searchEnd } = this.sharedCore ?
-                this.sharedCore.getEventDateRange(event, true) :
-                { startDate: new Date(event.startDate), endDate: new Date(event.endDate || event.startDate) };
-            
-            try {
-                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-                
-                // Use shared-core to analyze the action
-                const analysis = this.sharedCore.analyzeEventAction(event, existingEvents);
-                event._analysis = analysis;
-                
-                switch (analysis.action) {
-                    case 'new':
-                        event._action = 'new';
-                        newEvents.push(event);
-                        break;
-                    case 'update':
-                        event._action = 'update';
-                        event._existingEvent = analysis.existingEvent;
-                        updatedEvents.push(event);
-                        break;
-                    case 'merge':
-                        event._action = 'merge';
-                        event._existingEvent = analysis.existingEvent;
-                        if (analysis.existingKey) {
-                            event._existingKey = analysis.existingKey;
-                        }
-                        mergeEvents.push(event);
-                        break;
-                    case 'conflict':
-                        event._action = analysis.conflictType || 'conflict';
-                        event._existingEvent = analysis.existingEvent;
-                        if (analysis.existingKey) {
-                            event._existingKey = analysis.existingKey;
-                        }
-                        if (analysis.conflicts) {
-                            event._conflicts = analysis.conflicts;
-                        }
-                        conflictEvents.push(event);
-                        break;
-                }
-            } catch (error) {
-                event._action = 'new';
-                event._analysis = { reason: 'Error checking existing events' };
-                newEvents.push(event);
+            // Events should already have _action set by shared-core
+            switch (event._action) {
+                case 'new':
+                    newEvents.push(event);
+                    break;
+                case 'update':
+                    updatedEvents.push(event);
+                    break;
+                case 'merge':
+                    mergeEvents.push(event);
+                    break;
+                case 'conflict':
+                case 'key_conflict':
+                case 'time_conflict':
+                case 'missing_calendar':
+                    conflictEvents.push(event);
+                    break;
+                default:
+                    // Fallback for events without analysis
+                    newEvents.push(event);
+                    break;
             }
         }
         
@@ -1290,7 +1256,7 @@ class ScriptableAdapter {
             minute: '2-digit' 
         });
         
-        const notes = this.sharedCore ? this.sharedCore.formatEventNotes(event) : '';
+        const notes = event.notes || '';
         const calendarName = this.getCalendarNameForDisplay(event);
         
         let html = `
@@ -1844,10 +1810,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         };
     }
 
-    // Set shared core reference
-    setSharedCore(sharedCore) {
-        this.sharedCore = sharedCore;
-    }
+
     
 
 

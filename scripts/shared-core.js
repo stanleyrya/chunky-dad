@@ -787,9 +787,37 @@ class SharedCore {
         return { startDate, endDate };
     }
 
-    // Prepare events for calendar integration
-    prepareEventsForCalendar(events) {
-        return events.map(event => this.formatEventForCalendar(event));
+    // Prepare events for calendar integration with conflict analysis
+    async prepareEventsForCalendar(events, calendarAdapter) {
+        const preparedEvents = events.map(event => this.formatEventForCalendar(event));
+        
+        // Analyze each event against existing calendar events
+        const analyzedEvents = [];
+        
+        for (const event of preparedEvents) {
+            // Get existing events from the adapter
+            const existingEvents = await calendarAdapter.getExistingEvents(event);
+            
+            // Analyze what action to take
+            const analysis = this.analyzeEventAction(event, existingEvents);
+            
+            // Add analysis to event
+            event._analysis = analysis;
+            event._action = analysis.action;
+            if (analysis.existingEvent) {
+                event._existingEvent = analysis.existingEvent;
+            }
+            if (analysis.existingKey) {
+                event._existingKey = analysis.existingKey;
+            }
+            if (analysis.conflicts) {
+                event._conflicts = analysis.conflicts;
+            }
+            
+            analyzedEvents.push(event);
+        }
+        
+        return analyzedEvents;
     }
     
     // Analyze events against existing calendar events and determine actions
