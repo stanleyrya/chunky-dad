@@ -255,6 +255,7 @@ class GenericParser {
                 price: price,
                 image: '',
                 source: this.config.source,
+                setDescription: parserConfig.setDescription !== false, // Default to true unless explicitly false
                 isBearEvent: false // Will be filtered later based on keywords
             };
             

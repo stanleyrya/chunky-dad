@@ -207,7 +207,7 @@ class ScriptableAdapter {
                             // Only override notes completely for update operations (exact duplicates)
                             if (event._action === 'merge' && targetEvent.notes) {
                                 // Merge notes intelligently - preserve existing description but update metadata
-                                targetEvent.notes = this.mergeEventNotes(targetEvent.notes, event.notes);
+                                targetEvent.notes = this.mergeEventNotes(targetEvent.notes, event.notes, event);
                             } else {
                                 // For updates or when no existing notes, use new notes
                                 targetEvent.notes = event.notes;
@@ -1970,7 +1970,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
     
     // Intelligently merge event notes, preserving existing description while updating metadata
-    mergeEventNotes(existingNotes, newNotes) {
+    mergeEventNotes(existingNotes, newNotes, event = null) {
         if (!existingNotes) return newNotes;
         if (!newNotes) return existingNotes;
         
@@ -2004,6 +2004,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 inMetadata = true;
             }
             if (inMetadata) {
+                // Skip Description lines if setDescription is false
+                if (line.startsWith('Description:') && event && event.setDescription === false) {
+                    continue;
+                }
                 newMetadataLines.push(line);
             }
         }

@@ -13,6 +13,7 @@
       "maxAdditionalUrls": 20,
       "dryRun": true,
       "daysToLookAhead": null,
+      "setDescription": false,
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
       },
