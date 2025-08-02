@@ -244,11 +244,9 @@ class GenericParser {
                 this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl) :
                 this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
             
-            // Check if description should be included based on merge strategy
-            const shouldIncludeDescription = !(parserConfig.metadata?.description?.merge === 'preserve');
-            
             const event = {
                 title: title,
+                description: description,
                 startDate: startDate,
                 endDate: null,
                 venue: venue,
@@ -259,11 +257,6 @@ class GenericParser {
                 source: this.config.source,
                 isBearEvent: false // Will be filtered later based on keywords
             };
-            
-            // Only add description if it's not set to preserve
-            if (shouldIncludeDescription) {
-                event.description = description;
-            }
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {
