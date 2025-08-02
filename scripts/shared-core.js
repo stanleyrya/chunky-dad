@@ -159,8 +159,12 @@ class SharedCore {
                 }
                 
                 if (parseResult.events) {
-                    allEvents.push(...parseResult.events);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} events from ${url}`);
+                    // Apply field merge strategies to filter out fields that should be preserved
+                    const filteredEvents = parseResult.events.map(event => 
+                        this.applyFieldMergeStrategies(event, parserConfig)
+                    );
+                    allEvents.push(...filteredEvents);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${filteredEvents.length} events from ${url}`);
                 }
 
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
@@ -235,7 +239,11 @@ class SharedCore {
                 
                 // Instead of adding new events, use detail page data to enrich existing events
                 if (parseResult.events && parseResult.events.length > 0) {
-                    const detailEvent = parseResult.events[0]; // Detail pages should only have one event
+                    // Apply field merge strategies before using detail event
+                    const filteredEvents = parseResult.events.map(event => 
+                        this.applyFieldMergeStrategies(event, parserConfig)
+                    );
+                    const detailEvent = filteredEvents[0]; // Detail pages should only have one event
                     
                     // Find the matching existing event by URL
                     const matchingEvent = existingEvents.find(event => 
@@ -280,7 +288,11 @@ class SharedCore {
                 const parseResult = parser.parseEvents(htmlData, parserConfig);
                 
                 if (parseResult.events) {
-                    events.push(...parseResult.events);
+                    // Apply field merge strategies to filter out fields that should be preserved
+                    const filteredEvents = parseResult.events.map(event => 
+                        this.applyFieldMergeStrategies(event, parserConfig)
+                    );
+                    events.push(...filteredEvents);
                 }
             } catch (error) {
                 await displayAdapter.logWarn(`SYSTEM: Failed to process additional URL: ${url}`);
@@ -660,6 +672,8 @@ class SharedCore {
     // This prevents parsers from including fields that should be kept from existing events
     applyFieldMergeStrategies(event, parserConfig) {
         if (!parserConfig?.metadata) {
+            // Still attach parser config even if no metadata
+            event._parserConfig = parserConfig;
             return event;
         }
         
@@ -684,13 +698,11 @@ class SharedCore {
             // Note: If merge is 'preserve', we don't include the field at all
         });
         
-        // Always preserve internal fields
+        // Always preserve internal fields and attach parser config
         if (event._fieldMergeStrategies) {
             filteredEvent._fieldMergeStrategies = event._fieldMergeStrategies;
         }
-        if (event._parserConfig) {
-            filteredEvent._parserConfig = event._parserConfig;
-        }
+        filteredEvent._parserConfig = parserConfig;
         
         return filteredEvent;
     }

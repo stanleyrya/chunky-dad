@@ -378,15 +378,10 @@ class EventbriteParser {
                 });
             }
             
-            // Apply field merge strategies to filter out preserved fields
-            const filteredEvent = this.sharedCore ? 
-                this.sharedCore.applyFieldMergeStrategies(event, parserConfig) : 
-                event;
-            
             // Log event creation with URL for verification
             console.log(`🎫 Eventbrite: Created event "${title}" with URL: ${url}`);
             
-            return filteredEvent;
+            return event;
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse JSON event: ${error}`);
@@ -496,12 +491,7 @@ class EventbriteParser {
                 })
             };
             
-            // Apply field merge strategies to filter out preserved fields
-            const filteredEvent = this.sharedCore ? 
-                this.sharedCore.applyFieldMergeStrategies(event, this.config) : 
-                event;
-            
-            return filteredEvent;
+            return event;
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
