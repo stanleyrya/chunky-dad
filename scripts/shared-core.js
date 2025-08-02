@@ -715,11 +715,6 @@ class SharedCore {
             notes.push(`Key: ${event.key}`);
         }
         
-        // Add coordinates if available (for visibility)
-        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-            notes.push(`Coordinates: ${event.coordinates.lat}, ${event.coordinates.lng}`);
-        }
-        
         // Add city (renamed to debugCity)
         if (event.city) {
             notes.push(`DebugCity: ${event.city}`);
@@ -785,11 +780,6 @@ class SharedCore {
         // Add image URL if available
         if (event.image || event.imageUrl) {
             notes.push(`Image: ${event.image || event.imageUrl}`);
-        }
-        
-        // Add URL at the end
-        if (event.url) {
-            notes.push('', `More info: ${event.url}`);
         }
         
         // Add any additional custom metadata fields that aren't already handled
