@@ -1242,7 +1242,8 @@ class ScriptableAdapter {
 
     // Fallback to UITable if WebView fails
     async presentUITableFallback(results) {
-        const table = new UITable();
+        try {
+            const table = new UITable();
         table.showSeparators = true;
             
             // Header row
