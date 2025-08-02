@@ -788,31 +788,28 @@ class ScriptableAdapter {
                 const actionIcon = {
                     'new': '➕',
                     'add': '➕', 
-                    'merge': '🔄',
-                    'update': '📝',
+                    'update': '🔄',
+                    'merge': '🔀',
                     'conflict': '⚠️',
-                    'enriched': '✨'
+                    'skip': '⏭️'
                 }[event._action] || '❓';
-                
-                console.log(`   ${actionIcon} Action: ${(event._action || 'unknown').toUpperCase()}`);
-                
+                console.log(`   ${actionIcon} ${event._action?.toUpperCase() || 'UNKNOWN'}`);
                 if (event._analysis?.reason) {
                     console.log(`   📋 Reason: ${event._analysis.reason}`);
                 }
                 
-                if (event._existingEvent) {
-                    console.log(`   🔗 Existing Event: "${event._existingEvent.title}"`);
-                }
-                
-                if (event._existingKey) {
-                    console.log(`   🔑 Existing Key: ${event._existingKey}`);
-                }
-                
-                if (event._conflicts && event._conflicts.length > 0) {
-                    console.log(`   ⚠️ Conflicts: ${event._conflicts.length} found`);
-                    event._conflicts.forEach(conflict => {
-                        console.log(`      - "${conflict.title}"`);
-                    });
+                // Show existing event details for merge/conflict/update actions
+                if (event._existingEvent && (event._action === 'merge' || event._action === 'conflict' || event._action === 'update')) {
+                    console.log(`\n📅 Existing Event in Calendar:`);
+                    const existing = event._existingEvent;
+                    console.log(`   Title: ${existing.title}`);
+                    if (existing.notes) {
+                        // Parse existing notes to extract description
+                        const existingFields = this.parseNotesIntoFields(existing.notes);
+                        if (existingFields.description) {
+                            console.log(`   Current Description: ${existingFields.description}`);
+                        }
+                    }
                 }
             }
 
@@ -2184,6 +2181,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         for (const line of existingLines) {
             if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('City:') || 
                 line.startsWith('Source:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.startsWith('Description:') || line.startsWith('Price:') || line.startsWith('Type:') ||
+                line.startsWith('Recurrence:') || line.startsWith('ShortName:') || line.startsWith('ShortTitle:') ||
+                line.startsWith('Coordinates:') || line.startsWith('Gmaps:') ||
                 line.includes('More info:')) {
                 foundMetadata = true;
                 break;
@@ -2200,6 +2200,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         for (const line of newLines) {
             if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('DebugCity:') || 
                 line.startsWith('DebugSource:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.startsWith('Description:') || line.startsWith('Price:') || line.startsWith('Type:') ||
+                line.startsWith('Recurrence:') || line.startsWith('ShortName:') || line.startsWith('ShortTitle:') ||
                 line.startsWith('Coordinates:') || line.startsWith('Gmaps:') ||
                 line.includes('More info:')) {
                 inMetadata = true;
