@@ -804,11 +804,11 @@ class SharedCore {
         ]);
         
         // Add any custom fields from metadata
-        Object.keys(event).forEach(key => {
-            if (!handledFields.has(key) && event[key] !== undefined && event[key] !== null && event[key] !== '') {
-                // Format the key nicely (capitalize first letter) and prefix with Debug
-                const formattedKey = 'Debug' + key.charAt(0).toUpperCase() + key.slice(1);
-                notes.push(`${formattedKey}: ${event[key]}`);
+        Object.keys(event).forEach(fieldName => {
+            if (!handledFields.has(fieldName) && event[fieldName] !== undefined && event[fieldName] !== null && event[fieldName] !== '') {
+                // Format the field name nicely (capitalize first letter) and prefix with Debug
+                const formattedFieldName = 'Debug' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                notes.push(`${formattedFieldName}: ${event[fieldName]}`);
             }
         });
         
