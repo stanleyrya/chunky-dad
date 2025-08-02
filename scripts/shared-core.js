@@ -671,62 +671,25 @@ class SharedCore {
     // Apply field-level merge strategies to filter out fields that should be preserved
     // This prevents parsers from including fields that should be kept from existing events
     applyFieldMergeStrategies(event, parserConfig) {
-        if (!parserConfig?.metadata) {
-            // Still attach parser config even if no metadata
-            event._parserConfig = parserConfig;
-            return event;
-        }
+        // Always attach parser config
+        event._parserConfig = parserConfig;
         
-        // For new events (no existing event to preserve from), include all fields
-        // The 'preserve' strategy only applies when merging with existing events
-        if (!event._existingEvent) {
-            // Attach parser config and field merge strategies
-            if (parserConfig.metadata) {
-                Object.keys(parserConfig.metadata).forEach(key => {
-                    const metaValue = parserConfig.metadata[key];
-                    if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
-                        if (!event._fieldMergeStrategies) {
-                            event._fieldMergeStrategies = {};
-                        }
-                        event._fieldMergeStrategies[key] = metaValue.merge || 'preserve';
+        // Attach field merge strategies if metadata is configured
+        if (parserConfig?.metadata) {
+            Object.keys(parserConfig.metadata).forEach(key => {
+                const metaValue = parserConfig.metadata[key];
+                if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
+                    if (!event._fieldMergeStrategies) {
+                        event._fieldMergeStrategies = {};
                     }
-                });
-            }
-            event._parserConfig = parserConfig;
-            return event;
+                    event._fieldMergeStrategies[key] = metaValue.merge || 'preserve';
+                }
+            });
         }
         
-        // For existing events being updated, filter out fields with 'preserve' strategy
-        const filteredEvent = {};
-        
-        // First, copy all fields that aren't in metadata or don't have preserve strategy
-        Object.keys(event).forEach(key => {
-            const metadataField = parserConfig.metadata[key];
-            
-            // If field is not in metadata config, include it
-            if (!metadataField) {
-                filteredEvent[key] = event[key];
-                return;
-            }
-            
-            // If field has a merge strategy that's not 'preserve', include it
-            if (metadataField.merge !== 'preserve') {
-                filteredEvent[key] = event[key];
-            }
-            
-            // Note: If merge is 'preserve', we don't include the field at all
-        });
-        
-        // Always preserve internal fields and attach parser config
-        if (event._fieldMergeStrategies) {
-            filteredEvent._fieldMergeStrategies = event._fieldMergeStrategies;
-        }
-        if (event._existingEvent) {
-            filteredEvent._existingEvent = event._existingEvent;
-        }
-        filteredEvent._parserConfig = parserConfig;
-        
-        return filteredEvent;
+        // Return the event with all fields intact
+        // The actual merge logic will be handled later based on the strategies
+        return event;
     }
 
     // Check if two events should be merged based on key similarity
@@ -781,9 +744,8 @@ class SharedCore {
         }
         
         // Add description/tea in key-value format
-        // Only add description if setDescription is not explicitly false and description is not empty
-        if (event.setDescription !== false && 
-            ((event.description && event.description.trim()) || (event.tea && event.tea.trim()))) {
+        // For new events, always include the description if available
+        if ((event.description && event.description.trim()) || (event.tea && event.tea.trim())) {
             notes.push(`Description: ${event.description || event.tea}`);
         }
         
