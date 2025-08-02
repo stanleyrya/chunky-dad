@@ -202,7 +202,17 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: ${event._action === 'merge' ? 'Merging' : 'Updating'} event: ${event.title}`);
                             const targetEvent = event._existingEvent;
                             targetEvent.title = event.title;
-                            targetEvent.notes = event.notes;
+                            
+                            // For merge operations, preserve existing description if it exists
+                            // Only override notes completely for update operations (exact duplicates)
+                            if (event._action === 'merge' && targetEvent.notes) {
+                                // Merge notes intelligently - preserve existing description but update metadata
+                                targetEvent.notes = this.mergeEventNotes(targetEvent.notes, event.notes);
+                            } else {
+                                // For updates or when no existing notes, use new notes
+                                targetEvent.notes = event.notes;
+                            }
+                            
                             targetEvent.location = event.location;
                             if (event.url) {
                                 targetEvent.url = event.url;
@@ -474,6 +484,13 @@ class ScriptableAdapter {
             
             if (!calendar) {
                 console.log(`❌ Calendar "${calendarName}" doesn't exist - must be created manually first`);
+                // Mark event as missing calendar for display
+                event._action = 'missing_calendar';
+                event._analysis = {
+                    action: 'missing_calendar',
+                    reason: `Calendar "${calendarName}" does not exist`,
+                    calendarName: calendarName
+                };
                 continue;
             }
             
@@ -1071,6 +1088,15 @@ class ScriptableAdapter {
             content: "⚠️ ";
         }
         
+        .badge-warning {
+            background: #ff9500;
+            color: white;
+        }
+        
+        .badge-warning::before {
+            content: "⚠️ ";
+        }
+        
         .badge-error {
             background: #ff3b30;
             color: white;
@@ -1292,7 +1318,7 @@ class ScriptableAdapter {
     <div class="section">
         <div class="section-header">
             <span class="section-icon">⚠️</span>
-            <span class="section-title">Events with Conflicts</span>
+                            <span class="section-title">Events Requiring Review</span>
             <span class="section-count">${conflictEvents.length}</span>
         </div>
         ${conflictEvents.map(event => this.generateEventCard(event)).join('')}
@@ -1348,8 +1374,8 @@ class ScriptableAdapter {
             'new': '<span class="action-badge badge-new">NEW</span>',
             'update': '<span class="action-badge badge-update">UPDATE</span>',
             'merge': '<span class="action-badge badge-merge">MERGE</span>',
-            'key_conflict': '<span class="action-badge badge-conflict">KEY CONFLICT</span>',
-            'time_conflict': '<span class="action-badge badge-conflict">TIME CONFLICT</span>',
+            'key_conflict': '<span class="action-badge badge-warning">KEY MISMATCH</span>',
+            'time_conflict': '<span class="action-badge badge-warning">TIME OVERLAP</span>',
             'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
         }[event._action] || '';
         
@@ -1424,24 +1450,32 @@ class ScriptableAdapter {
             
             ${event._action === 'update' && event._existingEvent ? `
                 <div class="existing-info">
-                    <strong>Existing Event:</strong> Will update with missing metadata
-                    ${!event._existingEvent.url && event.url ? '<br>• Add URL' : ''}
-                    ${!event._existingEvent.notes?.includes('Key:') && event.key ? '<br>• Add event key' : ''}
-                    ${event.coordinates ? '<br>• Update location to GPS coordinates' : ''}
+                    <strong>Existing Event:</strong> Will update with new information
+                    ${event._existingEvent.title !== event.title ? `<br>• Title: "${this.escapeHtml(event._existingEvent.title)}" → "${this.escapeHtml(event.title)}"` : ''}
+                    ${event._existingEvent.location !== event.location ? `<br>• Location: "${this.escapeHtml(event._existingEvent.location || 'None')}" → "${this.escapeHtml(event.location || 'None')}"` : ''}
+                    ${!event._existingEvent.url && event.url ? '<br>• Add URL: ' + this.escapeHtml(event.url) : ''}
+                    ${event._existingEvent.url && event.url && event._existingEvent.url !== event.url ? `<br>• URL: "${this.escapeHtml(event._existingEvent.url)}" → "${this.escapeHtml(event.url)}"` : ''}
+                    <br>• Notes: Will be completely replaced with new event data
+                    ${event.coordinates ? '<br>• GPS coordinates will be updated' : ''}
                 </div>
             ` : ''}
             
             ${event._action === 'merge' && event._existingEvent ? `
                 <div class="existing-info">
                     <strong>Merging With:</strong> "${this.escapeHtml(event._existingEvent.title)}"
-                    <br>• Will add missing information and update metadata
+                    <br>• <strong>PRESERVED:</strong> Existing event description will be kept
+                    ${event._existingEvent.title !== event.title ? `<br>• Title: "${this.escapeHtml(event._existingEvent.title)}" → "${this.escapeHtml(event.title)}"` : ''}
+                    ${event._existingEvent.location !== event.location ? `<br>• Location: "${this.escapeHtml(event._existingEvent.location || 'None')}" → "${this.escapeHtml(event.location || 'None')}"` : ''}
+                    ${!event._existingEvent.url && event.url ? '<br>• Add URL: ' + this.escapeHtml(event.url) : ''}
+                    ${event._existingEvent.url && event.url && event._existingEvent.url !== event.url ? `<br>• URL: "${this.escapeHtml(event._existingEvent.url)}" → "${this.escapeHtml(event.url)}"` : ''}
+                    <br>• Metadata (Key, City, Source) will be updated/added
                     ${event.key ? `<br>• Key match confirmed: ${this.escapeHtml(event.key)}` : ''}
                 </div>
             ` : ''}
             
             ${(event._action === 'key_conflict' || event._action === 'time_conflict') && event._conflicts ? `
                 <div class="conflict-info">
-                    <strong>Conflicts:</strong> ${event._conflicts.length} overlapping event(s)
+                    <strong>Overlapping Events:</strong> ${event._conflicts.length} event(s) at same time
                     ${event._conflicts.map(conflict => `
                         <br>• "${this.escapeHtml(conflict.title)}" - ${conflict.startDate.toLocaleString()}
                     `).join('')}
@@ -1450,10 +1484,10 @@ class ScriptableAdapter {
             
             ${event._action === 'key_conflict' && event._existingKey ? `
                 <div class="conflict-info">
-                    <strong>Key Conflict:</strong>
+                    <strong>Key Mismatch:</strong>
                     <br>• Existing key: ${this.escapeHtml(event._existingKey)}
                     <br>• New key: ${this.escapeHtml(event.key)}
-                    <br>• Cannot merge without override
+                    <br>• Cannot automatically merge - manual review needed
                 </div>
             ` : ''}
             
@@ -1933,6 +1967,66 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     getCalendarNameForDisplay(event) {
         const city = event.city || 'default';
         return this.calendarMappings[city] || `chunky-dad-${city}`;
+    }
+    
+    // Intelligently merge event notes, preserving existing description while updating metadata
+    mergeEventNotes(existingNotes, newNotes) {
+        if (!existingNotes) return newNotes;
+        if (!newNotes) return existingNotes;
+        
+        const existingLines = existingNotes.split('\n');
+        const newLines = newNotes.split('\n');
+        
+        // Extract description from existing notes (everything before metadata)
+        const existingDescriptionLines = [];
+        let foundMetadata = false;
+        
+        for (const line of existingLines) {
+            if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('City:') || 
+                line.startsWith('Source:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.includes('More info:')) {
+                foundMetadata = true;
+                break;
+            }
+            if (line.trim() !== '' || !foundMetadata) {
+                existingDescriptionLines.push(line);
+            }
+        }
+        
+        // Extract metadata from new notes
+        const newMetadataLines = [];
+        let inMetadata = false;
+        
+        for (const line of newLines) {
+            if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('City:') || 
+                line.startsWith('Source:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.includes('More info:')) {
+                inMetadata = true;
+            }
+            if (inMetadata) {
+                newMetadataLines.push(line);
+            }
+        }
+        
+        // Combine: existing description + new metadata
+        const result = [];
+        
+        // Add existing description (preserve original event description)
+        if (existingDescriptionLines.length > 0) {
+            result.push(...existingDescriptionLines);
+        }
+        
+        // Add separator if we have both description and metadata
+        if (existingDescriptionLines.length > 0 && newMetadataLines.length > 0) {
+            result.push('');
+        }
+        
+        // Add new metadata
+        if (newMetadataLines.length > 0) {
+            result.push(...newMetadataLines);
+        }
+        
+        return result.join('\n');
     }
 }
 
