@@ -372,6 +372,9 @@ class SharedCore {
         for (const event of events) {
             const key = this.createEventKey(event);
             
+            // Set the key on the event for later use
+            event.key = key;
+            
             if (!seen.has(key)) {
                 seen.set(key, event);
                 deduplicated.push(event);
@@ -379,10 +382,11 @@ class SharedCore {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
                 const merged = this.mergeEvents(existing, event);
+                merged.key = key; // Ensure merged event has the key
                 seen.set(key, merged);
                 
                 // Update in deduplicated array
-                const index = deduplicated.findIndex(e => this.createEventKey(e) === key);
+                const index = deduplicated.findIndex(e => e.key === key);
                 if (index !== -1) {
                     deduplicated[index] = merged;
                 }
@@ -664,7 +668,8 @@ class SharedCore {
             location: this.formatLocationForCalendar(event),
             notes: this.formatEventNotes(event),
             url: event.url || null,
-            city: event.city || 'default' // Include city for calendar selection
+            city: event.city || 'default', // Include city for calendar selection
+            key: event.key // Key should already be set during deduplication
         };
         
         return calendarEvent;
@@ -687,91 +692,80 @@ class SharedCore {
             notes.push(`Bar: ${event.venue || event.bar}`);
         }
         
-        // Add description/tea
+        // Add description/tea in key-value format
         if (event.description || event.tea) {
-            notes.push(event.description || event.tea);
+            notes.push(`Description: ${event.description || event.tea}`);
         }
         
-        // Add metadata section
-        const metadata = [];
-        
-        // Add event key if available
+        // Add event key if available (for merging logic)
         if (event.key) {
-            metadata.push(`Key: ${event.key}`);
-        }
-        
-        // Add price/cover
-        if (event.price || event.cover) {
-            metadata.push(`Price: ${event.price || event.cover}`);
-        }
-        
-        // Add recurrence info
-        if (event.recurring && event.recurrence) {
-            metadata.push(`Recurrence: ${event.recurrence}`);
-        }
-        
-        // Add event type
-        if (event.eventType) {
-            metadata.push(`Type: ${event.eventType}`);
-        }
-        
-        // Add timezone if different from device
-        if (event.timezone) {
-            metadata.push(`Timezone: ${event.timezone}`);
+            notes.push(`Key: ${event.key}`);
         }
         
         // Add city
         if (event.city) {
-            metadata.push(`City: ${event.city}`);
+            notes.push(`City: ${event.city}`);
         }
         
         // Add source
         if (event.source) {
-            metadata.push(`Source: ${event.source}`);
+            notes.push(`Source: ${event.source}`);
         }
         
         // Add social media links
         if (event.instagram) {
-            metadata.push(`Instagram: ${event.instagram}`);
+            notes.push(`Instagram: ${event.instagram}`);
         }
         
         if (event.facebook) {
-            metadata.push(`Facebook: ${event.facebook}`);
+            notes.push(`Facebook: ${event.facebook}`);
         }
         
         if (event.website) {
-            metadata.push(`Website: ${event.website}`);
+            notes.push(`Website: ${event.website}`);
         }
         
         if (event.gmaps) {
-            metadata.push(`Gmaps: ${event.gmaps}`);
+            notes.push(`Gmaps: ${event.gmaps}`);
+        }
+        
+        // Add price/cover
+        if (event.price || event.cover) {
+            notes.push(`Price: ${event.price || event.cover}`);
+        }
+        
+        // Add recurrence info
+        if (event.recurring && event.recurrence) {
+            notes.push(`Recurrence: ${event.recurrence}`);
+        }
+        
+        // Add event type
+        if (event.eventType) {
+            notes.push(`Type: ${event.eventType}`);
+        }
+        
+        // Add timezone if different from device
+        if (event.timezone) {
+            notes.push(`Timezone: ${event.timezone}`);
         }
         
         // Add short names if available
         if (event.shortName) {
-            metadata.push(`ShortName: ${event.shortName}`);
+            notes.push(`Short Name: ${event.shortName}`);
         }
         
         if (event.shorterName) {
-            metadata.push(`ShorterName: ${event.shorterName}`);
+            notes.push(`Shorter Name: ${event.shorterName}`);
         }
         
-        // Add metadata section if we have any
-        if (metadata.length > 0) {
-            notes.push('--- Event Details ---');
-            notes.push(...metadata);
-        }
-        
-        // Add URL at the end
+        // Add URL 
         if (event.url && !notes.join(' ').includes(event.url)) {
-            notes.push('');
-            notes.push(`More info: ${event.url}`);
+            notes.push(`More Info: ${event.url}`);
         }
         
         // Add debug info if we have original title
         if (event.originalTitle && event.originalTitle !== event.title) {
-            notes.push('');
-            notes.push(`[Debug] Original title: ${event.originalTitle}`);
+            notes.push(`Debug Original Title: ${event.originalTitle}`);
         }
         
         return notes.join('\n');
@@ -793,9 +787,177 @@ class SharedCore {
         return { startDate, endDate };
     }
 
-    // Prepare events for calendar integration
-    prepareEventsForCalendar(events) {
-        return events.map(event => this.formatEventForCalendar(event));
+    // Prepare events for calendar integration with conflict analysis
+    async prepareEventsForCalendar(events, calendarAdapter) {
+        const preparedEvents = events.map(event => this.formatEventForCalendar(event));
+        
+        // Analyze each event against existing calendar events
+        const analyzedEvents = [];
+        
+        for (const event of preparedEvents) {
+            // Get existing events from the adapter
+            const existingEvents = await calendarAdapter.getExistingEvents(event);
+            
+            // Analyze what action to take
+            const analysis = this.analyzeEventAction(event, existingEvents);
+            
+            // Add analysis to event
+            event._analysis = analysis;
+            event._action = analysis.action;
+            if (analysis.existingEvent) {
+                event._existingEvent = analysis.existingEvent;
+            }
+            if (analysis.existingKey) {
+                event._existingKey = analysis.existingKey;
+            }
+            if (analysis.conflicts) {
+                event._conflicts = analysis.conflicts;
+            }
+            
+            analyzedEvents.push(event);
+        }
+        
+        return analyzedEvents;
+    }
+    
+    // Analyze events against existing calendar events and determine actions
+    // This is pure business logic - adapters provide the existing events data
+    analyzeEventActions(newEvents, existingEventsData) {
+        const actions = {
+            newEvents: [],
+            updateEvents: [],
+            mergeEvents: [],
+            conflictEvents: []
+        };
+        
+        for (const event of newEvents) {
+            const analysis = this.analyzeEventAction(event, existingEventsData);
+            
+            switch (analysis.action) {
+                case 'new':
+                    actions.newEvents.push({ event, analysis });
+                    break;
+                case 'update':
+                    actions.updateEvents.push({ event, analysis });
+                    break;
+                case 'merge':
+                    actions.mergeEvents.push({ event, analysis });
+                    break;
+                case 'conflict':
+                    actions.conflictEvents.push({ event, analysis });
+                    break;
+            }
+        }
+        
+        return actions;
+    }
+    
+    // Analyze a single event against existing events
+    analyzeEventAction(event, existingEventsData) {
+        if (!existingEventsData || existingEventsData.length === 0) {
+            return { action: 'new', reason: 'No existing events found' };
+        }
+        
+        // Check for key-based merging first
+        const keyBasedMatch = this.findEventByKey(existingEventsData, event.key);
+        
+        if (keyBasedMatch) {
+            const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
+            if (existingKey === event.key) {
+                return {
+                    action: 'merge',
+                    reason: 'Key match found',
+                    existingEvent: keyBasedMatch,
+                    existingKey: existingKey
+                };
+            } else if (existingKey && existingKey !== event.key) {
+                return {
+                    action: 'conflict',
+                    reason: 'Key conflict detected',
+                    conflictType: 'key_conflict',
+                    existingEvent: keyBasedMatch,
+                    existingKey: existingKey
+                };
+            }
+        }
+        
+        // Check for exact duplicates
+        const exactMatch = existingEventsData.find(existing => 
+            existing.title === event.title &&
+            this.areDatesEqual(existing.startDate, new Date(event.startDate), 1)
+        );
+        
+        if (exactMatch) {
+            return {
+                action: 'update',
+                reason: 'Exact duplicate found',
+                existingEvent: exactMatch
+            };
+        }
+        
+        // Check for time conflicts that can be merged
+        const timeConflicts = existingEventsData.filter(existing => 
+            this.doDatesOverlap(existing.startDate, existing.endDate, 
+                               new Date(event.startDate), new Date(event.endDate || event.startDate))
+        );
+        
+        if (timeConflicts.length > 0) {
+            // Check if these are mergeable conflicts (adding info to existing events)
+            const mergeableConflict = timeConflicts.find(existing => 
+                existing.title === event.title || 
+                (existing.location === (event.venue || event.bar) && 
+                 this.areDatesEqual(existing.startDate, new Date(event.startDate), 60))
+            );
+            
+            if (mergeableConflict) {
+                return {
+                    action: 'merge',
+                    reason: 'Mergeable time conflict',
+                    existingEvent: mergeableConflict
+                };
+            } else {
+                return {
+                    action: 'conflict',
+                    reason: 'Time conflict detected',
+                    conflictType: 'time_conflict',
+                    conflicts: timeConflicts
+                };
+            }
+        }
+        
+        return { action: 'new', reason: 'No conflicts found' };
+    }
+    
+    // Find event by key in existing events (pure logic, no calendar APIs)
+    findEventByKey(existingEvents, targetKey) {
+        if (!targetKey) return null;
+        
+        for (const event of existingEvents) {
+            const eventKey = this.extractKeyFromNotes(event.notes);
+            if (eventKey === targetKey) {
+                return event;
+            }
+        }
+        return null;
+    }
+    
+    // Extract key from event notes (pure string processing)
+    extractKeyFromNotes(notes) {
+        if (!notes) return null;
+        
+        const keyMatch = notes.match(/^Key: (.+)$/m);
+        return keyMatch ? keyMatch[1] : null;
+    }
+    
+    // Check if two dates are equal within a tolerance (pure logic)
+    areDatesEqual(date1, date2, toleranceMinutes) {
+        const diff = Math.abs(date1.getTime() - date2.getTime());
+        return diff <= (toleranceMinutes * 60 * 1000);
+    }
+    
+    // Check if two date ranges overlap (pure logic)
+    doDatesOverlap(start1, end1, start2, end2) {
+        return start1 < end2 && end1 > start2;
     }
 }
 

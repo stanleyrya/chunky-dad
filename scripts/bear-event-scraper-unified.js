@@ -207,11 +207,7 @@ class BearEventScraperOrchestrator {
             const sharedCore = new this.modules.SharedCore();
             console.log('🐻 Orchestrator: ✓ Shared core instance created');
             
-            // Set shared core reference in adapter if supported
-            if (typeof finalAdapter.setSharedCore === 'function') {
-                finalAdapter.setSharedCore(sharedCore);
-                console.log('🐻 Orchestrator: ✓ Set shared core reference in adapter');
-            }
+
 
             // Create parser instances
             console.log('🐻 Orchestrator: Creating parser instances...');
@@ -251,16 +247,16 @@ class BearEventScraperOrchestrator {
                 // Check if we should add to calendar
                 const isDryRun = config.parsers.some(p => p.dryRun === true);
                 
-                if (!isDryRun && typeof finalAdapter.addToCalendar === 'function') {
-                    console.log('🐻 Orchestrator: Adding events to calendar (not dry run)...');
+                if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function') {
+                    console.log('🐻 Orchestrator: Processing events for calendar (not dry run)...');
                     try {
-                        // Prepare events for calendar using SharedCore
-                        const calendarReadyEvents = sharedCore.prepareEventsForCalendar(results.allProcessedEvents);
-                        calendarEvents = await finalAdapter.addToCalendar(calendarReadyEvents, config);
-                        console.log(`🐻 Orchestrator: ✓ Added ${calendarEvents} events to calendar`);
+                        // Prepare and analyze events for calendar using SharedCore
+                        const analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter);
+                        calendarEvents = await finalAdapter.executeCalendarActions(analyzedEvents, config);
+                        console.log(`🐻 Orchestrator: ✓ Processed ${calendarEvents} events to calendar`);
                     } catch (error) {
-                        console.error(`🐻 Orchestrator: ✗ Failed to add events to calendar: ${error.message}`);
-                        results.errors.push(`Calendar integration failed: ${error.message}`);
+                        console.error(`🐻 Orchestrator: ✗ Failed to process events to calendar: ${error.message}`);
+                        results.errors.push(`Calendar processing failed: ${error.message}`);
                     }
                 } else {
                     console.log('🐻 Orchestrator: Dry run mode or calendar not supported - skipping calendar integration');
