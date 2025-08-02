@@ -20,7 +20,8 @@
         "title": "MEGAWOOF",
         "shortTitle": "MEGA-WOOF",
         "instagram": "https://www.instagram.com/megawoof_america",
-        "overrideTitle": true
+        "overrideTitle": true,
+        "setDescription": false
       }
     }
   ],
