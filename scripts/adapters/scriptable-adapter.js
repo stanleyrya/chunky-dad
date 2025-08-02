@@ -1945,7 +1945,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
             
             const value = newEvent[key];
-            const strategy = fieldStrategies[key] || 'upsert';
+            const strategy = fieldStrategies[key] || 'preserve'; // Default to preserve
             
             switch (strategy) {
                 case 'clobber':
@@ -1953,16 +1953,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     updatedFields[key] = value;
                     break;
                     
-                case 'preserve':
-                    // Keep existing value if it exists, ignore new value
-                    if (!existingFields[key]) {
+                case 'upsert':
+                    // Add if missing, keep existing if present
+                    if (!existingFields[key] && value) {
                         updatedFields[key] = value;
                     }
                     break;
                     
-                case 'upsert':
+                case 'preserve':
                 default:
-                    // Add if missing, keep existing if present
+                    // Keep existing value if it exists, only add if missing
                     if (!existingFields[key] && value) {
                         updatedFields[key] = value;
                     }

@@ -131,9 +131,9 @@ Merge strategies can be configured at multiple levels:
 3. **Global**: Default fallback if not specified elsewhere
 
 #### Available Merge Strategies:
-- **`upsert`** (default): Add if missing, keep existing if present
+- **`preserve`** (default): Keep existing value, only add if field doesn't exist
+- **`upsert`**: Add if missing, keep existing if present
 - **`clobber`**: Always replace with new value
-- **`preserve`**: Keep existing value, only add if field doesn't exist
 
 The most specific merge strategy wins. For example, if a parser has `mergeMode: "clobber"` but a field has `merge: "preserve"`, that field will be preserved while others are clobbered.
 
@@ -172,31 +172,41 @@ The most specific merge strategy wins. For example, if a parser has `mergeMode: 
 ```
 
 ### Metadata Fields
-The `metadata` object in parser configuration supports per-field merge strategies. Each field can be either:
-- A simple value (string/number/boolean) - uses default merge strategy
-- An object with `value` and `merge` properties
+The `metadata` object in parser configuration requires explicit merge strategies for each field. All fields must use the object format with `merge` property.
 
-#### Merge Strategies per Field:
+#### Field Format:
+```json
+{
+  "fieldName": {
+    "value": "field value",    // Optional - can be omitted for preserve
+    "merge": "strategy"        // Required - defaults to "preserve" if omitted
+  }
+}
+```
+
+#### Merge Strategies:
+- **`preserve`** (default): Keep existing value, only add if field doesn't exist
+- **`upsert`**: Add if missing, keep existing if present  
 - **`clobber`**: Always replace existing value with new value
-- **`upsert`**: Add if missing, keep existing if present (default)
-- **`preserve`**: Keep existing value, only add if field doesn't exist
 
 Example:
 ```json
 "metadata": {
   "title": {
     "value": "MEGAWOOF",
-    "merge": "clobber"        // Always use this title
+    "merge": "clobber"        // Always replace title
   },
   "description": {
-    "value": "",
-    "merge": "preserve"       // Keep existing description
+    "merge": "preserve"       // Keep existing, no value needed
   },
   "instagram": {
     "value": "https://www.instagram.com/megawoof_america",
-    "merge": "clobber"        // Always update to this Instagram
+    "merge": "clobber"        // Always update Instagram
   },
-  "shortTitle": "MEGA-WOOF"   // Simple value, uses default 'upsert'
+  "shortTitle": {
+    "value": "MEGA-WOOF",
+    "merge": "upsert"         // Add if missing
+  }
 }
 ```
 

@@ -20,18 +20,17 @@
       "metadata": {
         "title": {
           "value": "MEGAWOOF",
-          "merge": "upsert"
+          "merge": "clobber"
         },
         "shortTitle": {
           "value": "MEGA-WOOF",
-          "merge": "clobber"
+          "merge": "upsert"
         },
         "instagram": {
           "value": "https://www.instagram.com/megawoof_america",
           "merge": "clobber"
         },
         "description": {
-          "value": "",
           "merge": "preserve"
         }
       }
