@@ -249,7 +249,7 @@ class EventbriteParser {
     }
 
     // Parse a JSON event object into our standard format
-    parseJsonEvent(eventData) {
+    parseJsonEvent(eventData, htmlContext = null) {
         try {
             const title = eventData.name?.text || eventData.name || eventData.title || '';
             const description = eventData.description || eventData.summary || '';
@@ -283,6 +283,17 @@ class EventbriteParser {
                         // Create Google Maps link from address
                         googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
                     }
+                }
+            }
+            
+            // HTML address extraction fallback if JSON address is not available
+            if (!address && htmlContext) {
+                console.log(`🎫 Eventbrite: No address in JSON data, trying HTML extraction for "${title}"`);
+                address = this.extractAddressFromHtml(htmlContext, venue);
+                if (address) {
+                    console.log(`🎫 Eventbrite: Found address via HTML extraction: "${address}"`);
+                    // Create Google Maps link from extracted address
+                    googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
                 }
             }
             
