@@ -491,6 +491,8 @@ class EventbriteParser {
                 })
             };
             
+            return event;
+            
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
             return null;
