@@ -671,7 +671,7 @@ class SharedCore {
             endDate: event.endDate || event.startDate,
             location: this.formatLocationForCalendar(event),
             notes: this.formatEventNotes(event),
-            url: event.url || null,
+            // Don't use url field - it goes in notes instead
             city: event.city || 'default', // Include city for calendar selection
             key: event.key, // Key should already be set during deduplication
             _parserConfig: event._parserConfig, // Preserve parser config
@@ -780,6 +780,11 @@ class SharedCore {
         // Add image URL if available
         if (event.image || event.imageUrl) {
             notes.push(`Image: ${event.image || event.imageUrl}`);
+        }
+        
+        // Add URL at the end (we don't use the calendar URL field)
+        if (event.url) {
+            notes.push('', `More info: ${event.url}`);
         }
         
         // Add any additional custom metadata fields that aren't already handled
