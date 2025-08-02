@@ -13,15 +13,26 @@
       "maxAdditionalUrls": 20,
       "dryRun": true,
       "daysToLookAhead": null,
+      "mergeMode": "upsert",
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
       },
       "metadata": {
-        "title": "MEGAWOOF",
-        "shortTitle": "MEGA-WOOF",
-        "instagram": "https://www.instagram.com/megawoof_america",
-        "overrideTitle": true,
-        "setDescription": false
+        "title": {
+          "value": "MEGAWOOF",
+          "merge": "clobber"
+        },
+        "shortTitle": {
+          "value": "MEGA-WOOF",
+          "merge": "upsert"
+        },
+        "instagram": {
+          "value": "https://www.instagram.com/megawoof_america",
+          "merge": "clobber"
+        },
+        "description": {
+          "merge": "preserve"
+        }
       }
     }
   ],

@@ -244,7 +244,7 @@ class GenericParser {
                 this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl) :
                 this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
             
-            return {
+            const event = {
                 title: title,
                 description: description,
                 startDate: startDate,
@@ -255,9 +255,33 @@ class GenericParser {
                 price: price,
                 image: '',
                 source: this.config.source,
-                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
                 isBearEvent: false // Will be filtered later based on keywords
             };
+            
+            // Apply all metadata fields from config
+            if (parserConfig.metadata) {
+                // Pass through all metadata fields to the event
+                Object.keys(parserConfig.metadata).forEach(key => {
+                    const metaValue = parserConfig.metadata[key];
+                    
+                    // All fields must use {value, merge} format
+                    if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
+                        // Only set value if it's defined (allows preserve without value)
+                        if ('value' in metaValue && metaValue.value !== undefined) {
+                            event[key] = metaValue.value;
+                        }
+                        
+                        // Store merge strategy for later use
+                        if (!event._fieldMergeStrategies) {
+                            event._fieldMergeStrategies = {};
+                        }
+                        event._fieldMergeStrategies[key] = metaValue.merge || 'preserve';
+                    }
+                    // Ignore non-object values since we require explicit format
+                });
+            }
+            
+            return event;
             
         } catch (error) {
             console.warn(`🔧 Generic: Failed to parse HTML event element: ${error}`);

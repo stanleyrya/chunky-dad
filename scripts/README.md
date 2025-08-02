@@ -123,6 +123,20 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 
 ## 🔧 CONFIGURATION
 
+### Merge Modes
+Merge strategies can be configured at multiple levels:
+
+1. **Per-field** (most specific): Each metadata field can have its own merge strategy
+2. **Per-parser**: Set `mergeMode` in parser config for all fields in that parser
+3. **Global**: Default fallback if not specified elsewhere
+
+#### Available Merge Strategies:
+- **`preserve`** (default): Keep existing value, only add if field doesn't exist
+- **`upsert`**: Add if missing, keep existing if present
+- **`clobber`**: Always replace with new value
+
+The most specific merge strategy wins. For example, if a parser has `mergeMode: "clobber"` but a field has `merge: "preserve"`, that field will be preserved while others are clobbered.
+
 ### Main Configuration (`scraper-input.json`)
 ```json
 {
@@ -139,7 +153,8 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "allowlist": ["keyword1", "keyword2"],
-      "city": "nyc"
+      "city": "nyc",
+      "mergeMode": "upsert"   // Per-parser merge mode: "upsert" or "clobber"
     }
   ],
   "calendarMappings": {
@@ -152,6 +167,45 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
     "london": "chunky-dad-london",
     "berlin": "chunky-dad-berlin",
     "default": "chunky-dad-events"
+  }
+}
+```
+
+### Metadata Fields
+The `metadata` object in parser configuration requires explicit merge strategies for each field. All fields must use the object format with `merge` property.
+
+#### Field Format:
+```json
+{
+  "fieldName": {
+    "value": "field value",    // Optional - can be omitted for preserve
+    "merge": "strategy"        // Required - defaults to "preserve" if omitted
+  }
+}
+```
+
+#### Merge Strategies:
+- **`preserve`** (default): Do nothing - don't add, don't update
+- **`upsert`**: Add if missing, keep existing if present  
+- **`clobber`**: Always replace existing value with new value
+
+Example:
+```json
+"metadata": {
+  "title": {
+    "value": "MEGAWOOF",
+    "merge": "clobber"        // Always replace title
+  },
+  "description": {
+    "merge": "preserve"       // Keep existing, no value needed
+  },
+  "instagram": {
+    "value": "https://www.instagram.com/megawoof_america",
+    "merge": "clobber"        // Always update Instagram
+  },
+  "shortTitle": {
+    "value": "MEGA-WOOF",
+    "merge": "upsert"         // Add if missing
   }
 }
 ```

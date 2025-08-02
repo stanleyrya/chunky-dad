@@ -198,26 +198,62 @@ class ScriptableAdapter {
                     
                     switch (event._action) {
                         case 'merge':
-                        case 'update':
-                            console.log(`📱 Scriptable: ${event._action === 'merge' ? 'Merging' : 'Updating'} event: ${event.title}`);
+                            console.log(`📱 Scriptable: Merging event: ${event.title}`);
                             const targetEvent = event._existingEvent;
-                            targetEvent.title = event.title;
+                            const mergedData = this.mergeEventData(targetEvent, event);
                             
-                            // For merge operations, preserve existing description if it exists
-                            // Only override notes completely for update operations (exact duplicates)
-                            if (event._action === 'merge' && targetEvent.notes) {
-                                // Merge notes intelligently - preserve existing description but update metadata
-                                targetEvent.notes = this.mergeEventNotes(targetEvent.notes, event.notes, event);
-                            } else {
-                                // For updates or when no existing notes, use new notes
-                                targetEvent.notes = event.notes;
+                            // Log what's being changed
+                            const changes = [];
+                            if (targetEvent.notes !== mergedData.notes) {
+                                changes.push('notes');
+                            }
+                            if (!targetEvent.url && event.url) {
+                                changes.push('url (added)');
+                            }
+                            if (targetEvent.location !== event.location && event.location) {
+                                changes.push('location (updated)');
                             }
                             
-                            targetEvent.location = event.location;
-                            if (event.url) {
+                            console.log(`📱 Scriptable: Changes to apply: ${changes.length > 0 ? changes.join(', ') : 'none'}`);
+                            
+                            targetEvent.notes = mergedData.notes;
+                            if (!targetEvent.url && event.url) {
                                 targetEvent.url = event.url;
                             }
+                            // Update location only if new event has coordinates
+                            if (event.location && event.location.includes(',')) {
+                                targetEvent.location = event.location;
+                            }
                             await targetEvent.save();
+                            processedCount++;
+                            break;
+                            
+                        case 'update':
+                            console.log(`📱 Scriptable: Updating event: ${event.title}`);
+                            const updateTarget = event._existingEvent;
+                            
+                            // For updates (exact duplicates), replace everything
+                            const updateChanges = [];
+                            if (updateTarget.title !== event.title) {
+                                updateChanges.push('title');
+                                updateTarget.title = event.title;
+                            }
+                            if (updateTarget.notes !== event.notes) {
+                                updateChanges.push('notes (replaced)');
+                                updateTarget.notes = event.notes;
+                            }
+                            if (updateTarget.location !== event.location) {
+                                updateChanges.push('location (replaced)');
+                                updateTarget.location = event.location;
+                            }
+                            if (updateTarget.url !== event.url && event.url) {
+                                updateChanges.push('url (replaced)');
+                                updateTarget.url = event.url;
+                            }
+                            
+                            console.log(`📱 Scriptable: Changes to apply: ${updateChanges.length > 0 ? updateChanges.join(', ') : 'none'}`);
+                            
+                            await updateTarget.save();
                             processedCount++;
                             break;
                             
@@ -1885,78 +1921,116 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return intersection.size / union.size;
     }
 
-    // Helper method to merge event data
+    // Helper method to merge event data with per-field merge strategies
     mergeEventData(existingEvent, newEvent) {
         const existingNotes = existingEvent.notes || '';
+        const fieldStrategies = newEvent._fieldMergeStrategies || {};
         
-        // Parse existing notes to check what metadata we already have
-        const hasKey = existingNotes.includes('Key:');
-        const hasUrl = existingNotes.includes('More info:') || existingEvent.url;
-        const hasBar = existingNotes.includes('Bar:');
-        const hasPrice = existingNotes.includes('Price:');
-        const hasRecurrence = existingNotes.includes('Recurrence:');
-        const hasInstagram = existingNotes.includes('Instagram:');
+        // Parse existing notes to extract current field values
+        const existingFields = this.parseNotesIntoFields(existingNotes);
         
-        // Build updated notes with missing info
-        const updatedNotesLines = existingNotes.split('\n');
-        const metadataIndex = updatedNotesLines.findIndex(line => line.includes('--- Event Details ---'));
+        // Build updated notes based on merge strategies
+        const updatedFields = {};
         
-        // Add missing metadata
-        const newMetadata = [];
+        // First, preserve all existing fields
+        Object.keys(existingFields).forEach(key => {
+            updatedFields[key] = existingFields[key];
+        });
         
-        if (!hasKey && newEvent.key) {
-            newMetadata.push(`Key: ${newEvent.key}`);
-        }
-        
-        if (!hasPrice && (newEvent.price || newEvent.cover)) {
-            newMetadata.push(`Price: ${newEvent.price || newEvent.cover}`);
-        }
-        
-        if (!hasRecurrence && newEvent.recurring && newEvent.recurrence) {
-            newMetadata.push(`Recurrence: ${newEvent.recurrence}`);
-        }
-        
-        if (!hasInstagram && newEvent.instagram) {
-            newMetadata.push(`Instagram: ${newEvent.instagram}`);
-        }
-        
-        if (!hasBar && (newEvent.venue || newEvent.bar)) {
-            // Add bar at the beginning if missing
-            updatedNotesLines.unshift(`Bar: ${newEvent.venue || newEvent.bar}`);
-        }
-        
-        // Insert new metadata into existing notes
-        if (newMetadata.length > 0) {
-            if (metadataIndex >= 0) {
-                // Insert after the metadata header
-                updatedNotesLines.splice(metadataIndex + 1, 0, ...newMetadata);
-            } else {
-                // Add metadata section if it doesn't exist
-                const urlIndex = updatedNotesLines.findIndex(line => line.includes('More info:'));
-                if (urlIndex >= 0) {
-                    updatedNotesLines.splice(urlIndex, 0, '', '--- Event Details ---', ...newMetadata);
-                } else {
-                    updatedNotesLines.push('', '--- Event Details ---', ...newMetadata);
-                }
+        // Then apply new fields based on their merge strategies
+        Object.keys(newEvent).forEach(key => {
+            // Skip internal fields
+            if (key.startsWith('_') || key === 'startDate' || key === 'endDate' || key === 'location') {
+                return;
             }
-        }
-        
-        // Add URL if missing
-        if (!hasUrl && newEvent.url) {
-            const urlIndex = updatedNotesLines.findIndex(line => line.includes('More info:'));
-            if (urlIndex === -1) {
-                updatedNotesLines.push('', `More info: ${newEvent.url}`);
+            
+            const value = newEvent[key];
+            const strategy = fieldStrategies[key] || 'preserve'; // Default to preserve
+            
+            switch (strategy) {
+                case 'clobber':
+                    // Always replace with new value
+                    updatedFields[key] = value;
+                    break;
+                    
+                case 'upsert':
+                    // Add if missing, keep existing if present
+                    if (!existingFields[key] && value) {
+                        updatedFields[key] = value;
+                    }
+                    break;
+                    
+                case 'preserve':
+                default:
+                    // Do nothing - keep existing value as is
+                    // Don't add if missing, don't update if exists
+                    break;
             }
-        }
+        });
         
-        const mergedNotes = updatedNotesLines.join('\n');
+        // Rebuild notes from updated fields
+        const notes = this.buildNotesFromFields(updatedFields);
         
         return {
-            title: existingEvent.title, // Keep existing title
-            notes: mergedNotes,
+            title: existingEvent.title, // Keep existing title unless clobbered
+            notes: notes,
             url: existingEvent.url || newEvent.url
-            // location is handled separately using formatLocationForCalendar
         };
+    }
+    
+    // Parse notes back into field/value pairs
+    parseNotesIntoFields(notes) {
+        const fields = {};
+        const lines = notes.split('\n');
+        
+        lines.forEach(line => {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > 0) {
+                const key = line.substring(0, colonIndex).trim();
+                const value = line.substring(colonIndex + 1).trim();
+                
+                // Normalize key names
+                const normalizedKey = key.toLowerCase().replace(/^debug/, '');
+                fields[normalizedKey] = value;
+            }
+        });
+        
+        return fields;
+    }
+    
+    // Build notes from field/value pairs
+    buildNotesFromFields(fields) {
+        const lines = [];
+        
+        // Add fields in a consistent order
+        const fieldOrder = ['bar', 'description', 'key', 'coordinates', 'debugcity', 'debugsource', 
+                          'instagram', 'facebook', 'website', 'gmaps', 'price', 'recurrence', 
+                          'timezone', 'shorttitle'];
+        
+        // First add ordered fields
+        fieldOrder.forEach(key => {
+            if (fields[key]) {
+                const displayKey = key === 'debugcity' ? 'DebugCity' : 
+                                 key === 'debugsource' ? 'DebugSource' :
+                                 key.charAt(0).toUpperCase() + key.slice(1);
+                lines.push(`${displayKey}: ${fields[key]}`);
+            }
+        });
+        
+        // Then add any remaining fields
+        Object.keys(fields).forEach(key => {
+            if (!fieldOrder.includes(key) && key !== 'url') {
+                const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
+                lines.push(`${displayKey}: ${fields[key]}`);
+            }
+        });
+        
+        // Add URL at the end
+        if (fields.url) {
+            lines.push('', `More info: ${fields.url}`);
+        }
+        
+        return lines.join('\n');
     }
 
 
@@ -1998,16 +2072,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         let inMetadata = false;
         
         for (const line of newLines) {
-            if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('City:') || 
-                line.startsWith('Source:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+            if (line.startsWith('Bar:') || line.startsWith('Key:') || line.startsWith('DebugCity:') || 
+                line.startsWith('DebugSource:') || line.startsWith('Instagram:') || line.startsWith('Facebook:') ||
+                line.startsWith('Coordinates:') || line.startsWith('Gmaps:') ||
                 line.includes('More info:')) {
                 inMetadata = true;
             }
             if (inMetadata) {
-                // Skip Description lines if setDescription is false
-                if (line.startsWith('Description:') && event && event.setDescription === false) {
-                    continue;
-                }
                 newMetadataLines.push(line);
             }
         }
