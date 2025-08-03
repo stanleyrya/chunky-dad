@@ -934,8 +934,11 @@ class SharedCore {
         }
         
         // Add description/tea in key-value format
-        // For new events, always include the description if available
-        if ((event.description && event.description.trim()) || (event.tea && event.tea.trim())) {
+        // Check if description has "preserve" merge strategy
+        const descriptionStrategy = event._fieldMergeStrategies?.description;
+        const shouldIncludeDescription = descriptionStrategy !== 'preserve' || event._action === 'new';
+        
+        if (shouldIncludeDescription && ((event.description && event.description.trim()) || (event.tea && event.tea.trim()))) {
             notes.push(`Description: ${event.description || event.tea}`);
         }
         
@@ -1222,11 +1225,34 @@ class SharedCore {
         
         if (timeConflicts.length > 0) {
             // Check if these are mergeable conflicts (adding info to existing events)
-            const mergeableConflict = timeConflicts.find(existing => 
-                existing.title === event.title || 
-                (existing.location === (event.venue || event.bar) && 
-                 this.areDatesEqual(existing.startDate, new Date(event.startDate), 60))
-            );
+            const mergeableConflict = timeConflicts.find(existing => {
+                // Check exact title match
+                if (existing.title === event.title) return true;
+                
+                // Check location match with similar times
+                if (existing.location === (event.venue || event.bar) && 
+                    this.areDatesEqual(existing.startDate, new Date(event.startDate), 60)) {
+                    return true;
+                }
+                
+                // Check for MEGAWOOF/DURO conflicts that should be merged
+                const existingTitle = existing.title.toLowerCase().trim();
+                const newTitle = (event.title || '').toLowerCase().trim();
+                const newOriginalTitle = (event.originalTitle || '').toLowerCase().trim();
+                
+                const existingHasMegawoof = /megawoof/i.test(existingTitle);
+                const existingHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle);
+                
+                const newHasMegawoof = /megawoof/i.test(newTitle) || /megawoof/i.test(newOriginalTitle);
+                const newHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle) || /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newOriginalTitle);
+                
+                if ((existingHasMegawoof || existingHasDuro) && (newHasMegawoof || newHasDuro)) {
+                    console.log(`SYSTEM: MEGAWOOF/DURO conflict detected - should merge: "${existing.title}" vs "${event.title}"`);
+                    return true;
+                }
+                
+                return false;
+            });
             
             if (mergeableConflict) {
                 // In clobber mode, we update instead of merge

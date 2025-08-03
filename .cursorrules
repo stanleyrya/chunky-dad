@@ -35,7 +35,7 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 ├── scripts/            # Scriptable automation scripts
 │   ├── README.md       # Scripts documentation
 │   ├── scriptable-complete-api.md # Complete Scriptable API reference (54 classes)
-│   ├── bear-event-scraper-v*.js   # Bear event scraping scripts
+│   ├── bear-event-scraper-unified.js # Unified bear event scraper
 │   └── scraper-config.json        # Scraper configuration
 ├── testing/            # Test files and utilities
 │   ├── index.html      # Dynamic test file browser
@@ -188,7 +188,7 @@ logger.error('COMPONENT', 'error message', optionalData);
 - **Debugging issues**: Check console logs, filter by component, review error messages
 - **Performance optimization**: Use logger.time/timeEnd for timing analysis
 - **Scriptable development**: Reference `scripts/scriptable-complete-api.md` for API usage
-- **Event scraper updates**: Modify bear-event-scraper-v*.js files in scripts/ folder
+- **Event scraper updates**: Modify bear-event-scraper-unified.js and related modules in scripts/ folder
 
 ## IMPORTANT RESTRICTIONS
 - **NEVER create new *.md files** - no documentation, summaries, or guides
