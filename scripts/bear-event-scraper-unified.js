@@ -174,6 +174,11 @@ class BearEventScraperOrchestrator {
 
             console.log('🐻 Orchestrator: Starting event scraping process...');
 
+            // Create shared core instance first
+            console.log('🐻 Orchestrator: Creating shared core instance...');
+            const sharedCore = new this.modules.SharedCore();
+            console.log('🐻 Orchestrator: ✓ Shared core instance created');
+
             // Create adapter instance
             console.log('🐻 Orchestrator: Creating adapter instance...');
             const adapter = new this.modules.adapter();
@@ -201,13 +206,6 @@ class BearEventScraperOrchestrator {
                     console.log(`🐻 Orchestrator: Parser ${i + 1}: ${parser.name} (${parser.parser})`);
                 });
             }
-
-            // Create shared core instance
-            console.log('🐻 Orchestrator: Creating shared core instance...');
-            const sharedCore = new this.modules.SharedCore();
-            console.log('🐻 Orchestrator: ✓ Shared core instance created');
-            
-
 
             // Create parser instances
             console.log('🐻 Orchestrator: Creating parser instances...');
