@@ -925,68 +925,72 @@ class SharedCore {
     // Format event notes with all metadata in key-value format
     formatEventNotes(event) {
         const notes = [];
+        const fieldStrategies = event._fieldMergeStrategies || {};
+        
+        // Helper function to check if a field should be included
+        const shouldIncludeField = (fieldName) => {
+            const strategy = fieldStrategies[fieldName];
+            // Only include if not "preserve" or if it's a new event
+            return strategy !== 'preserve' || event._action === 'new';
+        };
         
         // === PARSED PROPERTIES (used by calendar-core.js) ===
         
         // Add bar/venue name first if available
-        if (event.venue || event.bar) {
+        if ((event.venue || event.bar) && shouldIncludeField('venue') && shouldIncludeField('bar')) {
             notes.push(`Bar: ${event.venue || event.bar}`);
         }
         
         // Add description/tea in key-value format
-        // Check if description has "preserve" merge strategy
-        const descriptionStrategy = event._fieldMergeStrategies?.description;
-        const shouldIncludeDescription = descriptionStrategy !== 'preserve' || event._action === 'new';
-        
-        if (shouldIncludeDescription && ((event.description && event.description.trim()) || (event.tea && event.tea.trim()))) {
+        if (shouldIncludeField('description') && ((event.description && event.description.trim()) || (event.tea && event.tea.trim()))) {
             notes.push(`Description: ${event.description || event.tea}`);
         }
         
         // Add price/cover
-        if (event.price || event.cover) {
+        if ((event.price || event.cover) && shouldIncludeField('price') && shouldIncludeField('cover')) {
             notes.push(`Price: ${event.price || event.cover}`);
         }
         
         // Add event type
-        if (event.eventType) {
+        if (event.eventType && shouldIncludeField('eventType')) {
             notes.push(`Type: ${event.eventType}`);
         }
         
         // Add recurrence info
-        if (event.recurring && event.recurrence) {
+        if (event.recurring && event.recurrence && shouldIncludeField('recurrence')) {
             notes.push(`Recurrence: ${event.recurrence}`);
         }
         
         // Add short names if available - using the keys that calendar-core.js expects
-        if (event.shortName) {
+        if (event.shortName && shouldIncludeField('shortName')) {
             notes.push(`Short Name: ${event.shortName}`);
         }
         
-        if (event.shorterName) {
+        if (event.shorterName && shouldIncludeField('shorterName')) {
             notes.push(`Shorter Name: ${event.shorterName}`);
         }
         
         // Add shortTitle as Short Name (which calendar-core.js understands)
-        if (event.shortTitle && !event.shortName) {
+        if (event.shortTitle && !event.shortName && shouldIncludeField('shortTitle')) {
             notes.push(`Short Name: ${event.shortTitle}`);
         }
         
         // Add social media links
-        if (event.instagram) {
+        if (event.instagram && shouldIncludeField('instagram')) {
             notes.push(`Instagram: ${event.instagram}`);
         }
         
-        if (event.facebook) {
+        if (event.facebook && shouldIncludeField('facebook')) {
             notes.push(`Facebook: ${event.facebook}`);
         }
         
         // Add website URL - prefer event.website, fallback to event.url
-        if (event.website || event.url) {
+        if ((event.website || event.url) && shouldIncludeField('website') && shouldIncludeField('url')) {
             notes.push(`Website: ${event.website || event.url}`);
         }
         
         // Handle both gmaps and googleMapsLink fields
-        if (event.gmaps || event.googleMapsLink) {
+        if ((event.gmaps || event.googleMapsLink) && shouldIncludeField('gmaps') && shouldIncludeField('googleMapsLink')) {
             notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
         }
         
@@ -1225,34 +1229,11 @@ class SharedCore {
         
         if (timeConflicts.length > 0) {
             // Check if these are mergeable conflicts (adding info to existing events)
-            const mergeableConflict = timeConflicts.find(existing => {
-                // Check exact title match
-                if (existing.title === event.title) return true;
-                
-                // Check location match with similar times
-                if (existing.location === (event.venue || event.bar) && 
-                    this.areDatesEqual(existing.startDate, new Date(event.startDate), 60)) {
-                    return true;
-                }
-                
-                // Check for MEGAWOOF/DURO conflicts that should be merged
-                const existingTitle = existing.title.toLowerCase().trim();
-                const newTitle = (event.title || '').toLowerCase().trim();
-                const newOriginalTitle = (event.originalTitle || '').toLowerCase().trim();
-                
-                const existingHasMegawoof = /megawoof/i.test(existingTitle);
-                const existingHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle);
-                
-                const newHasMegawoof = /megawoof/i.test(newTitle) || /megawoof/i.test(newOriginalTitle);
-                const newHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle) || /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newOriginalTitle);
-                
-                if ((existingHasMegawoof || existingHasDuro) && (newHasMegawoof || newHasDuro)) {
-                    console.log(`SYSTEM: MEGAWOOF/DURO conflict detected - should merge: "${existing.title}" vs "${event.title}"`);
-                    return true;
-                }
-                
-                return false;
-            });
+            const mergeableConflict = timeConflicts.find(existing => 
+                existing.title === event.title || 
+                (existing.location === (event.venue || event.bar) && 
+                 this.areDatesEqual(existing.startDate, new Date(event.startDate), 60))
+            );
             
             if (mergeableConflict) {
                 // In clobber mode, we update instead of merge
