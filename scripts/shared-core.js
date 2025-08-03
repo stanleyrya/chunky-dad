@@ -1306,34 +1306,40 @@ class SharedCore {
         return start1 < end2 && end1 > start2;
     }
     
-    // Extract "Tea" (insider information) from notes field
-    extractTea(notes) {
+    // Generic extraction method for fields from notes
+    extractFieldFromNotes(notes, fieldName) {
         if (!notes) return '';
         
-        // Look for "Tea:" pattern (case insensitive)
-        const teaMatch = notes.match(/tea:\s*(.+?)(?:\n|$)/i);
-        if (teaMatch) {
-            return teaMatch[1].trim();
+        // Define extraction patterns for different fields
+        const patterns = {
+            tea: /tea:\s*(.+?)(?:\n|$)/i,
+            instagram: /(?:instagram:\s*)?(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
+            website: /website:\s*(https?:\/\/[^\s\n]+)/i,
+            bar: /bar:\s*(.+?)(?:\n|$)/i,
+            venue: /venue:\s*(.+?)(?:\n|$)/i
+        };
+        
+        const pattern = patterns[fieldName.toLowerCase()];
+        if (!pattern) {
+            // Try generic pattern for unknown fields
+            const genericPattern = new RegExp(`${fieldName}:\\s*(.+?)(?:\\n|$)`, 'i');
+            const match = notes.match(genericPattern);
+            return match ? match[1].trim() : '';
         }
         
-        return '';
-    }
-    
-    // Extract Instagram URL from notes
-    extractInstagram(notes) {
-        if (!notes) return '';
+        const match = notes.match(pattern);
+        if (!match) return '';
         
-        // Look for Instagram URLs in notes
-        const instagramMatch = notes.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i);
-        if (instagramMatch) {
-            const url = instagramMatch[0];
+        // Special handling for Instagram URLs
+        if (fieldName.toLowerCase() === 'instagram') {
+            const url = match[0].replace(/^instagram:\s*/i, '');
             return url.startsWith('http') ? url : `https://${url}`;
         }
         
-        return '';
+        return match[1] ? match[1].trim() : match[0].trim();
     }
     
-    // Process event with conflicts - extract and merge important information
+    // Process event with conflicts - extract and merge based on strategies
     processEventWithConflicts(event) {
         if (!event._conflicts || event._conflicts.length === 0) {
             return event;
@@ -1342,32 +1348,48 @@ class SharedCore {
         // Get merge strategies
         const mergeStrategies = event._fieldMergeStrategies || {};
         
+        // Define fields to potentially extract from notes
+        const extractableFields = ['tea', 'instagram', 'website', 'bar', 'venue'];
+        
         // Process each conflict
         event._conflicts.forEach(conflict => {
-            // Extract tea if we don't have it
-            if (!event.tea && conflict.notes) {
-                const conflictTea = this.extractTea(conflict.notes);
-                if (conflictTea) {
-                    event.tea = conflictTea;
-                }
-            }
-            
-            // Extract Instagram based on merge strategy
-            if (mergeStrategies.instagram !== 'preserve' && conflict.notes) {
-                const conflictInstagram = this.extractInstagram(conflict.notes);
-                if (conflictInstagram) {
-                    if (mergeStrategies.instagram === 'clobber' || !event.instagram) {
-                        event.instagram = conflictInstagram;
+            // Extract fields from notes based on merge strategies
+            if (conflict.notes) {
+                extractableFields.forEach(fieldName => {
+                    const strategy = mergeStrategies[fieldName] || 'preserve';
+                    
+                    if (strategy === 'preserve') {
+                        return; // Skip this field
                     }
-                }
+                    
+                    const extractedValue = this.extractFieldFromNotes(conflict.notes, fieldName);
+                    if (extractedValue) {
+                        if (strategy === 'clobber' || (strategy === 'upsert' && !event[fieldName])) {
+                            event[fieldName] = extractedValue;
+                        }
+                    }
+                });
             }
             
-            // Handle venue/location based on merge strategy
-            if (mergeStrategies.venue !== 'preserve' && conflict.location) {
-                if (mergeStrategies.venue === 'clobber' || (!event.venue || event.venue === 'TBA')) {
-                    event.venue = conflict.location;
+            // Handle direct field mapping (e.g., conflict.location -> event.venue)
+            const fieldMappings = {
+                'location': 'venue',
+                'title': 'title',
+                'startDate': 'startDate',
+                'endDate': 'endDate'
+            };
+            
+            Object.entries(fieldMappings).forEach(([conflictField, eventField]) => {
+                const strategy = mergeStrategies[eventField] || 'preserve';
+                
+                if (strategy === 'preserve' || !conflict[conflictField]) {
+                    return;
                 }
-            }
+                
+                if (strategy === 'clobber' || (strategy === 'upsert' && !event[eventField])) {
+                    event[eventField] = conflict[conflictField];
+                }
+            });
         });
         
         return event;
