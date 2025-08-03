@@ -1559,12 +1559,66 @@ class ScriptableAdapter {
             ${event._action === 'merge' && event._existingEvent ? `
                 <div class="existing-info">
                     <strong>Merging With:</strong> "${this.escapeHtml(event._existingEvent.title)}"
-                    <br>• <strong>PRESERVED:</strong> Existing event description will be kept
-                    ${event._existingEvent.title !== event.title ? `<br>• Title: "${this.escapeHtml(event._existingEvent.title)}" → "${this.escapeHtml(event.title)}"` : ''}
-                    ${event._existingEvent.location !== event.location ? `<br>• Location: "${this.escapeHtml(event._existingEvent.location || 'None')}" → "${this.escapeHtml(event.location || 'None')}"` : ''}
-                    ${!event._existingEvent.url && event.url ? '<br>• Add URL: ' + this.escapeHtml(event.url) : ''}
-                    ${event._existingEvent.url && event.url && event._existingEvent.url !== event.url ? `<br>• URL: "${this.escapeHtml(event._existingEvent.url)}" → "${this.escapeHtml(event.url)}"` : ''}
-                    <br>• Metadata (Key, City, Source) will be updated/added
+                    ${(() => {
+                        // Parse existing and new notes to show field-by-field changes
+                        const existingFields = this.parseNotesIntoFields(event._existingEvent.notes || '');
+                        const newFields = this.parseNotesIntoFields(event.notes || '');
+                        const strategies = event._fieldMergeStrategies || {};
+                        
+                        const preserved = [];
+                        const updated = [];
+                        const added = [];
+                        
+                        // Check each field
+                        Object.keys(strategies).forEach(key => {
+                            const strategy = strategies[key];
+                            const existingValue = existingFields[key];
+                            const newValue = newFields[key];
+                            
+                            if (strategy === 'preserve' && existingValue) {
+                                preserved.push(key);
+                            } else if (strategy === 'clobber' && existingValue && newValue && existingValue !== newValue) {
+                                updated.push({ key, from: existingValue, to: newValue });
+                            } else if (strategy === 'upsert' && !existingValue && newValue) {
+                                added.push({ key, value: newValue });
+                            }
+                        });
+                        
+                        let html = '';
+                        
+                        if (preserved.length > 0) {
+                            html += '<br><strong>🔒 PRESERVED:</strong> ' + preserved.map(k => 
+                                k === 'description' ? 'Original event description' : this.escapeHtml(k)
+                            ).join(', ');
+                        }
+                        
+                        if (updated.length > 0) {
+                            html += '<br><strong>🔄 UPDATED:</strong>';
+                            updated.forEach(({ key, from, to }) => {
+                                const fromDisplay = from.length > 30 ? from.substring(0, 27) + '...' : from;
+                                const toDisplay = to.length > 30 ? to.substring(0, 27) + '...' : to;
+                                html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(fromDisplay)}" → "${this.escapeHtml(toDisplay)}"`;
+                            });
+                        }
+                        
+                        if (added.length > 0) {
+                            html += '<br><strong>➕ ADDED:</strong>';
+                            added.forEach(({ key, value }) => {
+                                const valueDisplay = value.length > 30 ? value.substring(0, 27) + '...' : value;
+                                html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(valueDisplay)}"`;
+                            });
+                        }
+                        
+                        // Add info about non-notes fields
+                        if (event._existingEvent.location !== event.location && event.coordinates) {
+                            html += '<br>• Location: GPS coordinates will be updated';
+                        }
+                        if (!event._existingEvent.url && event.url) {
+                            html += '<br>• URL: Will be added';
+                        }
+                        
+                        return html;
+                    })()}
                     ${event.key ? `<br>• Key match confirmed: ${this.escapeHtml(event.key)}` : ''}
                 </div>
             ` : ''}
@@ -1989,7 +2043,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Parse existing notes to extract current field values
         const existingFields = this.parseNotesIntoFields(existingNotes);
         
-        // Build updated notes based on merge strategies
+        // Build updated fields based on merge strategies
         const updatedFields = {};
         
         // First, preserve all existing fields
@@ -1998,25 +2052,24 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         });
         
         // Then apply new fields based on their merge strategies
-        Object.keys(newEvent).forEach(key => {
-            // Skip internal fields
-            if (key.startsWith('_') || key === 'startDate' || key === 'endDate' || key === 'location') {
-                return;
-            }
-            
-            const value = newEvent[key];
+        // Parse the new event's notes to get its fields
+        const newEventNotes = newEvent.notes || '';
+        const newFields = this.parseNotesIntoFields(newEventNotes);
+        
+        // Apply merge strategies for each field in the new event
+        Object.keys(newFields).forEach(key => {
             const strategy = fieldStrategies[key] || 'preserve'; // Default to preserve
             
             switch (strategy) {
                 case 'clobber':
                     // Always replace with new value
-                    updatedFields[key] = value;
+                    updatedFields[key] = newFields[key];
                     break;
                     
                 case 'upsert':
                     // Add if missing, keep existing if present
-                    if (!existingFields[key] && value) {
-                        updatedFields[key] = value;
+                    if (!existingFields[key] && newFields[key]) {
+                        updatedFields[key] = newFields[key];
                     }
                     break;
                     
