@@ -17,7 +17,7 @@
 // ============================================================================
 
 class ScriptableAdapter {
-    constructor(config = {}) {
+    constructor(config = {}, sharedCore = null) {
         this.config = {
             timeout: config.timeout || 30000,
             userAgent: config.userAgent || 'chunky-dad-scraper/1.0',
@@ -26,6 +26,7 @@ class ScriptableAdapter {
         
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
+        this.sharedCore = sharedCore; // Store reference to shared core
     }
 
     // HTTP Adapter Implementation
@@ -201,15 +202,15 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: Merging event: ${event.title}`);
                             const targetEvent = event._existingEvent;
                             const originalNotes = targetEvent.notes || '';
-                            const mergedData = this.mergeEventData(targetEvent, event);
+                            const mergedData = this.sharedCore.mergeEventData(targetEvent, event);
                             
                             // Show detailed diff
                             console.log('\n📊 MERGE DIFF:');
                             console.log('─'.repeat(60));
                             
                             // Parse original and new notes for comparison
-                            const originalFields = this.parseNotesIntoFields(originalNotes);
-                            const newFields = this.parseNotesIntoFields(mergedData.notes);
+                            const originalFields = this.sharedCore.parseNotesIntoFields(originalNotes);
+                            const newFields = this.sharedCore.parseNotesIntoFields(mergedData.notes);
                             
                             // Show what's being preserved
                             const preserved = [];
@@ -805,7 +806,7 @@ class ScriptableAdapter {
                     console.log(`   Title: ${existing.title}`);
                     if (existing.notes) {
                         // Parse existing notes to extract description
-                        const existingFields = this.parseNotesIntoFields(existing.notes);
+                        const existingFields = this.sharedCore.parseNotesIntoFields(existing.notes);
                         if (existingFields.description) {
                             console.log(`   Current Description: ${existingFields.description}`);
                         }
@@ -1561,8 +1562,8 @@ class ScriptableAdapter {
                     <strong>Merging With:</strong> "${this.escapeHtml(event._existingEvent.title)}"
                     ${(() => {
                         // Parse existing and new notes to show field-by-field changes
-                        const existingFields = this.parseNotesIntoFields(event._existingEvent.notes || '');
-                        const newFields = this.parseNotesIntoFields(event.notes || '');
+                        const existingFields = this.sharedCore.parseNotesIntoFields(event._existingEvent.notes || '');
+                        const newFields = this.sharedCore.parseNotesIntoFields(event.notes || '');
                         const strategies = event._fieldMergeStrategies || {};
                         
                         const preserved = [];
@@ -2035,182 +2036,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return intersection.size / union.size;
     }
 
-    // Helper method to merge event data with per-field merge strategies
-    mergeEventData(existingEvent, newEvent) {
-        const existingNotes = existingEvent.notes || '';
-        const fieldStrategies = newEvent._fieldMergeStrategies || {};
-        
-        // Parse existing notes to extract current field values
-        const existingFields = this.parseNotesIntoFields(existingNotes);
-        
-        // Build updated fields based on merge strategies
-        const updatedFields = {};
-        
-        // First, preserve all existing fields
-        Object.keys(existingFields).forEach(key => {
-            updatedFields[key] = existingFields[key];
-        });
-        
-        // Then apply new fields based on their merge strategies
-        // Parse the new event's notes to get its fields
-        const newEventNotes = newEvent.notes || '';
-        const newFields = this.parseNotesIntoFields(newEventNotes);
-        
-        // Apply merge strategies for each field in the new event
-        Object.keys(newFields).forEach(key => {
-            const strategy = fieldStrategies[key] || 'preserve'; // Default to preserve
-            
-            switch (strategy) {
-                case 'clobber':
-                    // Always replace with new value
-                    updatedFields[key] = newFields[key];
-                    break;
-                    
-                case 'upsert':
-                    // Add if missing, keep existing if present
-                    if (!existingFields[key] && newFields[key]) {
-                        updatedFields[key] = newFields[key];
-                    }
-                    break;
-                    
-                case 'preserve':
-                default:
-                    // Do nothing - keep existing value as is
-                    // Don't add if missing, don't update if exists
-                    break;
-            }
-        });
-        
-        // Rebuild notes from updated fields
-        const notes = this.buildNotesFromFields(updatedFields);
-        
-        return {
-            title: existingEvent.title, // Keep existing title unless clobbered
-            notes: notes,
-            url: existingEvent.url || newEvent.url
-        };
-    }
-    
-    // Parse notes back into field/value pairs
-    parseNotesIntoFields(notes) {
-        const fields = {};
-        const lines = notes.split('\n');
-        let currentDescription = [];
-        let inDescription = false;
-        let foundMetadata = false;
-        
-        lines.forEach((line, index) => {
-            // Check if this line is metadata (has a colon and starts with known field)
-            const colonIndex = line.indexOf(':');
-            const isMetadataLine = colonIndex > 0 && (
-                line.startsWith('Bar:') || 
-                line.startsWith('Description:') ||
-                line.startsWith('Key:') || 
-                line.startsWith('DebugCity:') || 
-                line.startsWith('DebugSource:') ||
-                line.startsWith('Instagram:') || 
-                line.startsWith('Facebook:') ||
-                line.startsWith('Website:') ||
-                line.startsWith('Gmaps:') ||
-                line.startsWith('Price:') ||
-                line.startsWith('Type:') ||
-                line.startsWith('Recurrence:') ||
-                line.startsWith('ShortName:') ||
-                line.startsWith('ShortTitle:') ||
-                line.startsWith('Coordinates:') ||
-                line.includes('More info:')
-            );
-            
-            if (isMetadataLine) {
-                foundMetadata = true;
-                const key = line.substring(0, colonIndex).trim();
-                const value = line.substring(colonIndex + 1).trim();
-                
-                // Normalize key names
-                const normalizedKey = key.toLowerCase().replace(/^debug/, '');
-                
-                if (normalizedKey === 'description') {
-                    // Start capturing description
-                    inDescription = true;
-                    if (value) {
-                        currentDescription.push(value);
-                    }
-                } else {
-                    // End description capture if we were in one
-                    if (inDescription && currentDescription.length > 0) {
-                        fields['description'] = currentDescription.join('\n').trim();
-                        currentDescription = [];
-                        inDescription = false;
-                    }
-                    fields[normalizedKey] = value;
-                }
-            } else if (!foundMetadata && line.trim() !== '') {
-                // This is part of the original description (before any metadata)
-                currentDescription.push(line);
-            } else if (inDescription && line.trim() !== '') {
-                // Continue capturing multi-line description after "Description:" line
-                currentDescription.push(line);
-            }
-        });
-        
-        // Handle any remaining description
-        if (currentDescription.length > 0) {
-            fields['description'] = currentDescription.join('\n').trim();
-        }
-        
-        return fields;
-    }
-    
-    // Build notes from field/value pairs
-    buildNotesFromFields(fields) {
-        const lines = [];
-        
-        // Handle description specially - it might be multi-line
-        if (fields.description) {
-            // If description doesn't already have "Description:" prefix, add it
-            const desc = fields.description;
-            if (!desc.startsWith('Description:')) {
-                // For multi-line descriptions, just add them as-is at the beginning
-                lines.push(desc);
-                lines.push(''); // Add blank line after description
-            }
-        }
-        
-        // Add fields in a consistent order (excluding description which we already handled)
-        const fieldOrder = ['bar', 'key', 'coordinates', 'debugcity', 'debugsource', 
-                          'instagram', 'facebook', 'website', 'gmaps', 'price', 'recurrence', 
-                          'timezone', 'shorttitle', 'shortname'];
-        
-        // First add ordered fields
-        fieldOrder.forEach(key => {
-            if (fields[key]) {
-                const displayKey = key === 'debugcity' ? 'DebugCity' : 
-                                 key === 'debugsource' ? 'DebugSource' :
-                                 key === 'shortname' ? 'Short Name' :
-                                 key === 'shorttitle' ? 'ShortTitle' :
-                                 key.charAt(0).toUpperCase() + key.slice(1);
-                lines.push(`${displayKey}: ${fields[key]}`);
-            }
-        });
-        
-        // Then add any remaining fields (except description and url which are handled separately)
-        Object.keys(fields).forEach(key => {
-            if (!fieldOrder.includes(key) && key !== 'url' && key !== 'description') {
-                const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
-                lines.push(`${displayKey}: ${fields[key]}`);
-            }
-        });
-        
-        // Add URL at the end
-        if (fields.url) {
-            lines.push('', `More info: ${fields.url}`);
-        }
-        
-        return lines.join('\n');
-    }
 
-
-    
 
 
     // Helper to get calendar name for display purposes only
@@ -2219,7 +2045,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return this.calendarMappings[city] || `chunky-dad-${city}`;
     }
     
-    // Intelligently merge event notes, preserving existing description while updating metadata
+    // The mergeEventNotes function is still needed here as it's specific to the old merge behavior
+    // and not used in the new merge logic
     mergeEventNotes(existingNotes, newNotes, event = null) {
         if (!existingNotes) return newNotes;
         if (!newNotes) return existingNotes;

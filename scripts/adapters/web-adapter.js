@@ -17,7 +17,7 @@
 // ============================================================================
 
 class WebAdapter {
-    constructor(config = {}) {
+    constructor(config = {}, sharedCore = null) {
         this.config = {
             timeout: config.timeout || 30000,
             userAgent: config.userAgent || 'chunky-dad-scraper/1.0',
@@ -25,6 +25,7 @@ class WebAdapter {
         };
         
         this.calendarMappings = config.calendarMappings || {};
+        this.sharedCore = sharedCore; // Store reference to shared core
     }
 
     // HTTP Adapter Implementation
