@@ -1099,9 +1099,12 @@ class SharedCore {
             // Analyze what action to take
             const analysis = this.analyzeEventAction(event, existingEvents, mergeMode);
             
-            // Add analysis to event
-            event._analysis = analysis;
-            event._action = analysis.action;
+            // Create a new object with all properties to avoid readonly errors
+            let analyzedEvent = { ...event };
+            
+            // Add analysis to the new event object
+            analyzedEvent._analysis = analysis;
+            analyzedEvent._action = analysis.action;
             
             // Handle merge action by performing the merge here
             if (analysis.action === 'merge' && analysis.existingEvent) {
@@ -1109,15 +1112,15 @@ class SharedCore {
                 const mergedData = this.mergeEventData(analysis.existingEvent, event);
                 
                 // Store merge information for the adapter
-                event._mergedNotes = mergedData.notes;
-                event._mergedUrl = mergedData.url;
-                event._existingEvent = analysis.existingEvent;
+                analyzedEvent._mergedNotes = mergedData.notes;
+                analyzedEvent._mergedUrl = mergedData.url;
+                analyzedEvent._existingEvent = analysis.existingEvent;
                 
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(mergedData.notes);
                 
-                event._mergeDiff = {
+                analyzedEvent._mergeDiff = {
                     preserved: [],
                     added: [],
                     updated: [],
@@ -1127,11 +1130,11 @@ class SharedCore {
                 // Analyze what changed
                 Object.keys(originalFields).forEach(key => {
                     if (mergedFields[key] === originalFields[key]) {
-                        event._mergeDiff.preserved.push(key);
+                        analyzedEvent._mergeDiff.preserved.push(key);
                     } else if (!mergedFields[key]) {
-                        event._mergeDiff.removed.push({ key, value: originalFields[key] });
+                        analyzedEvent._mergeDiff.removed.push({ key, value: originalFields[key] });
                     } else {
-                        event._mergeDiff.updated.push({ 
+                        analyzedEvent._mergeDiff.updated.push({ 
                             key, 
                             from: originalFields[key], 
                             to: mergedFields[key] 
@@ -1142,23 +1145,23 @@ class SharedCore {
                 // Check for added fields
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
-                        event._mergeDiff.added.push({ key, value: mergedFields[key] });
+                        analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
                     }
                 });
             } else if (analysis.existingEvent) {
-                event._existingEvent = analysis.existingEvent;
+                analyzedEvent._existingEvent = analysis.existingEvent;
             }
             
             if (analysis.existingKey) {
-                event._existingKey = analysis.existingKey;
+                analyzedEvent._existingKey = analysis.existingKey;
             }
             if (analysis.conflicts) {
-                event._conflicts = analysis.conflicts;
+                analyzedEvent._conflicts = analysis.conflicts;
                 // Process conflicts to extract important information
-                event = this.processEventWithConflicts(event);
+                analyzedEvent = this.processEventWithConflicts(analyzedEvent);
             }
             
-            analyzedEvents.push(event);
+            analyzedEvents.push(analyzedEvent);
         }
         
         return analyzedEvents;
