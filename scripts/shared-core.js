@@ -1345,11 +1345,24 @@ class SharedCore {
             return event;
         }
         
+        // Store original event data before processing
+        event._original = {
+            new: { ...event },
+            existing: event._conflicts[0] // Usually just one conflict
+        };
+        
         // Get merge strategies
         const mergeStrategies = event._fieldMergeStrategies || {};
         
         // Define fields to potentially extract from notes
         const extractableFields = ['tea', 'instagram', 'website', 'bar', 'venue'];
+        
+        // Track what was merged and from where
+        event._mergeInfo = {
+            extractedFields: {},
+            mergedFields: {},
+            strategy: mergeStrategies
+        };
         
         // Process each conflict (usually the existing calendar event)
         event._conflicts.forEach(conflict => {
@@ -1361,6 +1374,12 @@ class SharedCore {
                     
                     if (!extractedValue) return;
                     
+                    // Track extraction
+                    event._mergeInfo.extractedFields[fieldName] = {
+                        value: extractedValue,
+                        source: 'existing.notes'
+                    };
+                    
                     // Apply merge strategy:
                     // - preserve: use existing value (from conflict)
                     // - upsert: use new value if available, otherwise use existing
@@ -1369,9 +1388,11 @@ class SharedCore {
                     if (strategy === 'preserve') {
                         // Always use the existing value from conflict
                         event[fieldName] = extractedValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
                     } else if (strategy === 'upsert' && !event[fieldName]) {
                         // Only use existing if new doesn't have it
                         event[fieldName] = extractedValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
                     }
                     // For clobber, we don't use the extracted value at all
                 });
@@ -1394,9 +1415,11 @@ class SharedCore {
                 if (strategy === 'preserve') {
                     // Always use the existing value from conflict
                     event[eventField] = conflictValue;
+                    event._mergeInfo.mergedFields[eventField] = 'existing';
                 } else if (strategy === 'upsert' && !event[eventField]) {
                     // Only use existing if new doesn't have it
                     event[eventField] = conflictValue;
+                    event._mergeInfo.mergedFields[eventField] = 'existing';
                 }
                 // For clobber, we don't use the conflict value at all
             });
