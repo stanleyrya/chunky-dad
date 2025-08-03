@@ -1316,7 +1316,16 @@ class SharedCore {
             instagram: /(?:instagram:\s*)?(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
             website: /website:\s*(https?:\/\/[^\s\n]+)/i,
             bar: /bar:\s*(.+?)(?:\n|$)/i,
-            venue: /venue:\s*(.+?)(?:\n|$)/i
+            venue: /venue:\s*(.+?)(?:\n|$)/i,
+            cover: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
+            price: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
+            facebook: /(?:facebook:\s*)?(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i,
+            gmaps: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
+            shortname: /(?:short name|shortname|short|nickname|nick name|nick):\s*(.+?)(?:\n|$)/i,
+            shortername: /(?:shorter name|shortername|shorter):\s*(.+?)(?:\n|$)/i,
+            type: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
+            eventtype: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
+            recurring: /recurring:\s*(.+?)(?:\n|$)/i
         };
         
         const pattern = patterns[fieldName.toLowerCase()];
@@ -1330,9 +1339,9 @@ class SharedCore {
         const match = notes.match(pattern);
         if (!match) return '';
         
-        // Special handling for Instagram URLs
-        if (fieldName.toLowerCase() === 'instagram') {
-            const url = match[0].replace(/^instagram:\s*/i, '');
+        // Special handling for URLs
+        if (['instagram', 'facebook', 'website', 'gmaps'].includes(fieldName.toLowerCase())) {
+            const url = match[0].replace(new RegExp(`^${fieldName}:\\s*`, 'i'), '');
             return url.startsWith('http') ? url : `https://${url}`;
         }
         
@@ -1355,7 +1364,11 @@ class SharedCore {
         const mergeStrategies = event._fieldMergeStrategies || {};
         
         // Define fields to potentially extract from notes
-        const extractableFields = ['tea', 'instagram', 'website', 'bar', 'venue'];
+        const extractableFields = [
+            'tea', 'instagram', 'website', 'bar', 'venue', 
+            'cover', 'price', 'facebook', 'gmaps', 'shortName', 
+            'shorterName', 'type', 'eventType', 'recurring'
+        ];
         
         // Track what was merged and from where
         event._mergeInfo = {
@@ -1407,7 +1420,14 @@ class SharedCore {
                 'location': 'venue',
                 'title': 'title',
                 'startDate': 'startDate',
-                'endDate': 'endDate'
+                'endDate': 'endDate',
+                'description': 'description',
+                'recurrence': 'recurrence',
+                'coordinates': 'coordinates',
+                'links': 'links',
+                'slug': 'slug',
+                'eventType': 'eventType',
+                'recurring': 'recurring'
             };
             
             Object.entries(fieldMappings).forEach(([conflictField, eventField]) => {
