@@ -1229,10 +1229,65 @@ class ScriptableAdapter {
             padding: 10px;
             margin-top: 10px;
             font-size: 12px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            max-height: 150px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+            max-height: 250px;
             overflow-y: auto;
+        }
+        
+        .notes-preview strong {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        details {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        details summary {
+            padding: 5px 10px;
+            font-weight: 500;
+            user-select: none;
+            outline: none;
+            list-style: none;
+        }
+        
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+        
+        details summary:before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 5px;
+            transition: transform 0.2s ease;
+        }
+        
+        details[open] summary:before {
+            transform: rotate(90deg);
+        }
+        
+        details summary:hover {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 5px;
+        }
+        
+        details[open] {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        details[open] summary {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+        
+        details pre {
+            margin: 0;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
         }
         
         .coordinates {
@@ -1460,7 +1515,8 @@ class ScriptableAdapter {
             minute: '2-digit' 
         });
         
-        const notes = event.notes || '';
+        // For merged events, use the merged notes which contain the preserved description
+        const notes = (event._action === 'merge' && event._mergedNotes) ? event._mergedNotes : (event.notes || '');
         const calendarName = this.getCalendarNameForDisplay(event);
         
         let html = `
@@ -1540,9 +1596,17 @@ class ScriptableAdapter {
                         let html = '';
                         
                         if (diff.preserved.length > 0) {
-                            html += '<br><strong>🔒 PRESERVED:</strong> ' + diff.preserved.map(k => 
-                                k === 'description' ? 'Original event description' : this.escapeHtml(k)
-                            ).join(', ');
+                            html += '<br><strong>🔒 PRESERVED:</strong> ';
+                            html += '<div style="margin-top: 5px;">';
+                            diff.preserved.forEach(key => {
+                                const strategy = event._fieldMergeStrategies?.[key] || 'preserve';
+                                const isDescription = key === 'description';
+                                html += `<span style="display: inline-block; background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin: 2px;">`;
+                                html += isDescription ? 'Original event description' : this.escapeHtml(key);
+                                html += ` <small style="opacity: 0.7">(${strategy})</small>`;
+                                html += `</span> `;
+                            });
+                            html += '</div>';
                         }
                         
                         if (diff.updated.length > 0) {
@@ -1586,10 +1650,27 @@ class ScriptableAdapter {
             
             ${(event._action === 'key_conflict' || event._action === 'time_conflict') && event._conflicts ? `
                 <div class="conflict-info">
-                    <strong>Overlapping Events:</strong> ${event._conflicts.length} event(s) at same time
-                    ${event._conflicts.map(conflict => `
-                        <br>• "${this.escapeHtml(conflict.title)}" - ${conflict.startDate.toLocaleString()}
-                    `).join('')}
+                    <strong>⚠️ Overlapping Events:</strong> ${event._conflicts.length} event(s) at same time
+                    <div style="margin-top: 10px;">
+                    ${event._conflicts.map(conflict => {
+                        const shouldMerge = event._conflictAnalysis?.find(a => a.event === conflict)?.shouldMerge;
+                        return `
+                        <div style="background: ${shouldMerge ? '#d4edda' : '#f8d7da'}; padding: 8px; border-radius: 5px; margin-bottom: 5px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>"${this.escapeHtml(conflict.title)}"</strong>
+                                    <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                        ${new Date(conflict.startDate).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div style="font-size: 12px; font-weight: 600; color: ${shouldMerge ? '#155724' : '#721c24'};">
+                                    ${shouldMerge ? '✓ Will Merge' : '✗ Different Event'}
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                    </div>
                 </div>
             ` : ''}
             
@@ -1610,35 +1691,100 @@ class ScriptableAdapter {
             ` : ''}
             
             <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; font-size: 13px; color: #007aff;">View Calendar Notes Preview</summary>
-                <div class="notes-preview">${this.escapeHtml(notes)}</div>
+                <summary style="cursor: pointer; font-size: 13px; color: #007aff;">📝 View Calendar Notes Preview</summary>
+                <div class="notes-preview">
+                    ${(() => {
+                        // Parse and format notes for better readability
+                        const lines = notes.split('\n');
+                        let formattedHtml = '';
+                        let inDescription = true;
+                        
+                        lines.forEach(line => {
+                            if (line.includes(':') && !inDescription) {
+                                // This is a metadata field
+                                const [key, ...valueParts] = line.split(':');
+                                const value = valueParts.join(':').trim();
+                                formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
+                            } else if (line.trim() === '') {
+                                formattedHtml += '<br>';
+                                inDescription = false;
+                            } else {
+                                // Part of description
+                                formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
+                            }
+                        });
+                        
+                        return formattedHtml || '<em>No notes</em>';
+                    })()}
+                </div>
+            </details>
+            
+            ${event._action === 'merge' && event._mergedNotes !== event.notes ? `
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; font-size: 13px; color: #ff9500;">🔄 Compare Original vs Merged Notes</summary>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <div style="background: #fff3cd; padding: 10px; border-radius: 5px;">
+                        <strong>Original Notes (New Event):</strong>
+                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event.notes || 'No notes')}</pre>
+                    </div>
+                    <div style="background: #d4edda; padding: 10px; border-radius: 5px;">
+                        <strong>Merged Notes (Final):</strong>
+                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event._mergedNotes || 'No notes')}</pre>
+                    </div>
+                </div>
+            </details>
+            ` : ''}
+            
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; font-size: 13px; color: #34c759;">🔍 View Full Event Object (Debug)</summary>
+                <div class="raw-display" style="background: #f8f8f8; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px 15px; font-size: 12px;">
+                        <strong>Title:</strong> <span>${this.escapeHtml(event.title || event.name)}</span>
+                        <strong>Original Title:</strong> <span>${this.escapeHtml(event.originalTitle || 'N/A')}</span>
+                        <strong>Start Date:</strong> <span>${new Date(event.startDate).toLocaleString()}</span>
+                        <strong>End Date:</strong> <span>${new Date(event.endDate || event.startDate).toLocaleString()}</span>
+                        <strong>Location:</strong> <span>${this.escapeHtml(event.venue || event.bar || 'N/A')}</span>
+                        <strong>City:</strong> <span>${this.escapeHtml(event.city || 'N/A')}</span>
+                        <strong>Calendar:</strong> <span>${this.escapeHtml(calendarName)}</span>
+                        <strong>Key:</strong> <span>${this.escapeHtml(event.key || 'N/A')}</span>
+                        <strong>URL:</strong> <span>${event.url ? `<a href="${event.url}" target="_blank">${event.url}</a>` : 'None'}</span>
+                        <strong>Source:</strong> <span>${this.escapeHtml(event.source || 'N/A')}</span>
+                        <strong>Parser:</strong> <span>${this.escapeHtml(event._parserConfig?.name || 'Unknown')}</span>
+                        ${event.coordinates ? `
+                            <strong>Coordinates:</strong> <span>${event.coordinates.lat}, ${event.coordinates.lng}</span>
+                        ` : ''}
+                        ${event.price ? `<strong>Price:</strong> <span>${this.escapeHtml(event.price)}</span>` : ''}
+                        ${event.recurring ? `<strong>Recurring:</strong> <span>${event.recurrence || 'Yes'}</span>` : ''}
+                    </div>
+                    
+                    <details style="margin-top: 10px;">
+                        <summary style="cursor: pointer; font-size: 12px; color: #666;">View Complete JSON Object</summary>
+                        <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px;">${this.escapeHtml(JSON.stringify(event, (key, value) => {
+                            // Filter out circular references and functions
+                            if (key === '_parserConfig' && value) {
+                                return { name: value.name, parser: value.parser };
+                            }
+                            if (key === '_existingEvent' && value) {
+                                return { title: value.title, identifier: value.identifier };
+                            }
+                            if (typeof value === 'function') {
+                                return '[Function]';
+                            }
+                            return value;
+                        }, 2))}</pre>
+                    </details>
+                    
+                    ${event._fieldMergeStrategies ? `
+                    <details style="margin-top: 10px;">
+                        <summary style="cursor: pointer; font-size: 12px; color: #666;">View Merge Strategies</summary>
+                        <pre style="font-size: 11px; background: #f0f0f0; padding: 10px; border-radius: 5px; margin-top: 5px;">${this.escapeHtml(JSON.stringify(event._fieldMergeStrategies, null, 2))}</pre>
+                    </details>
+                    ` : ''}
+                </div>
             </details>
             
             <div class="raw-display">
-<strong>Raw Calendar Event Data:</strong>
-
-Title: ${this.escapeHtml(event.title || event.name)}
-Start Date: ${new Date(event.startDate).toISOString()}
-End Date: ${new Date(event.endDate || event.startDate).toISOString()}
-Location: ${this.escapeHtml(event.venue || event.bar || '')}
-Calendar: ${this.escapeHtml(calendarName)}
-URL: ${event.url || 'None'}
-
-Notes Field Content:
-${this.escapeHtml(notes)}
-
-Event Object (JSON):
-${this.escapeHtml(JSON.stringify({
-    title: event.title || event.name,
-    startDate: event.startDate,
-    endDate: event.endDate || event.startDate,
-    location: event.venue || event.bar || '',
-    city: event.city,
-    key: event.key,
-    url: event.url,
-    source: event.source,
-    coordinates: event.coordinates
-}, null, 2))}
+                <!-- Legacy raw display for backwards compatibility -->
             </div>
         </div>
         `;
