@@ -1078,9 +1078,53 @@ class SharedCore {
             // Add analysis to event
             event._analysis = analysis;
             event._action = analysis.action;
-            if (analysis.existingEvent) {
+            
+            // Handle merge action by performing the merge here
+            if (analysis.action === 'merge' && analysis.existingEvent) {
+                // Perform the merge and store the result
+                const mergedData = this.mergeEventData(analysis.existingEvent, event);
+                
+                // Store merge information for the adapter
+                event._mergedNotes = mergedData.notes;
+                event._mergedUrl = mergedData.url;
+                event._existingEvent = analysis.existingEvent;
+                
+                // Calculate merge diff for display purposes
+                const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
+                const mergedFields = this.parseNotesIntoFields(mergedData.notes);
+                
+                event._mergeDiff = {
+                    preserved: [],
+                    added: [],
+                    updated: [],
+                    removed: []
+                };
+                
+                // Analyze what changed
+                Object.keys(originalFields).forEach(key => {
+                    if (mergedFields[key] === originalFields[key]) {
+                        event._mergeDiff.preserved.push(key);
+                    } else if (!mergedFields[key]) {
+                        event._mergeDiff.removed.push({ key, value: originalFields[key] });
+                    } else {
+                        event._mergeDiff.updated.push({ 
+                            key, 
+                            from: originalFields[key], 
+                            to: mergedFields[key] 
+                        });
+                    }
+                });
+                
+                // Check for added fields
+                Object.keys(mergedFields).forEach(key => {
+                    if (!originalFields[key]) {
+                        event._mergeDiff.added.push({ key, value: mergedFields[key] });
+                    }
+                });
+            } else if (analysis.existingEvent) {
                 event._existingEvent = analysis.existingEvent;
             }
+            
             if (analysis.existingKey) {
                 event._existingKey = analysis.existingKey;
             }

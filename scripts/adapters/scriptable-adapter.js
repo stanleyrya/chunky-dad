@@ -17,7 +17,7 @@
 // ============================================================================
 
 class ScriptableAdapter {
-    constructor(config = {}, sharedCore = null) {
+    constructor(config = {}) {
         this.config = {
             timeout: config.timeout || 30000,
             userAgent: config.userAgent || 'chunky-dad-scraper/1.0',
@@ -26,7 +26,6 @@ class ScriptableAdapter {
         
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
-        this.sharedCore = sharedCore; // Store reference to shared core
     }
 
     // HTTP Adapter Implementation
@@ -201,95 +200,66 @@ class ScriptableAdapter {
                         case 'merge':
                             console.log(`📱 Scriptable: Merging event: ${event.title}`);
                             const targetEvent = event._existingEvent;
-                            const originalNotes = targetEvent.notes || '';
-                            const mergedData = this.sharedCore.mergeEventData(targetEvent, event);
                             
-                            // Show detailed diff
-                            console.log('\n📊 MERGE DIFF:');
-                            console.log('─'.repeat(60));
-                            
-                            // Parse original and new notes for comparison
-                            const originalFields = this.sharedCore.parseNotesIntoFields(originalNotes);
-                            const newFields = this.sharedCore.parseNotesIntoFields(mergedData.notes);
-                            
-                            // Show what's being preserved
-                            const preserved = [];
-                            Object.keys(originalFields).forEach(key => {
-                                if (newFields[key] === originalFields[key]) {
-                                    preserved.push(key);
+                            // Use the pre-merged data from shared-core
+                            if (event._mergedNotes) {
+                                // Show detailed diff (already calculated by shared-core)
+                                console.log('\n📊 MERGE DIFF:');
+                                console.log('─'.repeat(60));
+                                
+                                const diff = event._mergeDiff;
+                                
+                                // Show what's being preserved
+                                if (diff.preserved.length > 0) {
+                                    console.log('✅ PRESERVED:');
+                                    diff.preserved.forEach(key => {
+                                        console.log(`   ${key}`);
+                                    });
                                 }
-                            });
-                            if (preserved.length > 0) {
-                                console.log('✅ PRESERVED:');
-                                preserved.forEach(key => {
-                                    const value = originalFields[key];
-                                    // Truncate long values for display
-                                    const displayValue = value.length > 50 ? value.substring(0, 47) + '...' : value;
-                                    console.log(`   ${key}: ${displayValue}`);
-                                });
-                            }
-                            
-                            // Show what's being added
-                            const added = [];
-                            Object.keys(newFields).forEach(key => {
-                                if (!originalFields[key]) {
-                                    added.push(key);
+                                
+                                // Show what's being added
+                                if (diff.added.length > 0) {
+                                    console.log('\n➕ ADDED:');
+                                    diff.added.forEach(({ key, value }) => {
+                                        const displayValue = value.length > 50 ? value.substring(0, 47) + '...' : value;
+                                        console.log(`   ${key}: ${displayValue}`);
+                                    });
                                 }
-                            });
-                            if (added.length > 0) {
-                                console.log('\n➕ ADDED:');
-                                added.forEach(key => {
-                                    const value = newFields[key];
-                                    const displayValue = value.length > 50 ? value.substring(0, 47) + '...' : value;
-                                    console.log(`   ${key}: ${displayValue}`);
-                                });
-                            }
-                            
-                            // Show what's being updated
-                            const updated = [];
-                            Object.keys(newFields).forEach(key => {
-                                if (originalFields[key] && newFields[key] !== originalFields[key]) {
-                                    updated.push(key);
+                                
+                                // Show what's being updated
+                                if (diff.updated.length > 0) {
+                                    console.log('\n🔄 UPDATED:');
+                                    diff.updated.forEach(({ key, from, to }) => {
+                                        const oldDisplay = from.length > 30 ? from.substring(0, 27) + '...' : from;
+                                        const newDisplay = to.length > 30 ? to.substring(0, 27) + '...' : to;
+                                        console.log(`   ${key}: "${oldDisplay}" → "${newDisplay}"`);
+                                    });
                                 }
-                            });
-                            if (updated.length > 0) {
-                                console.log('\n🔄 UPDATED:');
-                                updated.forEach(key => {
-                                    const oldValue = originalFields[key];
-                                    const newValue = newFields[key];
-                                    const oldDisplay = oldValue.length > 30 ? oldValue.substring(0, 27) + '...' : oldValue;
-                                    const newDisplay = newValue.length > 30 ? newValue.substring(0, 27) + '...' : newValue;
-                                    console.log(`   ${key}: "${oldDisplay}" → "${newDisplay}"`);
-                                });
-                            }
-                            
-                            // Show what's being removed (shouldn't happen in merge)
-                            const removed = [];
-                            Object.keys(originalFields).forEach(key => {
-                                if (!newFields[key]) {
-                                    removed.push(key);
+                                
+                                // Show what's being removed (shouldn't happen in merge)
+                                if (diff.removed.length > 0) {
+                                    console.log('\n❌ REMOVED (WARNING - this shouldn\'t happen in merge):');
+                                    diff.removed.forEach(({ key, value }) => {
+                                        console.log(`   ${key}: ${value}`);
+                                    });
                                 }
-                            });
-                            if (removed.length > 0) {
-                                console.log('\n❌ REMOVED (WARNING - this shouldn\'t happen in merge):');
-                                removed.forEach(key => {
-                                    console.log(`   ${key}: ${originalFields[key]}`);
-                                });
+                                
+                                console.log('─'.repeat(60));
+                                
+                                // Apply the pre-merged changes
+                                targetEvent.notes = event._mergedNotes;
+                                if (event._mergedUrl) {
+                                    targetEvent.url = event._mergedUrl;
+                                }
+                                // Update location only if new event has coordinates
+                                if (event.location && event.location.includes(',')) {
+                                    targetEvent.location = event.location;
+                                }
+                                await targetEvent.save();
+                                processedCount++;
+                            } else {
+                                console.log(`📱 Scriptable: ⚠️ No merged data available for event: ${event.title}`);
                             }
-                            
-                            console.log('─'.repeat(60));
-                            
-                            // Apply the changes
-                            targetEvent.notes = mergedData.notes;
-                            if (!targetEvent.url && event.url) {
-                                targetEvent.url = event.url;
-                            }
-                            // Update location only if new event has coordinates
-                            if (event.location && event.location.includes(',')) {
-                                targetEvent.location = event.location;
-                            }
-                            await targetEvent.save();
-                            processedCount++;
                             break;
                             
                         case 'update':
@@ -805,10 +775,12 @@ class ScriptableAdapter {
                     const existing = event._existingEvent;
                     console.log(`   Title: ${existing.title}`);
                     if (existing.notes) {
-                        // Parse existing notes to extract description
-                        const existingFields = this.sharedCore.parseNotesIntoFields(existing.notes);
-                        if (existingFields.description) {
-                            console.log(`   Current Description: ${existingFields.description}`);
+                        // For merge actions, we have the diff info
+                        if (event._action === 'merge' && event._mergeDiff) {
+                            console.log(`   Merge Summary: ${event._mergeDiff.preserved.length} fields preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
+                        } else {
+                            // Just show that notes exist
+                            console.log(`   Notes: ${existing.notes.length} characters`);
                         }
                     }
                 }
@@ -1561,50 +1533,38 @@ class ScriptableAdapter {
                 <div class="existing-info">
                     <strong>Merging With:</strong> "${this.escapeHtml(event._existingEvent.title)}"
                     ${(() => {
-                        // Parse existing and new notes to show field-by-field changes
-                        const existingFields = this.sharedCore.parseNotesIntoFields(event._existingEvent.notes || '');
-                        const newFields = this.sharedCore.parseNotesIntoFields(event.notes || '');
-                        const strategies = event._fieldMergeStrategies || {};
-                        
-                        const preserved = [];
-                        const updated = [];
-                        const added = [];
-                        
-                        // Check each field
-                        Object.keys(strategies).forEach(key => {
-                            const strategy = strategies[key];
-                            const existingValue = existingFields[key];
-                            const newValue = newFields[key];
-                            
-                            if (strategy === 'preserve' && existingValue) {
-                                preserved.push(key);
-                            } else if (strategy === 'clobber' && existingValue && newValue && existingValue !== newValue) {
-                                updated.push({ key, from: existingValue, to: newValue });
-                            } else if (strategy === 'upsert' && !existingValue && newValue) {
-                                added.push({ key, value: newValue });
-                            }
-                        });
+                        // Use the pre-calculated merge diff from shared-core
+                        const diff = event._mergeDiff;
+                        if (!diff) return '<br>• No merge diff available';
                         
                         let html = '';
                         
-                        if (preserved.length > 0) {
-                            html += '<br><strong>🔒 PRESERVED:</strong> ' + preserved.map(k => 
+                        if (diff.preserved.length > 0) {
+                            html += '<br><strong>🔒 PRESERVED:</strong> ' + diff.preserved.map(k => 
                                 k === 'description' ? 'Original event description' : this.escapeHtml(k)
                             ).join(', ');
                         }
                         
-                        if (updated.length > 0) {
+                        if (diff.updated.length > 0) {
                             html += '<br><strong>🔄 UPDATED:</strong>';
-                            updated.forEach(({ key, from, to }) => {
+                            diff.updated.forEach(({ key, from, to }) => {
                                 const fromDisplay = from.length > 30 ? from.substring(0, 27) + '...' : from;
                                 const toDisplay = to.length > 30 ? to.substring(0, 27) + '...' : to;
                                 html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(fromDisplay)}" → "${this.escapeHtml(toDisplay)}"`;
                             });
                         }
                         
-                        if (added.length > 0) {
+                        if (diff.added.length > 0) {
                             html += '<br><strong>➕ ADDED:</strong>';
-                            added.forEach(({ key, value }) => {
+                            diff.added.forEach(({ key, value }) => {
+                                const valueDisplay = value.length > 30 ? value.substring(0, 27) + '...' : value;
+                                html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(valueDisplay)}"`;
+                            });
+                        }
+                        
+                        if (diff.removed.length > 0) {
+                            html += '<br><strong>❌ REMOVED:</strong>';
+                            diff.removed.forEach(({ key, value }) => {
                                 const valueDisplay = value.length > 30 ? value.substring(0, 27) + '...' : value;
                                 html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(valueDisplay)}"`;
                             });
