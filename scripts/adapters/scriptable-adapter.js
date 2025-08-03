@@ -1460,7 +1460,8 @@ class ScriptableAdapter {
             minute: '2-digit' 
         });
         
-        const notes = event.notes || '';
+        // For merged events, use the merged notes which contain the preserved description
+        const notes = (event._action === 'merge' && event._mergedNotes) ? event._mergedNotes : (event.notes || '');
         const calendarName = this.getCalendarNameForDisplay(event);
         
         let html = `
