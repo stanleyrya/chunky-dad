@@ -1351,23 +1351,29 @@ class SharedCore {
         // Define fields to potentially extract from notes
         const extractableFields = ['tea', 'instagram', 'website', 'bar', 'venue'];
         
-        // Process each conflict
+        // Process each conflict (usually the existing calendar event)
         event._conflicts.forEach(conflict => {
             // Extract fields from notes based on merge strategies
             if (conflict.notes) {
                 extractableFields.forEach(fieldName => {
                     const strategy = mergeStrategies[fieldName] || 'preserve';
+                    const extractedValue = this.extractFieldFromNotes(conflict.notes, fieldName);
+                    
+                    if (!extractedValue) return;
+                    
+                    // Apply merge strategy:
+                    // - preserve: use existing value (from conflict)
+                    // - upsert: use new value if available, otherwise use existing
+                    // - clobber: always use new value (don't use extracted)
                     
                     if (strategy === 'preserve') {
-                        return; // Skip this field
+                        // Always use the existing value from conflict
+                        event[fieldName] = extractedValue;
+                    } else if (strategy === 'upsert' && !event[fieldName]) {
+                        // Only use existing if new doesn't have it
+                        event[fieldName] = extractedValue;
                     }
-                    
-                    const extractedValue = this.extractFieldFromNotes(conflict.notes, fieldName);
-                    if (extractedValue) {
-                        if (strategy === 'clobber' || (strategy === 'upsert' && !event[fieldName])) {
-                            event[fieldName] = extractedValue;
-                        }
-                    }
+                    // For clobber, we don't use the extracted value at all
                 });
             }
             
@@ -1381,14 +1387,18 @@ class SharedCore {
             
             Object.entries(fieldMappings).forEach(([conflictField, eventField]) => {
                 const strategy = mergeStrategies[eventField] || 'preserve';
+                const conflictValue = conflict[conflictField];
                 
-                if (strategy === 'preserve' || !conflict[conflictField]) {
-                    return;
-                }
+                if (!conflictValue) return;
                 
-                if (strategy === 'clobber' || (strategy === 'upsert' && !event[eventField])) {
-                    event[eventField] = conflict[conflictField];
+                if (strategy === 'preserve') {
+                    // Always use the existing value from conflict
+                    event[eventField] = conflictValue;
+                } else if (strategy === 'upsert' && !event[eventField]) {
+                    // Only use existing if new doesn't have it
+                    event[eventField] = conflictValue;
                 }
+                // For clobber, we don't use the conflict value at all
             });
         });
         
