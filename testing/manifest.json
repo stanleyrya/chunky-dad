@@ -1,5 +1,5 @@
 {
-  "generated": "2025-08-03T14:32:42.457Z",
+  "generated": "2025-08-03T15:42:34.196Z",
   "files": [
     {
       "name": "breakpoint-test.html",
@@ -40,11 +40,6 @@
       "name": "test-error-logging-fix.html",
       "size": 6806,
       "modified": "2025-08-03T14:28:47.919Z"
-    },
-    {
-      "name": "test-event-structure.html",
-      "size": 8652,
-      "modified": "2025-08-03T14:32:35.592Z"
     },
     {
       "name": "test-eventbrite-address-fix.html",

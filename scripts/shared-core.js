@@ -19,15 +19,7 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
-// Import event structure utilities if available
-let eventStructureUtils = null;
-if (typeof require !== 'undefined') {
-    try {
-        eventStructureUtils = require('./event-structure.js');
-    } catch (e) {
-        // Event structure utilities not available, will use fallback
-    }
-}
+
 
 class SharedCore {
     constructor() {
@@ -1162,11 +1154,8 @@ class SharedCore {
             }
             if (analysis.conflicts) {
                 event._conflicts = analysis.conflicts;
-            }
-            
-            // Process event with conflict resolution if utilities are available
-            if (eventStructureUtils && eventStructureUtils.processEventWithConflicts) {
-                event = eventStructureUtils.processEventWithConflicts(event);
+                // Process conflicts to extract important information
+                event = this.processEventWithConflicts(event);
             }
             
             analyzedEvents.push(event);
@@ -1315,6 +1304,73 @@ class SharedCore {
     // Check if two date ranges overlap (pure logic)
     doDatesOverlap(start1, end1, start2, end2) {
         return start1 < end2 && end1 > start2;
+    }
+    
+    // Extract "Tea" (insider information) from notes field
+    extractTea(notes) {
+        if (!notes) return '';
+        
+        // Look for "Tea:" pattern (case insensitive)
+        const teaMatch = notes.match(/tea:\s*(.+?)(?:\n|$)/i);
+        if (teaMatch) {
+            return teaMatch[1].trim();
+        }
+        
+        return '';
+    }
+    
+    // Extract Instagram URL from notes
+    extractInstagram(notes) {
+        if (!notes) return '';
+        
+        // Look for Instagram URLs in notes
+        const instagramMatch = notes.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i);
+        if (instagramMatch) {
+            const url = instagramMatch[0];
+            return url.startsWith('http') ? url : `https://${url}`;
+        }
+        
+        return '';
+    }
+    
+    // Process event with conflicts - extract and merge important information
+    processEventWithConflicts(event) {
+        if (!event._conflicts || event._conflicts.length === 0) {
+            return event;
+        }
+        
+        // Get merge strategies
+        const mergeStrategies = event._fieldMergeStrategies || {};
+        
+        // Process each conflict
+        event._conflicts.forEach(conflict => {
+            // Extract tea if we don't have it
+            if (!event.tea && conflict.notes) {
+                const conflictTea = this.extractTea(conflict.notes);
+                if (conflictTea) {
+                    event.tea = conflictTea;
+                }
+            }
+            
+            // Extract Instagram based on merge strategy
+            if (mergeStrategies.instagram !== 'preserve' && conflict.notes) {
+                const conflictInstagram = this.extractInstagram(conflict.notes);
+                if (conflictInstagram) {
+                    if (mergeStrategies.instagram === 'clobber' || !event.instagram) {
+                        event.instagram = conflictInstagram;
+                    }
+                }
+            }
+            
+            // Handle venue/location based on merge strategy
+            if (mergeStrategies.venue !== 'preserve' && conflict.location) {
+                if (mergeStrategies.venue === 'clobber' || (!event.venue || event.venue === 'TBA')) {
+                    event.venue = conflict.location;
+                }
+            }
+        });
+        
+        return event;
     }
 }
 
