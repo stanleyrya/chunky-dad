@@ -1383,7 +1383,7 @@ class SharedCore {
                     // Apply merge strategy:
                     // - preserve: use existing value (from conflict)
                     // - upsert: use new value if available, otherwise use existing
-                    // - clobber: always use new value (don't use extracted)
+                    // - clobber: use new value if available, otherwise use existing
                     
                     if (strategy === 'preserve') {
                         // Always use the existing value from conflict
@@ -1393,8 +1393,11 @@ class SharedCore {
                         // Only use existing if new doesn't have it
                         event[fieldName] = extractedValue;
                         event._mergeInfo.mergedFields[fieldName] = 'existing';
+                    } else if (strategy === 'clobber' && !event[fieldName]) {
+                        // For clobber, use existing only if new doesn't have a value
+                        event[fieldName] = extractedValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
                     }
-                    // For clobber, we don't use the extracted value at all
                 });
             }
             
@@ -1420,8 +1423,11 @@ class SharedCore {
                     // Only use existing if new doesn't have it
                     event[eventField] = conflictValue;
                     event._mergeInfo.mergedFields[eventField] = 'existing';
+                } else if (strategy === 'clobber' && !event[eventField]) {
+                    // For clobber, use existing only if new doesn't have a value
+                    event[eventField] = conflictValue;
+                    event._mergeInfo.mergedFields[eventField] = 'existing';
                 }
-                // For clobber, we don't use the conflict value at all
             });
         });
         
