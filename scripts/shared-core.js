@@ -19,6 +19,16 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+// Import event structure utilities if available
+let eventStructureUtils = null;
+if (typeof require !== 'undefined') {
+    try {
+        eventStructureUtils = require('./event-structure.js');
+    } catch (e) {
+        // Event structure utilities not available, will use fallback
+    }
+}
+
 class SharedCore {
     constructor() {
         this.visitedUrls = new Set();
@@ -1152,6 +1162,11 @@ class SharedCore {
             }
             if (analysis.conflicts) {
                 event._conflicts = analysis.conflicts;
+            }
+            
+            // Process event with conflict resolution if utilities are available
+            if (eventStructureUtils && eventStructureUtils.processEventWithConflicts) {
+                event = eventStructureUtils.processEventWithConflicts(event);
             }
             
             analyzedEvents.push(event);
