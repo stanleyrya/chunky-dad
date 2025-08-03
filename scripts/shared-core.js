@@ -925,66 +925,88 @@ class SharedCore {
     // Format event notes with all metadata in key-value format
     formatEventNotes(event) {
         const notes = [];
+        const fieldStrategies = event._fieldMergeStrategies || {};
+        
+        // Helper function to check if a field should be included
+        const shouldIncludeField = (fieldName) => {
+            const strategy = fieldStrategies[fieldName];
+            // Only include if not "preserve" or if it's a new event
+            return strategy !== 'preserve' || event._action === 'new';
+        };
         
         // === PARSED PROPERTIES (used by calendar-core.js) ===
         
         // Add bar/venue name first if available
         if (event.venue || event.bar) {
-            notes.push(`Bar: ${event.venue || event.bar}`);
+            // Include if either venue OR bar is not preserved
+            if ((event.venue && shouldIncludeField('venue')) || (event.bar && shouldIncludeField('bar'))) {
+                notes.push(`Bar: ${event.venue || event.bar}`);
+            }
         }
         
         // Add description/tea in key-value format
-        // For new events, always include the description if available
         if ((event.description && event.description.trim()) || (event.tea && event.tea.trim())) {
-            notes.push(`Description: ${event.description || event.tea}`);
+            // Include if either description OR tea is not preserved
+            if ((event.description && shouldIncludeField('description')) || (event.tea && shouldIncludeField('tea'))) {
+                notes.push(`Description: ${event.description || event.tea}`);
+            }
         }
         
         // Add price/cover
         if (event.price || event.cover) {
-            notes.push(`Price: ${event.price || event.cover}`);
+            // Include if either price OR cover is not preserved
+            if ((event.price && shouldIncludeField('price')) || (event.cover && shouldIncludeField('cover'))) {
+                notes.push(`Price: ${event.price || event.cover}`);
+            }
         }
         
         // Add event type
-        if (event.eventType) {
+        if (event.eventType && shouldIncludeField('eventType')) {
             notes.push(`Type: ${event.eventType}`);
         }
         
         // Add recurrence info
-        if (event.recurring && event.recurrence) {
+        if (event.recurring && event.recurrence && shouldIncludeField('recurrence')) {
             notes.push(`Recurrence: ${event.recurrence}`);
         }
         
         // Add short names if available - using the keys that calendar-core.js expects
-        if (event.shortName) {
+        if (event.shortName && shouldIncludeField('shortName')) {
             notes.push(`Short Name: ${event.shortName}`);
         }
         
-        if (event.shorterName) {
+        if (event.shorterName && shouldIncludeField('shorterName')) {
             notes.push(`Shorter Name: ${event.shorterName}`);
         }
         
         // Add shortTitle as Short Name (which calendar-core.js understands)
-        if (event.shortTitle && !event.shortName) {
+        if (event.shortTitle && !event.shortName && shouldIncludeField('shortTitle')) {
             notes.push(`Short Name: ${event.shortTitle}`);
         }
         
         // Add social media links
-        if (event.instagram) {
+        if (event.instagram && shouldIncludeField('instagram')) {
             notes.push(`Instagram: ${event.instagram}`);
         }
         
-        if (event.facebook) {
+        if (event.facebook && shouldIncludeField('facebook')) {
             notes.push(`Facebook: ${event.facebook}`);
         }
         
         // Add website URL - prefer event.website, fallback to event.url
         if (event.website || event.url) {
-            notes.push(`Website: ${event.website || event.url}`);
+            // Include if either website OR url is not preserved
+            if ((event.website && shouldIncludeField('website')) || (event.url && shouldIncludeField('url'))) {
+                notes.push(`Website: ${event.website || event.url}`);
+            }
         }
         
         // Handle both gmaps and googleMapsLink fields
         if (event.gmaps || event.googleMapsLink) {
-            notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
+            // Include if either gmaps OR googleMapsLink is not preserved
+            if ((event.gmaps && shouldIncludeField('gmaps')) || (event.googleMapsLink && shouldIncludeField('googleMapsLink'))) {
+                notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
+            }
         }
         
         // === DEBUG PROPERTIES (not parsed by calendar-core.js) ===
