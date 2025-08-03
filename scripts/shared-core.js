@@ -1381,20 +1381,21 @@ class SharedCore {
                     };
                     
                     // Apply merge strategy:
-                    // - preserve: use existing value (from conflict)
-                    // - upsert: use new value if available, otherwise use existing
-                    // - clobber: use new value if available, otherwise use existing
+                    // - preserve: always use existing value
+                    // - upsert: only add if existing doesn't exist and new exists
+                    // - clobber: use new if it exists, preserve existing if new doesn't exist
                     
                     if (strategy === 'preserve') {
                         // Always use the existing value from conflict
                         event[fieldName] = extractedValue;
                         event._mergeInfo.mergedFields[fieldName] = 'existing';
-                    } else if (strategy === 'upsert' && !event[fieldName]) {
-                        // Only use existing if new doesn't have it
-                        event[fieldName] = extractedValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                    } else if (strategy === 'upsert') {
+                        // Only add if field doesn't exist in existing event
+                        // (extracted value means it exists in existing event, so skip)
+                        // This is backwards - we're extracting from existing, not checking if new has it
+                        // Skip this extraction since upsert only adds new values
                     } else if (strategy === 'clobber' && !event[fieldName]) {
-                        // For clobber, use existing only if new doesn't have a value
+                        // For clobber, preserve existing if new doesn't have a value
                         event[fieldName] = extractedValue;
                         event._mergeInfo.mergedFields[fieldName] = 'existing';
                     }
@@ -1419,12 +1420,11 @@ class SharedCore {
                     // Always use the existing value from conflict
                     event[eventField] = conflictValue;
                     event._mergeInfo.mergedFields[eventField] = 'existing';
-                } else if (strategy === 'upsert' && !event[eventField]) {
-                    // Only use existing if new doesn't have it
-                    event[eventField] = conflictValue;
-                    event._mergeInfo.mergedFields[eventField] = 'existing';
+                } else if (strategy === 'upsert') {
+                    // Only add if existing doesn't have this field
+                    // Since conflictValue exists, this means existing has it, so skip
                 } else if (strategy === 'clobber' && !event[eventField]) {
-                    // For clobber, use existing only if new doesn't have a value
+                    // For clobber, preserve existing if new doesn't have a value
                     event[eventField] = conflictValue;
                     event._mergeInfo.mergedFields[eventField] = 'existing';
                 }
