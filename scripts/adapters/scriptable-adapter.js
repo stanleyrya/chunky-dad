@@ -436,6 +436,9 @@ class ScriptableAdapter {
             // Show summary and recommended actions
             await this.displaySummaryAndActions(results);
             
+            // Display full event objects at the end (for debugging)
+            await this.displayFullEventObjects(results);
+            
             console.log('\n' + '='.repeat(60));
             
             // Present rich UI display
@@ -474,59 +477,50 @@ class ScriptableAdapter {
 
         // Get available calendars for comparison
         const availableCalendars = await Calendar.forEvents();
-
-        // Show how events will be stored
-        allEvents.forEach((event, i) => {
-            console.log(`\n🐻 Event ${i + 1}: ${event.title || event.name}`);
-            console.log('─'.repeat(40));
-            
-            // Calendar assignment
+        
+        // Get unique calendars needed
+        const calendarsNeeded = new Map();
+        allEvents.forEach(event => {
             const calendarName = this.getCalendarNameForDisplay(event);
-            console.log(`📅 Target Calendar: "${calendarName}"`);
-            
-            // Check if calendar exists
-            const existingCalendar = availableCalendars.find(cal => cal.title === calendarName);
-            if (existingCalendar) {
-                console.log(`✅ Calendar exists: ${existingCalendar.identifier}`);
-                console.log(`   Color: ${existingCalendar.color.hex}`);
-                console.log(`   Modifications allowed: ${existingCalendar.allowsContentModifications}`);
-            } else {
-                console.log(`❌ Calendar does not exist - must be created manually first`);
+            if (!calendarsNeeded.has(calendarName)) {
+                const exists = availableCalendars.find(cal => cal.title === calendarName);
+                calendarsNeeded.set(calendarName, {
+                    name: calendarName,
+                    exists: !!exists,
+                    calendar: exists,
+                    eventCount: 0
+                });
             }
-            
-            // Event properties that will be stored
-            console.log(`\n📋 CalendarEvent Properties:`);
-            console.log(`   title: "${event.title || event.name}"`);
-            console.log(`   startDate: ${new Date(event.startDate).toLocaleString()}`);
-            console.log(`   endDate: ${new Date(event.endDate || event.startDate).toLocaleString()}`);
-            console.log(`   location: "${event.venue || event.bar || ''}"`);
-            console.log(`   timeZone: "${event.timezone || 'device default'}"`);
-            console.log(`   isAllDay: false`);
-            
-            // Recurrence handling
-            if (event.recurring && event.recurrence) {
-                console.log(`   🔄 Recurrence: ${event.recurrence}`);
-                console.log(`   Event Type: ${event.eventType || 'recurring'}`);
-            } else {
-                console.log(`   🔄 Recurrence: None (one-time event)`);
-            }
-            
-            // Notes field content (should already be formatted by shared-core)
-            const notes = event.notes || '';
-            console.log(`\n📝 Notes field content (${notes.length} chars):`);
-            console.log(`"${notes.substring(0, 100)}${notes.length > 100 ? '...' : ''}"`);
-            
-            // Availability setting
-            console.log(`\n⏰ Availability: busy`);
-            
-            // City and timezone info
-            console.log(`\n🌍 Location Data:`);
-            console.log(`   City: ${event.city || 'unknown'}`);
-            if (event.coordinates) {
-                console.log(`   Coordinates: ${event.coordinates.lat}, ${event.coordinates.lng}`);
-            }
-            console.log(`   Timezone: ${event.timezone || 'device default'}`);
+            calendarsNeeded.get(calendarName).eventCount++;
         });
+
+        // Show calendar summary
+        console.log(`\n📊 Summary:`);
+        console.log(`   Total events: ${allEvents.length}`);
+        console.log(`   Calendars needed: ${calendarsNeeded.size}`);
+        
+        console.log(`\n📅 Calendar Status:`);
+        for (const [name, info] of calendarsNeeded) {
+            if (info.exists) {
+                console.log(`   ✅ ${name} (${info.eventCount} events)`);
+            } else {
+                console.log(`   ❌ ${name} (${info.eventCount} events) - must be created manually`);
+            }
+        }
+        
+        // Show sample event structure (just first one)
+        if (allEvents.length > 0) {
+            const sampleEvent = allEvents[0];
+            console.log(`\n📋 Sample Event Structure:`);
+            console.log(`   Title: "${sampleEvent.title || sampleEvent.name}"`);
+            console.log(`   Date: ${new Date(sampleEvent.startDate).toLocaleString()}`);
+            console.log(`   Location: "${sampleEvent.venue || sampleEvent.bar || 'TBD'}"`);
+            console.log(`   City: ${sampleEvent.city || 'unknown'}`);
+            console.log(`   Notes: ${(sampleEvent.notes || '').length} characters`);
+            if (sampleEvent.recurring) {
+                console.log(`   Recurring: ${sampleEvent.recurrence || 'Yes'}`);
+            }
+        }
         
         console.log('\n' + '='.repeat(60));
     }
@@ -696,104 +690,52 @@ class ScriptableAdapter {
             return;
         }
         
-        allEvents.forEach((event, i) => {
-            console.log(`\n🎉 Event ${i + 1}: ${event.title || event.name}`);
+        // Group events by action type
+        const eventsByAction = {
+            new: [],
+            merge: [],
+            update: [],
+            conflict: [],
+            other: []
+        };
+        
+        allEvents.forEach(event => {
+            const action = event._action || 'other';
+            if (eventsByAction[action]) {
+                eventsByAction[action].push(event);
+            } else {
+                eventsByAction.other.push(event);
+            }
+        });
+        
+        // Show summary by action type
+        console.log(`\n📊 Event Actions Summary:`);
+        console.log(`   ➕ New: ${eventsByAction.new.length} events`);
+        console.log(`   🔀 Merge: ${eventsByAction.merge.length} events`);
+        console.log(`   🔄 Update: ${eventsByAction.update.length} events`);
+        console.log(`   ⚠️  Conflict: ${eventsByAction.conflict.length} events`);
+        if (eventsByAction.other.length > 0) {
+            console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
+        }
+        
+        // Show sample events for each action type (max 2 per type)
+        Object.entries(eventsByAction).forEach(([action, events]) => {
+            if (events.length === 0) return;
+            
+            console.log(`\n${action.toUpperCase()} Events (showing ${Math.min(2, events.length)} of ${events.length}):`);
             console.log('─'.repeat(50));
             
-            // Basic info
-            console.log(`📍 Venue: ${event.venue || event.bar || 'TBD'}`);
-            console.log(`📅 When: ${event.day || 'TBD'} ${event.time || 'TBD'}`);
-            console.log(`🌍 City: ${(event.city || 'unknown').toUpperCase()}`);
-            console.log(`🕐 Timezone: ${event.timezone || 'device default'}`);
-            
-            // Event type and recurrence
-            if (event.recurring) {
-                console.log(`🔄 Type: ${event.eventType || 'recurring'} recurring event`);
-                if (event.recurrence) {
-                    console.log(`📋 Pattern: ${event.recurrence}`);
-                }
-            } else {
-                console.log(`📅 Type: One-time event`);
-            }
-            
-            // Cover and pricing
-            if (event.price || event.cover) {
-                const price = event.price || event.cover;
-                const coverIcon = price.toLowerCase().includes('free') ? '🆓' : '💰';
-                console.log(`${coverIcon} Cover: ${price}`);
-            }
-            
-            // Location with coordinates
-            if (event.coordinates) {
-                console.log(`🗺️  Coordinates: ${event.coordinates.lat}, ${event.coordinates.lng}`);
-            }
-            
-            // Description
-            if (event.description || event.tea) {
-                console.log(`\n☕ Description:`);
-                console.log(`   ${event.description || event.tea}`);
-            }
-            
-            // Links and social media
-            if (event.links && event.links.length > 0) {
-                console.log(`\n🔗 Links:`);
-                event.links.forEach(link => {
-                    console.log(`   ${link.label}: ${link.url}`);
-                });
-            } else if (event.url) {
-                console.log(`\n🔗 URL: ${event.url}`);
-            }
-            
-            // Short names for display optimization
-            if (event.shortName && event.shortName !== (event.title || event.name)) {
-                console.log(`\n📱 Display Names:`);
-                console.log(`   Short: "${event.shortName}"`);
-                if (event.shorterName) {
-                    console.log(`   Shorter: "${event.shorterName}"`);
-                }
-            }
-            
-            // Calendar action information
-            if (event._action || event._analysis) {
-                console.log(`\n🎯 Calendar Action:`);
-                const actionIcon = {
-                    'new': '➕',
-                    'add': '➕', 
-                    'update': '🔄',
-                    'merge': '🔀',
-                    'conflict': '⚠️',
-                    'skip': '⏭️'
-                }[event._action] || '❓';
-                console.log(`   ${actionIcon} ${event._action?.toUpperCase() || 'UNKNOWN'}`);
-                if (event._analysis?.reason) {
-                    console.log(`   📋 Reason: ${event._analysis.reason}`);
-                }
+            events.slice(0, 2).forEach(event => {
+                console.log(`• ${event.title || event.name}`);
+                console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 🌍 ${(event.city || 'unknown').toUpperCase()}`);
+                console.log(`  📅 ${new Date(event.startDate).toLocaleDateString()} ${new Date(event.startDate).toLocaleTimeString()}`);
                 
-                // Show existing event details for merge/conflict/update actions
-                if (event._existingEvent && (event._action === 'merge' || event._action === 'conflict' || event._action === 'update')) {
-                    console.log(`\n📅 Existing Event in Calendar:`);
-                    const existing = event._existingEvent;
-                    console.log(`   Title: ${existing.title}`);
-                    if (existing.notes) {
-                        // For merge actions, we have the diff info
-                        if (event._action === 'merge' && event._mergeDiff) {
-                            console.log(`   Merge Summary: ${event._mergeDiff.preserved.length} fields preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
-                        } else {
-                            // Just show that notes exist
-                            console.log(`   Notes: ${existing.notes.length} characters`);
-                        }
-                    }
+                if (action === 'merge' && event._mergeDiff) {
+                    console.log(`  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
+                } else if (action === 'conflict' && event._analysis?.reason) {
+                    console.log(`  ⚠️  Reason: ${event._analysis.reason}`);
                 }
-            }
-
-            // Calendar event preview
-            console.log(`\n📅 Calendar Event Preview:`);
-            console.log(`   Title: "${event.title || event.name}"`);
-            console.log(`   Start: ${new Date(event.startDate).toLocaleString()}`);
-            console.log(`   End: ${new Date(event.endDate || event.startDate).toLocaleString()}`);
-            console.log(`   Location: "${event.venue || event.bar || ''}"`);
-            const eventNotes = event.notes || '';
-            console.log(`   Notes: ${eventNotes.length} characters`);
+            });
         });
         
         console.log('\n' + '='.repeat(60));
@@ -893,6 +835,70 @@ class ScriptableAdapter {
         console.log(`   2. Check for conflicts in comparison section`);
         console.log(`   3. Verify calendar permissions and settings`);
         console.log(`   4. Set dryRun: false in config to actually add events`);
+        
+        console.log('\n' + '='.repeat(60));
+    }
+    
+    async displayFullEventObjects(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('🔍 FULL EVENT OBJECTS (DEBUG)');
+        console.log('='.repeat(60));
+        
+        const allEvents = this.getAllEventsFromResults(results);
+        if (!allEvents || !allEvents.length) {
+            console.log('❌ No events to display');
+            return;
+        }
+        
+        // Group events by action type
+        const eventsByAction = {};
+        allEvents.forEach(event => {
+            const action = event._action || 'unprocessed';
+            if (!eventsByAction[action]) {
+                eventsByAction[action] = [];
+            }
+            eventsByAction[action].push(event);
+        });
+        
+        // Display events grouped by action
+        Object.entries(eventsByAction).forEach(([action, events]) => {
+            console.log(`\n━━━ ${action.toUpperCase()} EVENTS (${events.length}) ━━━`);
+            
+            events.forEach((event, index) => {
+                console.log(`\n[${action.toUpperCase()} ${index + 1}/${events.length}] ${event.title || event.name}`);
+                console.log('─'.repeat(60));
+                
+                // Create a clean object for logging (remove circular references)
+                const cleanEvent = JSON.parse(JSON.stringify(event, (key, value) => {
+                    // Skip internal fields that might have circular references
+                    if (key === '_parserConfig' && value) {
+                        return { name: value.name, parser: value.parser };
+                    }
+                    if (key === '_existingEvent' && value) {
+                        return { 
+                            title: value.title, 
+                            identifier: value.identifier,
+                            startDate: value.startDate,
+                            endDate: value.endDate,
+                            notesLength: value.notes ? value.notes.length : 0
+                        };
+                    }
+                    if (key === '_conflicts' && value && Array.isArray(value)) {
+                        return value.map(c => ({
+                            title: c.title,
+                            startDate: c.startDate,
+                            identifier: c.identifier
+                        }));
+                    }
+                    if (typeof value === 'function') {
+                        return '[Function]';
+                    }
+                    return value;
+                }, 2));
+                
+                console.log(JSON.stringify(cleanEvent, null, 2));
+            });
+        });
         
         console.log('\n' + '='.repeat(60));
     }
@@ -1375,12 +1381,32 @@ class ScriptableAdapter {
             overflow-y: auto;
         }
         
-        .event-card.raw-mode .event-metadata {
-            display: none;
+        .event-card.raw-mode .event-details,
+        .event-card.raw-mode .event-metadata,
+        .event-card.raw-mode .existing-info,
+        .event-card.raw-mode .conflict-info,
+        .event-card.raw-mode details:not(.raw-json-details) {
+            display: none !important;
         }
         
         .event-card.raw-mode .raw-display {
             display: block;
+        }
+        
+        .event-card.raw-mode {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+        
+        .event-card.raw-mode .event-title {
+            color: #fff;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .event-card.raw-mode .action-badge {
+            background: #333;
+            border: 1px solid #555;
         }
     </style>
 </head>
@@ -1492,6 +1518,23 @@ class ScriptableAdapter {
                 }
             });
         }
+        
+        function toggleDiffView(button, eventKey) {
+            const tableView = document.getElementById('table-view-' + eventKey);
+            const lineView = document.getElementById('line-view-' + eventKey);
+            
+            if (tableView.style.display === 'none') {
+                // Switch to table view
+                tableView.style.display = 'block';
+                lineView.style.display = 'none';
+                button.textContent = 'Switch to Line View';
+            } else {
+                // Switch to line view
+                tableView.style.display = 'none';
+                lineView.style.display = 'block';
+                button.textContent = 'Switch to Table View';
+            }
+        }
     </script>
 </body>
 </html>
@@ -1583,7 +1626,13 @@ class ScriptableAdapter {
             <!-- Show comparison if we have original data -->
             ${event._original && event._action === 'conflict' ? `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
-                    <h4 style="margin: 0 0 10px 0; font-size: 14px;">📊 Conflict Resolution</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; font-size: 14px;">📊 Conflict Resolution</h4>
+                        <button onclick="toggleDiffView(this, '${event.key || Math.random()}')" 
+                                style="padding: 4px 10px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Switch to Line View
+                        </button>
+                    </div>
                     
                     <!-- Show what was extracted -->
                     ${event._mergeInfo?.extractedFields && Object.keys(event._mergeInfo.extractedFields).length > 0 ? `
@@ -1597,16 +1646,24 @@ class ScriptableAdapter {
                         </div>
                     ` : ''}
                     
-                    <!-- Show comparison table -->
-                    <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
-                        <tr>
-                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Field</th>
-                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">New Event</th>
-                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Existing Event</th>
-                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Result</th>
-                        </tr>
-                        ${this.generateComparisonRows(event)}
-                    </table>
+                    <!-- Table view (default) -->
+                    <div id="table-view-${event.key || Math.random()}" class="diff-view">
+                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
+                            <tr>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">New Event</th>
+                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">→</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">Existing Event</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Result</th>
+                            </tr>
+                            ${this.generateComparisonRows(event)}
+                        </table>
+                    </div>
+                    
+                    <!-- Line view (hidden by default) -->
+                    <div id="line-view-${event.key || Math.random()}" class="diff-view" style="display: none;">
+                        ${this.generateLineDiffView(event)}
+                    </div>
                 </div>
             ` : ''}
             
@@ -1724,56 +1781,22 @@ class ScriptableAdapter {
             </details>
             ` : ''}
             
-            <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; font-size: 13px; color: #34c759;">🔍 View Full Event Object (Debug)</summary>
-                <div class="raw-display" style="background: #f8f8f8; padding: 10px; border-radius: 5px; margin-top: 10px;">
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px 15px; font-size: 12px;">
-                        <strong>Title:</strong> <span>${this.escapeHtml(event.title || event.name)}</span>
-                        <strong>Original Title:</strong> <span>${this.escapeHtml(event.originalTitle || 'N/A')}</span>
-                        <strong>Start Date:</strong> <span>${new Date(event.startDate).toLocaleString()}</span>
-                        <strong>End Date:</strong> <span>${new Date(event.endDate || event.startDate).toLocaleString()}</span>
-                        <strong>Location:</strong> <span>${this.escapeHtml(event.venue || event.bar || 'N/A')}</span>
-                        <strong>City:</strong> <span>${this.escapeHtml(event.city || 'N/A')}</span>
-                        <strong>Calendar:</strong> <span>${this.escapeHtml(calendarName)}</span>
-                        <strong>Key:</strong> <span>${this.escapeHtml(event.key || 'N/A')}</span>
-                        <strong>URL:</strong> <span>${event.url ? `<a href="${event.url}" target="_blank">${event.url}</a>` : 'None'}</span>
-                        <strong>Source:</strong> <span>${this.escapeHtml(event.source || 'N/A')}</span>
-                        <strong>Parser:</strong> <span>${this.escapeHtml(event._parserConfig?.name || 'Unknown')}</span>
-                        ${event.coordinates ? `
-                            <strong>Coordinates:</strong> <span>${event.coordinates.lat}, ${event.coordinates.lng}</span>
-                        ` : ''}
-                        ${event.price ? `<strong>Price:</strong> <span>${this.escapeHtml(event.price)}</span>` : ''}
-                        ${event.recurring ? `<strong>Recurring:</strong> <span>${event.recurrence || 'Yes'}</span>` : ''}
-                    </div>
-                    
-                    <details style="margin-top: 10px;">
-                        <summary style="cursor: pointer; font-size: 12px; color: #666;">View Complete JSON Object</summary>
-                        <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px;">${this.escapeHtml(JSON.stringify(event, (key, value) => {
-                            // Filter out circular references and functions
-                            if (key === '_parserConfig' && value) {
-                                return { name: value.name, parser: value.parser };
-                            }
-                            if (key === '_existingEvent' && value) {
-                                return { title: value.title, identifier: value.identifier };
-                            }
-                            if (typeof value === 'function') {
-                                return '[Function]';
-                            }
-                            return value;
-                        }, 2))}</pre>
-                    </details>
-                    
-                    ${event._fieldMergeStrategies ? `
-                    <details style="margin-top: 10px;">
-                        <summary style="cursor: pointer; font-size: 12px; color: #666;">View Merge Strategies</summary>
-                        <pre style="font-size: 11px; background: #f0f0f0; padding: 10px; border-radius: 5px; margin-top: 5px;">${this.escapeHtml(JSON.stringify(event._fieldMergeStrategies, null, 2))}</pre>
-                    </details>
-                    ` : ''}
-                </div>
-            </details>
+
             
             <div class="raw-display">
-                <!-- Legacy raw display for backwards compatibility -->
+                <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(JSON.stringify(event, (key, value) => {
+                    // Filter out circular references and functions
+                    if (key === '_parserConfig' && value) {
+                        return { name: value.name, parser: value.parser };
+                    }
+                    if (key === '_existingEvent' && value) {
+                        return { title: value.title, identifier: value.identifier };
+                    }
+                    if (typeof value === 'function') {
+                        return '[Function]';
+                    }
+                    return value;
+                }, 2))}</pre>
             </div>
         </div>
         `;
@@ -2158,8 +2181,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!newValue && !existingValue && !finalValue) return;
             
             // Format values for display
-            const formatValue = (val) => {
-                if (!val) return '<em>-</em>';
+            const formatValue = (val, maxLength = 30) => {
+                if (!val) return '<em style="color: #999;">empty</em>';
                 if (field.includes('Date') && val) {
                     return new Date(val).toLocaleString('en-US', { 
                         month: 'short', 
@@ -2168,35 +2191,130 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                         minute: '2-digit'
                     });
                 }
-                return this.escapeHtml(val.toString().substring(0, 50) + (val.toString().length > 50 ? '...' : ''));
+                const str = val.toString();
+                if (str.length > maxLength) {
+                    return `<span title="${this.escapeHtml(str)}">${this.escapeHtml(str.substring(0, maxLength))}...</span>`;
+                }
+                return this.escapeHtml(str);
             };
             
-            // Determine which value was used
-            let resultIcon = '';
-            if (wasUsed === 'existing') {
-                resultIcon = '⬅️'; // Used existing
+            // Determine flow direction and result
+            let flowIcon = '';
+            let resultText = '';
+            
+            if (!existingValue && newValue) {
+                // New field being added
+                flowIcon = '→';
+                resultText = '<span style="color: #34c759;">NEW</span>';
+            } else if (wasUsed === 'existing' || finalValue === existingValue) {
+                // Kept existing value
+                flowIcon = '←';
+                resultText = '<span style="color: #007aff;">KEPT</span>';
             } else if (finalValue === newValue) {
-                resultIcon = '➡️'; // Used new
-            } else if (finalValue) {
-                resultIcon = '🔀'; // Merged/modified
+                // Replaced with new value
+                flowIcon = '→';
+                resultText = '<span style="color: #ff9500;">REPLACED</span>';
+            } else if (finalValue && finalValue !== existingValue && finalValue !== newValue) {
+                // Merged/combined value
+                flowIcon = '↔';
+                resultText = '<span style="color: #32d74b;">MERGED</span>';
+            } else {
+                flowIcon = '?';
+                resultText = '<span style="color: #999;">UNKNOWN</span>';
             }
             
             rows.push(`
                 <tr>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; vertical-align: top;">
                         <strong>${field}</strong>
                         <br><small style="color: #666;">${strategy}</small>
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee;">${formatValue(newValue)}</td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee;">${formatValue(existingValue)}</td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee;">
-                        ${resultIcon} ${formatValue(finalValue)}
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
+                        ${formatValue(newValue)}
+                    </td>
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff;">
+                        ${flowIcon}
+                    </td>
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
+                        ${formatValue(existingValue)}
+                    </td>
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center;">
+                        ${resultText}
                     </td>
                 </tr>
             `);
         });
         
         return rows.join('');
+    }
+    
+    // Generate line-by-line diff view
+    generateLineDiffView(event) {
+        if (!event._original) return '<p>No comparison data available</p>';
+        
+        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'startDate', 'endDate'];
+        let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
+        
+        fieldsToCompare.forEach(field => {
+            const newValue = event._original.new[field] || '';
+            const existingValue = event._original.existing?.[field] || '';
+            const finalValue = event[field] || '';
+            const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
+            
+            // Skip if both are empty
+            if (!newValue && !existingValue && !finalValue) return;
+            
+            // Format dates
+            const formatValue = (val) => {
+                if (!val) return '';
+                if (field.includes('Date') && val) {
+                    return new Date(val).toLocaleString();
+                }
+                return val.toString();
+            };
+            
+            html += `<div style="margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">`;
+            html += `<div style="font-weight: bold; color: #333; margin-bottom: 5px;">${field} (${strategy}):</div>`;
+            
+            // Show existing value
+            if (existingValue) {
+                html += `<div style="background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;">`;
+                html += `<span style="color: #d73a49;">- Existing:</span> ${this.escapeHtml(formatValue(existingValue))}`;
+                html += `</div>`;
+            }
+            
+            // Show new value
+            if (newValue) {
+                html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
+                html += `<span style="color: #28a745;">+ New:</span> ${this.escapeHtml(formatValue(newValue))}`;
+                html += `</div>`;
+            }
+            
+            // Show final result
+            if (finalValue) {
+                let resultColor = '#007aff';
+                let resultLabel = 'Result';
+                
+                if (finalValue === existingValue) {
+                    resultLabel = 'Kept existing';
+                } else if (finalValue === newValue) {
+                    resultLabel = 'Used new';
+                    resultColor = '#ff9500';
+                } else {
+                    resultLabel = 'Merged';
+                    resultColor = '#32d74b';
+                }
+                
+                html += `<div style="background: #e3f2fd; padding: 5px; margin: 2px 0; border-left: 3px solid ${resultColor};">`;
+                html += `<span style="color: ${resultColor};">→ ${resultLabel}:</span> ${this.escapeHtml(formatValue(finalValue))}`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+        });
+        
+        html += '</div>';
+        return html;
     }
 }
 
