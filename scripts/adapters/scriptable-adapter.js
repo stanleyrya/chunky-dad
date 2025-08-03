@@ -1056,39 +1056,47 @@ class ScriptableAdapter {
         }
         
         .event-card {
-            background: #f8f8f8;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
             transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         
         .event-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
             transform: translateY(-2px);
+            border-color: rgba(0,0,0,0.12);
         }
         
         .event-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             color: #1d1d1f;
+            line-height: 1.3;
         }
         
         .event-details {
             display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
+            flex-direction: column;
+            gap: 8px;
             font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
+            color: #333;
         }
         
         .event-detail {
             display: flex;
-            align-items: center;
-            gap: 5px;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .event-detail span:first-child {
+            font-size: 16px;
+            min-width: 24px;
+            text-align: center;
         }
         
         .event-metadata {
@@ -1498,12 +1506,14 @@ class ScriptableAdapter {
             'new': '<span class="action-badge badge-new">NEW</span>',
             'update': '<span class="action-badge badge-update">UPDATE</span>',
             'merge': '<span class="action-badge badge-merge">MERGE</span>',
+            'conflict': '<span class="action-badge badge-warning">CONFLICT</span>',
             'key_conflict': '<span class="action-badge badge-warning">KEY MISMATCH</span>',
             'time_conflict': '<span class="action-badge badge-warning">TIME OVERLAP</span>',
             'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
         }[event._action] || '';
         
         const eventDate = new Date(event.startDate);
+        const endDate = event.endDate ? new Date(event.endDate) : null;
         const dateStr = eventDate.toLocaleDateString('en-US', { 
             weekday: 'short', 
             year: 'numeric', 
@@ -1514,6 +1524,10 @@ class ScriptableAdapter {
             hour: 'numeric', 
             minute: '2-digit' 
         });
+        const endTimeStr = endDate ? endDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+        }) : '';
         
         // For merged events, use the merged notes which contain the preserved description
         const notes = (event._action === 'merge' && event._mergedNotes) ? event._mergedNotes : (event.notes || '');
@@ -1523,6 +1537,8 @@ class ScriptableAdapter {
         <div class="event-card">
             ${actionBadge}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
+            
+            <!-- Main Event Info -->
             <div class="event-details">
                 ${event.venue || event.bar ? `
                     <div class="event-detail">
@@ -1532,7 +1548,7 @@ class ScriptableAdapter {
                 ` : ''}
                 <div class="event-detail">
                     <span>📅</span>
-                    <span>${dateStr} at ${timeStr}</span>
+                    <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}</span>
                 </div>
                 ${event.city ? `
                     <div class="event-detail">
@@ -1544,107 +1560,80 @@ class ScriptableAdapter {
                     <span>📱</span>
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
+                ${event.tea ? `
+                    <div class="event-detail" style="background: #e8f5e9; padding: 8px; border-radius: 5px; margin-top: 8px;">
+                        <span>☕</span>
+                        <span style="font-style: italic;">${this.escapeHtml(event.tea)}</span>
+                    </div>
+                ` : ''}
+                ${event.instagram ? `
+                    <div class="event-detail">
+                        <span>📸</span>
+                        <span><a href="${this.escapeHtml(event.instagram)}" style="color: #007aff;">Instagram</a></span>
+                    </div>
+                ` : ''}
+                ${event.price ? `
+                    <div class="event-detail">
+                        <span>💵</span>
+                        <span>${this.escapeHtml(event.price)}</span>
+                    </div>
+                ` : ''}
             </div>
             
-            <div class="event-metadata">
-                ${event.coordinates && event.coordinates.lat && event.coordinates.lng ? `
-                    <div class="metadata-item">
-                        <span class="metadata-label">Location:</span>
-                        <span class="coordinates">${event.coordinates.lat}, ${event.coordinates.lng}</span>
-                    </div>
-                ` : ''}
-                ${event.key ? `
-                    <div class="metadata-item">
-                        <span class="metadata-label">Key:</span>
-                        <span>${this.escapeHtml(event.key)}</span>
-                    </div>
-                ` : ''}
-                ${event.price || event.cover ? `
-                    <div class="metadata-item">
-                        <span class="metadata-label">Price:</span>
-                        <span>${this.escapeHtml(event.price || event.cover)}</span>
-                    </div>
-                ` : ''}
-                ${event.recurring ? `
-                    <div class="metadata-item">
-                        <span class="metadata-label">Recurring:</span>
-                        <span>${event.recurrence || 'Yes'}</span>
-                    </div>
-                ` : ''}
-            </div>
+            <!-- Show comparison if we have original data -->
+            ${event._original && event._action === 'conflict' ? `
+                <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px;">📊 Conflict Resolution</h4>
+                    
+                    <!-- Show what was extracted -->
+                    ${event._mergeInfo?.extractedFields && Object.keys(event._mergeInfo.extractedFields).length > 0 ? `
+                        <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                            <strong style="font-size: 12px;">Extracted from existing event:</strong>
+                            ${Object.entries(event._mergeInfo.extractedFields).map(([field, info]) => `
+                                <div style="margin-top: 5px; font-size: 12px;">
+                                    • <strong>${field}:</strong> "${this.escapeHtml(info.value)}"
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Show comparison table -->
+                    <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                        <tr>
+                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Field</th>
+                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">New Event</th>
+                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Existing Event</th>
+                            <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Result</th>
+                        </tr>
+                        ${this.generateComparisonRows(event)}
+                    </table>
+                </div>
+            ` : ''}
+            
+            <!-- Simplified metadata -->
+            ${event.key || event.source ? `
+                <div class="event-metadata" style="margin-top: 10px; font-size: 11px; color: #666;">
+                    ${event.source ? `<span>Source: ${event.source}</span>` : ''}
+                    ${event.key ? `<span style="margin-left: 10px;">Key: ${this.escapeHtml(event.key)}</span>` : ''}
+                </div>
+            ` : ''}
             
             ${event._action === 'update' && event._existingEvent ? `
-                <div class="existing-info">
-                    <strong>Existing Event:</strong> Will update with new information
-                    ${event._existingEvent.title !== event.title ? `<br>• Title: "${this.escapeHtml(event._existingEvent.title)}" → "${this.escapeHtml(event.title)}"` : ''}
-                    ${event._existingEvent.location !== event.location ? `<br>• Location: "${this.escapeHtml(event._existingEvent.location || 'None')}" → "${this.escapeHtml(event.location || 'None')}"` : ''}
-                    ${!event._existingEvent.url && event.url ? '<br>• Add URL: ' + this.escapeHtml(event.url) : ''}
-                    ${event._existingEvent.url && event.url && event._existingEvent.url !== event.url ? `<br>• URL: "${this.escapeHtml(event._existingEvent.url)}" → "${this.escapeHtml(event.url)}"` : ''}
-                    <br>• Notes: Will be completely replaced with new event data
-                    ${event.coordinates ? '<br>• GPS coordinates will be updated' : ''}
+                <div class="existing-info" style="margin-top: 10px; background: #e3f2fd; padding: 10px; border-radius: 5px;">
+                    <strong>📝 Update Details:</strong>
+                    <div style="margin-top: 5px; font-size: 12px;">
+                        This event will be updated with new information from ${event.source || 'the scraper'}.
+                    </div>
                 </div>
             ` : ''}
             
             ${event._action === 'merge' && event._existingEvent ? `
-                <div class="existing-info">
-                    <strong>Merging With:</strong> "${this.escapeHtml(event._existingEvent.title)}"
-                    ${(() => {
-                        // Use the pre-calculated merge diff from shared-core
-                        const diff = event._mergeDiff;
-                        if (!diff) return '<br>• No merge diff available';
-                        
-                        let html = '';
-                        
-                        if (diff.preserved.length > 0) {
-                            html += '<br><strong>🔒 PRESERVED:</strong> ';
-                            html += '<div style="margin-top: 5px;">';
-                            diff.preserved.forEach(key => {
-                                const strategy = event._fieldMergeStrategies?.[key] || 'preserve';
-                                const isDescription = key === 'description';
-                                html += `<span style="display: inline-block; background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin: 2px;">`;
-                                html += isDescription ? 'Original event description' : this.escapeHtml(key);
-                                html += ` <small style="opacity: 0.7">(${strategy})</small>`;
-                                html += `</span> `;
-                            });
-                            html += '</div>';
-                        }
-                        
-                        if (diff.updated.length > 0) {
-                            html += '<br><strong>🔄 UPDATED:</strong>';
-                            diff.updated.forEach(({ key, from, to }) => {
-                                const fromDisplay = from.length > 30 ? from.substring(0, 27) + '...' : from;
-                                const toDisplay = to.length > 30 ? to.substring(0, 27) + '...' : to;
-                                html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(fromDisplay)}" → "${this.escapeHtml(toDisplay)}"`;
-                            });
-                        }
-                        
-                        if (diff.added.length > 0) {
-                            html += '<br><strong>➕ ADDED:</strong>';
-                            diff.added.forEach(({ key, value }) => {
-                                const valueDisplay = value.length > 30 ? value.substring(0, 27) + '...' : value;
-                                html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(valueDisplay)}"`;
-                            });
-                        }
-                        
-                        if (diff.removed.length > 0) {
-                            html += '<br><strong>❌ REMOVED:</strong>';
-                            diff.removed.forEach(({ key, value }) => {
-                                const valueDisplay = value.length > 30 ? value.substring(0, 27) + '...' : value;
-                                html += `<br>• ${this.escapeHtml(key)}: "${this.escapeHtml(valueDisplay)}"`;
-                            });
-                        }
-                        
-                        // Add info about non-notes fields
-                        if (event._existingEvent.location !== event.location && event.coordinates) {
-                            html += '<br>• Location: GPS coordinates will be updated';
-                        }
-                        if (!event._existingEvent.url && event.url) {
-                            html += '<br>• URL: Will be added';
-                        }
-                        
-                        return html;
-                    })()}
-                    ${event.key ? `<br>• Key match confirmed: ${this.escapeHtml(event.key)}` : ''}
+                <div class="existing-info" style="margin-top: 10px; background: #e8f5e9; padding: 10px; border-radius: 5px;">
+                    <strong>🔀 Merge Details:</strong>
+                    <div style="margin-top: 5px; font-size: 12px;">
+                        Merging with existing event: "${this.escapeHtml(event._existingEvent.title)}"
+                        <br>New information will be combined with existing data based on merge strategies.
+                    </div>
                 </div>
             ` : ''}
             
@@ -2149,6 +2138,65 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     getCalendarNameForDisplay(event) {
         const city = event.city || 'default';
         return this.calendarMappings[city] || `chunky-dad-${city}`;
+    }
+    
+    // Generate comparison rows for conflict display
+    generateComparisonRows(event) {
+        if (!event._original) return '';
+        
+        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'startDate', 'endDate'];
+        const rows = [];
+        
+        fieldsToCompare.forEach(field => {
+            const newValue = event._original.new[field] || '';
+            const existingValue = event._original.existing?.[field] || '';
+            const finalValue = event[field] || '';
+            const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
+            const wasUsed = event._mergeInfo?.mergedFields?.[field];
+            
+            // Skip if both are empty
+            if (!newValue && !existingValue && !finalValue) return;
+            
+            // Format values for display
+            const formatValue = (val) => {
+                if (!val) return '<em>-</em>';
+                if (field.includes('Date') && val) {
+                    return new Date(val).toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                    });
+                }
+                return this.escapeHtml(val.toString().substring(0, 50) + (val.toString().length > 50 ? '...' : ''));
+            };
+            
+            // Determine which value was used
+            let resultIcon = '';
+            if (wasUsed === 'existing') {
+                resultIcon = '⬅️'; // Used existing
+            } else if (finalValue === newValue) {
+                resultIcon = '➡️'; // Used new
+            } else if (finalValue) {
+                resultIcon = '🔀'; // Merged/modified
+            }
+            
+            rows.push(`
+                <tr>
+                    <td style="padding: 5px; border-bottom: 1px solid #eee;">
+                        <strong>${field}</strong>
+                        <br><small style="color: #666;">${strategy}</small>
+                    </td>
+                    <td style="padding: 5px; border-bottom: 1px solid #eee;">${formatValue(newValue)}</td>
+                    <td style="padding: 5px; border-bottom: 1px solid #eee;">${formatValue(existingValue)}</td>
+                    <td style="padding: 5px; border-bottom: 1px solid #eee;">
+                        ${resultIcon} ${formatValue(finalValue)}
+                    </td>
+                </tr>
+            `);
+        });
+        
+        return rows.join('');
     }
 }
 
