@@ -356,6 +356,22 @@ class EventbriteParser {
             
             // Apply metadata overrides from parser config
             if (parserConfig.metadata) {
+                // First, preserve the original scraped data before any modifications
+                event._originalScrapedData = {
+                    title: event.title,
+                    description: event.description,
+                    venue: event.venue,
+                    address: event.address,
+                    startDate: event.startDate,
+                    endDate: event.endDate,
+                    website: event.website,
+                    price: event.price,
+                    // Preserve any other fields that might be relevant for comparison
+                    ...Object.fromEntries(
+                        Object.keys(event).filter(key => !key.startsWith('_')).map(key => [key, event[key]])
+                    )
+                };
+                
                 Object.keys(parserConfig.metadata).forEach(key => {
                     const metaValue = parserConfig.metadata[key];
                     
@@ -363,11 +379,6 @@ class EventbriteParser {
                     if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
                         // Only set value if it's defined (allows preserve without value)
                         if ('value' in metaValue && metaValue.value !== undefined) {
-                            // Special handling for title field - preserve original for merge comparison
-                            if (key === 'title' && event[key] && event[key] !== metaValue.value) {
-                                event.originalTitle = event[key];
-                                console.log(`🎫 Eventbrite: Preserving original title: "${event.originalTitle}" → "${metaValue.value}"`);
-                            }
                             event[key] = metaValue.value;
                         }
                         
