@@ -42,16 +42,10 @@
         "endDate": {
           "merge": "clobber"
         },
-        "tea": {
-          "value": "☕ The hottest bear party in America! 🐻",
-          "merge": "upsert"
-        },
         "website": {
-          "value": "https://megawoof.com",
           "merge": "upsert"
         },
         "gmaps": {
-          "value": "https://maps.google.com/?q=Megawoof+LA",
           "merge": "upsert"
         }
       }
