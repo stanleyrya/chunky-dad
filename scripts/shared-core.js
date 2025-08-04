@@ -1308,16 +1308,6 @@ class SharedCore {
         return start1 < end2 && end1 > start2;
     }
     
-    // Check if two events overlap (wrapper around doDatesOverlap for event objects)
-    eventsOverlap(event1, event2) {
-        const start1 = new Date(event1.startDate);
-        const end1 = new Date(event1.endDate || event1.startDate);
-        const start2 = new Date(event2.startDate);
-        const end2 = new Date(event2.endDate || event2.startDate);
-        
-        return this.doDatesOverlap(start1, end1, start2, end2);
-    }
-    
     // Generic extraction method for fields from notes
     extractFieldFromNotes(notes, fieldName) {
         if (!notes) return '';
