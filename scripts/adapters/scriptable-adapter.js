@@ -2185,7 +2185,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateComparisonRows(event) {
         if (!event._original) return '';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'googleMapsLink', 'price', 'startDate', 'endDate'];
+        // Use dynamic field list from SharedCore
+        const { SharedCore } = require('../shared-core');
+        const fieldsToCompare = SharedCore.getDisplayFieldNames();
         const rows = [];
         
         fieldsToCompare.forEach(field => {
@@ -2241,10 +2243,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 resultText = '<span style="color: #999;">NO CHANGE</span>';
             }
             
+            const displayName = SharedCore.getFieldDisplayName(field);
+            
             rows.push(`
                 <tr>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; vertical-align: top;">
-                        <strong>${field}</strong>
+                        <strong>${displayName}</strong>
                         <br><small style="color: #666;">${strategy}</small>
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
@@ -2270,7 +2274,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateLineDiffView(event) {
         if (!event._original) return '<p>No comparison data available</p>';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'googleMapsLink', 'price', 'startDate', 'endDate'];
+        // Use dynamic field list from SharedCore
+        const { SharedCore } = require('../shared-core');
+        const fieldsToCompare = SharedCore.getDisplayFieldNames();
         let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
         
         fieldsToCompare.forEach(field => {
@@ -2291,8 +2297,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 return val.toString();
             };
             
+            const displayName = SharedCore.getFieldDisplayName(field);
+            
             html += `<div style="margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">`;
-            html += `<div style="font-weight: bold; color: #333; margin-bottom: 5px;">${field} (${strategy}):</div>`;
+            html += `<div style="font-weight: bold; color: #333; margin-bottom: 5px;">${displayName} (${strategy}):</div>`;
             
             // Determine what happened with this field
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
