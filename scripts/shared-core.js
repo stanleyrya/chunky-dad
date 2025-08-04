@@ -1327,11 +1327,40 @@ class SharedCore {
         
         if (timeConflicts.length > 0) {
             // Check if these are mergeable conflicts (adding info to existing events)
-            const mergeableConflict = timeConflicts.find(existing => 
-                existing.title === event.title || 
-                (existing.location === (event.venue || event.bar) && 
-                 this.areDatesEqual(existing.startDate, new Date(event.startDate), 60))
-            );
+            const mergeableConflict = timeConflicts.find(existing => {
+                // Exact title match
+                if (existing.title === event.title) {
+                    return true;
+                }
+                
+                // Location and date match
+                if (existing.location === (event.venue || event.bar) && 
+                    this.areDatesEqual(existing.startDate, new Date(event.startDate), 60)) {
+                    return true;
+                }
+                
+                // MEGAWOOF/DURO pattern matching
+                const existingTitle = existing.title.toLowerCase().trim();
+                const newTitle = event.title.toLowerCase().trim();
+                const newDescription = (event.description || '').toLowerCase().trim();
+                
+                const existingHasMegawoof = /megawoof/i.test(existingTitle);
+                const existingHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle);
+                
+                const newHasMegawoof = /megawoof/i.test(newTitle) || /megawoof/i.test(newDescription);
+                const newHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle) || /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newDescription);
+                
+                const isMegawoofConflict = (
+                    (existingHasMegawoof || existingHasDuro) && 
+                    (newHasMegawoof || newHasDuro)
+                );
+                
+                if (isMegawoofConflict) {
+                    return true;
+                }
+                
+                return false;
+            });
             
             if (mergeableConflict) {
                 // In clobber mode, we update instead of merge
