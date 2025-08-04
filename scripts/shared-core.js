@@ -1404,7 +1404,8 @@ class SharedCore {
         
         // Define extraction patterns for different fields
         const patterns = {
-            tea: /tea:\s*(.+?)(?:\n|$)/i,
+            tea: /(?:tea|description):\s*(.+?)(?:\n|$)/i,
+            description: /(?:description|tea):\s*(.+?)(?:\n|$)/i,
             instagram: /(?:instagram:\s*)?(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
             website: /website:\s*(https?:\/\/[^\s\n]+)/i,
             bar: /bar:\s*(.+?)(?:\n|$)/i,
@@ -1457,7 +1458,7 @@ class SharedCore {
         
         // Define fields to potentially extract from notes
         const extractableFields = [
-            'tea', 'instagram', 'website', 'bar', 'venue', 
+            'tea', 'description', 'instagram', 'website', 'bar', 'venue', 
             'cover', 'price', 'facebook', 'gmaps', 'shortName', 
             'shorterName', 'type', 'eventType', 'recurring'
         ];
