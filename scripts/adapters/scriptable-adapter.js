@@ -1615,6 +1615,24 @@ class ScriptableAdapter {
                         <span><a href="${this.escapeHtml(event.instagram)}" style="color: #007aff;">Instagram</a></span>
                     </div>
                 ` : ''}
+                ${event.facebook ? `
+                    <div class="event-detail">
+                        <span>👥</span>
+                        <span><a href="${this.escapeHtml(event.facebook)}" style="color: #007aff;">Facebook</a></span>
+                    </div>
+                ` : ''}
+                ${event.website ? `
+                    <div class="event-detail">
+                        <span>🌐</span>
+                        <span><a href="${this.escapeHtml(event.website)}" style="color: #007aff;">Website</a></span>
+                    </div>
+                ` : ''}
+                ${event.gmaps || event.googleMapsLink ? `
+                    <div class="event-detail">
+                        <span>🗺️</span>
+                        <span><a href="${this.escapeHtml(event.gmaps || event.googleMapsLink)}" style="color: #007aff;">Google Maps</a></span>
+                    </div>
+                ` : ''}
                 ${event.price ? `
                     <div class="event-detail">
                         <span>💵</span>
@@ -2167,7 +2185,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateComparisonRows(event) {
         if (!event._original) return '';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'startDate', 'endDate'];
+        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
         const rows = [];
         
         fieldsToCompare.forEach(field => {
@@ -2205,22 +2223,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!existingValue && newValue) {
                 // New field being added
                 flowIcon = '→';
-                resultText = '<span style="color: #34c759;">NEW</span>';
+                resultText = '<span style="color: #34c759;">ADDED</span>';
             } else if (wasUsed === 'existing' || finalValue === existingValue) {
                 // Kept existing value
                 flowIcon = '←';
-                resultText = '<span style="color: #007aff;">KEPT</span>';
+                resultText = '<span style="color: #007aff;">EXISTING</span>';
             } else if (finalValue === newValue) {
                 // Replaced with new value
                 flowIcon = '→';
-                resultText = '<span style="color: #ff9500;">REPLACED</span>';
+                resultText = '<span style="color: #ff9500;">NEW</span>';
             } else if (finalValue && finalValue !== existingValue && finalValue !== newValue) {
                 // Merged/combined value
                 flowIcon = '↔';
                 resultText = '<span style="color: #32d74b;">MERGED</span>';
             } else {
-                flowIcon = '?';
-                resultText = '<span style="color: #999;">UNKNOWN</span>';
+                flowIcon = '—';
+                resultText = '<span style="color: #999;">NO CHANGE</span>';
             }
             
             rows.push(`
@@ -2252,7 +2270,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateLineDiffView(event) {
         if (!event._original) return '<p>No comparison data available</p>';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'startDate', 'endDate'];
+        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
         let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
         
         fieldsToCompare.forEach(field => {
@@ -2276,37 +2294,51 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             html += `<div style="margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">`;
             html += `<div style="font-weight: bold; color: #333; margin-bottom: 5px;">${field} (${strategy}):</div>`;
             
-            // Show existing value
-            if (existingValue) {
-                html += `<div style="background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;">`;
-                html += `<span style="color: #d73a49;">- Existing:</span> ${this.escapeHtml(formatValue(existingValue))}`;
-                html += `</div>`;
-            }
+            // Determine what happened with this field
+            const wasUsed = event._mergeInfo?.mergedFields?.[field];
+            const isNew = !existingValue && newValue;
+            const isUnchanged = existingValue && !newValue;
+            const isReplaced = existingValue && newValue && finalValue === newValue;
+            const isKept = existingValue && newValue && finalValue === existingValue;
+            const isMerged = existingValue && newValue && finalValue && finalValue !== existingValue && finalValue !== newValue;
             
-            // Show new value
-            if (newValue) {
+            // Show git-style diff
+            if (isNew) {
+                // Only new value exists - show as addition
                 html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
-                html += `<span style="color: #28a745;">+ New:</span> ${this.escapeHtml(formatValue(newValue))}`;
+                html += `<span style="color: #28a745;">+</span> ${this.escapeHtml(formatValue(newValue))}`;
                 html += `</div>`;
-            }
-            
-            // Show final result
-            if (finalValue) {
-                let resultColor = '#007aff';
-                let resultLabel = 'Result';
-                
-                if (finalValue === existingValue) {
-                    resultLabel = 'Kept existing';
-                } else if (finalValue === newValue) {
-                    resultLabel = 'Used new';
-                    resultColor = '#ff9500';
-                } else {
-                    resultLabel = 'Merged';
-                    resultColor = '#32d74b';
-                }
-                
-                html += `<div style="background: #e3f2fd; padding: 5px; margin: 2px 0; border-left: 3px solid ${resultColor};">`;
-                html += `<span style="color: ${resultColor};">→ ${resultLabel}:</span> ${this.escapeHtml(formatValue(finalValue))}`;
+            } else if (isUnchanged) {
+                // Only existing value exists - show as context (orange)
+                html += `<div style="background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;">`;
+                html += `<span style="color: #ff9500;"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style="color: #666;">(existing)</em>`;
+                html += `</div>`;
+            } else if (isReplaced) {
+                // Value was replaced - show old as deletion, new as addition
+                html += `<div style="background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;">`;
+                html += `<span style="color: #d73a49;">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
+                html += `</div>`;
+                html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
+                html += `<span style="color: #28a745;">+</span> ${this.escapeHtml(formatValue(newValue))}`;
+                html += `</div>`;
+            } else if (isKept) {
+                // New value exists but existing was kept - show both with context
+                html += `<div style="background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;">`;
+                html += `<span style="color: #ff9500;"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style="color: #666;">(kept existing)</em>`;
+                html += `</div>`;
+                html += `<div style="background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999; opacity: 0.6;">`;
+                html += `<span style="color: #999;">~</span> ${this.escapeHtml(formatValue(newValue))} <em style="color: #666;">(new value ignored)</em>`;
+                html += `</div>`;
+            } else if (isMerged) {
+                // Values were merged - show all three
+                html += `<div style="background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;">`;
+                html += `<span style="color: #d73a49;">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
+                html += `</div>`;
+                html += `<div style="background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999;">`;
+                html += `<span style="color: #999;">~</span> ${this.escapeHtml(formatValue(newValue))} <em style="color: #666;">(proposed)</em>`;
+                html += `</div>`;
+                html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
+                html += `<span style="color: #28a745;">+</span> ${this.escapeHtml(formatValue(finalValue))} <em style="color: #666;">(merged result)</em>`;
                 html += `</div>`;
             }
             

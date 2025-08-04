@@ -521,6 +521,7 @@ class SharedCore {
             const colonIndex = line.indexOf(':');
             const isMetadataLine = colonIndex > 0 && (
                 line.startsWith('Bar:') || 
+                line.startsWith('Tea:') ||
                 line.startsWith('Description:') ||
                 line.startsWith('Key:') || 
                 line.startsWith('DebugCity:') || 
@@ -600,7 +601,7 @@ class SharedCore {
         }
         
         // Add fields in a consistent order (excluding description which we already handled)
-        const fieldOrder = ['bar', 'key', 'coordinates', 'debugcity', 'debugsource', 
+        const fieldOrder = ['bar', 'tea', 'key', 'coordinates', 'debugcity', 'debugsource', 
                           'instagram', 'facebook', 'website', 'gmaps', 'price', 'type',
                           'recurrence', 'timezone', 'shorttitle', 'shortname', 'shortername'];
         
@@ -614,6 +615,7 @@ class SharedCore {
                                  key === 'shortname' ? 'Short Name' :
                                  key === 'shortername' ? 'Shorter Name' :
                                  key === 'shorttitle' ? 'ShortTitle' :
+                                 key === 'tea' ? 'Tea' :
                                  key.charAt(0).toUpperCase() + key.slice(1);
                 lines.push(`${displayKey}: ${fields[key]}`);
             }
@@ -946,12 +948,14 @@ class SharedCore {
             }
         }
         
-        // Add description/tea in key-value format
-        if ((event.description && event.description.trim()) || (event.tea && event.tea.trim())) {
-            // Include if either description OR tea is not preserved
-            if ((event.description && shouldIncludeField('description')) || (event.tea && shouldIncludeField('tea'))) {
-                notes.push(`Description: ${event.description || event.tea}`);
-            }
+        // Add description in key-value format
+        if (event.description && event.description.trim() && shouldIncludeField('description')) {
+            notes.push(`Description: ${event.description}`);
+        }
+        
+        // Add tea as a separate field
+        if (event.tea && event.tea.trim() && shouldIncludeField('tea')) {
+            notes.push(`Tea: ${event.tea}`);
         }
         
         // Add price/cover
