@@ -1453,7 +1453,7 @@ class SharedCore {
         
         event._original = {
             new: cleanEvent,
-            existing: event._conflicts[0] // Usually just one conflict
+            existing: this.parseCalendarEventToFields(event._conflicts[0]) // Parse the calendar event properly
         };
         
         // Get merge strategies
@@ -1653,6 +1653,28 @@ class SharedCore {
         }
         
         return notes.join('\n');
+    }
+
+    // Helper to parse a calendar event object into a flat object of field names to values
+    parseCalendarEventToFields(calendarEvent) {
+        if (!calendarEvent) return {};
+        
+        const fields = {};
+        
+        // Start with basic calendar event properties
+        fields.title = calendarEvent.title || '';
+        fields.venue = calendarEvent.location || ''; // Map location to venue
+        fields.startDate = calendarEvent.startDate;
+        fields.endDate = calendarEvent.endDate;
+        
+        // Parse additional fields from notes
+        if (calendarEvent.notes) {
+            const notesFields = this.parseNotesIntoFields(calendarEvent.notes);
+            // Merge notes fields into the main fields object
+            Object.assign(fields, notesFields);
+        }
+        
+        return fields;
     }
 }
 

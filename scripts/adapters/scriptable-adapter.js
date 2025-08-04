@@ -2112,24 +2112,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Check if both events are similar enough to be the same event
         const existingTitle = existingEvent.title.toLowerCase().trim();
         
-        // For new events, check both the current title and original scraped title
+        // For new events, check both the current title and original title (if title was overridden)
         const newTitle = (newEvent.title || newEvent.name || '').toLowerCase().trim();
-        const originalScrapedTitle = newEvent._originalScrapedData?.title ? 
-            newEvent._originalScrapedData.title.toLowerCase().trim() : '';
+        const newOriginalTitle = (newEvent.originalTitle || '').toLowerCase().trim();
         
         console.log(`📱 Scriptable: Checking merge eligibility:`);
         console.log(`   Existing: "${existingTitle}"`);
         console.log(`   New: "${newTitle}"`);
-        if (originalScrapedTitle) {
-            console.log(`   New (original scraped): "${originalScrapedTitle}"`);
+        if (newOriginalTitle) {
+            console.log(`   New (original): "${newOriginalTitle}"`);
         }
         
-        // Check both current and original scraped titles for MEGAWOOF/DURO patterns
+        // Check both current and original titles for MEGAWOOF/DURO patterns
         const existingHasMegawoof = /megawoof/i.test(existingTitle);
         const existingHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle);
         
-        const newHasMegawoof = /megawoof/i.test(newTitle) || /megawoof/i.test(originalScrapedTitle);
-        const newHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle) || /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(originalScrapedTitle);
+        const newHasMegawoof = /megawoof/i.test(newTitle) || /megawoof/i.test(newOriginalTitle);
+        const newHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle) || /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newOriginalTitle);
         
         const isMegawoofConflict = (
             (existingHasMegawoof || existingHasDuro) && 
@@ -2137,19 +2136,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         );
         
         if (isMegawoofConflict) {
-            console.log(`📱 Scriptable: MEGAWOOF/DURO conflict detected - should merge: "${existingEvent.title}" vs "${newTitle}" (original scraped: "${originalScrapedTitle}")`);
+            console.log(`📱 Scriptable: MEGAWOOF/DURO conflict detected - should merge: "${existingEvent.title}" vs "${newTitle}" (orig: "${newOriginalTitle}")`);
             return true;
         }
         
         // Check for exact title matches (case insensitive) - check both titles
-        if (existingTitle === newTitle || (originalScrapedTitle && existingTitle === originalScrapedTitle)) {
+        if (existingTitle === newTitle || (newOriginalTitle && existingTitle === newOriginalTitle)) {
             console.log(`📱 Scriptable: Exact title match - should merge: "${existingEvent.title}" vs "${newTitle}"`);
             return true;
         }
         
-        // Check for similarity with both current and original scraped titles
+        // Check for similarity with both current and original titles
         const titleSimilarity = this.calculateTitleSimilarity(existingTitle, newTitle);
-        const originalTitleSimilarity = originalScrapedTitle ? this.calculateTitleSimilarity(existingTitle, originalScrapedTitle) : 0;
+        const originalTitleSimilarity = newOriginalTitle ? this.calculateTitleSimilarity(existingTitle, newOriginalTitle) : 0;
         const maxSimilarity = Math.max(titleSimilarity, originalTitleSimilarity);
         
         if (maxSimilarity > 0.8) { // 80% similarity threshold

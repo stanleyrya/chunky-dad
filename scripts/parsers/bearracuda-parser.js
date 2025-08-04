@@ -204,22 +204,6 @@ class BearraccudaParser {
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {
-                // First, preserve the original scraped data before any modifications
-                event._originalScrapedData = {
-                    title: event.title,
-                    description: event.description,
-                    venue: event.venue,
-                    address: event.address,
-                    startDate: event.startDate,
-                    endDate: event.endDate,
-                    website: event.website,
-                    price: event.price,
-                    // Preserve any other fields that might be relevant for comparison
-                    ...Object.fromEntries(
-                        Object.keys(event).filter(key => !key.startsWith('_')).map(key => [key, event[key]])
-                    )
-                };
-                
                 // Pass through all metadata fields to the event
                 Object.keys(parserConfig.metadata).forEach(key => {
                     const metaValue = parserConfig.metadata[key];
