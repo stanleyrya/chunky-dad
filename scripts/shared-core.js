@@ -1145,6 +1145,18 @@ class SharedCore {
     async prepareEventsForCalendar(events, calendarAdapter, config = {}) {
         const preparedEvents = events.map(event => this.formatEventForCalendar(event));
         
+        // Add field metadata to each event for display purposes
+        preparedEvents.forEach(event => {
+            // Add field display names
+            event._fieldDisplayNames = {};
+            SharedCore.getAllFieldNames().forEach(fieldName => {
+                event._fieldDisplayNames[fieldName] = SharedCore.getFieldDisplayName(fieldName);
+            });
+            
+            // Add display fields list
+            event._displayFields = SharedCore.getDisplayFieldNames();
+        });
+        
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
         

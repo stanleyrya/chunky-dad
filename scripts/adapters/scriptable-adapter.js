@@ -1674,13 +1674,13 @@ class ScriptableAdapter {
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">Existing Event</th>
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Result</th>
                             </tr>
-                            ${this.generateComparisonRows(event)}
+                            ${this.generateComparisonRows(event, event._displayFields)}
                         </table>
                     </div>
                     
                     <!-- Line view (hidden by default) -->
                     <div id="line-view-${event.key || Math.random()}" class="diff-view" style="display: none;">
-                        ${this.generateLineDiffView(event)}
+                        ${this.generateLineDiffView(event, event._displayFields)}
                     </div>
                 </div>
             ` : ''}
@@ -2182,12 +2182,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
     
     // Generate comparison rows for conflict display
-    generateComparisonRows(event) {
+    generateComparisonRows(event, fieldsToCompare = null) {
         if (!event._original) return '';
         
-        // Use dynamic field list from SharedCore
-        const { SharedCore } = require('../shared-core');
-        const fieldsToCompare = SharedCore.getDisplayFieldNames();
+        // Use provided fields or fall back to a default list
+        if (!fieldsToCompare) {
+            fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'googleMapsLink', 'price', 'startDate', 'endDate'];
+        }
+        
         const rows = [];
         
         fieldsToCompare.forEach(field => {
@@ -2243,7 +2245,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 resultText = '<span style="color: #999;">NO CHANGE</span>';
             }
             
-            const displayName = SharedCore.getFieldDisplayName(field);
+            // Get display name from event metadata or use field name
+            const displayName = event._fieldDisplayNames?.[field] || field;
             
             rows.push(`
                 <tr>
@@ -2271,12 +2274,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
     
     // Generate line-by-line diff view
-    generateLineDiffView(event) {
+    generateLineDiffView(event, fieldsToCompare = null) {
         if (!event._original) return '<p>No comparison data available</p>';
         
-        // Use dynamic field list from SharedCore
-        const { SharedCore } = require('../shared-core');
-        const fieldsToCompare = SharedCore.getDisplayFieldNames();
+        // Use provided fields or fall back to a default list
+        if (!fieldsToCompare) {
+            fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'googleMapsLink', 'price', 'startDate', 'endDate'];
+        }
+        
         let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
         
         fieldsToCompare.forEach(field => {
@@ -2297,7 +2302,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 return val.toString();
             };
             
-            const displayName = SharedCore.getFieldDisplayName(field);
+            // Get display name from event metadata or use field name
+            const displayName = event._fieldDisplayNames?.[field] || field;
             
             html += `<div style="margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">`;
             html += `<div style="font-weight: bold; color: #333; margin-bottom: 5px;">${displayName} (${strategy}):</div>`;
