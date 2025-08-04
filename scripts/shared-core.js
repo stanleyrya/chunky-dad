@@ -22,12 +22,16 @@
 
 
 class SharedCore {
-    constructor() {
-        this.visitedUrls = new Set();
-        this.bearKeywords = [
-            'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
-            'otter', 'leather', 'muscle bear', 'bearracuda', 'furball', 'megawoof',
-            'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
+    constructor(config = {}) {
+        this.config = config;
+        this.cities = this.config.cities || ['nyc', 'la', 'palm-springs', 'seattle', 'chicago', 'toronto', 'london', 'berlin'];
+        this.bearKeywords = this.config.bearKeywords || [
+            'bear', 'bears', 'bearracuda', 'bearweek', 'bearnight', 'bearparty',
+            'cub', 'cubs', 'daddy', 'daddies', 'otter', 'woof', 'grizzly',
+            'bearcamp', 'bearrun', 'bearfest', 'bearcruz', 'tbru', 'bearweekend',
+            'bearpride', 'bearbeach', 'bearpool', 'beardance', 'scruff',
+            'hirsute', 'furry', 'husky', 'stocky', 'bearish', 'megawoof',
+            'bear happy hour', 'bear brunch', 'bear tea', 'bear social'
         ];
         
         // City mapping for consistent location detection across all parsers
@@ -61,6 +65,76 @@ class SharedCore {
             'london': 'london',
             'berlin': 'berlin'
         };
+    }
+
+    // Static property defining all possible event fields
+    static EVENT_FIELDS = {
+        // Core fields
+        title: { order: 1, displayName: 'Title' },
+        shortTitle: { order: 2, displayName: 'Short Title' },
+        shortName: { order: 3, displayName: 'Short Name' },
+        shorterName: { order: 4, displayName: 'Shorter Name' },
+        
+        // Description fields
+        description: { order: 5, displayName: 'Description' },
+        tea: { order: 6, displayName: 'Tea' }, // Alternative name for description
+        
+        // Date/Time fields
+        startDate: { order: 10, displayName: 'Start Date' },
+        endDate: { order: 11, displayName: 'End Date' },
+        day: { order: 12, displayName: 'Day' },
+        time: { order: 13, displayName: 'Time' },
+        recurrence: { order: 14, displayName: 'Recurrence' },
+        recurring: { order: 15, displayName: 'Recurring' },
+        timezone: { order: 16, displayName: 'Timezone' },
+        
+        // Location fields
+        venue: { order: 20, displayName: 'Venue' },
+        bar: { order: 21, displayName: 'Bar' }, // Alternative name for venue
+        address: { order: 22, displayName: 'Address' },
+        city: { order: 23, displayName: 'City' },
+        coordinates: { order: 24, displayName: 'Coordinates' },
+        googleMapsLink: { order: 25, displayName: 'Google Maps' },
+        gmaps: { order: 26, displayName: 'Maps Link' }, // Alternative name
+        
+        // Contact/Social fields
+        website: { order: 30, displayName: 'Website' },
+        instagram: { order: 31, displayName: 'Instagram' },
+        
+        // Event details
+        price: { order: 40, displayName: 'Price' },
+        type: { order: 41, displayName: 'Type' },
+        eventType: { order: 42, displayName: 'Event Type' },
+        
+        // Metadata fields
+        source: { order: 50, displayName: 'Source' },
+        key: { order: 51, displayName: 'Key' },
+        slug: { order: 52, displayName: 'Slug' },
+        debugcity: { order: 53, displayName: 'Debug City' },
+        debugsource: { order: 54, displayName: 'Debug Source' },
+        
+        // System fields
+        isBearEvent: { order: 60, displayName: 'Is Bear Event' },
+        image: { order: 61, displayName: 'Image' },
+        links: { order: 62, displayName: 'Links' }
+    };
+
+    // Helper method to get all field names
+    static getAllFieldNames() {
+        return Object.keys(SharedCore.EVENT_FIELDS);
+    }
+
+    // Helper method to get display fields (excluding system/debug fields)
+    static getDisplayFieldNames() {
+        return Object.entries(SharedCore.EVENT_FIELDS)
+            .filter(([key, config]) => !['isBearEvent', 'debugcity', 'debugsource', 'source', 'image'].includes(key))
+            .sort((a, b) => a[1].order - b[1].order)
+            .map(([key]) => key);
+    }
+
+    // Helper method to get field display name
+    static getFieldDisplayName(fieldName) {
+        return SharedCore.EVENT_FIELDS[fieldName]?.displayName || fieldName;
     }
 
     // Pure business logic for processing events
@@ -600,29 +674,19 @@ class SharedCore {
             }
         }
         
-        // Add fields in a consistent order (excluding description which we already handled)
-        const fieldOrder = ['bar', 'key', 'coordinates', 'debugcity', 'debugsource', 
-                          'instagram', 'facebook', 'website', 'googleMapsLink', 'price', 'type',
-                          'recurrence', 'timezone', 'shorttitle', 'shortname', 'shortername'];
+        // Add fields in a consistent order using centralized field definitions
+        const allFieldNames = SharedCore.getAllFieldNames();
+        const orderedFields = Object.entries(SharedCore.EVENT_FIELDS)
+            .filter(([key]) => fields[key] && key !== 'description' && key !== 'website' && key !== 'more info')
+            .sort((a, b) => a[1].order - b[1].order);
         
-        // First add ordered fields
-        fieldOrder.forEach(key => {
-            if (fields[key]) {
-                const displayKey = key === 'debugcity' ? 'DebugCity' : 
-                                 key === 'debugsource' ? 'DebugSource' :
-                                 key === 'debugtimezone' ? 'DebugTimezone' :
-                                 key === 'debugimage' ? 'DebugImage' :
-                                 key === 'shortname' ? 'Short Name' :
-                                 key === 'shortername' ? 'Shorter Name' :
-                                 key === 'shorttitle' ? 'ShortTitle' :
-                                 key.charAt(0).toUpperCase() + key.slice(1);
-                lines.push(`${displayKey}: ${fields[key]}`);
-            }
+        orderedFields.forEach(([key, config]) => {
+            lines.push(`${config.displayName}: ${fields[key]}`);
         });
         
-        // Then add any remaining fields (except description and url which are handled separately)
+        // Add any remaining fields not in our standard list
         Object.keys(fields).forEach(key => {
-            if (!fieldOrder.includes(key) && key !== 'website' && key !== 'description' && key !== 'more info') {
+            if (!allFieldNames.includes(key) && key !== 'website' && key !== 'description' && key !== 'more info') {
                 const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
                 lines.push(`${displayKey}: ${fields[key]}`);
             }
@@ -1081,6 +1145,18 @@ class SharedCore {
     async prepareEventsForCalendar(events, calendarAdapter, config = {}) {
         const preparedEvents = events.map(event => this.formatEventForCalendar(event));
         
+        // Add field metadata to each event for display purposes
+        preparedEvents.forEach(event => {
+            // Add field display names
+            event._fieldDisplayNames = {};
+            SharedCore.getAllFieldNames().forEach(fieldName => {
+                event._fieldDisplayNames[fieldName] = SharedCore.getFieldDisplayName(fieldName);
+            });
+            
+            // Add display fields list
+            event._displayFields = SharedCore.getDisplayFieldNames();
+        });
+        
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
         
@@ -1383,12 +1459,8 @@ class SharedCore {
         // Get merge strategies
         const mergeStrategies = event._fieldMergeStrategies || {};
         
-        // Define fields to potentially extract from notes
-        const extractableFields = [
-            'tea', 'instagram', 'website', 'bar', 'venue', 
-            'cover', 'price', 'facebook', 'googleMapsLink', 'shortName', 
-            'shorterName', 'type', 'eventType', 'recurring'
-        ];
+        // Define fields to potentially extract from notes - use all field names from centralized list
+        const extractableFields = SharedCore.getAllFieldNames();
         
         // Track what was merged and from where
         event._mergeInfo = {
@@ -1472,6 +1544,115 @@ class SharedCore {
         });
         
         return event;
+    }
+
+    buildCalendarEventNotes(event) {
+        const notes = [];
+        
+        // Check merge strategies to determine what to include
+        const mergeStrategies = event._fieldMergeStrategies || {};
+        const shouldIncludeField = (fieldName) => {
+            const strategy = mergeStrategies[fieldName] || 'preserve';
+            // Only include if not "preserve" or if it's a new event
+            return strategy !== 'preserve' || event._action === 'new';
+        };
+        
+        // Special field mappings for notes (some fields use different names in notes)
+        const noteFieldMappings = {
+            'venue': 'Bar',
+            'bar': 'Bar',
+            'description': 'Description',
+            'tea': 'Description',
+            'price': 'Price',
+            'cover': 'Price',
+            'eventType': 'Type',
+            'type': 'Type',
+            'shortName': 'Short Name',
+            'shorterName': 'Shorter Name',
+            'shortTitle': 'Short Name', // shortTitle maps to Short Name in notes
+            'instagram': 'Instagram',
+            'facebook': 'Facebook',
+            'website': 'Website',
+            'googleMapsLink': 'Google Maps',
+            'gmaps': 'Google Maps',
+            'recurrence': 'Recurrence',
+            'key': 'Key',
+            'city': 'DebugCity',
+            'source': 'DebugSource',
+            'timezone': 'DebugTimezone',
+            'image': 'DebugImage',
+            'coordinates': 'Coordinates'
+        };
+        
+        // Fields to skip in notes (handled separately or not needed)
+        const skipFields = ['startDate', 'endDate', 'isBearEvent', 'links', 'slug', 'recurring', 'address'];
+        
+        // Get all fields sorted by order
+        const orderedFields = Object.entries(SharedCore.EVENT_FIELDS)
+            .sort((a, b) => a[1].order - b[1].order)
+            .map(([key]) => key);
+        
+        // Process fields in order
+        const parsedFields = [];
+        const debugFields = [];
+        
+        orderedFields.forEach(fieldName => {
+            if (skipFields.includes(fieldName)) return;
+            if (!event[fieldName]) return;
+            
+            // Check if we should include this field based on merge strategy
+            if (!shouldIncludeField(fieldName)) return;
+            
+            // Get the note field name
+            const noteFieldName = noteFieldMappings[fieldName];
+            if (!noteFieldName) return; // Skip fields without mapping
+            
+            // Determine if this is a debug field
+            const isDebugField = noteFieldName.startsWith('Debug');
+            
+            // Add to appropriate list
+            const value = event[fieldName];
+            const noteEntry = `${noteFieldName}: ${value}`;
+            
+            if (isDebugField) {
+                debugFields.push(noteEntry);
+            } else {
+                parsedFields.push(noteEntry);
+            }
+        });
+        
+        // Handle special cases for alternative field names
+        // For fields that can have multiple names, ensure we don't duplicate
+        const hasBar = parsedFields.some(entry => entry.startsWith('Bar:'));
+        const hasDescription = parsedFields.some(entry => entry.startsWith('Description:'));
+        
+        // If no Bar entry yet and bar field exists, add it
+        if (!hasBar && event.bar && shouldIncludeField('bar')) {
+            parsedFields.unshift(`Bar: ${event.bar}`);
+        }
+        
+        // If no Description entry yet and tea field exists, add it
+        if (!hasDescription && event.tea && shouldIncludeField('tea')) {
+            parsedFields.push(`Description: ${event.tea}`);
+        }
+        
+        // Add parsed fields first
+        notes.push(...parsedFields);
+        
+        // Add blank line before debug section if we have any parsed properties
+        if (parsedFields.length > 0 && debugFields.length > 0) {
+            notes.push('');
+        }
+        
+        // Add debug fields
+        notes.push(...debugFields);
+        
+        // Add URL at the end (special handling)
+        if (notes.length > 0 && (event.website || event.url)) {
+            notes.push('', `More info: ${event.website || event.url}`);
+        }
+        
+        return notes.join('\n');
     }
 }
 
