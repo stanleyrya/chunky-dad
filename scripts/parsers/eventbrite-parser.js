@@ -282,14 +282,42 @@ class EventbriteParser {
             const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
             const image = eventData.logo?.url || eventData.image?.url || '';
             
-            // City extraction will be handled by shared core during enrichment
+            // Extract city from event title for venue-specific logic (like Megawoof)
             let city = null;
             
-            // Special handling for Megawoof America events without explicit city
-            if (!city && title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia)/i.test(title)) {
-                console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
-                city = 'la';
+            // Special handling for Megawoof America events - extract city from title
+            if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title)) {
+                // Check if title contains a specific city
+                if (/(atlanta)/i.test(title)) city = 'atlanta';
+                else if (/(denver)/i.test(title)) city = 'denver';
+                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
+                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
+                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
+                else if (/(chicago)/i.test(title)) city = 'chicago';
+                else if (/(miami)/i.test(title)) city = 'miami';
+                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
+                else if (/(seattle)/i.test(title)) city = 'seattle';
+                else if (/(portland)/i.test(title)) city = 'portland';
+                else if (/(austin)/i.test(title)) city = 'austin';
+                else if (/(dallas)/i.test(title)) city = 'dallas';
+                else if (/(houston)/i.test(title)) city = 'houston';
+                else if (/(phoenix)/i.test(title)) city = 'phoenix';
+                else if (/(boston)/i.test(title)) city = 'boston';
+                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
+                else {
+                    // Default to LA for Megawoof events without explicit city
+                    city = 'la';
+                    console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
+                }
+                
+                if (city) {
+                    console.log(`🎫 Eventbrite: Extracted city "${city}" from Megawoof title: "${title}"`);
+                }
             }
+            
+            // Additional venue-specific city extraction could go here for other event types
+            
+
             
             const event = {
                 title: title,
@@ -422,8 +450,38 @@ class EventbriteParser {
                 return null;
             }
             
-            // City extraction will be handled by shared core during enrichment
+            // Extract city from event title for venue-specific logic (like Megawoof)
             let city = null;
+            
+            // Special handling for Megawoof America events - extract city from title
+            if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title)) {
+                // Check if title contains a specific city
+                if (/(atlanta)/i.test(title)) city = 'atlanta';
+                else if (/(denver)/i.test(title)) city = 'denver';
+                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
+                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
+                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
+                else if (/(chicago)/i.test(title)) city = 'chicago';
+                else if (/(miami)/i.test(title)) city = 'miami';
+                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
+                else if (/(seattle)/i.test(title)) city = 'seattle';
+                else if (/(portland)/i.test(title)) city = 'portland';
+                else if (/(austin)/i.test(title)) city = 'austin';
+                else if (/(dallas)/i.test(title)) city = 'dallas';
+                else if (/(houston)/i.test(title)) city = 'houston';
+                else if (/(phoenix)/i.test(title)) city = 'phoenix';
+                else if (/(boston)/i.test(title)) city = 'boston';
+                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
+                else {
+                    // Default to LA for Megawoof events without explicit city
+                    city = 'la';
+                    console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
+                }
+                
+                if (city) {
+                    console.log(`🎫 Eventbrite: Extracted city "${city}" from Megawoof title: "${title}"`);
+                }
+            }
             
             return {
                 title: title,

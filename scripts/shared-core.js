@@ -775,7 +775,7 @@ class SharedCore {
     enrichEventLocation(event) {
         if (!event) return event;
         
-        // Extract city if not already present
+        // Extract city if not already present (parser may have set it for venue-specific logic)
         if (!event.city) {
             event.city = this.extractCityFromEvent(event);
         }
@@ -923,12 +923,7 @@ class SharedCore {
             return cityFromText;
         }
         
-        // Special handling for Megawoof America events without explicit city
-        const title = eventData.title || eventData.name || '';
-        if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title) && 
-            !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia)/i.test(title)) {
-            return 'la'; // Default to LA for Megawoof events
-        }
+
         
         return null;
     }
