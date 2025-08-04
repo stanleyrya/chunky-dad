@@ -195,7 +195,8 @@ class BearraccudaParser {
                 venue: venue,
                 address: '', // Assuming address is not directly available in this regex
                 city: city || 'default',
-                website: eventUrl,
+                url: eventUrl,
+                website: eventUrl, // Add website property for consistency
                 price: '',
                 image: '',
                 source: this.config.source,

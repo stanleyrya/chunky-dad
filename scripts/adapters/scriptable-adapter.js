@@ -1627,10 +1627,10 @@ class ScriptableAdapter {
                         <span><a href="${this.escapeHtml(event.website)}" style="color: #007aff;">Website</a></span>
                     </div>
                 ` : ''}
-                ${event.googleMapsLink ? `
+                ${event.gmaps || event.googleMapsLink ? `
                     <div class="event-detail">
                         <span>🗺️</span>
-                        <span><a href="${this.escapeHtml(event.googleMapsLink)}" style="color: #007aff;">Google Maps</a></span>
+                        <span><a href="${this.escapeHtml(event.gmaps || event.googleMapsLink)}" style="color: #007aff;">Google Maps</a></span>
                     </div>
                 ` : ''}
                 ${event.price ? `
@@ -2185,7 +2185,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateComparisonRows(event) {
         if (!event._original) return '';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'googleMapsLink', 'price', 'startDate', 'endDate'];
+        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
         const rows = [];
         
         fieldsToCompare.forEach(field => {
@@ -2270,7 +2270,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateLineDiffView(event) {
         if (!event._original) return '<p>No comparison data available</p>';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'googleMapsLink', 'price', 'startDate', 'endDate'];
+        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
         let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
         
         fieldsToCompare.forEach(field => {
