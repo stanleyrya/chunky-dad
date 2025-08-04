@@ -763,6 +763,39 @@ class SharedCore {
     // CITY UTILITIES - Shared location detection and mapping
     // ============================================================================
     
+    // Check if an address is a full address (not just a city or region)
+    isFullAddress(address) {
+        if (!address || typeof address !== 'string') return false;
+        
+        // Clean up the address
+        const cleanAddress = address.trim();
+        if (cleanAddress.length < 10) return false; // Too short to be a full address
+        
+        // Check for common full address patterns
+        const fullAddressPatterns = [
+            /\d+\s+\w+.*street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i,
+            /\d+\s+\w+.*\s+\w+/i, // Number + words (likely street address)
+            /\w+.*,\s*\w+.*,\s*\w+/i // Multiple comma-separated components
+        ];
+        
+        // Must contain at least one full address pattern
+        const hasAddressPattern = fullAddressPatterns.some(pattern => pattern.test(cleanAddress));
+        if (!hasAddressPattern) return false;
+        
+        // Check if it's just a city name (common city patterns to exclude)
+        const cityOnlyPatterns = [
+            /^(new york|nyc|los angeles|san francisco|chicago|atlanta|miami|seattle|portland|denver|las vegas|vegas|boston|philadelphia|austin|dallas|houston|phoenix|toronto|london|berlin|palm springs)$/i,
+            /^[a-z\s]{3,25}$/i // Simple city name pattern (3-25 characters, letters and spaces only)
+        ];
+        
+        // If it matches a city-only pattern and has no numbers/street indicators, it's not a full address
+        const isCityOnly = cityOnlyPatterns.some(pattern => pattern.test(cleanAddress)) && 
+                          !/\d/.test(cleanAddress) && 
+                          !/street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i.test(cleanAddress);
+        
+        return !isCityOnly;
+    }
+    
     // Extract city from address string
     extractCityFromAddress(address) {
         if (!address || typeof address !== 'string') return null;

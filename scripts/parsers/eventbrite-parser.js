@@ -270,8 +270,9 @@ class EventbriteParser {
                     console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
                     console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
-                    // Extract coordinates if available
-                    if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
+                    // Extract coordinates if available and address is a full address
+                    if (eventData.venue.address.latitude && eventData.venue.address.longitude && 
+                        address && sharedCore.isFullAddress(address)) {
                         coordinates = {
                             lat: eventData.venue.address.latitude,
                             lng: eventData.venue.address.longitude
@@ -279,8 +280,8 @@ class EventbriteParser {
                         
                         // Create Google Maps link
                         googleMapsLink = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
-                    } else if (address) {
-                        // Create Google Maps link from address
+                    } else if (address && sharedCore.isFullAddress(address)) {
+                        // Create Google Maps link from address only if it's a full address
                         googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
                     }
                 }
@@ -290,10 +291,12 @@ class EventbriteParser {
             if (!address && htmlContext) {
                 console.log(`🎫 Eventbrite: No address in JSON data, trying HTML extraction for "${title}"`);
                 address = this.extractAddressFromHtml(htmlContext, venue);
-                if (address) {
+                if (address && sharedCore.isFullAddress(address)) {
                     console.log(`🎫 Eventbrite: Found address via HTML extraction: "${address}"`);
-                    // Create Google Maps link from extracted address
+                    // Create Google Maps link from extracted address only if it's a full address
                     googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+                } else if (address) {
+                    console.log(`🎫 Eventbrite: Address "${address}" appears to be just a city/region, skipping GPS coordinates and Google Maps link`);
                 }
             }
             
