@@ -165,8 +165,12 @@ class SharedCore {
                     const filteredEvents = parseResult.events.map(event => 
                         this.applyFieldMergeStrategies(event, parserConfig)
                     );
-                    allEvents.push(...filteredEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${filteredEvents.length} events from ${url}`);
+                    
+                    // Enrich events with location data (Google Maps links, city extraction)
+                    const enrichedEvents = filteredEvents.map(event => this.enrichEventLocation(event));
+                    
+                    allEvents.push(...enrichedEvents);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
@@ -262,7 +266,11 @@ class SharedCore {
                                 matchingEvent[key] = detailEvent[key];
                             }
                         });
-                        await displayAdapter.logInfo(`SYSTEM: Enriched event "${matchingEvent.title}" with detail page data`);
+                        
+                        // Re-enrich location data since we may have new address/venue info
+                        this.enrichEventLocation(matchingEvent);
+                        
+                        await displayAdapter.logInfo(`SYSTEM: Enriched event "${matchingEvent.title}" with detail page data and location info`);
                     } else {
                         await displayAdapter.logWarn(`SYSTEM: Could not match detail page ${url} to existing event`);
                     }
@@ -760,6 +768,36 @@ class SharedCore {
     }
     
     // ============================================================================
+    // EVENT ENRICHMENT - Add Google Maps links, validate addresses, extract cities
+    // ============================================================================
+    
+    // Enrich event with Google Maps links and city information
+    enrichEventLocation(event) {
+        if (!event) return event;
+        
+        // Extract city if not already present
+        if (!event.city) {
+            event.city = this.extractCityFromEvent(event);
+        }
+        
+        // Add Google Maps link only for full addresses
+        if (event.address && this.isFullAddress(event.address)) {
+            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                // Use coordinates if available
+                event.googleMapsLink = `https://maps.google.com/?q=${event.coordinates.lat},${event.coordinates.lng}`;
+            } else {
+                // Use address
+                event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+            }
+            event.gmaps = event.googleMapsLink; // Add alias for consistency
+        }
+        
+        return event;
+    }
+    
+
+    
+    // ============================================================================
     // CITY UTILITIES - Shared location detection and mapping
     // ============================================================================
     
@@ -870,9 +908,29 @@ class SharedCore {
             }
         }
         
-        // Try extracting from text
-        const searchText = `${eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
-        return this.extractCityFromText(searchText);
+        // Try address field
+        if (eventData.address) {
+            const cityFromAddress = this.extractCityFromAddress(eventData.address);
+            if (cityFromAddress) {
+                return cityFromAddress;
+            }
+        }
+        
+        // Try extracting from text content
+        const searchText = `${eventData.title || eventData.name || ''} ${eventData.description || ''} ${eventData.venue || ''} ${url || ''}`;
+        const cityFromText = this.extractCityFromText(searchText);
+        if (cityFromText) {
+            return cityFromText;
+        }
+        
+        // Special handling for Megawoof America events without explicit city
+        const title = eventData.title || eventData.name || '';
+        if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title) && 
+            !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia)/i.test(title)) {
+            return 'la'; // Default to LA for Megawoof events
+        }
+        
+        return null;
     }
     
     // Normalize city name to lowercase, handle common variations

@@ -1731,61 +1731,25 @@ class ScriptableAdapter {
                 rawOutput += rawData + '\\n\\n';
             });
             
-            // Copy to clipboard
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(rawOutput).then(() => {
-                    // Show success feedback
-                    const button = event.target;
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '✅ Copied!';
-                    button.style.background = '#34c759';
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                        button.style.background = '#007aff';
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                    fallbackCopy(rawOutput);
-                });
-            } else {
-                fallbackCopy(rawOutput);
-            }
+            // Copy to clipboard (modern iOS WebView supports this)
+            navigator.clipboard.writeText(rawOutput).then(() => {
+                // Show success feedback
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.background = '#34c759';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '#007aff';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Copy failed. Please try again.');
+            });
         }
         
-        function fallbackCopy(text) {
-            // Fallback for older browsers or non-secure contexts
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    const button = event.target;
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '✅ Copied!';
-                    button.style.background = '#34c759';
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                        button.style.background = '#007aff';
-                    }, 2000);
-                } else {
-                    alert('Copy failed. Please manually select and copy the content.');
-                }
-            } catch (err) {
-                console.error('Fallback copy failed: ', err);
-                alert('Copy not supported. Please manually select and copy the content.');
-            } finally {
-                document.body.removeChild(textArea);
-            }
-        }
+
         
         function filterEvents() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
@@ -1912,59 +1876,24 @@ class ScriptableAdapter {
             
             const jsonString = JSON.stringify(exportData, null, 2);
             
-            // Copy to clipboard
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(jsonString).then(() => {
-                    const button = event.target;
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '✅ JSON Copied!';
-                    button.style.background = '#28a745';
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                        button.style.background = '#34c759';
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy JSON: ', err);
-                    fallbackCopyJSON(jsonString);
-                });
-            } else {
-                fallbackCopyJSON(jsonString);
-            }
+            // Copy to clipboard (modern iOS WebView supports this)
+            navigator.clipboard.writeText(jsonString).then(() => {
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ JSON Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '#34c759';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy JSON: ', err);
+                alert('JSON copy failed. Please try again.');
+            });
         }
         
-        function fallbackCopyJSON(jsonString) {
-            const textArea = document.createElement('textarea');
-            textArea.value = jsonString;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    const button = event.target;
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '✅ JSON Copied!';
-                    button.style.background = '#28a745';
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                        button.style.background = '#34c759';
-                    }, 2000);
-                } else {
-                    alert('JSON export failed. Please manually select and copy the content.');
-                }
-            } catch (err) {
-                console.error('Fallback JSON copy failed: ', err);
-                alert('JSON export not supported. Please manually select and copy the content.');
-            } finally {
-                document.body.removeChild(textArea);
-            }
-        }
+
     </script>
 </body>
 </html>

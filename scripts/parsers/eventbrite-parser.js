@@ -33,15 +33,6 @@ class EventbriteParser {
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
             'furball', 'leather bears', 'bear night', 'bear party'
         ];
-        
-        // Shared city utilities will be injected by shared-core
-        this.sharedCore = null;
-    }
-    
-    // Initialize with shared-core instance for city utilities
-    initialize(sharedCore) {
-        this.sharedCore = sharedCore;
-    }
 
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}) {
@@ -261,7 +252,6 @@ class EventbriteParser {
             let venue = null;
             let address = null;
             let coordinates = null;
-            let googleMapsLink = null;
             
             if (eventData.venue) {
                 venue = eventData.venue.name || null;
@@ -270,19 +260,12 @@ class EventbriteParser {
                     console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
                     console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
-                    // Extract coordinates if available and address is a full address
-                    if (eventData.venue.address.latitude && eventData.venue.address.longitude && 
-                        address && sharedCore.isFullAddress(address)) {
+                    // Extract coordinates if available (shared core will validate address later)
+                    if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
                         coordinates = {
                             lat: eventData.venue.address.latitude,
                             lng: eventData.venue.address.longitude
                         };
-                        
-                        // Create Google Maps link
-                        googleMapsLink = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
-                    } else if (address && sharedCore.isFullAddress(address)) {
-                        // Create Google Maps link from address only if it's a full address
-                        googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
                     }
                 }
             }
@@ -291,41 +274,16 @@ class EventbriteParser {
             if (!address && htmlContext) {
                 console.log(`🎫 Eventbrite: No address in JSON data, trying HTML extraction for "${title}"`);
                 address = this.extractAddressFromHtml(htmlContext, venue);
-                if (address && sharedCore.isFullAddress(address)) {
+                if (address) {
                     console.log(`🎫 Eventbrite: Found address via HTML extraction: "${address}"`);
-                    // Create Google Maps link from extracted address only if it's a full address
-                    googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
-                } else if (address) {
-                    console.log(`🎫 Eventbrite: Address "${address}" appears to be just a city/region, skipping GPS coordinates and Google Maps link`);
                 }
             }
             
             const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
             const image = eventData.logo?.url || eventData.image?.url || '';
             
-            // Enhanced city extraction using shared city utilities
+            // City extraction will be handled by shared core during enrichment
             let city = null;
-            
-            if (this.sharedCore) {
-                // Use shared city utilities for consistent extraction
-                city = this.sharedCore.extractCityFromEvent(eventData, url);
-                
-                if (address && !city) {
-                    city = this.sharedCore.extractCityFromAddress(address);
-                }
-                
-                if (!city) {
-                    const searchText = `${title} ${venue || ''}`;
-                    city = this.sharedCore.extractCityFromText(searchText);
-                }
-                
-                if (!city && url) {
-                    city = this.sharedCore.extractCityFromText(url);
-                }
-            } else {
-                // Fallback to simple text extraction if shared-core not available
-                city = this.extractCityFromText(`${title} ${venue || ''} ${url || ''}`);
-            }
             
             // Special handling for Megawoof America events without explicit city
             if (!city && title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia)/i.test(title)) {
@@ -342,8 +300,6 @@ class EventbriteParser {
                 location: venue, // For backward compatibility
                 address: address,
                 coordinates: coordinates,
-                googleMapsLink: googleMapsLink,
-                gmaps: googleMapsLink, // Add gmaps alias for consistency
                 city: city,
                 url: url,
                 website: url, // Add website property for calendar integrations
@@ -466,13 +422,8 @@ class EventbriteParser {
                 return null;
             }
             
-            // Extract city using shared utilities
+            // City extraction will be handled by shared core during enrichment
             let city = null;
-            if (this.sharedCore) {
-                city = this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + url);
-            } else {
-                city = this.extractCityFromText(title + ' ' + venue + ' ' + url);
-            }
             
             return {
                 title: title,
@@ -637,26 +588,7 @@ class EventbriteParser {
         return this.extractCityFromText(searchText);
     }
 
-    // Extract city from text content
-    extractCityFromText(text) {
-        if (!this.sharedCore) {
-            console.warn('🎫 Eventbrite: SharedCore not initialized, using basic city extraction.');
-            // Very basic fallback - just look for common city names
-            const lowerText = text.toLowerCase();
-            if (lowerText.includes('new york') || lowerText.includes('nyc')) return 'nyc';
-            if (lowerText.includes('los angeles') || lowerText.includes('hollywood')) return 'la';
-            if (lowerText.includes('san francisco') || lowerText.includes(' sf ')) return 'sf';
-            if (lowerText.includes('chicago')) return 'chicago';
-            if (lowerText.includes('atlanta')) return 'atlanta';
-            if (lowerText.includes('miami')) return 'miami';
-            if (lowerText.includes('seattle')) return 'seattle';
-            if (lowerText.includes('denver')) return 'denver';
-            if (lowerText.includes('las vegas') || lowerText.includes('vegas')) return 'vegas';
-            return null;
-        }
 
-        return this.sharedCore.extractCityFromText(text);
-    }
 
     // Normalize city names
     normalizeCityName(cityName) {
