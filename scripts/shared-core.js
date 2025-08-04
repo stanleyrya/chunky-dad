@@ -1152,7 +1152,7 @@ class SharedCore {
             }
             if (analysis.conflictType === 'time_conflict') {
                 // Find the time conflicts for this event
-                const timeConflicts = existingEvents.filter(existing =>
+                const timeConflicts = existingEventsData.filter(existing =>
                     this.eventsOverlap(event, existing) && 
                     existing.key !== analyzedEvent._existingKey
                 );
