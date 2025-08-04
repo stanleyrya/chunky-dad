@@ -354,9 +354,8 @@ class EventbriteParser {
                 })
             };
             
-            // Apply all metadata fields from config
+            // Apply metadata overrides from parser config
             if (parserConfig.metadata) {
-                // Pass through all metadata fields to the event
                 Object.keys(parserConfig.metadata).forEach(key => {
                     const metaValue = parserConfig.metadata[key];
                     
@@ -364,6 +363,11 @@ class EventbriteParser {
                     if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
                         // Only set value if it's defined (allows preserve without value)
                         if ('value' in metaValue && metaValue.value !== undefined) {
+                            // Special handling for title field - preserve original for merge comparison
+                            if (key === 'title' && event[key] && event[key] !== metaValue.value) {
+                                event.originalTitle = event[key];
+                                console.log(`🎫 Eventbrite: Preserving original title: "${event.originalTitle}" → "${metaValue.value}"`);
+                            }
                             event[key] = metaValue.value;
                         }
                         
