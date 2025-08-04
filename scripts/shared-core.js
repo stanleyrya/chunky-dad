@@ -169,11 +169,8 @@ class SharedCore {
                     // Enrich events with location data (Google Maps links, city extraction)
                     const enrichedEvents = filteredEvents.map(event => this.enrichEventLocation(event));
                     
-                    // Normalize field names to preferred properties
-                    const normalizedEvents = enrichedEvents.map(event => this.normalizeEventFields(event));
-                    
-                    allEvents.push(...normalizedEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${normalizedEvents.length} enriched events from ${url}`);
+                    allEvents.push(...enrichedEvents);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
@@ -1383,34 +1380,11 @@ class SharedCore {
         return null;
     }
     
-    // Extract key from event notes (pure string processing)
+    // Helper function to extract key from notes
     extractKeyFromNotes(notes) {
         if (!notes) return null;
         const keyMatch = notes.match(/Key:\s*([^\n]+)/);
         return keyMatch ? keyMatch[1].trim() : null;
-    }
-    
-    // Normalize event fields to use preferred property names
-    normalizeEventFields(event) {
-        // Prefer url over website
-        if (event.website && !event.url) {
-            event.url = event.website;
-            delete event.website;
-        } else if (event.website && event.url) {
-            // If both exist, remove website
-            delete event.website;
-        }
-        
-        // Prefer googleMapsLink over gmaps
-        if (event.gmaps && !event.googleMapsLink) {
-            event.googleMapsLink = event.gmaps;
-            delete event.gmaps;
-        } else if (event.gmaps && event.googleMapsLink) {
-            // If both exist, remove gmaps
-            delete event.gmaps;
-        }
-        
-        return event;
     }
     
     // Check if two dates are equal within a tolerance (pure logic)
