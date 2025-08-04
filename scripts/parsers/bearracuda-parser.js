@@ -33,15 +33,6 @@ class BearraccudaParser {
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
             'furball', 'leather bears', 'bear night', 'bear party'
         ];
-        
-        // Shared city utilities will be injected by shared-core
-        this.sharedCore = null;
-    }
-    
-    // Initialize with shared-core instance for city utilities
-    initialize(sharedCore) {
-        this.sharedCore = sharedCore;
-    }
 
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}) {
@@ -177,9 +168,8 @@ class BearraccudaParser {
             const eventUrl = urlMatch ? this.normalizeUrl(urlMatch[1], sourceUrl) : sourceUrl;
             
             // Extract city from text
-            const city = this.sharedCore ? 
-                this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl) :
-                this.extractCityFromText(title + ' ' + venue + ' ' + description + ' ' + eventUrl);
+                        // City extraction will be handled by shared core during enrichment
+            const city = null;
             
             // Combine description with performer info
             let fullDescription = description;
@@ -287,14 +277,7 @@ class BearraccudaParser {
         }
     }
 
-    // Extract city from text content
-    extractCityFromText(text) {
-        if (!this.sharedCore) {
-            console.warn('🐻 Bearraccuda: Shared core utilities not initialized. Cannot extract city.');
-            return null;
-        }
-        return this.sharedCore.extractCityFromText(text);
-    }
+
 
     // Parse date string into ISO format
     parseDate(dateString) {

@@ -165,8 +165,12 @@ class SharedCore {
                     const filteredEvents = parseResult.events.map(event => 
                         this.applyFieldMergeStrategies(event, parserConfig)
                     );
-                    allEvents.push(...filteredEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${filteredEvents.length} events from ${url}`);
+                    
+                    // Enrich events with location data (Google Maps links, city extraction)
+                    const enrichedEvents = filteredEvents.map(event => this.enrichEventLocation(event));
+                    
+                    allEvents.push(...enrichedEvents);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
@@ -262,7 +266,11 @@ class SharedCore {
                                 matchingEvent[key] = detailEvent[key];
                             }
                         });
-                        await displayAdapter.logInfo(`SYSTEM: Enriched event "${matchingEvent.title}" with detail page data`);
+                        
+                        // Re-enrich location data since we may have new address/venue info
+                        this.enrichEventLocation(matchingEvent);
+                        
+                        await displayAdapter.logInfo(`SYSTEM: Enriched event "${matchingEvent.title}" with detail page data and location info`);
                     } else {
                         await displayAdapter.logWarn(`SYSTEM: Could not match detail page ${url} to existing event`);
                     }
@@ -760,8 +768,71 @@ class SharedCore {
     }
     
     // ============================================================================
+    // EVENT ENRICHMENT - Add Google Maps links, validate addresses, extract cities
+    // ============================================================================
+    
+    // Enrich event with Google Maps links and city information
+    enrichEventLocation(event) {
+        if (!event) return event;
+        
+        // Extract city if not already present (parser may have set it for venue-specific logic)
+        if (!event.city) {
+            event.city = this.extractCityFromEvent(event);
+        }
+        
+        // Add Google Maps link only for full addresses
+        if (event.address && this.isFullAddress(event.address)) {
+            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                // Use coordinates if available
+                event.googleMapsLink = `https://maps.google.com/?q=${event.coordinates.lat},${event.coordinates.lng}`;
+            } else {
+                // Use address
+                event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+            }
+            event.gmaps = event.googleMapsLink; // Add alias for consistency
+        }
+        
+        return event;
+    }
+    
+
+    
+    // ============================================================================
     // CITY UTILITIES - Shared location detection and mapping
     // ============================================================================
+    
+    // Check if an address is a full address (not just a city or region)
+    isFullAddress(address) {
+        if (!address || typeof address !== 'string') return false;
+        
+        // Clean up the address
+        const cleanAddress = address.trim();
+        if (cleanAddress.length < 10) return false; // Too short to be a full address
+        
+        // Check for common full address patterns
+        const fullAddressPatterns = [
+            /\d+\s+\w+.*street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i,
+            /\d+\s+\w+.*\s+\w+/i, // Number + words (likely street address)
+            /\w+.*,\s*\w+.*,\s*\w+/i // Multiple comma-separated components
+        ];
+        
+        // Must contain at least one full address pattern
+        const hasAddressPattern = fullAddressPatterns.some(pattern => pattern.test(cleanAddress));
+        if (!hasAddressPattern) return false;
+        
+        // Check if it's just a city name (common city patterns to exclude)
+        const cityOnlyPatterns = [
+            /^(new york|nyc|los angeles|san francisco|chicago|atlanta|miami|seattle|portland|denver|las vegas|vegas|boston|philadelphia|austin|dallas|houston|phoenix|toronto|london|berlin|palm springs)$/i,
+            /^[a-z\s]{3,25}$/i // Simple city name pattern (3-25 characters, letters and spaces only)
+        ];
+        
+        // If it matches a city-only pattern and has no numbers/street indicators, it's not a full address
+        const isCityOnly = cityOnlyPatterns.some(pattern => pattern.test(cleanAddress)) && 
+                          !/\d/.test(cleanAddress) && 
+                          !/street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i.test(cleanAddress);
+        
+        return !isCityOnly;
+    }
     
     // Extract city from address string
     extractCityFromAddress(address) {
@@ -837,9 +908,24 @@ class SharedCore {
             }
         }
         
-        // Try extracting from text
-        const searchText = `${eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
-        return this.extractCityFromText(searchText);
+        // Try address field
+        if (eventData.address) {
+            const cityFromAddress = this.extractCityFromAddress(eventData.address);
+            if (cityFromAddress) {
+                return cityFromAddress;
+            }
+        }
+        
+        // Try extracting from text content
+        const searchText = `${eventData.title || eventData.name || ''} ${eventData.description || ''} ${eventData.venue || ''} ${url || ''}`;
+        const cityFromText = this.extractCityFromText(searchText);
+        if (cityFromText) {
+            return cityFromText;
+        }
+        
+
+        
+        return null;
     }
     
     // Normalize city name to lowercase, handle common variations

@@ -1299,6 +1299,99 @@ class ScriptableAdapter {
             margin-bottom: 10px;
         }
         
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .header .stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .stat {
+                text-align: center;
+            }
+            
+            .controls-section {
+                flex-direction: column !important;
+                gap: 15px !important;
+                align-items: stretch !important;
+            }
+            
+            .search-container {
+                max-width: none !important;
+                order: 2;
+            }
+            
+            .display-toggle {
+                justify-content: center;
+                order: 1;
+            }
+            
+            .action-buttons {
+                justify-content: center;
+                order: 3;
+            }
+            
+            .action-buttons button {
+                flex: 1;
+                max-width: 150px;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+            
+            .event-card {
+                margin-bottom: 15px;
+            }
+            
+            .event-title {
+                font-size: 16px;
+            }
+            
+            .event-detail {
+                font-size: 13px;
+                padding: 6px 0;
+            }
+            
+            .raw-display {
+                font-size: 11px;
+                max-height: 200px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header .stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            
+            .stat:last-child {
+                grid-column: 1 / -1;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-buttons button {
+                max-width: none;
+            }
+        }
+        
         details pre {
             margin: 0;
             font-family: 'SF Mono', Monaco, 'Courier New', monospace;
@@ -1429,14 +1522,87 @@ class ScriptableAdapter {
         </div>
     </div>
     
-    <div class="display-toggle">
-        <span style="font-weight: 500;">Display Mode:</span>
-        <span>Pretty</span>
-        <label class="toggle-switch">
-            <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
-            <span class="slider"></span>
-        </label>
-        <span>Raw</span>
+    <div class="controls-section" style="
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: center;
+        justify-content: space-between;
+    ">
+        <div class="display-toggle">
+            <span style="font-weight: 500;">Display Mode:</span>
+            <span>Pretty</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
+                <span class="slider"></span>
+            </label>
+            <span>Raw</span>
+        </div>
+        
+        <div class="search-container" style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+            max-width: 400px;
+        ">
+            <span style="font-weight: 500;">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search events..." onkeyup="filterEvents()" style="
+                flex-grow: 1;
+                padding: 8px 12px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                font-size: 14px;
+                outline: none;
+                transition: border-color 0.2s ease;
+            " onfocus="this.style.borderColor='#007aff'" onblur="this.style.borderColor='#e0e0e0'">
+            <button onclick="clearSearch()" style="
+                padding: 6px 10px;
+                background: #f0f0f0;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: background 0.2s ease;
+            " onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background='#f0f0f0'">
+                Clear
+            </button>
+        </div>
+        
+        <div class="action-buttons" style="display: flex; gap: 10px;">
+            <button onclick="copyRawOutput()" style="
+                padding: 8px 16px;
+                background: #007aff;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.background='#0056b3'" onmouseout="this.style.background='#007aff'">
+                📋 Copy Raw Output
+            </button>
+            
+            <button onclick="exportAsJSON()" style="
+                padding: 8px 16px;
+                background: #34c759;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.background='#28a745'" onmouseout="this.style.background='#34c759'">
+                📄 Export JSON
+            </button>
+        </div>
     </div>
     
     ${newEvents.length > 0 ? `
@@ -1535,6 +1701,199 @@ class ScriptableAdapter {
                 button.textContent = 'Switch to Table View';
             }
         }
+        
+        function copyRawOutput() {
+            // Get all event cards
+            const eventCards = document.querySelectorAll('.event-card');
+            let rawOutput = '';
+            
+            // Add header
+            rawOutput += '🐻 BEAR EVENT SCRAPER - RAW OUTPUT\\n';
+            rawOutput += '=' + '='.repeat(50) + '\\n\\n';
+            
+            // Add summary stats
+            const totalEvents = document.querySelector('.stat-value').textContent;
+            const bearEvents = document.querySelectorAll('.stat-value')[1].textContent;
+            const calendarActions = document.querySelectorAll('.stat-value')[2].textContent;
+            
+            rawOutput += \`📊 SUMMARY:\\n\`;
+            rawOutput += \`Total Events: \${totalEvents}\\n\`;
+            rawOutput += \`Bear Events: \${bearEvents}\\n\`;
+            rawOutput += \`Calendar Actions: \${calendarActions}\\n\\n\`;
+            
+            // Process each event
+            eventCards.forEach((card, index) => {
+                const title = card.querySelector('.event-title')?.textContent || 'Untitled Event';
+                const rawData = card.querySelector('.raw-display')?.textContent || 'No raw data available';
+                
+                rawOutput += \`EVENT \${index + 1}: \${title}\\n\`;
+                rawOutput += '-'.repeat(60) + '\\n';
+                rawOutput += rawData + '\\n\\n';
+            });
+            
+            // Copy to clipboard (modern iOS WebView supports this)
+            navigator.clipboard.writeText(rawOutput).then(() => {
+                // Show success feedback
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.background = '#34c759';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '#007aff';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Copy failed. Please try again.');
+            });
+        }
+        
+
+        
+        function filterEvents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const eventCards = document.querySelectorAll('.event-card');
+            const sections = document.querySelectorAll('.section');
+            let visibleCount = 0;
+            
+            eventCards.forEach(card => {
+                const title = card.querySelector('.event-title')?.textContent.toLowerCase() || '';
+                const venue = card.querySelector('.event-detail span')?.textContent.toLowerCase() || '';
+                const content = card.textContent.toLowerCase();
+                
+                const isVisible = searchTerm === '' || 
+                                title.includes(searchTerm) || 
+                                venue.includes(searchTerm) || 
+                                content.includes(searchTerm);
+                
+                if (isVisible) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Update section visibility and counts
+            sections.forEach(section => {
+                const visibleCards = section.querySelectorAll('.event-card[style*="block"], .event-card:not([style*="none"])').length;
+                const sectionCount = section.querySelector('.section-count');
+                
+                if (visibleCards > 0) {
+                    section.style.display = 'block';
+                    if (sectionCount) {
+                        sectionCount.textContent = visibleCards;
+                    }
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+            
+            // Show/hide "no results" message
+            let noResultsMsg = document.getElementById('noResultsMessage');
+            if (visibleCount === 0 && searchTerm !== '') {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('div');
+                    noResultsMsg.id = 'noResultsMessage';
+                    noResultsMsg.innerHTML = `
+                        <div style="
+                            background: white;
+                            border-radius: 15px;
+                            padding: 40px;
+                            margin-bottom: 20px;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+                            text-align: center;
+                            color: #666;
+                        ">
+                            <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+                            <h3 style="margin: 0 0 10px 0; color: #333;">No events found</h3>
+                            <p style="margin: 0; font-size: 14px;">Try adjusting your search terms or clearing the search.</p>
+                        </div>
+                    `;
+                    document.body.appendChild(noResultsMsg);
+                }
+                noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
+            }
+        }
+        
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filterEvents();
+        }
+        
+        function exportAsJSON() {
+            const eventCards = document.querySelectorAll('.event-card');
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                summary: {
+                    totalEvents: document.querySelector('.stat-value').textContent,
+                    bearEvents: document.querySelectorAll('.stat-value')[1].textContent,
+                    calendarActions: document.querySelectorAll('.stat-value')[2].textContent
+                },
+                events: []
+            };
+            
+            eventCards.forEach(card => {
+                const title = card.querySelector('.event-title')?.textContent || 'Untitled Event';
+                const rawData = card.querySelector('.raw-display')?.textContent || '';
+                const action = card.querySelector('.action-badge')?.textContent || 'UNKNOWN';
+                
+                // Try to parse raw data for structured information
+                let eventData = { title, action, rawData };
+                
+                // Extract key information from the card
+                const eventDetails = card.querySelectorAll('.event-detail');
+                eventDetails.forEach(detail => {
+                    const spans = detail.querySelectorAll('span');
+                    if (spans.length >= 2) {
+                        const key = spans[0].textContent.trim();
+                        const value = spans[1].textContent.trim();
+                        
+                        // Map emoji keys to readable names
+                        const keyMapping = {
+                            '📍': 'venue',
+                            '📅': 'date',
+                            '🕐': 'time',
+                            '📱': 'calendar',
+                            '☕': 'tea',
+                            '📸': 'instagram',
+                            '👥': 'facebook',
+                            '🌐': 'website',
+                            '🗺️': 'googleMaps',
+                            '💵': 'price'
+                        };
+                        
+                        const mappedKey = keyMapping[key] || key;
+                        eventData[mappedKey] = value;
+                    }
+                });
+                
+                exportData.events.push(eventData);
+            });
+            
+            const jsonString = JSON.stringify(exportData, null, 2);
+            
+            // Copy to clipboard (modern iOS WebView supports this)
+            navigator.clipboard.writeText(jsonString).then(() => {
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ JSON Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '#34c759';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy JSON: ', err);
+                alert('JSON copy failed. Please try again.');
+            });
+        }
+        
+
     </script>
 </body>
 </html>

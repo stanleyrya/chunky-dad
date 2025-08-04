@@ -33,15 +33,6 @@ class EventbriteParser {
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
             'furball', 'leather bears', 'bear night', 'bear party'
         ];
-        
-        // Shared city utilities will be injected by shared-core
-        this.sharedCore = null;
-    }
-    
-    // Initialize with shared-core instance for city utilities
-    initialize(sharedCore) {
-        this.sharedCore = sharedCore;
-    }
 
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}) {
@@ -261,7 +252,6 @@ class EventbriteParser {
             let venue = null;
             let address = null;
             let coordinates = null;
-            let googleMapsLink = null;
             
             if (eventData.venue) {
                 venue = eventData.venue.name || null;
@@ -270,18 +260,12 @@ class EventbriteParser {
                     console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
                     console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
-                    // Extract coordinates if available
+                    // Extract coordinates if available (shared core will validate address later)
                     if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
                         coordinates = {
                             lat: eventData.venue.address.latitude,
                             lng: eventData.venue.address.longitude
                         };
-                        
-                        // Create Google Maps link
-                        googleMapsLink = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
-                    } else if (address) {
-                        // Create Google Maps link from address
-                        googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
                     }
                 }
             }
@@ -292,43 +276,48 @@ class EventbriteParser {
                 address = this.extractAddressFromHtml(htmlContext, venue);
                 if (address) {
                     console.log(`🎫 Eventbrite: Found address via HTML extraction: "${address}"`);
-                    // Create Google Maps link from extracted address
-                    googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
                 }
             }
             
             const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
             const image = eventData.logo?.url || eventData.image?.url || '';
             
-            // Enhanced city extraction using shared city utilities
+            // Extract city from event title for venue-specific logic (like Megawoof)
             let city = null;
             
-            if (this.sharedCore) {
-                // Use shared city utilities for consistent extraction
-                city = this.sharedCore.extractCityFromEvent(eventData, url);
-                
-                if (address && !city) {
-                    city = this.sharedCore.extractCityFromAddress(address);
+            // Special handling for Megawoof America events - extract city from title
+            if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title)) {
+                // Check if title contains a specific city
+                if (/(atlanta)/i.test(title)) city = 'atlanta';
+                else if (/(denver)/i.test(title)) city = 'denver';
+                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
+                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
+                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
+                else if (/(chicago)/i.test(title)) city = 'chicago';
+                else if (/(miami)/i.test(title)) city = 'miami';
+                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
+                else if (/(seattle)/i.test(title)) city = 'seattle';
+                else if (/(portland)/i.test(title)) city = 'portland';
+                else if (/(austin)/i.test(title)) city = 'austin';
+                else if (/(dallas)/i.test(title)) city = 'dallas';
+                else if (/(houston)/i.test(title)) city = 'houston';
+                else if (/(phoenix)/i.test(title)) city = 'phoenix';
+                else if (/(boston)/i.test(title)) city = 'boston';
+                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
+                else {
+                    // Default to LA for Megawoof events without explicit city
+                    city = 'la';
+                    console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
                 }
                 
-                if (!city) {
-                    const searchText = `${title} ${venue || ''}`;
-                    city = this.sharedCore.extractCityFromText(searchText);
+                if (city) {
+                    console.log(`🎫 Eventbrite: Extracted city "${city}" from Megawoof title: "${title}"`);
                 }
-                
-                if (!city && url) {
-                    city = this.sharedCore.extractCityFromText(url);
-                }
-            } else {
-                // Fallback to simple text extraction if shared-core not available
-                city = this.extractCityFromText(`${title} ${venue || ''} ${url || ''}`);
             }
             
-            // Special handling for Megawoof America events without explicit city
-            if (!city && title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title) && !/(atlanta|denver|vegas|las vegas|long beach|new york|chicago|miami|san francisco|seattle|portland|austin|dallas|houston|phoenix|boston|philadelphia)/i.test(title)) {
-                console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
-                city = 'la';
-            }
+            // Additional venue-specific city extraction could go here for other event types
+            
+
             
             const event = {
                 title: title,
@@ -339,8 +328,6 @@ class EventbriteParser {
                 location: venue, // For backward compatibility
                 address: address,
                 coordinates: coordinates,
-                googleMapsLink: googleMapsLink,
-                gmaps: googleMapsLink, // Add gmaps alias for consistency
                 city: city,
                 url: url,
                 website: url, // Add website property for calendar integrations
@@ -463,12 +450,37 @@ class EventbriteParser {
                 return null;
             }
             
-            // Extract city using shared utilities
+            // Extract city from event title for venue-specific logic (like Megawoof)
             let city = null;
-            if (this.sharedCore) {
-                city = this.sharedCore.extractCityFromText(title + ' ' + venue + ' ' + url);
-            } else {
-                city = this.extractCityFromText(title + ' ' + venue + ' ' + url);
+            
+            // Special handling for Megawoof America events - extract city from title
+            if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title)) {
+                // Check if title contains a specific city
+                if (/(atlanta)/i.test(title)) city = 'atlanta';
+                else if (/(denver)/i.test(title)) city = 'denver';
+                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
+                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
+                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
+                else if (/(chicago)/i.test(title)) city = 'chicago';
+                else if (/(miami)/i.test(title)) city = 'miami';
+                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
+                else if (/(seattle)/i.test(title)) city = 'seattle';
+                else if (/(portland)/i.test(title)) city = 'portland';
+                else if (/(austin)/i.test(title)) city = 'austin';
+                else if (/(dallas)/i.test(title)) city = 'dallas';
+                else if (/(houston)/i.test(title)) city = 'houston';
+                else if (/(phoenix)/i.test(title)) city = 'phoenix';
+                else if (/(boston)/i.test(title)) city = 'boston';
+                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
+                else {
+                    // Default to LA for Megawoof events without explicit city
+                    city = 'la';
+                    console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
+                }
+                
+                if (city) {
+                    console.log(`🎫 Eventbrite: Extracted city "${city}" from Megawoof title: "${title}"`);
+                }
             }
             
             return {
@@ -634,26 +646,7 @@ class EventbriteParser {
         return this.extractCityFromText(searchText);
     }
 
-    // Extract city from text content
-    extractCityFromText(text) {
-        if (!this.sharedCore) {
-            console.warn('🎫 Eventbrite: SharedCore not initialized, using basic city extraction.');
-            // Very basic fallback - just look for common city names
-            const lowerText = text.toLowerCase();
-            if (lowerText.includes('new york') || lowerText.includes('nyc')) return 'nyc';
-            if (lowerText.includes('los angeles') || lowerText.includes('hollywood')) return 'la';
-            if (lowerText.includes('san francisco') || lowerText.includes(' sf ')) return 'sf';
-            if (lowerText.includes('chicago')) return 'chicago';
-            if (lowerText.includes('atlanta')) return 'atlanta';
-            if (lowerText.includes('miami')) return 'miami';
-            if (lowerText.includes('seattle')) return 'seattle';
-            if (lowerText.includes('denver')) return 'denver';
-            if (lowerText.includes('las vegas') || lowerText.includes('vegas')) return 'vegas';
-            return null;
-        }
 
-        return this.sharedCore.extractCityFromText(text);
-    }
 
     // Normalize city names
     normalizeCityName(cityName) {
