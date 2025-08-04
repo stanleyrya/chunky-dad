@@ -2229,8 +2229,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 // New field being added
                 flowIcon = '→';
                 resultText = '<span style="color: #34c759;">ADDED</span>';
-            } else if (wasUsed === 'existing' || finalValue === existingValue) {
-                // Kept existing value
+            } else if (existingValue && newValue && existingValue === newValue) {
+                // Both values are identical - no change needed
+                flowIcon = '—';
+                resultText = '<span style="color: #999;">NO CHANGE</span>';
+            } else if (wasUsed === 'existing') {
+                // Merge strategy explicitly chose existing value
                 flowIcon = '←';
                 resultText = '<span style="color: #007aff;">EXISTING</span>';
             } else if (finalValue === newValue) {
