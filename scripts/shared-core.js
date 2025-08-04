@@ -1404,20 +1404,20 @@ class SharedCore {
         
         // Define extraction patterns for different fields
         const patterns = {
-            tea: /(?:tea|description):\s*(.+?)(?:\n|$)/i,
-            description: /(?:description|tea):\s*(.+?)(?:\n|$)/i,
+            tea: /(?:tea|description|info):\s*(.+?)(?:\n|$)/i,
+            description: /(?:description|tea|info):\s*(.+?)(?:\n|$)/i,
             instagram: /(?:instagram:\s*)?(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
             website: /website:\s*(https?:\/\/[^\s\n]+)/i,
-            bar: /bar:\s*(.+?)(?:\n|$)/i,
-            venue: /venue:\s*(.+?)(?:\n|$)/i,
+            bar: /(?:bar|location|host):\s*(.+?)(?:\n|$)/i,
+            venue: /(?:venue|bar|location|host):\s*(.+?)(?:\n|$)/i,
             cover: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
-            price: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
+            price: /(?:price|cover|cost):\s*(.+?)(?:\n|$)/i,
             facebook: /(?:facebook:\s*)?(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i,
             gmaps: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
             shortname: /(?:short name|shortname|short|nickname|nick name|nick):\s*(.+?)(?:\n|$)/i,
             shortername: /(?:shorter name|shortername|shorter):\s*(.+?)(?:\n|$)/i,
             type: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
-            eventtype: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
+            eventtype: /(?:eventtype|type):\s*(.+?)(?:\n|$)/i,
             recurring: /recurring:\s*(.+?)(?:\n|$)/i
         };
         
