@@ -1226,13 +1226,8 @@ class SharedCore {
             if (analysis.existingKey) {
                 analyzedEvent._existingKey = analysis.existingKey;
             }
-            if (analysis.conflictType === 'time_conflict') {
-                // Find the time conflicts for this event
-                const timeConflicts = existingEvents.filter(existing =>
-                    this.eventsOverlap(event, existing) && 
-                    existing.key !== analyzedEvent._existingKey
-                );
-                analyzedEvent._conflicts = timeConflicts;
+            if (analysis.conflicts) {
+                analyzedEvent._conflicts = analysis.conflicts;
                 // Process conflicts to extract important information
                 analyzedEvent = this.processEventWithConflicts(analyzedEvent);
             }
@@ -1373,7 +1368,8 @@ class SharedCore {
                 return {
                     action: 'conflict',
                     reason: 'Time conflict detected',
-                    conflictType: 'time_conflict'
+                    conflictType: 'time_conflict',
+                    conflicts: timeConflicts
                 };
             }
         }
