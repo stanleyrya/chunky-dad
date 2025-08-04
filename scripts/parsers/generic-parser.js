@@ -251,8 +251,7 @@ class GenericParser {
                 endDate: null,
                 venue: venue,
                 city: city,
-                url: eventUrl,
-                website: eventUrl, // Add website property for consistency
+                website: eventUrl,
                 price: price,
                 image: '',
                 source: this.config.source,

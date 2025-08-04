@@ -622,15 +622,15 @@ class SharedCore {
         
         // Then add any remaining fields (except description and url which are handled separately)
         Object.keys(fields).forEach(key => {
-            if (!fieldOrder.includes(key) && key !== 'url' && key !== 'description' && key !== 'more info') {
+            if (!fieldOrder.includes(key) && key !== 'website' && key !== 'description' && key !== 'more info') {
                 const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
                 lines.push(`${displayKey}: ${fields[key]}`);
             }
         });
         
-        // Add URL at the end
-        if (fields.url || fields['more info']) {
-            lines.push('', `More info: ${fields.url || fields['more info']}`);
+        // Add website/URL at the end
+        if (fields.website || fields['more info']) {
+            lines.push('', `More info: ${fields.website || fields['more info']}`);
         }
         
         return lines.join('\n');
@@ -997,11 +997,8 @@ class SharedCore {
         }
         
         // Add website URL - prefer event.website, fallback to event.url
-        if (event.website || event.url) {
-            // Include if either website OR url is not preserved
-            if ((event.website && shouldIncludeField('website')) || (event.url && shouldIncludeField('url'))) {
-                notes.push(`Website: ${event.website || event.url}`);
-            }
+        if (event.website && shouldIncludeField('website')) {
+            notes.push(`Website: ${event.website}`);
         }
         
         // Handle googleMapsLink field
@@ -1047,7 +1044,7 @@ class SharedCore {
             'location', 'address', 'coordinates', 'city', 'source', 'key', 
             'instagram', 'facebook', 'website', 'googleMapsLink', 
             'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
-            'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
+            'isBearEvent', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
             'shortName', 'shorterName', 'shortTitle', 'image', 'imageUrl'
         ]);
@@ -1325,7 +1322,7 @@ class SharedCore {
             cover: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
             price: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
             facebook: /(?:facebook:\s*)?(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i,
-            googleMapsLink: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
+            googlemapslink: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
             shortname: /(?:short name|shortname|short|nickname|nick name|nick):\s*(.+?)(?:\n|$)/i,
             shortername: /(?:shorter name|shortername|shorter):\s*(.+?)(?:\n|$)/i,
             type: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
