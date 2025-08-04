@@ -529,6 +529,7 @@ class SharedCore {
                 line.startsWith('Facebook:') ||
                 line.startsWith('Website:') ||
                 line.startsWith('Gmaps:') ||
+            line.startsWith('Google Maps:') ||
                 line.startsWith('Price:') ||
                 line.startsWith('Type:') ||
                 line.startsWith('Recurrence:') ||
@@ -601,7 +602,7 @@ class SharedCore {
         
         // Add fields in a consistent order (excluding description which we already handled)
         const fieldOrder = ['bar', 'key', 'coordinates', 'debugcity', 'debugsource', 
-                          'instagram', 'facebook', 'website', 'gmaps', 'price', 'type',
+                          'instagram', 'facebook', 'website', 'googleMapsLink', 'price', 'type',
                           'recurrence', 'timezone', 'shorttitle', 'shortname', 'shortername'];
         
         // First add ordered fields
@@ -621,15 +622,15 @@ class SharedCore {
         
         // Then add any remaining fields (except description and url which are handled separately)
         Object.keys(fields).forEach(key => {
-            if (!fieldOrder.includes(key) && key !== 'url' && key !== 'description' && key !== 'more info') {
+            if (!fieldOrder.includes(key) && key !== 'website' && key !== 'description' && key !== 'more info') {
                 const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
                 lines.push(`${displayKey}: ${fields[key]}`);
             }
         });
         
-        // Add URL at the end
-        if (fields.url || fields['more info']) {
-            lines.push('', `More info: ${fields.url || fields['more info']}`);
+        // Add website/URL at the end
+        if (fields.website || fields['more info']) {
+            lines.push('', `More info: ${fields.website || fields['more info']}`);
         }
         
         return lines.join('\n');
@@ -996,19 +997,13 @@ class SharedCore {
         }
         
         // Add website URL - prefer event.website, fallback to event.url
-        if (event.website || event.url) {
-            // Include if either website OR url is not preserved
-            if ((event.website && shouldIncludeField('website')) || (event.url && shouldIncludeField('url'))) {
-                notes.push(`Website: ${event.website || event.url}`);
-            }
+        if (event.website && shouldIncludeField('website')) {
+            notes.push(`Website: ${event.website}`);
         }
         
-        // Handle both gmaps and googleMapsLink fields
-        if (event.gmaps || event.googleMapsLink) {
-            // Include if either gmaps OR googleMapsLink is not preserved
-            if ((event.gmaps && shouldIncludeField('gmaps')) || (event.googleMapsLink && shouldIncludeField('googleMapsLink'))) {
-                notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
-            }
+        // Handle googleMapsLink field
+        if (event.googleMapsLink && shouldIncludeField('googleMapsLink')) {
+            notes.push(`Google Maps: ${event.googleMapsLink}`);
         }
         
         // === DEBUG PROPERTIES (not parsed by calendar-core.js) ===
@@ -1047,9 +1042,9 @@ class SharedCore {
         const handledFields = new Set([
             'title', 'description', 'tea', 'startDate', 'endDate', 'venue', 'bar', 
             'location', 'address', 'coordinates', 'city', 'source', 'key', 
-            'instagram', 'facebook', 'website', 'gmaps', 'googleMapsLink', 
+            'instagram', 'facebook', 'website', 'googleMapsLink', 
             'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
-            'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
+            'isBearEvent', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
             'shortName', 'shorterName', 'shortTitle', 'image', 'imageUrl'
         ]);
@@ -1155,8 +1150,13 @@ class SharedCore {
             if (analysis.existingKey) {
                 analyzedEvent._existingKey = analysis.existingKey;
             }
-            if (analysis.conflicts) {
-                analyzedEvent._conflicts = analysis.conflicts;
+            if (analysis.conflictType === 'time_conflict') {
+                // Find the time conflicts for this event
+                const timeConflicts = existingEventsData.filter(existing =>
+                    this.eventsOverlap(event, existing) && 
+                    existing.key !== analyzedEvent._existingKey
+                );
+                analyzedEvent._conflicts = timeConflicts;
                 // Process conflicts to extract important information
                 analyzedEvent = this.processEventWithConflicts(analyzedEvent);
             }
@@ -1268,8 +1268,7 @@ class SharedCore {
                 return {
                     action: 'conflict',
                     reason: 'Time conflict detected',
-                    conflictType: 'time_conflict',
-                    conflicts: timeConflicts
+                    conflictType: 'time_conflict'
                 };
             }
         }
@@ -1323,7 +1322,7 @@ class SharedCore {
             cover: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
             price: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
             facebook: /(?:facebook:\s*)?(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i,
-            gmaps: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
+            googlemapslink: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
             shortname: /(?:short name|shortname|short|nickname|nick name|nick):\s*(.+?)(?:\n|$)/i,
             shortername: /(?:shorter name|shortername|shorter):\s*(.+?)(?:\n|$)/i,
             type: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
@@ -1343,7 +1342,7 @@ class SharedCore {
         if (!match) return '';
         
         // Special handling for URLs
-        if (['instagram', 'facebook', 'website', 'gmaps'].includes(fieldName.toLowerCase())) {
+        if (['instagram', 'facebook', 'website', 'googlemapslink'].includes(fieldName.toLowerCase())) {
             const url = match[0].replace(new RegExp(`^${fieldName}:\\s*`, 'i'), '');
             return url.startsWith('http') ? url : `https://${url}`;
         }
@@ -1357,9 +1356,17 @@ class SharedCore {
             return event;
         }
         
-        // Store original event data before processing
+        // Store original event data before processing, excluding internal fields
+        const internalFields = ['_analysis', '_action', '_conflicts', '_original', '_parserConfig', '_fieldMergeStrategies', '_existingKey', '_existingEvent', '_mergeInfo'];
+        const cleanEvent = {};
+        for (const [key, value] of Object.entries(event)) {
+            if (!internalFields.includes(key)) {
+                cleanEvent[key] = value;
+            }
+        }
+        
         event._original = {
-            new: { ...event },
+            new: cleanEvent,
             existing: event._conflicts[0] // Usually just one conflict
         };
         
@@ -1369,7 +1376,7 @@ class SharedCore {
         // Define fields to potentially extract from notes
         const extractableFields = [
             'tea', 'instagram', 'website', 'bar', 'venue', 
-            'cover', 'price', 'facebook', 'gmaps', 'shortName', 
+            'cover', 'price', 'facebook', 'googleMapsLink', 'shortName', 
             'shorterName', 'type', 'eventType', 'recurring'
         ];
         
