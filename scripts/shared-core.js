@@ -789,7 +789,6 @@ class SharedCore {
                 // Use address
                 event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
             }
-            event.gmaps = event.googleMapsLink; // Add alias for consistency
         }
         
         return event;
@@ -1082,18 +1081,18 @@ class SharedCore {
         }
         
         // Add website URL - prefer event.website, fallback to event.url
-        if (event.website || event.url) {
+        if (event.url || event.website) {
             // Include if either website OR url is not preserved
             if ((event.website && shouldIncludeField('website')) || (event.url && shouldIncludeField('url'))) {
-                notes.push(`Website: ${event.website || event.url}`);
+                notes.push(`Website: ${event.url || event.website}`);
             }
         }
         
         // Handle both gmaps and googleMapsLink fields
-        if (event.gmaps || event.googleMapsLink) {
+        if (event.googleMapsLink || event.gmaps) {
             // Include if either gmaps OR googleMapsLink is not preserved
             if ((event.gmaps && shouldIncludeField('gmaps')) || (event.googleMapsLink && shouldIncludeField('googleMapsLink'))) {
-                notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
+                notes.push(`Gmaps: ${event.googleMapsLink || event.gmaps}`);
             }
         }
         
@@ -1189,7 +1188,12 @@ class SharedCore {
             let analyzedEvent = { ...event };
             
             // Add analysis to the new event object
-            analyzedEvent._analysis = analysis;
+            analyzedEvent._analysis = {
+                action: analysis.action,
+                reason: analysis.reason,
+                conflictType: analysis.conflictType,
+                // Don't include conflicts here - they'll be in _conflicts if needed
+            };
             analyzedEvent._action = analysis.action;
             
             // Handle merge action by performing the merge here
@@ -1376,12 +1380,11 @@ class SharedCore {
         return null;
     }
     
-    // Extract key from event notes (pure string processing)
+    // Helper function to extract key from notes
     extractKeyFromNotes(notes) {
         if (!notes) return null;
-        
-        const keyMatch = notes.match(/^Key: (.+)$/m);
-        return keyMatch ? keyMatch[1] : null;
+        const keyMatch = notes.match(/Key:\s*([^\n]+)/);
+        return keyMatch ? keyMatch[1].trim() : null;
     }
     
     // Check if two dates are equal within a tolerance (pure logic)
@@ -1401,19 +1404,20 @@ class SharedCore {
         
         // Define extraction patterns for different fields
         const patterns = {
-            tea: /tea:\s*(.+?)(?:\n|$)/i,
+            tea: /(?:tea|description|info):\s*(.+?)(?:\n|$)/i,
+            description: /(?:description|tea|info):\s*(.+?)(?:\n|$)/i,
             instagram: /(?:instagram:\s*)?(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
             website: /website:\s*(https?:\/\/[^\s\n]+)/i,
-            bar: /bar:\s*(.+?)(?:\n|$)/i,
-            venue: /venue:\s*(.+?)(?:\n|$)/i,
+            bar: /(?:bar|location|host):\s*(.+?)(?:\n|$)/i,
+            venue: /(?:venue|bar|location|host):\s*(.+?)(?:\n|$)/i,
             cover: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
-            price: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
+            price: /(?:price|cover|cost):\s*(.+?)(?:\n|$)/i,
             facebook: /(?:facebook:\s*)?(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i,
             gmaps: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
             shortname: /(?:short name|shortname|short|nickname|nick name|nick):\s*(.+?)(?:\n|$)/i,
             shortername: /(?:shorter name|shortername|shorter):\s*(.+?)(?:\n|$)/i,
             type: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
-            eventtype: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
+            eventtype: /(?:eventtype|type):\s*(.+?)(?:\n|$)/i,
             recurring: /recurring:\s*(.+?)(?:\n|$)/i
         };
         
@@ -1454,7 +1458,7 @@ class SharedCore {
         
         // Define fields to potentially extract from notes
         const extractableFields = [
-            'tea', 'instagram', 'website', 'bar', 'venue', 
+            'tea', 'description', 'instagram', 'website', 'bar', 'venue', 
             'cover', 'price', 'facebook', 'gmaps', 'shortName', 
             'shorterName', 'type', 'eventType', 'recurring'
         ];

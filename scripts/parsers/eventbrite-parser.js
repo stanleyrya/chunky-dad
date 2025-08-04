@@ -331,7 +331,6 @@ class EventbriteParser {
                 coordinates: coordinates,
                 city: city,
                 url: url,
-                website: url, // Add website property for calendar integrations
                 price: price,
                 image: image,
                 source: this.config.source,
