@@ -32,6 +32,21 @@
         },
         "description": {
           "merge": "preserve"
+        },
+        "venue": {
+          "merge": "clobber"
+        },
+        "startDate": {
+          "merge": "clobber"
+        },
+        "endDate": {
+          "merge": "clobber"
+        },
+        "website": {
+          "merge": "upsert"
+        },
+        "gmaps": {
+          "merge": "upsert"
         }
       }
     }

@@ -946,7 +946,7 @@ class SharedCore {
             }
         }
         
-        // Add description/tea in key-value format
+        // Add description/tea in key-value format (tea is an alternative name for description)
         if ((event.description && event.description.trim()) || (event.tea && event.tea.trim())) {
             // Include if either description OR tea is not preserved
             if ((event.description && shouldIncludeField('description')) || (event.tea && shouldIncludeField('tea'))) {
