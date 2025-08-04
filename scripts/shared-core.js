@@ -1189,7 +1189,12 @@ class SharedCore {
             let analyzedEvent = { ...event };
             
             // Add analysis to the new event object
-            analyzedEvent._analysis = analysis;
+            analyzedEvent._analysis = {
+                action: analysis.action,
+                reason: analysis.reason,
+                conflictType: analysis.conflictType,
+                // Don't include conflicts here - they'll be in _conflicts if needed
+            };
             analyzedEvent._action = analysis.action;
             
             // Handle merge action by performing the merge here
