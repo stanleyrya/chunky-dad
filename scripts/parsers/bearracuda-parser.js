@@ -33,6 +33,7 @@ class BearraccudaParser {
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
             'furball', 'leather bears', 'bear night', 'bear party'
         ];
+    }
 
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}) {
