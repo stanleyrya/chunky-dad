@@ -169,8 +169,11 @@ class SharedCore {
                     // Enrich events with location data (Google Maps links, city extraction)
                     const enrichedEvents = filteredEvents.map(event => this.enrichEventLocation(event));
                     
-                    allEvents.push(...enrichedEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
+                    // Normalize field names to preferred properties
+                    const normalizedEvents = enrichedEvents.map(event => this.normalizeEventFields(event));
+                    
+                    allEvents.push(...normalizedEvents);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${normalizedEvents.length} enriched events from ${url}`);
                 }
 
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
@@ -789,7 +792,6 @@ class SharedCore {
                 // Use address
                 event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
             }
-            event.gmaps = event.googleMapsLink; // Add alias for consistency
         }
         
         return event;
@@ -1082,18 +1084,18 @@ class SharedCore {
         }
         
         // Add website URL - prefer event.website, fallback to event.url
-        if (event.website || event.url) {
+        if (event.url || event.website) {
             // Include if either website OR url is not preserved
             if ((event.website && shouldIncludeField('website')) || (event.url && shouldIncludeField('url'))) {
-                notes.push(`Website: ${event.website || event.url}`);
+                notes.push(`Website: ${event.url || event.website}`);
             }
         }
         
         // Handle both gmaps and googleMapsLink fields
-        if (event.gmaps || event.googleMapsLink) {
+        if (event.googleMapsLink || event.gmaps) {
             // Include if either gmaps OR googleMapsLink is not preserved
             if ((event.gmaps && shouldIncludeField('gmaps')) || (event.googleMapsLink && shouldIncludeField('googleMapsLink'))) {
-                notes.push(`Gmaps: ${event.gmaps || event.googleMapsLink}`);
+                notes.push(`Gmaps: ${event.googleMapsLink || event.gmaps}`);
             }
         }
         
@@ -1384,9 +1386,31 @@ class SharedCore {
     // Extract key from event notes (pure string processing)
     extractKeyFromNotes(notes) {
         if (!notes) return null;
+        const keyMatch = notes.match(/Key:\s*([^\n]+)/);
+        return keyMatch ? keyMatch[1].trim() : null;
+    }
+    
+    // Normalize event fields to use preferred property names
+    normalizeEventFields(event) {
+        // Prefer url over website
+        if (event.website && !event.url) {
+            event.url = event.website;
+            delete event.website;
+        } else if (event.website && event.url) {
+            // If both exist, remove website
+            delete event.website;
+        }
         
-        const keyMatch = notes.match(/^Key: (.+)$/m);
-        return keyMatch ? keyMatch[1] : null;
+        // Prefer googleMapsLink over gmaps
+        if (event.gmaps && !event.googleMapsLink) {
+            event.googleMapsLink = event.gmaps;
+            delete event.gmaps;
+        } else if (event.gmaps && event.googleMapsLink) {
+            // If both exist, remove gmaps
+            delete event.gmaps;
+        }
+        
+        return event;
     }
     
     // Check if two dates are equal within a tolerance (pure logic)

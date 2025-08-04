@@ -242,8 +242,7 @@ class GenericParser {
                 venue: venue,
                 city: city,
                 url: eventUrl,
-                website: eventUrl, // Add website property for consistency
-                price: price,
+                price: price || '',
                 image: '',
                 source: this.config.source,
                 isBearEvent: false // Will be filtered later based on keywords
