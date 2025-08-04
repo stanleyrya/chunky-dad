@@ -1669,9 +1669,9 @@ class ScriptableAdapter {
                         <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
                             <tr>
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">New Event</th>
-                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">→</th>
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">Existing Event</th>
+                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Flow</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">New Event</th>
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Result</th>
                             </tr>
                             ${this.generateComparisonRows(event)}
@@ -2189,13 +2189,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const rows = [];
         
         fieldsToCompare.forEach(field => {
-            const newValue = event._original.new[field] || '';
-            const existingValue = event._original.existing?.[field] || '';
+            let newValue = event._original.new[field] || '';
+            let existingValue = event._original.existing?.[field] || '';
             const finalValue = event[field] || '';
             const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
             
-            // Skip if both are empty
+            // Check if this field was extracted from existing event's notes
+            if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
+                existingValue = event._mergeInfo.extractedFields[field].value;
+            }
+            
+            // Skip if both are empty and no final value
             if (!newValue && !existingValue && !finalValue) return;
             
             // Format values for display
@@ -2248,13 +2253,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                         <br><small style="color: #666;">${strategy}</small>
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
-                        ${formatValue(newValue)}
+                        ${formatValue(existingValue)}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff;">
                         ${flowIcon}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
-                        ${formatValue(existingValue)}
+                        ${formatValue(newValue)}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center;">
                         ${resultText}
@@ -2274,12 +2279,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
         
         fieldsToCompare.forEach(field => {
-            const newValue = event._original.new[field] || '';
-            const existingValue = event._original.existing?.[field] || '';
+            let newValue = event._original.new[field] || '';
+            let existingValue = event._original.existing?.[field] || '';
             const finalValue = event[field] || '';
             const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
             
-            // Skip if both are empty
+            // Check if this field was extracted from existing event's notes
+            if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
+                existingValue = event._mergeInfo.extractedFields[field].value;
+            }
+            
+            // Skip if both are empty and no final value
             if (!newValue && !existingValue && !finalValue) return;
             
             // Format dates
