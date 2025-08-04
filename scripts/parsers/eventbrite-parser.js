@@ -340,7 +340,6 @@ class EventbriteParser {
                 address: address,
                 coordinates: coordinates,
                 googleMapsLink: googleMapsLink,
-                gmaps: googleMapsLink, // Add gmaps alias for consistency
                 city: city,
                 url: url,
                 website: url, // Add website property for calendar integrations
