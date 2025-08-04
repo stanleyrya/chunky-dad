@@ -1716,17 +1716,17 @@ class ScriptableAdapter {
             const bearEvents = document.querySelectorAll('.stat-value')[1].textContent;
             const calendarActions = document.querySelectorAll('.stat-value')[2].textContent;
             
-            rawOutput += \`📊 SUMMARY:\\n\`;
-            rawOutput += \`Total Events: \${totalEvents}\\n\`;
-            rawOutput += \`Bear Events: \${bearEvents}\\n\`;
-            rawOutput += \`Calendar Actions: \${calendarActions}\\n\\n\`;
+            rawOutput += \`📊 SUMMARY:\\\\n\`;
+            rawOutput += \`Total Events: \${totalEvents}\\\\n\`;
+            rawOutput += \`Bear Events: \${bearEvents}\\\\n\`;
+            rawOutput += \`Calendar Actions: \${calendarActions}\\\\n\\\\n\`;
             
             // Process each event
             eventCards.forEach((card, index) => {
                 const title = card.querySelector('.event-title')?.textContent || 'Untitled Event';
                 const rawData = card.querySelector('.raw-display')?.textContent || 'No raw data available';
                 
-                rawOutput += \`EVENT \${index + 1}: \${title}\\n\`;
+                rawOutput += \`EVENT \${index + 1}: \${title}\\\\n\`;
                 rawOutput += '-'.repeat(60) + '\\n';
                 rawOutput += rawData + '\\n\\n';
             });
@@ -1796,7 +1796,7 @@ class ScriptableAdapter {
                 if (!noResultsMsg) {
                     noResultsMsg = document.createElement('div');
                     noResultsMsg.id = 'noResultsMessage';
-                    noResultsMsg.innerHTML = `
+                    noResultsMsg.innerHTML = \`
                         <div style="
                             background: white;
                             border-radius: 15px;
@@ -1810,7 +1810,7 @@ class ScriptableAdapter {
                             <h3 style="margin: 0 0 10px 0; color: #333;">No events found</h3>
                             <p style="margin: 0; font-size: 14px;">Try adjusting your search terms or clearing the search.</p>
                         </div>
-                    `;
+                    \`;
                     document.body.appendChild(noResultsMsg);
                 }
                 noResultsMsg.style.display = 'block';
