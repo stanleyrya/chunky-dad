@@ -342,7 +342,7 @@ class SharedCore {
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
-                const merged = this.mergeEvents(existing, event);
+                const merged = this.mergeEventData(existing, event);
                 merged.key = key; // Ensure merged event has the key
                 seen.set(key, merged);
                 
@@ -582,12 +582,6 @@ class SharedCore {
         }
         
         return lines.join('\n');
-    }
-
-    // Merge events using field-level merge strategies
-    mergeEvents(existing, newEvent) {
-        // Always use the comprehensive merge with field strategies
-        return this.mergeEventData(existing, newEvent);
     }
 
     // Helper method to normalize event dates for consistent comparison across timezones
