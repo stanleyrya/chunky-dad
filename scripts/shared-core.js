@@ -703,15 +703,13 @@ class SharedCore {
             event.city = this.extractCityFromEvent(event);
         }
         
-        // Add Google Maps link only for full addresses
+        // Add Google Maps link - prefer address over coordinates
         if (event.address && this.isFullAddress(event.address)) {
-            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-                // Use coordinates if available
-                event.googleMapsLink = `https://maps.google.com/?q=${event.coordinates.lat},${event.coordinates.lng}`;
-            } else {
-                // Use address
-                event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-            }
+            // Use address when available and it's a full address
+            event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+        } else if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+            // Fall back to coordinates if no full address
+            event.googleMapsLink = `https://maps.google.com/?q=${event.coordinates.lat},${event.coordinates.lng}`;
         }
         
         return event;
