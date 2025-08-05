@@ -198,12 +198,7 @@ class SharedCore {
 
         await displayAdapter.logInfo(`SYSTEM: Total events collected: ${allEvents.length}`);
 
-        // Apply metadata overrides if configured
-        if (parserConfig.metadata && parserConfig.metadata.overrideTitle) {
-            await displayAdapter.logInfo('SYSTEM: Applying metadata overrides...');
-            this.applyMetadataOverrides(allEvents, parserConfig.metadata);
-            await displayAdapter.logInfo(`SYSTEM: Applied metadata overrides to ${allEvents.length} events`);
-        }
+        // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events
         await displayAdapter.logInfo('SYSTEM: Filtering future events...');
@@ -281,36 +276,7 @@ class SharedCore {
         }
     }
 
-    // Apply metadata overrides to events (for hardcoded titles, etc.)
-    applyMetadataOverrides(events, metadata) {
-        if (!metadata || !events) return;
-        
-        events.forEach(event => {
-            // Store original title for debugging if we're overriding
-            if (metadata.overrideTitle && metadata.title && event.title !== metadata.title) {
-                event.originalTitle = event.title;
-                event.title = metadata.title;
-                console.log(`🔄 SharedCore: Override title applied - Original: "${event.originalTitle}" → New: "${event.title}"`);
-            }
-            
-            // Apply short title if provided
-            if (metadata.shortTitle) {
-                event.shortTitle = metadata.shortTitle;
-            }
-            
-            // Apply other metadata properties
-            if (metadata.instagram) {
-                event.instagram = metadata.instagram;
-            }
-            
-            // Add any other metadata properties that might be useful
-            Object.keys(metadata).forEach(key => {
-                if (!['overrideTitle', 'title', 'shortTitle'].includes(key)) {
-                    event[key] = metadata[key];
-                }
-            });
-        });
-    }
+
 
     // Pure utility functions
     filterFutureEvents(events, daysToLookAhead = null) {
