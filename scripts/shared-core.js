@@ -461,76 +461,24 @@ class SharedCore {
     parseNotesIntoFields(notes) {
         const fields = {};
         const lines = notes.split('\n');
-        let currentDescription = [];
-        let inDescription = false;
-        let foundMetadata = false;
         
-        lines.forEach((line, index) => {
-            // Check if this line is metadata (has a colon after non-whitespace)
+        lines.forEach(line => {
             const colonIndex = line.indexOf(':');
-            // A valid metadata line has:
-            // 1. A colon that's not at the start
-            // 2. Non-whitespace before the colon
-            // 3. The part before the colon doesn't contain :// (to avoid URLs as keys)
-            const keyPart = colonIndex > 0 ? line.substring(0, colonIndex) : '';
-            const isMetadataLine = colonIndex > 0 && 
-                                   keyPart.trim() !== '' &&
-                                   !keyPart.includes('://');
-            
-            if (isMetadataLine) {
-                foundMetadata = true;
-                const key = keyPart.trim();
+            // A valid metadata line has a colon that's not at the start
+            if (colonIndex > 0) {
+                const key = line.substring(0, colonIndex).trim();
                 const value = line.substring(colonIndex + 1).trim();
                 
-                // Normalize key names - convert to lowercase and remove spaces
-                let normalizedKey = key.toLowerCase()
-                    .replace(/^debug/, '') // Remove debug prefix
-                    .replace(/\s+/g, ''); // Remove all spaces
-                
-                if (normalizedKey === 'description') {
-                    // Start capturing description
-                    inDescription = true;
-                    if (value) {
-                        currentDescription.push(value);
-                    }
-                } else {
-                    // End description capture if we were in one
-                    if (inDescription && currentDescription.length > 0) {
-                        fields['description'] = currentDescription.join('\n').trim();
-                        currentDescription = [];
-                        inDescription = false;
-                    }
+                if (key && value) {
+                    // Normalize key names - convert to lowercase and remove spaces
+                    const normalizedKey = key.toLowerCase()
+                        .replace(/^debug/, '') // Remove debug prefix
+                        .replace(/\s+/g, ''); // Remove all spaces
                     
-                    // Store the field with normalized key
                     fields[normalizedKey] = value;
-                }
-            } else if (!foundMetadata && line.trim() !== '') {
-                // This is part of the original description (before any metadata)
-                currentDescription.push(line);
-            } else if (inDescription && line.trim() !== '') {
-                // Continue capturing multi-line description after "Description:" line
-                currentDescription.push(line);
-            } else if (line.includes('More info:')) {
-                // Special handling for "More info:" which might appear anywhere in the line
-                const moreInfoMatch = line.match(/More info:\s*(.+)/i);
-                if (moreInfoMatch) {
-                    fields['moreinfo'] = moreInfoMatch[1].trim();
-                    foundMetadata = true;
-                    
-                    // End description capture if we were in one
-                    if (inDescription && currentDescription.length > 0) {
-                        fields['description'] = currentDescription.join('\n').trim();
-                        currentDescription = [];
-                        inDescription = false;
-                    }
                 }
             }
         });
-        
-        // Handle any remaining description
-        if (currentDescription.length > 0) {
-            fields['description'] = currentDescription.join('\n').trim();
-        }
         
         return fields;
     }
@@ -539,23 +487,11 @@ class SharedCore {
     buildNotesFromFields(fields) {
         const lines = [];
         
-        // Handle description specially - it might be multi-line
-        if (fields.description) {
-            // If description doesn't already have "Description:" prefix, add it
-            const desc = fields.description;
-            if (!desc.startsWith('Description:')) {
-                // For multi-line descriptions, just add them as-is at the beginning
-                lines.push(desc);
-                lines.push(''); // Add blank line after description
-            }
-        }
-        
         // Define priority fields that should appear first (in order)
         const priorityFields = ['bar', 'key'];
         
         // Create a set of fields to process
         const allFields = new Set(Object.keys(fields));
-        allFields.delete('description'); // Already handled
         
         // Process priority fields first
         priorityFields.forEach(key => {
