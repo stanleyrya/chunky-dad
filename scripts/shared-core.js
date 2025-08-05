@@ -461,74 +461,24 @@ class SharedCore {
     parseNotesIntoFields(notes) {
         const fields = {};
         const lines = notes.split('\n');
-        let currentDescription = [];
-        let inDescription = false;
-        let foundMetadata = false;
         
-        lines.forEach((line, index) => {
-            // Check if this line is metadata (has a colon and starts with known field)
+        lines.forEach(line => {
             const colonIndex = line.indexOf(':');
-            const isMetadataLine = colonIndex > 0 && (
-                line.startsWith('Bar:') || 
-                line.startsWith('Description:') ||
-                line.startsWith('Key:') || 
-                line.startsWith('DebugCity:') || 
-                line.startsWith('DebugSource:') ||
-                line.startsWith('Instagram:') || 
-                line.startsWith('Facebook:') ||
-                line.startsWith('Website:') ||
-                line.startsWith('Gmaps:') ||
-                line.startsWith('Price:') ||
-                line.startsWith('Type:') ||
-                line.startsWith('Recurrence:') ||
-                line.startsWith('Short Name:') ||
-                line.startsWith('Shorter Name:') ||
-                line.startsWith('ShortTitle:') ||
-                line.startsWith('Coordinates:') ||
-                line.startsWith('DebugTimezone:') ||
-                line.startsWith('DebugImage:') ||
-                line.includes('More info:')
-            );
-            
-            if (isMetadataLine) {
-                foundMetadata = true;
+            // A valid metadata line has a colon that's not at the start
+            if (colonIndex > 0) {
                 const key = line.substring(0, colonIndex).trim();
                 const value = line.substring(colonIndex + 1).trim();
                 
-                // Normalize key names
-                let normalizedKey = key.toLowerCase().replace(/^debug/, '');
-                // Handle special cases
-                if (normalizedKey === 'short name') normalizedKey = 'shortname';
-                if (normalizedKey === 'shorter name') normalizedKey = 'shortername';
-                
-                if (normalizedKey === 'description') {
-                    // Start capturing description
-                    inDescription = true;
-                    if (value) {
-                        currentDescription.push(value);
-                    }
-                } else {
-                    // End description capture if we were in one
-                    if (inDescription && currentDescription.length > 0) {
-                        fields['description'] = currentDescription.join('\n').trim();
-                        currentDescription = [];
-                        inDescription = false;
-                    }
+                if (key && value) {
+                    // Normalize key names - convert to lowercase and remove spaces
+                    const normalizedKey = key.toLowerCase()
+                        .replace(/^debug/, '') // Remove debug prefix
+                        .replace(/\s+/g, ''); // Remove all spaces
+                    
                     fields[normalizedKey] = value;
                 }
-            } else if (!foundMetadata && line.trim() !== '') {
-                // This is part of the original description (before any metadata)
-                currentDescription.push(line);
-            } else if (inDescription && line.trim() !== '') {
-                // Continue capturing multi-line description after "Description:" line
-                currentDescription.push(line);
             }
         });
-        
-        // Handle any remaining description
-        if (currentDescription.length > 0) {
-            fields['description'] = currentDescription.join('\n').trim();
-        }
         
         return fields;
     }
@@ -537,51 +487,60 @@ class SharedCore {
     buildNotesFromFields(fields) {
         const lines = [];
         
-        // Handle description specially - it might be multi-line
-        if (fields.description) {
-            // If description doesn't already have "Description:" prefix, add it
-            const desc = fields.description;
-            if (!desc.startsWith('Description:')) {
-                // For multi-line descriptions, just add them as-is at the beginning
-                lines.push(desc);
-                lines.push(''); // Add blank line after description
-            }
-        }
+        // Define priority fields that should appear first (in order)
+        const priorityFields = ['bar', 'key'];
         
-        // Add fields in a consistent order (excluding description which we already handled)
-        const fieldOrder = ['bar', 'key', 'coordinates', 'debugcity', 'debugsource', 
-                          'instagram', 'facebook', 'website', 'gmaps', 'price', 'type',
-                          'recurrence', 'timezone', 'shorttitle', 'shortname', 'shortername'];
+        // Create a set of fields to process
+        const allFields = new Set(Object.keys(fields));
         
-        // First add ordered fields
-        fieldOrder.forEach(key => {
+        // Process priority fields first
+        priorityFields.forEach(key => {
             if (fields[key]) {
-                const displayKey = key === 'debugcity' ? 'DebugCity' : 
-                                 key === 'debugsource' ? 'DebugSource' :
-                                 key === 'debugtimezone' ? 'DebugTimezone' :
-                                 key === 'debugimage' ? 'DebugImage' :
-                                 key === 'shortname' ? 'Short Name' :
-                                 key === 'shortername' ? 'Shorter Name' :
-                                 key === 'shorttitle' ? 'ShortTitle' :
-                                 key.charAt(0).toUpperCase() + key.slice(1);
+                const displayKey = this.formatFieldKey(key);
                 lines.push(`${displayKey}: ${fields[key]}`);
+                allFields.delete(key);
             }
         });
         
-        // Then add any remaining fields (except description and url which are handled separately)
-        Object.keys(fields).forEach(key => {
-            if (!fieldOrder.includes(key) && key !== 'url' && key !== 'description' && key !== 'more info') {
-                const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
-                lines.push(`${displayKey}: ${fields[key]}`);
+        // Process remaining fields in alphabetical order
+        const sortedFields = Array.from(allFields).sort();
+        sortedFields.forEach(key => {
+            const value = fields[key];
+            if (value !== undefined && value !== null && value !== '') {
+                const displayKey = this.formatFieldKey(key);
+                lines.push(`${displayKey}: ${value}`);
             }
         });
-        
-        // Add URL at the end
-        if (fields.url || fields['more info']) {
-            lines.push('', `More info: ${fields.url || fields['more info']}`);
-        }
         
         return lines.join('\n');
+    }
+    
+    // Helper to format field keys for display
+    formatFieldKey(key) {
+        // Handle special cases that need specific formatting
+        const specialCases = {
+            'debugcity': 'DebugCity',
+            'debugsource': 'DebugSource',
+            'debugtimezone': 'DebugTimezone',
+            'debugimage': 'DebugImage',
+            'shortname': 'Short Name',
+            'shortername': 'Shorter Name',
+            'shorttitle': 'ShortTitle',
+            'moreinfo': 'More info',
+            'gmaps': 'Gmaps'
+        };
+        
+        if (specialCases[key]) {
+            return specialCases[key];
+        }
+        
+        // For fields starting with 'debug', capitalize the D
+        if (key.startsWith('debug')) {
+            return 'Debug' + key.charAt(5).toUpperCase() + key.slice(6);
+        }
+        
+        // Default: capitalize first letter
+        return key.charAt(0).toUpperCase() + key.slice(1);
     }
 
     // Helper method to normalize event dates for consistent comparison across timezones
@@ -952,130 +911,124 @@ class SharedCore {
             return strategy !== 'preserve' || event._action === 'new';
         };
         
-        // === PARSED PROPERTIES (used by calendar-core.js) ===
+        // Define field mappings for notes output
+        // Maps from event property names to note field names
+        const fieldMappings = {
+            // Primary fields
+            'venue': 'Bar',
+            'bar': 'Bar',
+            'description': 'Description',
+            'tea': 'Description', // Alternative name for description
+            'price': 'Price',
+            'cover': 'Price', // Alternative name for price
+            'eventType': 'Type',
+            'recurrence': 'Recurrence',
+            'shortName': 'Short Name',
+            'shorterName': 'Shorter Name',
+            'shortTitle': 'Short Name', // Maps to Short Name if shortName not present
+            
+            // Social media and links
+            'instagram': 'Instagram',
+            'facebook': 'Facebook',
+            'website': 'Website',
+            'url': 'Website', // Alternative for website
+            'googleMapsLink': 'Gmaps',
+            'gmaps': 'Gmaps',
+            
+            // Debug/metadata fields
+            'key': 'Key',
+            'city': 'DebugCity',
+            'source': 'DebugSource',
+            'timezone': 'DebugTimezone',
+            'image': 'DebugImage',
+            'imageUrl': 'DebugImage'
+        };
         
-        // Add bar/venue name first if available
-        if (event.venue || event.bar) {
-            // Include if either venue OR bar is not preserved
-            if ((event.venue && shouldIncludeField('venue')) || (event.bar && shouldIncludeField('bar'))) {
-                notes.push(`Bar: ${event.venue || event.bar}`);
+        // Track which fields we've already processed
+        const processedFields = new Set();
+        
+        // Process fields in a specific order for consistency
+        const fieldOrder = [
+            // Primary venue/description first
+            ['venue', 'bar'],
+            ['description', 'tea'],
+            ['price', 'cover'],
+            ['eventType'],
+            ['recurrence'],
+            ['shortName'],
+            ['shorterName'],
+            ['shortTitle'],
+            
+            // Social and links
+            ['instagram'],
+            ['facebook'],
+            ['website', 'url'],
+            ['googleMapsLink', 'gmaps'],
+            
+            // Debug fields (add blank line before these)
+            '_separator',
+            ['key'],
+            ['city'],
+            ['source'],
+            ['timezone'],
+            ['image', 'imageUrl']
+        ];
+        
+        // Process fields in order
+        fieldOrder.forEach(fieldGroup => {
+            if (fieldGroup === '_separator') {
+                // Add blank line before debug section if we have any notes
+                if (notes.length > 0) {
+                    notes.push('');
+                }
+                return;
             }
-        }
-        
-        // Add description/tea in key-value format (tea is an alternative name for description)
-        if ((event.description && event.description.trim()) || (event.tea && event.tea.trim())) {
-            // Include if either description OR tea is not preserved
-            if ((event.description && shouldIncludeField('description')) || (event.tea && shouldIncludeField('tea'))) {
-                notes.push(`Description: ${event.description || event.tea}`);
+            
+            // Find the first field in the group that has a value
+            let fieldAdded = false;
+            for (const fieldName of fieldGroup) {
+                if (fieldAdded) break;
+                
+                const value = event[fieldName];
+                if (value && !processedFields.has(fieldName)) {
+                    // Check if this field should be included based on merge strategy
+                    if (shouldIncludeField(fieldName)) {
+                        const noteFieldName = fieldMappings[fieldName];
+                        if (noteFieldName) {
+                            notes.push(`${noteFieldName}: ${value}`);
+                            fieldAdded = true;
+                            
+                            // Mark all alternatives as processed
+                            fieldGroup.forEach(f => processedFields.add(f));
+                        }
+                    }
+                }
             }
-        }
+        });
         
-        // Add price/cover
-        if (event.price || event.cover) {
-            // Include if either price OR cover is not preserved
-            if ((event.price && shouldIncludeField('price')) || (event.cover && shouldIncludeField('cover'))) {
-                notes.push(`Price: ${event.price || event.cover}`);
-            }
-        }
-        
-        // Add event type
-        if (event.eventType && shouldIncludeField('eventType')) {
-            notes.push(`Type: ${event.eventType}`);
-        }
-        
-        // Add recurrence info
-        if (event.recurring && event.recurrence && shouldIncludeField('recurrence')) {
+        // Handle recurring field specially
+        if (event.recurring && event.recurrence && shouldIncludeField('recurrence') && !processedFields.has('recurrence')) {
             notes.push(`Recurrence: ${event.recurrence}`);
-        }
-        
-        // Add short names if available - using the keys that calendar-core.js expects
-        if (event.shortName && shouldIncludeField('shortName')) {
-            notes.push(`Short Name: ${event.shortName}`);
-        }
-        
-        if (event.shorterName && shouldIncludeField('shorterName')) {
-            notes.push(`Shorter Name: ${event.shorterName}`);
-        }
-        
-        // Add shortTitle as Short Name (which calendar-core.js understands)
-        if (event.shortTitle && !event.shortName && shouldIncludeField('shortTitle')) {
-            notes.push(`Short Name: ${event.shortTitle}`);
-        }
-        
-        // Add social media links
-        if (event.instagram && shouldIncludeField('instagram')) {
-            notes.push(`Instagram: ${event.instagram}`);
-        }
-        
-        if (event.facebook && shouldIncludeField('facebook')) {
-            notes.push(`Facebook: ${event.facebook}`);
-        }
-        
-        // Add website URL - prefer event.website, fallback to event.url
-        if (event.url || event.website) {
-            // Include if either website OR url is not preserved
-            if ((event.website && shouldIncludeField('website')) || (event.url && shouldIncludeField('url'))) {
-                notes.push(`Website: ${event.url || event.website}`);
-            }
-        }
-        
-        // Handle both gmaps and googleMapsLink fields
-        if (event.googleMapsLink || event.gmaps) {
-            // Include if either gmaps OR googleMapsLink is not preserved
-            if ((event.gmaps && shouldIncludeField('gmaps')) || (event.googleMapsLink && shouldIncludeField('googleMapsLink'))) {
-                notes.push(`Gmaps: ${event.googleMapsLink || event.gmaps}`);
-            }
-        }
-        
-        // === DEBUG PROPERTIES (not parsed by calendar-core.js) ===
-        // Add blank line before debug section if we have any parsed properties
-        if (notes.length > 0) {
-            notes.push('');
-        }
-        
-        // Add event key if available (for merging logic)
-        // Note: Must use "Key:" format for extractKeyFromNotes to work
-        if (event.key) {
-            notes.push(`Key: ${event.key}`);
-        }
-        
-        // Add city
-        if (event.city) {
-            notes.push(`DebugCity: ${event.city}`);
-        }
-        
-        // Add source
-        if (event.source) {
-            notes.push(`DebugSource: ${event.source}`);
-        }
-        
-        // Add timezone if different from device
-        if (event.timezone) {
-            notes.push(`DebugTimezone: ${event.timezone}`);
-        }
-        
-        // Add image URL if available
-        if (event.image || event.imageUrl) {
-            notes.push(`DebugImage: ${event.image || event.imageUrl}`);
+            processedFields.add('recurrence');
         }
         
         // Add any additional custom metadata fields that aren't already handled
         const handledFields = new Set([
-            'title', 'description', 'tea', 'startDate', 'endDate', 'venue', 'bar', 
-            'location', 'address', 'coordinates', 'city', 'source', 'key', 
-            'instagram', 'facebook', 'website', 'gmaps', 'googleMapsLink', 
-            'price', 'cover', 'recurring', 'recurrence', 'eventType', 'timezone', 
-            'url', 'isBearEvent', 'setDescription', '_analysis', '_action', 
+            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
+            'isBearEvent', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
-            'shortName', 'shorterName', 'shortTitle', 'image', 'imageUrl'
+            'recurring', // Special handling above
+            ...processedFields
         ]);
         
-        // Add any custom fields from metadata
+        // Add any custom fields
         Object.keys(event).forEach(fieldName => {
             if (!handledFields.has(fieldName) && event[fieldName] !== undefined && event[fieldName] !== null && event[fieldName] !== '') {
-                // Format the field name nicely (capitalize first letter) and prefix with Debug
-                const formattedFieldName = 'Debug' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-                notes.push(`${formattedFieldName}: ${event[fieldName]}`);
+                if (shouldIncludeField(fieldName)) {
+                    // Format the field name nicely (capitalize first letter) and prefix with Debug
+                    const formattedFieldName = 'Debug' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                    notes.push(`${formattedFieldName}: ${event[fieldName]}`);
+                }
             }
         });
         
