@@ -1232,73 +1232,58 @@ class SharedCore {
             strategy: mergeStrategies
         };
         
+        // Helper function to apply merge strategy
+        const applyMergeStrategy = (fieldName, existingValue, newValue) => {
+            const strategy = mergeStrategies[fieldName] || 'preserve';
+            
+            switch (strategy) {
+                case 'preserve':
+                    // Always use existing value if it exists
+                    if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                        event[fieldName] = existingValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        return true;
+                    }
+                    break;
+                    
+                case 'upsert':
+                    // Only add new value if existing doesn't have it
+                    if (!existingValue && newValue) {
+                        // Keep new value (do nothing as it's already in event)
+                        event._mergeInfo.mergedFields[fieldName] = 'new';
+                        return true;
+                    } else if (existingValue) {
+                        // Existing has value, keep it
+                        event[fieldName] = existingValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        return true;
+                    }
+                    break;
+                    
+                case 'clobber':
+                    // Use new value if it exists, otherwise keep existing
+                    if (newValue !== undefined && newValue !== null && newValue !== '') {
+                        // Keep new value (do nothing as it's already in event)
+                        event._mergeInfo.mergedFields[fieldName] = 'new';
+                        return true;
+                    } else if (existingValue) {
+                        event[fieldName] = existingValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        return true;
+                    }
+                    break;
+            }
+            
+            return false;
+        };
+        
         // Process each conflict (usually the existing calendar event)
         event._conflicts.forEach(conflict => {
-            // Parse all fields from existing event's notes
-            const existingFields = conflict.notes ? this.parseNotesIntoFields(conflict.notes) : {};
-            
-            // Define field mappings between conflict object and event object
-            const directFieldMappings = {
-                'location': 'venue',
-                'title': 'title',
-                'startDate': 'startDate',
-                'endDate': 'endDate',
-                'description': 'description',
-                'recurrence': 'recurrence',
-                'coordinates': 'coordinates',
-                'links': 'links',
-                'slug': 'slug',
-                'eventType': 'eventType',
-                'recurring': 'recurring'
-            };
-            
-            // Helper function to apply merge strategy
-            const applyMergeStrategy = (fieldName, existingValue, newValue) => {
-                const strategy = mergeStrategies[fieldName] || 'preserve';
-                
-                switch (strategy) {
-                    case 'preserve':
-                        // Always use existing value if it exists
-                        if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                            event[fieldName] = existingValue;
-                            event._mergeInfo.mergedFields[fieldName] = 'existing';
-                            return true;
-                        }
-                        break;
-                        
-                    case 'upsert':
-                        // Only add new value if existing doesn't have it
-                        if (!existingValue && newValue) {
-                            // Keep new value (do nothing as it's already in event)
-                            event._mergeInfo.mergedFields[fieldName] = 'new';
-                            return true;
-                        } else if (existingValue) {
-                            // Existing has value, keep it
-                            event[fieldName] = existingValue;
-                            event._mergeInfo.mergedFields[fieldName] = 'existing';
-                            return true;
-                        }
-                        break;
-                        
-                    case 'clobber':
-                        // Use new value if it exists, otherwise keep existing
-                        if (newValue !== undefined && newValue !== null && newValue !== '') {
-                            // Keep new value (do nothing as it's already in event)
-                            event._mergeInfo.mergedFields[fieldName] = 'new';
-                            return true;
-                        } else if (existingValue) {
-                            event[fieldName] = existingValue;
-                            event._mergeInfo.mergedFields[fieldName] = 'existing';
-                            return true;
-                        }
-                        break;
-                }
-                
-                return false;
-            };
+            // First, parse fields from existing event's notes
+            const existingFieldsFromNotes = conflict.notes ? this.parseNotesIntoFields(conflict.notes) : {};
             
             // Process fields from notes
-            Object.entries(existingFields).forEach(([fieldName, value]) => {
+            Object.entries(existingFieldsFromNotes).forEach(([fieldName, value]) => {
                 // Track extraction
                 event._mergeInfo.extractedFields[fieldName] = {
                     value: value,
@@ -1309,11 +1294,17 @@ class SharedCore {
                 applyMergeStrategy(fieldName, value, event[fieldName]);
             });
             
-            // Process direct field mappings
-            Object.entries(directFieldMappings).forEach(([conflictField, eventField]) => {
-                const existingValue = conflict[conflictField];
-                if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                    applyMergeStrategy(eventField, existingValue, event[eventField]);
+            // Process direct fields from conflict object
+            // Handle 'location' -> 'venue' mapping
+            if (conflict.location && !existingFieldsFromNotes.venue) {
+                applyMergeStrategy('venue', conflict.location, event.venue);
+            }
+            
+            // Process other direct fields that might exist on conflict
+            const directFields = ['title', 'description', 'startDate', 'endDate', 'recurrence', 'eventType', 'recurring'];
+            directFields.forEach(fieldName => {
+                if (conflict[fieldName] && !existingFieldsFromNotes[fieldName]) {
+                    applyMergeStrategy(fieldName, conflict[fieldName], event[fieldName]);
                 }
             });
         });
