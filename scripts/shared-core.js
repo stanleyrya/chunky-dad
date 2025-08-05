@@ -198,8 +198,7 @@ class SharedCore {
 
         await displayAdapter.logInfo(`SYSTEM: Total events collected: ${allEvents.length}`);
 
-        // Note: Metadata is now applied dynamically by parsers using the {value, merge} format
-        // The applyMetadataOverrides method is deprecated but kept for backward compatibility
+        // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events
         await displayAdapter.logInfo('SYSTEM: Filtering future events...');
@@ -277,20 +276,7 @@ class SharedCore {
         }
     }
 
-    // DEPRECATED: This method uses the old hardcoded approach for metadata overrides
-    // Modern parsers now handle metadata dynamically using the {value, merge} format
-    // Kept for backward compatibility only - consider removing in future versions
-    applyMetadataOverrides(events, metadata) {
-        // This method is deprecated. Metadata is now applied by parsers using the dynamic approach.
-        // The new format in scraper-input.json is:
-        // "metadata": {
-        //   "fieldName": {
-        //     "value": "field value",
-        //     "merge": "clobber|upsert|preserve"
-        //   }
-        // }
-        console.log('⚠️ SharedCore: applyMetadataOverrides is deprecated. Metadata should be applied by parsers.');
-    }
+
 
     // Pure utility functions
     filterFutureEvents(events, daysToLookAhead = null) {
