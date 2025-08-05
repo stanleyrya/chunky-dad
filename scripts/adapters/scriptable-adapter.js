@@ -1702,6 +1702,22 @@ class ScriptableAdapter {
             }
         }
         
+        function toggleComparisonSection(eventId) {
+            const content = document.getElementById('comparison-content-' + eventId);
+            const icon = document.getElementById('expand-icon-' + eventId);
+            const diffToggle = document.getElementById('diff-toggle-' + eventId);
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+                if (diffToggle) diffToggle.style.display = 'block';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+                if (diffToggle) diffToggle.style.display = 'none';
+            }
+        }
+        
         function copyRawOutput() {
             // Get all event cards
             const eventCards = document.querySelectorAll('.event-card');
@@ -1906,11 +1922,8 @@ class ScriptableAdapter {
     generateEventCard(event) {
         const actionBadge = {
             'new': '<span class="action-badge badge-new">NEW</span>',
-            'update': '<span class="action-badge badge-update">UPDATE</span>',
             'merge': '<span class="action-badge badge-merge">MERGE</span>',
             'conflict': '<span class="action-badge badge-warning">CONFLICT</span>',
-            'key_conflict': '<span class="action-badge badge-warning">KEY MISMATCH</span>',
-            'time_conflict': '<span class="action-badge badge-warning">TIME OVERLAP</span>',
             'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
         }[event._action] || '';
         
@@ -2000,17 +2013,31 @@ class ScriptableAdapter {
                 ` : ''}
             </div>
             
-            <!-- Show comparison if we have original data -->
-            ${event._original && (event._action === 'conflict' || event._action === 'time_conflict') ? `
+            <!-- Show comparison for all non-new events with original data -->
+            ${event._original && event._action !== 'new' ? (() => {
+                const hasDifferences = this.hasEventDifferences(event);
+                const eventId = event.key || Math.random();
+                const isExpanded = hasDifferences; // Auto-expand if there are differences
+                
+                return `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h4 style="margin: 0; font-size: 14px;">📊 Conflict Resolution</h4>
-                        <button onclick="toggleDiffView(this, '${event.key || Math.random()}')" 
-                                style="padding: 4px 10px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;"
+                         onclick="toggleComparisonSection('${eventId}')">
+                        <h4 style="margin: 0; font-size: 14px;">
+                            <span id="expand-icon-${eventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">
+                                ${isExpanded ? '▼' : '▶'}
+                            </span>
+                            📊 ${event._action === 'conflict' ? 'Conflict Resolution' : 'Merge Comparison'}
+                            ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
+                        </h4>
+                        <button onclick="event.stopPropagation(); toggleDiffView(this, '${eventId}');" 
+                                style="padding: 4px 10px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; ${!isExpanded ? 'display: none;' : ''}"
+                                id="diff-toggle-${eventId}">
                             Switch to Line View
                         </button>
                     </div>
                     
+                    <div id="comparison-content-${eventId}" style="${!isExpanded ? 'display: none;' : ''}">
                     <!-- Show what was extracted -->
                     ${event._mergeInfo?.extractedFields && Object.keys(event._mergeInfo.extractedFields).length > 0 ? `
                         <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
@@ -2024,7 +2051,7 @@ class ScriptableAdapter {
                     ` : ''}
                     
                     <!-- Table view (default) -->
-                    <div id="table-view-${event.key || Math.random()}" class="diff-view">
+                    <div id="table-view-${eventId}" class="diff-view">
                         <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
                             <tr>
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
@@ -2038,11 +2065,13 @@ class ScriptableAdapter {
                     </div>
                     
                     <!-- Line view (hidden by default) -->
-                    <div id="line-view-${event.key || Math.random()}" class="diff-view" style="display: none;">
+                    <div id="line-view-${eventId}" class="diff-view" style="display: none;">
                         ${this.generateLineDiffView(event)}
                     </div>
+                    </div>
                 </div>
-            ` : ''}
+                `;
+            })() : ''}
             
             <!-- Simplified metadata -->
             ${event.key || event.source ? `
@@ -2052,26 +2081,9 @@ class ScriptableAdapter {
                 </div>
             ` : ''}
             
-            ${event._action === 'update' && event._existingEvent ? `
-                <div class="existing-info" style="margin-top: 10px; background: #e3f2fd; padding: 10px; border-radius: 5px;">
-                    <strong>📝 Update Details:</strong>
-                    <div style="margin-top: 5px; font-size: 12px;">
-                        This event will be updated with new information from ${event.source || 'the scraper'}.
-                    </div>
-                </div>
-            ` : ''}
+
             
-            ${event._action === 'merge' && event._existingEvent ? `
-                <div class="existing-info" style="margin-top: 10px; background: #e8f5e9; padding: 10px; border-radius: 5px;">
-                    <strong>🔀 Merge Details:</strong>
-                    <div style="margin-top: 5px; font-size: 12px;">
-                        Merging with existing event: "${this.escapeHtml(event._existingEvent.title)}"
-                        <br>New information will be combined with existing data based on merge strategies.
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${(event._action === 'key_conflict' || event._action === 'time_conflict') && event._conflicts ? `
+            ${event._action === 'conflict' && event._conflicts ? `
                 <div class="conflict-info">
                     <strong>⚠️ Overlapping Events:</strong> ${event._conflicts.length} event(s) at same time
                     <div style="margin-top: 10px;">
@@ -2097,14 +2109,7 @@ class ScriptableAdapter {
                 </div>
             ` : ''}
             
-            ${event._action === 'key_conflict' && event._existingKey ? `
-                <div class="conflict-info">
-                    <strong>Key Mismatch:</strong>
-                    <br>• Existing key: ${this.escapeHtml(event._existingKey)}
-                    <br>• New key: ${this.escapeHtml(event.key)}
-                    <br>• Cannot automatically merge - manual review needed
-                </div>
-            ` : ''}
+
             
             ${event._action === 'missing_calendar' ? `
                 <div class="conflict-info">
@@ -2506,6 +2511,33 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     getCalendarNameForDisplay(event) {
         const city = event.city || 'default';
         return this.calendarMappings[city] || `chunky-dad-${city}`;
+    }
+    
+    // Check if event has actual differences to show
+    hasEventDifferences(event) {
+        if (!event._original) return false;
+        
+        const fieldsToCheck = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
+        
+        for (const field of fieldsToCheck) {
+            let newValue = event._original.new[field] || '';
+            let existingValue = event._original.existing?.[field] || '';
+            
+            // Check if field was extracted from notes
+            if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
+                existingValue = event._mergeInfo.extractedFields[field].value;
+            }
+            
+            // Skip empty fields
+            if (!newValue && !existingValue) continue;
+            
+            // Check for differences
+            if (newValue !== existingValue) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     // Generate comparison rows for conflict display
