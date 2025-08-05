@@ -462,6 +462,45 @@ class SharedCore {
         const fields = {};
         const lines = notes.split('\n');
         
+        // Define field aliases for normalization
+        // Maps various names to canonical field names
+        const fieldAliases = {
+            // Description aliases
+            'tea': 'description',
+            'info': 'description',
+            
+            // Venue/location aliases
+            'bar': 'venue',
+            'location': 'venue',
+            'host': 'venue',
+            
+            // Price aliases
+            'cover': 'price',
+            'cost': 'price',
+            
+            // Name aliases
+            'shortname': 'shortname',
+            'short name': 'shortname',
+            'shorter name': 'shortername',
+            'shortername': 'shortername',
+            'shorttitle': 'shorttitle',
+            'short title': 'shorttitle',
+            
+            // Type aliases
+            'type': 'eventtype',
+            'event type': 'eventtype',
+            
+            // Social/web aliases
+            'gmaps': 'gmaps',
+            'google maps': 'gmaps',
+            
+            // Debug aliases (keep as-is but normalized)
+            'debugcity': 'debugcity',
+            'debugsource': 'debugsource',
+            'debugtimezone': 'debugtimezone',
+            'debugimage': 'debugimage'
+        };
+        
         lines.forEach(line => {
             const colonIndex = line.indexOf(':');
             // A valid metadata line has a colon that's not at the start
@@ -470,10 +509,16 @@ class SharedCore {
                 const value = line.substring(colonIndex + 1).trim();
                 
                 if (key && value) {
-                    // Normalize key names - convert to lowercase and remove spaces
-                    const normalizedKey = key.toLowerCase()
-                        .replace(/^debug/, '') // Remove debug prefix
-                        .replace(/\s+/g, ''); // Remove all spaces
+                    // Normalize key names - convert to lowercase and remove extra spaces
+                    let normalizedKey = key.toLowerCase().trim();
+                    
+                    // Apply alias mapping if exists
+                    if (fieldAliases[normalizedKey]) {
+                        normalizedKey = fieldAliases[normalizedKey];
+                    } else {
+                        // For unrecognized keys, just remove spaces
+                        normalizedKey = normalizedKey.replace(/\s+/g, '');
+                    }
                     
                     fields[normalizedKey] = value;
                 }
@@ -916,16 +961,13 @@ class SharedCore {
         const fieldMappings = {
             // Primary fields
             'venue': 'Bar',
-            'bar': 'Bar',
             'description': 'Description',
-            'tea': 'Description', // Alternative name for description
             'price': 'Price',
-            'cover': 'Price', // Alternative name for price
-            'eventType': 'Type',
+            'eventtype': 'Type',
             'recurrence': 'Recurrence',
-            'shortName': 'Short Name',
-            'shorterName': 'Shorter Name',
-            'shortTitle': 'Short Name', // Maps to Short Name if shortName not present
+            'shortname': 'Short Name',
+            'shortername': 'Shorter Name',
+            'shorttitle': 'Short Title',
             
             // Social media and links
             'instagram': 'Instagram',
@@ -950,14 +992,14 @@ class SharedCore {
         // Process fields in a specific order for consistency
         const fieldOrder = [
             // Primary venue/description first
-            ['venue', 'bar'],
-            ['description', 'tea'],
-            ['price', 'cover'],
-            ['eventType'],
+            ['venue'],
+            ['description'],
+            ['price'],
+            ['eventtype'],
             ['recurrence'],
-            ['shortName'],
-            ['shorterName'],
-            ['shortTitle'],
+            ['shortname'],
+            ['shortername'],
+            ['shorttitle'],
             
             // Social and links
             ['instagram'],
