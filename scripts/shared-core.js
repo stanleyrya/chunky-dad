@@ -372,18 +372,24 @@ class SharedCore {
             console.log(`🔄 SharedCore: Using original title for deduplication: "${event.title}" → "${title}"`);
         }
         
-        // Normalize Megawoof/DURO event titles for better deduplication
-        // Convert variations like "D>U>R>O!", "DURO", "D U R O" to a standard form
-        if (/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(title) || /megawoof/i.test(title)) {
-            const originalTitle = title;
-            // Extract the core event identifier (DURO) and normalize it
-            const duroMatch = title.match(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i);
-            if (duroMatch) {
-                title = title.replace(/d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o[^\w]*/i, 'megawoof-duro');
-            } else if (/megawoof/i.test(title)) {
-                title = title.replace(/megawoof[:\s\-]*/i, 'megawoof-');
-            }
-            console.log(`🔄 SharedCore: Normalized Megawoof title for deduplication: "${originalTitle}" → "${title}"`);
+        // Generic text normalization for better deduplication
+        // This handles titles with special characters, spacing variations, etc.
+        const originalTitle = title;
+        
+        // Normalize text patterns with special characters between letters
+        // Examples: "D>U>R>O!", "A-B-C", "X Y Z" -> normalized forms
+        title = title
+            // Replace sequences of special chars between letters with a single hyphen
+            .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
+            // Remove trailing special characters after words
+            .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
+            // Collapse multiple spaces/hyphens into single hyphen
+            .replace(/[\s\-]+/g, '-')
+            // Remove leading/trailing hyphens
+            .replace(/^-+|-+$/g, '');
+        
+        if (title !== originalTitle) {
+            console.log(`🔄 SharedCore: Normalized title for deduplication: "${originalTitle}" → "${title}"`);
         }
         
         const date = this.normalizeEventDate(event.startDate);
