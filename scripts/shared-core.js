@@ -731,6 +731,23 @@ class SharedCore {
         const cleanAddress = address.trim();
         if (cleanAddress.length < 10) return false; // Too short to be a full address
         
+        // Check for TBA or similar placeholder values
+        if (/^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(cleanAddress)) {
+            return false;
+        }
+        
+        // Check for partial addresses that are just area/neighborhood + city + zip
+        // Examples: "DTLA Los Angeles, CA 90013", "Downtown Denver, CO 80202"
+        const partialAddressPatterns = [
+            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s+[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
+            /^[A-Za-z\s]+\s+(District|Area|Zone|Neighborhood)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i
+        ];
+        
+        // If it matches a partial address pattern, it's not a full address
+        if (partialAddressPatterns.some(pattern => pattern.test(cleanAddress))) {
+            return false;
+        }
+        
         // Check for common full address patterns
         const fullAddressPatterns = [
             /\d+\s+\w+.*street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i,
