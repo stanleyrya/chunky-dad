@@ -2015,11 +2015,30 @@ class ScriptableAdapter {
                     ${event._mergeInfo?.extractedFields && Object.keys(event._mergeInfo.extractedFields).length > 0 ? `
                         <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
                             <strong style="font-size: 12px;">Extracted from existing event:</strong>
-                            ${Object.entries(event._mergeInfo.extractedFields).map(([field, info]) => `
-                                <div style="margin-top: 5px; font-size: 12px;">
-                                    • <strong>${field}:</strong> "${this.escapeHtml(info.value)}"
-                                </div>
-                            `).join('')}
+                            ${(() => {
+                                const fields = { ...event._mergeInfo.extractedFields };
+                                const processedFields = [];
+                                
+                                // Merge tea and description into one entry
+                                if (fields.tea || fields.description) {
+                                    const value = fields.tea?.value || fields.description?.value;
+                                    const source = fields.tea?.source || fields.description?.source;
+                                    processedFields.push({ field: 'description', value, source });
+                                    delete fields.tea;
+                                    delete fields.description;
+                                }
+                                
+                                // Add remaining fields
+                                Object.entries(fields).forEach(([field, info]) => {
+                                    processedFields.push({ field, value: info.value, source: info.source });
+                                });
+                                
+                                return processedFields.map(({ field, value }) => `
+                                    <div style="margin-top: 5px; font-size: 12px;">
+                                        • <strong>${field}:</strong> "${this.escapeHtml(value)}"
+                                    </div>
+                                `).join('');
+                            })()}
                         </div>
                     ` : ''}
                     
@@ -2117,25 +2136,43 @@ class ScriptableAdapter {
                 <summary style="cursor: pointer; font-size: 13px; color: #007aff;">📝 View Calendar Notes Preview</summary>
                 <div class="notes-preview">
                     ${(() => {
-                        // Parse and format notes for better readability
-                        const lines = notes.split('\n');
                         let formattedHtml = '';
-                        let inDescription = true;
                         
-                        lines.forEach(line => {
-                            if (line.includes(':') && !inDescription) {
-                                // This is a metadata field
-                                const [key, ...valueParts] = line.split(':');
-                                const value = valueParts.join(':').trim();
-                                formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
-                            } else if (line.trim() === '') {
-                                formattedHtml += '<br>';
-                                inDescription = false;
-                            } else {
-                                // Part of description
-                                formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
-                            }
-                        });
+                        // First, show tea/description if available as a field
+                        if (event.tea) {
+                            formattedHtml += `<div style="margin: 5px 0; padding: 8px; background: #f0f8ff; border-radius: 4px;">
+                                <strong style="color: #666;">Description:</strong>
+                                <div style="margin-top: 4px;">${this.escapeHtml(event.tea)}</div>
+                            </div>`;
+                        }
+                        
+                        // Then parse and format notes for other fields
+                        if (notes) {
+                            const lines = notes.split('\n');
+                            let inDescription = true;
+                            
+                            lines.forEach(line => {
+                                if (line.includes(':') && !inDescription) {
+                                    // This is a metadata field
+                                    const [key, ...valueParts] = line.split(':');
+                                    const value = valueParts.join(':').trim();
+                                    
+                                    // Skip tea/description in notes if we already showed it from the field
+                                    const keyLower = key.toLowerCase().trim();
+                                    if ((keyLower === 'tea' || keyLower === 'description') && event.tea) {
+                                        return;
+                                    }
+                                    
+                                    formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
+                                } else if (line.trim() === '') {
+                                    formattedHtml += '<br>';
+                                    inDescription = false;
+                                } else if (!event.tea) {
+                                    // Only show description lines from notes if no tea field exists
+                                    formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
+                                }
+                            });
+                        }
                         
                         return formattedHtml || '<em>No notes</em>';
                     })()}

@@ -1031,11 +1031,10 @@ class SharedCore {
             }
         }
         
-        // Add description/tea in key-value format (tea is an alternative name for description)
-        if ((event.description && event.description.trim()) || (event.tea && event.tea.trim())) {
-            // Include if either description OR tea is not preserved
-            if ((event.description && shouldIncludeField('description')) || (event.tea && shouldIncludeField('tea'))) {
-                notes.push(`Description: ${event.description || event.tea}`);
+        // Add description/tea in key-value format (tea is the standard field name)
+        if (event.tea && event.tea.trim()) {
+            if (shouldIncludeField('tea')) {
+                notes.push(`Description: ${event.tea}`);
             }
         }
         
@@ -1447,6 +1446,12 @@ class SharedCore {
             return event;
         }
         
+        // Standardize tea/description fields - always use 'tea' as primary
+        if (event.description && !event.tea) {
+            event.tea = event.description;
+            delete event.description;
+        }
+        
         // Store original event data before processing
         event._original = {
             new: { ...event },
@@ -1458,7 +1463,7 @@ class SharedCore {
         
         // Define fields to potentially extract from notes
         const extractableFields = [
-            'tea', 'description', 'instagram', 'website', 'bar', 'venue', 
+            'tea', 'instagram', 'website', 'bar', 'venue', 
             'cover', 'price', 'facebook', 'gmaps', 'shortName', 
             'shorterName', 'type', 'eventType', 'recurring'
         ];
@@ -1480,8 +1485,11 @@ class SharedCore {
                     
                     if (!extractedValue) return;
                     
+                    // Standardize tea/description to always use 'tea'
+                    const standardizedFieldName = fieldName === 'description' ? 'tea' : fieldName;
+                    
                     // Track extraction
-                    event._mergeInfo.extractedFields[fieldName] = {
+                    event._mergeInfo.extractedFields[standardizedFieldName] = {
                         value: extractedValue,
                         source: 'existing.notes'
                     };
@@ -1493,17 +1501,17 @@ class SharedCore {
                     
                     if (strategy === 'preserve') {
                         // Always use the existing value from conflict
-                        event[fieldName] = extractedValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        event[standardizedFieldName] = extractedValue;
+                        event._mergeInfo.mergedFields[standardizedFieldName] = 'existing';
                     } else if (strategy === 'upsert') {
                         // Only add if field doesn't exist in existing event
                         // (extracted value means it exists in existing event, so skip)
                         // This is backwards - we're extracting from existing, not checking if new has it
                         // Skip this extraction since upsert only adds new values
-                    } else if (strategy === 'clobber' && !event[fieldName]) {
+                    } else if (strategy === 'clobber' && !event[standardizedFieldName]) {
                         // For clobber, preserve existing if new doesn't have a value
-                        event[fieldName] = extractedValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        event[standardizedFieldName] = extractedValue;
+                        event._mergeInfo.mergedFields[standardizedFieldName] = 'existing';
                     }
                 });
             }
