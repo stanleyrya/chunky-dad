@@ -1264,8 +1264,8 @@ class SharedCore {
     // Helper function to extract key from notes
     extractKeyFromNotes(notes) {
         if (!notes) return null;
-        const keyMatch = notes.match(/Key:\s*([^\n]+)/);
-        return keyMatch ? keyMatch[1].trim() : null;
+        const fields = this.parseNotesIntoFields(notes);
+        return fields.key || null;
     }
     
     // Check if two dates are equal within a tolerance (pure logic)
@@ -1317,43 +1317,65 @@ class SharedCore {
     extractFieldFromNotes(notes, fieldName) {
         if (!notes) return '';
         
-        // Define extraction patterns for different fields
-        const patterns = {
-            tea: /(?:tea|description|info):\s*(.+?)(?:\n|$)/i,
-            description: /(?:description|tea|info):\s*(.+?)(?:\n|$)/i,
-            instagram: /(?:instagram:\s*)?(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
-            website: /website:\s*(https?:\/\/[^\s\n]+)/i,
-            bar: /(?:bar|location|host):\s*(.+?)(?:\n|$)/i,
-            venue: /(?:venue|bar|location|host):\s*(.+?)(?:\n|$)/i,
-            cover: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
-            price: /(?:price|cover|cost):\s*(.+?)(?:\n|$)/i,
-            facebook: /(?:facebook:\s*)?(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i,
-            gmaps: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
-            shortname: /(?:short name|shortname|short|nickname|nick name|nick):\s*(.+?)(?:\n|$)/i,
-            shortername: /(?:shorter name|shortername|shorter):\s*(.+?)(?:\n|$)/i,
-            type: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
-            eventtype: /(?:eventtype|type):\s*(.+?)(?:\n|$)/i,
-            recurring: /recurring:\s*(.+?)(?:\n|$)/i
+        // First try to get the field from parsed notes
+        const fields = this.parseNotesIntoFields(notes);
+        const normalizedFieldName = fieldName.toLowerCase().replace(/\s+/g, '');
+        
+        // Check if we have a direct match
+        if (fields[normalizedFieldName]) {
+            const value = fields[normalizedFieldName];
+            
+            // Special handling for URLs
+            if (['instagram', 'facebook', 'website', 'gmaps'].includes(normalizedFieldName)) {
+                return value.startsWith('http') ? value : `https://${value}`;
+            }
+            
+            return value;
+        }
+        
+        // If no direct match, try alternative field names
+        const fieldAliases = {
+            'tea': ['description', 'info'],
+            'description': ['tea', 'info'],
+            'bar': ['location', 'host', 'venue'],
+            'venue': ['bar', 'location', 'host'],
+            'cover': ['cost', 'price'],
+            'price': ['cover', 'cost'],
+            'shortname': ['shortername', 'short', 'nickname', 'nick'],
+            'type': ['eventtype'],
+            'eventtype': ['type']
         };
         
-        const pattern = patterns[fieldName.toLowerCase()];
-        if (!pattern) {
-            // Try generic pattern for unknown fields
-            const genericPattern = new RegExp(`${fieldName}:\\s*(.+?)(?:\\n|$)`, 'i');
-            const match = notes.match(genericPattern);
-            return match ? match[1].trim() : '';
+        const aliases = fieldAliases[normalizedFieldName] || [];
+        for (const alias of aliases) {
+            const aliasNormalized = alias.toLowerCase().replace(/\s+/g, '');
+            if (fields[aliasNormalized]) {
+                const value = fields[aliasNormalized];
+                
+                // Special handling for URLs
+                if (['instagram', 'facebook', 'website', 'gmaps'].includes(normalizedFieldName)) {
+                    return value.startsWith('http') ? value : `https://${value}`;
+                }
+                
+                return value;
+            }
         }
         
-        const match = notes.match(pattern);
-        if (!match) return '';
+        // Special patterns for social media URLs that might not have field labels
+        const socialPatterns = {
+            instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
+            facebook: /(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i
+        };
         
-        // Special handling for URLs
-        if (['instagram', 'facebook', 'website', 'gmaps'].includes(fieldName.toLowerCase())) {
-            const url = match[0].replace(new RegExp(`^${fieldName}:\\s*`, 'i'), '');
-            return url.startsWith('http') ? url : `https://${url}`;
+        if (socialPatterns[normalizedFieldName]) {
+            const match = notes.match(socialPatterns[normalizedFieldName]);
+            if (match) {
+                const url = match[0];
+                return url.startsWith('http') ? url : `https://${url}`;
+            }
         }
         
-        return match[1] ? match[1].trim() : match[0].trim();
+        return '';
     }
     
     // Process event with conflicts - extract and merge based on strategies
@@ -1371,13 +1393,6 @@ class SharedCore {
         // Get merge strategies
         const mergeStrategies = event._fieldMergeStrategies || {};
         
-        // Define fields to potentially extract from notes
-        const extractableFields = [
-            'tea', 'description', 'instagram', 'website', 'bar', 'venue', 
-            'cover', 'price', 'facebook', 'gmaps', 'shortName', 
-            'shorterName', 'type', 'eventType', 'recurring'
-        ];
-        
         // Track what was merged and from where
         event._mergeInfo = {
             extractedFields: {},
@@ -1387,44 +1402,11 @@ class SharedCore {
         
         // Process each conflict (usually the existing calendar event)
         event._conflicts.forEach(conflict => {
-            // Extract fields from notes based on merge strategies
-            if (conflict.notes) {
-                extractableFields.forEach(fieldName => {
-                    const strategy = mergeStrategies[fieldName] || 'preserve';
-                    const extractedValue = this.extractFieldFromNotes(conflict.notes, fieldName);
-                    
-                    if (!extractedValue) return;
-                    
-                    // Track extraction
-                    event._mergeInfo.extractedFields[fieldName] = {
-                        value: extractedValue,
-                        source: 'existing.notes'
-                    };
-                    
-                    // Apply merge strategy:
-                    // - preserve: always use existing value
-                    // - upsert: only add if existing doesn't exist and new exists
-                    // - clobber: use new if it exists, preserve existing if new doesn't exist
-                    
-                    if (strategy === 'preserve') {
-                        // Always use the existing value from conflict
-                        event[fieldName] = extractedValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
-                    } else if (strategy === 'upsert') {
-                        // Only add if field doesn't exist in existing event
-                        // (extracted value means it exists in existing event, so skip)
-                        // This is backwards - we're extracting from existing, not checking if new has it
-                        // Skip this extraction since upsert only adds new values
-                    } else if (strategy === 'clobber' && !event[fieldName]) {
-                        // For clobber, preserve existing if new doesn't have a value
-                        event[fieldName] = extractedValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
-                    }
-                });
-            }
+            // Parse all fields from existing event's notes
+            const existingFields = conflict.notes ? this.parseNotesIntoFields(conflict.notes) : {};
             
-            // Handle direct field mapping (e.g., conflict.location -> event.venue)
-            const fieldMappings = {
+            // Define field mappings between conflict object and event object
+            const directFieldMappings = {
                 'location': 'venue',
                 'title': 'title',
                 'startDate': 'startDate',
@@ -1438,23 +1420,68 @@ class SharedCore {
                 'recurring': 'recurring'
             };
             
-            Object.entries(fieldMappings).forEach(([conflictField, eventField]) => {
-                const strategy = mergeStrategies[eventField] || 'preserve';
-                const conflictValue = conflict[conflictField];
+            // Helper function to apply merge strategy
+            const applyMergeStrategy = (fieldName, existingValue, newValue) => {
+                const strategy = mergeStrategies[fieldName] || 'preserve';
                 
-                if (!conflictValue) return;
+                switch (strategy) {
+                    case 'preserve':
+                        // Always use existing value if it exists
+                        if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                            event[fieldName] = existingValue;
+                            event._mergeInfo.mergedFields[fieldName] = 'existing';
+                            return true;
+                        }
+                        break;
+                        
+                    case 'upsert':
+                        // Only add new value if existing doesn't have it
+                        if (!existingValue && newValue) {
+                            // Keep new value (do nothing as it's already in event)
+                            event._mergeInfo.mergedFields[fieldName] = 'new';
+                            return true;
+                        } else if (existingValue) {
+                            // Existing has value, keep it
+                            event[fieldName] = existingValue;
+                            event._mergeInfo.mergedFields[fieldName] = 'existing';
+                            return true;
+                        }
+                        break;
+                        
+                    case 'clobber':
+                        // Use new value if it exists, otherwise keep existing
+                        if (newValue !== undefined && newValue !== null && newValue !== '') {
+                            // Keep new value (do nothing as it's already in event)
+                            event._mergeInfo.mergedFields[fieldName] = 'new';
+                            return true;
+                        } else if (existingValue) {
+                            event[fieldName] = existingValue;
+                            event._mergeInfo.mergedFields[fieldName] = 'existing';
+                            return true;
+                        }
+                        break;
+                }
                 
-                if (strategy === 'preserve') {
-                    // Always use the existing value from conflict
-                    event[eventField] = conflictValue;
-                    event._mergeInfo.mergedFields[eventField] = 'existing';
-                } else if (strategy === 'upsert') {
-                    // Only add if existing doesn't have this field
-                    // Since conflictValue exists, this means existing has it, so skip
-                } else if (strategy === 'clobber' && !event[eventField]) {
-                    // For clobber, preserve existing if new doesn't have a value
-                    event[eventField] = conflictValue;
-                    event._mergeInfo.mergedFields[eventField] = 'existing';
+                return false;
+            };
+            
+            // Process fields from notes
+            Object.entries(existingFields).forEach(([fieldName, value]) => {
+                // Track extraction
+                event._mergeInfo.extractedFields[fieldName] = {
+                    value: value,
+                    source: 'existing.notes'
+                };
+                
+                // Apply merge strategy
+                applyMergeStrategy(fieldName, value, event[fieldName]);
+            });
+            
+            // Process direct field mappings
+            Object.entries(directFieldMappings).forEach(([conflictField, eventField]) => {
+                const existingValue = conflict[conflictField];
+                if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                    applyMergeStrategy(eventField, existingValue, event[eventField]);
                 }
             });
         });
