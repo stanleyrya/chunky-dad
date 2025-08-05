@@ -533,7 +533,7 @@ class SharedCore {
         const lines = [];
         
         // Define priority fields that should appear first (in order)
-        const priorityFields = ['bar', 'key'];
+        const priorityFields = ['venue', 'key'];
         
         // Create a set of fields to process
         const allFields = new Set(Object.keys(fields));
@@ -541,8 +541,7 @@ class SharedCore {
         // Process priority fields first
         priorityFields.forEach(key => {
             if (fields[key]) {
-                const displayKey = this.formatFieldKey(key);
-                lines.push(`${displayKey}: ${fields[key]}`);
+                lines.push(`${key}: ${fields[key]}`);
                 allFields.delete(key);
             }
         });
@@ -552,41 +551,13 @@ class SharedCore {
         sortedFields.forEach(key => {
             const value = fields[key];
             if (value !== undefined && value !== null && value !== '') {
-                const displayKey = this.formatFieldKey(key);
-                lines.push(`${displayKey}: ${value}`);
+                lines.push(`${key}: ${value}`);
             }
         });
         
         return lines.join('\n');
     }
-    
-    // Helper to format field keys for display
-    formatFieldKey(key) {
-        // Handle special cases that need specific formatting
-        const specialCases = {
-            'debugcity': 'DebugCity',
-            'debugsource': 'DebugSource',
-            'debugtimezone': 'DebugTimezone',
-            'debugimage': 'DebugImage',
-            'shortname': 'Short Name',
-            'shortername': 'Shorter Name',
-            'shorttitle': 'ShortTitle',
-            'moreinfo': 'More info',
-            'gmaps': 'Gmaps'
-        };
-        
-        if (specialCases[key]) {
-            return specialCases[key];
-        }
-        
-        // For fields starting with 'debug', capitalize the D
-        if (key.startsWith('debug')) {
-            return 'Debug' + key.charAt(5).toUpperCase() + key.slice(6);
-        }
-        
-        // Default: capitalize first letter
-        return key.charAt(0).toUpperCase() + key.slice(1);
-    }
+
 
     // Helper method to normalize event dates for consistent comparison across timezones
     normalizeEventDate(dateInput) {
@@ -956,34 +927,15 @@ class SharedCore {
             return strategy !== 'preserve' || event._action === 'new';
         };
         
-        // Define field mappings for notes output
-        // Maps from event property names to note field names
-        const fieldMappings = {
-            // Primary fields
-            'venue': 'Bar',
-            'description': 'Description',
-            'price': 'Price',
-            'eventtype': 'Type',
-            'recurrence': 'Recurrence',
-            'shortname': 'Short Name',
-            'shortername': 'Shorter Name',
-            'shorttitle': 'Short Title',
+        // Helper to capitalize field names for display
+        const capitalizeFieldName = (fieldName) => {
+            // Handle special cases
+            if (fieldName === 'eventtype') return 'eventtype';
+            if (fieldName === 'gmaps') return 'gmaps';
+            if (fieldName.startsWith('debug')) return fieldName;
             
-            // Social media and links
-            'instagram': 'Instagram',
-            'facebook': 'Facebook',
-            'website': 'Website',
-            'url': 'Website', // Alternative for website
-            'googleMapsLink': 'Gmaps',
-            'gmaps': 'Gmaps',
-            
-            // Debug/metadata fields
-            'key': 'Key',
-            'city': 'DebugCity',
-            'source': 'DebugSource',
-            'timezone': 'DebugTimezone',
-            'image': 'DebugImage',
-            'imageUrl': 'DebugImage'
+            // Default: just return as-is
+            return fieldName;
         };
         
         // Track which fields we've already processed
@@ -991,34 +943,34 @@ class SharedCore {
         
         // Process fields in a specific order for consistency
         const fieldOrder = [
-            // Primary venue/description first
-            ['venue'],
-            ['description'],
-            ['price'],
-            ['eventtype'],
-            ['recurrence'],
-            ['shortname'],
-            ['shortername'],
-            ['shorttitle'],
+            // Primary fields first
+            'venue',
+            'description',
+            'price',
+            'eventtype',
+            'recurrence',
+            'shortname',
+            'shortername',
+            'shorttitle',
             
             // Social and links
-            ['instagram'],
-            ['facebook'],
-            ['website', 'url'],
-            ['googleMapsLink', 'gmaps'],
+            'instagram',
+            'facebook',
+            'website',
+            'gmaps',
             
             // Debug fields (add blank line before these)
             '_separator',
-            ['key'],
-            ['city'],
-            ['source'],
-            ['timezone'],
-            ['image', 'imageUrl']
+            'key',
+            'city',
+            'source',
+            'timezone',
+            'image'
         ];
         
         // Process fields in order
-        fieldOrder.forEach(fieldGroup => {
-            if (fieldGroup === '_separator') {
+        fieldOrder.forEach(fieldName => {
+            if (fieldName === '_separator') {
                 // Add blank line before debug section if we have any notes
                 if (notes.length > 0) {
                     notes.push('');
@@ -1026,31 +978,20 @@ class SharedCore {
                 return;
             }
             
-            // Find the first field in the group that has a value
-            let fieldAdded = false;
-            for (const fieldName of fieldGroup) {
-                if (fieldAdded) break;
-                
-                const value = event[fieldName];
-                if (value && !processedFields.has(fieldName)) {
-                    // Check if this field should be included based on merge strategy
-                    if (shouldIncludeField(fieldName)) {
-                        const noteFieldName = fieldMappings[fieldName];
-                        if (noteFieldName) {
-                            notes.push(`${noteFieldName}: ${value}`);
-                            fieldAdded = true;
-                            
-                            // Mark all alternatives as processed
-                            fieldGroup.forEach(f => processedFields.add(f));
-                        }
-                    }
+            const value = event[fieldName];
+            if (value && !processedFields.has(fieldName)) {
+                // Check if this field should be included based on merge strategy
+                if (shouldIncludeField(fieldName)) {
+                    const displayName = capitalizeFieldName(fieldName);
+                    notes.push(`${displayName}: ${value}`);
+                    processedFields.add(fieldName);
                 }
             }
         });
         
         // Handle recurring field specially
         if (event.recurring && event.recurrence && shouldIncludeField('recurrence') && !processedFields.has('recurrence')) {
-            notes.push(`Recurrence: ${event.recurrence}`);
+            notes.push(`recurrence: ${event.recurrence}`);
             processedFields.add('recurrence');
         }
         
@@ -1067,9 +1008,8 @@ class SharedCore {
         Object.keys(event).forEach(fieldName => {
             if (!handledFields.has(fieldName) && event[fieldName] !== undefined && event[fieldName] !== null && event[fieldName] !== '') {
                 if (shouldIncludeField(fieldName)) {
-                    // Format the field name nicely (capitalize first letter) and prefix with Debug
-                    const formattedFieldName = 'Debug' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-                    notes.push(`${formattedFieldName}: ${event[fieldName]}`);
+                    const displayName = capitalizeFieldName(fieldName);
+                    notes.push(`${displayName}: ${event[fieldName]}`);
                 }
             }
         });
