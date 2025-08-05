@@ -1137,6 +1137,12 @@ class SharedCore {
                 analyzedEvent._mergedUrl = mergedData.url;
                 analyzedEvent._existingEvent = analysis.existingEvent;
                 
+                // Store original data for comparison display
+                analyzedEvent._original = {
+                    new: { ...event },
+                    existing: analysis.existingEvent
+                };
+                
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(mergedData.notes);
