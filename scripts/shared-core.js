@@ -1123,16 +1123,9 @@ class SharedCore {
             // Add analysis to the new event object
             analyzedEvent._analysis = {
                 action: analysis.action,
-                reason: analysis.reason,
-                conflictType: analysis.conflictType,
-                // Don't include conflicts here - they'll be in _conflicts if needed
+                reason: analysis.reason
             };
             analyzedEvent._action = analysis.action;
-            
-            // If action is conflict and we have a specific conflict type, use that as the action
-            if (analysis.action === 'conflict' && analysis.conflictType) {
-                analyzedEvent._action = analysis.conflictType;
-            }
             
             // Handle merge action by performing the merge here
             if (analysis.action === 'merge' && analysis.existingEvent) {
@@ -1208,24 +1201,14 @@ class SharedCore {
         for (const event of newEvents) {
             const analysis = this.analyzeEventAction(event, existingEventsData);
             
-            // Use the specific conflict type as the action if available
-            const actionType = (analysis.action === 'conflict' && analysis.conflictType) 
-                ? analysis.conflictType 
-                : analysis.action;
-            
-            switch (actionType) {
+            switch (analysis.action) {
                 case 'new':
                     actions.newEvents.push({ event, analysis });
-                    break;
-                case 'update':
-                    actions.updateEvents.push({ event, analysis });
                     break;
                 case 'merge':
                     actions.mergeEvents.push({ event, analysis });
                     break;
                 case 'conflict':
-                case 'key_conflict':
-                case 'time_conflict':
                     actions.conflictEvents.push({ event, analysis });
                     break;
             }
@@ -1246,9 +1229,8 @@ class SharedCore {
         if (keyBasedMatch) {
             const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
             if (existingKey === event.key) {
-                // In clobber mode, we update instead of merge
                 return {
-                    action: mergeMode === 'clobber' ? 'update' : 'merge',
+                    action: 'merge',
                     reason: 'Key match found',
                     existingEvent: keyBasedMatch,
                     existingKey: existingKey
@@ -1257,23 +1239,22 @@ class SharedCore {
                 return {
                     action: 'conflict',
                     reason: 'Key conflict detected',
-                    conflictType: 'key_conflict',
                     existingEvent: keyBasedMatch,
                     existingKey: existingKey
                 };
             }
         }
         
-        // Check for exact duplicates
+        // Check for exact or similar duplicates
         const exactMatch = existingEventsData.find(existing => 
-            existing.title === event.title &&
+            this.areTitlesSimilar(existing.title, event.title) &&
             this.areDatesEqual(existing.startDate, new Date(event.startDate), 1)
         );
         
         if (exactMatch) {
             return {
-                action: 'update',
-                reason: 'Exact duplicate found',
+                action: 'merge',
+                reason: 'Similar event found',
                 existingEvent: exactMatch
             };
         }
@@ -1287,15 +1268,14 @@ class SharedCore {
         if (timeConflicts.length > 0) {
             // Check if these are mergeable conflicts (adding info to existing events)
             const mergeableConflict = timeConflicts.find(existing => 
-                existing.title === event.title || 
+                this.areTitlesSimilar(existing.title, event.title) || 
                 (existing.location === (event.venue || event.bar) && 
                  this.areDatesEqual(existing.startDate, new Date(event.startDate), 60))
             );
             
             if (mergeableConflict) {
-                // In clobber mode, we update instead of merge
                 return {
-                    action: mergeMode === 'clobber' ? 'update' : 'merge',
+                    action: 'merge',
                     reason: 'Mergeable time conflict',
                     existingEvent: mergeableConflict
                 };
@@ -1303,7 +1283,6 @@ class SharedCore {
                 return {
                     action: 'conflict',
                     reason: 'Time conflict detected',
-                    conflictType: 'time_conflict',
                     conflicts: timeConflicts
                 };
             }
@@ -1341,6 +1320,40 @@ class SharedCore {
     // Check if two date ranges overlap (pure logic)
     doDatesOverlap(start1, end1, start2, end2) {
         return start1 < end2 && end1 > start2;
+    }
+    
+    // Fuzzy title matching to handle variations
+    areTitlesSimilar(title1, title2) {
+        if (!title1 || !title2) return false;
+        
+        // Normalize titles for comparison
+        const normalize = (str) => {
+            return str
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '') // Remove special chars
+                .replace(/\s+/g, ''); // Remove spaces
+        };
+        
+        const norm1 = normalize(title1);
+        const norm2 = normalize(title2);
+        
+        // Exact match after normalization
+        if (norm1 === norm2) return true;
+        
+        // Check if one contains the other (handles "Megawoof" vs "Megawoof: DURO")
+        if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+        
+        // Check for common event name patterns
+        const extractEventName = (title) => {
+            // Extract before colon or dash
+            const match = title.match(/^([^:\-–—]+)/);
+            return match ? normalize(match[1]) : normalize(title);
+        };
+        
+        const eventName1 = extractEventName(title1);
+        const eventName2 = extractEventName(title2);
+        
+        return eventName1 === eventName2;
     }
     
     // Generic extraction method for fields from notes
