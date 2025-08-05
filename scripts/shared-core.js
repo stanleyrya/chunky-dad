@@ -462,6 +462,45 @@ class SharedCore {
         const fields = {};
         const lines = notes.split('\n');
         
+        // Define field aliases for normalization
+        // Maps various names to canonical field names
+        const fieldAliases = {
+            // Description aliases
+            'tea': 'description',
+            'info': 'description',
+            
+            // Venue/location aliases
+            'bar': 'venue',
+            'location': 'venue',
+            'host': 'venue',
+            
+            // Price aliases
+            'cover': 'price',
+            'cost': 'price',
+            
+            // Name aliases
+            'shortname': 'shortname',
+            'short name': 'shortname',
+            'shorter name': 'shortername',
+            'shortername': 'shortername',
+            'shorttitle': 'shorttitle',
+            'short title': 'shorttitle',
+            
+            // Type aliases
+            'type': 'eventtype',
+            'event type': 'eventtype',
+            
+            // Social/web aliases
+            'gmaps': 'gmaps',
+            'google maps': 'gmaps',
+            
+            // Debug aliases (keep as-is but normalized)
+            'debugcity': 'debugcity',
+            'debugsource': 'debugsource',
+            'debugtimezone': 'debugtimezone',
+            'debugimage': 'debugimage'
+        };
+        
         lines.forEach(line => {
             const colonIndex = line.indexOf(':');
             // A valid metadata line has a colon that's not at the start
@@ -470,10 +509,16 @@ class SharedCore {
                 const value = line.substring(colonIndex + 1).trim();
                 
                 if (key && value) {
-                    // Normalize key names - convert to lowercase and remove spaces
-                    const normalizedKey = key.toLowerCase()
-                        .replace(/^debug/, '') // Remove debug prefix
-                        .replace(/\s+/g, ''); // Remove all spaces
+                    // Normalize key names - convert to lowercase and remove extra spaces
+                    let normalizedKey = key.toLowerCase().trim();
+                    
+                    // Apply alias mapping if exists
+                    if (fieldAliases[normalizedKey]) {
+                        normalizedKey = fieldAliases[normalizedKey];
+                    } else {
+                        // For unrecognized keys, just remove spaces
+                        normalizedKey = normalizedKey.replace(/\s+/g, '');
+                    }
                     
                     fields[normalizedKey] = value;
                 }
@@ -487,61 +532,17 @@ class SharedCore {
     buildNotesFromFields(fields) {
         const lines = [];
         
-        // Define priority fields that should appear first (in order)
-        const priorityFields = ['bar', 'key'];
-        
-        // Create a set of fields to process
-        const allFields = new Set(Object.keys(fields));
-        
-        // Process priority fields first
-        priorityFields.forEach(key => {
-            if (fields[key]) {
-                const displayKey = this.formatFieldKey(key);
-                lines.push(`${displayKey}: ${fields[key]}`);
-                allFields.delete(key);
-            }
-        });
-        
-        // Process remaining fields in alphabetical order
-        const sortedFields = Array.from(allFields).sort();
-        sortedFields.forEach(key => {
+        // Just add all fields that have values
+        Object.keys(fields).forEach(key => {
             const value = fields[key];
             if (value !== undefined && value !== null && value !== '') {
-                const displayKey = this.formatFieldKey(key);
-                lines.push(`${displayKey}: ${value}`);
+                lines.push(`${key}: ${value}`);
             }
         });
         
         return lines.join('\n');
     }
-    
-    // Helper to format field keys for display
-    formatFieldKey(key) {
-        // Handle special cases that need specific formatting
-        const specialCases = {
-            'debugcity': 'DebugCity',
-            'debugsource': 'DebugSource',
-            'debugtimezone': 'DebugTimezone',
-            'debugimage': 'DebugImage',
-            'shortname': 'Short Name',
-            'shortername': 'Shorter Name',
-            'shorttitle': 'ShortTitle',
-            'moreinfo': 'More info',
-            'gmaps': 'Gmaps'
-        };
-        
-        if (specialCases[key]) {
-            return specialCases[key];
-        }
-        
-        // For fields starting with 'debug', capitalize the D
-        if (key.startsWith('debug')) {
-            return 'Debug' + key.charAt(5).toUpperCase() + key.slice(6);
-        }
-        
-        // Default: capitalize first letter
-        return key.charAt(0).toUpperCase() + key.slice(1);
-    }
+
 
     // Helper method to normalize event dates for consistent comparison across timezones
     normalizeEventDate(dateInput) {
@@ -911,123 +912,22 @@ class SharedCore {
             return strategy !== 'preserve' || event._action === 'new';
         };
         
-        // Define field mappings for notes output
-        // Maps from event property names to note field names
-        const fieldMappings = {
-            // Primary fields
-            'venue': 'Bar',
-            'bar': 'Bar',
-            'description': 'Description',
-            'tea': 'Description', // Alternative name for description
-            'price': 'Price',
-            'cover': 'Price', // Alternative name for price
-            'eventType': 'Type',
-            'recurrence': 'Recurrence',
-            'shortName': 'Short Name',
-            'shorterName': 'Shorter Name',
-            'shortTitle': 'Short Name', // Maps to Short Name if shortName not present
-            
-            // Social media and links
-            'instagram': 'Instagram',
-            'facebook': 'Facebook',
-            'website': 'Website',
-            'url': 'Website', // Alternative for website
-            'googleMapsLink': 'Gmaps',
-            'gmaps': 'Gmaps',
-            
-            // Debug/metadata fields
-            'key': 'Key',
-            'city': 'DebugCity',
-            'source': 'DebugSource',
-            'timezone': 'DebugTimezone',
-            'image': 'DebugImage',
-            'imageUrl': 'DebugImage'
-        };
-        
-        // Track which fields we've already processed
-        const processedFields = new Set();
-        
-        // Process fields in a specific order for consistency
-        const fieldOrder = [
-            // Primary venue/description first
-            ['venue', 'bar'],
-            ['description', 'tea'],
-            ['price', 'cover'],
-            ['eventType'],
-            ['recurrence'],
-            ['shortName'],
-            ['shorterName'],
-            ['shortTitle'],
-            
-            // Social and links
-            ['instagram'],
-            ['facebook'],
-            ['website', 'url'],
-            ['googleMapsLink', 'gmaps'],
-            
-            // Debug fields (add blank line before these)
-            '_separator',
-            ['key'],
-            ['city'],
-            ['source'],
-            ['timezone'],
-            ['image', 'imageUrl']
-        ];
-        
-        // Process fields in order
-        fieldOrder.forEach(fieldGroup => {
-            if (fieldGroup === '_separator') {
-                // Add blank line before debug section if we have any notes
-                if (notes.length > 0) {
-                    notes.push('');
-                }
-                return;
-            }
-            
-            // Find the first field in the group that has a value
-            let fieldAdded = false;
-            for (const fieldName of fieldGroup) {
-                if (fieldAdded) break;
-                
-                const value = event[fieldName];
-                if (value && !processedFields.has(fieldName)) {
-                    // Check if this field should be included based on merge strategy
-                    if (shouldIncludeField(fieldName)) {
-                        const noteFieldName = fieldMappings[fieldName];
-                        if (noteFieldName) {
-                            notes.push(`${noteFieldName}: ${value}`);
-                            fieldAdded = true;
-                            
-                            // Mark all alternatives as processed
-                            fieldGroup.forEach(f => processedFields.add(f));
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Handle recurring field specially
-        if (event.recurring && event.recurrence && shouldIncludeField('recurrence') && !processedFields.has('recurrence')) {
-            notes.push(`Recurrence: ${event.recurrence}`);
-            processedFields.add('recurrence');
-        }
-        
-        // Add any additional custom metadata fields that aren't already handled
-        const handledFields = new Set([
+        // Fields to exclude from notes
+        const excludeFields = new Set([
             'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
             'isBearEvent', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
-            'recurring', // Special handling above
-            ...processedFields
+            'originalTitle', 'name' // These are usually duplicates of title
         ]);
         
-        // Add any custom fields
+        // Add all fields that have values
         Object.keys(event).forEach(fieldName => {
-            if (!handledFields.has(fieldName) && event[fieldName] !== undefined && event[fieldName] !== null && event[fieldName] !== '') {
+            if (!excludeFields.has(fieldName) && 
+                event[fieldName] !== undefined && 
+                event[fieldName] !== null && 
+                event[fieldName] !== '') {
                 if (shouldIncludeField(fieldName)) {
-                    // Format the field name nicely (capitalize first letter) and prefix with Debug
-                    const formattedFieldName = 'Debug' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-                    notes.push(`${formattedFieldName}: ${event[fieldName]}`);
+                    notes.push(`${fieldName}: ${event[fieldName]}`);
                 }
             }
         });
@@ -1184,7 +1084,8 @@ class SharedCore {
         const keyBasedMatch = this.findEventByKey(existingEventsData, event.key);
         
         if (keyBasedMatch) {
-            const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
+            const existingFields = this.parseNotesIntoFields(keyBasedMatch.notes || '');
+            const existingKey = existingFields.key || null;
             if (existingKey === event.key) {
                 return {
                     action: 'merge',
@@ -1253,7 +1154,8 @@ class SharedCore {
         if (!targetKey) return null;
         
         for (const event of existingEvents) {
-            const eventKey = this.extractKeyFromNotes(event.notes);
+            const fields = this.parseNotesIntoFields(event.notes || '');
+            const eventKey = fields.key || null;
             if (eventKey === targetKey) {
                 return event;
             }
@@ -1261,13 +1163,7 @@ class SharedCore {
         return null;
     }
     
-    // Helper function to extract key from notes
-    extractKeyFromNotes(notes) {
-        if (!notes) return null;
-        const keyMatch = notes.match(/Key:\s*([^\n]+)/);
-        return keyMatch ? keyMatch[1].trim() : null;
-    }
-    
+
     // Check if two dates are equal within a tolerance (pure logic)
     areDatesEqual(date1, date2, toleranceMinutes) {
         const diff = Math.abs(date1.getTime() - date2.getTime());
@@ -1313,49 +1209,7 @@ class SharedCore {
         return eventName1 === eventName2;
     }
     
-    // Generic extraction method for fields from notes
-    extractFieldFromNotes(notes, fieldName) {
-        if (!notes) return '';
-        
-        // Define extraction patterns for different fields
-        const patterns = {
-            tea: /(?:tea|description|info):\s*(.+?)(?:\n|$)/i,
-            description: /(?:description|tea|info):\s*(.+?)(?:\n|$)/i,
-            instagram: /(?:instagram:\s*)?(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
-            website: /website:\s*(https?:\/\/[^\s\n]+)/i,
-            bar: /(?:bar|location|host):\s*(.+?)(?:\n|$)/i,
-            venue: /(?:venue|bar|location|host):\s*(.+?)(?:\n|$)/i,
-            cover: /(?:cover|cost|price):\s*(.+?)(?:\n|$)/i,
-            price: /(?:price|cover|cost):\s*(.+?)(?:\n|$)/i,
-            facebook: /(?:facebook:\s*)?(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i,
-            gmaps: /(?:gmaps|google maps):\s*(https?:\/\/[^\s\n]+)/i,
-            shortname: /(?:short name|shortname|short|nickname|nick name|nick):\s*(.+?)(?:\n|$)/i,
-            shortername: /(?:shorter name|shortername|shorter):\s*(.+?)(?:\n|$)/i,
-            type: /(?:type|eventtype):\s*(.+?)(?:\n|$)/i,
-            eventtype: /(?:eventtype|type):\s*(.+?)(?:\n|$)/i,
-            recurring: /recurring:\s*(.+?)(?:\n|$)/i
-        };
-        
-        const pattern = patterns[fieldName.toLowerCase()];
-        if (!pattern) {
-            // Try generic pattern for unknown fields
-            const genericPattern = new RegExp(`${fieldName}:\\s*(.+?)(?:\\n|$)`, 'i');
-            const match = notes.match(genericPattern);
-            return match ? match[1].trim() : '';
-        }
-        
-        const match = notes.match(pattern);
-        if (!match) return '';
-        
-        // Special handling for URLs
-        if (['instagram', 'facebook', 'website', 'gmaps'].includes(fieldName.toLowerCase())) {
-            const url = match[0].replace(new RegExp(`^${fieldName}:\\s*`, 'i'), '');
-            return url.startsWith('http') ? url : `https://${url}`;
-        }
-        
-        return match[1] ? match[1].trim() : match[0].trim();
-    }
-    
+
     // Process event with conflicts - extract and merge based on strategies
     processEventWithConflicts(event) {
         if (!event._conflicts || event._conflicts.length === 0) {
@@ -1371,13 +1225,6 @@ class SharedCore {
         // Get merge strategies
         const mergeStrategies = event._fieldMergeStrategies || {};
         
-        // Define fields to potentially extract from notes
-        const extractableFields = [
-            'tea', 'description', 'instagram', 'website', 'bar', 'venue', 
-            'cover', 'price', 'facebook', 'gmaps', 'shortName', 
-            'shorterName', 'type', 'eventType', 'recurring'
-        ];
-        
         // Track what was merged and from where
         event._mergeInfo = {
             extractedFields: {},
@@ -1385,76 +1232,79 @@ class SharedCore {
             strategy: mergeStrategies
         };
         
-        // Process each conflict (usually the existing calendar event)
-        event._conflicts.forEach(conflict => {
-            // Extract fields from notes based on merge strategies
-            if (conflict.notes) {
-                extractableFields.forEach(fieldName => {
-                    const strategy = mergeStrategies[fieldName] || 'preserve';
-                    const extractedValue = this.extractFieldFromNotes(conflict.notes, fieldName);
-                    
-                    if (!extractedValue) return;
-                    
-                    // Track extraction
-                    event._mergeInfo.extractedFields[fieldName] = {
-                        value: extractedValue,
-                        source: 'existing.notes'
-                    };
-                    
-                    // Apply merge strategy:
-                    // - preserve: always use existing value
-                    // - upsert: only add if existing doesn't exist and new exists
-                    // - clobber: use new if it exists, preserve existing if new doesn't exist
-                    
-                    if (strategy === 'preserve') {
-                        // Always use the existing value from conflict
-                        event[fieldName] = extractedValue;
+        // Helper function to apply merge strategy
+        const applyMergeStrategy = (fieldName, existingValue, newValue) => {
+            const strategy = mergeStrategies[fieldName] || 'preserve';
+            
+            switch (strategy) {
+                case 'preserve':
+                    // Always use existing value if it exists
+                    if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                        event[fieldName] = existingValue;
                         event._mergeInfo.mergedFields[fieldName] = 'existing';
-                    } else if (strategy === 'upsert') {
-                        // Only add if field doesn't exist in existing event
-                        // (extracted value means it exists in existing event, so skip)
-                        // This is backwards - we're extracting from existing, not checking if new has it
-                        // Skip this extraction since upsert only adds new values
-                    } else if (strategy === 'clobber' && !event[fieldName]) {
-                        // For clobber, preserve existing if new doesn't have a value
-                        event[fieldName] = extractedValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        return true;
                     }
-                });
+                    break;
+                    
+                case 'upsert':
+                    // Only add new value if existing doesn't have it
+                    if (!existingValue && newValue) {
+                        // Keep new value (do nothing as it's already in event)
+                        event._mergeInfo.mergedFields[fieldName] = 'new';
+                        return true;
+                    } else if (existingValue) {
+                        // Existing has value, keep it
+                        event[fieldName] = existingValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        return true;
+                    }
+                    break;
+                    
+                case 'clobber':
+                    // Use new value if it exists, otherwise keep existing
+                    if (newValue !== undefined && newValue !== null && newValue !== '') {
+                        // Keep new value (do nothing as it's already in event)
+                        event._mergeInfo.mergedFields[fieldName] = 'new';
+                        return true;
+                    } else if (existingValue) {
+                        event[fieldName] = existingValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        return true;
+                    }
+                    break;
             }
             
-            // Handle direct field mapping (e.g., conflict.location -> event.venue)
-            const fieldMappings = {
-                'location': 'venue',
-                'title': 'title',
-                'startDate': 'startDate',
-                'endDate': 'endDate',
-                'description': 'description',
-                'recurrence': 'recurrence',
-                'coordinates': 'coordinates',
-                'links': 'links',
-                'slug': 'slug',
-                'eventType': 'eventType',
-                'recurring': 'recurring'
-            };
+            return false;
+        };
+        
+        // Process each conflict (usually the existing calendar event)
+        event._conflicts.forEach(conflict => {
+            // First, parse fields from existing event's notes
+            const existingFieldsFromNotes = conflict.notes ? this.parseNotesIntoFields(conflict.notes) : {};
             
-            Object.entries(fieldMappings).forEach(([conflictField, eventField]) => {
-                const strategy = mergeStrategies[eventField] || 'preserve';
-                const conflictValue = conflict[conflictField];
+            // Process fields from notes
+            Object.entries(existingFieldsFromNotes).forEach(([fieldName, value]) => {
+                // Track extraction
+                event._mergeInfo.extractedFields[fieldName] = {
+                    value: value,
+                    source: 'existing.notes'
+                };
                 
-                if (!conflictValue) return;
-                
-                if (strategy === 'preserve') {
-                    // Always use the existing value from conflict
-                    event[eventField] = conflictValue;
-                    event._mergeInfo.mergedFields[eventField] = 'existing';
-                } else if (strategy === 'upsert') {
-                    // Only add if existing doesn't have this field
-                    // Since conflictValue exists, this means existing has it, so skip
-                } else if (strategy === 'clobber' && !event[eventField]) {
-                    // For clobber, preserve existing if new doesn't have a value
-                    event[eventField] = conflictValue;
-                    event._mergeInfo.mergedFields[eventField] = 'existing';
+                // Apply merge strategy
+                applyMergeStrategy(fieldName, value, event[fieldName]);
+            });
+            
+            // Process direct fields from conflict object
+            // Handle 'location' -> 'venue' mapping
+            if (conflict.location && !existingFieldsFromNotes.venue) {
+                applyMergeStrategy('venue', conflict.location, event.venue);
+            }
+            
+            // Process other direct fields that might exist on conflict
+            const directFields = ['title', 'description', 'startDate', 'endDate', 'recurrence', 'eventType', 'recurring'];
+            directFields.forEach(fieldName => {
+                if (conflict[fieldName] && !existingFieldsFromNotes[fieldName]) {
+                    applyMergeStrategy(fieldName, conflict[fieldName], event[fieldName]);
                 }
             });
         });
