@@ -1129,6 +1129,11 @@ class SharedCore {
             };
             analyzedEvent._action = analysis.action;
             
+            // If action is conflict and we have a specific conflict type, use that as the action
+            if (analysis.action === 'conflict' && analysis.conflictType) {
+                analyzedEvent._action = analysis.conflictType;
+            }
+            
             // Handle merge action by performing the merge here
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Perform the merge and store the result
@@ -1203,7 +1208,12 @@ class SharedCore {
         for (const event of newEvents) {
             const analysis = this.analyzeEventAction(event, existingEventsData);
             
-            switch (analysis.action) {
+            // Use the specific conflict type as the action if available
+            const actionType = (analysis.action === 'conflict' && analysis.conflictType) 
+                ? analysis.conflictType 
+                : analysis.action;
+            
+            switch (actionType) {
                 case 'new':
                     actions.newEvents.push({ event, analysis });
                     break;
@@ -1214,6 +1224,8 @@ class SharedCore {
                     actions.mergeEvents.push({ event, analysis });
                     break;
                 case 'conflict':
+                case 'key_conflict':
+                case 'time_conflict':
                     actions.conflictEvents.push({ event, analysis });
                     break;
             }
