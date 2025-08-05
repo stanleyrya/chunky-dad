@@ -283,11 +283,11 @@ class EventbriteParser {
             const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
             const image = eventData.logo?.url || eventData.image?.url || '';
             
-            // Extract city from event title for venue-specific logic (like Megawoof)
+            // Extract city from event title for better event organization
             let city = null;
             
-            // Special handling for Megawoof America events - extract city from title
-            if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title)) {
+            // Generic city extraction from title - useful for events that include city in their name
+            if (title) {
                 // Check if title contains a specific city
                 if (/(atlanta)/i.test(title)) city = 'atlanta';
                 else if (/(denver)/i.test(title)) city = 'denver';
@@ -305,18 +305,15 @@ class EventbriteParser {
                 else if (/(phoenix)/i.test(title)) city = 'phoenix';
                 else if (/(boston)/i.test(title)) city = 'boston';
                 else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else {
-                    // Default to LA for Megawoof events without explicit city
-                    city = 'la';
-                    console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
-                }
+                else if (/(los angeles|la)/i.test(title)) city = 'la';
+                else if (/(washington|dc)/i.test(title)) city = 'dc';
+                else if (/(orlando)/i.test(title)) city = 'orlando';
+                else if (/(tampa)/i.test(title)) city = 'tampa';
                 
                 if (city) {
-                    console.log(`🎫 Eventbrite: Extracted city "${city}" from Megawoof title: "${title}"`);
+                    console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
                 }
             }
-            
-            // Additional venue-specific city extraction could go here for other event types
             
 
             
@@ -450,11 +447,11 @@ class EventbriteParser {
                 return null;
             }
             
-            // Extract city from event title for venue-specific logic (like Megawoof)
+            // Extract city from event title for better event organization
             let city = null;
             
-            // Special handling for Megawoof America events - extract city from title
-            if (title && /megawoof|d[\>\s]*u[\>\s]*r[\>\s]*o/i.test(title)) {
+            // Generic city extraction from title - useful for events that include city in their name
+            if (title) {
                 // Check if title contains a specific city
                 if (/(atlanta)/i.test(title)) city = 'atlanta';
                 else if (/(denver)/i.test(title)) city = 'denver';
@@ -472,14 +469,13 @@ class EventbriteParser {
                 else if (/(phoenix)/i.test(title)) city = 'phoenix';
                 else if (/(boston)/i.test(title)) city = 'boston';
                 else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else {
-                    // Default to LA for Megawoof events without explicit city
-                    city = 'la';
-                    console.log(`🎫 Eventbrite: Megawoof event without explicit city, defaulting to LA: "${title}"`);
-                }
+                else if (/(los angeles|la)/i.test(title)) city = 'la';
+                else if (/(washington|dc)/i.test(title)) city = 'dc';
+                else if (/(orlando)/i.test(title)) city = 'orlando';
+                else if (/(tampa)/i.test(title)) city = 'tampa';
                 
                 if (city) {
-                    console.log(`🎫 Eventbrite: Extracted city "${city}" from Megawoof title: "${title}"`);
+                    console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
                 }
             }
             
@@ -693,18 +689,13 @@ class EventbriteParser {
         const venue = event.venue || '';
         const url = event.url || '';
 
-        // Check if the title or description contains bear keywords
+        // Check if the title, description, venue, or URL contains bear keywords
         if (this.bearKeywords.some(keyword => 
             title.toLowerCase().includes(keyword) || 
             description.toLowerCase().includes(keyword) || 
             venue.toLowerCase().includes(keyword) || 
             url.toLowerCase().includes(keyword)
         )) {
-            return true;
-        }
-
-        // Check if the URL itself contains bear keywords (e.g., megawoof.com)
-        if (url.toLowerCase().includes('megawoof.com')) {
             return true;
         }
 

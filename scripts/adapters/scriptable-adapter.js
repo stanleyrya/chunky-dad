@@ -2444,21 +2444,37 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             console.log(`   New (original): "${newOriginalTitle}"`);
         }
         
-        // Check both current and original titles for MEGAWOOF/DURO patterns
-        const existingHasMegawoof = /megawoof/i.test(existingTitle);
-        const existingHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(existingTitle);
+        // Generic pattern detection for events with complex text formatting
+        // This helps merge events that have variations like "A>B>C", "A-B-C", "A B C"
+        const hasComplexPattern = (text) => {
+            // Check if text has letters separated by special characters
+            return /[a-z][\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+[a-z]/i.test(text);
+        };
         
-        const newHasMegawoof = /megawoof/i.test(newTitle) || /megawoof/i.test(newOriginalTitle);
-        const newHasDuro = /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newTitle) || /d[\s\>\-]*u[\s\>\-]*r[\s\>\-]*o/i.test(newOriginalTitle);
+        const normalizeComplexText = (text) => {
+            return text
+                // Replace sequences of special chars between letters with a single hyphen
+                .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
+                // Remove trailing special characters after words
+                .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
+                // Collapse multiple spaces/hyphens into single hyphen
+                .replace(/[\s\-]+/g, '-')
+                // Remove leading/trailing hyphens
+                .replace(/^-+|-+$/g, '');
+        };
         
-        const isMegawoofConflict = (
-            (existingHasMegawoof || existingHasDuro) && 
-            (newHasMegawoof || newHasDuro)
-        );
-        
-        if (isMegawoofConflict) {
-            console.log(`📱 Scriptable: MEGAWOOF/DURO conflict detected - should merge: "${existingEvent.title}" vs "${newTitle}" (orig: "${newOriginalTitle}")`);
-            return true;
+        // Check if both titles have complex patterns that normalize to the same value
+        if (hasComplexPattern(existingTitle) || hasComplexPattern(newTitle) || hasComplexPattern(newOriginalTitle)) {
+            const normalizedExisting = normalizeComplexText(existingTitle);
+            const normalizedNew = normalizeComplexText(newTitle);
+            const normalizedNewOriginal = normalizeComplexText(newOriginalTitle);
+            
+            if (normalizedExisting === normalizedNew || normalizedExisting === normalizedNewOriginal) {
+                console.log(`📱 Scriptable: Complex pattern match detected - should merge:`);
+                console.log(`   Normalized existing: "${normalizedExisting}"`);
+                console.log(`   Normalized new: "${normalizedNew}"`);
+                return true;
+            }
         }
         
         // Check for exact title matches (case insensitive) - check both titles
@@ -2467,17 +2483,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             return true;
         }
         
-        // Check for similarity with both current and original titles
-        const titleSimilarity = this.calculateTitleSimilarity(existingTitle, newTitle);
-        const originalTitleSimilarity = newOriginalTitle ? this.calculateTitleSimilarity(existingTitle, newOriginalTitle) : 0;
-        const maxSimilarity = Math.max(titleSimilarity, originalTitleSimilarity);
-        
-        if (maxSimilarity > 0.8) { // 80% similarity threshold
-            console.log(`📱 Scriptable: High title similarity (${Math.round(maxSimilarity * 100)}%) - should merge: "${existingEvent.title}" vs "${newTitle}"`);
-            return true;
-        }
-        
-        console.log(`📱 Scriptable: No merge criteria met - similarity: ${Math.round(maxSimilarity * 100)}%`);
+        console.log(`📱 Scriptable: No merge criteria met`);
         return false;
     }
 
