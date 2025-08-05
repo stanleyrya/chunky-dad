@@ -1184,7 +1184,8 @@ class SharedCore {
         const keyBasedMatch = this.findEventByKey(existingEventsData, event.key);
         
         if (keyBasedMatch) {
-            const existingKey = this.extractKeyFromNotes(keyBasedMatch.notes);
+            const existingFields = this.parseNotesIntoFields(keyBasedMatch.notes || '');
+            const existingKey = existingFields.key || null;
             if (existingKey === event.key) {
                 return {
                     action: 'merge',
@@ -1253,7 +1254,8 @@ class SharedCore {
         if (!targetKey) return null;
         
         for (const event of existingEvents) {
-            const eventKey = this.extractKeyFromNotes(event.notes);
+            const fields = this.parseNotesIntoFields(event.notes || '');
+            const eventKey = fields.key || null;
             if (eventKey === targetKey) {
                 return event;
             }
@@ -1261,13 +1263,7 @@ class SharedCore {
         return null;
     }
     
-    // Helper function to extract key from notes
-    extractKeyFromNotes(notes) {
-        if (!notes) return null;
-        const fields = this.parseNotesIntoFields(notes);
-        return fields.key || null;
-    }
-    
+
     // Check if two dates are equal within a tolerance (pure logic)
     areDatesEqual(date1, date2, toleranceMinutes) {
         const diff = Math.abs(date1.getTime() - date2.getTime());
@@ -1313,71 +1309,7 @@ class SharedCore {
         return eventName1 === eventName2;
     }
     
-    // Generic extraction method for fields from notes
-    extractFieldFromNotes(notes, fieldName) {
-        if (!notes) return '';
-        
-        // First try to get the field from parsed notes
-        const fields = this.parseNotesIntoFields(notes);
-        const normalizedFieldName = fieldName.toLowerCase().replace(/\s+/g, '');
-        
-        // Check if we have a direct match
-        if (fields[normalizedFieldName]) {
-            const value = fields[normalizedFieldName];
-            
-            // Special handling for URLs
-            if (['instagram', 'facebook', 'website', 'gmaps'].includes(normalizedFieldName)) {
-                return value.startsWith('http') ? value : `https://${value}`;
-            }
-            
-            return value;
-        }
-        
-        // If no direct match, try alternative field names
-        const fieldAliases = {
-            'tea': ['description', 'info'],
-            'description': ['tea', 'info'],
-            'bar': ['location', 'host', 'venue'],
-            'venue': ['bar', 'location', 'host'],
-            'cover': ['cost', 'price'],
-            'price': ['cover', 'cost'],
-            'shortname': ['shortername', 'short', 'nickname', 'nick'],
-            'type': ['eventtype'],
-            'eventtype': ['type']
-        };
-        
-        const aliases = fieldAliases[normalizedFieldName] || [];
-        for (const alias of aliases) {
-            const aliasNormalized = alias.toLowerCase().replace(/\s+/g, '');
-            if (fields[aliasNormalized]) {
-                const value = fields[aliasNormalized];
-                
-                // Special handling for URLs
-                if (['instagram', 'facebook', 'website', 'gmaps'].includes(normalizedFieldName)) {
-                    return value.startsWith('http') ? value : `https://${value}`;
-                }
-                
-                return value;
-            }
-        }
-        
-        // Special patterns for social media URLs that might not have field labels
-        const socialPatterns = {
-            instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s\n?]+/i,
-            facebook: /(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s\n?]+/i
-        };
-        
-        if (socialPatterns[normalizedFieldName]) {
-            const match = notes.match(socialPatterns[normalizedFieldName]);
-            if (match) {
-                const url = match[0];
-                return url.startsWith('http') ? url : `https://${url}`;
-            }
-        }
-        
-        return '';
-    }
-    
+
     // Process event with conflicts - extract and merge based on strategies
     processEventWithConflicts(event) {
         if (!event._conflicts || event._conflicts.length === 0) {
