@@ -83,7 +83,7 @@ class EventbriteParser {
         const events = [];
         
         try {
-            // Look for window.__SERVER_DATA__ which contains the event information (from old working script)
+            // Look for window.__SERVER_DATA__ which contains the event information
             const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
             
             if (serverDataMatch && serverDataMatch[1]) {

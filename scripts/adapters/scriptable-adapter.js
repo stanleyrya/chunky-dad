@@ -2428,44 +2428,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return allEvents;
     }
 
-
-
-    // Helper method to compare dates with timezone awareness
-    areDatesEqual(date1, date2, toleranceMinutes = 1) {
-        try {
-            const d1 = new Date(date1);
-            const d2 = new Date(date2);
-            
-            if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
-                return false;
-            }
-            
-            const diffMs = Math.abs(d1.getTime() - d2.getTime());
-            const toleranceMs = toleranceMinutes * 60 * 1000;
-            
-            return diffMs <= toleranceMs;
-        } catch (error) {
-            console.log(`📱 Scriptable: Warning - Failed to compare dates: ${error.message}`);
-            return false;
-        }
-    }
-
-    // Helper method to check if two dates overlap (for time conflict detection)
-    doDatesOverlap(start1, end1, start2, end2) {
-        try {
-            const s1 = new Date(start1).getTime();
-            const e1 = new Date(end1).getTime();
-            const s2 = new Date(start2).getTime();
-            const e2 = new Date(end2).getTime();
-            
-            // Check for any overlap
-            return s1 < e2 && s2 < e1;
-        } catch (error) {
-            console.log(`📱 Scriptable: Warning - Failed to check date overlap: ${error.message}`);
-            return false;
-        }
-    }
-
     // Helper method to determine if time conflicts should be merged
     shouldMergeTimeConflict(existingEvent, newEvent) {
         // Check if both events are similar enough to be the same event
