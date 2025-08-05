@@ -584,22 +584,10 @@ class SharedCore {
         return lines.join('\n');
     }
 
-    // Simple merge for backward compatibility
+    // Merge events using field-level merge strategies
     mergeEvents(existing, newEvent) {
-        // Use the new comprehensive merge if we have merge strategies
-        if (newEvent._fieldMergeStrategies) {
-            return this.mergeEventData(existing, newEvent);
-        }
-        
-        // Otherwise fall back to simple merge
-        return {
-            ...existing,
-            description: existing.description || newEvent.description,
-            url: existing.url || newEvent.url,
-            image: existing.image || newEvent.image,
-            price: existing.price || newEvent.price,
-            // Keep the most complete event data
-        };
+        // Always use the comprehensive merge with field strategies
+        return this.mergeEventData(existing, newEvent);
     }
 
     // Helper method to normalize event dates for consistent comparison across timezones
