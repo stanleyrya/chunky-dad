@@ -2001,7 +2001,7 @@ class ScriptableAdapter {
             </div>
             
             <!-- Show comparison if we have original data -->
-            ${event._original && event._action === 'conflict' ? `
+            ${event._original && (event._action === 'conflict' || event._action === 'time_conflict') ? `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h4 style="margin: 0; font-size: 14px;">📊 Conflict Resolution</h4>
