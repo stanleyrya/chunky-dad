@@ -281,37 +281,6 @@ class SharedCore {
         }
     }
 
-    // Legacy method kept for backward compatibility (but not used for detail pages anymore)
-    async processAdditionalUrls(additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls) {
-        const maxUrls = parserConfig.maxAdditionalUrls || 12;
-        const urlsToProcess = additionalLinks.slice(0, maxUrls);
-        const events = [];
-
-        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs`);
-
-        for (const url of urlsToProcess) {
-            if (processedUrls.has(url)) continue;
-            processedUrls.add(url);
-
-            try {
-                const htmlData = await httpAdapter.fetchData(url);
-                const parseResult = parser.parseEvents(htmlData, parserConfig);
-                
-                if (parseResult.events) {
-                    // Apply field merge strategies to filter out fields that should be preserved
-                    const filteredEvents = parseResult.events.map(event => 
-                        this.applyFieldMergeStrategies(event, parserConfig)
-                    );
-                    events.push(...filteredEvents);
-                }
-            } catch (error) {
-                await displayAdapter.logWarn(`SYSTEM: Failed to process additional URL: ${url}`);
-            }
-        }
-
-        return events;
-    }
-
     // Apply metadata overrides to events (for hardcoded titles, etc.)
     applyMetadataOverrides(events, metadata) {
         if (!metadata || !events) return;
@@ -967,13 +936,6 @@ class SharedCore {
         // Return the event with all fields intact
         // The actual merge logic will be handled later based on the strategies
         return event;
-    }
-
-    // Check if two events should be merged based on key similarity
-    shouldMergeEvents(event1, event2) {
-        const key1 = this.createEventKey(event1);
-        const key2 = this.createEventKey(event2);
-        return key1 === key2;
     }
     
     // Format event for calendar integration
