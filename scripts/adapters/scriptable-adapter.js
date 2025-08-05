@@ -169,7 +169,8 @@ class ScriptableAdapter {
             searchEnd.setHours(23, 59, 59, 999);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-            return existingEvents;
+            // Normalize dates to UTC when returning
+            return existingEvents.map(e => this.normalizeCalendarEventDates(e));
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
@@ -299,8 +300,9 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: Creating new event: ${event.title}`);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
-                            calendarEvent.startDate = new Date(event.startDate);
-                            calendarEvent.endDate = new Date(event.endDate);
+                            // Normalize dates to ensure they're in UTC
+                            calendarEvent.startDate = new Date(this.normalizeToUTC(event.startDate));
+                            calendarEvent.endDate = new Date(this.normalizeToUTC(event.endDate));
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
@@ -308,6 +310,9 @@ class ScriptableAdapter {
                             if (event.url) {
                                 calendarEvent.url = event.url;
                             }
+                            
+                            // Set timezone to UTC for consistency
+                            calendarEvent.timeZone = "UTC";
                             
                             await calendarEvent.save();
                             processedCount++;
@@ -915,6 +920,17 @@ class ScriptableAdapter {
             await WebView.loadHTML(html, null, null, true);
             
             console.log('📱 Scriptable: ✓ Rich HTML display completed');
+            
+            // After displaying results, prompt for calendar execution if we have analyzed events
+            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents) {
+                // Only prompt if we haven't already executed (calendarEvents would be > 0)
+                const isDryRun = results.config?.parsers?.some(p => p.dryRun === true);
+                if (!isDryRun) {
+                    console.log('📱 Scriptable: Prompting for calendar execution...');
+                    const executedCount = await this.promptForCalendarExecution(results.analyzedEvents, results.config);
+                    results.calendarEvents = executedCount;
+                }
+            }
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
@@ -2720,6 +2736,94 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         html += '</div>';
         return html;
+    }
+
+    // Timezone normalization helpers
+    normalizeToUTC(dateString) {
+        // If already has Z suffix, it's already UTC
+        if (dateString && dateString.endsWith('Z')) {
+            return dateString;
+        }
+        
+        // Parse the date and convert to UTC
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+            return date.toISOString();
+        }
+        
+        // Return original if parsing fails
+        return dateString;
+    }
+    
+    // When reading from calendar, normalize timezone to UTC
+    normalizeCalendarEventDates(event) {
+        if (event.startDate) {
+            event.startDate = event.startDate.toISOString();
+        }
+        if (event.endDate) {
+            event.endDate = event.endDate.toISOString();
+        }
+        return event;
+    }
+
+    // Display results with interactive elements
+    async displayResults(results) {
+        // ... existing code ...
+    }
+
+    // Prompt user for calendar execution after displaying results
+    async promptForCalendarExecution(analyzedEvents, config) {
+        if (!analyzedEvents || analyzedEvents.length === 0) {
+            return false;
+        }
+        
+        const alert = new Alert();
+        alert.title = "Execute Calendar Actions?";
+        
+        // Count actions by type
+        const actionCounts = {};
+        analyzedEvents.forEach(event => {
+            const action = event._action || 'unknown';
+            actionCounts[action] = (actionCounts[action] || 0) + 1;
+        });
+        
+        let message = "Ready to execute the following calendar actions:\n\n";
+        if (actionCounts.new) message += `➕ Create ${actionCounts.new} new events\n`;
+        if (actionCounts.merge) message += `🔄 Merge ${actionCounts.merge} events\n`;
+        if (actionCounts.update) message += `📝 Update ${actionCounts.update} events\n`;
+        if (actionCounts.conflict) message += `⚠️ Skip ${actionCounts.conflict} conflicted events\n`;
+        if (actionCounts.missing_calendar) message += `❌ Skip ${actionCounts.missing_calendar} events (missing calendars)\n`;
+        
+        alert.message = message;
+        alert.addAction("Execute");
+        alert.addCancelAction("Cancel");
+        
+        const response = await alert.presentAlert();
+        
+        if (response === 0) {
+            // User selected Execute
+            try {
+                const processedCount = await this.executeCalendarActions(analyzedEvents, config);
+                
+                const successAlert = new Alert();
+                successAlert.title = "Calendar Updated";
+                successAlert.message = `Successfully processed ${processedCount} events.`;
+                successAlert.addAction("OK");
+                await successAlert.presentAlert();
+                
+                return processedCount;
+            } catch (error) {
+                const errorAlert = new Alert();
+                errorAlert.title = "Error";
+                errorAlert.message = `Failed to update calendar: ${error.message}`;
+                errorAlert.addAction("OK");
+                await errorAlert.presentAlert();
+                
+                return 0;
+            }
+        }
+        
+        return 0;
     }
 }
 

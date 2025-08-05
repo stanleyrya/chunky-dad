@@ -254,21 +254,33 @@ class BearEventScraperOrchestrator {
                     results.errors.push(`Event analysis failed: ${error.message}`);
                 }
 
+                // Determine execution mode based on environment
+                const hasDisplay = this.isScriptable || this.isWeb;
+                const isWidget = this.isScriptable && config.widgetParameter;
+                
                 if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function' && analyzedEvents) {
-                    console.log('🐻 Orchestrator: Processing events for calendar (not dry run)...');
-                    try {
-                        calendarEvents = await finalAdapter.executeCalendarActions(analyzedEvents, config);
-                        console.log(`🐻 Orchestrator: ✓ Processed ${calendarEvents} events to calendar`);
-                    } catch (error) {
-                        console.error(`🐻 Orchestrator: ✗ Failed to process events to calendar: ${error.message}`);
-                        results.errors.push(`Calendar processing failed: ${error.message}`);
+                    if (hasDisplay && !isWidget) {
+                        // If we have a display (not widget), show results first and let user decide
+                        console.log('🐻 Orchestrator: Display mode - showing results before execution');
+                        // The display will handle the execution decision
+                    } else {
+                        // No display (widget mode) or explicit execution requested
+                        console.log('🐻 Orchestrator: Auto-execution mode - processing calendar actions');
+                        try {
+                            calendarEvents = await finalAdapter.executeCalendarActions(analyzedEvents, config);
+                            console.log(`🐻 Orchestrator: ✓ Processed ${calendarEvents} events to calendar`);
+                        } catch (error) {
+                            console.error(`🐻 Orchestrator: ✗ Failed to process events to calendar: ${error.message}`);
+                            results.errors.push(`Calendar processing failed: ${error.message}`);
+                        }
                     }
                 } else {
                     console.log('🐻 Orchestrator: Dry run mode or calendar not supported - skipping calendar integration');
                 }
                 
-                // Add calendar count to results
-                results.calendarEvents = calendarEvents;
+                            // Add calendar count and config to results
+            results.calendarEvents = calendarEvents;
+            results.config = config;
             }
 
             // Display results
