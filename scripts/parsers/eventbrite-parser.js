@@ -315,13 +315,11 @@ class EventbriteParser {
                 }
             }
             
-
-            
             const event = {
                 title: title,
                 description: description,
-                startDate: startDateObj,
-                endDate: endDateObj,
+                startDate: startDate ? new Date(startDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
                 venue: venue,
                 location: venue, // For backward compatibility
                 address: address,
