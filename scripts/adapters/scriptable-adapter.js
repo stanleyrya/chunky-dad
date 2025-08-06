@@ -2042,7 +2042,7 @@ class ScriptableAdapter {
                             ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
                         </h4>
                         <div style="font-size: 11px; color: #666; margin-top: 2px;">
-                            📝 Shows exactly what will be saved to calendar event notes
+                            📝 Shows all event fields for complete comparison
                         </div>
                         <button onclick="event.stopPropagation(); toggleDiffView(this, '${eventId}');" 
                                 style="padding: 4px 10px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; ${!isExpanded ? 'display: none;' : ''}"
@@ -2555,27 +2555,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return false;
     }
 
-    // Get all fields that should be compared/displayed - matches what goes into calendar notes
+    // Get all fields that should be compared/displayed - check ALL fields for maximum visibility
     getFieldsForComparison(event) {
-        // Fields to exclude from comparison (same as formatEventNotes in shared-core.js)
+        // Only exclude internal/system fields that start with underscore
         const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
-            'isBearEvent', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
-            'originalTitle', 'name', // These are usually duplicates of title
-            'notes', 'key', 'city' // These are handled separately in calendar formatting
+            '_analysis', '_action', '_existingEvent', '_existingKey', '_conflicts', 
+            '_parserConfig', '_fieldMergeStrategies', '_original', '_mergeInfo'
         ]);
         
-        // Get all fields from both new and existing events that have values
+        // Get all fields from both new and existing events
         const allFields = new Set();
         
         // Add fields from new event
         if (event._original?.new) {
             Object.keys(event._original.new).forEach(field => {
-                if (!excludeFields.has(field) && 
-                    event._original.new[field] !== undefined && 
-                    event._original.new[field] !== null && 
-                    event._original.new[field] !== '') {
+                if (!excludeFields.has(field)) {
                     allFields.add(field);
                 }
             });
@@ -2584,10 +2578,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Add fields from existing event
         if (event._original?.existing) {
             Object.keys(event._original.existing).forEach(field => {
-                if (!excludeFields.has(field) && 
-                    event._original.existing[field] !== undefined && 
-                    event._original.existing[field] !== null && 
-                    event._original.existing[field] !== '') {
+                if (!excludeFields.has(field)) {
                     allFields.add(field);
                 }
             });
@@ -2602,12 +2593,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             });
         }
         
-        // Add fields from final event that would be included in notes
+        // Add fields from final event
         Object.keys(event).forEach(field => {
-            if (!excludeFields.has(field) && 
-                event[field] !== undefined && 
-                event[field] !== null && 
-                event[field] !== '') {
+            if (!excludeFields.has(field)) {
                 allFields.add(field);
             }
         });
