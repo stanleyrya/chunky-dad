@@ -18,10 +18,6 @@
         "include": ["eventbrite\\.com\\/e\\/"]
       },
       "metadata": {
-        "title": {
-          "value": "MEGAWOOF",
-          "merge": "clobber"
-        },
         "shortTitle": {
           "value": "MEGA-WOOF",
           "merge": "upsert"
