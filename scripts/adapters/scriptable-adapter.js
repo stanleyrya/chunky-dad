@@ -169,8 +169,7 @@ class ScriptableAdapter {
             searchEnd.setHours(23, 59, 59, 999);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-            // Normalize dates to UTC when returning
-            return existingEvents.map(e => this.normalizeCalendarEventDates(e));
+            return existingEvents;
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
@@ -300,9 +299,8 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: Creating new event: ${event.title}`);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
-                            // Normalize dates to ensure they're in UTC
-                            calendarEvent.startDate = new Date(this.normalizeToUTC(event.startDate));
-                            calendarEvent.endDate = new Date(this.normalizeToUTC(event.endDate));
+                            calendarEvent.startDate = new Date(event.startDate);
+                            calendarEvent.endDate = new Date(event.endDate);
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
@@ -310,9 +308,6 @@ class ScriptableAdapter {
                             if (event.url) {
                                 calendarEvent.url = event.url;
                             }
-                            
-                            // Set timezone to UTC for consistency
-                            calendarEvent.timeZone = "UTC";
                             
                             await calendarEvent.save();
                             processedCount++;
@@ -2737,36 +2732,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         html += '</div>';
         return html;
     }
-
-    // Timezone normalization helpers
-    normalizeToUTC(dateString) {
-        // If already has Z suffix, it's already UTC
-        if (dateString && dateString.endsWith('Z')) {
-            return dateString;
-        }
-        
-        // Parse the date and convert to UTC
-        const date = new Date(dateString);
-        if (!isNaN(date.getTime())) {
-            return date.toISOString();
-        }
-        
-        // Return original if parsing fails
-        return dateString;
-    }
-    
-    // When reading from calendar, normalize timezone to UTC
-    normalizeCalendarEventDates(event) {
-        if (event.startDate) {
-            event.startDate = event.startDate.toISOString();
-        }
-        if (event.endDate) {
-            event.endDate = event.endDate.toISOString();
-        }
-        return event;
-    }
-
-
 
     // Prompt user for calendar execution after displaying results
     async promptForCalendarExecution(analyzedEvents, config) {

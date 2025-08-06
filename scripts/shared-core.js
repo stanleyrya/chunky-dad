@@ -1166,13 +1166,34 @@ class SharedCore {
 
     // Check if two dates are equal within a tolerance (pure logic)
     areDatesEqual(date1, date2, toleranceMinutes) {
-        const diff = Math.abs(date1.getTime() - date2.getTime());
+        // Convert to Date objects if they aren't already
+        const d1 = date1 instanceof Date ? date1 : new Date(date1);
+        const d2 = date2 instanceof Date ? date2 : new Date(date2);
+        
+        // Check if dates are valid
+        if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+            return false;
+        }
+        
+        const diff = Math.abs(d1.getTime() - d2.getTime());
         return diff <= (toleranceMinutes * 60 * 1000);
     }
     
     // Check if two date ranges overlap (pure logic)
     doDatesOverlap(start1, end1, start2, end2) {
-        return start1 < end2 && end1 > start2;
+        // Convert to Date objects if they aren't already
+        const s1 = start1 instanceof Date ? start1 : new Date(start1);
+        const e1 = end1 instanceof Date ? end1 : new Date(end1);
+        const s2 = start2 instanceof Date ? start2 : new Date(start2);
+        const e2 = end2 instanceof Date ? end2 : new Date(end2);
+        
+        // Check if dates are valid
+        if (isNaN(s1.getTime()) || isNaN(e1.getTime()) || 
+            isNaN(s2.getTime()) || isNaN(e2.getTime())) {
+            return false;
+        }
+        
+        return s1 < e2 && e1 > s2;
     }
     
     // Fuzzy title matching to handle variations
