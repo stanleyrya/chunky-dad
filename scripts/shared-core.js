@@ -871,8 +871,8 @@ class SharedCore {
     formatEventForCalendar(event) {
         const calendarEvent = {
             title: event.title || event.name || 'Untitled Event',
-            startDate: event.startDate,
-            endDate: event.endDate || event.startDate,
+            startDate: this.ensureUTCISOString(event.startDate),
+            endDate: this.ensureUTCISOString(event.endDate || event.startDate),
             location: this.formatLocationForCalendar(event),
             notes: this.formatEventNotes(event),
             // Don't use url field - it goes in notes instead
@@ -1166,34 +1166,13 @@ class SharedCore {
 
     // Check if two dates are equal within a tolerance (pure logic)
     areDatesEqual(date1, date2, toleranceMinutes) {
-        // Convert to Date objects if they aren't already
-        const d1 = date1 instanceof Date ? date1 : new Date(date1);
-        const d2 = date2 instanceof Date ? date2 : new Date(date2);
-        
-        // Check if dates are valid
-        if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
-            return false;
-        }
-        
-        const diff = Math.abs(d1.getTime() - d2.getTime());
+        const diff = Math.abs(date1.getTime() - date2.getTime());
         return diff <= (toleranceMinutes * 60 * 1000);
     }
     
     // Check if two date ranges overlap (pure logic)
     doDatesOverlap(start1, end1, start2, end2) {
-        // Convert to Date objects if they aren't already
-        const s1 = start1 instanceof Date ? start1 : new Date(start1);
-        const e1 = end1 instanceof Date ? end1 : new Date(end1);
-        const s2 = start2 instanceof Date ? start2 : new Date(start2);
-        const e2 = end2 instanceof Date ? end2 : new Date(end2);
-        
-        // Check if dates are valid
-        if (isNaN(s1.getTime()) || isNaN(e1.getTime()) || 
-            isNaN(s2.getTime()) || isNaN(e2.getTime())) {
-            return false;
-        }
-        
-        return s1 < e2 && e1 > s2;
+        return start1 < end2 && end1 > start2;
     }
     
     // Fuzzy title matching to handle variations
@@ -1331,6 +1310,25 @@ class SharedCore {
         });
         
         return event;
+    }
+
+    // Ensure date is a UTC ISO string
+    ensureUTCISOString(dateInput) {
+        if (!dateInput) return null;
+        
+        // If already an ISO string with Z, return as-is
+        if (typeof dateInput === 'string' && dateInput.endsWith('Z')) {
+            return dateInput;
+        }
+        
+        // Convert to Date object and then to ISO string
+        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        if (isNaN(date.getTime())) {
+            console.warn(`SharedCore: Invalid date input: ${dateInput}`);
+            return null;
+        }
+        
+        return date.toISOString();
     }
 }
 
