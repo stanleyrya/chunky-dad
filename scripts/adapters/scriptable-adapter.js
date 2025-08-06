@@ -2552,21 +2552,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return false;
     }
 
-    // Get all fields that should be compared/displayed - check ALL fields for maximum visibility
+    // Get all fields that should be compared/displayed - check ALL fields except underscore fields
     getFieldsForComparison(event) {
-        // Only exclude internal/system fields that start with underscore
-        const excludeFields = new Set([
-            '_analysis', '_action', '_existingEvent', '_existingKey', '_conflicts', 
-            '_parserConfig', '_fieldMergeStrategies', '_original', '_mergeInfo'
-        ]);
-        
         // Get all fields from both new and existing events
         const allFields = new Set();
         
         // Add fields from new event
         if (event._original?.new) {
             Object.keys(event._original.new).forEach(field => {
-                if (!excludeFields.has(field)) {
+                if (!field.startsWith('_')) {
                     allFields.add(field);
                 }
             });
@@ -2575,7 +2569,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Add fields from existing event
         if (event._original?.existing) {
             Object.keys(event._original.existing).forEach(field => {
-                if (!excludeFields.has(field)) {
+                if (!field.startsWith('_')) {
                     allFields.add(field);
                 }
             });
@@ -2584,7 +2578,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Add fields from extracted fields
         if (event._mergeInfo?.extractedFields) {
             Object.keys(event._mergeInfo.extractedFields).forEach(field => {
-                if (!excludeFields.has(field)) {
+                if (!field.startsWith('_')) {
                     allFields.add(field);
                 }
             });
@@ -2592,7 +2586,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         // Add fields from final event
         Object.keys(event).forEach(field => {
-            if (!excludeFields.has(field)) {
+            if (!field.startsWith('_')) {
                 allFields.add(field);
             }
         });
