@@ -941,9 +941,9 @@ class SharedCore {
         const endDate = event.endDate || event.startDate;
         
         if (expandRange) {
-            const searchStart = new Date(startDate);
+            const searchStart = new Date(startDate.getTime());
             searchStart.setHours(0, 0, 0, 0);
-            const searchEnd = new Date(endDate);
+            const searchEnd = new Date(endDate.getTime());
             searchEnd.setHours(23, 59, 59, 999);
             return { startDate, endDate, searchStart, searchEnd };
         }
@@ -1166,35 +1166,13 @@ class SharedCore {
 
     // Check if two dates are equal within a tolerance (pure logic)
     areDatesEqual(date1, date2, toleranceMinutes) {
-        // Convert to Date objects if they're strings
-        const d1 = typeof date1 === 'string' ? new Date(date1) : date1;
-        const d2 = typeof date2 === 'string' ? new Date(date2) : date2;
-        
-        // Check if both are valid dates
-        if (!d1 || !d2 || isNaN(d1.getTime()) || isNaN(d2.getTime())) {
-            return false;
-        }
-        
-        const diff = Math.abs(d1.getTime() - d2.getTime());
+        const diff = Math.abs(date1.getTime() - date2.getTime());
         return diff <= (toleranceMinutes * 60 * 1000);
     }
     
     // Check if two date ranges overlap (pure logic)
     doDatesOverlap(start1, end1, start2, end2) {
-        // Convert to Date objects if they're strings
-        const s1 = typeof start1 === 'string' ? new Date(start1) : start1;
-        const e1 = typeof end1 === 'string' ? new Date(end1) : end1;
-        const s2 = typeof start2 === 'string' ? new Date(start2) : start2;
-        const e2 = typeof end2 === 'string' ? new Date(end2) : end2;
-        
-        // Check if all are valid dates
-        if (!s1 || !e1 || !s2 || !e2 || 
-            isNaN(s1.getTime()) || isNaN(e1.getTime()) || 
-            isNaN(s2.getTime()) || isNaN(e2.getTime())) {
-            return false;
-        }
-        
-        return s1 < e2 && e1 > s2;
+        return start1 < end2 && end1 > start2;
     }
     
     // Fuzzy title matching to handle variations
