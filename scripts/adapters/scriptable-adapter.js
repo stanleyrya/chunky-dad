@@ -2164,10 +2164,7 @@ class ScriptableAdapter {
                                             }));
                                         }
                                         if (typeof value === 'function') {
-                                            return undefined;
-                                        }
-                                        if (key.startsWith('_field') || key.startsWith('_merge') || key === '_original' || key === '_analysis') {
-                                            return undefined;
+                                            return '[Function]';
                                         }
                                         return value;
                                     }, 2))}'>
@@ -2289,7 +2286,7 @@ class ScriptableAdapter {
             
             <div class="raw-display">
                 <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(JSON.stringify(event, (key, value) => {
-                    // Filter out circular references and functions
+                    // Keep full object for debugging, only filter out circular references and functions
                     if (key === '_parserConfig' && value) {
                         return { name: value.name, parser: value.parser };
                     }
@@ -2303,13 +2300,8 @@ class ScriptableAdapter {
                             identifier: c.identifier
                         }));
                     }
-                    // Filter out functions and internal fields that don't need display
                     if (typeof value === 'function') {
-                        return undefined; // Don't display functions at all
-                    }
-                    // Hide internal merge fields that clutter the display
-                    if (key.startsWith('_field') || key.startsWith('_merge') || key === '_original' || key === '_analysis') {
-                        return undefined;
+                        return '[Function]'; // Show functions exist but don't break JSON
                     }
                     return value;
                 }, 2))}</pre>
@@ -2331,10 +2323,7 @@ class ScriptableAdapter {
                                     }));
                                 }
                                 if (typeof value === 'function') {
-                                    return undefined;
-                                }
-                                if (key.startsWith('_field') || key.startsWith('_merge') || key === '_original' || key === '_analysis') {
-                                    return undefined;
+                                    return '[Function]';
                                 }
                                 return value;
                             }, 2))}'>
@@ -2703,15 +2692,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return false;
     }
 
-    // Get all fields that should be compared/displayed - check ALL fields except underscore fields
+    // Get all fields that should be compared/displayed - check ALL fields except underscore fields and functions
     getFieldsForComparison(event) {
         // Get all fields from both new and existing events
         const allFields = new Set();
         
+        // Helper function to check if a field should be included
+        const shouldIncludeField = (obj, field) => {
+            if (field.startsWith('_')) return false;
+            if (typeof obj[field] === 'function') return false;
+            return true;
+        };
+        
         // Add fields from new event
         if (event._original?.new) {
             Object.keys(event._original.new).forEach(field => {
-                if (!field.startsWith('_')) {
+                if (shouldIncludeField(event._original.new, field)) {
                     allFields.add(field);
                 }
             });
@@ -2720,7 +2716,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Add fields from existing event
         if (event._original?.existing) {
             Object.keys(event._original.existing).forEach(field => {
-                if (!field.startsWith('_')) {
+                if (shouldIncludeField(event._original.existing, field)) {
                     allFields.add(field);
                 }
             });
@@ -2737,7 +2733,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         // Add fields from final event
         Object.keys(event).forEach(field => {
-            if (!field.startsWith('_')) {
+            if (shouldIncludeField(event, field)) {
                 allFields.add(field);
             }
         });
