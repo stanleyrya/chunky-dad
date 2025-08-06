@@ -2465,6 +2465,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             console.log(`   New (original): "${newOriginalTitle}"`);
         }
         
+        // Special case for Megawoof events
+        // Handle "Megawoof: DURO" matching with MEGAWOOF events that have DURO in original title
+        if (existingTitle.includes('megawoof') && newTitle.includes('megawoof')) {
+            // Extract the subtitle from existing event (e.g., "duro" from "megawoof: duro")
+            const existingParts = existingTitle.split(':').map(p => p.trim());
+            if (existingParts.length > 1) {
+                const existingSubtitle = existingParts[1];
+                // Check if the new event's original title contains the subtitle
+                if (newOriginalTitle && newOriginalTitle.toLowerCase().includes(existingSubtitle)) {
+                    console.log(`📱 Scriptable: Megawoof pattern match - existing subtitle "${existingSubtitle}" found in original title`);
+                    return true;
+                }
+            }
+        }
+        
         // Generic pattern detection for events with complex text formatting
         // This helps merge events that have variations like "A>B>C", "A-B-C", "A B C"
         const hasComplexPattern = (text) => {
