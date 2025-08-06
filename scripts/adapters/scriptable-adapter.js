@@ -150,6 +150,17 @@ class ScriptableAdapter {
         }
     }
 
+    // Helper method to get consistent date range for searching existing events
+    getSearchDateRange(startDate, endDate) {
+        // Expand search range for recurring events and better conflict detection
+        const searchStart = new Date(startDate);
+        searchStart.setDate(searchStart.getDate() - 7); // Look back a week
+        const searchEnd = new Date(endDate || startDate);
+        searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
+        
+        return { searchStart, searchEnd };
+    }
+    
     // Get existing events for a specific event (called by shared-core)
     async getExistingEvents(event) {
         try {
@@ -162,12 +173,8 @@ class ScriptableAdapter {
             const startDate = new Date(event.startDate);
             const endDate = new Date(event.endDate);
             
-            // Expand search range for conflict detection and recurring events
-            // This matches the logic in compareWithExistingCalendars
-            const searchStart = new Date(startDate);
-            searchStart.setDate(searchStart.getDate() - 7); // Look back a week
-            const searchEnd = new Date(endDate);
-            searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
+            // Use shared date range logic
+            const { searchStart, searchEnd } = this.getSearchDateRange(startDate, endDate);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
             // Normalize dates to UTC when returning
@@ -569,11 +576,8 @@ class ScriptableAdapter {
                 const startDate = new Date(event.startDate);
                 const endDate = new Date(event.endDate || event.startDate);
                 
-                // Expand search range for recurring events
-                const searchStart = new Date(startDate);
-                searchStart.setDate(searchStart.getDate() - 7); // Look back a week
-                const searchEnd = new Date(endDate);
-                searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
+                // Use shared date range logic
+                const { searchStart, searchEnd } = this.getSearchDateRange(startDate, endDate);
                 
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
