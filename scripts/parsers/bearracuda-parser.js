@@ -331,7 +331,7 @@ class BearraccudaParser {
                     }
                     
                     if (!isNaN(date.getTime())) {
-                        return date.toISOString();
+                        return date;
                     }
                 }
             }
@@ -339,7 +339,7 @@ class BearraccudaParser {
             // Fallback to Date constructor
             const date = new Date(dateString);
             if (!isNaN(date.getTime())) {
-                return date.toISOString();
+                return date;
             }
             
         } catch (error) {

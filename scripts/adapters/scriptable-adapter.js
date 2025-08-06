@@ -159,8 +159,8 @@ class ScriptableAdapter {
             const calendar = await this.getOrCreateCalendar(calendarName);
             
             // Parse dates from formatted event
-            const startDate = new Date(event.startDate);
-            const endDate = new Date(event.endDate);
+            const startDate = event.startDate;
+            const endDate = event.endDate;
             
             // Expand search range for conflict detection
             const searchStart = new Date(startDate);
@@ -299,8 +299,8 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: Creating new event: ${event.title}`);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
-                            calendarEvent.startDate = new Date(event.startDate);
-                            calendarEvent.endDate = new Date(event.endDate);
+                            calendarEvent.startDate = event.startDate;
+                            calendarEvent.endDate = event.endDate;
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
@@ -560,8 +560,8 @@ class ScriptableAdapter {
             
             try {
                 // Check for existing events in the time range
-                const startDate = new Date(event.startDate);
-                const endDate = new Date(event.endDate || event.startDate);
+                const startDate = event.startDate;
+                const endDate = event.endDate || event.startDate;
                 
                 // Expand search range for recurring events
                 const searchStart = new Date(startDate);

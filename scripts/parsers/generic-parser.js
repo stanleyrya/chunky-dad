@@ -406,7 +406,7 @@ class GenericParser {
                     }
                     
                     if (!isNaN(date.getTime())) {
-                        return date.toISOString();
+                        return date;
                     }
                 }
             }
@@ -414,7 +414,7 @@ class GenericParser {
             // Fallback to Date constructor
             const date = new Date(dateString);
             if (!isNaN(date.getTime())) {
-                return date.toISOString();
+                return date;
             }
             
         } catch (error) {
