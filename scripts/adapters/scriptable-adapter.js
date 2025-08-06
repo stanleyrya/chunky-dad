@@ -2528,7 +2528,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     hasEventDifferences(event) {
         if (!event._original) return false;
         
-        const fieldsToCheck = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
+        // Get all fields that would be included in the calendar event, using the same logic as formatEventNotes
+        const fieldsToCheck = this.getFieldsForComparison(event);
         
         for (const field of fieldsToCheck) {
             let newValue = event._original.new[field] || '';
@@ -2550,12 +2551,56 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         return false;
     }
+
+    // Get all fields that should be compared/displayed - check ALL fields except underscore fields
+    getFieldsForComparison(event) {
+        // Get all fields from both new and existing events
+        const allFields = new Set();
+        
+        // Add fields from new event
+        if (event._original?.new) {
+            Object.keys(event._original.new).forEach(field => {
+                if (!field.startsWith('_')) {
+                    allFields.add(field);
+                }
+            });
+        }
+        
+        // Add fields from existing event
+        if (event._original?.existing) {
+            Object.keys(event._original.existing).forEach(field => {
+                if (!field.startsWith('_')) {
+                    allFields.add(field);
+                }
+            });
+        }
+        
+        // Add fields from extracted fields
+        if (event._mergeInfo?.extractedFields) {
+            Object.keys(event._mergeInfo.extractedFields).forEach(field => {
+                if (!field.startsWith('_')) {
+                    allFields.add(field);
+                }
+            });
+        }
+        
+        // Add fields from final event
+        Object.keys(event).forEach(field => {
+            if (!field.startsWith('_')) {
+                allFields.add(field);
+            }
+        });
+        
+        // Convert to array and sort for consistent display
+        return Array.from(allFields).sort();
+    }
     
     // Generate comparison rows for conflict display
     generateComparisonRows(event) {
         if (!event._original) return '';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
+        // Use the same field logic as what goes into calendar notes
+        const fieldsToCompare = this.getFieldsForComparison(event);
         const rows = [];
         
         fieldsToCompare.forEach(field => {
@@ -2649,7 +2694,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateLineDiffView(event) {
         if (!event._original) return '<p>No comparison data available</p>';
         
-        const fieldsToCompare = ['title', 'venue', 'tea', 'instagram', 'website', 'gmaps', 'price', 'startDate', 'endDate'];
+        // Use the same field logic as what goes into calendar notes
+        const fieldsToCompare = this.getFieldsForComparison(event);
         let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
         
         fieldsToCompare.forEach(field => {
