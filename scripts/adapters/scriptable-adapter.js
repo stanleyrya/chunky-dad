@@ -162,11 +162,12 @@ class ScriptableAdapter {
             const startDate = new Date(event.startDate);
             const endDate = new Date(event.endDate);
             
-            // Expand search range for conflict detection
+            // Expand search range for conflict detection and recurring events
+            // This matches the logic in compareWithExistingCalendars
             const searchStart = new Date(startDate);
-            searchStart.setHours(0, 0, 0, 0);
+            searchStart.setDate(searchStart.getDate() - 7); // Look back a week
             const searchEnd = new Date(endDate);
-            searchEnd.setHours(23, 59, 59, 999);
+            searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
             // Normalize dates to UTC when returning
