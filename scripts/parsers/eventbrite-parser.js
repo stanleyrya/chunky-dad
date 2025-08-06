@@ -320,8 +320,8 @@ class EventbriteParser {
             const event = {
                 title: title,
                 description: description,
-                startDate: startDate,
-                endDate: endDate,
+                startDate: startDateObj,
+                endDate: endDateObj,
                 venue: venue,
                 location: venue, // For backward compatibility
                 address: address,
@@ -482,7 +482,7 @@ class EventbriteParser {
             return {
                 title: title,
                 description: '',
-                startDate: startDate,
+                startDate: startDate ? new Date(startDate) : null,
                 endDate: null,
                 venue: venue,
                 city: city,
