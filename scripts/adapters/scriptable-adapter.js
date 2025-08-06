@@ -2041,9 +2041,6 @@ class ScriptableAdapter {
                             📊 ${event._action === 'conflict' ? 'Conflict Resolution' : 'Merge Comparison'}
                             ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
                         </h4>
-                        <div style="font-size: 11px; color: #666; margin-top: 2px;">
-                            📝 Shows all event fields for complete comparison
-                        </div>
                         <button onclick="event.stopPropagation(); toggleDiffView(this, '${eventId}');" 
                                 style="padding: 4px 10px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; ${!isExpanded ? 'display: none;' : ''}"
                                 id="diff-toggle-${eventId}">
