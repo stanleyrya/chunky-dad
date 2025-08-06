@@ -288,7 +288,7 @@ class SharedCore {
         return events.filter(event => {
             if (!event.startDate) return false;
             
-            const eventDate = new Date(event.startDate);
+            const eventDate = event.startDate;
             if (eventDate <= now) return false;
             
             if (cutoffDate && eventDate > cutoffDate) return false;
@@ -937,8 +937,8 @@ class SharedCore {
     
     // Get event date ranges with optional expansion
     getEventDateRange(event, expandRange = false) {
-        const startDate = new Date(event.startDate);
-        const endDate = new Date(event.endDate || event.startDate);
+        const startDate = event.startDate;
+        const endDate = event.endDate || event.startDate;
         
         if (expandRange) {
             const searchStart = new Date(startDate);
@@ -1106,7 +1106,7 @@ class SharedCore {
         // Check for exact or similar duplicates
         const exactMatch = existingEventsData.find(existing => 
             this.areTitlesSimilar(existing.title, event.title) &&
-            this.areDatesEqual(existing.startDate, new Date(event.startDate), 1)
+            this.areDatesEqual(existing.startDate, event.startDate, 1)
         );
         
         if (exactMatch) {
@@ -1120,7 +1120,7 @@ class SharedCore {
         // Check for time conflicts that can be merged
         const timeConflicts = existingEventsData.filter(existing => 
             this.doDatesOverlap(existing.startDate, existing.endDate, 
-                               new Date(event.startDate), new Date(event.endDate || event.startDate))
+                               event.startDate, event.endDate || event.startDate)
         );
         
         if (timeConflicts.length > 0) {
@@ -1128,7 +1128,7 @@ class SharedCore {
             const mergeableConflict = timeConflicts.find(existing => 
                 this.areTitlesSimilar(existing.title, event.title) || 
                 (existing.location === (event.venue || event.bar) && 
-                 this.areDatesEqual(existing.startDate, new Date(event.startDate), 60))
+                 this.areDatesEqual(existing.startDate, event.startDate, 60))
             );
             
             if (mergeableConflict) {

@@ -150,17 +150,6 @@ class ScriptableAdapter {
         }
     }
 
-    // Helper method to get consistent date range for searching existing events
-    getSearchDateRange(startDate, endDate) {
-        // Expand search range for recurring events and better conflict detection
-        const searchStart = new Date(startDate);
-        searchStart.setDate(searchStart.getDate() - 7); // Look back a week
-        const searchEnd = new Date(endDate || startDate);
-        searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
-        
-        return { searchStart, searchEnd };
-    }
-    
     // Get existing events for a specific event (called by shared-core)
     async getExistingEvents(event) {
         try {
@@ -170,15 +159,17 @@ class ScriptableAdapter {
             const calendar = await this.getOrCreateCalendar(calendarName);
             
             // Parse dates from formatted event
-            const startDate = new Date(event.startDate);
-            const endDate = new Date(event.endDate);
+            const startDate = event.startDate;
+            const endDate = event.endDate;
             
-            // Use shared date range logic
-            const { searchStart, searchEnd } = this.getSearchDateRange(startDate, endDate);
+            // Expand search range for conflict detection
+            const searchStart = new Date(startDate);
+            searchStart.setHours(0, 0, 0, 0);
+            const searchEnd = new Date(endDate);
+            searchEnd.setHours(23, 59, 59, 999);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-            // Normalize dates to UTC when returning
-            return existingEvents.map(e => this.normalizeCalendarEventDates(e));
+            return existingEvents;
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
@@ -308,9 +299,8 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: Creating new event: ${event.title}`);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
-                            // Normalize dates to ensure they're in UTC
-                            calendarEvent.startDate = new Date(this.normalizeToUTC(event.startDate));
-                            calendarEvent.endDate = new Date(this.normalizeToUTC(event.endDate));
+                            calendarEvent.startDate = event.startDate;
+                            calendarEvent.endDate = event.endDate;
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
@@ -318,9 +308,6 @@ class ScriptableAdapter {
                             if (event.url) {
                                 calendarEvent.url = event.url;
                             }
-                            
-                            // Set timezone to UTC for consistency
-                            calendarEvent.timeZone = "UTC";
                             
                             await calendarEvent.save();
                             processedCount++;
@@ -573,11 +560,14 @@ class ScriptableAdapter {
             
             try {
                 // Check for existing events in the time range
-                const startDate = new Date(event.startDate);
-                const endDate = new Date(event.endDate || event.startDate);
+                const startDate = event.startDate;
+                const endDate = event.endDate || event.startDate;
                 
-                // Use shared date range logic
-                const { searchStart, searchEnd } = this.getSearchDateRange(startDate, endDate);
+                // Expand search range for recurring events
+                const searchStart = new Date(startDate);
+                searchStart.setDate(searchStart.getDate() - 7); // Look back a week
+                const searchEnd = new Date(endDate);
+                searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
                 
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
@@ -2470,21 +2460,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             console.log(`   New (original): "${newOriginalTitle}"`);
         }
         
-        // Special case for Megawoof events
-        // Handle "Megawoof: DURO" matching with MEGAWOOF events that have DURO in original title
-        if (existingTitle.includes('megawoof') && newTitle.includes('megawoof')) {
-            // Extract the subtitle from existing event (e.g., "duro" from "megawoof: duro")
-            const existingParts = existingTitle.split(':').map(p => p.trim());
-            if (existingParts.length > 1) {
-                const existingSubtitle = existingParts[1];
-                // Check if the new event's original title contains the subtitle
-                if (newOriginalTitle && newOriginalTitle.toLowerCase().includes(existingSubtitle)) {
-                    console.log(`📱 Scriptable: Megawoof pattern match - existing subtitle "${existingSubtitle}" found in original title`);
-                    return true;
-                }
-            }
-        }
-        
         // Generic pattern detection for events with complex text formatting
         // This helps merge events that have variations like "A>B>C", "A-B-C", "A B C"
         const hasComplexPattern = (text) => {
@@ -2757,36 +2732,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         html += '</div>';
         return html;
     }
-
-    // Timezone normalization helpers
-    normalizeToUTC(dateString) {
-        // If already has Z suffix, it's already UTC
-        if (dateString && dateString.endsWith('Z')) {
-            return dateString;
-        }
-        
-        // Parse the date and convert to UTC
-        const date = new Date(dateString);
-        if (!isNaN(date.getTime())) {
-            return date.toISOString();
-        }
-        
-        // Return original if parsing fails
-        return dateString;
-    }
-    
-    // When reading from calendar, normalize timezone to UTC
-    normalizeCalendarEventDates(event) {
-        if (event.startDate) {
-            event.startDate = event.startDate.toISOString();
-        }
-        if (event.endDate) {
-            event.endDate = event.endDate.toISOString();
-        }
-        return event;
-    }
-
-
 
     // Prompt user for calendar execution after displaying results
     async promptForCalendarExecution(analyzedEvents, config) {
