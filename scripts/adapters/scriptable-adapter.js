@@ -1851,6 +1851,24 @@ class ScriptableAdapter {
             filterEvents();
         }
         
+        function copyEventJSON(button) {
+            const eventJSON = button.getAttribute('data-event-json');
+            
+            navigator.clipboard.writeText(eventJSON).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '#007aff';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy event JSON: ', err);
+                alert('Event JSON copy failed. Please try again.');
+            });
+        }
+        
         function exportAsJSON() {
             const eventCards = document.querySelectorAll('.event-card');
             const exportData = {
@@ -1931,6 +1949,70 @@ class ScriptableAdapter {
     
     // Generate HTML for individual event card
     generateEventCard(event) {
+        /*
+         * EVENT OBJECT LIFECYCLE DOCUMENTATION
+         * ===================================
+         * 
+         * This function displays events that have gone through the following lifecycle:
+         * 
+         * 1. PARSING PHASE:
+         *    - Events are scraped from external sources (Eventbrite, Facebook, etc.)
+         *    - Raw data is parsed into standardized event objects
+         *    - Basic fields are extracted: title, startDate, endDate, venue, etc.
+         *    - Events get a unique 'key' for deduplication
+         * 
+         * 2. ANALYSIS PHASE (by shared-core.js):
+         *    - Events are compared against existing calendar events
+         *    - Each event gets an '_action' field indicating what should happen:
+         *      • 'new': Brand new event, add to calendar
+         *      • 'merge': Similar event exists, merge additional info
+         *      • 'update': Event exists but needs updates
+         *      • 'conflict': Multiple matching events found, needs review
+         *      • 'missing_calendar': Target calendar doesn't exist
+         * 
+         * 3. MERGE STRATEGY APPLICATION:
+         *    - For merge actions, field-level merge strategies are applied:
+         *      • 'clobber': New value overwrites existing
+         *      • 'preserve': Keep existing value, ignore new
+         *      • 'upsert': Update if new value is better/longer
+         *    - Results stored in '_fieldMergeStrategies' and applied to create merged fields
+         * 
+         * 4. ENRICHMENT PHASE:
+         *    - Additional metadata is added for display and debugging:
+         *      • '_original': Contains both 'new' and 'existing' event data
+         *      • '_mergeDiff': Shows what was preserved/added/updated/removed
+         *      • '_mergedNotes': Final notes after merge strategy application
+         *      • '_existingEvent': Reference to the calendar event being merged with
+         *      • '_conflicts': Array of conflicting events for manual review
+         * 
+         * 5. DISPLAY PHASE (this function):
+         *    - Events are rendered in the UI with their action badges
+         *    - Comparison tables show before/after for merge operations
+         *    - Raw JSON is displayed with sensitive fields filtered out
+         *    - Individual copy buttons allow copying specific event data
+         * 
+         * FIELD FILTERING FOR DISPLAY:
+         * - Functions are completely hidden (return undefined)
+         * - Internal merge fields (_field*, _merge*, _original, _analysis) are hidden
+         * - Circular references are simplified to prevent JSON errors
+         * - This keeps the displayed JSON clean and focused on the actual event data
+         * 
+         * EXAMPLE EVENT STRUCTURE (as displayed):
+         * {
+         *   "title": "MEGAWOOF",
+         *   "startDate": "2025-08-17T05:00:00.000Z",
+         *   "endDate": "2025-08-17T10:00:00.000Z",
+         *   "venue": "TBA",
+         *   "city": "la",
+         *   "key": "megawoof|2025-08-17|tba",
+         *   "_action": "merge",
+         *   "_parserConfig": { "name": "Megawoof America", "parser": "eventbrite" },
+         *   "_existingEvent": { "title": "Megawoof: DURO", "identifier": "..." },
+         *   "isBearEvent": true,
+         *   "source": "eventbrite"
+         * }
+         */
+        
         const actionBadge = {
             'new': '<span class="action-badge badge-new">NEW</span>',
             'merge': '<span class="action-badge badge-merge">MERGE</span>',
@@ -2063,6 +2145,35 @@ class ScriptableAdapter {
                     
                     <!-- Table view (default) -->
                     <div id="table-view-${eventId}" class="diff-view">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="font-size: 12px; color: #666;">Comparison Table</div>
+                            <button onclick="copyEventJSON(this)" 
+                                    style="padding: 4px 8px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                                    data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
+                                        if (key === '_parserConfig' && value) {
+                                            return { name: value.name, parser: value.parser };
+                                        }
+                                        if (key === '_existingEvent' && value) {
+                                            return { title: value.title, identifier: value.identifier };
+                                        }
+                                        if (key === '_conflicts' && value && Array.isArray(value)) {
+                                            return value.map(c => ({
+                                                title: c.title,
+                                                startDate: c.startDate,
+                                                identifier: c.identifier
+                                            }));
+                                        }
+                                        if (typeof value === 'function') {
+                                            return undefined;
+                                        }
+                                        if (key.startsWith('_field') || key.startsWith('_merge') || key === '_original' || key === '_analysis') {
+                                            return undefined;
+                                        }
+                                        return value;
+                                    }, 2))}'>
+                                📋 Copy JSON
+                            </button>
+                        </div>
                         <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
                             <tr>
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
@@ -2185,11 +2296,51 @@ class ScriptableAdapter {
                     if (key === '_existingEvent' && value) {
                         return { title: value.title, identifier: value.identifier };
                     }
+                    if (key === '_conflicts' && value && Array.isArray(value)) {
+                        return value.map(c => ({
+                            title: c.title,
+                            startDate: c.startDate,
+                            identifier: c.identifier
+                        }));
+                    }
+                    // Filter out functions and internal fields that don't need display
                     if (typeof value === 'function') {
-                        return '[Function]';
+                        return undefined; // Don't display functions at all
+                    }
+                    // Hide internal merge fields that clutter the display
+                    if (key.startsWith('_field') || key.startsWith('_merge') || key === '_original' || key === '_analysis') {
+                        return undefined;
                     }
                     return value;
                 }, 2))}</pre>
+                <div style="margin-top: 8px; text-align: right;">
+                    <button onclick="copyEventJSON(this)" 
+                            style="padding: 4px 8px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                            data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
+                                if (key === '_parserConfig' && value) {
+                                    return { name: value.name, parser: value.parser };
+                                }
+                                if (key === '_existingEvent' && value) {
+                                    return { title: value.title, identifier: value.identifier };
+                                }
+                                if (key === '_conflicts' && value && Array.isArray(value)) {
+                                    return value.map(c => ({
+                                        title: c.title,
+                                        startDate: c.startDate,
+                                        identifier: c.identifier
+                                    }));
+                                }
+                                if (typeof value === 'function') {
+                                    return undefined;
+                                }
+                                if (key.startsWith('_field') || key.startsWith('_merge') || key === '_original' || key === '_analysis') {
+                                    return undefined;
+                                }
+                                return value;
+                            }, 2))}'>
+                        📋 Copy JSON
+                    </button>
+                </div>
             </div>
         </div>
         `;
