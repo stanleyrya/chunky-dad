@@ -150,17 +150,6 @@ class ScriptableAdapter {
         }
     }
 
-    // Helper method to get consistent date range for searching existing events
-    getSearchDateRange(startDate, endDate) {
-        // Expand search range for recurring events and better conflict detection
-        const searchStart = new Date(startDate);
-        searchStart.setDate(searchStart.getDate() - 7); // Look back a week
-        const searchEnd = new Date(endDate || startDate);
-        searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
-        
-        return { searchStart, searchEnd };
-    }
-    
     // Get existing events for a specific event (called by shared-core)
     async getExistingEvents(event) {
         try {
@@ -173,8 +162,11 @@ class ScriptableAdapter {
             const startDate = new Date(event.startDate);
             const endDate = new Date(event.endDate);
             
-            // Use shared date range logic
-            const { searchStart, searchEnd } = this.getSearchDateRange(startDate, endDate);
+            // Expand search range for conflict detection
+            const searchStart = new Date(startDate);
+            searchStart.setHours(0, 0, 0, 0);
+            const searchEnd = new Date(endDate);
+            searchEnd.setHours(23, 59, 59, 999);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
             // Normalize dates to UTC when returning
@@ -576,8 +568,11 @@ class ScriptableAdapter {
                 const startDate = new Date(event.startDate);
                 const endDate = new Date(event.endDate || event.startDate);
                 
-                // Use shared date range logic
-                const { searchStart, searchEnd } = this.getSearchDateRange(startDate, endDate);
+                // Expand search range for recurring events
+                const searchStart = new Date(startDate);
+                searchStart.setDate(searchStart.getDate() - 7); // Look back a week
+                const searchEnd = new Date(endDate);
+                searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
                 
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
@@ -2468,21 +2463,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         console.log(`   New: "${newTitle}"`);
         if (newOriginalTitle) {
             console.log(`   New (original): "${newOriginalTitle}"`);
-        }
-        
-        // Special case for Megawoof events
-        // Handle "Megawoof: DURO" matching with MEGAWOOF events that have DURO in original title
-        if (existingTitle.includes('megawoof') && newTitle.includes('megawoof')) {
-            // Extract the subtitle from existing event (e.g., "duro" from "megawoof: duro")
-            const existingParts = existingTitle.split(':').map(p => p.trim());
-            if (existingParts.length > 1) {
-                const existingSubtitle = existingParts[1];
-                // Check if the new event's original title contains the subtitle
-                if (newOriginalTitle && newOriginalTitle.toLowerCase().includes(existingSubtitle)) {
-                    console.log(`📱 Scriptable: Megawoof pattern match - existing subtitle "${existingSubtitle}" found in original title`);
-                    return true;
-                }
-            }
         }
         
         // Generic pattern detection for events with complex text formatting

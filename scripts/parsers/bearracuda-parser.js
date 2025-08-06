@@ -195,11 +195,6 @@ class BearraccudaParser {
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {
-                // Preserve original title if we're about to override it
-                if (parserConfig.metadata.title && parserConfig.metadata.title.value !== undefined) {
-                    event.originalTitle = event.title;
-                }
-                
                 // Pass through all metadata fields to the event
                 Object.keys(parserConfig.metadata).forEach(key => {
                     const metaValue = parserConfig.metadata[key];
