@@ -315,15 +315,11 @@ class EventbriteParser {
                 }
             }
             
-            // Create date objects from the extracted date strings
-            const startDateObj = startDate ? new Date(startDate) : null;
-            const endDateObj = endDate ? new Date(endDate) : null;
-            
             const event = {
                 title: title,
                 description: description,
-                startDate: startDateObj,
-                endDate: endDateObj,
+                startDate: startDate ? new Date(startDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
                 venue: venue,
                 location: venue, // For backward compatibility
                 address: address,
