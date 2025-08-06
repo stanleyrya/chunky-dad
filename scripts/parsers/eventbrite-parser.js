@@ -315,7 +315,9 @@ class EventbriteParser {
                 }
             }
             
-
+            // Create date objects from the extracted date strings
+            const startDateObj = startDate ? new Date(startDate) : null;
+            const endDateObj = endDate ? new Date(endDate) : null;
             
             const event = {
                 title: title,
