@@ -1988,14 +1988,32 @@ class ScriptableAdapter {
          * 5. DISPLAY PHASE (this function):
          *    - Events are rendered in the UI with their action badges
          *    - Comparison tables show before/after for merge operations
-         *    - Raw JSON is displayed with sensitive fields filtered out
+         *    - Raw JSON is displayed with all debugging information
          *    - Individual copy buttons allow copying specific event data
          * 
+         * 6. SAVING PHASE (executeCalendarActions):
+         *    - Events are processed based on their '_action' field:
+         *      • 'new': Create new CalendarEvent and save to iOS Calendar
+         *      • 'merge': Update existing event with merged notes/url/location, then save
+         *      • 'update': Replace existing event fields entirely, then save
+         *      • 'conflict': Skip - requires manual review
+         *    - Calendar mapping determines which iOS calendar to use (chunky-dad-{city})
+         *    - Actual iOS Calendar.save() calls persist changes to device calendar
+         * 
+         * REDUNDANCIES IN EVENT OBJECT:
+         * - 'location' field appears both as GPS coordinates AND in 'googleMapsLink'
+         * - 'venue' info duplicated in 'notes' field and top-level 'venue' field
+         * - 'url' appears both as top-level field AND in 'notes' as "url: ..."
+         * - 'instagram' appears both as top-level field AND in 'notes' as "instagram: ..."
+         * - 'image' URL stored separately but also embedded in 'notes' as "image: ..."
+         * - 'shortTitle' often duplicates or abbreviates the main 'title'
+         * - 'address' and 'coordinates' contain overlapping location data
+         * - '_mergedNotes' and 'notes' can contain similar information post-merge
+         * 
          * FIELD FILTERING FOR DISPLAY:
-         * - Functions are completely hidden (return undefined)
-         * - Internal merge fields (_field*, _merge*, _original, _analysis) are hidden
+         * - Functions are completely hidden from comparison tables
+         * - Raw JSON shows full object including all internal fields for debugging
          * - Circular references are simplified to prevent JSON errors
-         * - This keeps the displayed JSON clean and focused on the actual event data
          * 
          * EXAMPLE EVENT STRUCTURE (as displayed):
          * {
