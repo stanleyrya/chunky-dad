@@ -2766,10 +2766,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return event;
     }
 
-    // Display results with interactive elements
-    async displayResults(results) {
-        // ... existing code ...
-    }
+
 
     // Prompt user for calendar execution after displaying results
     async promptForCalendarExecution(analyzedEvents, config) {
