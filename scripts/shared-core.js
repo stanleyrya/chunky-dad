@@ -506,17 +506,21 @@ class SharedCore {
         const mergedData = this.mergeEventData(existingEvent, newEvent);
         finalEvent.notes = mergedData.notes;
         
-        // Store comparison data for display - ensure existing event has all available data
+        // Store comparison data for display - use COMPLETE existing event data
+        // Parse existing notes to get all the current field values
+        const existingFields = existingEvent.notes ? this.parseNotesIntoFields(existingEvent.notes) : {};
+        
         finalEvent._original = {
             existing: { 
-                ...existingEvent,
-                // Ensure basic calendar fields are available for comparison
+                // Start with basic calendar fields from the actual existing event
                 title: existingEvent.title || '',
                 startDate: existingEvent.startDate || '',
                 endDate: existingEvent.endDate || '',
                 location: existingEvent.location || '',
                 notes: existingEvent.notes || '',
-                url: existingEvent.url || ''
+                url: existingEvent.url || '',
+                // Add all fields that are currently stored in the existing event's notes
+                ...existingFields
             },
             new: { ...newEvent }
         };
