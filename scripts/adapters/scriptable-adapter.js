@@ -2214,15 +2214,6 @@ class ScriptableAdapter {
             })() : ''}
             
             <!-- Simplified metadata -->
-            ${event.key || event.source ? `
-                <div class="event-metadata" style="margin-top: 10px; font-size: 11px; color: #666;">
-                    ${event.source ? `<span>Source: ${event.source}</span>` : ''}
-                    ${event.key ? `<span style="margin-left: 10px;">Key: ${this.escapeHtml(event.key)}</span>` : ''}
-                </div>
-            ` : ''}
-            
-
-            
             ${event._action === 'conflict' && event._conflicts ? `
                 <div class="conflict-info">
                     <strong>⚠️ Overlapping Events:</strong> ${event._conflicts.length} event(s) at same time
