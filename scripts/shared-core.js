@@ -765,9 +765,9 @@ class SharedCore {
         if (event.address && this.isFullAddress(event.address)) {
             // Use address when available and it's a full address
             event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-        } else if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-            // Fall back to coordinates if no full address
-            event.googleMapsLink = `https://maps.google.com/?q=${event.coordinates.lat},${event.coordinates.lng}`;
+        } else if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
+            // Fall back to coordinates if no full address (location stored as "lat,lng" string)
+            event.googleMapsLink = `https://maps.google.com/?q=${event.location}`;
         }
         
         return event;
