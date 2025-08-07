@@ -2093,19 +2093,25 @@ class ScriptableAdapter {
                                 // Parse and format notes for better readability
                                 const lines = notes.split('\n');
                                 let formattedHtml = '';
-                                let inDescription = true;
+                                let seenBlank = false;
                                 
                                 lines.forEach(line => {
-                                    if (line.includes(':') && !inDescription) {
-                                        // This is a metadata field
-                                        const [key, ...valueParts] = line.split(':');
-                                        const value = valueParts.join(':').trim();
-                                        formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
-                                    } else if (line.trim() === '') {
+                                    const trimmed = line.trim();
+                                    if (trimmed === '') {
+                                        // Treat first blank line as a simple separator
                                         formattedHtml += '<br>';
-                                        inDescription = false;
+                                        seenBlank = true;
+                                        return;
+                                    }
+                                    
+                                    const colonIndex = line.indexOf(':');
+                                    if (colonIndex > 0) {
+                                        // Key-value metadata line
+                                        const key = line.substring(0, colonIndex).trim();
+                                        const value = line.substring(colonIndex + 1).trim();
+                                        formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
                                     } else {
-                                        // Part of description
+                                        // Freeform description line
                                         formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
                                     }
                                 });
@@ -2713,21 +2719,38 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
         });
         
+        // Deduplicate synonyms in favor of canonical keys
+        const has = (key) => allFields.has(key);
+        const remove = (keys) => keys.forEach(k => allFields.delete(k));
+        
+        // Description
+        if (has('description')) remove(['tea', 'info']);
+        
+        // Venue/location
+        if (has('venue')) remove(['location', 'bar', 'host']);
+        
+        // Price
+        if (has('price')) remove(['cover', 'cost']);
+        
+        // Short title/name variants
+        if (has('shortTitle')) remove(['shorttitle', 'shortname', 'shortername', 'short title', 'short name', 'shorter name']);
+        
+        // Google Maps link variants
+        if (has('googleMapsLink')) remove(['gmaps', 'googlemaps', 'googlemapslink', 'google maps']);
+        
         // Convert to array and sort with logical grouping
         const fieldArray = Array.from(allFields);
         
         // Define field priority order - group related fields together
-        // Includes field aliases/pseudonyms from shared-core.js
+        // Prefer canonical keys
         const fieldPriority = {
             // Core event info - keep name fields together
             'title': 1,
-            'shortname': 2,        // Move shortname right after title
-            'shortername': 3,      // Keep other short name variants close
-            'shorttitle': 4,
+            'shortTitle': 2,
             
-            'description': 5,      // Move description after name fields
-            'tea': 6,              // alias for description
-            'info': 7,             // alias for description
+            'description': 5,
+            'tea': 6,              // alias for description (kept if description missing)
+            'info': 7,             // alias for description (kept if description missing)
             
             // Date/Time fields - keep start/end times together
             'startDate': 10,
@@ -2753,7 +2776,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'twitter': 33,
             'phone': 34,
             'email': 35,
-            'gmaps': 36,        // Google Maps
+            'googleMapsLink': 36,  // canonical Google Maps
+            'gmaps': 36,           // alias fallback
             
             // Event details
             'price': 40,

@@ -462,6 +462,11 @@ class SharedCore {
             }
         });
         
+        // Ensure important metadata fields are present for notes
+        if (!mergedEvent.key && newEvent.key) {
+            mergedEvent.key = newEvent.key;
+        }
+        
         // Use the existing formatEventNotes function to generate notes
         const notes = this.formatEventNotes(mergedEvent);
         
@@ -479,13 +484,37 @@ class SharedCore {
         // Use the existing merge function to do all the heavy lifting
         const mergedData = this.mergeEventData(existingEvent, newEvent);
         
+        // Helper to apply merge strategy for core calendar fields
+        const fieldStrategies = newEvent._fieldMergeStrategies || {};
+        const applyStrategy = (fieldName, existingValue, newValue) => {
+            // Allow mapping of strategy keys (location uses 'venue' in strategies)
+            const strategyKey = (fieldName === 'location' && !fieldStrategies[fieldName]) ? 'venue' : fieldName;
+            const strategy = fieldStrategies[strategyKey] || 'preserve';
+            switch (strategy) {
+                case 'clobber':
+                    return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
+                case 'upsert':
+                    return (existingValue !== undefined && existingValue !== null && existingValue !== '')
+                        ? existingValue
+                        : ((newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue);
+                case 'preserve':
+                default:
+                    return existingValue;
+            }
+        };
+        
+        // Resolve calendar core fields using strategies
+        const resolvedStartDate = applyStrategy('startDate', existingEvent.startDate, newEvent.startDate);
+        const resolvedEndDate = applyStrategy('endDate', existingEvent.endDate, newEvent.endDate || newEvent.startDate);
+        const resolvedLocation = applyStrategy('location', existingEvent.location, newEvent.venue || newEvent.location);
+        
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
-            // Core calendar fields that actually get saved (from mergedData)
+            // Core calendar fields that actually get saved (from mergedData + strategy application)
             title: mergedData.title,
-            startDate: existingEvent.startDate, // These don't usually change in merges
-            endDate: existingEvent.endDate,
-            location: existingEvent.location,
+            startDate: resolvedStartDate,
+            endDate: resolvedEndDate,
+            location: resolvedLocation,
             notes: mergedData.notes,
             url: mergedData.url,
             
@@ -505,7 +534,7 @@ class SharedCore {
         const finalFields = this.parseNotesIntoFields(finalEvent.notes);
         
         // Prepare strategy and existing fields for comparison blocks below
-        const fieldStrategies = newEvent._fieldMergeStrategies || {};
+        const fieldStrategiesForCompare = newEvent._fieldMergeStrategies || {};
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
 
         // Add all fields from notes to the final event for display purposes
@@ -557,18 +586,18 @@ class SharedCore {
         finalEvent._mergeInfo = {
             extractedFields: {},
             mergedFields: {},
-            strategy: fieldStrategies
+            strategy: fieldStrategiesForCompare
         };
         
         // Track which fields were merged and how
         ['title', 'startDate', 'endDate', 'location', 'url', 'notes'].forEach(field => {
             const existingValue = existingEvent[field];
-            const newValue = newEvent[field];
+            const newValue = newEvent[field] || (field === 'location' ? (newEvent.venue || newEvent.location) : undefined);
             const finalValue = finalEvent[field];
             
             if (finalValue === existingValue && existingValue !== newValue) {
                 finalEvent._mergeInfo.mergedFields[field] = 'existing';
-            } else if (finalValue === newValue && newValue !== existingValue) {
+            } else if (newValue !== undefined && finalValue === newValue && newValue !== existingValue) {
                 finalEvent._mergeInfo.mergedFields[field] = 'new';
             }
         });
@@ -599,7 +628,7 @@ class SharedCore {
         // This ensures the object structure matches what gets saved and makes debugging easier
         if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldMergeStrategies) {
             Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
-                const strategy = finalEvent._fieldMergeStrategies[fieldName];
+                const strategy = finalEvent._fieldMergeStrategies[fieldName] || (fieldName === 'location' ? finalEvent._fieldMergeStrategies['venue'] : undefined);
                 // Only add fields that were preserved (not overridden by new values)
                 if (strategy === 'preserve' && !finalEvent[fieldName]) {
                     finalEvent[fieldName] = fieldInfo.value;
@@ -615,9 +644,8 @@ class SharedCore {
         const fields = {};
         const lines = notes.split('\n');
         
-        // Define field aliases for normalization
-        // Maps various names to canonical field names
-        const fieldAliases = {
+        // Map of normalized aliases (lowercased, spaces removed) to canonical field names
+        const aliasToCanonical = {
             // Description aliases
             'tea': 'description',
             'info': 'description',
@@ -632,48 +660,35 @@ class SharedCore {
             'cost': 'price',
             
             // Name aliases
-            'shortname': 'shortname',
-            'short name': 'shortname',
-            'shorter name': 'shortername',
-            'shortername': 'shortername',
-            'shorttitle': 'shorttitle',
-            'short title': 'shorttitle',
-            
-            // Type aliases
-            'type': 'eventtype',
-            'event type': 'eventtype',
+            'shortname': 'shortTitle',
+            'shortername': 'shortTitle',
+            'shorter name': 'shortTitle',
+            'short title': 'shortTitle',
+            'shorttitle': 'shortTitle',
             
             // Social/web aliases
-            'gmaps': 'gmaps',
-            'google maps': 'gmaps',
-            
-            // Debug aliases (keep as-is but normalized)
-            'debugcity': 'debugcity',
-            'debugsource': 'debugsource',
-            'debugtimezone': 'debugtimezone',
-            'debugimage': 'debugimage'
+            'gmaps': 'googleMapsLink',
+            'googlemaps': 'googleMapsLink',
+            'googlemapslink': 'googleMapsLink',
+            'google maps': 'googleMapsLink'
         };
+        
+        const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
         
         lines.forEach(line => {
             const colonIndex = line.indexOf(':');
             // A valid metadata line has a colon that's not at the start
             if (colonIndex > 0) {
-                const key = line.substring(0, colonIndex).trim();
+                const rawKey = line.substring(0, colonIndex).trim();
                 const value = line.substring(colonIndex + 1).trim();
                 
-                if (key && value) {
-                    // Normalize key names - convert to lowercase and remove extra spaces
-                    let normalizedKey = key.toLowerCase().trim();
-                    
-                    // Apply alias mapping if exists
-                    if (fieldAliases[normalizedKey]) {
-                        normalizedKey = fieldAliases[normalizedKey];
-                    } else {
-                        // For unrecognized keys, just remove spaces
-                        normalizedKey = normalizedKey.replace(/\s+/g, '');
-                    }
-                    
-                    fields[normalizedKey] = value;
+                if (rawKey && value) {
+                    const normalizedKey = normalize(rawKey);
+                    // Prefer canonical mapping when recognized; otherwise, keep original key casing
+                    const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
+                        ? aliasToCanonical[normalizedKey]
+                        : rawKey;
+                    fields[canonicalKey] = value;
                 }
             }
         });
