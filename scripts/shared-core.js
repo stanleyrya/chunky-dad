@@ -423,16 +423,13 @@ class SharedCore {
             if (key.startsWith('_')) return;
             
             // Get strategy for this field, with field name variations support
-            let strategy = fieldStrategies[key] || fieldStrategies[key.toLowerCase()] || 'preserve';
-            
-            // Handle common field name variations
-            if (strategy === 'preserve') {
-                if (key === 'googleMapsLink' && fieldStrategies['gmaps']) {
-                    strategy = fieldStrategies['gmaps'];
-                } else if (key === 'gmaps' && fieldStrategies['googleMapsLink']) {
-                    strategy = fieldStrategies['googleMapsLink'];
-                }
-            }
+            let strategy = (
+                fieldStrategies[key] !== undefined ? fieldStrategies[key] :
+                fieldStrategies[key.toLowerCase()] !== undefined ? fieldStrategies[key.toLowerCase()] :
+                (key === 'googleMapsLink' && fieldStrategies['gmaps'] !== undefined) ? fieldStrategies['gmaps'] :
+                (key === 'gmaps' && fieldStrategies['googleMapsLink'] !== undefined) ? fieldStrategies['googleMapsLink'] :
+                'upsert'
+            );
             
             const existingValue = existingEvent[key] || existingFields[key];
             const newValue = newEvent[key];
@@ -461,11 +458,6 @@ class SharedCore {
                     break;
             }
         });
-        
-        // Ensure important metadata fields are present for notes
-        if (!mergedEvent.key && newEvent.key) {
-            mergedEvent.key = newEvent.key;
-        }
         
         // Use the existing formatEventNotes function to generate notes
         const notes = this.formatEventNotes(mergedEvent);
