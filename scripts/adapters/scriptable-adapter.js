@@ -1728,24 +1728,19 @@ class ScriptableAdapter {
                 rawOutput += rawData + '\\n\\n';
             });
             
-            // Copy to clipboard (modern iOS WebView supports this)
-            navigator.clipboard.writeText(rawOutput).then(() => {
-                // Show success feedback - get button from event context
-                const button = document.querySelector('button[onclick="copyRawOutput()"]');
-                if (button) {
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '✅ Copied!';
-                    button.style.background = '#34c759';
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                        button.style.background = '#007aff';
-                    }, 2000);
-                }
-            }).catch(err => {
-                console.error('Failed to copy: ', err);
-                alert('Copy failed. Please try again.');
-            });
+            // Copy to clipboard with fallback support
+            const button = document.querySelector('button[onclick="copyRawOutput()"]');
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(rawOutput).then(() => {
+                    if (button) showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(rawOutput, button);
+                });
+            } else {
+                copyToClipboardFallback(rawOutput, button);
+            }
         }
         
 
@@ -1826,19 +1821,58 @@ class ScriptableAdapter {
         function copyEventJSON(button) {
             const eventJSON = button.getAttribute('data-event-json');
             
-            navigator.clipboard.writeText(eventJSON).then(() => {
-                const originalText = button.innerHTML;
-                button.innerHTML = '✅ Copied!';
-                button.style.background = '#28a745';
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(eventJSON).then(() => {
+                    showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(eventJSON, button);
+                });
+            } else {
+                // Fallback for older WebViews
+                copyToClipboardFallback(eventJSON, button);
+            }
+        }
+        
+        function copyToClipboardFallback(text, button) {
+            try {
+                // Create a temporary textarea element
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
                 
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.style.background = '#007aff';
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy event JSON: ', err);
-                alert('Event JSON copy failed. Please try again.');
-            });
+                // Select and copy
+                textArea.focus();
+                textArea.select();
+                
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                if (successful) {
+                    showCopySuccess(button);
+                } else {
+                    throw new Error('execCommand failed');
+                }
+            } catch (err) {
+                console.error('Fallback copy failed: ', err);
+                // Show the JSON in an alert as last resort
+                alert('Copy failed. Here is the JSON data:\\n\\n' + text.substring(0, 500) + (text.length > 500 ? '...' : ''));
+            }
+        }
+        
+        function showCopySuccess(button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '✅ Copied!';
+            button.style.background = '#28a745';
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.style.background = '#007aff';
+            }, 2000);
         }
         
         function exportAsJSON() {
@@ -1893,23 +1927,28 @@ class ScriptableAdapter {
             
             const jsonString = JSON.stringify(exportData, null, 2);
             
-            // Copy to clipboard (modern iOS WebView supports this)
-            navigator.clipboard.writeText(jsonString).then(() => {
-                const button = document.querySelector('button[onclick="exportAsJSON()"]');
-                if (button) {
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '✅ JSON Copied!';
-                    button.style.background = '#28a745';
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                        button.style.background = '#34c759';
-                    }, 2000);
-                }
-            }).catch(err => {
-                console.error('Failed to copy JSON: ', err);
-                alert('JSON copy failed. Please try again.');
-            });
+            // Copy to clipboard with fallback support
+            const button = document.querySelector('button[onclick="exportAsJSON()"]');
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(jsonString).then(() => {
+                    if (button) {
+                        const originalText = button.innerHTML;
+                        button.innerHTML = '✅ JSON Copied!';
+                        button.style.background = '#28a745';
+                        
+                        setTimeout(() => {
+                            button.innerHTML = originalText;
+                            button.style.background = '#34c759';
+                        }, 2000);
+                    }
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(jsonString, button);
+                });
+            } else {
+                copyToClipboardFallback(jsonString, button);
+            }
         }
         
 

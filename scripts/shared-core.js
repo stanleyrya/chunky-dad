@@ -423,7 +423,7 @@ class SharedCore {
         const newEventNotes = newEvent.notes || '';
         const newFields = this.parseNotesIntoFields(newEventNotes);
         
-        // Apply merge strategies for each field in the new event
+        // Apply merge strategies for each field in the new event's notes
         Object.keys(newFields).forEach(key => {
             const strategy = fieldStrategies[key] || 'preserve'; // Default to preserve
             
@@ -445,6 +445,56 @@ class SharedCore {
                     // Do nothing - keep existing value as is
                     // Don't add if missing, don't update if exists
                     break;
+            }
+        });
+        
+        // ALSO check for event object properties that should be included based on merge strategies
+        // This handles fields like googleMapsLink, gmaps, etc. that are properties of the event object
+        const excludeFields = new Set([
+            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
+            'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
+            '_original', '_mergeInfo', '_changes', '_mergeDiff', 'key',
+            'originalTitle', 'name', 'notes' // These are usually duplicates of title or computed
+        ]);
+        
+        Object.keys(newEvent).forEach(key => {
+            if (!excludeFields.has(key) && 
+                newEvent[key] !== undefined && 
+                newEvent[key] !== null && 
+                newEvent[key] !== '') {
+                
+                // Check for field name mappings (e.g., googleMapsLink -> gmaps)
+                let strategy = fieldStrategies[key] || fieldStrategies[key.toLowerCase()] || 'preserve';
+                
+                // Handle common field name variations
+                if (strategy === 'preserve') {
+                    if (key === 'googleMapsLink' && fieldStrategies['gmaps']) {
+                        strategy = fieldStrategies['gmaps'];
+                    } else if (key === 'gmaps' && fieldStrategies['googleMapsLink']) {
+                        strategy = fieldStrategies['googleMapsLink'];
+                    }
+                }
+                
+                switch (strategy) {
+                    case 'clobber':
+                        // Always replace with new value
+                        updatedFields[key] = newEvent[key];
+                        break;
+                        
+                    case 'upsert':
+                        // Add if missing, keep existing if present
+                        if (!existingFields[key] && newEvent[key]) {
+                            updatedFields[key] = newEvent[key];
+                        }
+                        break;
+                        
+                    case 'preserve':
+                    default:
+                        // Do nothing - keep existing value as is
+                        // Don't add if missing, don't update if exists
+                        break;
+                }
             }
         });
         
