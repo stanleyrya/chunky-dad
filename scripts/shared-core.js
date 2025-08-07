@@ -504,6 +504,10 @@ class SharedCore {
         // Parse the final notes to get all the merged fields for display
         const finalFields = this.parseNotesIntoFields(finalEvent.notes);
         
+        // Prepare strategy and existing fields for comparison blocks below
+        const fieldStrategies = newEvent._fieldMergeStrategies || {};
+        const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
+
         // Add all fields from notes to the final event for display purposes
         Object.keys(finalFields).forEach(fieldName => {
             if (finalFields[fieldName] && !finalEvent[fieldName]) {
@@ -571,8 +575,8 @@ class SharedCore {
         
         // Extract fields from existing notes for display
         if (existingEvent.notes) {
-            const existingFields = this.parseNotesIntoFields(existingEvent.notes);
-            Object.entries(existingFields).forEach(([fieldName, value]) => {
+            const existingFieldsForExtract = this.parseNotesIntoFields(existingEvent.notes);
+            Object.entries(existingFieldsForExtract).forEach(([fieldName, value]) => {
                 finalEvent._mergeInfo.extractedFields[fieldName] = {
                     value: value,
                     source: 'existing.notes'
