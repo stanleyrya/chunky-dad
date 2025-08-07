@@ -2761,21 +2761,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Skip if both are empty and no final value
             if (!newValue && !existingValue && !finalValue) return;
             
-            // Format values for display
-            const formatValue = (val, maxLength = 30, isExisting = false) => {
-                // For existing values, try to get the actual value from the final event if the field is empty
-                // This helps show the actual existing values instead of just "empty"
-                if (!val && isExisting) {
-                    // First try the final event value
-                    if (event[field]) {
-                        val = event[field];
-                    }
-                    // Then try extracted fields
-                    else if (event._mergeInfo?.extractedFields?.[field]) {
-                        val = event._mergeInfo.extractedFields[field].value;
-                    }
-                }
-                
+            // Format values for display - show exactly what the merge logic saw
+            const formatValue = (val, maxLength = 30) => {
                 if (!val) return '<em style="color: #999;">empty</em>';
                 if (field.includes('Date') && val) {
                     return new Date(val).toLocaleString('en-US', { 
@@ -2832,13 +2819,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                         <br><small style="color: #666;">${strategy}</small>
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
-                        ${formatValue(existingValue, 30, true)}
+                        ${formatValue(existingValue)}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff;">
                         ${flowIcon}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
-                        ${formatValue(newValue, 30, false)}
+                        ${formatValue(newValue)}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center;">
                         ${resultText}
