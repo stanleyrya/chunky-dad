@@ -185,6 +185,7 @@ class BearraccudaParser {
                 endDate: null,
                 venue: venue,
                 location: null, // No coordinates available in bearracuda parsing
+                coordinates: null, // Keep coordinates field for UI compatibility
                 address: '', // Assuming address is not directly available in this regex
                 city: city || 'default',
                 url: eventUrl,

@@ -765,9 +765,9 @@ class SharedCore {
         if (event.address && this.isFullAddress(event.address)) {
             // Use address when available and it's a full address
             event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-        } else if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-            // Fall back to coordinates if no full address (location stored as "lat,lng" string)
-            event.googleMapsLink = `https://maps.google.com/?q=${event.location}`;
+        } else if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+            // Fall back to coordinates if no full address
+            event.googleMapsLink = `https://maps.google.com/?q=${event.coordinates.lat},${event.coordinates.lng}`;
         }
         
         return event;
@@ -993,8 +993,8 @@ class SharedCore {
     
     // Format location for calendar (GPS coordinates only)
     formatLocationForCalendar(event) {
-        if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-            return event.location; // Location is already stored as "lat,lng" string
+        if (event.location && typeof event.location === 'string') {
+            return event.location; // Location is stored as "lat,lng" string for calendar
         }
         return ''; // Never use bar name in location field
     }
@@ -1013,7 +1013,7 @@ class SharedCore {
         
         // Fields to exclude from notes
         const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'address',
+            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
             'originalTitle', 'name' // These are usually duplicates of title

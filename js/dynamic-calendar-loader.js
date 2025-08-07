@@ -1037,12 +1037,11 @@ class DynamicCalendarLoader extends CalendarCore {
             </div>
         ` : '';
 
-        const parsedCoords = this.parseCoordinates(event.coordinates);
-        const locationHtml = parsedCoords ? 
+        const locationHtml = event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
             `<div class="detail-row">
                 <span class="label">Location:</span>
                 <span class="value">
-                    <a href="#" onclick="showOnMap(${parsedCoords.lat}, ${parsedCoords.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
+                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
                         📍 ${event.bar || 'Location'}
                     </a>
                 </span>
@@ -1074,9 +1073,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return `${displayDay} ${time}`;
         };
 
-        const eventCoords = this.parseCoordinates(event.coordinates);
         return `
-            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${eventCoords?.lat || ''}" data-lng="${eventCoords?.lng || ''}">
+            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
                     <h3>${event.name}</h3>
                     <div class="event-meta">
@@ -1139,21 +1137,6 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         return false;
-    }
-
-    // Helper function to parse coordinates from string format "lat,lng"
-    parseCoordinates(coordinatesString) {
-        if (!coordinatesString || typeof coordinatesString !== 'string') return null;
-        
-        const coords = coordinatesString.split(',').map(coord => parseFloat(coord.trim()));
-        if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-            return {
-                lat: coords[0],
-                lng: coords[1]
-            };
-        }
-        
-        return null;
     }
 
     // Helper function to determine if a recurring event occurs on a specific date
@@ -1478,10 +1461,10 @@ class DynamicCalendarLoader extends CalendarCore {
             }
 
             // Filter events with valid coordinates
-            const eventsWithCoords = events.filter(event => {
-                const coords = this.parseCoordinates(event.coordinates);
-                return coords && !isNaN(coords.lat) && !isNaN(coords.lng);
-            });
+            const eventsWithCoords = events.filter(event => 
+                event.coordinates?.lat && event.coordinates?.lng && 
+                !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
+            );
 
             // Set up default map center and zoom (lower zoom to show more area)
             let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
@@ -1561,9 +1544,9 @@ class DynamicCalendarLoader extends CalendarCore {
             });
 
             events.forEach(event => {
-                const coords = this.parseCoordinates(event.coordinates);
-                if (coords && !isNaN(coords.lat) && !isNaN(coords.lng)) {
-                    const marker = L.marker([coords.lat, coords.lng], {
+                if (event.coordinates?.lat && event.coordinates?.lng && 
+                    !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
+                    const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
                         icon: customIcon
                     })
                         .addTo(map)
