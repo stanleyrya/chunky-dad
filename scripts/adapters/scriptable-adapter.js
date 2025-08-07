@@ -2019,7 +2019,13 @@ class ScriptableAdapter {
                     <span>📱</span>
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
-                ${event.description ? `
+                ${(() => {
+                    const shouldShowDescription = event.description && (!event._fieldMergeStrategies || event._fieldMergeStrategies.description !== 'preserve' || event._action !== 'new');
+                    if (event.description && !shouldShowDescription) {
+                        console.log(`📝 Scriptable: Hiding description for "${event.title}" due to preserve strategy on new event`);
+                    }
+                    return shouldShowDescription;
+                })() ? `
                     <div class="event-detail" style="background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;">
                         <span>📝</span>
                         <span style="font-style: italic;">${this.escapeHtml(event.description)}</span>
@@ -2032,11 +2038,18 @@ class ScriptableAdapter {
                     </div>
                 ` : ''}
                 ${event.image ? `
-                    <div class="event-detail" style="margin-top: 8px;">
+                    <div class="event-detail" style="margin-top: 12px;">
                         <span>🖼️</span>
-                        <span><a href="${this.escapeHtml(event.image)}" target="_blank" rel="noopener" style="color: #007aff;">View Image</a></span>
-                        <div style="margin-top: 5px;">
-                            <img src="${this.escapeHtml(event.image)}" alt="Event Image" style="max-width: 200px; max-height: 150px; border-radius: 5px; object-fit: cover;" onerror="this.style.display='none'">
+                        <span><a href="${this.escapeHtml(event.image)}" target="_blank" rel="noopener" style="color: #007aff; font-weight: 500;">View Full Image</a></span>
+                        <div style="margin-top: 8px; text-align: center;">
+                            <img src="${this.escapeHtml(event.image)}" alt="Event Image" 
+                                 style="max-width: 100%; width: 280px; max-height: 200px; border-radius: 12px; 
+                                        object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+                                        border: 2px solid #f0f0f0; transition: transform 0.2s ease;" 
+                                 onload="this.style.opacity='1'" 
+                                 onerror="this.style.display='none'"
+                                 onmouseover="this.style.transform='scale(1.02)'" 
+                                 onmouseout="this.style.transform='scale(1)'">
                         </div>
                     </div>
                 ` : ''}

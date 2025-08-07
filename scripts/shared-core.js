@@ -511,12 +511,40 @@ class SharedCore {
             }
         };
         
+        // Parse existing notes to get field values
+        const existingFields = existingEvent.notes ? this.parseNotesIntoFields(existingEvent.notes) : {};
+        
         // Apply strategies to core calendar fields
         finalEvent.title = applyStrategy('title', existingEvent.title, newEvent.title, fieldStrategies.title || 'preserve');
         finalEvent.startDate = applyStrategy('startDate', existingEvent.startDate, newEvent.startDate, fieldStrategies.startDate || 'preserve');
         finalEvent.endDate = applyStrategy('endDate', existingEvent.endDate, newEvent.endDate, fieldStrategies.endDate || 'preserve');
         finalEvent.location = applyStrategy('location', existingEvent.location, newEvent.location, fieldStrategies.location || 'upsert');
         finalEvent.url = applyStrategy('url', existingEvent.url, newEvent.url, fieldStrategies.website || fieldStrategies.url || 'upsert');
+        
+        // Apply strategies to ALL other fields from the new event for proper display
+        let mergedFieldCount = 0;
+        Object.keys(newEvent).forEach(fieldName => {
+            // Skip internal metadata and already processed fields
+            if (fieldName.startsWith('_') || ['title', 'startDate', 'endDate', 'location', 'url', 'city', 'key', 'source'].includes(fieldName)) {
+                return;
+            }
+            
+            const strategy = fieldStrategies[fieldName] || 'preserve';
+            const existingValue = existingFields[fieldName] || existingEvent[fieldName];
+            const newValue = newEvent[fieldName];
+            
+            const finalValue = applyStrategy(fieldName, existingValue, newValue, strategy);
+            if (finalValue !== existingValue && finalValue !== undefined && finalValue !== '') {
+                mergedFieldCount++;
+                console.log(`🔄 SharedCore: Merged field "${fieldName}" using strategy "${strategy}": "${existingValue}" → "${finalValue}"`);
+            }
+            
+            finalEvent[fieldName] = finalValue;
+        });
+        
+        if (mergedFieldCount > 0) {
+            console.log(`🔄 SharedCore: Applied merge strategies to ${mergedFieldCount} fields for event "${newEvent.title}"`);
+        }
         
         // Handle notes merge (existing complex logic)
         const mergedData = this.mergeEventData(existingEvent, newEvent);
@@ -531,8 +559,7 @@ class SharedCore {
         // targetEvent.notes = event.notes;
         // targetEvent.url = event.url;
         
-        // Parse existing notes to get all current field values for comparison
-        const existingFields = existingEvent.notes ? this.parseNotesIntoFields(existingEvent.notes) : {};
+        // Use existing fields already parsed above
         
         finalEvent._original = {
             existing: { 
@@ -1061,19 +1088,23 @@ class SharedCore {
             'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
-            '_original', '_mergeInfo', '_changes', '_mergeDiff', 'key',
+            '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name' // These are usually duplicates of title
         ]);
         
         // Add all fields that have values (merge logic has already determined correct values)
+        let savedFieldCount = 0;
         Object.keys(event).forEach(fieldName => {
             if (!excludeFields.has(fieldName) && 
                 event[fieldName] !== undefined && 
                 event[fieldName] !== null && 
                 event[fieldName] !== '') {
                 notes.push(`${fieldName}: ${event[fieldName]}`);
+                savedFieldCount++;
             }
         });
+        
+        console.log(`📝 SharedCore: Formatted notes for "${event.title}" with ${savedFieldCount} fields (excluding ${excludeFields.size} system fields)`);
         
         return notes.join('\n');
     }
@@ -1123,12 +1154,15 @@ class SharedCore {
             
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
+                console.log(`🔄 SharedCore: Creating merged event for "${event.title}" with existing event "${analysis.existingEvent.title}"`);
                 // Create final merged event that represents exactly what will be saved
                 analyzedEvent = this.createFinalEventObject(analysis.existingEvent, event);
                 
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes);
+                
+                console.log(`📊 SharedCore: Comparing fields for merge diff - Original: ${Object.keys(originalFields).length} fields, Merged: ${Object.keys(mergedFields).length} fields`);
                 
                 analyzedEvent._mergeDiff = {
                     preserved: [],
