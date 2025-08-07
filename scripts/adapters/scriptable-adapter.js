@@ -201,65 +201,35 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: Merging event: ${event.title}`);
                             const targetEvent = event._existingEvent;
                             
-                            // Use the pre-merged data from shared-core
-                            if (event._mergedNotes) {
-                                // Show detailed diff (already calculated by shared-core)
-                                console.log('\n📊 MERGE DIFF:');
-                                console.log('─'.repeat(60));
-                                
-                                const diff = event._mergeDiff;
-                                
-                                // Show what's being preserved
-                                if (diff.preserved.length > 0) {
-                                    console.log('✅ PRESERVED:');
-                                    diff.preserved.forEach(key => {
-                                        console.log(`   ${key}`);
-                                    });
-                                }
-                                
-                                // Show what's being added
-                                if (diff.added.length > 0) {
-                                    console.log('\n➕ ADDED:');
-                                    diff.added.forEach(({ key, value }) => {
-                                        const displayValue = value.length > 50 ? value.substring(0, 47) + '...' : value;
-                                        console.log(`   ${key}: ${displayValue}`);
-                                    });
-                                }
-                                
-                                // Show what's being updated
-                                if (diff.updated.length > 0) {
-                                    console.log('\n🔄 UPDATED:');
-                                    diff.updated.forEach(({ key, from, to }) => {
-                                        const oldDisplay = from.length > 30 ? from.substring(0, 27) + '...' : from;
-                                        const newDisplay = to.length > 30 ? to.substring(0, 27) + '...' : to;
-                                        console.log(`   ${key}: "${oldDisplay}" → "${newDisplay}"`);
-                                    });
-                                }
-                                
-                                // Show what's being removed (shouldn't happen in merge)
-                                if (diff.removed.length > 0) {
-                                    console.log('\n❌ REMOVED (WARNING - this shouldn\'t happen in merge):');
-                                    diff.removed.forEach(({ key, value }) => {
-                                        console.log(`   ${key}: ${value}`);
-                                    });
-                                }
-                                
-                                console.log('─'.repeat(60));
-                                
-                                // Apply the pre-merged changes
-                                targetEvent.notes = event._mergedNotes;
-                                if (event._mergedUrl) {
-                                    targetEvent.url = event._mergedUrl;
-                                }
-                                // Update location only if new event has coordinates
-                                if (event.location && event.location.includes(',')) {
-                                    targetEvent.location = event.location;
-                                }
-                                await targetEvent.save();
-                                processedCount++;
+                            // Show what changes will be applied
+                            console.log('\n📊 MERGE CHANGES:');
+                            console.log('─'.repeat(60));
+                            
+                            if (event._changes && event._changes.length > 0) {
+                                console.log(`✅ APPLYING CHANGES: ${event._changes.join(', ')}`);
+                                event._changes.forEach(field => {
+                                    const oldValue = targetEvent[field] || '';
+                                    const newValue = event[field] || '';
+                                    const oldDisplay = oldValue.length > 30 ? oldValue.substring(0, 27) + '...' : oldValue;
+                                    const newDisplay = newValue.length > 30 ? newValue.substring(0, 27) + '...' : newValue;
+                                    console.log(`   ${field}: "${oldDisplay}" → "${newDisplay}"`);
+                                });
                             } else {
-                                console.log(`📱 Scriptable: ⚠️ No merged data available for event: ${event.title}`);
+                                console.log('ℹ️  NO CHANGES NEEDED - event already up to date');
                             }
+                            
+                            console.log('─'.repeat(60));
+                            
+                            // Apply the final merged values (event object already contains final values)
+                            targetEvent.title = event.title;
+                            targetEvent.startDate = event.startDate;
+                            targetEvent.endDate = event.endDate;
+                            targetEvent.location = event.location;
+                            targetEvent.notes = event.notes;
+                            targetEvent.url = event.url;
+                            
+                            await targetEvent.save();
+                            processedCount++;
                             break;
                             
                         case 'update':
@@ -1851,6 +1821,24 @@ class ScriptableAdapter {
             filterEvents();
         }
         
+        function copyEventJSON(button) {
+            const eventJSON = button.getAttribute('data-event-json');
+            
+            navigator.clipboard.writeText(eventJSON).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '#007aff';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy event JSON: ', err);
+                alert('Event JSON copy failed. Please try again.');
+            });
+        }
+        
         function exportAsJSON() {
             const eventCards = document.querySelectorAll('.event-card');
             const exportData = {
@@ -1931,6 +1919,8 @@ class ScriptableAdapter {
     
     // Generate HTML for individual event card
     generateEventCard(event) {
+
+        
         const actionBadge = {
             'new': '<span class="action-badge badge-new">NEW</span>',
             'merge': '<span class="action-badge badge-merge">MERGE</span>',
@@ -1955,8 +1945,8 @@ class ScriptableAdapter {
             minute: '2-digit' 
         }) : '';
         
-        // For merged events, use the merged notes which contain the preserved description
-        const notes = (event._action === 'merge' && event._mergedNotes) ? event._mergedNotes : (event.notes || '');
+        // Use the final notes that will actually be saved
+        const notes = event.notes || '';
         const calendarName = this.getCalendarNameForDisplay(event);
         
         let html = `
@@ -2063,6 +2053,32 @@ class ScriptableAdapter {
                     
                     <!-- Table view (default) -->
                     <div id="table-view-${eventId}" class="diff-view">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="font-size: 12px; color: #666;">Comparison Table</div>
+                            <button onclick="copyEventJSON(this)" 
+                                    style="padding: 4px 8px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                                    data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
+                                        if (key === '_parserConfig' && value) {
+                                            return { name: value.name, parser: value.parser };
+                                        }
+                                        if (key === '_existingEvent' && value) {
+                                            return { title: value.title, identifier: value.identifier };
+                                        }
+                                        if (key === '_conflicts' && value && Array.isArray(value)) {
+                                            return value.map(c => ({
+                                                title: c.title,
+                                                startDate: c.startDate,
+                                                identifier: c.identifier
+                                            }));
+                                        }
+                                        if (typeof value === 'function') {
+                                            return '[Function]';
+                                        }
+                                        return value;
+                                    }, 2))}'>
+                                📋 Copy JSON
+                            </button>
+                        </div>
                         <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
                             <tr>
                                 <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
@@ -2158,17 +2174,17 @@ class ScriptableAdapter {
                 </div>
             </details>
             
-            ${event._action === 'merge' && event._mergedNotes !== event.notes ? `
+            ${event._original && event._action === 'merge' ? `
             <details style="margin-top: 10px;">
                 <summary style="cursor: pointer; font-size: 13px; color: #ff9500;">🔄 Compare Original vs Merged Notes</summary>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                     <div style="background: #fff3cd; padding: 10px; border-radius: 5px;">
-                        <strong>Original Notes (New Event):</strong>
-                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event.notes || 'No notes')}</pre>
+                        <strong>Before (Existing Event):</strong>
+                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event._original.existing?.notes || 'No notes')}</pre>
                     </div>
                     <div style="background: #d4edda; padding: 10px; border-radius: 5px;">
-                        <strong>Merged Notes (Final):</strong>
-                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event._mergedNotes || 'No notes')}</pre>
+                        <strong>After (Final Result):</strong>
+                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event.notes || 'No notes')}</pre>
                     </div>
                 </div>
             </details>
@@ -2178,18 +2194,50 @@ class ScriptableAdapter {
             
             <div class="raw-display">
                 <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(JSON.stringify(event, (key, value) => {
-                    // Filter out circular references and functions
+                    // Keep full object for debugging, only filter out circular references and functions
                     if (key === '_parserConfig' && value) {
                         return { name: value.name, parser: value.parser };
                     }
                     if (key === '_existingEvent' && value) {
                         return { title: value.title, identifier: value.identifier };
                     }
+                    if (key === '_conflicts' && value && Array.isArray(value)) {
+                        return value.map(c => ({
+                            title: c.title,
+                            startDate: c.startDate,
+                            identifier: c.identifier
+                        }));
+                    }
                     if (typeof value === 'function') {
-                        return '[Function]';
+                        return '[Function]'; // Show functions exist but don't break JSON
                     }
                     return value;
                 }, 2))}</pre>
+                <div style="margin-top: 8px; text-align: right;">
+                    <button onclick="copyEventJSON(this)" 
+                            style="padding: 4px 8px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                            data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
+                                if (key === '_parserConfig' && value) {
+                                    return { name: value.name, parser: value.parser };
+                                }
+                                if (key === '_existingEvent' && value) {
+                                    return { title: value.title, identifier: value.identifier };
+                                }
+                                if (key === '_conflicts' && value && Array.isArray(value)) {
+                                    return value.map(c => ({
+                                        title: c.title,
+                                        startDate: c.startDate,
+                                        identifier: c.identifier
+                                    }));
+                                }
+                                if (typeof value === 'function') {
+                                    return '[Function]';
+                                }
+                                return value;
+                            }, 2))}'>
+                        📋 Copy JSON
+                    </button>
+                </div>
             </div>
         </div>
         `;
@@ -2552,15 +2600,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return false;
     }
 
-    // Get all fields that should be compared/displayed - check ALL fields except underscore fields
+    // Get all fields that should be compared/displayed - check ALL fields except underscore fields and functions
     getFieldsForComparison(event) {
         // Get all fields from both new and existing events
         const allFields = new Set();
         
+        // Helper function to check if a field should be included
+        const shouldIncludeField = (obj, field) => {
+            if (field.startsWith('_')) return false;
+            if (typeof obj[field] === 'function') return false;
+            return true;
+        };
+        
         // Add fields from new event
         if (event._original?.new) {
             Object.keys(event._original.new).forEach(field => {
-                if (!field.startsWith('_')) {
+                if (shouldIncludeField(event._original.new, field)) {
                     allFields.add(field);
                 }
             });
@@ -2569,7 +2624,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Add fields from existing event
         if (event._original?.existing) {
             Object.keys(event._original.existing).forEach(field => {
-                if (!field.startsWith('_')) {
+                if (shouldIncludeField(event._original.existing, field)) {
                     allFields.add(field);
                 }
             });
@@ -2586,7 +2641,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         // Add fields from final event
         Object.keys(event).forEach(field => {
-            if (!field.startsWith('_')) {
+            if (shouldIncludeField(event, field)) {
                 allFields.add(field);
             }
         });
