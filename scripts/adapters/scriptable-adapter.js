@@ -1730,16 +1730,18 @@ class ScriptableAdapter {
             
             // Copy to clipboard (modern iOS WebView supports this)
             navigator.clipboard.writeText(rawOutput).then(() => {
-                // Show success feedback
-                const button = event.target;
-                const originalText = button.innerHTML;
-                button.innerHTML = '✅ Copied!';
-                button.style.background = '#34c759';
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.style.background = '#007aff';
-                }, 2000);
+                // Show success feedback - get button from event context
+                const button = document.querySelector('button[onclick="copyRawOutput()"]');
+                if (button) {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '✅ Copied!';
+                    button.style.background = '#34c759';
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.style.background = '#007aff';
+                    }, 2000);
+                }
             }).catch(err => {
                 console.error('Failed to copy: ', err);
                 alert('Copy failed. Please try again.');
@@ -1893,15 +1895,17 @@ class ScriptableAdapter {
             
             // Copy to clipboard (modern iOS WebView supports this)
             navigator.clipboard.writeText(jsonString).then(() => {
-                const button = event.target;
-                const originalText = button.innerHTML;
-                button.innerHTML = '✅ JSON Copied!';
-                button.style.background = '#28a745';
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.style.background = '#34c759';
-                }, 2000);
+                const button = document.querySelector('button[onclick="exportAsJSON()"]');
+                if (button) {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '✅ JSON Copied!';
+                    button.style.background = '#28a745';
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.style.background = '#34c759';
+                    }, 2000);
+                }
             }).catch(err => {
                 console.error('Failed to copy JSON: ', err);
                 alert('JSON copy failed. Please try again.');
@@ -2646,8 +2650,64 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
         });
         
-        // Convert to array and sort for consistent display
-        return Array.from(allFields).sort();
+        // Convert to array and sort with logical grouping
+        const fieldArray = Array.from(allFields);
+        
+        // Define field priority order - group related fields together
+        const fieldPriority = {
+            // Core event info
+            'title': 1,
+            'description': 2,
+            
+            // Date/Time fields - keep start/end times together
+            'startDate': 10,
+            'endDate': 11,
+            'date': 12,
+            'day': 13,
+            'time': 14,
+            'startTime': 15,
+            'endTime': 16,
+            
+            // Location fields
+            'venue': 20,
+            'address': 21,
+            'city': 22,
+            'location': 23,
+            
+            // Contact/Social fields
+            'website': 30,
+            'facebook': 31,
+            'instagram': 32,
+            'twitter': 33,
+            'phone': 34,
+            'email': 35,
+            
+            // Event details
+            'price': 40,
+            'category': 41,
+            'type': 42,
+            'tags': 43,
+            
+            // Calendar specific
+            'calendar': 50,
+            'calendarId': 51,
+            'identifier': 52,
+            'notes': 53,
+            
+            // Other fields get default priority
+        };
+        
+        return fieldArray.sort((a, b) => {
+            const priorityA = fieldPriority[a] || 100;
+            const priorityB = fieldPriority[b] || 100;
+            
+            // If same priority, sort alphabetically
+            if (priorityA === priorityB) {
+                return a.localeCompare(b);
+            }
+            
+            return priorityA - priorityB;
+        });
     }
     
     // Generate comparison rows for conflict display
