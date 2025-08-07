@@ -971,7 +971,7 @@ class SharedCore {
             title: event.title || event.name || 'Untitled Event',
             startDate: event.startDate,
             endDate: event.endDate || event.startDate,
-            location: event.location || '',
+            location: event.location,
             notes: this.formatEventNotes(event),
             // Don't use url field - it goes in notes instead
             city: event.city || 'default', // Include city for calendar selection
