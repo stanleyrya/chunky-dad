@@ -457,7 +457,7 @@ class SharedCore {
         };
     }
 
-    // NEW: Create complete merged event object that represents exactly what will be saved
+    // Create complete merged event object that represents exactly what will be saved
     createFinalEventObject(existingEvent, newEvent) {
         const fieldStrategies = newEvent._fieldMergeStrategies || {};
         
