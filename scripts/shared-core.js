@@ -404,57 +404,71 @@ class SharedCore {
 
     // Enhanced merge function that respects field-level merge strategies
     mergeEventData(existingEvent, newEvent) {
-        const existingNotes = existingEvent.notes || '';
         const fieldStrategies = newEvent._fieldMergeStrategies || {};
         
         // Parse existing notes to extract current field values
-        const existingFields = this.parseNotesIntoFields(existingNotes);
+        const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
-        // Build updated fields based on merge strategies
-        const updatedFields = {};
-        
-        // First, preserve all existing fields
-        Object.keys(existingFields).forEach(key => {
-            updatedFields[key] = existingFields[key];
-        });
-        
-        // Then apply new fields based on their merge strategies
-        // Parse the new event's notes to get its fields
-        const newEventNotes = newEvent.notes || '';
-        const newFields = this.parseNotesIntoFields(newEventNotes);
+        // Create a merged event object by starting with existing event
+        const mergedEvent = {
+            ...existingEvent,
+            // Preserve existing metadata and strategies
+            _fieldMergeStrategies: fieldStrategies,
+            _action: newEvent._action || 'merge'
+        };
         
         // Apply merge strategies for each field in the new event
-        Object.keys(newFields).forEach(key => {
-            const strategy = fieldStrategies[key] || 'preserve'; // Default to preserve
+        Object.keys(newEvent).forEach(key => {
+            // Skip internal metadata fields
+            if (key.startsWith('_')) return;
             
+            // Get strategy for this field, with field name variations support
+            let strategy = fieldStrategies[key] || fieldStrategies[key.toLowerCase()] || 'preserve';
+            
+            // Handle common field name variations
+            if (strategy === 'preserve') {
+                if (key === 'googleMapsLink' && fieldStrategies['gmaps']) {
+                    strategy = fieldStrategies['gmaps'];
+                } else if (key === 'gmaps' && fieldStrategies['googleMapsLink']) {
+                    strategy = fieldStrategies['googleMapsLink'];
+                }
+            }
+            
+            const existingValue = existingEvent[key] || existingFields[key];
+            const newValue = newEvent[key];
+            
+            // Apply merge strategy
             switch (strategy) {
                 case 'clobber':
-                    // Always replace with new value
-                    updatedFields[key] = newFields[key];
+                    // Always use new value if it exists
+                    if (newValue !== undefined && newValue !== null && newValue !== '') {
+                        mergedEvent[key] = newValue;
+                    }
                     break;
                     
                 case 'upsert':
-                    // Add if missing, keep existing if present
-                    if (!existingFields[key] && newFields[key]) {
-                        updatedFields[key] = newFields[key];
+                    // Use new value only if existing value is missing/empty
+                    if ((!existingValue || existingValue === '') && 
+                        newValue !== undefined && newValue !== null && newValue !== '') {
+                        mergedEvent[key] = newValue;
                     }
                     break;
                     
                 case 'preserve':
                 default:
-                    // Do nothing - keep existing value as is
-                    // Don't add if missing, don't update if exists
+                    // Keep existing value, don't change anything
+                    // mergedEvent already has existing values
                     break;
             }
         });
         
-        // Rebuild notes from updated fields
-        const notes = this.buildNotesFromFields(updatedFields);
+        // Use the existing formatEventNotes function to generate notes
+        const notes = this.formatEventNotes(mergedEvent);
         
         return {
-            title: existingEvent.title, // Keep existing title unless clobbered
+            title: mergedEvent.title,
             notes: notes,
-            url: existingEvent.url || newEvent.url
+            url: mergedEvent.url
         };
     }
 
@@ -1037,32 +1051,23 @@ class SharedCore {
     // Format event notes with all metadata in key-value format
     formatEventNotes(event) {
         const notes = [];
-        const fieldStrategies = event._fieldMergeStrategies || {};
         
-        // Helper function to check if a field should be included
-        const shouldIncludeField = (fieldName) => {
-            const strategy = fieldStrategies[fieldName];
-            // Only include if not "preserve" or if it's a new event
-            return strategy !== 'preserve' || event._action === 'new';
-        };
-        
-        // Fields to exclude from notes
+        // Fields to exclude from notes (core calendar fields and internal metadata)
         const excludeFields = new Set([
             'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
+            '_original', '_mergeInfo', '_changes', '_mergeDiff', 'key',
             'originalTitle', 'name' // These are usually duplicates of title
         ]);
         
-        // Add all fields that have values
+        // Add all fields that have values (merge logic has already determined correct values)
         Object.keys(event).forEach(fieldName => {
             if (!excludeFields.has(fieldName) && 
                 event[fieldName] !== undefined && 
                 event[fieldName] !== null && 
                 event[fieldName] !== '') {
-                if (shouldIncludeField(fieldName)) {
-                    notes.push(`${fieldName}: ${event[fieldName]}`);
-                }
+                notes.push(`${fieldName}: ${event[fieldName]}`);
             }
         });
         
