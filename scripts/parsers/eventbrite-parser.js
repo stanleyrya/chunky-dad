@@ -321,9 +321,8 @@ class EventbriteParser {
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
                 venue: venue,
-                location: venue, // For backward compatibility
+                location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: address,
-                coordinates: coordinates,
                 city: city,
                 url: url,
                 price: price,
@@ -483,6 +482,7 @@ class EventbriteParser {
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: null,
                 venue: venue,
+                location: null, // No coordinates available in HTML parsing
                 city: city,
                 url: url,
                 price: '',

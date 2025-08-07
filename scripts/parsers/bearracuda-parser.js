@@ -184,6 +184,7 @@ class BearraccudaParser {
                 startDate: startDate,
                 endDate: null,
                 venue: venue,
+                location: null, // No coordinates available in bearracuda parsing
                 address: '', // Assuming address is not directly available in this regex
                 city: city || 'default',
                 url: eventUrl,
