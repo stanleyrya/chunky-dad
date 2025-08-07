@@ -436,12 +436,9 @@ class SharedCore {
             }
         });
         
-        // Use formatEventNotes to generate notes (handles all the filtering)
-        const notes = this.formatEventNotes(mergedEvent);
-        
         return {
             title: mergedEvent.title,
-            notes: notes,
+            notes: this.formatEventNotes(mergedEvent),
             url: mergedEvent.url
         };
     }
