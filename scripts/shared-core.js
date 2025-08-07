@@ -513,6 +513,8 @@ class SharedCore {
         
         // Apply strategies to core calendar fields
         finalEvent.title = applyStrategy('title', existingEvent.title, newEvent.title, fieldStrategies.title || 'preserve');
+        finalEvent.startDate = applyStrategy('startDate', existingEvent.startDate, newEvent.startDate, fieldStrategies.startDate || 'preserve');
+        finalEvent.endDate = applyStrategy('endDate', existingEvent.endDate, newEvent.endDate, fieldStrategies.endDate || 'preserve');
         finalEvent.location = applyStrategy('location', existingEvent.location, newEvent.location, fieldStrategies.location || 'upsert');
         finalEvent.url = applyStrategy('url', existingEvent.url, newEvent.url, fieldStrategies.website || fieldStrategies.url || 'upsert');
         
@@ -565,7 +567,7 @@ class SharedCore {
         };
         
         // Track which fields were merged and how
-        ['title', 'location', 'url', 'notes'].forEach(field => {
+        ['title', 'startDate', 'endDate', 'location', 'url', 'notes'].forEach(field => {
             const existingValue = existingEvent[field];
             const newValue = newEvent[field];
             const finalValue = finalEvent[field];
@@ -591,6 +593,8 @@ class SharedCore {
         // Calculate what actually changed
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
+        if (finalEvent.startDate !== existingEvent.startDate) changes.push('startDate');
+        if (finalEvent.endDate !== existingEvent.endDate) changes.push('endDate');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         if (finalEvent.url !== existingEvent.url) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
