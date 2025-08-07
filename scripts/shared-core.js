@@ -474,17 +474,20 @@ class SharedCore {
 
     // Create complete merged event object that represents exactly what will be saved
     createFinalEventObject(existingEvent, newEvent) {
-        const fieldStrategies = newEvent._fieldMergeStrategies || {};
+        console.log(`🔄 SharedCore: Creating merged event for "${newEvent.title}" with existing event "${existingEvent.title}"`);
         
-        // Start with existing event as base
+        // Use the existing merge function to do all the heavy lifting
+        const mergedData = this.mergeEventData(existingEvent, newEvent);
+        
+        // Create the final event object that represents exactly what will be saved
         const finalEvent = {
-            // Core calendar fields that actually get saved
-            title: existingEvent.title,
-            startDate: existingEvent.startDate,
+            // Core calendar fields that actually get saved (from mergedData)
+            title: mergedData.title,
+            startDate: existingEvent.startDate, // These don't usually change in merges
             endDate: existingEvent.endDate,
             location: existingEvent.location,
-            notes: existingEvent.notes || '',
-            url: existingEvent.url || '',
+            notes: mergedData.notes,
+            url: mergedData.url,
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
@@ -498,64 +501,17 @@ class SharedCore {
             _fieldMergeStrategies: newEvent._fieldMergeStrategies
         };
         
-        // Apply merge strategies to ALL relevant fields
-        const applyStrategy = (field, existingValue, newValue, strategy) => {
-            switch (strategy) {
-                case 'clobber':
-                    return newValue || existingValue;
-                case 'upsert':
-                    return existingValue || newValue;
-                case 'preserve':
-                default:
-                    return existingValue;
-            }
-        };
+        // Parse the final notes to get all the merged fields for display
+        const finalFields = this.parseNotesIntoFields(finalEvent.notes);
         
-        // Parse existing notes to get field values
-        const existingFields = existingEvent.notes ? this.parseNotesIntoFields(existingEvent.notes) : {};
-        
-        // Apply strategies to core calendar fields
-        finalEvent.title = applyStrategy('title', existingEvent.title, newEvent.title, fieldStrategies.title || 'preserve');
-        finalEvent.startDate = applyStrategy('startDate', existingEvent.startDate, newEvent.startDate, fieldStrategies.startDate || 'preserve');
-        finalEvent.endDate = applyStrategy('endDate', existingEvent.endDate, newEvent.endDate, fieldStrategies.endDate || 'preserve');
-        finalEvent.location = applyStrategy('location', existingEvent.location, newEvent.location, fieldStrategies.location || 'upsert');
-        finalEvent.url = applyStrategy('url', existingEvent.url, newEvent.url, fieldStrategies.website || fieldStrategies.url || 'upsert');
-        
-        // Apply strategies to ALL other fields from the new event for proper display
-        let mergedFieldCount = 0;
-        Object.keys(newEvent).forEach(fieldName => {
-            // Skip internal metadata and already processed fields
-            if (fieldName.startsWith('_') || ['title', 'startDate', 'endDate', 'location', 'url', 'city', 'key', 'source'].includes(fieldName)) {
-                return;
-            }
-            
-            const strategy = fieldStrategies[fieldName] || 'preserve';
-            const existingValue = existingFields[fieldName] || existingEvent[fieldName];
-            const newValue = newEvent[fieldName];
-            
-            const finalValue = applyStrategy(fieldName, existingValue, newValue, strategy);
-            
-            // Only set the field if there's actually a value to keep
-            if (finalValue !== undefined && finalValue !== null && finalValue !== '') {
-                finalEvent[fieldName] = finalValue;
-                
-                if (finalValue !== existingValue) {
-                    mergedFieldCount++;
-                    console.log(`🔄 SharedCore: Merged field "${fieldName}" using strategy "${strategy}": "${existingValue || '(empty)'}" → "${finalValue}"`);
-                }
-            } else if (strategy === 'preserve' && (!existingValue || existingValue === '')) {
-                // For preserve strategy with no existing value, explicitly don't set the field
-                console.log(`🔄 SharedCore: Preserving empty field "${fieldName}" - not adding new value "${newValue || '(empty)'}"`);
+        // Add all fields from notes to the final event for display purposes
+        Object.keys(finalFields).forEach(fieldName => {
+            if (finalFields[fieldName] && !finalEvent[fieldName]) {
+                finalEvent[fieldName] = finalFields[fieldName];
             }
         });
         
-        if (mergedFieldCount > 0) {
-            console.log(`🔄 SharedCore: Applied merge strategies to ${mergedFieldCount} fields for event "${newEvent.title}"`);
-        }
-        
-        // Handle notes merge (existing complex logic)
-        const mergedData = this.mergeEventData(existingEvent, newEvent);
-        finalEvent.notes = mergedData.notes;
+        console.log(`🔄 SharedCore: Final merged event has ${Object.keys(finalFields).length} fields in notes`);
         
         // Store comparison data for display - use the EXACT same structure as the save operation
         // The save operation uses: targetEvent.field = event.field for these fields:
@@ -1164,7 +1120,6 @@ class SharedCore {
             
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
-                console.log(`🔄 SharedCore: Creating merged event for "${event.title}" with existing event "${analysis.existingEvent.title}"`);
                 // Create final merged event that represents exactly what will be saved
                 analyzedEvent = this.createFinalEventObject(analysis.existingEvent, event);
                 
