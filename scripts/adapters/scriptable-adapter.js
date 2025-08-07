@@ -1989,25 +1989,25 @@ class ScriptableAdapter {
                 ${event.instagram ? `
                     <div class="event-detail">
                         <span>📸</span>
-                        <span><a href="${this.escapeHtml(event.instagram)}" style="color: #007aff;">Instagram</a></span>
+                        <span><a href="${this.escapeHtml(event.instagram)}" target="_blank" rel="noopener" style="color: #007aff;">Instagram</a></span>
                     </div>
                 ` : ''}
                 ${event.facebook ? `
                     <div class="event-detail">
                         <span>👥</span>
-                        <span><a href="${this.escapeHtml(event.facebook)}" style="color: #007aff;">Facebook</a></span>
+                        <span><a href="${this.escapeHtml(event.facebook)}" target="_blank" rel="noopener" style="color: #007aff;">Facebook</a></span>
                     </div>
                 ` : ''}
                 ${event.website ? `
                     <div class="event-detail">
                         <span>🌐</span>
-                        <span><a href="${this.escapeHtml(event.website)}" style="color: #007aff;">Website</a></span>
+                        <span><a href="${this.escapeHtml(event.website)}" target="_blank" rel="noopener" style="color: #007aff;">Website</a></span>
                     </div>
                 ` : ''}
                 ${event.gmaps || event.googleMapsLink ? `
                     <div class="event-detail">
                         <span>🗺️</span>
-                        <span><a href="${this.escapeHtml(event.gmaps || event.googleMapsLink)}" style="color: #007aff;">Google Maps</a></span>
+                        <span><a href="${this.escapeHtml(event.gmaps || event.googleMapsLink)}" target="_blank" rel="noopener" style="color: #007aff;">Google Maps</a></span>
                     </div>
                 ` : ''}
                 ${event.price ? `
@@ -2584,6 +2584,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const fieldsToCheck = this.getFieldsForComparison(event);
         
         for (const field of fieldsToCheck) {
+            // Skip notes field as it's a computed field that combines other fields
+            if (field === 'notes') continue;
+            
             let newValue = event._original.new[field] || '';
             let existingValue = event._original.existing?.[field] || '';
             
@@ -2656,16 +2659,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Define field priority order - group related fields together
         // Includes field aliases/pseudonyms from shared-core.js
         const fieldPriority = {
-            // Core event info
+            // Core event info - keep name fields together
             'title': 1,
-            'description': 2,
-            'tea': 2,           // alias for description
-            'info': 2,          // alias for description
+            'shortname': 2,        // Move shortname right after title
+            'shortername': 3,      // Keep other short name variants close
+            'shorttitle': 4,
             
-            // Name variations
-            'shortname': 3,
-            'shortername': 4,
-            'shorttitle': 5,
+            'description': 5,      // Move description after name fields
+            'tea': 6,              // alias for description
+            'info': 7,             // alias for description
             
             // Date/Time fields - keep start/end times together
             'startDate': 10,
@@ -2702,17 +2704,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'eventtype': 42,    // alias for type
             'tags': 43,
             
-            // Calendar specific
+            // Calendar specific - move notes to end since it's computed
             'calendar': 50,
             'calendarId': 51,
             'identifier': 52,
-            'notes': 53,
             
             // Debug fields
             'debugcity': 60,
             'debugsource': 61,
             'debugtimezone': 62,
             'debugimage': 63,
+            
+            // Computed fields should be last - notes is combination of other fields
+            'notes': 99,
             
             // Other fields get default priority
         };
@@ -2739,6 +2743,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const rows = [];
         
         fieldsToCompare.forEach(field => {
+            // Skip notes field as it's a computed field that combines other fields
+            // This makes the comparison confusing and it's often broken
+            if (field === 'notes') return;
+            
             let newValue = event._original.new[field] || '';
             let existingValue = event._original.existing?.[field] || '';
             let finalValue = event[field] || '';
@@ -2754,7 +2762,20 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!newValue && !existingValue && !finalValue) return;
             
             // Format values for display
-            const formatValue = (val, maxLength = 30) => {
+            const formatValue = (val, maxLength = 30, isExisting = false) => {
+                // For existing values, try to get the actual value from the final event if the field is empty
+                // This helps show the actual existing values instead of just "empty"
+                if (!val && isExisting) {
+                    // First try the final event value
+                    if (event[field]) {
+                        val = event[field];
+                    }
+                    // Then try extracted fields
+                    else if (event._mergeInfo?.extractedFields?.[field]) {
+                        val = event._mergeInfo.extractedFields[field].value;
+                    }
+                }
+                
                 if (!val) return '<em style="color: #999;">empty</em>';
                 if (field.includes('Date') && val) {
                     return new Date(val).toLocaleString('en-US', { 
@@ -2811,13 +2832,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                         <br><small style="color: #666;">${strategy}</small>
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
-                        ${formatValue(existingValue)}
+                        ${formatValue(existingValue, 30, true)}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff;">
                         ${flowIcon}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
-                        ${formatValue(newValue)}
+                        ${formatValue(newValue, 30, false)}
                     </td>
                     <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center;">
                         ${resultText}
@@ -2838,6 +2859,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
         
         fieldsToCompare.forEach(field => {
+            // Skip notes field as it's a computed field that combines other fields
+            // This makes the comparison confusing and it's often broken
+            if (field === 'notes') return;
+            
             let newValue = event._original.new[field] || '';
             let existingValue = event._original.existing?.[field] || '';
             let finalValue = event[field] || '';
