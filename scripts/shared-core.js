@@ -474,17 +474,20 @@ class SharedCore {
 
     // Create complete merged event object that represents exactly what will be saved
     createFinalEventObject(existingEvent, newEvent) {
-        const fieldStrategies = newEvent._fieldMergeStrategies || {};
+        console.log(`🔄 SharedCore: Creating merged event for "${newEvent.title}" with existing event "${existingEvent.title}"`);
         
-        // Start with existing event as base
+        // Use the existing merge function to do all the heavy lifting
+        const mergedData = this.mergeEventData(existingEvent, newEvent);
+        
+        // Create the final event object that represents exactly what will be saved
         const finalEvent = {
-            // Core calendar fields that actually get saved
-            title: existingEvent.title,
-            startDate: existingEvent.startDate,
+            // Core calendar fields that actually get saved (from mergedData)
+            title: mergedData.title,
+            startDate: existingEvent.startDate, // These don't usually change in merges
             endDate: existingEvent.endDate,
             location: existingEvent.location,
-            notes: existingEvent.notes || '',
-            url: existingEvent.url || '',
+            notes: mergedData.notes,
+            url: mergedData.url,
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
@@ -498,29 +501,17 @@ class SharedCore {
             _fieldMergeStrategies: newEvent._fieldMergeStrategies
         };
         
-        // Apply merge strategies to ALL relevant fields
-        const applyStrategy = (field, existingValue, newValue, strategy) => {
-            switch (strategy) {
-                case 'clobber':
-                    return newValue || existingValue;
-                case 'upsert':
-                    return existingValue || newValue;
-                case 'preserve':
-                default:
-                    return existingValue;
+        // Parse the final notes to get all the merged fields for display
+        const finalFields = this.parseNotesIntoFields(finalEvent.notes);
+        
+        // Add all fields from notes to the final event for display purposes
+        Object.keys(finalFields).forEach(fieldName => {
+            if (finalFields[fieldName] && !finalEvent[fieldName]) {
+                finalEvent[fieldName] = finalFields[fieldName];
             }
-        };
+        });
         
-        // Apply strategies to core calendar fields
-        finalEvent.title = applyStrategy('title', existingEvent.title, newEvent.title, fieldStrategies.title || 'preserve');
-        finalEvent.startDate = applyStrategy('startDate', existingEvent.startDate, newEvent.startDate, fieldStrategies.startDate || 'preserve');
-        finalEvent.endDate = applyStrategy('endDate', existingEvent.endDate, newEvent.endDate, fieldStrategies.endDate || 'preserve');
-        finalEvent.location = applyStrategy('location', existingEvent.location, newEvent.location, fieldStrategies.location || 'upsert');
-        finalEvent.url = applyStrategy('url', existingEvent.url, newEvent.url, fieldStrategies.website || fieldStrategies.url || 'upsert');
-        
-        // Handle notes merge (existing complex logic)
-        const mergedData = this.mergeEventData(existingEvent, newEvent);
-        finalEvent.notes = mergedData.notes;
+        console.log(`🔄 SharedCore: Final merged event has ${Object.keys(finalFields).length} fields in notes`);
         
         // Store comparison data for display - use the EXACT same structure as the save operation
         // The save operation uses: targetEvent.field = event.field for these fields:
@@ -531,8 +522,7 @@ class SharedCore {
         // targetEvent.notes = event.notes;
         // targetEvent.url = event.url;
         
-        // Parse existing notes to get all current field values for comparison
-        const existingFields = existingEvent.notes ? this.parseNotesIntoFields(existingEvent.notes) : {};
+        // Use existing fields already parsed above
         
         finalEvent._original = {
             existing: { 
@@ -1045,7 +1035,10 @@ class SharedCore {
         const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
         Object.keys(event).forEach(key => {
             if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
-                calendarEvent[key] = event[key];
+                // Only copy fields that have values and should be included
+                if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
+                    calendarEvent[key] = event[key];
+                }
             }
         });
         
@@ -1061,19 +1054,23 @@ class SharedCore {
             'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
-            '_original', '_mergeInfo', '_changes', '_mergeDiff', 'key',
+            '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name' // These are usually duplicates of title
         ]);
         
         // Add all fields that have values (merge logic has already determined correct values)
+        let savedFieldCount = 0;
         Object.keys(event).forEach(fieldName => {
             if (!excludeFields.has(fieldName) && 
                 event[fieldName] !== undefined && 
                 event[fieldName] !== null && 
                 event[fieldName] !== '') {
                 notes.push(`${fieldName}: ${event[fieldName]}`);
+                savedFieldCount++;
             }
         });
+        
+        console.log(`📝 SharedCore: Formatted notes for "${event.title}" with ${savedFieldCount} fields (excluding ${excludeFields.size} system fields)`);
         
         return notes.join('\n');
     }
@@ -1129,6 +1126,8 @@ class SharedCore {
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes);
+                
+                console.log(`📊 SharedCore: Comparing fields for merge diff - Original: ${Object.keys(originalFields).length} fields, Merged: ${Object.keys(mergedFields).length} fields`);
                 
                 analyzedEvent._mergeDiff = {
                     preserved: [],
