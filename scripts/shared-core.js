@@ -404,72 +404,45 @@ class SharedCore {
 
     // Enhanced merge function that respects field-level merge strategies
     mergeEventData(existingEvent, newEvent) {
-        const existingNotes = existingEvent.notes || '';
         const fieldStrategies = newEvent._fieldMergeStrategies || {};
         
-        // Parse existing notes to extract current field values
-        const existingFields = this.parseNotesIntoFields(existingNotes);
+        // Create merged event starting with existing event
+        const mergedEvent = { ...existingEvent };
         
-        // Build updated fields based on merge strategies
-        const updatedFields = {};
-        
-        // First, preserve all existing fields
-        Object.keys(existingFields).forEach(key => {
-            updatedFields[key] = existingFields[key];
-        });
-        
-        // Then apply new fields based on their merge strategies
-        // Parse the new event's notes to get its fields
-        const newEventNotes = newEvent.notes || '';
-        const newFields = this.parseNotesIntoFields(newEventNotes);
-        
-        // Apply merge strategies for fields from notes
-        Object.keys(newFields).forEach(key => {
+        // Apply merge strategies to each field in the new event
+        Object.keys(newEvent).forEach(key => {
+            if (key.startsWith('_')) return; // Skip internal fields
+            
             const strategy = fieldStrategies[key] || 'preserve';
+            const existingValue = existingEvent[key];
+            const newValue = newEvent[key];
             
             switch (strategy) {
                 case 'clobber':
-                    updatedFields[key] = newFields[key];
+                    if (newValue !== undefined && newValue !== null && newValue !== '') {
+                        mergedEvent[key] = newValue;
+                    }
                     break;
                 case 'upsert':
-                    if (!existingFields[key] && newFields[key]) {
-                        updatedFields[key] = newFields[key];
+                    if ((!existingValue || existingValue === '') && 
+                        newValue !== undefined && newValue !== null && newValue !== '') {
+                        mergedEvent[key] = newValue;
                     }
                     break;
                 case 'preserve':
                 default:
+                    // Keep existing value - mergedEvent already has it
                     break;
             }
         });
         
-        // Also apply merge strategies for event object properties
-        Object.keys(newEvent).forEach(key => {
-            if (!key.startsWith('_') && newEvent[key] !== undefined && newEvent[key] !== null && newEvent[key] !== '') {
-                const strategy = fieldStrategies[key] || 'preserve';
-                
-                switch (strategy) {
-                    case 'clobber':
-                        updatedFields[key] = newEvent[key];
-                        break;
-                    case 'upsert':
-                        if (!existingFields[key] && newEvent[key]) {
-                            updatedFields[key] = newEvent[key];
-                        }
-                        break;
-                    case 'preserve':
-                    default:
-                        break;
-                }
-            }
-        });
-        
-        // Rebuild notes from updated fields
-        const notes = this.buildNotesFromFields(updatedFields);
+        // Use formatEventNotes to generate notes (handles all the filtering)
+        const notes = this.formatEventNotes(mergedEvent);
         
         return {
-            title: existingEvent.title, // Keep existing title unless clobbered
+            title: mergedEvent.title,
             notes: notes,
-            url: existingEvent.url || newEvent.url
+            url: mergedEvent.url
         };
     }
 
