@@ -2019,10 +2019,25 @@ class ScriptableAdapter {
                     <span>📱</span>
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
+                ${event.description ? `
+                    <div class="event-detail" style="background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;">
+                        <span>📝</span>
+                        <span style="font-style: italic;">${this.escapeHtml(event.description)}</span>
+                    </div>
+                ` : ''}
                 ${event.tea ? `
                     <div class="event-detail" style="background: #e8f5e9; padding: 8px; border-radius: 5px; margin-top: 8px;">
                         <span>☕</span>
                         <span style="font-style: italic;">${this.escapeHtml(event.tea)}</span>
+                    </div>
+                ` : ''}
+                ${event.image ? `
+                    <div class="event-detail" style="margin-top: 8px;">
+                        <span>🖼️</span>
+                        <span><a href="${this.escapeHtml(event.image)}" target="_blank" rel="noopener" style="color: #007aff;">View Image</a></span>
+                        <div style="margin-top: 5px;">
+                            <img src="${this.escapeHtml(event.image)}" alt="Event Image" style="max-width: 200px; max-height: 150px; border-radius: 5px; object-fit: cover;" onerror="this.style.display='none'">
+                        </div>
                     </div>
                 ` : ''}
                 ${event.instagram ? `
@@ -2043,6 +2058,12 @@ class ScriptableAdapter {
                         <span><a href="${this.escapeHtml(event.website)}" target="_blank" rel="noopener" style="color: #007aff;">Website</a></span>
                     </div>
                 ` : ''}
+                ${event.url && event.url !== event.website ? `
+                    <div class="event-detail">
+                        <span>🎫</span>
+                        <span><a href="${this.escapeHtml(event.url)}" target="_blank" rel="noopener" style="color: #007aff;">Event Link</a></span>
+                    </div>
+                ` : ''}
                 ${event.gmaps || event.googleMapsLink ? `
                     <div class="event-detail">
                         <span>🗺️</span>
@@ -2054,6 +2075,38 @@ class ScriptableAdapter {
                         <span>💵</span>
                         <span>${this.escapeHtml(event.price)}</span>
                     </div>
+                ` : ''}
+                
+                <!-- Calendar Notes Preview -->
+                ${notes ? `
+                    <details style="margin-top: 10px;">
+                        <summary style="cursor: pointer; font-size: 13px; color: #007aff; padding: 5px;">📝 Calendar Notes Preview</summary>
+                        <div class="notes-preview" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 5px;">
+                            ${(() => {
+                                // Parse and format notes for better readability
+                                const lines = notes.split('\n');
+                                let formattedHtml = '';
+                                let inDescription = true;
+                                
+                                lines.forEach(line => {
+                                    if (line.includes(':') && !inDescription) {
+                                        // This is a metadata field
+                                        const [key, ...valueParts] = line.split(':');
+                                        const value = valueParts.join(':').trim();
+                                        formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
+                                    } else if (line.trim() === '') {
+                                        formattedHtml += '<br>';
+                                        inDescription = false;
+                                    } else {
+                                        // Part of description
+                                        formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
+                                    }
+                                });
+                                
+                                return formattedHtml || '<em>No notes</em>';
+                            })()}
+                        </div>
+                    </details>
                 ` : ''}
             </div>
             
@@ -2084,14 +2137,18 @@ class ScriptableAdapter {
                     <div id="comparison-content-${eventId}" style="${!isExpanded ? 'display: none;' : ''}">
                     <!-- Show what was extracted -->
                     ${event._mergeInfo?.extractedFields && Object.keys(event._mergeInfo.extractedFields).length > 0 ? `
-                        <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-                            <strong style="font-size: 12px;">Extracted from existing event:</strong>
-                            ${Object.entries(event._mergeInfo.extractedFields).map(([field, info]) => `
-                                <div style="margin-top: 5px; font-size: 12px;">
-                                    • <strong>${field}:</strong> "${this.escapeHtml(info.value)}"
-                                </div>
-                            `).join('')}
-                        </div>
+                        <details style="margin-bottom: 10px;">
+                            <summary style="cursor: pointer; font-size: 12px; color: #666; padding: 5px;">
+                                🔍 Extracted Fields (${Object.keys(event._mergeInfo.extractedFields).length})
+                            </summary>
+                            <div style="background: #f5f5f5; padding: 8px; border-radius: 5px; margin-top: 5px; font-size: 11px;">
+                                ${Object.entries(event._mergeInfo.extractedFields).map(([field, info]) => `
+                                    <div style="margin: 2px 0;">
+                                        <strong>${field}:</strong> "${this.escapeHtml(info.value)}"
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </details>
                     ` : ''}
                     
                     <!-- Table view (default) -->
@@ -2188,50 +2245,7 @@ class ScriptableAdapter {
                 </div>
             ` : ''}
             
-            <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; font-size: 13px; color: #007aff;">📝 View Calendar Notes Preview</summary>
-                <div class="notes-preview">
-                    ${(() => {
-                        // Parse and format notes for better readability
-                        const lines = notes.split('\n');
-                        let formattedHtml = '';
-                        let inDescription = true;
-                        
-                        lines.forEach(line => {
-                            if (line.includes(':') && !inDescription) {
-                                // This is a metadata field
-                                const [key, ...valueParts] = line.split(':');
-                                const value = valueParts.join(':').trim();
-                                formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
-                            } else if (line.trim() === '') {
-                                formattedHtml += '<br>';
-                                inDescription = false;
-                            } else {
-                                // Part of description
-                                formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
-                            }
-                        });
-                        
-                        return formattedHtml || '<em>No notes</em>';
-                    })()}
-                </div>
-            </details>
-            
-            ${event._original && event._action === 'merge' ? `
-            <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; font-size: 13px; color: #ff9500;">🔄 Compare Original vs Merged Notes</summary>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-                    <div style="background: #fff3cd; padding: 10px; border-radius: 5px;">
-                        <strong>Before (Existing Event):</strong>
-                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event._original.existing?.notes || 'No notes')}</pre>
-                    </div>
-                    <div style="background: #d4edda; padding: 10px; border-radius: 5px;">
-                        <strong>After (Final Result):</strong>
-                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event.notes || 'No notes')}</pre>
-                    </div>
-                </div>
-            </details>
-            ` : ''}
+
             
 
             
@@ -2829,7 +2843,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             } else if (existingValue && newValue && existingValue === newValue) {
                 // Both values are identical - no change needed
                 flowIcon = '—';
-                resultText = '<span style="color: #999;">NO CHANGE</span>';
+                resultText = '<span style="color: #999;">SAME VALUE</span>';
+            } else if (strategy === 'clobber' && newValue && finalValue === newValue) {
+                // Clobber strategy applied - new value used (even if same as existing)
+                flowIcon = '→';
+                resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
             } else if (wasUsed === 'existing') {
                 // Merge strategy explicitly chose existing value
                 flowIcon = '←';
