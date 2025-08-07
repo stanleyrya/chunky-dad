@@ -475,11 +475,12 @@ class SharedCore {
             _existingEvent: existingEvent,
             _action: 'merge',
             
-            // Keep metadata for display
+            // Keep metadata for display and comparison tables
             city: newEvent.city,
             key: newEvent.key,
             source: newEvent.source,
-            _parserConfig: newEvent._parserConfig
+            _parserConfig: newEvent._parserConfig,
+            _fieldMergeStrategies: newEvent._fieldMergeStrategies
         };
         
         // Apply merge strategies to ALL relevant fields
@@ -509,6 +510,37 @@ class SharedCore {
             existing: { ...existingEvent },
             new: { ...newEvent }
         };
+        
+        // Create merge info for comparison tables
+        finalEvent._mergeInfo = {
+            extractedFields: {},
+            mergedFields: {},
+            strategy: fieldStrategies
+        };
+        
+        // Track which fields were merged and how
+        ['title', 'location', 'url', 'notes'].forEach(field => {
+            const existingValue = existingEvent[field];
+            const newValue = newEvent[field];
+            const finalValue = finalEvent[field];
+            
+            if (finalValue === existingValue && existingValue !== newValue) {
+                finalEvent._mergeInfo.mergedFields[field] = 'existing';
+            } else if (finalValue === newValue && newValue !== existingValue) {
+                finalEvent._mergeInfo.mergedFields[field] = 'new';
+            }
+        });
+        
+        // Extract fields from existing notes for display
+        if (existingEvent.notes) {
+            const existingFields = this.parseNotesIntoFields(existingEvent.notes);
+            Object.entries(existingFields).forEach(([fieldName, value]) => {
+                finalEvent._mergeInfo.extractedFields[fieldName] = {
+                    value: value,
+                    source: 'existing.notes'
+                };
+            });
+        }
         
         // Calculate what actually changed
         const changes = [];
