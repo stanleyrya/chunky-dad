@@ -971,7 +971,7 @@ class SharedCore {
             title: event.title || event.name || 'Untitled Event',
             startDate: event.startDate,
             endDate: event.endDate || event.startDate,
-            location: this.formatLocationForCalendar(event),
+            location: event.location || '',
             notes: this.formatEventNotes(event),
             // Don't use url field - it goes in notes instead
             city: event.city || 'default', // Include city for calendar selection
@@ -989,11 +989,6 @@ class SharedCore {
         });
         
         return calendarEvent;
-    }
-    
-    // Format location for calendar (GPS coordinates only)
-    formatLocationForCalendar(event) {
-        return event.location || ''; // Location is already stored as "lat,lng" string for calendar
     }
     
     // Format event notes with all metadata in key-value format
