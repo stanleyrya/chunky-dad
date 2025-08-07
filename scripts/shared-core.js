@@ -481,7 +481,7 @@ class SharedCore {
         const applyStrategy = (fieldName, existingValue, newValue) => {
             // Allow mapping of strategy keys (location uses 'venue' in strategies)
             const strategyKey = (fieldName === 'location' && !fieldStrategies[fieldName]) ? 'venue' : fieldName;
-            const strategy = fieldStrategies[strategyKey] || 'preserve';
+            const strategy = (fieldStrategies[strategyKey] !== undefined) ? fieldStrategies[strategyKey] : 'upsert';
             switch (strategy) {
                 case 'clobber':
                     return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
@@ -498,7 +498,7 @@ class SharedCore {
         // Resolve calendar core fields using strategies
         const resolvedStartDate = applyStrategy('startDate', existingEvent.startDate, newEvent.startDate);
         const resolvedEndDate = applyStrategy('endDate', existingEvent.endDate, newEvent.endDate || newEvent.startDate);
-        const resolvedLocation = applyStrategy('location', existingEvent.location, newEvent.venue || newEvent.location);
+        const resolvedLocation = applyStrategy('location', existingEvent.location, newEvent.location);
         
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
@@ -584,7 +584,7 @@ class SharedCore {
         // Track which fields were merged and how
         ['title', 'startDate', 'endDate', 'location', 'url', 'notes'].forEach(field => {
             const existingValue = existingEvent[field];
-            const newValue = newEvent[field] || (field === 'location' ? (newEvent.venue || newEvent.location) : undefined);
+            const newValue = newEvent[field];
             const finalValue = finalEvent[field];
             
             if (finalValue === existingValue && existingValue !== newValue) {
