@@ -612,7 +612,7 @@ class SharedCore {
         // This ensures the object structure matches what gets saved and makes debugging easier
         if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldMergeStrategies) {
             Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
-                const strategy = finalEvent._fieldMergeStrategies[fieldName] || (fieldName === 'location' ? finalEvent._fieldMergeStrategies['venue'] : undefined);
+                const strategy = finalEvent._fieldMergeStrategies[fieldName];
                 // Only add fields that were preserved (not overridden by new values)
                 if (strategy === 'preserve' && !finalEvent[fieldName]) {
                     finalEvent[fieldName] = fieldInfo.value;
