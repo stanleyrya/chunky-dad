@@ -1992,13 +1992,30 @@ class ScriptableAdapter {
          *    - Individual copy buttons allow copying specific event data
          * 
          * 6. SAVING PHASE (executeCalendarActions):
-         *    - Events are processed based on their '_action' field:
-         *      • 'new': Create new CalendarEvent and save to iOS Calendar
-         *      • 'merge': Update existing event with merged notes/url/location, then save
-         *      • 'update': Replace existing event fields entirely, then save
-         *      • 'conflict': Skip - requires manual review
-         *    - Calendar mapping determines which iOS calendar to use (chunky-dad-{city})
-         *    - Actual iOS Calendar.save() calls persist changes to device calendar
+         *    Events are processed based on their '_action' field:
+         *    
+         *    • 'new': Create new CalendarEvent
+         *      - Uses: event.title, event.startDate, event.endDate, event.location, event.notes, event.url
+         *      - Creates fresh CalendarEvent object and saves to iOS Calendar
+         *    
+         *    • 'merge': Update existing event (uses event._existingEvent as target)
+         *      - targetEvent = event._existingEvent (the actual iOS CalendarEvent object)
+         *      - Updates: targetEvent.notes = event._mergedNotes
+         *      - Updates: targetEvent.url = event._mergedUrl (if exists)
+         *      - Updates: targetEvent.location = event.location (if has coordinates)
+         *      - Calls: await targetEvent.save()
+         *    
+         *    • 'update': Replace existing event fields (uses event._existingEvent as target)
+         *      - updateTarget = event._existingEvent (the actual iOS CalendarEvent object)
+         *      - Replaces: updateTarget.title = event.title
+         *      - Replaces: updateTarget.notes = event.notes (NOT _mergedNotes)
+         *      - Replaces: updateTarget.location = event.location
+         *      - Replaces: updateTarget.url = event.url
+         *      - Calls: await updateTarget.save()
+         *    
+         *    • 'conflict': Skip - no saving occurs
+         *    
+         *    CRITICAL: event._existingEvent contains the actual iOS CalendarEvent object that gets saved!
          * 
          * REDUNDANCIES IN EVENT OBJECT:
          * - 'location' field appears both as GPS coordinates AND in 'googleMapsLink'
