@@ -2071,10 +2071,10 @@ class ScriptableAdapter {
                         <span><a href="${this.escapeHtml(event.url)}" target="_blank" rel="noopener" style="color: #007aff;">Event Link</a></span>
                     </div>
                 ` : ''}
-                ${event.gmaps || event.googleMapsLink ? `
+                ${event.googleMapsLink ? `
                     <div class="event-detail">
                         <span>🗺️</span>
-                        <span><a href="${this.escapeHtml(event.gmaps || event.googleMapsLink)}" target="_blank" rel="noopener" style="color: #007aff;">Google Maps</a></span>
+                        <span><a href="${this.escapeHtml(event.googleMapsLink)}" target="_blank" rel="noopener" style="color: #007aff;">Google Maps</a></span>
                     </div>
                 ` : ''}
                 ${event.price ? `
@@ -2706,25 +2706,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 allFields.add(field);
             }
         });
-        
-        // Deduplicate synonyms in favor of canonical keys
-        const has = (key) => allFields.has(key);
-        const remove = (keys) => keys.forEach(k => allFields.delete(k));
-        
-        // Description
-        if (has('description')) remove(['tea', 'info']);
-        
-        // Venue/location
-        if (has('venue')) remove(['location', 'bar', 'host']);
-        
-        // Price
-        if (has('price')) remove(['cover', 'cost']);
-        
-        // Short title/name variants
-        if (has('shortTitle')) remove(['shorttitle', 'shortname', 'shortername', 'short title', 'short name', 'shorter name']);
-        
-        // Google Maps link variants
-        if (has('googleMapsLink')) remove(['gmaps', 'googlemaps', 'googlemapslink', 'google maps']);
         
         // Convert to array and sort with logical grouping
         const fieldArray = Array.from(allFields);
