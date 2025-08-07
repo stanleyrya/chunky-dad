@@ -506,20 +506,17 @@ class SharedCore {
         const mergedData = this.mergeEventData(existingEvent, newEvent);
         finalEvent.notes = mergedData.notes;
         
-        // Extract fields from existing notes BEFORE creating comparison data
-        const extractedExistingFields = {};
-        if (existingEvent.notes) {
-            const existingFields = this.parseNotesIntoFields(existingEvent.notes);
-            Object.entries(existingFields).forEach(([fieldName, value]) => {
-                extractedExistingFields[fieldName] = value;
-            });
-        }
-        
-        // Store comparison data for display - include extracted fields in existing
+        // Store comparison data for display - ensure existing event has all available data
         finalEvent._original = {
             existing: { 
                 ...existingEvent,
-                ...extractedExistingFields  // Add extracted fields so comparison shows them
+                // Ensure basic calendar fields are available for comparison
+                title: existingEvent.title || '',
+                startDate: existingEvent.startDate || '',
+                endDate: existingEvent.endDate || '',
+                location: existingEvent.location || '',
+                notes: existingEvent.notes || '',
+                url: existingEvent.url || ''
             },
             new: { ...newEvent }
         };
@@ -544,10 +541,12 @@ class SharedCore {
             }
         });
         
-        // Store extracted fields info for debugging/display
-        Object.entries(extractedExistingFields).forEach(([fieldName, value]) => {
-            finalEvent._mergeInfo.extractedFields[fieldName] = {
-                value: value,
+        // Extract fields from existing notes for display
+        if (existingEvent.notes) {
+            const existingFields = this.parseNotesIntoFields(existingEvent.notes);
+            Object.entries(existingFields).forEach(([fieldName, value]) => {
+                finalEvent._mergeInfo.extractedFields[fieldName] = {
+                    value: value,
                     source: 'existing.notes'
                 };
             });
