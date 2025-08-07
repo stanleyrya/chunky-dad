@@ -308,7 +308,7 @@ class CalendarCore {
                 eventType: this.getEventType(calendarEvent.recurrence),
                 recurring: !!calendarEvent.recurrence,
                 recurrence: calendarEvent.recurrence,
-                coordinates: this.parseCoordinatesFromLocation(calendarEvent.location),
+                coordinates: calendarEvent.location,
                 startDate: calendarEvent.start,
                 endDate: calendarEvent.end,
                 unprocessedDescription: calendarEvent.description || null, // Store raw description for debugging
@@ -531,22 +531,6 @@ class CalendarCore {
         }
         
         return startTime;
-    }
-
-    // Parse coordinates from location field (lat, lng string format)
-    parseCoordinatesFromLocation(location) {
-        if (!location || typeof location !== 'string') return null;
-        
-        // Parse "lat, lng" format from calendar location field
-        const coords = location.split(',').map(coord => parseFloat(coord.trim()));
-        if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-            return {
-                lat: coords[0],
-                lng: coords[1]
-            };
-        }
-        
-        return null;
     }
 
     getEventType(recurrence) {

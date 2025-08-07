@@ -321,7 +321,7 @@ class EventbriteParser {
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
                 venue: venue,
-                location: coordinates, // Store coordinates in location field instead of separate field
+                location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: address,
                 city: city,
                 url: url,

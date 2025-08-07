@@ -765,9 +765,9 @@ class SharedCore {
         if (event.address && this.isFullAddress(event.address)) {
             // Use address when available and it's a full address
             event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-        } else if (event.location && event.location.lat && event.location.lng) {
-            // Fall back to coordinates if no full address
-            event.googleMapsLink = `https://maps.google.com/?q=${event.location.lat},${event.location.lng}`;
+        } else if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
+            // Fall back to coordinates if no full address (location stored as "lat,lng" string)
+            event.googleMapsLink = `https://maps.google.com/?q=${event.location}`;
         }
         
         return event;
@@ -993,8 +993,8 @@ class SharedCore {
     
     // Format location for calendar (GPS coordinates only)
     formatLocationForCalendar(event) {
-        if (event.location && event.location.lat && event.location.lng) {
-            return `${event.location.lat}, ${event.location.lng}`;
+        if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
+            return event.location; // Location is already stored as "lat,lng" string
         }
         return ''; // Never use bar name in location field
     }
