@@ -1051,23 +1051,8 @@ class SharedCore {
     // Format event notes with all metadata in key-value format
     formatEventNotes(event) {
         const notes = [];
-        const fieldStrategies = event._fieldMergeStrategies || {};
         
-        // Helper function to check if a field should be included
-        const shouldIncludeField = (fieldName) => {
-            // For new events, include all fields
-            if (event._action === 'new') {
-                return true;
-            }
-            
-            // For merged events, include all fields that have values
-            // The merge logic has already applied the strategies to determine 
-            // which values to use (existing vs new), so we just need to include
-            // any field that has a value in the merged event
-            return true;
-        };
-        
-        // Fields to exclude from notes
+        // Fields to exclude from notes (core calendar fields and internal metadata)
         const excludeFields = new Set([
             'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
@@ -1076,15 +1061,13 @@ class SharedCore {
             'originalTitle', 'name' // These are usually duplicates of title
         ]);
         
-        // Add all fields that have values
+        // Add all fields that have values (merge logic has already determined correct values)
         Object.keys(event).forEach(fieldName => {
             if (!excludeFields.has(fieldName) && 
                 event[fieldName] !== undefined && 
                 event[fieldName] !== null && 
                 event[fieldName] !== '') {
-                if (shouldIncludeField(fieldName)) {
-                    notes.push(`${fieldName}: ${event[fieldName]}`);
-                }
+                notes.push(`${fieldName}: ${event[fieldName]}`);
             }
         });
         
