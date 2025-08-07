@@ -404,107 +404,71 @@ class SharedCore {
 
     // Enhanced merge function that respects field-level merge strategies
     mergeEventData(existingEvent, newEvent) {
-        const existingNotes = existingEvent.notes || '';
         const fieldStrategies = newEvent._fieldMergeStrategies || {};
         
         // Parse existing notes to extract current field values
-        const existingFields = this.parseNotesIntoFields(existingNotes);
+        const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
-        // Build updated fields based on merge strategies
-        const updatedFields = {};
+        // Create a merged event object by starting with existing event
+        const mergedEvent = {
+            ...existingEvent,
+            // Preserve existing metadata and strategies
+            _fieldMergeStrategies: fieldStrategies,
+            _action: newEvent._action || 'merge'
+        };
         
-        // First, preserve all existing fields
-        Object.keys(existingFields).forEach(key => {
-            updatedFields[key] = existingFields[key];
-        });
-        
-        // Then apply new fields based on their merge strategies
-        // Parse the new event's notes to get its fields
-        const newEventNotes = newEvent.notes || '';
-        const newFields = this.parseNotesIntoFields(newEventNotes);
-        
-        // Apply merge strategies for each field in the new event's notes
-        Object.keys(newFields).forEach(key => {
-            const strategy = fieldStrategies[key] || 'preserve'; // Default to preserve
+        // Apply merge strategies for each field in the new event
+        Object.keys(newEvent).forEach(key => {
+            // Skip internal metadata fields
+            if (key.startsWith('_')) return;
             
+            // Get strategy for this field, with field name variations support
+            let strategy = fieldStrategies[key] || fieldStrategies[key.toLowerCase()] || 'preserve';
+            
+            // Handle common field name variations
+            if (strategy === 'preserve') {
+                if (key === 'googleMapsLink' && fieldStrategies['gmaps']) {
+                    strategy = fieldStrategies['gmaps'];
+                } else if (key === 'gmaps' && fieldStrategies['googleMapsLink']) {
+                    strategy = fieldStrategies['googleMapsLink'];
+                }
+            }
+            
+            const existingValue = existingEvent[key] || existingFields[key];
+            const newValue = newEvent[key];
+            
+            // Apply merge strategy
             switch (strategy) {
                 case 'clobber':
-                    // Always replace with new value
-                    updatedFields[key] = newFields[key];
+                    // Always use new value if it exists
+                    if (newValue !== undefined && newValue !== null && newValue !== '') {
+                        mergedEvent[key] = newValue;
+                    }
                     break;
                     
                 case 'upsert':
-                    // Add if missing, keep existing if present
-                    if (!existingFields[key] && newFields[key]) {
-                        updatedFields[key] = newFields[key];
+                    // Use new value only if existing value is missing/empty
+                    if ((!existingValue || existingValue === '') && 
+                        newValue !== undefined && newValue !== null && newValue !== '') {
+                        mergedEvent[key] = newValue;
                     }
                     break;
                     
                 case 'preserve':
                 default:
-                    // Do nothing - keep existing value as is
-                    // Don't add if missing, don't update if exists
+                    // Keep existing value, don't change anything
+                    // mergedEvent already has existing values
                     break;
             }
         });
         
-        // ALSO check for event object properties that should be included based on merge strategies
-        // This handles fields like googleMapsLink, gmaps, etc. that are properties of the event object
-        const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
-            'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
-            '_original', '_mergeInfo', '_changes', '_mergeDiff', 'key',
-            'originalTitle', 'name', 'notes' // These are usually duplicates of title or computed
-        ]);
-        
-        Object.keys(newEvent).forEach(key => {
-            if (!excludeFields.has(key) && 
-                newEvent[key] !== undefined && 
-                newEvent[key] !== null && 
-                newEvent[key] !== '') {
-                
-                // Check for field name mappings (e.g., googleMapsLink -> gmaps)
-                let strategy = fieldStrategies[key] || fieldStrategies[key.toLowerCase()] || 'preserve';
-                
-                // Handle common field name variations
-                if (strategy === 'preserve') {
-                    if (key === 'googleMapsLink' && fieldStrategies['gmaps']) {
-                        strategy = fieldStrategies['gmaps'];
-                    } else if (key === 'gmaps' && fieldStrategies['googleMapsLink']) {
-                        strategy = fieldStrategies['googleMapsLink'];
-                    }
-                }
-                
-                switch (strategy) {
-                    case 'clobber':
-                        // Always replace with new value
-                        updatedFields[key] = newEvent[key];
-                        break;
-                        
-                    case 'upsert':
-                        // Add if missing, keep existing if present
-                        if (!existingFields[key] && newEvent[key]) {
-                            updatedFields[key] = newEvent[key];
-                        }
-                        break;
-                        
-                    case 'preserve':
-                    default:
-                        // Do nothing - keep existing value as is
-                        // Don't add if missing, don't update if exists
-                        break;
-                }
-            }
-        });
-        
-        // Rebuild notes from updated fields
-        const notes = this.buildNotesFromFields(updatedFields);
+        // Use the existing formatEventNotes function to generate notes
+        const notes = this.formatEventNotes(mergedEvent);
         
         return {
-            title: existingEvent.title, // Keep existing title unless clobbered
+            title: mergedEvent.title,
             notes: notes,
-            url: existingEvent.url || newEvent.url
+            url: mergedEvent.url
         };
     }
 
@@ -1101,6 +1065,7 @@ class SharedCore {
             'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
+            '_original', '_mergeInfo', '_changes', '_mergeDiff', 'key',
             'originalTitle', 'name' // These are usually duplicates of title
         ]);
         
