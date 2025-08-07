@@ -2654,10 +2654,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const fieldArray = Array.from(allFields);
         
         // Define field priority order - group related fields together
+        // Includes field aliases/pseudonyms from shared-core.js
         const fieldPriority = {
             // Core event info
             'title': 1,
             'description': 2,
+            'tea': 2,           // alias for description
+            'info': 2,          // alias for description
+            
+            // Name variations
+            'shortname': 3,
+            'shortername': 4,
+            'shorttitle': 5,
             
             // Date/Time fields - keep start/end times together
             'startDate': 10,
@@ -2670,9 +2678,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             // Location fields
             'venue': 20,
+            'bar': 20,          // alias for venue
+            'location': 20,     // alias for venue
+            'host': 20,         // alias for venue
             'address': 21,
             'city': 22,
-            'location': 23,
             
             // Contact/Social fields
             'website': 30,
@@ -2681,11 +2691,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'twitter': 33,
             'phone': 34,
             'email': 35,
+            'gmaps': 36,        // Google Maps
             
             // Event details
             'price': 40,
+            'cover': 40,        // alias for price
+            'cost': 40,         // alias for price
             'category': 41,
             'type': 42,
+            'eventtype': 42,    // alias for type
             'tags': 43,
             
             // Calendar specific
@@ -2693,6 +2707,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'calendarId': 51,
             'identifier': 52,
             'notes': 53,
+            
+            // Debug fields
+            'debugcity': 60,
+            'debugsource': 61,
+            'debugtimezone': 62,
+            'debugimage': 63,
             
             // Other fields get default priority
         };
