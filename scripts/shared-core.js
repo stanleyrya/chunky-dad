@@ -423,48 +423,43 @@ class SharedCore {
         const newEventNotes = newEvent.notes || '';
         const newFields = this.parseNotesIntoFields(newEventNotes);
         
-        // Apply merge strategies for each field in the new event (both from notes and event object)
-        const allNewFields = { ...newFields };
-        
-        // Also include fields from the event object itself (like googleMapsLink, shortTitle, etc.)
-        Object.keys(newEvent).forEach(key => {
-            if (!key.startsWith('_') && 
-                newEvent[key] !== undefined && 
-                newEvent[key] !== null && 
-                newEvent[key] !== '') {
-                allNewFields[key] = newEvent[key];
-            }
-        });
-        
-        Object.keys(allNewFields).forEach(key => {
-            // Handle field name variations (googleMapsLink <-> gmaps)
-            let strategy = fieldStrategies[key] || fieldStrategies[key.toLowerCase()] || 'preserve';
-            if (strategy === 'preserve') {
-                if (key === 'googleMapsLink' && fieldStrategies['gmaps']) {
-                    strategy = fieldStrategies['gmaps'];
-                } else if (key === 'gmaps' && fieldStrategies['googleMapsLink']) {
-                    strategy = fieldStrategies['googleMapsLink'];
-                }
-            }
+        // Apply merge strategies for fields from notes
+        Object.keys(newFields).forEach(key => {
+            const strategy = fieldStrategies[key] || 'preserve';
             
             switch (strategy) {
                 case 'clobber':
-                    // Always replace with new value
-                    updatedFields[key] = allNewFields[key];
+                    updatedFields[key] = newFields[key];
                     break;
-                    
                 case 'upsert':
-                    // Add if missing, keep existing if present
-                    if (!existingFields[key] && allNewFields[key]) {
-                        updatedFields[key] = allNewFields[key];
+                    if (!existingFields[key] && newFields[key]) {
+                        updatedFields[key] = newFields[key];
                     }
                     break;
-                    
                 case 'preserve':
                 default:
-                    // Do nothing - keep existing value as is
-                    // Don't add if missing, don't update if exists
                     break;
+            }
+        });
+        
+        // Also apply merge strategies for event object properties
+        Object.keys(newEvent).forEach(key => {
+            if (!key.startsWith('_') && newEvent[key] !== undefined && newEvent[key] !== null && newEvent[key] !== '') {
+                const strategy = fieldStrategies[key] || 'preserve';
+                
+                switch (strategy) {
+                    case 'clobber':
+                        updatedFields[key] = newEvent[key];
+                        break;
+                    case 'upsert':
+                        if (!existingFields[key] && newEvent[key]) {
+                            updatedFields[key] = newEvent[key];
+                        }
+                        break;
+                    case 'preserve':
+                    default:
+                        break;
+                }
             }
         });
         
