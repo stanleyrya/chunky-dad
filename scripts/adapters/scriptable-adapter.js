@@ -2661,13 +2661,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         fieldsToCompare.forEach(field => {
             let newValue = event._original.new[field] || '';
             let existingValue = event._original.existing?.[field] || '';
-            const finalValue = event[field] || '';
+            let finalValue = event[field] || '';
             const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
             
             // Check if this field was extracted from existing event's notes
             if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
                 existingValue = event._mergeInfo.extractedFields[field].value;
+            }
+            
+            // If field was extracted and has preserve strategy but no final value,
+            // it means the field was preserved by being embedded in notes
+            if (!finalValue && existingValue && strategy === 'preserve' && event._mergeInfo?.extractedFields?.[field]) {
+                finalValue = existingValue;
             }
             
             // Skip if both are empty and no final value
@@ -2760,12 +2766,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         fieldsToCompare.forEach(field => {
             let newValue = event._original.new[field] || '';
             let existingValue = event._original.existing?.[field] || '';
-            const finalValue = event[field] || '';
+            let finalValue = event[field] || '';
             const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
             
             // Check if this field was extracted from existing event's notes
             if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
                 existingValue = event._mergeInfo.extractedFields[field].value;
+            }
+            
+            // If field was extracted and has preserve strategy but no final value,
+            // it means the field was preserved by being embedded in notes
+            if (!finalValue && existingValue && strategy === 'preserve' && event._mergeInfo?.extractedFields?.[field]) {
+                finalValue = existingValue;
             }
             
             // Skip if both are empty and no final value
