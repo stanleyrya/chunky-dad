@@ -506,10 +506,41 @@ class SharedCore {
         const mergedData = this.mergeEventData(existingEvent, newEvent);
         finalEvent.notes = mergedData.notes;
         
-        // Store comparison data for display
+        // Store comparison data for display - use the EXACT same structure as the save operation
+        // The save operation uses: targetEvent.field = event.field for these fields:
+        // targetEvent.title = event.title;
+        // targetEvent.startDate = event.startDate;
+        // targetEvent.endDate = event.endDate;
+        // targetEvent.location = event.location;
+        // targetEvent.notes = event.notes;
+        // targetEvent.url = event.url;
+        
+        // Parse existing notes to get all current field values for comparison
+        const existingFields = existingEvent.notes ? this.parseNotesIntoFields(existingEvent.notes) : {};
+        
         finalEvent._original = {
-            existing: { ...existingEvent },
-            new: { ...newEvent }
+            existing: { 
+                // These are the CURRENT values that will be replaced during save
+                title: existingEvent.title || '',
+                startDate: existingEvent.startDate || '',
+                endDate: existingEvent.endDate || '',
+                location: existingEvent.location || '',
+                notes: existingEvent.notes || '',
+                url: existingEvent.url || '',
+                // Add fields extracted from current notes for rich comparison
+                ...existingFields
+            },
+            new: { 
+                // These are the FINAL values that will be written during save
+                title: finalEvent.title,
+                startDate: finalEvent.startDate,
+                endDate: finalEvent.endDate,
+                location: finalEvent.location,
+                notes: finalEvent.notes,
+                url: finalEvent.url,
+                // Include other new event fields for comparison
+                ...newEvent
+            }
         };
         
         // Create merge info for comparison tables
