@@ -534,12 +534,19 @@ class SharedCore {
             const newValue = newEvent[fieldName];
             
             const finalValue = applyStrategy(fieldName, existingValue, newValue, strategy);
-            if (finalValue !== existingValue && finalValue !== undefined && finalValue !== '') {
-                mergedFieldCount++;
-                console.log(`🔄 SharedCore: Merged field "${fieldName}" using strategy "${strategy}": "${existingValue}" → "${finalValue}"`);
-            }
             
-            finalEvent[fieldName] = finalValue;
+            // Only set the field if there's actually a value to keep
+            if (finalValue !== undefined && finalValue !== null && finalValue !== '') {
+                finalEvent[fieldName] = finalValue;
+                
+                if (finalValue !== existingValue) {
+                    mergedFieldCount++;
+                    console.log(`🔄 SharedCore: Merged field "${fieldName}" using strategy "${strategy}": "${existingValue || '(empty)'}" → "${finalValue}"`);
+                }
+            } else if (strategy === 'preserve' && (!existingValue || existingValue === '')) {
+                // For preserve strategy with no existing value, explicitly don't set the field
+                console.log(`🔄 SharedCore: Preserving empty field "${fieldName}" - not adding new value "${newValue || '(empty)'}"`);
+            }
         });
         
         if (mergedFieldCount > 0) {
@@ -1072,7 +1079,10 @@ class SharedCore {
         const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
         Object.keys(event).forEach(key => {
             if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
-                calendarEvent[key] = event[key];
+                // Only copy fields that have values and should be included
+                if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
+                    calendarEvent[key] = event[key];
+                }
             }
         });
         

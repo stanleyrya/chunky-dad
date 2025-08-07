@@ -2019,13 +2019,7 @@ class ScriptableAdapter {
                     <span>📱</span>
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
-                ${(() => {
-                    const shouldShowDescription = event.description && (!event._fieldMergeStrategies || event._fieldMergeStrategies.description !== 'preserve' || event._action !== 'new');
-                    if (event.description && !shouldShowDescription) {
-                        console.log(`📝 Scriptable: Hiding description for "${event.title}" due to preserve strategy on new event`);
-                    }
-                    return shouldShowDescription;
-                })() ? `
+                ${event.description ? `
                     <div class="event-detail" style="background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;">
                         <span>📝</span>
                         <span style="font-style: italic;">${this.escapeHtml(event.description)}</span>
