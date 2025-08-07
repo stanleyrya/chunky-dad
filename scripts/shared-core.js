@@ -394,8 +394,9 @@ class SharedCore {
         
         const date = this.normalizeEventDate(event.startDate);
         const venue = String(event.venue || '').toLowerCase().trim();
+        const source = String(event.source || '').toLowerCase().trim();
         
-        const key = `${title}|${date}|${venue}`;
+        const key = `${title}|${date}|${venue}|${source}`;
         console.log(`🔄 SharedCore: Created event key: "${key}" for event "${event.title}"`);
         
         return key;
@@ -764,9 +765,9 @@ class SharedCore {
         if (event.address && this.isFullAddress(event.address)) {
             // Use address when available and it's a full address
             event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-        } else if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+        } else if (event.location && event.location.lat && event.location.lng) {
             // Fall back to coordinates if no full address
-            event.googleMapsLink = `https://maps.google.com/?q=${event.coordinates.lat},${event.coordinates.lng}`;
+            event.googleMapsLink = `https://maps.google.com/?q=${event.location.lat},${event.location.lng}`;
         }
         
         return event;
@@ -979,9 +980,10 @@ class SharedCore {
             _fieldMergeStrategies: event._fieldMergeStrategies // Preserve field strategies
         };
         
-        // Copy over all other fields that might have merge strategies
+        // Copy over all other fields that might have merge strategies, excluding unwanted fields
+        const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
         Object.keys(event).forEach(key => {
-            if (!key.startsWith('_') && !(key in calendarEvent)) {
+            if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
                 calendarEvent[key] = event[key];
             }
         });
@@ -991,8 +993,8 @@ class SharedCore {
     
     // Format location for calendar (GPS coordinates only)
     formatLocationForCalendar(event) {
-        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-            return `${event.coordinates.lat}, ${event.coordinates.lng}`;
+        if (event.location && event.location.lat && event.location.lng) {
+            return `${event.location.lat}, ${event.location.lng}`;
         }
         return ''; // Never use bar name in location field
     }
@@ -1011,8 +1013,8 @@ class SharedCore {
         
         // Fields to exclude from notes
         const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
-            'isBearEvent', 'setDescription', '_analysis', '_action', 
+            'title', 'startDate', 'endDate', 'location', 'address',
+            'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
             'originalTitle', 'name' // These are usually duplicates of title
         ]);

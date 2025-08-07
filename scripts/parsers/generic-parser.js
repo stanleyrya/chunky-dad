@@ -240,6 +240,7 @@ class GenericParser {
                 startDate: startDate,
                 endDate: null,
                 venue: venue,
+                location: null, // No coordinates available in generic parsing
                 city: city,
                 url: eventUrl,
                 price: price || '',
