@@ -423,13 +423,7 @@ class SharedCore {
             if (key.startsWith('_')) return;
             
             // Get strategy for this field, with field name variations support
-            let strategy = (
-                fieldStrategies[key] !== undefined ? fieldStrategies[key] :
-                fieldStrategies[key.toLowerCase()] !== undefined ? fieldStrategies[key.toLowerCase()] :
-                (key === 'googleMapsLink' && fieldStrategies['gmaps'] !== undefined) ? fieldStrategies['gmaps'] :
-                (key === 'gmaps' && fieldStrategies['googleMapsLink'] !== undefined) ? fieldStrategies['googleMapsLink'] :
-                'upsert'
-            );
+            let strategy = (fieldStrategies[key] !== undefined) ? fieldStrategies[key] : 'upsert';
             
             const existingValue = existingEvent[key] || existingFields[key];
             const newValue = newEvent[key];
@@ -479,9 +473,7 @@ class SharedCore {
         // Helper to apply merge strategy for core calendar fields
         const fieldStrategies = newEvent._fieldMergeStrategies || {};
         const applyStrategy = (fieldName, existingValue, newValue) => {
-            // Allow mapping of strategy keys (location uses 'venue' in strategies)
-            const strategyKey = (fieldName === 'location' && !fieldStrategies[fieldName]) ? 'venue' : fieldName;
-            const strategy = (fieldStrategies[strategyKey] !== undefined) ? fieldStrategies[strategyKey] : 'upsert';
+            const strategy = (fieldStrategies[fieldName] !== undefined) ? fieldStrategies[fieldName] : 'upsert';
             switch (strategy) {
                 case 'clobber':
                     return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;

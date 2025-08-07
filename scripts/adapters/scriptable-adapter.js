@@ -2093,14 +2093,11 @@ class ScriptableAdapter {
                                 // Parse and format notes for better readability
                                 const lines = notes.split('\n');
                                 let formattedHtml = '';
-                                let seenBlank = false;
                                 
                                 lines.forEach(line => {
                                     const trimmed = line.trim();
                                     if (trimmed === '') {
-                                        // Treat first blank line as a simple separator
                                         formattedHtml += '<br>';
-                                        seenBlank = true;
                                         return;
                                     }
                                     
