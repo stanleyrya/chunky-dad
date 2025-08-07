@@ -2711,6 +2711,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 // Replaced with new value
                 flowIcon = '→';
                 resultText = '<span style="color: #ff9500;">NEW</span>';
+            } else if (finalValue === existingValue && existingValue !== newValue) {
+                // Preserved existing value when values differ
+                flowIcon = '←';
+                resultText = '<span style="color: #007aff;">EXISTING</span>';
             } else if (finalValue && finalValue !== existingValue && finalValue !== newValue) {
                 // Merged/combined value
                 flowIcon = '↔';
