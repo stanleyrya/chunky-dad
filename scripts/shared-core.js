@@ -1055,9 +1055,16 @@ class SharedCore {
         
         // Helper function to check if a field should be included
         const shouldIncludeField = (fieldName) => {
-            const strategy = fieldStrategies[fieldName];
-            // Only include if not "preserve" or if it's a new event
-            return strategy !== 'preserve' || event._action === 'new';
+            // For new events, include all fields
+            if (event._action === 'new') {
+                return true;
+            }
+            
+            // For merged events, include all fields that have values
+            // The merge logic has already applied the strategies to determine 
+            // which values to use (existing vs new), so we just need to include
+            // any field that has a value in the merged event
+            return true;
         };
         
         // Fields to exclude from notes
