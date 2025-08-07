@@ -201,65 +201,35 @@ class ScriptableAdapter {
                             console.log(`📱 Scriptable: Merging event: ${event.title}`);
                             const targetEvent = event._existingEvent;
                             
-                            // Use the pre-merged data from shared-core
-                            if (event._mergedNotes) {
-                                // Show detailed diff (already calculated by shared-core)
-                                console.log('\n📊 MERGE DIFF:');
-                                console.log('─'.repeat(60));
-                                
-                                const diff = event._mergeDiff;
-                                
-                                // Show what's being preserved
-                                if (diff.preserved.length > 0) {
-                                    console.log('✅ PRESERVED:');
-                                    diff.preserved.forEach(key => {
-                                        console.log(`   ${key}`);
-                                    });
-                                }
-                                
-                                // Show what's being added
-                                if (diff.added.length > 0) {
-                                    console.log('\n➕ ADDED:');
-                                    diff.added.forEach(({ key, value }) => {
-                                        const displayValue = value.length > 50 ? value.substring(0, 47) + '...' : value;
-                                        console.log(`   ${key}: ${displayValue}`);
-                                    });
-                                }
-                                
-                                // Show what's being updated
-                                if (diff.updated.length > 0) {
-                                    console.log('\n🔄 UPDATED:');
-                                    diff.updated.forEach(({ key, from, to }) => {
-                                        const oldDisplay = from.length > 30 ? from.substring(0, 27) + '...' : from;
-                                        const newDisplay = to.length > 30 ? to.substring(0, 27) + '...' : to;
-                                        console.log(`   ${key}: "${oldDisplay}" → "${newDisplay}"`);
-                                    });
-                                }
-                                
-                                // Show what's being removed (shouldn't happen in merge)
-                                if (diff.removed.length > 0) {
-                                    console.log('\n❌ REMOVED (WARNING - this shouldn\'t happen in merge):');
-                                    diff.removed.forEach(({ key, value }) => {
-                                        console.log(`   ${key}: ${value}`);
-                                    });
-                                }
-                                
-                                console.log('─'.repeat(60));
-                                
-                                // Apply the pre-merged changes
-                                targetEvent.notes = event._mergedNotes;
-                                if (event._mergedUrl) {
-                                    targetEvent.url = event._mergedUrl;
-                                }
-                                // Update location only if new event has coordinates
-                                if (event.location && event.location.includes(',')) {
-                                    targetEvent.location = event.location;
-                                }
-                                await targetEvent.save();
-                                processedCount++;
+                            // Show what changes will be applied
+                            console.log('\n📊 MERGE CHANGES:');
+                            console.log('─'.repeat(60));
+                            
+                            if (event._changes && event._changes.length > 0) {
+                                console.log(`✅ APPLYING CHANGES: ${event._changes.join(', ')}`);
+                                event._changes.forEach(field => {
+                                    const oldValue = targetEvent[field] || '';
+                                    const newValue = event[field] || '';
+                                    const oldDisplay = oldValue.length > 30 ? oldValue.substring(0, 27) + '...' : oldValue;
+                                    const newDisplay = newValue.length > 30 ? newValue.substring(0, 27) + '...' : newValue;
+                                    console.log(`   ${field}: "${oldDisplay}" → "${newDisplay}"`);
+                                });
                             } else {
-                                console.log(`📱 Scriptable: ⚠️ No merged data available for event: ${event.title}`);
+                                console.log('ℹ️  NO CHANGES NEEDED - event already up to date');
                             }
+                            
+                            console.log('─'.repeat(60));
+                            
+                            // Apply the final merged values (event object already contains final values)
+                            targetEvent.title = event.title;
+                            targetEvent.startDate = event.startDate;
+                            targetEvent.endDate = event.endDate;
+                            targetEvent.location = event.location;
+                            targetEvent.notes = event.notes;
+                            targetEvent.url = event.url;
+                            
+                            await targetEvent.save();
+                            processedCount++;
                             break;
                             
                         case 'update':
@@ -2000,22 +1970,22 @@ class ScriptableAdapter {
          *    
          *    • 'merge': Update existing event (uses event._existingEvent as target)
          *      - targetEvent = event._existingEvent (the actual iOS CalendarEvent object)
-         *      - Updates: targetEvent.notes = event._mergedNotes
-         *      - Updates: targetEvent.url = event._mergedUrl (if exists)
-         *      - Updates: targetEvent.location = event.location (if has coordinates)
+         *      - Updates ALL core fields: title, startDate, endDate, location, notes, url
+         *      - Event object contains final merged values (no more _mergedNotes confusion!)
+         *      - Display shows exactly what gets saved
          *      - Calls: await targetEvent.save()
          *    
          *    • 'update': Replace existing event fields (uses event._existingEvent as target)
          *      - updateTarget = event._existingEvent (the actual iOS CalendarEvent object)
          *      - Replaces: updateTarget.title = event.title
-         *      - Replaces: updateTarget.notes = event.notes (NOT _mergedNotes)
+         *      - Replaces: updateTarget.notes = event.notes
          *      - Replaces: updateTarget.location = event.location
          *      - Replaces: updateTarget.url = event.url
          *      - Calls: await updateTarget.save()
          *    
          *    • 'conflict': Skip - no saving occurs
          *    
-         *    CRITICAL: event._existingEvent contains the actual iOS CalendarEvent object that gets saved!
+         *    FIXED: Display now shows exactly what will be saved - no more inconsistencies!
          * 
          * REDUNDANCIES IN EVENT OBJECT:
          * - 'location' field appears both as GPS coordinates AND in 'googleMapsLink'
@@ -2072,8 +2042,8 @@ class ScriptableAdapter {
             minute: '2-digit' 
         }) : '';
         
-        // For merged events, use the merged notes which contain the preserved description
-        const notes = (event._action === 'merge' && event._mergedNotes) ? event._mergedNotes : (event.notes || '');
+        // Use the final notes that will actually be saved
+        const notes = event.notes || '';
         const calendarName = this.getCalendarNameForDisplay(event);
         
         let html = `
@@ -2301,17 +2271,17 @@ class ScriptableAdapter {
                 </div>
             </details>
             
-            ${event._action === 'merge' && event._mergedNotes !== event.notes ? `
+            ${event._original && event._action === 'merge' ? `
             <details style="margin-top: 10px;">
                 <summary style="cursor: pointer; font-size: 13px; color: #ff9500;">🔄 Compare Original vs Merged Notes</summary>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                     <div style="background: #fff3cd; padding: 10px; border-radius: 5px;">
-                        <strong>Original Notes (New Event):</strong>
-                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event.notes || 'No notes')}</pre>
+                        <strong>Before (Existing Event):</strong>
+                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event._original.existing?.notes || 'No notes')}</pre>
                     </div>
                     <div style="background: #d4edda; padding: 10px; border-radius: 5px;">
-                        <strong>Merged Notes (Final):</strong>
-                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event._mergedNotes || 'No notes')}</pre>
+                        <strong>After (Final Result):</strong>
+                        <pre style="font-size: 11px; margin: 5px 0; white-space: pre-wrap;">${this.escapeHtml(event.notes || 'No notes')}</pre>
                     </div>
                 </div>
             </details>

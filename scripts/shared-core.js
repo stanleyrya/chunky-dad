@@ -456,6 +456,71 @@ class SharedCore {
             url: existingEvent.url || newEvent.url
         };
     }
+
+    // NEW: Create complete merged event object that represents exactly what will be saved
+    createFinalEventObject(existingEvent, newEvent) {
+        const fieldStrategies = newEvent._fieldMergeStrategies || {};
+        
+        // Start with existing event as base
+        const finalEvent = {
+            // Core calendar fields that actually get saved
+            title: existingEvent.title,
+            startDate: existingEvent.startDate,
+            endDate: existingEvent.endDate,
+            location: existingEvent.location,
+            notes: existingEvent.notes || '',
+            url: existingEvent.url || '',
+            
+            // Preserve existing event reference for saving
+            _existingEvent: existingEvent,
+            _action: 'merge',
+            
+            // Keep metadata for display
+            city: newEvent.city,
+            key: newEvent.key,
+            source: newEvent.source,
+            _parserConfig: newEvent._parserConfig
+        };
+        
+        // Apply merge strategies to ALL relevant fields
+        const applyStrategy = (field, existingValue, newValue, strategy) => {
+            switch (strategy) {
+                case 'clobber':
+                    return newValue || existingValue;
+                case 'upsert':
+                    return existingValue || newValue;
+                case 'preserve':
+                default:
+                    return existingValue;
+            }
+        };
+        
+        // Apply strategies to core calendar fields
+        finalEvent.title = applyStrategy('title', existingEvent.title, newEvent.title, fieldStrategies.title || 'preserve');
+        finalEvent.location = applyStrategy('location', existingEvent.location, newEvent.location, fieldStrategies.location || 'upsert');
+        finalEvent.url = applyStrategy('url', existingEvent.url, newEvent.url, fieldStrategies.website || fieldStrategies.url || 'upsert');
+        
+        // Handle notes merge (existing complex logic)
+        const mergedData = this.mergeEventData(existingEvent, newEvent);
+        finalEvent.notes = mergedData.notes;
+        
+        // Store comparison data for display
+        finalEvent._original = {
+            existing: { ...existingEvent },
+            new: { ...newEvent }
+        };
+        
+        // Calculate what actually changed
+        const changes = [];
+        if (finalEvent.title !== existingEvent.title) changes.push('title');
+        if (finalEvent.location !== existingEvent.location) changes.push('location');
+        if (finalEvent.url !== existingEvent.url) changes.push('url');
+        if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
+        
+        finalEvent._changes = changes;
+        
+        return finalEvent;
+    }
     
     // Parse notes back into field/value pairs
     parseNotesIntoFields(notes) {
@@ -978,25 +1043,14 @@ class SharedCore {
             };
             analyzedEvent._action = analysis.action;
             
-            // Handle merge action by performing the merge here
+            // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
-                // Perform the merge and store the result
-                const mergedData = this.mergeEventData(analysis.existingEvent, event);
-                
-                // Store merge information for the adapter
-                analyzedEvent._mergedNotes = mergedData.notes;
-                analyzedEvent._mergedUrl = mergedData.url;
-                analyzedEvent._existingEvent = analysis.existingEvent;
-                
-                // Store original data for comparison display
-                analyzedEvent._original = {
-                    new: { ...event },
-                    existing: analysis.existingEvent
-                };
+                // Create final merged event that represents exactly what will be saved
+                analyzedEvent = this.createFinalEventObject(analysis.existingEvent, event);
                 
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
-                const mergedFields = this.parseNotesIntoFields(mergedData.notes);
+                const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes);
                 
                 analyzedEvent._mergeDiff = {
                     preserved: [],
