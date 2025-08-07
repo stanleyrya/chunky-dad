@@ -993,10 +993,7 @@ class SharedCore {
     
     // Format location for calendar (GPS coordinates only)
     formatLocationForCalendar(event) {
-        if (event.location && typeof event.location === 'string') {
-            return event.location; // Location is stored as "lat,lng" string for calendar
-        }
-        return ''; // Never use bar name in location field
+        return event.location || ''; // Location is already stored as "lat,lng" string for calendar
     }
     
     // Format event notes with all metadata in key-value format
