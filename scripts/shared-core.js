@@ -615,9 +615,7 @@ class SharedCore {
                 const strategy = finalEvent._fieldMergeStrategies[fieldName];
                 // Only add fields that were preserved (not overridden by new values)
                 if (strategy === 'preserve' && !finalEvent[fieldName]) {
-                    // Canonicalize common variants (e.g., Instagram -> instagram)
-                    const canonicalFieldName = (fieldName.toLowerCase() === 'instagram') ? 'instagram' : fieldName;
-                    finalEvent[canonicalFieldName] = fieldInfo.value;
+                    finalEvent[fieldName] = fieldInfo.value;
                 }
             });
         }
