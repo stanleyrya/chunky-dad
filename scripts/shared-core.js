@@ -598,22 +598,18 @@ class SharedCore {
         }
         
         // Calculate what actually changed
-        const areSameDate = (a, b) => {
-            try {
-                if (!a && !b) return true;
-                if (!a || !b) return false;
-                const da = new Date(a);
-                const db = new Date(b);
-                if (isNaN(da) || isNaN(db)) return a === b;
-                return this.areDatesEqual(da, db, 1);
-            } catch (_) {
-                return a === b;
-            }
+        const sameInstant = (a, b) => {
+            if (!a && !b) return true;
+            if (!a || !b) return false;
+            const da = new Date(a);
+            const db = new Date(b);
+            if (isNaN(da) || isNaN(db)) return String(a) === String(b);
+            return da.getTime() === db.getTime();
         };
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
-        if (!areSameDate(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
-        if (!areSameDate(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
+        if (!sameInstant(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
+        if (!sameInstant(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         if (finalEvent.url !== existingEvent.url) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
