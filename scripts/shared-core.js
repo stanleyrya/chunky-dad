@@ -600,8 +600,11 @@ class SharedCore {
         // Calculate what actually changed
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
-        if (finalEvent.startDate !== existingEvent.startDate) changes.push('startDate');
-        if (finalEvent.endDate !== existingEvent.endDate) changes.push('endDate');
+        
+        // Inline date equality checks using Date.toString()
+        if (!(String(new Date(finalEvent.startDate)) === String(new Date(existingEvent.startDate)))) changes.push('startDate');
+        if (!(String(new Date(finalEvent.endDate)) === String(new Date(existingEvent.endDate)))) changes.push('endDate');
+        
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         if (finalEvent.url !== existingEvent.url) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
@@ -831,23 +834,31 @@ class SharedCore {
             event.city = this.extractCityFromEvent(event);
         }
         
-        // Add Google Maps link - prefer address over coordinates
+        // Only generate Google Maps link for full addresses
         if (event.address && this.isFullAddress(event.address)) {
-            // Use address when available and it's a full address
             event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-        } else if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-            // Fall back to coordinates if no full address (location stored as "lat,lng" string)
-            event.googleMapsLink = `https://maps.google.com/?q=${event.location}`;
+        } else if (!event.address) {
+            // No address provided: fall back to coordinates if available
+            if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
+                event.googleMapsLink = `https://maps.google.com/?q=${event.location}`;
+            } else {
+                delete event.googleMapsLink;
+                event.location = null;
+            }
+        } else {
+            // Address present but not full (placeholder): disable maps and coordinates
+            delete event.googleMapsLink;
+            event.location = null;
         }
         
         return event;
     }
     
-
     
-    // ============================================================================
+    
+    // =========================================================================
     // CITY UTILITIES - Shared location detection and mapping
-    // ============================================================================
+    // =========================================================================
     
     // Check if an address is a full address (not just a city or region)
     isFullAddress(address) {
@@ -865,7 +876,7 @@ class SharedCore {
         // Check for partial addresses that are just area/neighborhood + city + zip
         // Examples: "DTLA Los Angeles, CA 90013", "Downtown Denver, CO 80202"
         const partialAddressPatterns = [
-            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s+[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
+            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
             /^[A-Za-z\s]+\s+(District|Area|Zone|Neighborhood)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i
         ];
         
@@ -877,8 +888,7 @@ class SharedCore {
         // Check for common full address patterns
         const fullAddressPatterns = [
             /\d+\s+\w+.*street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i,
-            /\d+\s+\w+.*\s+\w+/i, // Number + words (likely street address)
-            /\w+.*,\s*\w+.*,\s*\w+/i // Multiple comma-separated components
+            /\d+\s+\w+.*\s+\w+/i // Number + words (likely street address)
         ];
         
         // Must contain at least one full address pattern

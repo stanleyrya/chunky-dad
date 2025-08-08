@@ -261,7 +261,7 @@ class EventbriteParser {
                     console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
                     console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
-                    // Extract coordinates if available (shared core will validate address later)
+                    // Extract coordinates if available; shared-core will later suppress for placeholders
                     if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
                         coordinates = {
                             lat: eventData.venue.address.latitude,
@@ -498,8 +498,6 @@ class EventbriteParser {
                 })
             };
             
-            return event;
-            
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
             return null;
@@ -554,11 +552,11 @@ class EventbriteParser {
             // Fallback: Try to extract URLs from JSON-LD structured data
             if (urls.size === 0) {
                 console.log('🎫 Eventbrite: No URLs found in server data, trying JSON-LD fallback');
-                const jsonLdMatch = html.match(/"url":"(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"/g);
+                const jsonLdMatch = html.match(/"url":"(https:\/\/www\.eventbrite\.com\/e\/[^\"]+)"/g);
                 
                 if (jsonLdMatch) {
                     jsonLdMatch.forEach(match => {
-                        const urlMatch = match.match(/"url":"([^"]+)"/);
+                        const urlMatch = match.match(/"url":"([^\"]+)"/);
                         if (urlMatch && urlMatch[1]) {
                             const eventUrl = urlMatch[1];
                             if (this.isValidEventUrl(eventUrl, parserConfig)) {
@@ -578,135 +576,135 @@ class EventbriteParser {
         
         return Array.from(urls).slice(0, 20); // Limit to 20 additional links per page
     }
-
-    // Validate if URL is a valid event URL
-    isValidEventUrl(url, parserConfig) {
-        if (!url || typeof url !== 'string') return false;
-        
-        try {
-            const urlObj = new URL(url);
-            
-            // Must be Eventbrite domain
-            if (!urlObj.hostname.includes('eventbrite.com')) return false;
-            
-            // Must be event page
-            if (!urlObj.pathname.includes('/e/')) return false;
-            
-            // Apply URL filters if configured
-            if (parserConfig.urlFilters) {
-                if (parserConfig.urlFilters.include) {
-                    const includePatterns = Array.isArray(parserConfig.urlFilters.include) ? 
-                        parserConfig.urlFilters.include : [parserConfig.urlFilters.include];
-                    
-                    const matchesInclude = includePatterns.some(pattern => 
-                        new RegExp(pattern, 'i').test(url)
-                    );
-                    
-                    if (!matchesInclude) return false;
-                }
-                
-                if (parserConfig.urlFilters.exclude) {
-                    const excludePatterns = Array.isArray(parserConfig.urlFilters.exclude) ? 
-                        parserConfig.urlFilters.exclude : [parserConfig.urlFilters.exclude];
-                    
-                    const matchesExclude = excludePatterns.some(pattern => 
-                        new RegExp(pattern, 'i').test(url)
-                    );
-                    
-                    if (matchesExclude) return false;
-                }
-            }
-            
-            return true;
-            
-        } catch (error) {
-            return false;
-        }
-    }
-
-    // Extract city from event data or URL
-    extractCityFromEvent(eventData, url) {
-        // Try venue address first
-        if (eventData.venue?.address) {
-            const address = eventData.venue.address;
-            const cityFromAddress = address.city || address.localized_area_display || '';
-            if (cityFromAddress) {
-                return this.normalizeCityName(cityFromAddress);
-            }
-        }
-        
-        // Try extracting from text
-        const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
-        return this.extractCityFromText(searchText);
-    }
-
-
-
-    // Normalize city names
-    normalizeCityName(cityName) {
-        const normalizations = {
-            'new york': 'nyc',
-            'new york city': 'nyc',
-            'manhattan': 'nyc',
-            'los angeles': 'la',
-            'san francisco': 'sf',
-            'las vegas': 'vegas'
-        };
-        
-        const lower = cityName.toLowerCase();
-        return normalizations[lower] || lower;
-    }
-
-    // Normalize URLs
-    normalizeUrl(url, baseUrl) {
-        if (!url) return null;
-        
-        // Remove HTML entities
-        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        
-        // Handle relative URLs
-        if (url.startsWith('/')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}//${base.host}${url}`;
-        }
-        
-        // Handle protocol-relative URLs
-        if (url.startsWith('//')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}${url}`;
-        }
-        
-        return url;
-    }
-
-    // Check if an event is a bear event based on keywords and title
-    isBearEvent(event) {
-        // Handle title objects (from Eventbrite JSON) vs strings
-        const title = typeof event.title === 'object' && event.title.text ? event.title.text : (event.title || '');
-        const description = event.description || '';
-        const venue = event.venue || '';
-        const url = event.url || '';
-
-        // Check if the title, description, venue, or URL contains bear keywords
-        if (this.bearKeywords.some(keyword => 
-            title.toLowerCase().includes(keyword) || 
-            description.toLowerCase().includes(keyword) || 
-            venue.toLowerCase().includes(keyword) || 
-            url.toLowerCase().includes(keyword)
-        )) {
-            return true;
-        }
-
-        return false;
-    }
-}
-
-// Export for both environments
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { EventbriteParser };
-} else if (typeof window !== 'undefined') {
-    window.EventbriteParser = EventbriteParser;
-} else {
-    // Scriptable environment
-    this.EventbriteParser = EventbriteParser;
-}
+ 
+     // Validate if URL is a valid event URL
+     isValidEventUrl(url, parserConfig) {
+         if (!url || typeof url !== 'string') return false;
+         
+         try {
+             const urlObj = new URL(url);
+             
+             // Must be Eventbrite domain
+             if (!urlObj.hostname.includes('eventbrite.com')) return false;
+             
+             // Must be event page
+             if (!urlObj.pathname.includes('/e/')) return false;
+             
+             // Apply URL filters if configured
+             if (parserConfig.urlFilters) {
+                 if (parserConfig.urlFilters.include) {
+                     const includePatterns = Array.isArray(parserConfig.urlFilters.include) ? 
+                         parserConfig.urlFilters.include : [parserConfig.urlFilters.include];
+                     
+                     const matchesInclude = includePatterns.some(pattern => 
+                         new RegExp(pattern, 'i').test(url)
+                     );
+                     
+                     if (!matchesInclude) return false;
+                 }
+                 
+                 if (parserConfig.urlFilters.exclude) {
+                     const excludePatterns = Array.isArray(parserConfig.urlFilters.exclude) ? 
+                         parserConfig.urlFilters.exclude : [parserConfig.urlFilters.exclude];
+                     
+                     const matchesExclude = excludePatterns.some(pattern => 
+                         new RegExp(pattern, 'i').test(url)
+                     );
+                     
+                     if (matchesExclude) return false;
+                 }
+             }
+             
+             return true;
+             
+         } catch (error) {
+             return false;
+         }
+     }
+ 
+     // Extract city from event data or URL
+     extractCityFromEvent(eventData, url) {
+         // Try venue address first
+         if (eventData.venue?.address) {
+             const address = eventData.venue.address;
+             const cityFromAddress = address.city || address.localized_area_display || '';
+             if (cityFromAddress) {
+                 return this.normalizeCityName(cityFromAddress);
+             }
+         }
+         
+         // Try extracting from text
+         const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
+         return this.extractCityFromText(searchText);
+     }
+ 
+ 
+ 
+     // Normalize city names
+     normalizeCityName(cityName) {
+         const normalizations = {
+             'new york': 'nyc',
+             'new york city': 'nyc',
+             'manhattan': 'nyc',
+             'los angeles': 'la',
+             'san francisco': 'sf',
+             'las vegas': 'vegas'
+         };
+         
+         const lower = cityName.toLowerCase();
+         return normalizations[lower] || lower;
+     }
+ 
+     // Normalize URLs
+     normalizeUrl(url, baseUrl) {
+         if (!url) return null;
+         
+         // Remove HTML entities
+         url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+         
+         // Handle relative URLs
+         if (url.startsWith('/')) {
+             const base = new URL(baseUrl);
+             return `${base.protocol}//${base.host}${url}`;
+         }
+         
+         // Handle protocol-relative URLs
+         if (url.startsWith('//')) {
+             const base = new URL(baseUrl);
+             return `${base.protocol}${url}`;
+         }
+         
+         return url;
+     }
+ 
+     // Check if an event is a bear event based on keywords and title
+     isBearEvent(event) {
+         // Handle title objects (from Eventbrite JSON) vs strings
+         const title = typeof event.title === 'object' && event.title.text ? event.title.text : (event.title || '');
+         const description = event.description || '';
+         const venue = event.venue || '';
+         const url = event.url || '';
+ 
+         // Check if the title, description, venue, or URL contains bear keywords
+         if (this.bearKeywords.some(keyword => 
+             title.toLowerCase().includes(keyword) || 
+             description.toLowerCase().includes(keyword) || 
+             venue.toLowerCase().includes(keyword) || 
+             url.toLowerCase().includes(keyword)
+         )) {
+             return true;
+         }
+ 
+         return false;
+     }
+ }
+ 
+ // Export for both environments
+ if (typeof module !== 'undefined' && module.exports) {
+     module.exports = { EventbriteParser };
+ } else if (typeof window !== 'undefined') {
+     window.EventbriteParser = EventbriteParser;
+ } else {
+     // Scriptable environment
+     this.EventbriteParser = EventbriteParser;
+ }
