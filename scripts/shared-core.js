@@ -601,39 +601,9 @@ class SharedCore {
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
         
-        // Inline date equality for startDate using ISO strings
-        {
-            const a = finalEvent.startDate;
-            const b = existingEvent.startDate;
-            let equal = false;
-            if (!a && !b) {
-                equal = true;
-            } else if (!a || !b) {
-                equal = false;
-            } else {
-                const da = new Date(a);
-                const db = new Date(b);
-                equal = (!isNaN(da) && !isNaN(db)) ? (da.toISOString() === db.toISOString()) : (String(a) === String(b));
-            }
-            if (!equal) changes.push('startDate');
-        }
-        
-        // Inline date equality for endDate using ISO strings
-        {
-            const a = finalEvent.endDate;
-            const b = existingEvent.endDate;
-            let equal = false;
-            if (!a && !b) {
-                equal = true;
-            } else if (!a || !b) {
-                equal = false;
-            } else {
-                const da = new Date(a);
-                const db = new Date(b);
-                equal = (!isNaN(da) && !isNaN(db)) ? (da.toISOString() === db.toISOString()) : (String(a) === String(b));
-            }
-            if (!equal) changes.push('endDate');
-        }
+        // Inline date equality checks using Date.toString()
+        if (!(String(new Date(finalEvent.startDate)) === String(new Date(existingEvent.startDate)))) changes.push('startDate');
+        if (!(String(new Date(finalEvent.endDate)) === String(new Date(existingEvent.endDate)))) changes.push('endDate');
         
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         if (finalEvent.url !== existingEvent.url) changes.push('url');
