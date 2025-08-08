@@ -98,6 +98,11 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
   - UI components (Alert, Notification classes)
 - **AI-Proofing**: Each file has specific restrictions - read file headers before editing
 
+### Canonicalization & Display Rules (scripts/ only)
+- Scope: These rules apply ONLY to files under `scripts/` (parsers, adapters, shared-core).
+- Only canonicalize field names when parsing source data and when reading from calendar notes. No other per-field special logic.
+- Display and comparisons must use the exact event object that will be saved. Never add custom display-time logic that alters fields.
+
 ## Project-Specific Notes
 - Bear community focus - inclusive, welcoming tone
 - Event calendar needs regular updates

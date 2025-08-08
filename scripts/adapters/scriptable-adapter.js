@@ -2020,9 +2020,9 @@ class ScriptableAdapter {
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
                 ${event.description ? `
-                    <div class="event-detail" style="background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;">
+                    <div class=\"event-detail\" style=\"background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;\">
                         <span>📝</span>
-                        <span style="font-style: italic;">${this.escapeHtml(event.description)}</span>
+                        <span style=\"font-style: italic;\">${this.escapeHtml(event.description)}</span>
                     </div>
                 ` : ''}
                 ${event.tea ? `

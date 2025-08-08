@@ -650,6 +650,22 @@ class SharedCore {
             'short title': 'shortTitle',
             'shorttitle': 'shortTitle',
             
+            // Social/web aliases (canonicalize case and common variants)
+            'instagram': 'instagram',
+            'ig': 'instagram',
+            'facebook': 'facebook',
+            'fb': 'facebook',
+            'website': 'website',
+            'site': 'website',
+            'twitter': 'twitter',
+            'xtwitter': 'twitter',
+            'x': 'twitter',
+            'email': 'email',
+            'e-mail': 'email',
+            'phone': 'phone',
+            'phonenumber': 'phone',
+            'phone number': 'phone',
+            
             // Social/web aliases
             'gmaps': 'googleMapsLink',
             'googlemaps': 'googleMapsLink',
@@ -1021,12 +1037,22 @@ class SharedCore {
     
     // Format event for calendar integration
     formatEventForCalendar(event) {
+        // Build a view of the event that excludes fields explicitly marked as 'preserve'
+        const strategies = event._fieldMergeStrategies || {};
+        const eventForNotes = { ...event };
+        Object.keys(eventForNotes).forEach(key => {
+            if (!key.startsWith('_') && strategies[key] === 'preserve') {
+                delete eventForNotes[key];
+            }
+        });
+        
         const calendarEvent = {
             title: event.title || event.name || 'Untitled Event',
             startDate: event.startDate,
             endDate: event.endDate || event.startDate,
             location: event.location,
-            notes: this.formatEventNotes(event),
+            // Notes should reflect exactly what will be saved for NEW events (no 'preserve' fields)
+            notes: this.formatEventNotes(eventForNotes),
             // Don't use url field - it goes in notes instead
             city: event.city || 'default', // Include city for calendar selection
             key: event.key, // Key should already be set during deduplication
@@ -1034,10 +1060,11 @@ class SharedCore {
             _fieldMergeStrategies: event._fieldMergeStrategies // Preserve field strategies
         };
         
-        // Copy over all other fields that might have merge strategies, excluding unwanted fields
+        // Copy over all other fields except those explicitly marked as 'preserve'
         const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
         Object.keys(event).forEach(key => {
             if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
+                if (strategies[key] === 'preserve') return;
                 // Only copy fields that have values and should be included
                 if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
                     calendarEvent[key] = event[key];
