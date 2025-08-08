@@ -601,9 +601,9 @@ class SharedCore {
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
         
-        // Inline date equality checks using Date.toString()
-        if (!(String(new Date(finalEvent.startDate)) === String(new Date(existingEvent.startDate)))) changes.push('startDate');
-        if (!(String(new Date(finalEvent.endDate)) === String(new Date(existingEvent.endDate)))) changes.push('endDate');
+        // Inline date equality checks using display-aware comparison
+        if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
+        if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         if (finalEvent.url !== existingEvent.url) changes.push('url');
@@ -737,6 +737,23 @@ class SharedCore {
         }
     }
 
+    // Compare two date inputs for display equality, avoiding timezone-related false diffs
+    datesEqualForDisplay(a, b) {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        const da = new Date(a);
+        const db = new Date(b);
+        if (isNaN(da.getTime()) || isNaN(db.getTime())) {
+            return String(a) === String(b);
+        }
+        if (da.getTime() === db.getTime()) return true;
+        try {
+            return da.toLocaleString() === db.toLocaleString();
+        } catch (e) {
+            return da.toString() === db.toString();
+        }
+    }
+
     // URL processing utilities
     extractUrls(html, patterns, baseUrl) {
         const urls = new Set();
@@ -849,6 +866,7 @@ class SharedCore {
             // Address present but not full (placeholder): disable maps and coordinates
             delete event.googleMapsLink;
             event.location = null;
+            delete event.address;
         }
         
         return event;
