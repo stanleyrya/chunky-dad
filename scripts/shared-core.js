@@ -598,18 +598,43 @@ class SharedCore {
         }
         
         // Calculate what actually changed
-        const sameInstant = (a, b) => {
-            if (!a && !b) return true;
-            if (!a || !b) return false;
-            const da = new Date(a);
-            const db = new Date(b);
-            if (isNaN(da) || isNaN(db)) return String(a) === String(b);
-            return da.toISOString() === db.toISOString();
-        };
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
-        if (!sameInstant(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
-        if (!sameInstant(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
+        
+        // Inline date equality for startDate using ISO strings
+        {
+            const a = finalEvent.startDate;
+            const b = existingEvent.startDate;
+            let equal = false;
+            if (!a && !b) {
+                equal = true;
+            } else if (!a || !b) {
+                equal = false;
+            } else {
+                const da = new Date(a);
+                const db = new Date(b);
+                equal = (!isNaN(da) && !isNaN(db)) ? (da.toISOString() === db.toISOString()) : (String(a) === String(b));
+            }
+            if (!equal) changes.push('startDate');
+        }
+        
+        // Inline date equality for endDate using ISO strings
+        {
+            const a = finalEvent.endDate;
+            const b = existingEvent.endDate;
+            let equal = false;
+            if (!a && !b) {
+                equal = true;
+            } else if (!a || !b) {
+                equal = false;
+            } else {
+                const da = new Date(a);
+                const db = new Date(b);
+                equal = (!isNaN(da) && !isNaN(db)) ? (da.toISOString() === db.toISOString()) : (String(a) === String(b));
+            }
+            if (!equal) changes.push('endDate');
+        }
+        
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         if (finalEvent.url !== existingEvent.url) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
