@@ -837,8 +837,16 @@ class SharedCore {
         // Only generate Google Maps link for full addresses
         if (event.address && this.isFullAddress(event.address)) {
             event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+        } else if (!event.address) {
+            // No address provided: fall back to coordinates if available
+            if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
+                event.googleMapsLink = `https://maps.google.com/?q=${event.location}`;
+            } else {
+                delete event.googleMapsLink;
+                event.location = null;
+            }
         } else {
-            // Address is missing or not full: do not expose maps link or coordinates
+            // Address present but not full (placeholder): disable maps and coordinates
             delete event.googleMapsLink;
             event.location = null;
         }
@@ -862,11 +870,6 @@ class SharedCore {
         
         // Check for TBA or similar placeholder values
         if (/^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(cleanAddress)) {
-            return false;
-        }
-        
-        // Explicitly handle common placeholder formats like "DTLA, Los Angeles, CA 90013"
-        if (/^DTLA\s*,?\s*Los Angeles,\s*CA\b/i.test(cleanAddress)) {
             return false;
         }
         
