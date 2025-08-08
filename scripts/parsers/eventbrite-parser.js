@@ -261,25 +261,12 @@ class EventbriteParser {
                     console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
                     console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
-                    // Detect placeholder venue/address values
-                    const isPlaceholderAddress = (addr) => {
-                        if (!addr) return false; // absence of address is not a placeholder by itself
-                        const a = String(addr).trim();
-                        if (!a) return false;
-                        if (/^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(a)) return true;
-                        if (/^DTLA\s*,?\s*Los Angeles,\s*CA\b/i.test(a)) return true;
-                        return false;
-                    };
-                    const isPlaceholderVenue = (v) => !!(v && /^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(String(v).trim()));
-                    
-                    // Extract coordinates only if not placeholders
-                    if (!isPlaceholderVenue(venue) && !isPlaceholderAddress(address)) {
-                        if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
-                            coordinates = {
-                                lat: eventData.venue.address.latitude,
-                                lng: eventData.venue.address.longitude
-                            };
-                        }
+                    // Extract coordinates if available; shared-core will later suppress for placeholders
+                    if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
+                        coordinates = {
+                            lat: eventData.venue.address.latitude,
+                            lng: eventData.venue.address.longitude
+                        };
                     }
                 }
             }

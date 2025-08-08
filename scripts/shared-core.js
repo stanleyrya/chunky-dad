@@ -843,6 +843,39 @@ class SharedCore {
             event.city = this.extractCityFromEvent(event);
         }
         
+        // Centralized placeholder detection
+        const isPlaceholderString = (str) => {
+            if (!str || typeof str !== 'string') return false;
+            return /^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(str.trim());
+        };
+        const isNeighborhoodPlaceholder = (addr) => {
+            if (!addr || typeof addr !== 'string') return false;
+            const a = addr.trim();
+            // Explicit DTLA LA placeholder and common neighborhood+city+zip placeholders
+            if (/^DTLA\s*,?\s*Los Angeles,\s*CA\b/i.test(a)) return true;
+            const partialAddressPatterns = [
+                /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
+                /^[A-Za-z\s]+\s+(District|Area|Zone|Neighborhood)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i
+            ];
+            return partialAddressPatterns.some(p => p.test(a));
+        };
+        const isPlaceholderAddress = (addr) => {
+            if (!addr || typeof addr !== 'string') return false;
+            const a = addr.trim();
+            if (!a) return false;
+            if (isPlaceholderString(a)) return true;
+            if (isNeighborhoodPlaceholder(a)) return true;
+            return false;
+        };
+        const isPlaceholderVenue = (venue) => isPlaceholderString(venue);
+        
+        // If placeholder address/venue, suppress coordinates and map link
+        if (isPlaceholderVenue(event.venue) || isPlaceholderAddress(event.address)) {
+            event.location = null;
+            delete event.googleMapsLink;
+            return event;
+        }
+        
         // Add Google Maps link - prefer address over coordinates
         if (event.address && this.isFullAddress(event.address)) {
             // Use address when available and it's a full address
@@ -855,11 +888,11 @@ class SharedCore {
         return event;
     }
     
-
     
-    // ============================================================================
+    
+    // =========================================================================
     // CITY UTILITIES - Shared location detection and mapping
-    // ============================================================================
+    // =========================================================================
     
     // Check if an address is a full address (not just a city or region)
     isFullAddress(address) {
