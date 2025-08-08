@@ -2019,10 +2019,10 @@ class ScriptableAdapter {
                     <span>📱</span>
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
-                ${(event.description && (event._action === 'merge' || (event._fieldMergeStrategies?.description !== 'preserve'))) ? `
-                    <div class="event-detail" style="background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;">
+                ${event.description ? `
+                    <div class=\"event-detail\" style=\"background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;\">
                         <span>📝</span>
-                        <span style="font-style: italic;">${this.escapeHtml(event.description)}</span>
+                        <span style=\"font-style: italic;\">${this.escapeHtml(event.description)}</span>
                     </div>
                 ` : ''}
                 ${event.tea ? `

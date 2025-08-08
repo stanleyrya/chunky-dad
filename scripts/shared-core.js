@@ -1139,16 +1139,6 @@ class SharedCore {
             };
             analyzedEvent._action = analysis.action;
             
-            // If description strategy is preserve and this is not a merge, suppress description in display/notes
-            if (analyzedEvent._fieldMergeStrategies?.description === 'preserve' && analysis.action !== 'merge') {
-                if (analyzedEvent.description) {
-                    // Remove description so it won't appear in cards or notes preview
-                    delete analyzedEvent.description;
-                    // Rebuild notes without description
-                    analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
-                }
-            }
-            
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Create final merged event that represents exactly what will be saved
