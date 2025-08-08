@@ -2929,54 +2929,61 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 return val.toString();
             };
             
-            html += `<div style="margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">`;
-            html += `<div style="font-weight: bold; color: #333; margin-bottom: 5px;">${field} (${strategy}):</div>`;
-            
             // Determine what happened with this field
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
             const isNew = !existingValue && newValue;
             const isUnchanged = existingValue && !newValue;
-            const isReplaced = existingValue && newValue && finalValue === newValue;
-            const isKept = existingValue && newValue && finalValue === existingValue;
-            const isMerged = existingValue && newValue && finalValue && finalValue !== existingValue && finalValue !== newValue;
+            
+            const isDateField = field.toLowerCase().includes('date');
+            const equalForDisplay = isDateField ? this.datesEqualForDisplay(existingValue, newValue) : (existingValue === newValue);
+            const isSame = existingValue && newValue && equalForDisplay;
+            
+            const isReplaced = existingValue && newValue && (finalValue === newValue) && !equalForDisplay;
+            const isKept = existingValue && newValue && (finalValue === existingValue) && !equalForDisplay;
+            const isMerged = existingValue && newValue && finalValue && (finalValue !== existingValue) && (finalValue !== newValue) && !equalForDisplay;
             
             // Show git-style diff
             if (isNew) {
                 // Only new value exists - show as addition
                 html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
-                html += `<span style="color: #28a745;">+</span> ${this.escapeHtml(formatValue(newValue))}`;
+                html += `<span style=\"color: #28a745;\">+</span> ${this.escapeHtml(formatValue(newValue))}`;
                 html += `</div>`;
             } else if (isUnchanged) {
                 // Only existing value exists - show as context (orange)
-                html += `<div style="background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;">`;
-                html += `<span style="color: #ff9500;"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style="color: #666;">(existing)</em>`;
+                html += `<div style=\"background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;\">`;
+                html += `<span style=\"color: #ff9500;\"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666;\">(existing)</em>`;
+                html += `</div>`;
+            } else if (isSame) {
+                // Existing and new are the same for display - avoid +/- noise
+                html += `<div style=\"background: #f0f0f0; padding: 5px; margin: 2px 0; border-left: 3px solid #999;\">`;
+                html += `<span style=\"color: #999;\"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666;\">(same)</em>`;
                 html += `</div>`;
             } else if (isReplaced) {
                 // Value was replaced - show old as deletion, new as addition
-                html += `<div style="background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;">`;
-                html += `<span style="color: #d73a49;">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
+                html += `<div style=\"background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;\">`;
+                html += `<span style=\"color: #d73a49;\">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
                 html += `</div>`;
-                html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
-                html += `<span style="color: #28a745;">+</span> ${this.escapeHtml(formatValue(newValue))}`;
+                html += `<div style=\"background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;\">`;
+                html += `<span style=\"color: #28a745;\">+</span> ${this.escapeHtml(formatValue(newValue))}`;
                 html += `</div>`;
             } else if (isKept) {
                 // New value exists but existing was kept - show both with context
-                html += `<div style="background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;">`;
-                html += `<span style="color: #ff9500;"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style="color: #666;">(kept existing)</em>`;
+                html += `<div style=\"background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;\">`;
+                html += `<span style=\"color: #ff9500;\"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666;\">(kept existing)</em>`;
                 html += `</div>`;
-                html += `<div style="background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999; opacity: 0.6;">`;
-                html += `<span style="color: #999;">~</span> ${this.escapeHtml(formatValue(newValue))} <em style="color: #666;">(new value ignored)</em>`;
+                html += `<div style=\"background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999; opacity: 0.6;\">`;
+                html += `<span style=\"color: #999;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666;\">(new value ignored)</em>`;
                 html += `</div>`;
             } else if (isMerged) {
                 // Values were merged - show all three
-                html += `<div style="background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;">`;
-                html += `<span style="color: #d73a49;">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
+                html += `<div style=\"background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;\">`;
+                html += `<span style=\"color: #d73a49;\">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
                 html += `</div>`;
-                html += `<div style="background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999;">`;
-                html += `<span style="color: #999;">~</span> ${this.escapeHtml(formatValue(newValue))} <em style="color: #666;">(proposed)</em>`;
+                html += `<div style=\"background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999;\">`;
+                html += `<span style=\"color: #999;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666;\">(proposed)</em>`;
                 html += `</div>`;
-                html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
-                html += `<span style="color: #28a745;">+</span> ${this.escapeHtml(formatValue(finalValue))} <em style="color: #666;">(merged result)</em>`;
+                html += `<div style=\"background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;\">`;
+                html += `<span style=\"color: #28a745;\">+</span> ${this.escapeHtml(formatValue(finalValue))} <em style=\"color: #666;\">(merged result)</em>`;
                 html += `</div>`;
             }
             
@@ -2985,6 +2992,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         html += '</div>';
         return html;
+    }
+
+    // Compare two date inputs for display equality, avoiding timezone-related false diffs
+    datesEqualForDisplay(a, b) {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        const da = new Date(a);
+        const db = new Date(b);
+        if (isNaN(da.getTime()) || isNaN(db.getTime())) {
+            return String(a) === String(b);
+        }
+        if (da.getTime() === db.getTime()) return true;
+        try {
+            return da.toLocaleString() === db.toLocaleString();
+        } catch (e) {
+            return da.toString() === db.toString();
+        }
     }
 
     // Prompt user for calendar execution after displaying results
