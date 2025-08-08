@@ -598,10 +598,22 @@ class SharedCore {
         }
         
         // Calculate what actually changed
+        const areSameDate = (a, b) => {
+            try {
+                if (!a && !b) return true;
+                if (!a || !b) return false;
+                const da = new Date(a);
+                const db = new Date(b);
+                if (isNaN(da) || isNaN(db)) return a === b;
+                return this.areDatesEqual(da, db, 1);
+            } catch (_) {
+                return a === b;
+            }
+        };
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
-        if (finalEvent.startDate !== existingEvent.startDate) changes.push('startDate');
-        if (finalEvent.endDate !== existingEvent.endDate) changes.push('endDate');
+        if (!areSameDate(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
+        if (!areSameDate(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
         if (finalEvent.url !== existingEvent.url) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
@@ -862,10 +874,15 @@ class SharedCore {
             return false;
         }
         
+        // Explicitly handle common placeholder formats like "DTLA, Los Angeles, CA 90013"
+        if (/^DTLA\s*,?\s*Los Angeles,\s*CA\b/i.test(cleanAddress)) {
+            return false;
+        }
+        
         // Check for partial addresses that are just area/neighborhood + city + zip
         // Examples: "DTLA Los Angeles, CA 90013", "Downtown Denver, CO 80202"
         const partialAddressPatterns = [
-            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s+[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
+            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
             /^[A-Za-z\s]+\s+(District|Area|Zone|Neighborhood)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i
         ];
         
@@ -877,8 +894,7 @@ class SharedCore {
         // Check for common full address patterns
         const fullAddressPatterns = [
             /\d+\s+\w+.*street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i,
-            /\d+\s+\w+.*\s+\w+/i, // Number + words (likely street address)
-            /\w+.*,\s*\w+.*,\s*\w+/i // Multiple comma-separated components
+            /\d+\s+\w+.*\s+\w+/i // Number + words (likely street address)
         ];
         
         // Must contain at least one full address pattern
