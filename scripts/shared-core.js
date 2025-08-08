@@ -604,7 +604,7 @@ class SharedCore {
             const da = new Date(a);
             const db = new Date(b);
             if (isNaN(da) || isNaN(db)) return String(a) === String(b);
-            return da.getTime() === db.getTime();
+            return da.toISOString() === db.toISOString();
         };
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
