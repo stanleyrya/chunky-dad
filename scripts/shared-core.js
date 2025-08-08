@@ -615,7 +615,9 @@ class SharedCore {
                 const strategy = finalEvent._fieldMergeStrategies[fieldName];
                 // Only add fields that were preserved (not overridden by new values)
                 if (strategy === 'preserve' && !finalEvent[fieldName]) {
-                    finalEvent[fieldName] = fieldInfo.value;
+                    // Canonicalize common variants (e.g., Instagram -> instagram)
+                    const canonicalFieldName = (fieldName.toLowerCase() === 'instagram') ? 'instagram' : fieldName;
+                    finalEvent[canonicalFieldName] = fieldInfo.value;
                 }
             });
         }
@@ -649,6 +651,22 @@ class SharedCore {
             'shorter name': 'shortTitle',
             'short title': 'shortTitle',
             'shorttitle': 'shortTitle',
+            
+            // Social/web aliases (canonicalize case and common variants)
+            'instagram': 'instagram',
+            'ig': 'instagram',
+            'facebook': 'facebook',
+            'fb': 'facebook',
+            'website': 'website',
+            'site': 'website',
+            'twitter': 'twitter',
+            'xtwitter': 'twitter',
+            'x': 'twitter',
+            'email': 'email',
+            'e-mail': 'email',
+            'phone': 'phone',
+            'phonenumber': 'phone',
+            'phone number': 'phone',
             
             // Social/web aliases
             'gmaps': 'googleMapsLink',
@@ -1120,6 +1138,16 @@ class SharedCore {
                 reason: analysis.reason
             };
             analyzedEvent._action = analysis.action;
+            
+            // If description strategy is preserve and this is not a merge, suppress description in display/notes
+            if (analyzedEvent._fieldMergeStrategies?.description === 'preserve' && analysis.action !== 'merge') {
+                if (analyzedEvent.description) {
+                    // Remove description so it won't appear in cards or notes preview
+                    delete analyzedEvent.description;
+                    // Rebuild notes without description
+                    analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+                }
+            }
             
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
