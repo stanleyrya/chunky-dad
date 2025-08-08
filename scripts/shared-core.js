@@ -410,8 +410,10 @@ class SharedCore {
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
         // Create a merged event object by starting with existing event
+        // IMPORTANT: seed with fields parsed from existing notes so 'preserve' fields remain in notes
         const mergedEvent = {
             ...existingEvent,
+            ...existingFields,
             // Preserve existing metadata and strategies
             _fieldMergeStrategies: fieldStrategies,
             _action: newEvent._action || 'merge'
@@ -448,7 +450,7 @@ class SharedCore {
                 case 'preserve':
                 default:
                     // Keep existing value, don't change anything
-                    // mergedEvent already has existing values
+                    // mergedEvent already has existing values (including those parsed from notes)
                     break;
             }
         });
@@ -1109,7 +1111,7 @@ class SharedCore {
         
         // Fields to exclude from notes (core calendar fields and internal metadata)
         const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates',
+            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates', 'notes',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
