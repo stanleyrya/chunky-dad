@@ -181,7 +181,7 @@ class BearEventScraperOrchestrator {
 
             // Create adapter instance
             console.log('🐻 Orchestrator: Creating adapter instance...');
-            const adapter = new this.modules.adapter();
+            const adapter = new this.modules.adapter({ sharedCore });
             console.log('🐻 Orchestrator: ✓ Adapter instance created');
             
             // Load configuration
@@ -194,6 +194,7 @@ class BearEventScraperOrchestrator {
             if (config.calendarMappings) {
                 console.log('🐻 Orchestrator: Creating adapter with calendar mappings...');
                 finalAdapter = new this.modules.adapter({
+                    sharedCore,
                     calendarMappings: config.calendarMappings,
                     ...this.config
                 });
@@ -307,7 +308,7 @@ class BearEventScraperOrchestrator {
             // Try to show user-friendly error
             if (this.modules?.adapter) {
                 try {
-                    const adapter = new this.modules.adapter();
+                    const adapter = new this.modules.adapter({ sharedCore });
                     const errorName = error.name || 'Unknown Error';
                     const errorMessage = error.message || 'An unexpected error occurred';
                     await adapter.showError('Bear Event Scraper Error', `${errorName}: ${errorMessage}\n\nCheck console for full details.`);
