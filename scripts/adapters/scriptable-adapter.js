@@ -1310,7 +1310,19 @@ class ScriptableAdapter {
             line-height: 1.5;
             max-height: 250px;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
+        
+        .diff-view {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            position: relative;
+        }
+        
+
+        
+
         
         .notes-preview strong {
             font-weight: 600;
@@ -1433,6 +1445,14 @@ class ScriptableAdapter {
                 font-size: 11px;
                 max-height: 200px;
             }
+            
+            .diff-view {
+                padding: 8px !important;
+            }
+            
+
+            
+
         }
         
         @media (max-width: 480px) {
@@ -1453,6 +1473,14 @@ class ScriptableAdapter {
             .action-buttons button {
                 max-width: none;
             }
+            
+            .diff-view {
+                padding: 6px !important;
+            }
+            
+
+            
+
         }
         
         details pre {
@@ -1535,6 +1563,7 @@ class ScriptableAdapter {
             white-space: pre-wrap;
             max-height: 300px;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .event-card.raw-mode .event-details,
@@ -2247,9 +2276,14 @@ class ScriptableAdapter {
                     ` : ''}
                     
                     <!-- Table view (default) -->
-                    <div id="table-view-${eventId}" class="diff-view" style="display: block; max-height: 360px; overflow-y: auto;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div style="font-size: 12px; color: #666;">Comparison Table</div>
+                    <div id="table-view-${eventId}" class="diff-view" style="display: block; padding: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="font-size: 12px; color: #666;">
+                                <strong>📊 Field-by-Field Comparison</strong>
+                                <div style="font-size: 10px; margin-top: 2px; color: #888;">
+                                    Shows how each field will be merged between existing and new event data
+                                </div>
+                            </div>
                             <button onclick="copyEventJSON(this)" 
                                     style="padding: 4px 8px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;"
                                     data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
@@ -2274,20 +2308,26 @@ class ScriptableAdapter {
                                 📋 Copy JSON
                             </button>
                         </div>
-                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
+                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: auto;">
                             <tr>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">Existing Event</th>
-                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Flow</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">New Event</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Result</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Field</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Existing Event</th>
+                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Flow</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">New Event</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Result</th>
                             </tr>
                             ${this.generateComparisonRows(event)}
                         </table>
                     </div>
                     
                     <!-- Line view (hidden by default) -->
-                    <div id="line-view-${eventId}" class="diff-view" style="display: none; max-height: 360px; overflow-y: auto;">
+                    <div id="line-view-${eventId}" class="diff-view" style="display: none; padding: 10px;">
+                        <div style="margin-bottom: 12px;">
+                            <strong style="font-size: 12px; color: #666;">📝 Line-by-Line Diff</strong>
+                            <div style="font-size: 10px; margin-top: 2px; color: #888;">
+                                Git-style diff showing additions (+), deletions (-), and unchanged (=) fields
+                            </div>
+                        </div>
                         ${this.generateLineDiffView(event)}
                     </div>
                     </div>
@@ -2956,20 +2996,20 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             rows.push(`
                 <tr>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; vertical-align: top;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word;">
                         <strong>${field}</strong>
                         <br><small style="color: #666;">${strategy}</small>
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                         ${formatValue(existingValue)}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff; word-wrap: break-word; overflow-wrap: break-word;">
                         ${flowIcon}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                         ${formatValue(newValue)}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; word-wrap: break-word; overflow-wrap: break-word;">
                         ${resultText}
                     </td>
                 </tr>
@@ -2985,9 +3025,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         // Use the same field logic as what goes into calendar notes
         const fieldsToCompare = this.getFieldsForComparison(event);
-        let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 10px; border-radius: 5px;">';
+        let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 12px; border-radius: 8px; line-height: 1.6;">';
         
-        fieldsToCompare.forEach(field => {
+        fieldsToCompare.forEach((field, index) => {
             // Skip notes field as it's a computed field that combines other fields
             // This makes the comparison confusing and it's often broken
             if (field === 'notes') return;
@@ -3027,49 +3067,64 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const isKept = existingValue && newValue && (finalValue === existingValue) && !equalForDisplay;
             const isMerged = existingValue && newValue && finalValue && (finalValue !== existingValue) && (finalValue !== newValue) && !equalForDisplay;
             
+            // Add field separator for readability (except for first field)
+            if (index > 0) {
+                html += `<div style="border-top: 1px solid #ddd; margin: 8px 0 4px 0;"></div>`;
+            }
+            
+            // Add field header
+            html += `<div style="color: #666; font-size: 11px; margin-bottom: 4px; font-weight: bold;">
+                        ${field}
+                     </div>`;
+            
             // Show git-style diff
             if (isNew) {
                 // Only new value exists - show as addition
-                html += `<div style="background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;">`;
-                html += `<span style=\"color: #28a745;\">+</span> ${this.escapeHtml(formatValue(newValue))}`;
+                html += `<div style="background: #e6ffec; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #34d058; border-radius: 4px;">`;
+                html += `<span style=\"color: #28a745; font-weight: bold;\">+</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(new field)</em>`;
                 html += `</div>`;
             } else if (isUnchanged) {
                 // Only existing value exists - show as context (orange)
-                html += `<div style=\"background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;\">`;
-                html += `<span style=\"color: #ff9500;\"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666;\">(existing)</em>`;
+                html += `<div style=\"background: #fff3cd; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #ffc107; border-radius: 4px;\">`;
+                html += `<span style=\"color: #ff9500; font-weight: bold;\">═</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(existing, unchanged)</em>`;
                 html += `</div>`;
             } else if (isSame) {
                 // Existing and new are the same for display - avoid +/- noise
-                html += `<div style=\"background: #f0f0f0; padding: 5px; margin: 2px 0; border-left: 3px solid #999;\">`;
-                html += `<span style=\"color: #999;\"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666;\">(same)</em>`;
+                html += `<div style=\"background: #f1f8ff; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #0366d6; border-radius: 4px;\">`;
+                html += `<span style=\"color: #0366d6; font-weight: bold;\">═</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(same in both)</em>`;
                 html += `</div>`;
             } else if (isReplaced) {
                 // Value was replaced - show old as deletion, new as addition
-                html += `<div style=\"background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;\">`;
-                html += `<span style=\"color: #d73a49;\">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
+                html += `<div style=\"background: #ffeef0; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #d73a49; border-radius: 4px;\">`;
+                html += `<span style=\"color: #d73a49; font-weight: bold;\">-</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(removed)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;\">`;
-                html += `<span style=\"color: #28a745;\">+</span> ${this.escapeHtml(formatValue(newValue))}`;
+                html += `<div style=\"background: #e6ffec; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #34d058; border-radius: 4px;\">`;
+                html += `<span style=\"color: #28a745; font-weight: bold;\">+</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(added)</em>`;
                 html += `</div>`;
             } else if (isKept) {
                 // New value exists but existing was kept - show both with context
-                html += `<div style=\"background: #fff3cd; padding: 5px; margin: 2px 0; border-left: 3px solid #ffc107;\">`;
-                html += `<span style=\"color: #ff9500;\"> </span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666;\">(kept existing)</em>`;
+                html += `<div style=\"background: #f1f8ff; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #0366d6; border-radius: 4px;\">`;
+                html += `<span style=\"color: #0366d6; font-weight: bold;\">═</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(kept existing)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999; opacity: 0.6;\">`;
-                html += `<span style=\"color: #999;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666;\">(new value ignored)</em>`;
+                html += `<div style=\"background: #fff5b4; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #dbab09; opacity: 0.7; border-radius: 4px;\">`;
+                html += `<span style=\"color: #b08800; font-weight: bold;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(ignored new value)</em>`;
                 html += `</div>`;
             } else if (isMerged) {
                 // Values were merged - show all three
-                html += `<div style=\"background: #ffecec; padding: 5px; margin: 2px 0; border-left: 3px solid #ff6b6b;\">`;
-                html += `<span style=\"color: #d73a49;\">-</span> ${this.escapeHtml(formatValue(existingValue))}`;
+                html += `<div style=\"background: #ffeef0; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #d73a49; border-radius: 4px;\">`;
+                html += `<span style=\"color: #d73a49; font-weight: bold;\">-</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(original)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #f8f8f8; padding: 5px; margin: 2px 0; border-left: 3px solid #999;\">`;
-                html += `<span style=\"color: #999;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666;\">(proposed)</em>`;
+                html += `<div style=\"background: #fff5b4; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #dbab09; border-radius: 4px;\">`;
+                html += `<span style=\"color: #b08800; font-weight: bold;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(proposed)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #e6ffec; padding: 5px; margin: 2px 0; border-left: 3px solid #34d058;\">`;
-                html += `<span style=\"color: #28a745;\">+</span> ${this.escapeHtml(formatValue(finalValue))} <em style=\"color: #666;\">(merged result)</em>`;
+                html += `<div style=\"background: #e6ffec; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #34d058; border-radius: 4px;\">`;
+                html += `<span style=\"color: #28a745; font-weight: bold;\">+</span> ${this.escapeHtml(formatValue(finalValue))} <em style=\"color: #666; font-size: 10px;\">(merged result)</em>`;
                 html += `</div>`;
+            }
+            
+            // Add spacing after each field (except last one)
+            if (index < fieldsToCompare.length - 1) {
+                html += `<div style="margin-bottom: 12px;"></div>`;
             }
         });
         
