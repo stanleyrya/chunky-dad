@@ -2206,7 +2206,11 @@ class ScriptableAdapter {
             ${event._original && event._action !== 'new' ? (() => {
                 const hasDifferences = this.hasEventDifferences(event);
                 const eventId = event.key || Math.random();
-                const isExpanded = false; // Start collapsed; expand on click
+                
+                // Only show comparison section if there are actual differences
+                if (!hasDifferences) return '';
+                
+                const isExpanded = hasDifferences; // Auto-expand if there are differences
                 
                 return `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
