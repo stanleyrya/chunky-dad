@@ -38,6 +38,9 @@ class DynamicCalendarLoader extends CalendarCore {
         this.lastScreenWidth = window.innerWidth;
         this.currentBreakpoint = this.getCurrentBreakpoint();
         
+        // Cache for event text width - separate cache for week and month views
+        this.cachedEventTextWidths = new Map();
+        
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
         
@@ -673,17 +676,22 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Get the actual width available for event text from the fake event rendered invisibly
     getEventTextWidth() {
-        // Check if we already have a cached measurement
-        if (this.cachedEventTextWidth) {
-            return this.cachedEventTextWidth;
+        // Create a cache key based on current view and breakpoint
+        const cacheKey = `${this.currentView}-${this.currentBreakpoint}`;
+        
+        // Check if we already have a cached measurement for this view/breakpoint combo
+        if (this.cachedEventTextWidths.has(cacheKey)) {
+            return this.cachedEventTextWidths.get(cacheKey);
         }
         
         // Find the fake event that was rendered invisibly for measurement
-        const eventName = document.querySelector('.event-name');
+        // We need to be more specific about which view we're measuring for
+        const viewClass = this.currentView === 'week' ? '.week-view' : '.month-day';
+        const eventName = document.querySelector(`${viewClass} .event-name`);
         
         // If the element doesn't exist yet, we can't measure - return null to indicate measurement not ready
         if (!eventName) {
-            logger.debug('CALENDAR', 'Event name element not found for measurement - DOM not ready yet');
+            logger.debug('CALENDAR', `Event name element not found for measurement in ${this.currentView} view - DOM not ready yet`);
             return null;
         }
         
@@ -694,42 +702,41 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
         
-        // Measure the event item's inner width (excluding padding and borders)
-        const eventItemStyle = window.getComputedStyle(eventItem);
-        const eventItemRect = eventItem.getBoundingClientRect();
-        const paddingLeft = parseFloat(eventItemStyle.paddingLeft) || 0;
-        const paddingRight = parseFloat(eventItemStyle.paddingRight) || 0;
-        const borderLeft = parseFloat(eventItemStyle.borderLeftWidth) || 0;
-        const borderRight = parseFloat(eventItemStyle.borderRightWidth) || 0;
+        // Measure the event name element directly instead of the container
+        const eventNameRect = eventName.getBoundingClientRect();
+        const eventNameStyle = window.getComputedStyle(eventName);
+        const paddingLeft = parseFloat(eventNameStyle.paddingLeft) || 0;
+        const paddingRight = parseFloat(eventNameStyle.paddingRight) || 0;
+        const borderLeft = parseFloat(eventNameStyle.borderLeftWidth) || 0;
+        const borderRight = parseFloat(eventNameStyle.borderRightWidth) || 0;
         
         // Calculate the actual available width for text content
-        const availableWidth = eventItemRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
+        const availableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
         
-        // Also check if there are any sibling elements that might take up space
-        const eventTime = eventItem.querySelector('.event-time');
-        const eventVenue = eventItem.querySelector('.event-venue');
+        const finalWidth = Math.max(availableWidth, 20); // Minimum 20px
         
-        // For vertical layouts, we don't need to subtract sibling widths
-        // For horizontal layouts, we would need to subtract them
-        // Since our events are typically vertical, we use the full width
+        // Cache the result for this specific view/breakpoint combination
+        this.cachedEventTextWidths.set(cacheKey, finalWidth);
         
-        this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
-        
-        logger.info('CALENDAR', `Measured actual event text width from container: ${this.cachedEventTextWidth}px`, {
-            eventItemWidth: eventItemRect.width,
+        logger.info('CALENDAR', `Measured actual event text width from .event-name element in ${this.currentView} view: ${finalWidth}px`, {
+            currentView: this.currentView,
+            viewSelector: `${viewClass} .event-name`,
+            cacheKey,
+            eventNameWidth: eventNameRect.width,
             paddingLeft,
             paddingRight,
             borderLeft,
             borderRight,
-            calculatedWidth: availableWidth
+            calculatedWidth: availableWidth,
+            eventItemWidth: eventItem.getBoundingClientRect().width
         });
         
-        return this.cachedEventTextWidth;
+        return finalWidth;
     }
 
     // Clear cached measurements (call when layout changes)
     clearMeasurementCache() {
-        this.cachedEventTextWidth = null;
+        this.cachedEventTextWidths.clear();
         this.charsPerPixel = null;
         logger.debug('CALENDAR', 'Measurement cache cleared');
     }
@@ -1745,6 +1752,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (newView !== this.currentView) {
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
                     this.currentView = newView;
+                    
+                    // Clear measurement cache when switching views since dimensions may be different
+                    this.clearMeasurementCache();
+                    this.clearEventNameCache();
                     
                     // Update active button
                     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
