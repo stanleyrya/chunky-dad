@@ -1752,16 +1752,19 @@ class ScriptableAdapter {
             const tableView = document.getElementById('table-view-' + eventKey);
             const lineView = document.getElementById('line-view-' + eventKey);
             
-            if (tableView.style.display === 'none') {
-                // Switch to table view
-                tableView.style.display = 'block';
-                lineView.style.display = 'none';
-                button.textContent = 'Switch to Line View';
-            } else {
+            // Check current state - table view is visible if display is not 'none'
+            const isTableVisible = tableView.style.display !== 'none';
+            
+            if (isTableVisible) {
                 // Switch to line view
                 tableView.style.display = 'none';
                 lineView.style.display = 'block';
                 button.textContent = 'Switch to Table View';
+            } else {
+                // Switch to table view
+                tableView.style.display = 'block';
+                lineView.style.display = 'none';
+                button.textContent = 'Switch to Line View';
             }
         }
         
@@ -2205,7 +2208,7 @@ class ScriptableAdapter {
             <!-- Show comparison for all non-new events with original data -->
             ${event._original && event._action !== 'new' ? (() => {
                 const hasDifferences = this.hasEventDifferences(event);
-                const eventId = event.key || Math.random();
+                const eventId = event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
                 const isExpanded = false; // Start collapsed; expand on click
                 
                 return `
@@ -2244,7 +2247,7 @@ class ScriptableAdapter {
                     ` : ''}
                     
                     <!-- Table view (default) -->
-                    <div id="table-view-${eventId}" class="diff-view" style="max-height: 360px; overflow-y: auto;">
+                    <div id="table-view-${eventId}" class="diff-view" style="display: block; max-height: 360px; overflow-y: auto;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div style="font-size: 12px; color: #666;">Comparison Table</div>
                             <button onclick="copyEventJSON(this)" 
