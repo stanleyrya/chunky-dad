@@ -36,10 +36,16 @@ const performanceDebugger = new PerformanceDebugger()
  * Author: Ryan Stanley (stanleyrya@gmail.com)
  * Tips: https://www.paypal.me/stanleyrya
  *
- * JSON File Manager for Scriptable (minified). Must remain unmodified.
- * Full version: https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
+ * Class that can read and write JSON objects using the file system.
+ *
+ * This is a minified version but it can be replaced with the full version here!
+ * https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
+ *
+ * Usage:
+ *  * write(relativePath, jsonObject): Writes JSON object to a relative path.
+ *  * read(relativePath): Reads JSON object from a relative path.
  */
-class JSONFileManager{saveJSON(e,t){const s=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],t=i.replace("/"+e,"");s.createDirectory(t,!0)}if(s.fileExists(i)&&s.isDirectory(i))throw"JSON file is a directory, please delete!";const n=JSON.stringify(t);s.writeString(i,n)}readJSON(e){const t=this.getFileManager(),s=this.getCurrentDir()+e;if(t.fileExists(s)){try{return t.downloadFileFromiCloud(s),JSON.parse(t.readString(s))}catch(e){return JSON.parse(t.readString(s))}}return null}appendJSONToArrayFile(e,t){const s=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],t=i.replace("/"+e,"");s.createDirectory(t,!0)}if(s.fileExists(i)&&s.isDirectory(i))throw"JSON file is a directory, please delete!";let n=[];if(s.fileExists(i))try{n=JSON.parse(s.readString(i))}catch(e){n=[]}Array.isArray(n)||("object"==typeof n&&(n=[n]),Array.isArray(n)||(n=[])),n.push(t);const a=JSON.stringify(n);s.writeString(i,a)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),t=module.filename;return t.replace(e.fileName(t,!0),"")}}
+class JSONFileManager{write(e,r){const t=this.getFileManager(),i=this.getCurrentDir()+e,l=e.split("/");if(l>1){const e=l[l.length-1],r=i.replace("/"+e,"");t.createDirectory(r,!0)}if(t.fileExists(i)&&t.isDirectory(i))throw"JSON file is a directory, please delete!";t.writeString(i,JSON.stringify(r))}read(e){const r=this.getFileManager(),t=this.getCurrentDir()+e;if(!r.fileExists(t))throw"JSON file does not exist! Could not load: "+t;if(r.isDirectory(t))throw"JSON file is a directory! Could not load: "+t;r.downloadFileFromiCloud(t);const i=JSON.parse(r.readString(t));if(null!==i)return i;throw"Could not read file as JSON! Could not load: "+t}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),r=module.filename;return r.replace(e.fileName(r,!0),"")}}
 const jsonFileManager = new JSONFileManager()
 
 /**
@@ -3222,16 +3228,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             };
 
             // Save run via JSONFileManager
-            jsonFileManager.saveJSON(relPath, payload);
+            jsonFileManager.write(relPath, payload);
             console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${relPath}`);
 
             // Update index (read, push, sort, write)
-            let index = jsonFileManager.readJSON(indexRelPath) || [];
+            let index = jsonFileManager.read(indexRelPath) || [];
             if (!Array.isArray(index)) index = [];
             index.push(summary);
             index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
             if (index.length > 200) index = index.slice(0, 200);
-            jsonFileManager.saveJSON(indexRelPath, index);
+            jsonFileManager.write(indexRelPath, index);
             return runId;
         } catch (e) {
             console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
@@ -3241,12 +3247,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     updateRunIndex(summary) {
         try {
             const indexRelPath = `chunky-dad-scraper/runs/index.json`;
-            let index = jsonFileManager.readJSON(indexRelPath) || [];
+            let index = jsonFileManager.read(indexRelPath) || [];
             if (!Array.isArray(index)) index = [];
             index.push(summary);
             index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
             if (index.length > 200) index = index.slice(0, 200);
-            jsonFileManager.saveJSON(indexRelPath, index);
+            jsonFileManager.write(indexRelPath, index);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to update run index: ${e.message}`);
         }
@@ -3255,7 +3261,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     listSavedRuns() {
         const indexRelPath = `chunky-dad-scraper/runs/index.json`;
         try {
-            const arr = jsonFileManager.readJSON(indexRelPath) || [];
+            const arr = jsonFileManager.read(indexRelPath) || [];
             return Array.isArray(arr) ? arr : [];
         } catch (e) {
             console.log(`📱 Scriptable: Failed to read run index: ${e.message}`);
@@ -3275,7 +3281,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     loadSavedRun(runId) {
         try {
             const relPath = `chunky-dad-scraper/runs/${runId}.json`;
-            return jsonFileManager.readJSON(relPath);
+            return jsonFileManager.read(relPath);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
             return null;
@@ -3362,12 +3368,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 remaining.forEach(name => {
                     if (!name.endsWith('.json') || name === 'index.json') return;
                     try {
-                        const data = jsonFileManager.readJSON(`chunky-dad-scraper/runs/${name}`);
+                        const data = jsonFileManager.read(`chunky-dad-scraper/runs/${name}`);
                         if (data && data.summary) summaries.push(data.summary);
                     } catch (_) {}
                 });
                 summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-                jsonFileManager.saveJSON(`chunky-dad-scraper/runs/index.json`, summaries);
+                jsonFileManager.write(`chunky-dad-scraper/runs/index.json`, summaries);
             } catch (_) {}
         } catch (e) {
             console.log(`📱 Scriptable: Cleanup failed: ${e.message}`);
