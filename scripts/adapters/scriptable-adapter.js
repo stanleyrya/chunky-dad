@@ -472,8 +472,11 @@ class ScriptableAdapter {
                 await this.ensureRelativeStorageDirs();
                 await this.saveRun(results);
                 // Cleanup old JSON runs
-                const maxAgeDays = 30;
-                await this.cleanupOldRuns(maxAgeDays);
+                await this.cleanupOldFiles('chunky-dad-scraper/runs', {
+                    maxAgeDays: 30,
+                    keep: (name) => name === 'index.json' || !name.endsWith('.json'),
+                    afterCleanup: async () => { await this.rebuildRunsIndex(); }
+                });
             } else {
                 console.log('📱 Scriptable: Skipping run save (no calendar writes)');
             }
@@ -482,7 +485,13 @@ class ScriptableAdapter {
             try {
                 await this.ensureRelativeStorageDirs();
                 await this.appendLogSummary(results);
-                await this.cleanupOldLogs(30);
+                await this.cleanupOldFiles('chunky-dad-scraper/logs', {
+                    maxAgeDays: 30,
+                    keep: (name) => {
+                        const lower = name.toLowerCase();
+                        return lower.includes('performance') || lower.endsWith('.csv');
+                    }
+                });
             } catch (logErr) {
                 console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
             }
@@ -3329,41 +3338,45 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
-    async cleanupOldRuns(maxAgeDays = 30) {
-        try {
-            const base = jsonFileManager.getCurrentDir();
-            const runsPath = `${base}chunky-dad-scraper/runs`;
-            const fm = this.fm || FileManager.iCloud();
-            const now = Date.now();
-            const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
-            const files = fm.listContents(runsPath) || [];
-            files.forEach(name => {
-                if (!name.endsWith('.json') || name === 'index.json') return; // only delete run JSONs
-                const path = fm.joinPath(runsPath, name);
-                let mtime = null;
-                try { mtime = fm.modificationDate(path); } catch (_) {}
-                const ms = mtime ? mtime.getTime() : null;
-                if (ms && ms < cutoff) {
-                    try { fm.remove(path); } catch (_) {}
-                }
-            });
-            // Rebuild index after cleanup using JSONFileManager reads
-            try {
-                const remaining = fm.listContents(runsPath) || [];
-                const summaries = [];
-                remaining.forEach(name => {
-                    if (!name.endsWith('.json') || name === 'index.json') return;
-                    try {
-                        const data = jsonFileManager.read(`chunky-dad-scraper/runs/${name}`);
-                        if (data && data.summary) summaries.push(data.summary);
-                    } catch (_) {}
-                });
-                summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-                jsonFileManager.write(`chunky-dad-scraper/runs/index.json`, summaries);
-            } catch (_) {}
-        } catch (e) {
-            console.log(`📱 Scriptable: Cleanup failed: ${e.message}`);
+    async cleanupOldFiles(relDirPath, { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {}) {
+        const base = jsonFileManager.getCurrentDir();
+        const dirPath = `${base}${relDirPath}`;
+        const fm = this.fm || FileManager.iCloud();
+        if (!fm.fileExists(dirPath)) return;
+        const now = Date.now();
+        const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
+        const files = fm.listContents(dirPath) || [];
+        files.forEach(name => {
+            if (keep(name)) return;
+            const path = fm.joinPath(dirPath, name);
+            let mtime = null;
+            try { mtime = fm.modificationDate(path); } catch (_) {}
+            const ms = mtime ? mtime.getTime() : null;
+            if (ms && ms < cutoff) {
+                try { fm.remove(path); } catch (_) {}
+            }
+        });
+        if (typeof afterCleanup === 'function') {
+            await afterCleanup();
         }
+    }
+
+    async rebuildRunsIndex() {
+        const base = jsonFileManager.getCurrentDir();
+        const runsPath = `${base}chunky-dad-scraper/runs`;
+        const fm = this.fm || FileManager.iCloud();
+        if (!fm.fileExists(runsPath)) return;
+        const files = fm.listContents(runsPath) || [];
+        const summaries = [];
+        files.forEach(name => {
+            if (!name.endsWith('.json') || name === 'index.json') return;
+            try {
+                const data = jsonFileManager.read(`chunky-dad-scraper/runs/${name}`);
+                if (data && data.summary) summaries.push(data.summary);
+            } catch (_) {}
+        });
+        summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+        jsonFileManager.write(`chunky-dad-scraper/runs/index.json`, summaries);
     }
 
     // Log helpers (prefer user's file logger)
@@ -3406,32 +3419,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             fm.writeString(path, existing + line + '\n');
         } catch (e) {
             console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
-        }
-    }
-
-    async cleanupOldLogs(maxAgeDays = 30) {
-        try {
-            const base = jsonFileManager.getCurrentDir();
-            const logsPath = `${base}chunky-dad-scraper/logs`;
-            const fm = this.fm || FileManager.iCloud();
-            const now = Date.now();
-            const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
-            if (!fm.fileExists(logsPath)) return;
-            const files = fm.listContents(logsPath) || [];
-            files.forEach(name => {
-                const lower = name.toLowerCase();
-                // Never delete performance CSVs or similar single-file metrics
-                if (lower.includes('performance') || lower.endsWith('.csv')) return;
-                const path = fm.joinPath(logsPath, name);
-                let mtime = null;
-                try { mtime = fm.modificationDate(path); } catch (_) {}
-                const ms = mtime ? mtime.getTime() : null;
-                if (ms && ms < cutoff) {
-                    try { fm.remove(path); } catch (_) {}
-                }
-            });
-        } catch (e) {
-            console.log(`📱 Scriptable: Log cleanup failed: ${e.message}`);
         }
     }
 }
