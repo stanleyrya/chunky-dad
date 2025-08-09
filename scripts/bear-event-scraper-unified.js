@@ -199,6 +199,32 @@ class BearEventScraperOrchestrator {
                 });
                 console.log('🐻 Orchestrator: ✓ Adapter with calendar mappings created');
             }
+
+            // Optional: review previously saved run based on config flags
+            try {
+                const reviewCfg = (config && config.config) ? config.config : {};
+                if (reviewCfg.viewSavedRun === true || reviewCfg.viewRunId || reviewCfg.presentRunHistory === true) {
+                    console.log('🐻 Orchestrator: Review mode detected - displaying saved run');
+                    if (typeof finalAdapter.displaySavedRun === 'function') {
+                        await finalAdapter.displaySavedRun({
+                            last: reviewCfg.viewSavedRun === true,
+                            runId: reviewCfg.viewRunId || null,
+                            presentHistory: reviewCfg.presentRunHistory === true
+                        });
+                        // Optional cleanup after viewing
+                        if (typeof finalAdapter.cleanupOldRuns === 'function') {
+                            const maxAgeDays = reviewCfg.maxSavedRunAgeDays || 30;
+                            await finalAdapter.cleanupOldRuns(maxAgeDays);
+                        }
+                        console.log('🐻 Orchestrator: Review mode complete');
+                        return { reviewed: true };
+                    } else {
+                        console.log('🐻 Orchestrator: Adapter does not support saved run display; continuing normally');
+                    }
+                }
+            } catch (reviewErr) {
+                console.error(`🐻 Orchestrator: Failed to enter review mode: ${reviewErr?.message || reviewErr}`);
+            }
             
             // Log configuration details
             if (config.parsers) {

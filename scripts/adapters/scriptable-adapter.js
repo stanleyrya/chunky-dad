@@ -26,6 +26,19 @@ class ScriptableAdapter {
         
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
+
+        // Run storage setup (Scriptable iCloud)
+        try {
+            this.fm = FileManager.iCloud();
+            const docs = this.fm.documentsDirectory();
+            this.storageRoot = this.fm.joinPath(docs, 'chunky-dad-scraper');
+            this.runsDir = this.fm.joinPath(this.storageRoot, 'runs');
+            this.logsDir = this.fm.joinPath(this.storageRoot, 'logs');
+            this.ensureStorageDirs();
+        } catch (e) {
+            // Best-effort; continue without persistent storage if unavailable
+            console.log(`📱 Scriptable: Storage init failed: ${e.message}`);
+        }
     }
 
     // HTTP Adapter Implementation
@@ -413,6 +426,15 @@ class ScriptableAdapter {
             
             // Present rich UI display
             await this.presentRichResults(results);
+
+            // Persist this run for later review and cleanup old runs
+            try {
+                await this.saveRun(results);
+                const maxAgeDays = (results?.config?.config?.maxSavedRunAgeDays) || 30;
+                await this.cleanupOldRuns(maxAgeDays);
+            } catch (persistErr) {
+                console.log(`📱 Scriptable: Run persistence failed: ${persistErr.message}`);
+            }
             
         } catch (error) {
             console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
@@ -3064,6 +3086,221 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
         
         return 0;
+    }
+
+    // Persistent run storage utilities
+    ensureStorageDirs() {
+        try {
+            if (!this.fm.fileExists(this.storageRoot)) this.fm.createDirectory(this.storageRoot, true);
+            if (!this.fm.fileExists(this.runsDir)) this.fm.createDirectory(this.runsDir, true);
+            if (!this.fm.fileExists(this.logsDir)) this.fm.createDirectory(this.logsDir, true);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to ensure storage dirs: ${e.message}`);
+        }
+    }
+
+    getRunId(timestamp = new Date()) {
+        // Use a filesystem-friendly timestamp
+        const pad = n => String(n).padStart(2, '0');
+        const y = timestamp.getFullYear();
+        const m = pad(timestamp.getMonth() + 1);
+        const d = pad(timestamp.getDate());
+        const hh = pad(timestamp.getHours());
+        const mm = pad(timestamp.getMinutes());
+        const ss = pad(timestamp.getSeconds());
+        return `${y}${m}${d}-${hh}${mm}${ss}`;
+    }
+
+    getRunFilePath(runId) {
+        return this.fm.joinPath(this.runsDir, `${runId}.json`);
+    }
+
+    async saveRun(results) {
+        if (!this.fm) return;
+        try {
+            const ts = new Date();
+            const runId = this.getRunId(ts);
+            const filePath = this.getRunFilePath(runId);
+            
+            const summary = {
+                runId,
+                timestamp: ts.toISOString(),
+                totals: {
+                    totalEvents: results.totalEvents || 0,
+                    bearEvents: results.bearEvents || 0,
+                    calendarEvents: results.calendarEvents || 0,
+                    errors: (results.errors || []).length
+                },
+                parserSummaries: (results.parserResults || []).map(r => ({ name: r.name, bearEvents: r.bearEvents, totalEvents: r.totalEvents }))
+            };
+            
+            const payload = {
+                version: 1,
+                summary,
+                config: results.config || null,
+                analyzedEvents: results.analyzedEvents || null,
+                parserResults: results.parserResults || [],
+                errors: results.errors || []
+            };
+            
+            this.fm.writeString(filePath, JSON.stringify(payload));
+            console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${filePath}`);
+            
+            // Update index
+            this.updateRunIndex(summary);
+            return runId;
+        } catch (e) {
+            console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
+        }
+    }
+
+    updateRunIndex(summary) {
+        try {
+            const indexPath = this.fm.joinPath(this.runsDir, 'index.json');
+            let index = [];
+            if (this.fm.fileExists(indexPath)) {
+                try {
+                    index = JSON.parse(this.fm.readString(indexPath)) || [];
+                } catch (_) { index = []; }
+            }
+            index.push(summary);
+            // Sort newest first
+            index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+            // Keep last 200 entries max
+            if (index.length > 200) index = index.slice(0, 200);
+            this.fm.writeString(indexPath, JSON.stringify(index));
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to update run index: ${e.message}`);
+        }
+    }
+
+    listSavedRuns() {
+        if (!this.fm) return [];
+        const indexPath = this.fm.joinPath(this.runsDir, 'index.json');
+        try {
+            if (this.fm.fileExists(indexPath)) {
+                const txt = this.fm.readString(indexPath);
+                const arr = JSON.parse(txt) || [];
+                return Array.isArray(arr) ? arr : [];
+            }
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to read run index: ${e.message}`);
+        }
+        // Fallback to scanning directory
+        try {
+            const files = this.fm.listContents(this.runsDir) || [];
+            return files
+                .filter(name => name.endsWith('.json') && name !== 'index.json')
+                .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
+                .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
+        } catch (_) { return []; }
+    }
+
+    loadSavedRun(runId) {
+        if (!this.fm) return null;
+        try {
+            const filePath = this.getRunFilePath(runId);
+            if (this.fm.fileExists(filePath)) {
+                const txt = this.fm.readString(filePath);
+                const data = JSON.parse(txt);
+                return data;
+            }
+            console.log(`📱 Scriptable: Run not found: ${runId}`);
+            return null;
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
+            return null;
+        }
+    }
+
+    async displaySavedRun(options = {}) {
+        try {
+            let runToShow = null;
+            const runs = this.listSavedRuns();
+            if (!runs || runs.length === 0) {
+                await this.showError('No saved runs', 'No saved runs were found to display.');
+                return;
+            }
+
+            if (options.runId) {
+                runToShow = options.runId;
+            } else if (options.last) {
+                runToShow = runs[0].runId || runs[0];
+            } else if (options.presentHistory) {
+                // Simple selection UI using Alert
+                const alert = new Alert();
+                alert.title = 'Select Saved Run';
+                alert.message = 'Choose a run to display';
+                runs.slice(0, 25).forEach((r, idx) => {
+                    const label = r.timestamp ? `${idx + 1}. ${r.timestamp}` : `${idx + 1}. ${r.runId}`;
+                    alert.addAction(label);
+                });
+                alert.addCancelAction('Cancel');
+                const idx = await alert.present();
+                if (idx < 0 || idx >= runs.length) return;
+                runToShow = runs[idx].runId || runs[idx];
+            }
+
+            if (!runToShow) {
+                runToShow = runs[0].runId || runs[0];
+            }
+
+            const saved = this.loadSavedRun(runToShow);
+            if (!saved) {
+                await this.showError('Load failed', `Could not load saved run: ${runToShow}`);
+                return;
+            }
+
+            // Normalize to the same shape expected by display/present methods
+            const resultsLike = {
+                totalEvents: saved?.summary?.totals?.totalEvents || 0,
+                bearEvents: saved?.summary?.totals?.bearEvents || 0,
+                calendarEvents: saved?.summary?.totals?.calendarEvents || 0,
+                errors: saved?.errors || [],
+                parserResults: saved?.parserResults || [],
+                analyzedEvents: saved?.analyzedEvents || null,
+                config: saved?.config || null
+            };
+
+            await this.displayResults(resultsLike);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to display saved run: ${e.message}`);
+        }
+    }
+
+    async cleanupOldRuns(maxAgeDays = 30) {
+        if (!this.fm) return;
+        try {
+            const now = Date.now();
+            const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
+            const files = this.fm.listContents(this.runsDir) || [];
+            files.forEach(name => {
+                if (!name.endsWith('.json') || name === 'index.json') return;
+                const path = this.fm.joinPath(this.runsDir, name);
+                let mtime = null;
+                try { mtime = this.fm.modificationDate(path); } catch (_) {}
+                const ms = mtime ? mtime.getTime() : null;
+                if (ms && ms < cutoff) {
+                    try { this.fm.remove(path); } catch (_) {}
+                }
+            });
+            // Rebuild index after cleanup
+            try {
+                const remaining = this.fm.listContents(this.runsDir) || [];
+                const summaries = [];
+                remaining.forEach(name => {
+                    if (!name.endsWith('.json') || name === 'index.json') return;
+                    try {
+                        const data = JSON.parse(this.fm.readString(this.fm.joinPath(this.runsDir, name)));
+                        if (data && data.summary) summaries.push(data.summary);
+                    } catch (_) {}
+                });
+                summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+                this.fm.writeString(this.fm.joinPath(this.runsDir, 'index.json'), JSON.stringify(summaries));
+            } catch (_) {}
+        } catch (e) {
+            console.log(`📱 Scriptable: Cleanup failed: ${e.message}`);
+        }
     }
 }
 
