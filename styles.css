@@ -1788,7 +1788,7 @@ body.index-page main {
     background: var(--background-primary);
     border: 1px solid var(--border-light);
     border-radius: 8px;
-    padding: 0.75rem;
+    padding: 0.5rem;
     min-height: 120px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
@@ -1888,16 +1888,17 @@ body.index-page main {
     gap: 0;
 }
 
-/* Daily events container spacing fix for week view */
+/* Daily events container - unified spacing for both week and month views */
 .daily-events {
-    padding: 0.5rem;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.2rem;
 }
 
-/* Remove padding from daily events in week view for tight fit */
-.calendar-day.week-view .daily-events {
+/* Keep the same tight spacing for both views */
+.calendar-day.week-view .daily-events,
+.calendar-day.month-day .daily-events {
     padding: 0;
     gap: 0.2rem;
 }
@@ -1981,7 +1982,7 @@ body.index-page main {
 
 @media (max-width: 768px) {
     .calendar-day {
-        padding: 0.5rem;
+        padding: 0.4rem;
         min-height: 100px;
     }
     
@@ -2021,7 +2022,7 @@ body.index-page main {
 @media (max-width: 480px) {
     
     .calendar-day {
-        padding: 0.4rem;
+        padding: 0.3rem;
         min-height: 80px;
     }
     
@@ -2875,8 +2876,8 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 1.2rem 0 0 0;
-        gap: 0.5px;
+        padding: 1rem 0 0 0;
+        gap: 0.2rem;
         height: 100%;
     }
 
@@ -3252,8 +3253,8 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 1rem 0.15rem 0.15rem 0.15rem;
-        gap: 1px;
+        padding: 1rem 0.1rem 0.1rem 0.1rem;
+        gap: 0.2rem;
     }
 
     /* Hide today indicator in month view on small screens */
@@ -3641,8 +3642,8 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 0.9rem 0.1rem 0.1rem 0.1rem;
-        gap: 0;
+        padding: 0.8rem 0.1rem 0.1rem 0.1rem;
+        gap: 0.1rem;
     }
 
 
