@@ -3123,30 +3123,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const response = await alert.presentAlert();
         
         if (response === 0) {
-            // Before executing writes, attempt to persist the run blob. If this fails, abort.
-            // Ensure relative dirs exist for the JSONFileManager-based save
+            // Before executing writes, attempt to persist capability by writing a temp file. If this fails, abort.
             await this.ensureRelativeStorageDirs();
-            const tempResults = this.lastResults || { parserResults: [], errors: [], analyzedEvents, totalEvents: 0, bearEvents: 0, calendarEvents: 0, config };
-            // Mark that we intend to write so saveRun includes this in summary after execution
-            // Save pre-execution snapshot; we will update calendarEvents after execution and re-save
-            const preSaveId = await this.saveRun(tempResults);
-            if (!preSaveId) {
+            const base = jsonFileManager.getCurrentDir();
+            const testRelPath = `chunky-dad-scraper/runs/.write-test.json`;
+            const testAbsPath = `${base}${testRelPath}`;
+            try {
+                jsonFileManager.write(testRelPath, { ts: new Date().toISOString() });
+                // remove temp file
+                const fm = this.fm || FileManager.iCloud();
+                if (fm.fileExists(testAbsPath)) fm.remove(testAbsPath);
+            } catch (e) {
                 const errorAlert = new Alert();
                 errorAlert.title = "Cannot Proceed";
-                errorAlert.message = "Failed to save run data. Calendar changes will not be executed.";
+                errorAlert.message = "Failed to write to runs directory. Calendar changes will not be executed.";
                 errorAlert.addAction("OK");
                 await errorAlert.presentAlert();
                 return 0;
             }
 
-            // User selected Execute and saving works — proceed to execute
+            // User selected Execute and write preflight works — proceed to execute
             const processedCount = await this.executeCalendarActions(analyzedEvents, config);
-
-            // Update results and overwrite the saved run with final calendarEvents count
-            const finalResults = { ...(this.lastResults || {}), analyzedEvents, calendarEvents: processedCount, config };
-            try {
-                await this.saveRun(finalResults);
-            } catch (_) {}
 
             const successAlert = new Alert();
             successAlert.title = "Calendar Updated";
