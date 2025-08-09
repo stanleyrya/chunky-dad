@@ -16,6 +16,32 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+/**
+ * Author: Ryan Stanley (stanleyrya@gmail.com)
+ * Tips: https://www.paypal.me/stanleyrya
+ *
+ * Class that can capture the time functions take in milliseconds then export them to a CSV.
+ *
+ * This is a minified version but it can be replaced with the full version here!
+ * https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
+ *
+ * Usage:
+ *  * wrap(fn, args): Wrap the function calls you want to monitor with this wrapper.
+ *  * appendPerformanceDataToFile(relativePath): Use at the end of your script to write the metrics to the CSV file at the relative file path.
+ */
+class PerformanceDebugger{constructor(){this.performanceResultsInMillis={}}async wrap(e,t,i){const r=Date.now(),s=await e.apply(null,t),n=Date.now(),a=i||e.name;return this.performanceResultsInMillis[a]=n-r,s}async appendPerformanceDataToFile(e){const t=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],s=i.replace("/"+e,"");t.createDirectory(s,!0)}if(t.fileExists(i)&&t.isDirectory(i))throw"Performance file is a directory, please delete!";let s,n,a=Object.getOwnPropertyNames(this.performanceResultsInMillis);if(t.fileExists(i)){console.log("File exists, reading headers. To keep things easy we're only going to write to these headers."),await t.downloadFileFromiCloud(i),n=t.readString(i),s=this.getFirstLine(n).split(",")}else console.log("File doesn't exist, using available headers."),n=(s=a).toString();n=n.concat("\n");for(const e of s)this.performanceResultsInMillis[e]&&(n=n.concat(this.performanceResultsInMillis[e])),n=n.concat(",");n=n.slice(0,-1),t.writeString(i,n)}getFirstLine(e){var t=e.indexOf("\n");return-1===t&&(t=void 0),e.substring(0,t)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),t=module.filename;return t.replace(e.fileName(t,!0),"")}}
+const performanceDebugger = new PerformanceDebugger()
+
+/**
+ * Author: Ryan Stanley (stanleyrya@gmail.com)
+ * Tips: https://www.paypal.me/stanleyrya
+ *
+ * JSON File Manager for Scriptable (minified). Must remain unmodified.
+ * Full version: https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
+ */
+class JSONFileManager{saveJSON(e,t){const s=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],t=i.replace("/"+e,"");s.createDirectory(t,!0)}if(s.fileExists(i)&&s.isDirectory(i))throw"JSON file is a directory, please delete!";const n=JSON.stringify(t);s.writeString(i,n)}readJSON(e){const t=this.getFileManager(),s=this.getCurrentDir()+e;if(t.fileExists(s)){try{return t.downloadFileFromiCloud(s),JSON.parse(t.readString(s))}catch(e){return JSON.parse(t.readString(s))}}return null}appendJSONToArrayFile(e,t){const s=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],t=i.replace("/"+e,"");s.createDirectory(t,!0)}if(s.fileExists(i)&&s.isDirectory(i))throw"JSON file is a directory, please delete!";let n=[];if(s.fileExists(i))try{n=JSON.parse(s.readString(i))}catch(e){n=[]}Array.isArray(n)||("object"==typeof n&&(n=[n]),Array.isArray(n)||(n=[])),n.push(t);const a=JSON.stringify(n);s.writeString(i,a)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),t=module.filename;return t.replace(e.fileName(t,!0),"")}}
+const jsonFileManager = new JSONFileManager()
+
 class ScriptableAdapter {
     constructor(config = {}) {
         this.config = {
@@ -3131,7 +3157,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         try {
             const ts = new Date();
             const runId = this.getRunId(ts);
-            const filePath = this.getRunFilePath(runId);
+            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
+            const indexRelPath = `chunky-dad-scraper/runs/index.json`;
             
             const summary = {
                 runId,
@@ -3145,7 +3172,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 parserSummaries: (results.parserResults || []).map(r => ({ name: r.name, bearEvents: r.bearEvents, totalEvents: r.totalEvents }))
             };
             
-            // Blob saved is the exact display-ready object
             const payload = {
                 version: 1,
                 summary,
@@ -3154,12 +3180,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 parserResults: results.parserResults || [],
                 errors: results.errors || []
             };
-            
-            await this.writeJsonFile(filePath, payload);
-            console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${filePath}`);
-            
-            // Update index
-            this.updateRunIndex(summary);
+
+            // Save run via JSONFileManager
+            jsonFileManager.saveJSON(relPath, payload);
+            console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${relPath}`);
+
+            // Update index (read, push, sort, write)
+            let index = jsonFileManager.readJSON(indexRelPath) || [];
+            if (!Array.isArray(index)) index = [];
+            index.push(summary);
+            index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+            if (index.length > 200) index = index.slice(0, 200);
+            jsonFileManager.saveJSON(indexRelPath, index);
             return runId;
         } catch (e) {
             console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
@@ -3168,42 +3200,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     updateRunIndex(summary) {
         try {
-            const indexPath = this.fm.joinPath(this.runsDir, 'index.json');
-            let index = [];
-            if (this.fm.fileExists(indexPath)) {
-                try {
-                    index = JSON.parse(this.fm.readString(indexPath)) || [];
-                } catch (_) { index = []; }
-            }
+            const indexRelPath = `chunky-dad-scraper/runs/index.json`;
+            let index = jsonFileManager.readJSON(indexRelPath) || [];
+            if (!Array.isArray(index)) index = [];
             index.push(summary);
-            // Sort newest first
             index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-            // Keep last 200 entries max
             if (index.length > 200) index = index.slice(0, 200);
-            // Best effort write via json manager
-            try {
-                this.writeJsonFile(indexPath, index);
-            } catch (_) {
-                this.fm.writeString(indexPath, JSON.stringify(index));
-            }
+            jsonFileManager.saveJSON(indexRelPath, index);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to update run index: ${e.message}`);
         }
     }
 
     listSavedRuns() {
-        if (!this.fm) return [];
-        const indexPath = this.fm.joinPath(this.runsDir, 'index.json');
+        const indexRelPath = `chunky-dad-scraper/runs/index.json`;
         try {
-            if (this.fm.fileExists(indexPath)) {
-                const txt = this.fm.readString(indexPath);
-                const arr = JSON.parse(txt) || [];
-                return Array.isArray(arr) ? arr : [];
-            }
+            const arr = jsonFileManager.readJSON(indexRelPath) || [];
+            return Array.isArray(arr) ? arr : [];
         } catch (e) {
             console.log(`📱 Scriptable: Failed to read run index: ${e.message}`);
         }
-        // Fallback to scanning directory
+        // Fallback to scanning directory via FileManager for resilience
         try {
             const files = this.fm.listContents(this.runsDir) || [];
             return files
@@ -3214,16 +3231,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     loadSavedRun(runId) {
-        if (!this.fm) return null;
         try {
-            const filePath = this.getRunFilePath(runId);
-            if (this.fm.fileExists(filePath)) {
-                const txt = this.fm.readString(filePath);
-                const data = JSON.parse(txt);
-                return data;
-            }
-            console.log(`📱 Scriptable: Run not found: ${runId}`);
-            return null;
+            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
+            return jsonFileManager.readJSON(relPath);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
             return null;
@@ -3301,19 +3311,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     try { this.fm.remove(path); } catch (_) {}
                 }
             });
-            // Rebuild index after cleanup
+            // Rebuild index after cleanup using JSONFileManager reads
             try {
                 const remaining = this.fm.listContents(this.runsDir) || [];
                 const summaries = [];
                 remaining.forEach(name => {
                     if (!name.endsWith('.json') || name === 'index.json') return;
                     try {
-                        const data = JSON.parse(this.fm.readString(this.fm.joinPath(this.runsDir, name)));
+                        const data = jsonFileManager.readJSON(`chunky-dad-scraper/runs/${name}`);
                         if (data && data.summary) summaries.push(data.summary);
                     } catch (_) {}
                 });
                 summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-                await this.writeJsonFile(this.fm.joinPath(this.runsDir, 'index.json'), summaries);
+                jsonFileManager.saveJSON(`chunky-dad-scraper/runs/index.json`, summaries);
             } catch (_) {}
         } catch (e) {
             console.log(`📱 Scriptable: Cleanup failed: ${e.message}`);
