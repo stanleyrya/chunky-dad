@@ -77,18 +77,8 @@ class ScriptableAdapter {
 
         // Embedded utilities available as globals (see top of file)
 
-        // Run storage setup (Scriptable iCloud)
-        try {
-            this.fm = FileManager.iCloud();
-            const docs = this.fm.documentsDirectory();
-            this.storageRoot = this.fm.joinPath(docs, 'chunky-dad-scraper');
-            this.runsDir = this.fm.joinPath(this.storageRoot, 'runs');
-            this.logsDir = this.fm.joinPath(this.storageRoot, 'logs');
-            this.ensureStorageDirs();
-        } catch (e) {
-            // Best-effort; continue without persistent storage if unavailable
-            console.log(`📱 Scriptable: Storage init failed: ${e.message}`);
-        }
+        // FileManager available for fallbacks
+        this.fm = FileManager.iCloud();
     }
 
     // HTTP Adapter Implementation
@@ -3162,16 +3152,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return 0;
     }
 
-    // Persistent run storage utilities
-    ensureStorageDirs() {
-        try {
-            if (!this.fm.fileExists(this.storageRoot)) this.fm.createDirectory(this.storageRoot, true);
-            if (!this.fm.fileExists(this.runsDir)) this.fm.createDirectory(this.runsDir, true);
-            if (!this.fm.fileExists(this.logsDir)) this.fm.createDirectory(this.logsDir, true);
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to ensure storage dirs: ${e.message}`);
-        }
-    }
+    // (Directory creation handled by ensureRelativeStorageDirs using embedded JSONFileManager path base)
 
     async ensureRelativeStorageDirs() {
         try {
