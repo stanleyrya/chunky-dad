@@ -64,6 +64,24 @@ class ScriptableAdapter {
             this.jsonLib = JSONFileManager; // Fall back to global symbol if user attached it
         }
 
+        // Optional external File Logger (user-provided)
+        this.fileLogger = null;
+        try {
+            const maybeLoggerModule = typeof importModule !== 'undefined' ? importModule('minified-file-logger') : null;
+            // Be liberal in what we accept
+            if (maybeLoggerModule) {
+                if (typeof maybeLoggerModule.FileLogger === 'function') {
+                    this.fileLogger = new maybeLoggerModule.FileLogger();
+                } else if (typeof maybeLoggerModule.fileLogger !== 'undefined') {
+                    this.fileLogger = maybeLoggerModule.fileLogger;
+                } else if (typeof maybeLoggerModule.logger !== 'undefined') {
+                    this.fileLogger = maybeLoggerModule.logger;
+                } else {
+                    this.fileLogger = maybeLoggerModule;
+                }
+            }
+        } catch (_) {}
+
         // Run storage setup (Scriptable iCloud)
         try {
             this.fm = FileManager.iCloud();
@@ -470,7 +488,7 @@ class ScriptableAdapter {
                 if (wroteToCalendar) {
                     await this.ensureRelativeStorageDirs();
                     await this.saveRun(results);
-                    // Cleanup old JSON runs (CSV performance files are not in runs dir and are not .json)
+                    // Cleanup old JSON runs
                     const maxAgeDays = 30;
                     await this.cleanupOldRuns(maxAgeDays);
                 } else {
@@ -478,6 +496,15 @@ class ScriptableAdapter {
                 }
             } catch (persistErr) {
                 console.log(`📱 Scriptable: Run persistence failed: ${persistErr.message}`);
+            }
+
+            // Append a simple log file entry and cleanup logs (regardless of calendar writes)
+            try {
+                await this.ensureRelativeStorageDirs();
+                await this.appendLogSummary(results);
+                await this.cleanupOldLogs(30);
+            } catch (logErr) {
+                console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
             }
             
         } catch (error) {
@@ -3148,9 +3175,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const base = jsonFileManager.getCurrentDir();
             const root = `${base}chunky-dad-scraper`;
             const runs = `${root}/runs`;
+            const logs = `${root}/logs`;
             const fm = this.fm || FileManager.iCloud();
             if (!fm.fileExists(root)) fm.createDirectory(root, true);
             if (!fm.fileExists(runs)) fm.createDirectory(runs, true);
+            if (!fm.fileExists(logs)) fm.createDirectory(logs, true);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
         }
@@ -3378,6 +3407,84 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
         // Fallback to FileManager
         this.fm.writeString(absolutePath, jsonStr);
+    }
+
+    // Log helpers (prefer user's file logger)
+    getLogFilePath() {
+        const base = jsonFileManager.getCurrentDir();
+        const date = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const y = date.getFullYear();
+        const m = pad(date.getMonth() + 1);
+        const d = pad(date.getDate());
+        return `${base}chunky-dad-scraper/logs/${y}-${m}-${d}.log`;
+    }
+
+    async appendLogSummary(results) {
+        try {
+            const summary = {
+                timestamp: new Date().toISOString(),
+                totals: {
+                    totalEvents: results.totalEvents || 0,
+                    bearEvents: results.bearEvents || 0,
+                    calendarEvents: results.calendarEvents || 0,
+                    errors: (results.errors || []).length
+                }
+            };
+            const line = JSON.stringify(summary);
+
+            if (this.fileLogger) {
+                // Be liberal: support common methods
+                if (typeof this.fileLogger.appendLine === 'function') {
+                    await this.fileLogger.appendLine(this.getLogFilePath(), line);
+                    return;
+                }
+                if (typeof this.fileLogger.append === 'function') {
+                    await this.fileLogger.append(this.getLogFilePath(), line + '\n');
+                    return;
+                }
+                if (typeof this.fileLogger.log === 'function') {
+                    await this.fileLogger.log(this.getLogFilePath(), line);
+                    return;
+                }
+            }
+            // Fallback: plain append
+            const fm = this.fm || FileManager.iCloud();
+            const path = this.getLogFilePath();
+            let existing = '';
+            if (fm.fileExists(path)) {
+                try { existing = fm.readString(path) || ''; } catch (_) {}
+            }
+            fm.writeString(path, existing + line + '\n');
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
+        }
+    }
+
+    async cleanupOldLogs(maxAgeDays = 30) {
+        try {
+            const base = jsonFileManager.getCurrentDir();
+            const logsPath = `${base}chunky-dad-scraper/logs`;
+            const fm = this.fm || FileManager.iCloud();
+            const now = Date.now();
+            const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
+            if (!fm.fileExists(logsPath)) return;
+            const files = fm.listContents(logsPath) || [];
+            files.forEach(name => {
+                const lower = name.toLowerCase();
+                // Never delete performance CSVs or similar single-file metrics
+                if (lower.includes('performance') || lower.endsWith('.csv')) return;
+                const path = fm.joinPath(logsPath, name);
+                let mtime = null;
+                try { mtime = fm.modificationDate(path); } catch (_) {}
+                const ms = mtime ? mtime.getTime() : null;
+                if (ms && ms < cutoff) {
+                    try { fm.remove(path); } catch (_) {}
+                }
+            });
+        } catch (e) {
+            console.log(`📱 Scriptable: Log cleanup failed: ${e.message}`);
+        }
     }
 }
 
