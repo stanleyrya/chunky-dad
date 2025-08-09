@@ -687,36 +687,21 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
         
-        // Get the parent event item container to measure the actual available space
-        const eventItem = eventName.closest('.event-item');
-        if (!eventItem) {
-            logger.debug('CALENDAR', 'Event item container not found for measurement');
-            return null;
-        }
-        
-        // Measure the event item's inner width (excluding padding and borders)
-        const eventItemStyle = window.getComputedStyle(eventItem);
-        const eventItemRect = eventItem.getBoundingClientRect();
-        const paddingLeft = parseFloat(eventItemStyle.paddingLeft) || 0;
-        const paddingRight = parseFloat(eventItemStyle.paddingRight) || 0;
-        const borderLeft = parseFloat(eventItemStyle.borderLeftWidth) || 0;
-        const borderRight = parseFloat(eventItemStyle.borderRightWidth) || 0;
+        // Measure the event name element directly - this IS the text container
+        const eventNameRect = eventName.getBoundingClientRect();
+        const eventNameStyle = window.getComputedStyle(eventName);
+        const paddingLeft = parseFloat(eventNameStyle.paddingLeft) || 0;
+        const paddingRight = parseFloat(eventNameStyle.paddingRight) || 0;
+        const borderLeft = parseFloat(eventNameStyle.borderLeftWidth) || 0;
+        const borderRight = parseFloat(eventNameStyle.borderRightWidth) || 0;
         
         // Calculate the actual available width for text content
-        const availableWidth = eventItemRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
-        
-        // Also check if there are any sibling elements that might take up space
-        const eventTime = eventItem.querySelector('.event-time');
-        const eventVenue = eventItem.querySelector('.event-venue');
-        
-        // For vertical layouts, we don't need to subtract sibling widths
-        // For horizontal layouts, we would need to subtract them
-        // Since our events are typically vertical, we use the full width
+        const availableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
         
         this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
         
-        logger.info('CALENDAR', `Measured actual event text width from container: ${this.cachedEventTextWidth}px`, {
-            eventItemWidth: eventItemRect.width,
+        logger.info('CALENDAR', `Measured actual event text width from .event-name element: ${this.cachedEventTextWidth}px`, {
+            eventNameWidth: eventNameRect.width,
             paddingLeft,
             paddingRight,
             borderLeft,

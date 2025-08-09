@@ -2854,18 +2854,18 @@ footer {
     }
 
     .calendar-day.month-day {
-        position: relative;
+        display: flex;
+        flex-direction: column;
     }
 
     .calendar-day.month-day .day-header {
-        position: absolute;
-        top: 0.2rem;
-        left: 0.2rem;
-        padding: 0;
+        padding: 0.2rem;
         margin: 0;
         border: none;
         background: none;
-        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .calendar-day.month-day .day-number {
@@ -2876,9 +2876,9 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 1rem 0 0 0;
+        padding: 0;
         gap: 0.2rem;
-        height: 100%;
+        flex: 1;
     }
 
 
@@ -3239,8 +3239,7 @@ footer {
     }
 
     .calendar-day.month-day .day-header {
-        top: 0.15rem;
-        left: 0.15rem;
+        padding: 0.15rem;
     }
 
     .calendar-day.month-day .day-number {
@@ -3253,7 +3252,7 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 1rem 0.1rem 0.1rem 0.1rem;
+        padding: 0;
         gap: 0.2rem;
     }
 
@@ -3586,8 +3585,7 @@ footer {
     }
 
     .calendar-day.month-day .day-header {
-        top: 0.1rem;
-        left: 0.1rem;
+        padding: 0.1rem;
     }
 }
 
@@ -3642,7 +3640,7 @@ footer {
     }
 
     .calendar-day.month-day .day-events {
-        padding: 0.8rem 0.1rem 0.1rem 0.1rem;
+        padding: 0;
         gap: 0.1rem;
     }
 
