@@ -3388,32 +3388,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
-    // Unified JSON writer that prefers external JSON file manager if present
-    async writeJsonFile(absolutePath, obj) {
-        const jsonStr = JSON.stringify(obj);
-        // Try external manager variants
-        try {
-            if (this.jsonLib) {
-                if (typeof this.jsonLib.saveJSON === 'function') {
-                    return await this.jsonLib.saveJSON(absolutePath, obj);
-                }
-                if (typeof this.jsonLib.writeJSON === 'function') {
-                    return await this.jsonLib.writeJSON(absolutePath, obj);
-                }
-                if (typeof this.jsonLib.write === 'function') {
-                    return await this.jsonLib.write(absolutePath, jsonStr);
-                }
-                if (typeof this.jsonLib.save === 'function') {
-                    return await this.jsonLib.save(absolutePath, jsonStr);
-                }
-            }
-        } catch (e) {
-            console.log(`📱 Scriptable: External JSON manager write failed, falling back. Reason: ${e.message}`);
-        }
-        // Fallback to FileManager
-        this.fm.writeString(absolutePath, jsonStr);
-    }
-
     // Log helpers (prefer user's file logger)
     getLogFilePath() {
         const base = jsonFileManager.getCurrentDir();
