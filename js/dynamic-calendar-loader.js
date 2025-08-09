@@ -687,14 +687,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
         
-        // Get the parent event item container to measure the actual available space
-        const eventItem = eventName.closest('.event-item');
-        if (!eventItem) {
-            logger.debug('CALENDAR', 'Event item container not found for measurement');
-            return null;
-        }
-        
-        // Measure the event name element directly to get the actual text container width
+        // Measure the event name element directly - this IS the text container
         const eventNameRect = eventName.getBoundingClientRect();
         const eventNameStyle = window.getComputedStyle(eventName);
         const paddingLeft = parseFloat(eventNameStyle.paddingLeft) || 0;
@@ -713,8 +706,7 @@ class DynamicCalendarLoader extends CalendarCore {
             paddingRight,
             borderLeft,
             borderRight,
-            calculatedWidth: availableWidth,
-            eventItemWidth: eventItem.getBoundingClientRect().width
+            calculatedWidth: availableWidth
         });
         
         return this.cachedEventTextWidth;
