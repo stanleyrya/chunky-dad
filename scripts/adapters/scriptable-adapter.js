@@ -399,7 +399,7 @@ class ScriptableAdapter {
             // First show the enhanced display features in console for debugging
             await this.displayCalendarProperties(results);
             await this.compareWithExistingCalendars(results);
-            await this.displayAvailableCalendars();
+            await this.displayAvailableCalendars(results);
             await this.displayEnrichedEvents(results);
             
             // Show console summary
@@ -461,14 +461,21 @@ class ScriptableAdapter {
             
             console.log('\n' + '='.repeat(60));
             
-            // Present rich UI display
+            // Present rich UI display (may update results.calendarEvents if user executes)
             await this.presentRichResults(results);
 
-            // Persist this run for later review and cleanup old runs
+            // Persist this run ONLY if we actually wrote to calendar
             try {
-                await this.saveRun(results);
-                const maxAgeDays = (results?.config?.config?.maxSavedRunAgeDays) || 30;
-                await this.cleanupOldRuns(maxAgeDays);
+                const wroteToCalendar = typeof results?.calendarEvents === 'number' && results.calendarEvents > 0;
+                if (wroteToCalendar) {
+                    await this.ensureRelativeStorageDirs();
+                    await this.saveRun(results);
+                    // Cleanup old JSON runs (CSV performance files are not in runs dir and are not .json)
+                    const maxAgeDays = 30;
+                    await this.cleanupOldRuns(maxAgeDays);
+                } else {
+                    console.log('📱 Scriptable: Skipping run save (no calendar writes)');
+                }
             } catch (persistErr) {
                 console.log(`📱 Scriptable: Run persistence failed: ${persistErr.message}`);
             }
@@ -654,7 +661,7 @@ class ScriptableAdapter {
         console.log('\n' + '='.repeat(60));
     }
 
-    async displayAvailableCalendars() {
+    async displayAvailableCalendars(results) {
         console.log('\n' + '='.repeat(60));
         console.log('📅 CALENDAR STATUS');
         console.log('='.repeat(60));
@@ -3136,6 +3143,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
+    async ensureRelativeStorageDirs() {
+        try {
+            const base = jsonFileManager.getCurrentDir();
+            const root = `${base}chunky-dad-scraper`;
+            const runs = `${root}/runs`;
+            const fm = this.fm || FileManager.iCloud();
+            if (!fm.fileExists(root)) fm.createDirectory(root, true);
+            if (!fm.fileExists(runs)) fm.createDirectory(runs, true);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
+        }
+    }
+
     getRunId(timestamp = new Date()) {
         // Use a filesystem-friendly timestamp
         const pad = n => String(n).padStart(2, '0');
@@ -3222,7 +3242,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
         // Fallback to scanning directory via FileManager for resilience
         try {
-            const files = this.fm.listContents(this.runsDir) || [];
+            const base = jsonFileManager.getCurrentDir();
+            const runsPath = `${base}chunky-dad-scraper/runs`;
+            const files = this.fm.listContents(runsPath) || [];
             return files
                 .filter(name => name.endsWith('.json') && name !== 'index.json')
                 .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
@@ -3296,24 +3318,26 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     async cleanupOldRuns(maxAgeDays = 30) {
-        if (!this.fm) return;
         try {
+            const base = jsonFileManager.getCurrentDir();
+            const runsPath = `${base}chunky-dad-scraper/runs`;
+            const fm = this.fm || FileManager.iCloud();
             const now = Date.now();
             const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
-            const files = this.fm.listContents(this.runsDir) || [];
+            const files = fm.listContents(runsPath) || [];
             files.forEach(name => {
-                if (!name.endsWith('.json') || name === 'index.json') return;
-                const path = this.fm.joinPath(this.runsDir, name);
+                if (!name.endsWith('.json') || name === 'index.json') return; // only delete run JSONs
+                const path = fm.joinPath(runsPath, name);
                 let mtime = null;
-                try { mtime = this.fm.modificationDate(path); } catch (_) {}
+                try { mtime = fm.modificationDate(path); } catch (_) {}
                 const ms = mtime ? mtime.getTime() : null;
                 if (ms && ms < cutoff) {
-                    try { this.fm.remove(path); } catch (_) {}
+                    try { fm.remove(path); } catch (_) {}
                 }
             });
             // Rebuild index after cleanup using JSONFileManager reads
             try {
-                const remaining = this.fm.listContents(this.runsDir) || [];
+                const remaining = fm.listContents(runsPath) || [];
                 const summaries = [];
                 remaining.forEach(name => {
                     if (!name.endsWith('.json') || name === 'index.json') return;
