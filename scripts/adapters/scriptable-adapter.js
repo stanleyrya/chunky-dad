@@ -1348,13 +1348,7 @@ class ScriptableAdapter {
             z-index: 1;
         }
         
-        .field-description {
-            font-size: 10px;
-            color: #666;
-            font-style: italic;
-            margin-top: 2px;
-            line-height: 1.3;
-        }
+
         
         .notes-preview strong {
             font-weight: 600;
@@ -1493,9 +1487,7 @@ class ScriptableAdapter {
                 font-size: 11px;
             }
             
-            .field-description {
-                font-size: 9px;
-            }
+
         }
         
         @media (max-width: 480px) {
@@ -1532,9 +1524,7 @@ class ScriptableAdapter {
                 font-size: 10px;
             }
             
-            .field-description {
-                display: none; /* Hide descriptions on very small screens */
-            }
+
         }
         
         details pre {
@@ -2366,26 +2356,11 @@ class ScriptableAdapter {
                             <table class="diff-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 20%;">
-                                            Field
-                                            <div class="field-description">Event property being compared</div>
-                                        </th>
-                                        <th style="width: 30%;">
-                                            Existing Event
-                                            <div class="field-description">Current value in calendar</div>
-                                        </th>
-                                        <th style="width: 10%; text-align: center;">
-                                            Flow
-                                            <div class="field-description">Merge direction</div>
-                                        </th>
-                                        <th style="width: 30%;">
-                                            New Event
-                                            <div class="field-description">Scraped value from source</div>
-                                        </th>
-                                        <th style="width: 10%;">
-                                            Result
-                                            <div class="field-description">Final merged value</div>
-                                        </th>
+                                        <th style="width: 20%;">Field</th>
+                                        <th style="width: 30%;">Existing Event</th>
+                                        <th style="width: 10%; text-align: center;">Flow</th>
+                                        <th style="width: 30%;">New Event</th>
+                                        <th style="width: 10%;">Result</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -3149,28 +3124,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 html += `<div style="border-top: 1px solid #ddd; margin: 8px 0 4px 0;"></div>`;
             }
             
-            // Add field header with description
-            const fieldDescriptions = {
-                'title': 'Event name/title',
-                'startDate': 'Start date and time',
-                'endDate': 'End date and time',
-                'venue': 'Location/venue name',
-                'bar': 'Bar/establishment name',
-                'city': 'City location',
-                'description': 'Event description',
-                'tea': 'Additional event details/tea',
-                'price': 'Ticket price or cost',
-                'url': 'Event link/tickets',
-                'website': 'Website URL',
-                'instagram': 'Instagram link',
-                'facebook': 'Facebook link',
-                'image': 'Event image URL',
-                'googleMapsLink': 'Google Maps location'
-            };
-            
-            const fieldDesc = fieldDescriptions[field] || 'Event property';
+            // Add field header
             html += `<div style="color: #666; font-size: 11px; margin-bottom: 4px; font-weight: bold;">
-                        ${field} <span style="font-weight: normal; font-style: italic;">(${fieldDesc})</span>
+                        ${field}
                      </div>`;
             
             // Show git-style diff
