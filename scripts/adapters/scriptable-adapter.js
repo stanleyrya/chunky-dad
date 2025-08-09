@@ -2308,13 +2308,13 @@ class ScriptableAdapter {
                                 📋 Copy JSON
                             </button>
                         </div>
-                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
+                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: auto;">
                             <tr>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%; word-wrap: break-word; overflow-wrap: break-word;">Field</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%; word-wrap: break-word; overflow-wrap: break-word;">Existing Event</th>
-                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%; word-wrap: break-word; overflow-wrap: break-word;">Flow</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%; word-wrap: break-word; overflow-wrap: break-word;">New Event</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%; word-wrap: break-word; overflow-wrap: break-word;">Result</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Field</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Existing Event</th>
+                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Flow</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">New Event</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Result</th>
                             </tr>
                             ${this.generateComparisonRows(event)}
                         </table>
