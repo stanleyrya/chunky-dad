@@ -2206,7 +2206,7 @@ class ScriptableAdapter {
             ${event._original && event._action !== 'new' ? (() => {
                 const hasDifferences = this.hasEventDifferences(event);
                 const eventId = event.key || Math.random();
-                const isExpanded = hasDifferences; // Auto-expand if there are differences
+                const isExpanded = false; // Start collapsed; expand on click
                 
                 return `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
@@ -2244,7 +2244,7 @@ class ScriptableAdapter {
                     ` : ''}
                     
                     <!-- Table view (default) -->
-                    <div id="table-view-${eventId}" class="diff-view">
+                    <div id="table-view-${eventId}" class="diff-view" style="max-height: 360px; overflow-y: auto;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div style="font-size: 12px; color: #666;">Comparison Table</div>
                             <button onclick="copyEventJSON(this)" 
@@ -2284,7 +2284,7 @@ class ScriptableAdapter {
                     </div>
                     
                     <!-- Line view (hidden by default) -->
-                    <div id="line-view-${eventId}" class="diff-view" style="display: none;">
+                    <div id="line-view-${eventId}" class="diff-view" style="display: none; max-height: 360px; overflow-y: auto;">
                         ${this.generateLineDiffView(event)}
                     </div>
                     </div>
