@@ -1314,8 +1314,6 @@ class ScriptableAdapter {
         }
         
         .diff-view {
-            -webkit-overflow-scrolling: touch;
-            overflow-y: auto;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             background: white;
@@ -1449,7 +1447,6 @@ class ScriptableAdapter {
             }
             
             .diff-view {
-                max-height: 250px;
                 padding: 8px !important;
             }
             
@@ -1478,7 +1475,6 @@ class ScriptableAdapter {
             }
             
             .diff-view {
-                max-height: 200px;
                 padding: 6px !important;
             }
             
@@ -2280,7 +2276,7 @@ class ScriptableAdapter {
                     ` : ''}
                     
                     <!-- Table view (default) -->
-                    <div id="table-view-${eventId}" class="diff-view" style="display: block; max-height: 360px; padding: 10px;">
+                    <div id="table-view-${eventId}" class="diff-view" style="display: block; padding: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <div style="font-size: 12px; color: #666;">
                                 <strong>📊 Field-by-Field Comparison</strong>
@@ -2325,16 +2321,14 @@ class ScriptableAdapter {
                     </div>
                     
                     <!-- Line view (hidden by default) -->
-                    <div id="line-view-${eventId}" class="diff-view" style="display: none; max-height: 360px; padding: 10px;">
+                    <div id="line-view-${eventId}" class="diff-view" style="display: none; padding: 10px;">
                         <div style="margin-bottom: 12px;">
                             <strong style="font-size: 12px; color: #666;">📝 Line-by-Line Diff</strong>
                             <div style="font-size: 10px; margin-top: 2px; color: #888;">
                                 Git-style diff showing additions (+), deletions (-), and unchanged (=) fields
                             </div>
                         </div>
-                        <div style="overflow-y: auto; -webkit-overflow-scrolling: touch;">
-                            ${this.generateLineDiffView(event)}
-                        </div>
+                        ${this.generateLineDiffView(event)}
                     </div>
                     </div>
                 </div>
