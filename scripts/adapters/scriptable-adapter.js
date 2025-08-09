@@ -2314,11 +2314,11 @@ class ScriptableAdapter {
                         </div>
                         <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
                             <tr>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">Existing Event</th>
-                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Flow</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">New Event</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Result</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%; word-wrap: break-word; overflow-wrap: break-word;">Field</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%; word-wrap: break-word; overflow-wrap: break-word;">Existing Event</th>
+                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%; word-wrap: break-word; overflow-wrap: break-word;">Flow</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%; word-wrap: break-word; overflow-wrap: break-word;">New Event</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%; word-wrap: break-word; overflow-wrap: break-word;">Result</th>
                             </tr>
                             ${this.generateComparisonRows(event)}
                         </table>
@@ -3002,20 +3002,20 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             rows.push(`
                 <tr>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; vertical-align: top;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word;">
                         <strong>${field}</strong>
                         <br><small style="color: #666;">${strategy}</small>
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                         ${formatValue(existingValue)}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff; word-wrap: break-word; overflow-wrap: break-word;">
                         ${flowIcon}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-break: break-word; max-width: 150px;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                         ${formatValue(newValue)}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center;">
+                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; word-wrap: break-word; overflow-wrap: break-word;">
                         ${resultText}
                     </td>
                 </tr>
