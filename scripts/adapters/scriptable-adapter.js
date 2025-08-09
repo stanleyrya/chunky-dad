@@ -3071,8 +3071,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 html += `<span style=\"color: #28a745;\">+</span> ${this.escapeHtml(formatValue(finalValue))} <em style=\"color: #666;\">(merged result)</em>`;
                 html += `</div>`;
             }
-            
-            html += `</div>`;
         });
         
         html += '</div>';
