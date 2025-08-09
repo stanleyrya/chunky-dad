@@ -3346,15 +3346,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     makeConfigReadOnlyIfNeeded(config, options) {
         if (!config) return null;
         
-        // If readOnly is not explicitly set to false, force dry run mode
-        const shouldBeReadOnly = options.readOnly !== false;
-        
-        if (shouldBeReadOnly && config.parsers) {
-            // Clone config and set all parsers to dry run mode
+        // If readOnly is true (default), force all parsers to dry run mode
+        if (options.readOnly !== false && config.parsers) {
+            // Clone config and override ALL parsers to dry run mode
             const readOnlyConfig = JSON.parse(JSON.stringify(config));
             readOnlyConfig.parsers = readOnlyConfig.parsers.map(parser => ({
                 ...parser,
-                dryRun: true
+                dryRun: true  // Total override - always dry run in read-only mode
             }));
             return readOnlyConfig;
         }

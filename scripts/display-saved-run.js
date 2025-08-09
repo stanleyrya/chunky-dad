@@ -6,8 +6,8 @@
 // Loads previously saved run JSON from iCloud and renders via ScriptableAdapter
 // 
 // MODES:
-// - Widget/Read-Only (readOnly: true): Safe viewing only, no calendar operations
-// - Manual Run (readOnly: false): Allows calendar updates for saved run data
+// - Widget/Read-Only (readOnly: true): Safe viewing only, forces isDryRun override
+// - Manual Run (readOnly: false): Preserves original config, allows calendar updates
 
 try {
   const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
@@ -18,7 +18,7 @@ try {
     last: false,           // set true to auto-load most recent
     runId: null,           // or set to a specific runId like "20250101-120000"
     presentHistory: true,  // default: present a picker
-    readOnly: true         // WIDGET SAFE: set false to allow calendar updates when running manually
+    readOnly: true         // TOTAL OVERRIDE: forces isDryRun=true, set false for calendar updates
   };
 
   await adapter.displaySavedRun(OPTIONS);
