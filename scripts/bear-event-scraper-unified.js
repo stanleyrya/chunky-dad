@@ -241,18 +241,12 @@ class BearEventScraperOrchestrator {
                 
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 console.log('🐻 Orchestrator: Analyzing events for calendar actions...');
-                let analyzedEvents = null;
-                try {
-                    analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter, config.config);
-                    console.log(`🐻 Orchestrator: ✓ Analyzed ${analyzedEvents.length} events for calendar actions`);
-                    
-                    // Store analyzed events back into results for display
-                    results.analyzedEvents = analyzedEvents;
-                    
-                } catch (error) {
-                    console.error(`🐻 Orchestrator: ✗ Failed to analyze events: ${error.message}`);
-                    results.errors.push(`Event analysis failed: ${error.message}`);
-                }
+                
+                const analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter, config.config);
+                console.log(`🐻 Orchestrator: ✓ Analyzed ${analyzedEvents.length} events for calendar actions`);
+                
+                // Store analyzed events back into results for display
+                results.analyzedEvents = analyzedEvents;
 
                 // Determine execution mode based on environment
                 const hasDisplay = this.isScriptable || this.isWeb;

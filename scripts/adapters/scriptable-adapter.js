@@ -612,8 +612,11 @@ class ScriptableAdapter {
             
             try {
                 // Check for existing events in the time range
-                const startDate = event.startDate;
-                const endDate = event.endDate || event.startDate;
+                // Ensure dates are Date objects (may be strings from saved runs)
+                const startDate = typeof event.startDate === 'string' ? new Date(event.startDate) : event.startDate;
+                const endDate = typeof (event.endDate || event.startDate) === 'string' ? 
+                    new Date(event.endDate || event.startDate) : 
+                    (event.endDate || event.startDate);
                 
                 // Expand search range for recurring events
                 const searchStart = new Date(startDate);
@@ -2655,24 +2658,28 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     // Helper method to extract all events from parser results
     getAllEventsFromResults(results) {
-        // Prefer analyzed events if available (they have action types)
-        if (results && results.analyzedEvents && Array.isArray(results.analyzedEvents)) {
-            return results.analyzedEvents;
+        // Events must be analyzed to have action types - no fallback to raw parser results
+        if (!results || !results.analyzedEvents || !Array.isArray(results.analyzedEvents)) {
+            throw new Error('No analyzed events available - event analysis must succeed for the system to function');
         }
         
-        // Fall back to original events
-        if (!results || !results.parserResults) {
-            return [];
+        let events = results.analyzedEvents;
+        
+        // If this is from a saved run, convert date strings to Date objects
+        if (results && results._isDisplayingSavedRun && events.length > 0) {
+            events = events.map(event => {
+                const convertedEvent = { ...event };
+                if (typeof convertedEvent.startDate === 'string') {
+                    convertedEvent.startDate = new Date(convertedEvent.startDate);
+                }
+                if (typeof convertedEvent.endDate === 'string') {
+                    convertedEvent.endDate = new Date(convertedEvent.endDate);
+                }
+                return convertedEvent;
+            });
         }
         
-        const allEvents = [];
-        for (const parserResult of results.parserResults) {
-            if (parserResult.events && parserResult.events.length > 0) {
-                allEvents.push(...parserResult.events);
-            }
-        }
-        
-        return allEvents;
+        return events;
     }
 
     // Helper method to determine if time conflicts should be merged
@@ -3375,14 +3382,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
 
             // Normalize to the same shape expected by display/present methods
+            // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
             const resultsLike = {
                 totalEvents: saved?.summary?.totals?.totalEvents || 0,
                 bearEvents: saved?.summary?.totals?.bearEvents || 0,
-                calendarEvents: saved?.summary?.totals?.calendarEvents || 0,
+                calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
                 analyzedEvents: saved?.analyzedEvents || null,
-                config: saved?.config || null
+                config: saved?.config || null,
+                _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
             };
 
             await this.displayResults(resultsLike);
