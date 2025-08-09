@@ -42,6 +42,22 @@ const performanceDebugger = new PerformanceDebugger()
 class JSONFileManager{saveJSON(e,t){const s=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],t=i.replace("/"+e,"");s.createDirectory(t,!0)}if(s.fileExists(i)&&s.isDirectory(i))throw"JSON file is a directory, please delete!";const n=JSON.stringify(t);s.writeString(i,n)}readJSON(e){const t=this.getFileManager(),s=this.getCurrentDir()+e;if(t.fileExists(s)){try{return t.downloadFileFromiCloud(s),JSON.parse(t.readString(s))}catch(e){return JSON.parse(t.readString(s))}}return null}appendJSONToArrayFile(e,t){const s=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],t=i.replace("/"+e,"");s.createDirectory(t,!0)}if(s.fileExists(i)&&s.isDirectory(i))throw"JSON file is a directory, please delete!";let n=[];if(s.fileExists(i))try{n=JSON.parse(s.readString(i))}catch(e){n=[]}Array.isArray(n)||("object"==typeof n&&(n=[n]),Array.isArray(n)||(n=[])),n.push(t);const a=JSON.stringify(n);s.writeString(i,a)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),t=module.filename;return t.replace(e.fileName(t,!0),"")}}
 const jsonFileManager = new JSONFileManager()
 
+/**
+ * Author: Ryan Stanley (stanleyrya@gmail.com)
+ * Tips: https://www.paypal.me/stanleyrya
+ *
+ * Class that can write logs to the file system.
+ *
+ * This is a minified version but it can be replaced with the full version here!
+ * https://github.com/stanleyrya/scriptable-playground/tree/main/file-logger
+ *
+ * Usage:
+ *  * log(line): Adds the log line to the class' internal log object.
+ *  * writeLogs(relativePath): Writes the stored logs to the relative file path.
+ */
+class FileLogger{constructor(){this.logs=""}log(e){e instanceof Error?console.error(e):console.log(e),this.logs+=new Date+" - "+e+"\n"}writeLogs(e){const r=this.getFileManager(),t=this.getCurrentDir()+e,i=e.split("/");if(i>1){const e=i[i.length-1],l=t.replace("/"+e,"");r.createDirectory(l,!0)}if(r.fileExists(t)&&r.isDirectory(t))throw"Log file is a directory, please delete!";r.writeString(t,this.logs)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),r=module.filename;return r.replace(e.fileName(r,!0),"")}}
+const logger = new FileLogger();
+
 class ScriptableAdapter {
     constructor(config = {}) {
         this.config = {
@@ -53,34 +69,9 @@ class ScriptableAdapter {
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
 
-        // Optional external JSON manager (user-provided)
-        this.jsonLib = null;
-        try {
-            // Try to import if user added it as a separate Scriptable script file
-            const maybeJsonModule = typeof importModule !== 'undefined' ? importModule('minified-json-file-manager') : null;
-            if (maybeJsonModule) this.jsonLib = maybeJsonModule;
-        } catch (_) {}
-        if (!this.jsonLib && typeof JSONFileManager !== 'undefined') {
-            this.jsonLib = JSONFileManager; // Fall back to global symbol if user attached it
-        }
-
-        // Optional external File Logger (user-provided)
-        this.fileLogger = null;
-        try {
-            const maybeLoggerModule = typeof importModule !== 'undefined' ? importModule('minified-file-logger') : null;
-            // Be liberal in what we accept
-            if (maybeLoggerModule) {
-                if (typeof maybeLoggerModule.FileLogger === 'function') {
-                    this.fileLogger = new maybeLoggerModule.FileLogger();
-                } else if (typeof maybeLoggerModule.fileLogger !== 'undefined') {
-                    this.fileLogger = maybeLoggerModule.fileLogger;
-                } else if (typeof maybeLoggerModule.logger !== 'undefined') {
-                    this.fileLogger = maybeLoggerModule.logger;
-                } else {
-                    this.fileLogger = maybeLoggerModule;
-                }
-            }
-        } catch (_) {}
+        // Hardcoded embedded utilities
+        this.jsonLib = JSONFileManager;
+        this.fileLogger = logger;
 
         // Run storage setup (Scriptable iCloud)
         try {
@@ -3434,17 +3425,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const line = JSON.stringify(summary);
 
             if (this.fileLogger) {
-                // Be liberal: support common methods
-                if (typeof this.fileLogger.appendLine === 'function') {
-                    await this.fileLogger.appendLine(this.getLogFilePath(), line);
-                    return;
-                }
-                if (typeof this.fileLogger.append === 'function') {
-                    await this.fileLogger.append(this.getLogFilePath(), line + '\n');
-                    return;
-                }
-                if (typeof this.fileLogger.log === 'function') {
-                    await this.fileLogger.log(this.getLogFilePath(), line);
+                // Prefer embedded logger API
+                if (typeof this.fileLogger.log === 'function' && typeof this.fileLogger.writeLogs === 'function') {
+                    this.fileLogger.log(line);
+                    this.fileLogger.writeLogs(this.getLogFilePath().replace(jsonFileManager.getCurrentDir(), ''));
                     return;
                 }
             }
