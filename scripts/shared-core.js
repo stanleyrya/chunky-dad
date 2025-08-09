@@ -310,7 +310,7 @@ class SharedCore {
     isBearEvent(event, parserConfig) {
         if (parserConfig.alwaysBear) return true;
 
-        const searchText = `${event.title || ''} ${event.description || ''} ${event.venue || ''}`.toLowerCase();
+        const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`.toLowerCase();
         
         // Check allowlist first (if provided)
         if (parserConfig.allowlist && parserConfig.allowlist.length > 0) {
@@ -393,7 +393,7 @@ class SharedCore {
         }
         
         const date = this.normalizeEventDate(event.startDate);
-        const venue = String(event.venue || '').toLowerCase().trim();
+        const venue = String(event.bar || '').toLowerCase().trim();
         const source = String(event.source || '').toLowerCase().trim();
         
         const key = `${title}|${date}|${venue}|${source}`;
@@ -640,13 +640,13 @@ class SharedCore {
             'info': 'description',
             
             // Venue/location aliases
-            'bar': 'venue',
-            'location': 'venue',
-            'host': 'venue',
+            'venue': 'bar',
+            'location': 'bar',
+            'host': 'bar',
             
             // Price aliases
-            'cover': 'price',
-            'cost': 'price',
+            'price': 'cover',
+            'cost': 'cover',
             
             // Name aliases
             'shortname': 'shortTitle',
@@ -672,10 +672,10 @@ class SharedCore {
             'phone number': 'phone',
             
             // Social/web aliases
-            'gmaps': 'googleMapsLink',
-            'googlemaps': 'googleMapsLink',
-            'googlemapslink': 'googleMapsLink',
-            'google maps': 'googleMapsLink'
+            'googleMapsLink': 'gmaps',
+            'googlemaps': 'gmaps',
+            'googlemapslink': 'gmaps',
+            'google maps': 'gmaps'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
@@ -855,18 +855,18 @@ class SharedCore {
         
         // Only generate Google Maps link for full addresses
         if (event.address && this.isFullAddress(event.address)) {
-            event.googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+            event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
         } else if (!event.address) {
             // No address provided: fall back to coordinates if available
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-                event.googleMapsLink = `https://maps.google.com/?q=${event.location}`;
+                event.gmaps = `https://maps.google.com/?q=${event.location}`;
             } else {
-                delete event.googleMapsLink;
+                delete event.gmaps;
                 event.location = null;
             }
         } else {
             // Address present but not full (placeholder): disable maps and coordinates
-            delete event.googleMapsLink;
+            delete event.gmaps;
             event.location = null;
             delete event.address;
         }
@@ -994,7 +994,7 @@ class SharedCore {
     
     // Extract city from event data or URL
     extractCityFromEvent(eventData, url) {
-        // Try venue address first
+        // Try venue address first (keeping venue for backward compatibility with eventbrite data structure)
         if (eventData.venue?.address) {
             const address = eventData.venue.address;
             const cityFromAddress = address.city || address.localized_area_display || '';
@@ -1012,7 +1012,7 @@ class SharedCore {
         }
         
         // Try extracting from text content
-        const searchText = `${eventData.title || eventData.name || ''} ${eventData.description || ''} ${eventData.venue || ''} ${url || ''}`;
+        const searchText = `${eventData.title || eventData.name || ''} ${eventData.description || ''} ${eventData.bar || ''} ${url || ''}`;
         const cityFromText = this.extractCityFromText(searchText);
         if (cityFromText) {
             return cityFromText;
@@ -1318,7 +1318,7 @@ class SharedCore {
             // Check if these are mergeable conflicts (adding info to existing events)
             const mergeableConflict = timeConflicts.find(existing => 
                 this.areTitlesSimilar(existing.title, event.title) || 
-                (existing.location === (event.venue || event.bar) && 
+                (existing.location === (event.bar || event.venue) && 
                  this.areDatesEqual(existing.startDate, event.startDate, 60))
             );
             
@@ -1486,9 +1486,9 @@ class SharedCore {
             });
             
             // Process direct fields from conflict object
-            // Handle 'location' -> 'venue' mapping
-            if (conflict.location && !existingFieldsFromNotes.venue) {
-                applyMergeStrategy('venue', conflict.location, event.venue);
+            // Handle 'location' -> 'bar' mapping
+            if (conflict.location && !existingFieldsFromNotes.bar) {
+                applyMergeStrategy('bar', conflict.location, event.bar);
             }
             
             // Process other direct fields that might exist on conflict

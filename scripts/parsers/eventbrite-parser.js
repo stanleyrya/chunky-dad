@@ -320,12 +320,12 @@ class EventbriteParser {
                 description: description,
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
-                venue: venue,
+                bar: venue, // Use 'bar' field name that calendar-core.js expects
                 location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: address,
                 city: city,
                 url: url,
-                price: price,
+                cover: price, // Use 'cover' field name that calendar-core.js expects
                 image: image,
                 source: this.config.source,
                 // Properly handle bear event detection based on configuration
@@ -481,11 +481,11 @@ class EventbriteParser {
                 description: '',
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: null,
-                venue: venue,
+                bar: venue, // Use 'bar' field name that calendar-core.js expects
                 location: null, // No coordinates available in HTML parsing
                 city: city,
                 url: url,
-                price: '',
+                cover: '', // Use 'cover' field name that calendar-core.js expects
                 image: '',
                 source: this.config.source,
                 setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
