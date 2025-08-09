@@ -75,9 +75,7 @@ class ScriptableAdapter {
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
 
-        // Hardcoded embedded utilities
-        this.jsonLib = JSONFileManager;
-        this.fileLogger = logger;
+        // Embedded utilities available as globals (see top of file)
 
         // Run storage setup (Scriptable iCloud)
         try {
@@ -3412,13 +3410,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             };
             const line = JSON.stringify(summary);
 
-            if (this.fileLogger) {
-                // Prefer embedded logger API
-                if (typeof this.fileLogger.log === 'function' && typeof this.fileLogger.writeLogs === 'function') {
-                    this.fileLogger.log(line);
-                    this.fileLogger.writeLogs(this.getLogFilePath().replace(jsonFileManager.getCurrentDir(), ''));
-                    return;
-                }
+            // Prefer embedded logger API
+            if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
+                logger.log(line);
+                logger.writeLogs(this.getLogFilePath().replace(jsonFileManager.getCurrentDir(), ''));
+                return;
             }
             // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
