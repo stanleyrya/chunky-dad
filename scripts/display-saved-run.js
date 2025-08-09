@@ -13,12 +13,12 @@ try {
   const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
   const adapter = new ScriptableAdapter();
 
-  // Options: change these to skip the picker
+  // Options: change these to control behavior
   const OPTIONS = {
     last: false,           // set true to auto-load most recent
     runId: null,           // or set to a specific runId like "20250101-120000"
     presentHistory: true,  // default: present a picker
-    readOnly: true         // set false to allow calendar updates when running manually
+    readOnly: true         // WIDGET SAFE: set false to allow calendar updates when running manually
   };
 
   await adapter.displaySavedRun(OPTIONS);

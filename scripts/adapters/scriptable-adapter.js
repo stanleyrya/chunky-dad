@@ -972,8 +972,7 @@ class ScriptableAdapter {
             console.log('📱 Scriptable: ✓ Rich HTML display completed');
             
             // After displaying results, prompt for calendar execution if we have analyzed events
-            // NEVER prompt for calendar execution when in read-only mode (saved runs or widgets)
-            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
+            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents) {
                 // Only prompt if we haven't already executed (calendarEvents would be > 0)
                 const isDryRun = results.config?.parsers?.some(p => p.dryRun === true);
                 if (!isDryRun) {
@@ -3344,6 +3343,25 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
+    makeConfigReadOnlyIfNeeded(config, options) {
+        if (!config) return null;
+        
+        // If readOnly is not explicitly set to false, force dry run mode
+        const shouldBeReadOnly = options.readOnly !== false;
+        
+        if (shouldBeReadOnly && config.parsers) {
+            // Clone config and set all parsers to dry run mode
+            const readOnlyConfig = JSON.parse(JSON.stringify(config));
+            readOnlyConfig.parsers = readOnlyConfig.parsers.map(parser => ({
+                ...parser,
+                dryRun: true
+            }));
+            return readOnlyConfig;
+        }
+        
+        return config;
+    }
+
     async displaySavedRun(options = {}) {
         try {
             let runToShow = null;
@@ -3391,8 +3409,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
                 analyzedEvents: saved?.analyzedEvents || null,
-                config: saved?.config || null,
-                _isDisplayingSavedRun: options.readOnly !== false // Flag to indicate read-only mode (default true)
+                config: this.makeConfigReadOnlyIfNeeded(saved?.config, options),
+                _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
             };
 
             await this.displayResults(resultsLike);
