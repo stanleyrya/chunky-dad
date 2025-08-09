@@ -2658,19 +2658,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     // Helper method to extract all events from parser results
     getAllEventsFromResults(results) {
-        let events = [];
-        
-        // Prefer analyzed events if available (they have action types)
-        if (results && results.analyzedEvents && Array.isArray(results.analyzedEvents)) {
-            events = results.analyzedEvents;
-        } else if (results && results.parserResults) {
-            // Fall back to original events
-            for (const parserResult of results.parserResults) {
-                if (parserResult.events && parserResult.events.length > 0) {
-                    events.push(...parserResult.events);
-                }
-            }
+        // Events must be analyzed to have action types - no fallback to raw parser results
+        if (!results || !results.analyzedEvents || !Array.isArray(results.analyzedEvents)) {
+            throw new Error('No analyzed events available - event analysis must succeed for the system to function');
         }
+        
+        let events = results.analyzedEvents;
         
         // If this is from a saved run, convert date strings to Date objects
         if (results && results._isDisplayingSavedRun && events.length > 0) {

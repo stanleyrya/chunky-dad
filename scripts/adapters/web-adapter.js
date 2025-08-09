@@ -366,24 +366,12 @@ class WebAdapter {
 
     // Helper method to extract all events from parser results
     getAllEventsFromResults(results) {
-        // Prefer analyzed events if available (they have action types)
-        if (results && results.analyzedEvents && Array.isArray(results.analyzedEvents)) {
-            return results.analyzedEvents;
+        // Events must be analyzed to have action types - no fallback to raw parser results
+        if (!results || !results.analyzedEvents || !Array.isArray(results.analyzedEvents)) {
+            throw new Error('No analyzed events available - event analysis must succeed for the system to function');
         }
         
-        // Fall back to original events
-        if (!results || !results.parserResults) {
-            return [];
-        }
-        
-        const allEvents = [];
-        for (const parserResult of results.parserResults) {
-            if (parserResult.events && parserResult.events.length > 0) {
-                allEvents.push(...parserResult.events);
-            }
-        }
-        
-        return allEvents;
+        return results.analyzedEvents;
     }
 }
 
