@@ -16,6 +16,54 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+/**
+ * Author: Ryan Stanley (stanleyrya@gmail.com)
+ * Tips: https://www.paypal.me/stanleyrya
+ *
+ * Class that can capture the time functions take in milliseconds then export them to a CSV.
+ *
+ * This is a minified version but it can be replaced with the full version here!
+ * https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
+ *
+ * Usage:
+ *  * wrap(fn, args): Wrap the function calls you want to monitor with this wrapper.
+ *  * appendPerformanceDataToFile(relativePath): Use at the end of your script to write the metrics to the CSV file at the relative file path.
+ */
+class PerformanceDebugger{constructor(){this.performanceResultsInMillis={}}async wrap(e,t,i){const r=Date.now(),s=await e.apply(null,t),n=Date.now(),a=i||e.name;return this.performanceResultsInMillis[a]=n-r,s}async appendPerformanceDataToFile(e){const t=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],s=i.replace("/"+e,"");t.createDirectory(s,!0)}if(t.fileExists(i)&&t.isDirectory(i))throw"Performance file is a directory, please delete!";let s,n,a=Object.getOwnPropertyNames(this.performanceResultsInMillis);if(t.fileExists(i)){console.log("File exists, reading headers. To keep things easy we're only going to write to these headers."),await t.downloadFileFromiCloud(i),n=t.readString(i),s=this.getFirstLine(n).split(",")}else console.log("File doesn't exist, using available headers."),n=(s=a).toString();n=n.concat("\n");for(const e of s)this.performanceResultsInMillis[e]&&(n=n.concat(this.performanceResultsInMillis[e])),n=n.concat(",");n=n.slice(0,-1),t.writeString(i,n)}getFirstLine(e){var t=e.indexOf("\n");return-1===t&&(t=void 0),e.substring(0,t)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),t=module.filename;return t.replace(e.fileName(t,!0),"")}}
+const performanceDebugger = new PerformanceDebugger()
+
+/**
+ * Author: Ryan Stanley (stanleyrya@gmail.com)
+ * Tips: https://www.paypal.me/stanleyrya
+ *
+ * Class that can read and write JSON objects using the file system.
+ *
+ * This is a minified version but it can be replaced with the full version here!
+ * https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
+ *
+ * Usage:
+ *  * write(relativePath, jsonObject): Writes JSON object to a relative path.
+ *  * read(relativePath): Reads JSON object from a relative path.
+ */
+class JSONFileManager{write(e,r){const t=this.getFileManager(),i=this.getCurrentDir()+e,l=e.split("/");if(l>1){const e=l[l.length-1],r=i.replace("/"+e,"");t.createDirectory(r,!0)}if(t.fileExists(i)&&t.isDirectory(i))throw"JSON file is a directory, please delete!";t.writeString(i,JSON.stringify(r))}read(e){const r=this.getFileManager(),t=this.getCurrentDir()+e;if(!r.fileExists(t))throw"JSON file does not exist! Could not load: "+t;if(r.isDirectory(t))throw"JSON file is a directory! Could not load: "+t;r.downloadFileFromiCloud(t);const i=JSON.parse(r.readString(t));if(null!==i)return i;throw"Could not read file as JSON! Could not load: "+t}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),r=module.filename;return r.replace(e.fileName(r,!0),"")}}
+const jsonFileManager = new JSONFileManager()
+
+/**
+ * Author: Ryan Stanley (stanleyrya@gmail.com)
+ * Tips: https://www.paypal.me/stanleyrya
+ *
+ * Class that can write logs to the file system.
+ *
+ * This is a minified version but it can be replaced with the full version here!
+ * https://github.com/stanleyrya/scriptable-playground/tree/main/file-logger
+ *
+ * Usage:
+ *  * log(line): Adds the log line to the class' internal log object.
+ *  * writeLogs(relativePath): Writes the stored logs to the relative file path.
+ */
+class FileLogger{constructor(){this.logs=""}log(e){e instanceof Error?console.error(e):console.log(e),this.logs+=new Date+" - "+e+"\n"}writeLogs(e){const r=this.getFileManager(),t=this.getCurrentDir()+e,i=e.split("/");if(i>1){const e=i[i.length-1],l=t.replace("/"+e,"");r.createDirectory(l,!0)}if(r.fileExists(t)&&r.isDirectory(t))throw"Log file is a directory, please delete!";r.writeString(t,this.logs)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),r=module.filename;return r.replace(e.fileName(r,!0),"")}}
+const logger = new FileLogger();
+
 class ScriptableAdapter {
     constructor(config = {}) {
         this.config = {
@@ -26,6 +74,10 @@ class ScriptableAdapter {
         
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
+
+
+        // FileManager available for fallbacks
+        this.fm = FileManager.iCloud();
     }
 
     // HTTP Adapter Implementation
@@ -349,7 +401,7 @@ class ScriptableAdapter {
             // First show the enhanced display features in console for debugging
             await this.displayCalendarProperties(results);
             await this.compareWithExistingCalendars(results);
-            await this.displayAvailableCalendars();
+            await this.displayAvailableCalendars(results);
             await this.displayEnrichedEvents(results);
             
             // Show console summary
@@ -411,8 +463,38 @@ class ScriptableAdapter {
             
             console.log('\n' + '='.repeat(60));
             
-            // Present rich UI display
+            // Present rich UI display (may update results.calendarEvents if user executes)
             await this.presentRichResults(results);
+
+            // Persist this run ONLY if we actually wrote to calendar
+            const wroteToCalendar = typeof results?.calendarEvents === 'number' && results.calendarEvents > 0;
+            if (wroteToCalendar) {
+                await this.ensureRelativeStorageDirs();
+                await this.saveRun(results);
+                // Cleanup old JSON runs
+                await this.cleanupOldFiles('chunky-dad-scraper/runs', {
+                    maxAgeDays: 30,
+                    keep: (name) => name === 'index.json' || !name.endsWith('.json'),
+                    afterCleanup: async () => { await this.rebuildRunsIndex(); }
+                });
+            } else {
+                console.log('📱 Scriptable: Skipping run save (no calendar writes)');
+            }
+
+            // Append a simple log file entry and cleanup logs (regardless of calendar writes)
+            try {
+                await this.ensureRelativeStorageDirs();
+                await this.appendLogSummary(results);
+                await this.cleanupOldFiles('chunky-dad-scraper/logs', {
+                    maxAgeDays: 30,
+                    keep: (name) => {
+                        const lower = name.toLowerCase();
+                        return lower.includes('performance') || lower.endsWith('.csv');
+                    }
+                });
+            } catch (logErr) {
+                console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
+            }
             
         } catch (error) {
             console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
@@ -595,7 +677,7 @@ class ScriptableAdapter {
         console.log('\n' + '='.repeat(60));
     }
 
-    async displayAvailableCalendars() {
+    async displayAvailableCalendars(results) {
         console.log('\n' + '='.repeat(60));
         console.log('📅 CALENDAR STATUS');
         console.log('='.repeat(60));
@@ -3041,29 +3123,300 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const response = await alert.presentAlert();
         
         if (response === 0) {
-            // User selected Execute
+            // Before executing writes, attempt to persist capability by writing a temp file. If this fails, abort.
+            await this.ensureRelativeStorageDirs();
+            const base = jsonFileManager.getCurrentDir();
+            const testRelPath = `chunky-dad-scraper/runs/.write-test.json`;
+            const testAbsPath = `${base}${testRelPath}`;
             try {
-                const processedCount = await this.executeCalendarActions(analyzedEvents, config);
-                
-                const successAlert = new Alert();
-                successAlert.title = "Calendar Updated";
-                successAlert.message = `Successfully processed ${processedCount} events.`;
-                successAlert.addAction("OK");
-                await successAlert.presentAlert();
-                
-                return processedCount;
-            } catch (error) {
+                jsonFileManager.write(testRelPath, { ts: new Date().toISOString() });
+                // remove temp file
+                const fm = this.fm || FileManager.iCloud();
+                if (fm.fileExists(testAbsPath)) fm.remove(testAbsPath);
+            } catch (e) {
                 const errorAlert = new Alert();
-                errorAlert.title = "Error";
-                errorAlert.message = `Failed to update calendar: ${error.message}`;
+                errorAlert.title = "Cannot Proceed";
+                errorAlert.message = "Failed to write to runs directory. Calendar changes will not be executed.";
                 errorAlert.addAction("OK");
                 await errorAlert.presentAlert();
-                
                 return 0;
             }
+
+            // User selected Execute and write preflight works — proceed to execute
+            const processedCount = await this.executeCalendarActions(analyzedEvents, config);
+
+            const successAlert = new Alert();
+            successAlert.title = "Calendar Updated";
+            successAlert.message = `Successfully processed ${processedCount} events.`;
+            successAlert.addAction("OK");
+            await successAlert.presentAlert();
+            
+            return processedCount;
         }
         
         return 0;
+    }
+
+    // (Directory creation handled by ensureRelativeStorageDirs using embedded JSONFileManager path base)
+
+    async ensureRelativeStorageDirs() {
+        try {
+            const base = jsonFileManager.getCurrentDir();
+            const root = `${base}chunky-dad-scraper`;
+            const runs = `${root}/runs`;
+            const logs = `${root}/logs`;
+            const fm = this.fm || FileManager.iCloud();
+            if (!fm.fileExists(root)) fm.createDirectory(root, true);
+            if (!fm.fileExists(runs)) fm.createDirectory(runs, true);
+            if (!fm.fileExists(logs)) fm.createDirectory(logs, true);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
+        }
+    }
+
+    getRunId(timestamp = new Date()) {
+        // Use a filesystem-friendly timestamp
+        const pad = n => String(n).padStart(2, '0');
+        const y = timestamp.getFullYear();
+        const m = pad(timestamp.getMonth() + 1);
+        const d = pad(timestamp.getDate());
+        const hh = pad(timestamp.getHours());
+        const mm = pad(timestamp.getMinutes());
+        const ss = pad(timestamp.getSeconds());
+        return `${y}${m}${d}-${hh}${mm}${ss}`;
+    }
+
+    getRunFilePath(runId) {
+        return this.fm.joinPath(this.runsDir, `${runId}.json`);
+    }
+
+    async saveRun(results) {
+        if (!this.fm) return;
+        try {
+            const ts = new Date();
+            const runId = this.getRunId(ts);
+            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
+            const indexRelPath = `chunky-dad-scraper/runs/index.json`;
+            
+            const summary = {
+                runId,
+                timestamp: ts.toISOString(),
+                totals: {
+                    totalEvents: results.totalEvents || 0,
+                    bearEvents: results.bearEvents || 0,
+                    calendarEvents: results.calendarEvents || 0,
+                    errors: (results.errors || []).length
+                },
+                parserSummaries: (results.parserResults || []).map(r => ({ name: r.name, bearEvents: r.bearEvents, totalEvents: r.totalEvents }))
+            };
+            
+            const payload = {
+                version: 1,
+                summary,
+                config: results.config || null,
+                analyzedEvents: results.analyzedEvents || null,
+                parserResults: results.parserResults || [],
+                errors: results.errors || []
+            };
+
+            // Save run via JSONFileManager
+            jsonFileManager.write(relPath, payload);
+            console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${relPath}`);
+
+            // Update index (read, push, sort, write)
+            let index = jsonFileManager.read(indexRelPath) || [];
+            if (!Array.isArray(index)) index = [];
+            index.push(summary);
+            index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+            if (index.length > 200) index = index.slice(0, 200);
+            jsonFileManager.write(indexRelPath, index);
+            return runId;
+        } catch (e) {
+            console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
+        }
+    }
+
+    updateRunIndex(summary) {
+        try {
+            const indexRelPath = `chunky-dad-scraper/runs/index.json`;
+            let index = jsonFileManager.read(indexRelPath) || [];
+            if (!Array.isArray(index)) index = [];
+            index.push(summary);
+            index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+            if (index.length > 200) index = index.slice(0, 200);
+            jsonFileManager.write(indexRelPath, index);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to update run index: ${e.message}`);
+        }
+    }
+
+    listSavedRuns() {
+        const indexRelPath = `chunky-dad-scraper/runs/index.json`;
+        try {
+            const arr = jsonFileManager.read(indexRelPath) || [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to read run index: ${e.message}`);
+        }
+        // Fallback to scanning directory via FileManager for resilience
+        try {
+            const base = jsonFileManager.getCurrentDir();
+            const runsPath = `${base}chunky-dad-scraper/runs`;
+            const files = this.fm.listContents(runsPath) || [];
+            return files
+                .filter(name => name.endsWith('.json') && name !== 'index.json')
+                .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
+                .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
+        } catch (_) { return []; }
+    }
+
+    loadSavedRun(runId) {
+        try {
+            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
+            return jsonFileManager.read(relPath);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
+            return null;
+        }
+    }
+
+    async displaySavedRun(options = {}) {
+        try {
+            let runToShow = null;
+            const runs = this.listSavedRuns();
+            if (!runs || runs.length === 0) {
+                await this.showError('No saved runs', 'No saved runs were found to display.');
+                return;
+            }
+
+            if (options.runId) {
+                runToShow = options.runId;
+            } else if (options.last) {
+                runToShow = runs[0].runId || runs[0];
+            } else if (options.presentHistory) {
+                // Simple selection UI using Alert
+                const alert = new Alert();
+                alert.title = 'Select Saved Run';
+                alert.message = 'Choose a run to display';
+                runs.slice(0, 25).forEach((r, idx) => {
+                    const label = r.timestamp ? `${idx + 1}. ${r.timestamp}` : `${idx + 1}. ${r.runId}`;
+                    alert.addAction(label);
+                });
+                alert.addCancelAction('Cancel');
+                const idx = await alert.present();
+                if (idx < 0 || idx >= runs.length) return;
+                runToShow = runs[idx].runId || runs[idx];
+            }
+
+            if (!runToShow) {
+                runToShow = runs[0].runId || runs[0];
+            }
+
+            const saved = this.loadSavedRun(runToShow);
+            if (!saved) {
+                await this.showError('Load failed', `Could not load saved run: ${runToShow}`);
+                return;
+            }
+
+            // Normalize to the same shape expected by display/present methods
+            const resultsLike = {
+                totalEvents: saved?.summary?.totals?.totalEvents || 0,
+                bearEvents: saved?.summary?.totals?.bearEvents || 0,
+                calendarEvents: saved?.summary?.totals?.calendarEvents || 0,
+                errors: saved?.errors || [],
+                parserResults: saved?.parserResults || [],
+                analyzedEvents: saved?.analyzedEvents || null,
+                config: saved?.config || null
+            };
+
+            await this.displayResults(resultsLike);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to display saved run: ${e.message}`);
+        }
+    }
+
+    async cleanupOldFiles(relDirPath, { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {}) {
+        const base = jsonFileManager.getCurrentDir();
+        const dirPath = `${base}${relDirPath}`;
+        const fm = this.fm || FileManager.iCloud();
+        if (!fm.fileExists(dirPath)) return;
+        const now = Date.now();
+        const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
+        const files = fm.listContents(dirPath) || [];
+        files.forEach(name => {
+            if (keep(name)) return;
+            const path = fm.joinPath(dirPath, name);
+            let mtime = null;
+            try { mtime = fm.modificationDate(path); } catch (_) {}
+            const ms = mtime ? mtime.getTime() : null;
+            if (ms && ms < cutoff) {
+                try { fm.remove(path); } catch (_) {}
+            }
+        });
+        if (typeof afterCleanup === 'function') {
+            await afterCleanup();
+        }
+    }
+
+    async rebuildRunsIndex() {
+        const base = jsonFileManager.getCurrentDir();
+        const runsPath = `${base}chunky-dad-scraper/runs`;
+        const fm = this.fm || FileManager.iCloud();
+        if (!fm.fileExists(runsPath)) return;
+        const files = fm.listContents(runsPath) || [];
+        const summaries = [];
+        files.forEach(name => {
+            if (!name.endsWith('.json') || name === 'index.json') return;
+            try {
+                const data = jsonFileManager.read(`chunky-dad-scraper/runs/${name}`);
+                if (data && data.summary) summaries.push(data.summary);
+            } catch (_) {}
+        });
+        summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+        jsonFileManager.write(`chunky-dad-scraper/runs/index.json`, summaries);
+    }
+
+    // Log helpers (prefer user's file logger)
+    getLogFilePath() {
+        const base = jsonFileManager.getCurrentDir();
+        const date = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const y = date.getFullYear();
+        const m = pad(date.getMonth() + 1);
+        const d = pad(date.getDate());
+        return `${base}chunky-dad-scraper/logs/${y}-${m}-${d}.log`;
+    }
+
+    async appendLogSummary(results) {
+        try {
+            const summary = {
+                timestamp: new Date().toISOString(),
+                totals: {
+                    totalEvents: results.totalEvents || 0,
+                    bearEvents: results.bearEvents || 0,
+                    calendarEvents: results.calendarEvents || 0,
+                    errors: (results.errors || []).length
+                }
+            };
+            const line = JSON.stringify(summary);
+
+            // Prefer embedded logger API
+            if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
+                logger.log(line);
+                logger.writeLogs(this.getLogFilePath().replace(jsonFileManager.getCurrentDir(), ''));
+                return;
+            }
+            // Fallback: plain append
+            const fm = this.fm || FileManager.iCloud();
+            const path = this.getLogFilePath();
+            let existing = '';
+            if (fm.fileExists(path)) {
+                try { existing = fm.readString(path) || ''; } catch (_) {}
+            }
+            fm.writeString(path, existing + line + '\n');
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
+        }
     }
 }
 

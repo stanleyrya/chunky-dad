@@ -199,7 +199,7 @@ class BearEventScraperOrchestrator {
                 });
                 console.log('🐻 Orchestrator: ✓ Adapter with calendar mappings created');
             }
-            
+
             // Log configuration details
             if (config.parsers) {
                 config.parsers.forEach((parser, i) => {
