@@ -4,6 +4,10 @@
 
 // Display Saved Bear Event Scraper Run
 // Loads previously saved run JSON from iCloud and renders via ScriptableAdapter
+// 
+// MODES:
+// - Widget/Read-Only (readOnly: true): Safe viewing only, no calendar operations
+// - Manual Run (readOnly: false): Allows calendar updates for saved run data
 
 try {
   const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
@@ -13,7 +17,8 @@ try {
   const OPTIONS = {
     last: false,           // set true to auto-load most recent
     runId: null,           // or set to a specific runId like "20250101-120000"
-    presentHistory: true   // default: present a picker
+    presentHistory: true,  // default: present a picker
+    readOnly: true         // set false to allow calendar updates when running manually
   };
 
   await adapter.displaySavedRun(OPTIONS);

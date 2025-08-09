@@ -972,7 +972,7 @@ class ScriptableAdapter {
             console.log('📱 Scriptable: ✓ Rich HTML display completed');
             
             // After displaying results, prompt for calendar execution if we have analyzed events
-            // NEVER prompt for calendar execution when displaying saved runs
+            // NEVER prompt for calendar execution when in read-only mode (saved runs or widgets)
             if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
                 // Only prompt if we haven't already executed (calendarEvents would be > 0)
                 const isDryRun = results.config?.parsers?.some(p => p.dryRun === true);
@@ -3392,7 +3392,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 parserResults: saved?.parserResults || [],
                 analyzedEvents: saved?.analyzedEvents || null,
                 config: saved?.config || null,
-                _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
+                _isDisplayingSavedRun: options.readOnly !== false // Flag to indicate read-only mode (default true)
             };
 
             await this.displayResults(resultsLike);
