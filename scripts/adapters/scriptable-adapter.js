@@ -1322,31 +1322,7 @@ class ScriptableAdapter {
             position: relative;
         }
         
-        .diff-table {
-            width: 100%;
-            font-size: 12px;
-            border-collapse: collapse;
-            table-layout: fixed;
-            min-width: 600px; /* Ensure table doesn't get too narrow */
-        }
-        
-        .diff-table th,
-        .diff-table td {
-            padding: 8px;
-            border-bottom: 1px solid #f0f0f0;
-            vertical-align: top;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-        
-        .diff-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            border-bottom: 2px solid #dee2e6;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
+
         
 
         
@@ -1477,15 +1453,7 @@ class ScriptableAdapter {
                 padding: 8px !important;
             }
             
-            .diff-table {
-                min-width: 500px;
-            }
-            
-            .diff-table th,
-            .diff-table td {
-                padding: 6px !important;
-                font-size: 11px;
-            }
+
             
 
         }
@@ -1514,15 +1482,7 @@ class ScriptableAdapter {
                 padding: 6px !important;
             }
             
-            .diff-table {
-                min-width: 400px;
-            }
-            
-            .diff-table th,
-            .diff-table td {
-                padding: 4px !important;
-                font-size: 10px;
-            }
+
             
 
         }
@@ -2352,22 +2312,16 @@ class ScriptableAdapter {
                                 📋 Copy JSON
                             </button>
                         </div>
-                        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table class="diff-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 20%;">Field</th>
-                                        <th style="width: 30%;">Existing Event</th>
-                                        <th style="width: 10%; text-align: center;">Flow</th>
-                                        <th style="width: 30%;">New Event</th>
-                                        <th style="width: 10%;">Result</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${this.generateComparisonRows(event)}
-                                </tbody>
-                            </table>
-                        </div>
+                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed;">
+                            <tr>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">Existing Event</th>
+                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Flow</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 30%;">New Event</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; width: 10%;">Result</th>
+                            </tr>
+                            ${this.generateComparisonRows(event)}
+                        </table>
                     </div>
                     
                     <!-- Line view (hidden by default) -->
