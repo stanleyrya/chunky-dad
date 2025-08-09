@@ -75,7 +75,6 @@ class ScriptableAdapter {
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
 
-        // Embedded utilities available as globals (see top of file)
 
         // FileManager available for fallbacks
         this.fm = FileManager.iCloud();
