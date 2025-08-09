@@ -27,6 +27,17 @@ class ScriptableAdapter {
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
 
+        // Optional external JSON manager (user-provided)
+        this.jsonLib = null;
+        try {
+            // Try to import if user added it as a separate Scriptable script file
+            const maybeJsonModule = typeof importModule !== 'undefined' ? importModule('minified-json-file-manager') : null;
+            if (maybeJsonModule) this.jsonLib = maybeJsonModule;
+        } catch (_) {}
+        if (!this.jsonLib && typeof JSONFileManager !== 'undefined') {
+            this.jsonLib = JSONFileManager; // Fall back to global symbol if user attached it
+        }
+
         // Run storage setup (Scriptable iCloud)
         try {
             this.fm = FileManager.iCloud();
@@ -3134,6 +3145,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 parserSummaries: (results.parserResults || []).map(r => ({ name: r.name, bearEvents: r.bearEvents, totalEvents: r.totalEvents }))
             };
             
+            // Blob saved is the exact display-ready object
             const payload = {
                 version: 1,
                 summary,
@@ -3143,7 +3155,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 errors: results.errors || []
             };
             
-            this.fm.writeString(filePath, JSON.stringify(payload));
+            await this.writeJsonFile(filePath, payload);
             console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${filePath}`);
             
             // Update index
@@ -3168,7 +3180,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
             // Keep last 200 entries max
             if (index.length > 200) index = index.slice(0, 200);
-            this.fm.writeString(indexPath, JSON.stringify(index));
+            // Best effort write via json manager
+            try {
+                this.writeJsonFile(indexPath, index);
+            } catch (_) {
+                this.fm.writeString(indexPath, JSON.stringify(index));
+            }
         } catch (e) {
             console.log(`📱 Scriptable: Failed to update run index: ${e.message}`);
         }
@@ -3296,11 +3313,37 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     } catch (_) {}
                 });
                 summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-                this.fm.writeString(this.fm.joinPath(this.runsDir, 'index.json'), JSON.stringify(summaries));
+                await this.writeJsonFile(this.fm.joinPath(this.runsDir, 'index.json'), summaries);
             } catch (_) {}
         } catch (e) {
             console.log(`📱 Scriptable: Cleanup failed: ${e.message}`);
         }
+    }
+
+    // Unified JSON writer that prefers external JSON file manager if present
+    async writeJsonFile(absolutePath, obj) {
+        const jsonStr = JSON.stringify(obj);
+        // Try external manager variants
+        try {
+            if (this.jsonLib) {
+                if (typeof this.jsonLib.saveJSON === 'function') {
+                    return await this.jsonLib.saveJSON(absolutePath, obj);
+                }
+                if (typeof this.jsonLib.writeJSON === 'function') {
+                    return await this.jsonLib.writeJSON(absolutePath, obj);
+                }
+                if (typeof this.jsonLib.write === 'function') {
+                    return await this.jsonLib.write(absolutePath, jsonStr);
+                }
+                if (typeof this.jsonLib.save === 'function') {
+                    return await this.jsonLib.save(absolutePath, jsonStr);
+                }
+            }
+        } catch (e) {
+            console.log(`📱 Scriptable: External JSON manager write failed, falling back. Reason: ${e.message}`);
+        }
+        // Fallback to FileManager
+        this.fm.writeString(absolutePath, jsonStr);
     }
 }
 
