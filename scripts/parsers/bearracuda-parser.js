@@ -183,12 +183,12 @@ class BearraccudaParser {
                 description: fullDescription,
                 startDate: startDate,
                 endDate: null,
-                venue: venue,
+                bar: venue, // Use 'bar' field name that calendar-core.js expects
                 location: null, // No coordinates available in bearracuda parsing
                 address: '', // Assuming address is not directly available in this regex
                 city: city || 'default',
                 url: eventUrl,
-                price: '',
+                cover: '', // Use 'cover' field name that calendar-core.js expects
                 image: '',
                 source: this.config.source,
                 isBearEvent: true // Bearraccuda events are always bear events
