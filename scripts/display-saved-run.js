@@ -70,22 +70,7 @@ class SavedRunDisplay {
         }
     }
 
-    makeConfigReadOnlyIfNeeded(config, options) {
-        if (!config) return null;
-        
-        // If readOnly is true (default), force all parsers to dry run mode
-        if (options.readOnly !== false && config.parsers) {
-            // Clone config and override ALL parsers to dry run mode
-            const readOnlyConfig = JSON.parse(JSON.stringify(config));
-            readOnlyConfig.parsers = readOnlyConfig.parsers.map(parser => ({
-                ...parser,
-                dryRun: true  // Total override - always dry run in read-only mode
-            }));
-            return readOnlyConfig;
-        }
-        
-        return config;
-    }
+
 
     async displaySavedRun(options = {}) {
         try {
@@ -127,6 +112,17 @@ class SavedRunDisplay {
 
             // Normalize to the same shape expected by display/present methods
             // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
+            let config = saved?.config;
+            
+            // If readOnly mode (default), force isDryRun override for all parsers
+            if (options.readOnly !== false && config && config.parsers) {
+                config = JSON.parse(JSON.stringify(config)); // Clone
+                config.parsers = config.parsers.map(parser => ({
+                    ...parser,
+                    dryRun: true  // Total override - force dry run mode
+                }));
+            }
+            
             const resultsLike = {
                 totalEvents: saved?.summary?.totals?.totalEvents || 0,
                 bearEvents: saved?.summary?.totals?.bearEvents || 0,
@@ -134,7 +130,7 @@ class SavedRunDisplay {
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
                 analyzedEvents: saved?.analyzedEvents || null,
-                config: this.makeConfigReadOnlyIfNeeded(saved?.config, options),
+                config: config,
                 _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
             };
 

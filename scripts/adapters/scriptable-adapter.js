@@ -972,7 +972,8 @@ class ScriptableAdapter {
             console.log('📱 Scriptable: ✓ Rich HTML display completed');
             
             // After displaying results, prompt for calendar execution if we have analyzed events
-            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents) {
+            // Don't prompt when displaying saved runs (they should use isDryRun override instead)
+            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
                 // Only prompt if we haven't already executed (calendarEvents would be > 0)
                 const isDryRun = results.config?.parsers?.some(p => p.dryRun === true);
                 if (!isDryRun) {
@@ -3313,7 +3314,92 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
+    listSavedRuns() {
+        const indexRelPath = `chunky-dad-scraper/runs/index.json`;
+        try {
+            const arr = jsonFileManager.read(indexRelPath) || [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to read run index: ${e.message}`);
+        }
+        // Fallback to scanning directory via FileManager for resilience
+        try {
+            const base = jsonFileManager.getCurrentDir();
+            const runsPath = `${base}chunky-dad-scraper/runs`;
+            const files = this.fm.listContents(runsPath) || [];
+            return files
+                .filter(name => name.endsWith('.json') && name !== 'index.json')
+                .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
+                .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
+        } catch (_) { return []; }
+    }
 
+    loadSavedRun(runId) {
+        try {
+            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
+            return jsonFileManager.read(relPath);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
+            return null;
+        }
+    }
+
+    async displaySavedRun(options = {}) {
+        try {
+            let runToShow = null;
+            const runs = this.listSavedRuns();
+            if (!runs || runs.length === 0) {
+                await this.showError('No saved runs', 'No saved runs were found to display.');
+                return;
+            }
+
+            if (options.runId) {
+                runToShow = options.runId;
+            } else if (options.last) {
+                runToShow = runs[0].runId || runs[0];
+            } else if (options.presentHistory) {
+                // Simple selection UI using Alert
+                const alert = new Alert();
+                alert.title = 'Select Saved Run';
+                alert.message = 'Choose a run to display';
+                runs.slice(0, 25).forEach((r, idx) => {
+                    const label = r.timestamp ? `${idx + 1}. ${r.timestamp}` : `${idx + 1}. ${r.runId}`;
+                    alert.addAction(label);
+                });
+                alert.addCancelAction('Cancel');
+                const idx = await alert.present();
+                if (idx < 0 || idx >= runs.length) return;
+                runToShow = runs[idx].runId || runs[idx];
+            }
+
+            if (!runToShow) {
+                runToShow = runs[0].runId || runs[0];
+            }
+
+            const saved = this.loadSavedRun(runToShow);
+            if (!saved) {
+                await this.showError('Load failed', `Could not load saved run: ${runToShow}`);
+                return;
+            }
+
+            // Normalize to the same shape expected by display/present methods
+            // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
+            const resultsLike = {
+                totalEvents: saved?.summary?.totals?.totalEvents || 0,
+                bearEvents: saved?.summary?.totals?.bearEvents || 0,
+                calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
+                errors: saved?.errors || [],
+                parserResults: saved?.parserResults || [],
+                analyzedEvents: saved?.analyzedEvents || null,
+                config: saved?.config || null,
+                _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
+            };
+
+            await this.displayResults(resultsLike);
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to display saved run: ${e.message}`);
+        }
+    }
 
     async cleanupOldFiles(relDirPath, { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {}) {
         const base = jsonFileManager.getCurrentDir();
