@@ -831,18 +831,16 @@ class DynamicCalendarLoader extends CalendarCore {
             mode: hideEvents ? 'MEASUREMENT' : 'DISPLAY'
         });
         
-        // For measurement mode, use a representative name that will trigger proper measurement
-        // This avoids the chicken-and-egg problem where measurement needs width but width needs measurement
+        // For measurement mode, use full name to get accurate width measurement
+        // This gives us a realistic event name length for proper width calculation
         if (hideEvents) {
-            const measurementName = hasShortName ? (event.shortName || event.nickname) : fullName;
-            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Measurement mode - using representative name', {
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Measurement mode - using full name for accurate measurement', {
                 eventName: fullName,
                 shortName: event.shortName || event.nickname || '',
-                measurementName,
                 hideEvents: true,
-                reason: 'measurement_mode_representative'
+                reason: 'measurement_mode_uses_full_name'
             });
-            return `<div class="event-name">${measurementName}</div>`;
+            return `<div class="event-name">${fullName}</div>`;
         }
         
         // DISPLAY MODE: Use full smart name logic with caching
