@@ -3290,8 +3290,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
-    // Index functionality removed - using directory reading instead
-
     listSavedRuns() {
         // Read directory contents directly - no index needed
         try {
@@ -3397,8 +3395,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             await afterCleanup();
         }
     }
-
-    // Index functionality removed - using directory reading instead
 
     // Log helpers (prefer user's file logger)
     getLogFilePath() {
