@@ -635,41 +635,35 @@ class DynamicCalendarLoader extends CalendarCore {
         return finalResult;
     }
 
-    // Calculate characters per pixel based on actual font metrics
+    // Calculate characters per pixel ratio for dynamic text fitting
     calculateCharsPerPixel() {
+        logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
+        
         try {
-            logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
+            // Instead of creating a separate test element, use the actual measurement event
+            // that's already rendered with the correct styling context
+            const eventName = document.querySelector('.event-name');
             
-            // Create a temporary element to measure character width
-            const testElement = document.createElement('div');
-            testElement.className = 'event-name'; // Use the same class as actual event names
-            testElement.style.cssText = `
-                position: absolute;
-                visibility: hidden;
-                white-space: nowrap;
-                font-family: 'Poppins', sans-serif;
-                font-size: var(--event-name-font-size);
-                font-weight: var(--event-name-font-weight);
-                line-height: var(--event-name-line-height);
-            `;
+            if (!eventName) {
+                logger.warn('CALENDAR', '🔍 CALCULATION: No event-name element found for charsPerPixel calculation');
+                return 0.1; // Conservative fallback
+            }
             
-            // Use a representative string of average characters
-            const testString = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
-            testElement.textContent = testString;
-            document.body.appendChild(testElement);
+            // Use the actual event name element that's already styled correctly
+            const actualWidth = eventName.getBoundingClientRect().width;
+            const actualText = eventName.textContent;
+            const actualCharCount = actualText.length;
             
-            const width = testElement.getBoundingClientRect().width;
-            const charCount = testElement.textContent.length;
-            const pixelsPerChar = width / charCount;
-            let charsPerPixel = 1 / pixelsPerChar;
-            
-            // Get the computed styles to verify what we're actually using
-            const computedStyles = window.getComputedStyle(testElement);
+            // Get the computed styles from the actual element
+            const computedStyles = window.getComputedStyle(eventName);
             const actualFontSize = computedStyles.fontSize;
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
+            const letterSpacing = computedStyles.letterSpacing;
             
-
+            // Calculate based on actual rendered element
+            const pixelsPerChar = actualWidth / actualCharCount;
+            let charsPerPixel = 1 / pixelsPerChar;
             
             // Simple zoom adjustment: use visual viewport scale for zoom detection
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
@@ -679,11 +673,10 @@ class DynamicCalendarLoader extends CalendarCore {
             // Therefore, we DIVIDE by zoom level, not multiply
             charsPerPixel = charsPerPixel / visualZoom;
             
-            document.body.removeChild(testElement);
-            
             logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
-                width: width.toFixed(2),
-                charCount,
+                actualText: actualText,
+                actualCharCount: actualCharCount,
+                actualWidth: actualWidth.toFixed(2),
                 pixelsPerChar: pixelsPerChar.toFixed(2),
                 charsPerPixel: charsPerPixel.toFixed(4),
                 visualZoom: visualZoom.toFixed(2),
@@ -691,7 +684,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
-                screenWidth: window.innerWidth
+                letterSpacing,
+                screenWidth: window.innerWidth,
+                calculationMethod: 'actual_event_element'
             });
             
             // Cache the result
@@ -699,8 +694,8 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.info('CALENDAR', `🔍 CALCULATION: Cached charsPerPixel = ${charsPerPixel.toFixed(4)}`);
             return charsPerPixel;
         } catch (error) {
-            logger.componentError('CALENDAR', 'Could not calculate chars per pixel', error);
-            throw error; // Don't use fallbacks, fail properly
+            logger.componentError('CALENDAR', 'Error calculating chars per pixel', error);
+            return 0.1; // Conservative fallback
         }
     }
 
