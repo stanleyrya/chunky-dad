@@ -220,9 +220,8 @@ Example:
 
 ### For Scriptable (iOS)
 1. Install [Scriptable](https://scriptable.app/) on iOS
-2. Copy ALL scriptable files to Scriptable (7 files total from ROOT directory):
+2. Copy ALL files to Scriptable (7 files total):
    - `bear-event-scraper-unified.js`
-   - `display-saved-run.js`
    - `shared-core.js`
    - `adapters/scriptable-adapter.js`
    - `adapters/web-adapter.js` (needed for unified script)
@@ -230,10 +229,8 @@ Example:
    - `parsers/bearracuda-parser.js`
    - `parsers/generic-parser.js`
 3. Copy `scraper-input.json` to **iCloud Drive/Scriptable/** folder
-4. Run `bear-event-scraper-unified.js` or `display-saved-run.js`
+4. Run `bear-event-scraper-unified.js`
 5. Set `dryRun: false` when ready for live calendar updates
-
-**IMPORTANT**: All scriptable files are now in the ROOT directory for proper Scriptable compatibility. The `chunky-dad/` folder contains backup/development copies but Scriptable should use the root files.
 
 ### For Web Testing
 1. Load all script files in HTML with proper script tags

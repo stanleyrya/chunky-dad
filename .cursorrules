@@ -32,17 +32,29 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 │   ├── dynamic-calendar-loader.js # Calendar UI and interactions
 │   └── app.js          # Main application coordinator
 ├── data/               # JSON data files
-├── scripts/            # Scriptable automation scripts
+├── scripts/            # Scriptable automation scripts (development)
 │   ├── README.md       # Scripts documentation
 │   ├── scriptable-complete-api.md # Complete Scriptable API reference (54 classes)
 │   ├── bear-event-scraper-unified.js # Unified bear event scraper
 │   └── scraper-config.json        # Scraper configuration
+├── chunky-dad/         # Organized development files
+│   ├── adapters/       # Environment-specific implementations
+│   ├── parsers/        # Venue-specific parsing logic
+│   └── shared-core.js  # Pure JavaScript business logic
+├── adapters/           # Scriptable-compatible adapters (root level)
+├── parsers/            # Scriptable-compatible parsers (root level)
+├── bear-event-scraper-unified.js # Main scriptable file (root level)
+├── display-saved-run.js # Past runs viewer (root level)
+├── shared-core.js      # Core logic (root level)
+├── scraper-input.json  # Configuration (root level)
 ├── testing/            # Test files and utilities
 │   ├── index.html      # Dynamic test file browser
 │   ├── manifest.json   # Auto-generated list of test files
 │   └── generate-manifest.js # Script to update manifest
 └── README.md
 ```
+
+**SCRIPTABLE FILE ORGANIZATION**: For Scriptable compatibility, all script files must be in the ROOT directory. The `scripts/` folder contains development copies, while `chunky-dad/` contains organized backup copies. When deploying to Scriptable, use the root-level files.
 
 ## Testing Directory
 - **Auto-updating manifest**: When adding new HTML files to testing/, run `npm run update-test-manifest`

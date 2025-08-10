@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "summary": {
+    "runId": "20250102-140000",
+    "timestamp": "2025-01-02T14:00:00.000Z",
+    "totals": {
+      "totalEvents": 8,
+      "bearEvents": 6,
+      "calendarEvents": 4,
+      "errors": 1
+    },
+    "parserSummaries": [
+      {
+        "name": "Another Test Venue",
+        "bearEvents": 6,
+        "totalEvents": 8
+      }
+    ]
+  },
+  "config": {
+    "dryRun": false,
+    "daysToLookAhead": 30
+  },
+  "analyzedEvents": null,
+  "parserResults": [
+    {
+      "name": "Another Test Venue",
+      "bearEvents": 6,
+      "totalEvents": 8,
+      "events": []
+    }
+  ],
+  "errors": ["Test error message"]
+}

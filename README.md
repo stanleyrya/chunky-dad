@@ -136,18 +136,22 @@ Know about bear events or businesses we're missing? We want to hear from you!
 - **Progressive Enhancement**: Works with JavaScript disabled
 - **SEO Optimized**: Proper meta tags and structure
 
-## Automation Scripts
+## 🤖 Scriptable Automation
 
-The `scripts/` directory contains automation tools for maintaining event data:
+The `scripts/` directory contains iOS automation scripts for scraping bear community events. For Scriptable compatibility:
 
-- **Bear Event Parser**: A Scriptable (iOS) script that automatically:
-  - Fetches event data from multiple bear event websites
-  - Parses and formats events for our calendar system
-  - Detects cities and assigns to appropriate calendars
-  - Merges with existing events to avoid duplicates
-  - Flags new events as "not-checked" until validated
+- **Scriptable files**: Located in ROOT directory for importModule compatibility
+  - `bear-event-scraper-unified.js` - Main scraper
+  - `display-saved-run.js` - View past runs  
+  - `shared-core.js` - Core business logic
+  - `adapters/` and `parsers/` directories - Environment-specific code
+  - `scraper-input.json` - Configuration
 
-See [scripts/README.md](scripts/README.md) for detailed documentation on using these tools.
+- **Development files**: Organized in `chunky-dad/` and `scripts/` directories
+  - Contains backup copies and documentation
+  - Use for development and version control
+
+**Setup**: Copy all root-level script files and directories to Scriptable app on iOS. The app will create a `chunky-dad-scraper/` directory for saving run data and logs.
 
 ## Browser Support
 
