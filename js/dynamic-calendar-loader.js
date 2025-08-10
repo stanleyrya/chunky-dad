@@ -2302,35 +2302,7 @@ calculatedData: {
 
 
 
-    // Measure actual text content width (separate from element width)
-    measureActualTextWidth(text) {
-        try {
-            // Create a temporary element to measure just the text content
-            const textElement = document.createElement('span');
-            textElement.style.cssText = `
-                position: absolute;
-                visibility: hidden;
-                white-space: nowrap;
-                font-family: 'Poppins', sans-serif;
-                font-size: var(--event-name-font-size);
-                font-weight: var(--event-name-font-weight);
-                line-height: var(--event-name-line-height);
-                padding: 0;
-                margin: 0;
-                border: none;
-            `;
-            textElement.textContent = text;
-            document.body.appendChild(textElement);
-            
-            const textWidth = textElement.getBoundingClientRect().width;
-            document.body.removeChild(textElement);
-            
-            return textWidth;
-        } catch (error) {
-            logger.componentError('CALENDAR', 'Error measuring text width', error);
-            return null;
-        }
-    }
+
 }
 
 // Map interaction function
