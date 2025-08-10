@@ -677,12 +677,35 @@ class DynamicCalendarLoader extends CalendarCore {
             // Therefore, we DIVIDE by zoom level, not multiply
             charsPerPixel = charsPerPixel / visualZoom;
             
-            // CONSERVATIVE CORRECTION FACTOR:
-            // Based on real-world testing, the calculation consistently overestimates
-            // character capacity. Apply a conservative factor to prevent text overflow.
-            // Real testing shows we typically overestimate by 15-50%, so reduce by ~30%
-            const conservativeFactor = 0.7;
-            charsPerPixel = charsPerPixel * conservativeFactor;
+            // DYNAMIC CONSERVATIVE CORRECTION FACTOR:
+            // Based on real-world testing data:
+            // - 85% zoom (440px): Tool says 10, reality 8-9 → need factor ~0.85
+            // - 75% zoom (440px): Tool says 14, reality 8-9 → need factor ~0.6  
+            // - 100% horizontal (440px): Tool says 32, reality 14-15 → need factor ~0.45
+            const viewportWidth = window.innerWidth;
+            
+            // Calculate dynamic factor based on zoom level primarily
+            let dynamicFactor;
+            if (visualZoom >= 0.85) {
+                // Normal to slightly zoomed out - mild overestimation
+                dynamicFactor = 0.85;
+            } else if (visualZoom >= 0.75) {
+                // Moderately zoomed out - significant overestimation  
+                dynamicFactor = 0.6;
+            } else {
+                // Very zoomed out or large viewport - severe overestimation
+                dynamicFactor = 0.45;
+            }
+            
+            // Additional adjustment for cases where event width is unusually large
+            // If the calculated character limit seems unreasonably high, be more conservative
+            const estimatedCharLimit = Math.floor(this.cachedEventTextWidth * charsPerPixel * dynamicFactor);
+            if (estimatedCharLimit > 20) {
+                // Very high character limits suggest measurement issues - be more conservative
+                dynamicFactor = Math.min(dynamicFactor, 0.5);
+            }
+            
+            charsPerPixel = charsPerPixel * dynamicFactor;
             
             document.body.removeChild(testElement);
             
@@ -690,9 +713,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 width: width.toFixed(2),
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
-                charsPerPixelRaw: (charsPerPixel / conservativeFactor).toFixed(4),
+                charsPerPixelRaw: (charsPerPixel / dynamicFactor).toFixed(4),
                 charsPerPixelAdjusted: charsPerPixel.toFixed(4),
-                conservativeFactor,
+                dynamicFactor: dynamicFactor.toFixed(3),
                 visualZoom: visualZoom.toFixed(2),
                 zoomDirection: visualZoom > 1 ? 'zoomed in' : visualZoom < 1 ? 'zoomed out' : 'normal',
                 actualFontSize,
