@@ -677,35 +677,7 @@ class DynamicCalendarLoader extends CalendarCore {
             // Therefore, we DIVIDE by zoom level, not multiply
             charsPerPixel = charsPerPixel / visualZoom;
             
-            // DYNAMIC CONSERVATIVE CORRECTION FACTOR:
-            // Based on real-world testing data:
-            // - 85% zoom (440px): Tool says 10, reality 8-9 → need factor ~0.85
-            // - 75% zoom (440px): Tool says 14, reality 8-9 → need factor ~0.6  
-            // - 100% horizontal (440px): Tool says 32, reality 14-15 → need factor ~0.45
-            const viewportWidth = window.innerWidth;
-            
-            // Calculate dynamic factor based on zoom level primarily
-            let dynamicFactor;
-            if (visualZoom >= 0.85) {
-                // Normal to slightly zoomed out - mild overestimation
-                dynamicFactor = 0.85;
-            } else if (visualZoom >= 0.75) {
-                // Moderately zoomed out - significant overestimation  
-                dynamicFactor = 0.6;
-            } else {
-                // Very zoomed out or large viewport - severe overestimation
-                dynamicFactor = 0.45;
-            }
-            
-            // Additional adjustment for cases where event width is unusually large
-            // If the calculated character limit seems unreasonably high, be more conservative
-            const estimatedCharLimit = Math.floor(this.cachedEventTextWidth * charsPerPixel * dynamicFactor);
-            if (estimatedCharLimit > 20) {
-                // Very high character limits suggest measurement issues - be more conservative
-                dynamicFactor = Math.min(dynamicFactor, 0.5);
-            }
-            
-            charsPerPixel = charsPerPixel * dynamicFactor;
+
             
             document.body.removeChild(testElement);
             
@@ -713,9 +685,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 width: width.toFixed(2),
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
-                charsPerPixelRaw: (charsPerPixel / dynamicFactor).toFixed(4),
-                charsPerPixelAdjusted: charsPerPixel.toFixed(4),
-                dynamicFactor: dynamicFactor.toFixed(3),
+                charsPerPixel: charsPerPixel.toFixed(4),
                 visualZoom: visualZoom.toFixed(2),
                 zoomDirection: visualZoom > 1 ? 'zoomed in' : visualZoom < 1 ? 'zoomed out' : 'normal',
                 actualFontSize,
@@ -781,50 +751,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Calculate the actual available width for text content
         const availableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
         
-        // Add additional measurement methods for comparison
-        const clientWidth = eventName.clientWidth;
-        const offsetWidth = eventName.offsetWidth;
-        const scrollWidth = eventName.scrollWidth;
-        
-        // Try to get more precise text measurement using canvas
-        let canvasTextWidth = null;
-        try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const fontSize = eventNameStyle.fontSize;
-            const fontWeight = eventNameStyle.fontWeight;
-            const fontFamily = eventNameStyle.fontFamily;
-            const letterSpacing = eventNameStyle.letterSpacing;
-            
-            ctx.font = `${fontWeight} ${fontSize} ${fontFamily}`;
-            const textMetrics = ctx.measureText(eventName.textContent);
-            canvasTextWidth = textMetrics.width;
-            
-            // Add letter spacing if present
-            if (letterSpacing && letterSpacing !== 'normal') {
-                const letterSpacingPx = parseFloat(letterSpacing);
-                if (!isNaN(letterSpacingPx)) {
-                    const charCount = eventName.textContent.length;
-                    canvasTextWidth += letterSpacingPx * (charCount - 1);
-                }
-            }
-        } catch (error) {
-            logger.debug('CALENDAR', '🔍 MEASUREMENT: Canvas text measurement failed', error);
-        }
-        
         this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
-        
-        // MEASUREMENT DISCREPANCY NOTE:
-        // getBoundingClientRect() may differ from manual measurements due to:
-        // 1. Browser text rendering differences (sub-pixel positioning)
-        // 2. Letter spacing, text shadows, and other CSS effects
-        // 3. Different measurement contexts (dev tools vs DOM API)
-        // If canvas measurement shows significant discrepancy, consider using it instead
-        if (canvasTextWidth && Math.abs(this.cachedEventTextWidth - canvasTextWidth) > 5) {
-            logger.warn('CALENDAR', `🔍 MEASUREMENT: Significant discrepancy detected between DOM (${this.cachedEventTextWidth.toFixed(2)}px) and Canvas (${canvasTextWidth.toFixed(2)}px) measurements`);
-            // Uncomment the next line to use canvas measurement instead:
-            // this.cachedEventTextWidth = Math.max(canvasTextWidth, 20);
-        }
         
         logger.info('CALENDAR', `🔍 MEASUREMENT: Measured actual event text width from .event-name element: ${this.cachedEventTextWidth}px`, {
             elementRect: {
@@ -841,25 +768,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 fontSize: eventNameStyle.fontSize,
                 fontWeight: eventNameStyle.fontWeight,
                 fontFamily: eventNameStyle.fontFamily,
-                letterSpacing: eventNameStyle.letterSpacing,
-                textAlign: eventNameStyle.textAlign
-            },
-            measurements: {
-                getBoundingClientRect: eventNameRect.width,
-                clientWidth: clientWidth,
-                offsetWidth: offsetWidth,
-                scrollWidth: scrollWidth,
-                canvasTextWidth: canvasTextWidth,
-                textContent: eventName.textContent,
-                textLength: eventName.textContent.length
+                fontFamily: eventNameStyle.fontFamily
             },
             calculations: {
                 rawWidth: eventNameRect.width,
                 totalPadding: paddingLeft + paddingRight,
                 totalBorders: borderLeft + borderRight,
                 calculatedWidth: availableWidth,
-                finalCachedWidth: this.cachedEventTextWidth,
-                discrepancyFromCanvas: canvasTextWidth ? (this.cachedEventTextWidth - canvasTextWidth).toFixed(2) + 'px' : 'N/A'
+                finalCachedWidth: this.cachedEventTextWidth
             },
 
         });
