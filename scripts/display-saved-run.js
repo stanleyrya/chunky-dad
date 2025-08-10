@@ -40,24 +40,20 @@ class SavedRunDisplay {
     }
 
     listSavedRuns() {
-        const indexRelPath = `chunky-dad-scraper/runs/index.json`;
-        try {
-            const index = jsonFileManager.read(indexRelPath) || [];
-            return Array.isArray(index) ? index.filter(item => item && item.runId).sort((a, b) => (b.runId || '').localeCompare(a.runId || '')) : [];
-        } catch (e) {
-            console.log(`📱 Display: Failed to read run index: ${e.message}`);
-        }
-        // Fallback: read directory contents
+        // Read directory contents directly - no index needed
         try {
             const fm = FileManager.iCloud();
             const base = jsonFileManager.getCurrentDir();
             const runsDir = `${base}chunky-dad-scraper/runs`;
             if (!fm.fileExists(runsDir)) return [];
             return fm.listContents(runsDir)
-                .filter(name => name.endsWith('.json') && name !== 'index.json')
+                .filter(name => name.endsWith('.json'))
                 .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
                 .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
-        } catch (_) { return []; }
+        } catch (e) {
+            console.log(`📱 Display: Failed to read runs directory: ${e.message}`);
+            return [];
+        }
     }
 
     loadSavedRun(runId) {

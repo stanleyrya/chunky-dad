@@ -474,8 +474,7 @@ class ScriptableAdapter {
                 // Cleanup old JSON runs
                 await this.cleanupOldFiles('chunky-dad-scraper/runs', {
                     maxAgeDays: 30,
-                    keep: (name) => name === 'index.json' || !name.endsWith('.json'),
-                    afterCleanup: async () => { await this.rebuildRunsIndex(); }
+                    keep: (name) => !name.endsWith('.json')
                 });
             } else {
                 console.log('📱 Scriptable: Skipping run save (no calendar writes)');
@@ -3260,7 +3259,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const ts = new Date();
             const runId = this.getRunId(ts);
             const relPath = `chunky-dad-scraper/runs/${runId}.json`;
-            const indexRelPath = `chunky-dad-scraper/runs/index.json`;
             
             const summary = {
                 runId,
@@ -3286,52 +3284,28 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Save run via JSONFileManager
             jsonFileManager.write(relPath, payload);
             console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${relPath}`);
-
-            // Update index (read, push, sort, write)
-            let index = jsonFileManager.read(indexRelPath) || [];
-            if (!Array.isArray(index)) index = [];
-            index.push(summary);
-            index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-            if (index.length > 200) index = index.slice(0, 200);
-            jsonFileManager.write(indexRelPath, index);
             return runId;
         } catch (e) {
             console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
         }
     }
 
-    updateRunIndex(summary) {
-        try {
-            const indexRelPath = `chunky-dad-scraper/runs/index.json`;
-            let index = jsonFileManager.read(indexRelPath) || [];
-            if (!Array.isArray(index)) index = [];
-            index.push(summary);
-            index.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-            if (index.length > 200) index = index.slice(0, 200);
-            jsonFileManager.write(indexRelPath, index);
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to update run index: ${e.message}`);
-        }
-    }
+    // Index functionality removed - using directory reading instead
 
     listSavedRuns() {
-        const indexRelPath = `chunky-dad-scraper/runs/index.json`;
-        try {
-            const arr = jsonFileManager.read(indexRelPath) || [];
-            return Array.isArray(arr) ? arr : [];
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to read run index: ${e.message}`);
-        }
-        // Fallback to scanning directory via FileManager for resilience
+        // Read directory contents directly - no index needed
         try {
             const base = jsonFileManager.getCurrentDir();
             const runsPath = `${base}chunky-dad-scraper/runs`;
             const files = this.fm.listContents(runsPath) || [];
             return files
-                .filter(name => name.endsWith('.json') && name !== 'index.json')
+                .filter(name => name.endsWith('.json'))
                 .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
                 .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
-        } catch (_) { return []; }
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to read runs directory: ${e.message}`);
+            return [];
+        }
     }
 
     loadSavedRun(runId) {
@@ -3424,23 +3398,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
-    async rebuildRunsIndex() {
-        const base = jsonFileManager.getCurrentDir();
-        const runsPath = `${base}chunky-dad-scraper/runs`;
-        const fm = this.fm || FileManager.iCloud();
-        if (!fm.fileExists(runsPath)) return;
-        const files = fm.listContents(runsPath) || [];
-        const summaries = [];
-        files.forEach(name => {
-            if (!name.endsWith('.json') || name === 'index.json') return;
-            try {
-                const data = jsonFileManager.read(`chunky-dad-scraper/runs/${name}`);
-                if (data && data.summary) summaries.push(data.summary);
-            } catch (_) {}
-        });
-        summaries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-        jsonFileManager.write(`chunky-dad-scraper/runs/index.json`, summaries);
-    }
+    // Index functionality removed - using directory reading instead
 
     // Log helpers (prefer user's file logger)
     getLogFilePath() {
