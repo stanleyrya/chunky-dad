@@ -972,7 +972,8 @@ class ScriptableAdapter {
             console.log('📱 Scriptable: ✓ Rich HTML display completed');
             
             // After displaying results, prompt for calendar execution if we have analyzed events
-            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents) {
+            // Don't prompt when displaying saved runs (they should use isDryRun override instead)
+            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
                 // Only prompt if we haven't already executed (calendarEvents would be > 0)
                 const isDryRun = results.config?.parsers?.some(p => p.dryRun === true);
                 if (!isDryRun) {
