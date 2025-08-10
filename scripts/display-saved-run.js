@@ -45,9 +45,31 @@ class SavedRunDisplay {
             const fm = FileManager.iCloud();
             const base = jsonFileManager.getCurrentDir();
             const runsDir = `${base}chunky-dad-scraper/runs`;
-            if (!fm.fileExists(runsDir)) return [];
-            return fm.listContents(runsDir)
-                .filter(name => name.endsWith('.json'))
+            console.log(`📱 Display: Looking for runs in: ${runsDir}`);
+            console.log(`📱 Display: Base directory: ${base}`);
+            
+            // Ensure directory structure exists
+            const rootDir = `${base}chunky-dad-scraper`;
+            if (!fm.fileExists(rootDir)) {
+                console.log(`📱 Display: Creating chunky-dad-scraper directory: ${rootDir}`);
+                fm.createDirectory(rootDir, true);
+            }
+            if (!fm.fileExists(runsDir)) {
+                console.log(`📱 Display: Creating runs directory: ${runsDir}`);
+                fm.createDirectory(runsDir, true);
+                console.log(`📱 Display: No saved runs found - runs directory was just created`);
+                return [];
+            }
+            
+            const files = fm.listContents(runsDir);
+            console.log(`📱 Display: Found ${files.length} files: ${JSON.stringify(files)}`);
+            
+            const jsonFiles = files.filter(name => name.endsWith('.json'));
+            if (jsonFiles.length === 0) {
+                console.log(`📱 Display: No .json run files found in directory`);
+            }
+            
+            return jsonFiles
                 .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
                 .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
         } catch (e) {
@@ -73,7 +95,7 @@ class SavedRunDisplay {
             let runToShow = null;
             const runs = this.listSavedRuns();
             if (!runs || runs.length === 0) {
-                await this.showError('No saved runs', 'No saved runs were found to display.');
+                await this.showError('No saved runs', 'No saved runs were found to display.\n\nTo create runs, first run the bear-event-scraper-unified.js script.\n\nRuns are saved in the chunky-dad-scraper/runs/ directory relative to where this script is located.');
                 return;
             }
 
