@@ -2045,11 +2045,15 @@ class DynamicCalendarLoader extends CalendarCore {
         // STEP 2: Wait for DOM to be fully updated and then measure
         logger.info('CALENDAR', '🔍 RENDER: Step 2: Waiting for DOM to be ready for measurement');
         
-        // Use requestAnimationFrame to ensure DOM is rendered
+        // Use requestAnimationFrame to ensure DOM is rendered AND responsive CSS is applied
         await new Promise(resolve => {
             requestAnimationFrame(() => {
-                // Wait one more frame to be absolutely sure
-                requestAnimationFrame(resolve);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Add small timeout to ensure responsive CSS layout is fully settled
+                        setTimeout(resolve, 50);
+                    });
+                });
             });
         });
         
@@ -2059,17 +2063,14 @@ class DynamicCalendarLoader extends CalendarCore {
         const measurementWidth = this.getEventTextWidth();
         
         if (measurementWidth === null) {
-            logger.warn('CALENDAR', '🔍 RENDER: Failed to measure event text width - using fallback calculation');
-            // Force calculate chars per pixel as fallback
-            this.calculateCharsPerPixel();
-        } else {
-            logger.info('CALENDAR', `🔍 RENDER: Successfully measured event text width: ${measurementWidth}px`);
-            // Now calculate chars per pixel using the measured width
-            const charsPerPixel = this.calculateCharsPerPixel();
-            logger.info('CALENDAR', `🔍 RENDER: Calculated charsPerPixel: ${charsPerPixel?.toFixed(4)} using measured width: ${measurementWidth}px`);
-            
-
+            logger.error('CALENDAR', '🔍 RENDER: Failed to measure event text width - cannot proceed');
+            throw new Error('Measurement failed - DOM not ready');
         }
+        
+        logger.info('CALENDAR', `🔍 RENDER: Successfully measured event text width: ${measurementWidth}px`);
+        // Now calculate chars per pixel using the measured width
+        const charsPerPixel = this.calculateCharsPerPixel();
+        logger.info('CALENDAR', `🔍 RENDER: Calculated charsPerPixel: ${charsPerPixel?.toFixed(4)} using measured width: ${measurementWidth}px`);
         
         // STEP 3: Load calendar data from the API
         logger.info('CALENDAR', '🔍 RENDER: Step 3: Loading real calendar data');
