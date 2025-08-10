@@ -635,11 +635,11 @@ class DynamicCalendarLoader extends CalendarCore {
         return finalResult;
     }
 
-    // Calculate characters per pixel based on actual font metrics
+    // Calculate characters per pixel ratio for dynamic text fitting
     calculateCharsPerPixel() {
+        logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
+        
         try {
-            logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
-            
             // Create a temporary element to measure character width
             const testElement = document.createElement('div');
             testElement.className = 'event-name'; // Use the same class as actual event names
@@ -669,8 +669,6 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
-
-            
             // Simple zoom adjustment: use visual viewport scale for zoom detection
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
             
@@ -678,6 +676,8 @@ class DynamicCalendarLoader extends CalendarCore {
             // When zoomed OUT (visualZoom < 1), text appears smaller, so MORE characters fit
             // Therefore, we DIVIDE by zoom level, not multiply
             charsPerPixel = charsPerPixel / visualZoom;
+            
+
             
             document.body.removeChild(testElement);
             
@@ -699,8 +699,8 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.info('CALENDAR', `🔍 CALCULATION: Cached charsPerPixel = ${charsPerPixel.toFixed(4)}`);
             return charsPerPixel;
         } catch (error) {
-            logger.componentError('CALENDAR', 'Could not calculate chars per pixel', error);
-            throw error; // Don't use fallbacks, fail properly
+            logger.componentError('CALENDAR', 'Error calculating chars per pixel', error);
+            return 0.1; // Conservative fallback
         }
     }
 
@@ -767,6 +767,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 borderRight,
                 fontSize: eventNameStyle.fontSize,
                 fontWeight: eventNameStyle.fontWeight,
+                fontFamily: eventNameStyle.fontFamily,
                 fontFamily: eventNameStyle.fontFamily
             },
             calculations: {
@@ -2045,11 +2046,16 @@ class DynamicCalendarLoader extends CalendarCore {
         // STEP 2: Wait for DOM to be fully updated and then measure
         logger.info('CALENDAR', '🔍 RENDER: Step 2: Waiting for DOM to be ready for measurement');
         
-        // Use requestAnimationFrame to ensure DOM is rendered
+        // Use requestAnimationFrame to ensure DOM is rendered AND responsive CSS is applied
         await new Promise(resolve => {
             requestAnimationFrame(() => {
-                // Wait one more frame to be absolutely sure
-                requestAnimationFrame(resolve);
+                // Wait additional frames to ensure responsive CSS layout is fully applied
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Add a small timeout to ensure all CSS transitions/media queries are settled
+                        setTimeout(resolve, 50);
+                    });
+                });
             });
         });
         
