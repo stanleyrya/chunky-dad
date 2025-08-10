@@ -462,12 +462,23 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
     getSmartEventNameForBreakpoint(event, breakpoint) {
+        logger.info('CALENDAR', `🔍 SMART_NAME: Starting getSmartEventNameForBreakpoint for breakpoint: ${breakpoint}`);
+        
         // Get the nickname/shortname
         const shortName = event.shortName || event.nickname || '';
         const fullName = event.name || '';
         
+        logger.info('CALENDAR', `🔍 SMART_NAME: Event names`, {
+            fullName,
+            shortName,
+            breakpoint
+        });
+        
         // If no shortname, return the full name
-        if (!shortName) return fullName;
+        if (!shortName) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, returning full name: "${fullName}"`);
+            return fullName;
+        }
         
         // Get characters per pixel ratio (calculated once and cached)
         const charsPerPixel = this.charsPerPixel || this.calculateCharsPerPixel();
@@ -475,10 +486,16 @@ class DynamicCalendarLoader extends CalendarCore {
         // Get actual available width for event text
         const availableWidth = this.getEventTextWidth();
         
+        logger.info('CALENDAR', `🔍 SMART_NAME: Got measurement data`, {
+            charsPerPixel: charsPerPixel?.toFixed(4),
+            availableWidth: availableWidth?.toFixed(2),
+            breakpoint
+        });
+        
         // If measurement not ready yet, prefer shortName over fullName for real rendering
         // Only use fullName as fallback during measurement mode (when we need consistent sizing)
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `Measurement not ready for ${breakpoint}, using short name instead of full name`, {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using short name instead of full name`, {
                 shortName: shortName,
                 fullName: fullName
             });
@@ -488,7 +505,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Calculate how many characters can fit on one line
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         
-        logger.debug('CALENDAR', `Dynamic char calculation for ${breakpoint}`, {
+        logger.info('CALENDAR', `🔍 SMART_NAME: Dynamic char calculation for ${breakpoint}`, {
             availableWidth: availableWidth.toFixed(2),
             charsPerPixel: charsPerPixel.toFixed(4),
             charLimitPerLine,
@@ -505,21 +522,21 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If the entire name fits on one line, return it
         if (processedShortName.length <= charLimitPerLine) {
-            logger.debug('CALENDAR', `Event name fits without hyphens: "${processedShortName}" (${processedShortName.length} <= ${charLimitPerLine})`);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Event name fits without hyphens: "${processedShortName}" (${processedShortName.length} <= ${charLimitPerLine})`);
             return processedShortName;
         }
         
         // Try to fit the original hyphenated name on one line
         if (shortName.length <= charLimitPerLine) {
-            logger.debug('CALENDAR', `Event name fits with hyphens: "${shortName}" (${shortName.length} <= ${charLimitPerLine})`);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Event name fits with hyphens: "${shortName}" (${shortName.length} <= ${charLimitPerLine})`);
             return shortName;
         }
         
-        logger.debug('CALENDAR', `Event name too long, needs truncation/hyphenation: "${shortName}" (${shortName.length} > ${charLimitPerLine})`);
+        logger.info('CALENDAR', `🔍 SMART_NAME: Event name too long, needs truncation/hyphenation: "${shortName}" (${shortName.length} > ${charLimitPerLine})`);
         
         // For very small character limits (4 or less), try to use shorterName if available
         if (charLimitPerLine <= 4 && event.shorterName?.trim() && event.shorterName.trim().length <= charLimitPerLine) {
-            logger.debug('CALENDAR', `Using shorterName for ${charLimitPerLine} char limit: "${event.shorterName}"`);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for ${charLimitPerLine} char limit: "${event.shorterName}"`);
             return event.shorterName.trim();
         }
         
@@ -606,14 +623,26 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         // Return the multi-line name as a single string (CSS will handle wrapping)
-        return displayLines.join(' ');
+        const finalResult = displayLines.join(' ');
+        logger.info('CALENDAR', `🔍 SMART_NAME: Final result: "${finalResult}" (${finalResult.length} chars)`, {
+            originalShortName: shortName,
+            processedShortName,
+            charLimitPerLine,
+            linesCreated: displayLines.length,
+            finalLength: finalResult.length
+        });
+        
+        return finalResult;
     }
 
     // Calculate characters per pixel based on actual font metrics
     calculateCharsPerPixel() {
         try {
+            logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
+            
             // Create a temporary element to measure character width
             const testElement = document.createElement('div');
+            testElement.className = 'event-name'; // Use the same class as actual event names
             testElement.style.cssText = `
                 position: absolute;
                 visibility: hidden;
@@ -625,7 +654,8 @@ class DynamicCalendarLoader extends CalendarCore {
             `;
             
             // Use a representative string of average characters
-            testElement.textContent = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
+            const testString = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
+            testElement.textContent = testString;
             document.body.appendChild(testElement);
             
             const width = testElement.getBoundingClientRect().width;
@@ -639,6 +669,17 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
+            // Test with the specific strings mentioned in the user's testing
+            const megawElement = testElement.cloneNode();
+            megawElement.textContent = 'MEGAW';
+            document.body.appendChild(megawElement);
+            const megawWidth = megawElement.getBoundingClientRect().width;
+            
+            const megawoElement = testElement.cloneNode();
+            megawoElement.textContent = 'Megawo';
+            document.body.appendChild(megawoElement);
+            const megawoWidth = megawoElement.getBoundingClientRect().width;
+            
             // Simple zoom adjustment: use visual viewport scale for zoom detection
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
             
@@ -648,8 +689,10 @@ class DynamicCalendarLoader extends CalendarCore {
             charsPerPixel = charsPerPixel / visualZoom;
             
             document.body.removeChild(testElement);
+            document.body.removeChild(megawElement);
+            document.body.removeChild(megawoElement);
             
-            logger.info('CALENDAR', `Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
+            logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
                 width: width.toFixed(2),
                 charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
@@ -659,11 +702,17 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
-                screenWidth: window.innerWidth
+                screenWidth: window.innerWidth,
+                testMeasurements: {
+                    megawWidth: megawWidth.toFixed(2),
+                    megawoWidth: megawoWidth.toFixed(2),
+                    testStringWidth: width.toFixed(2)
+                }
             });
             
             // Cache the result
             this.charsPerPixel = charsPerPixel;
+            logger.info('CALENDAR', `🔍 CALCULATION: Cached charsPerPixel = ${charsPerPixel.toFixed(4)}`);
             return charsPerPixel;
         } catch (error) {
             logger.componentError('CALENDAR', 'Could not calculate chars per pixel', error);
@@ -673,19 +722,39 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Get the actual width available for event text from the fake event rendered invisibly
     getEventTextWidth() {
+        logger.info('CALENDAR', '🔍 MEASUREMENT: Starting getEventTextWidth()');
+        
         // Check if we already have a cached measurement
         if (this.cachedEventTextWidth) {
+            logger.info('CALENDAR', `🔍 MEASUREMENT: Using cached event text width: ${this.cachedEventTextWidth}px`);
             return this.cachedEventTextWidth;
         }
         
-        // Find the fake event that was rendered invisibly for measurement
+        // Find ALL event-name elements to understand what we're measuring
+        const allEventNames = document.querySelectorAll('.event-name');
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Found ${allEventNames.length} .event-name elements`);
+        
+        // Find the first visible event-name element (should be our measurement element)
         const eventName = document.querySelector('.event-name');
         
         // If the element doesn't exist yet, we can't measure - return null to indicate measurement not ready
         if (!eventName) {
-            logger.debug('CALENDAR', 'Event name element not found for measurement - DOM not ready yet');
+            logger.debug('CALENDAR', '🔍 MEASUREMENT: Event name element not found for measurement - DOM not ready yet');
             return null;
         }
+        
+        // Log details about the element we're measuring
+        const isVisible = eventName.offsetParent !== null;
+        const hasContent = eventName.textContent && eventName.textContent.trim().length > 0;
+        
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Measuring event-name element`, {
+            elementFound: true,
+            isVisible,
+            hasContent,
+            textContent: eventName.textContent,
+            tagName: eventName.tagName,
+            className: eventName.className
+        });
         
         // Measure the event name element directly - this IS the text container
         const eventNameRect = eventName.getBoundingClientRect();
@@ -700,13 +769,34 @@ class DynamicCalendarLoader extends CalendarCore {
         
         this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
         
-        logger.info('CALENDAR', `Measured actual event text width from .event-name element: ${this.cachedEventTextWidth}px`, {
-            eventNameWidth: eventNameRect.width,
-            paddingLeft,
-            paddingRight,
-            borderLeft,
-            borderRight,
-            calculatedWidth: availableWidth
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Measured actual event text width from .event-name element: ${this.cachedEventTextWidth}px`, {
+            elementRect: {
+                width: eventNameRect.width,
+                height: eventNameRect.height,
+                left: eventNameRect.left,
+                top: eventNameRect.top
+            },
+            computedStyle: {
+                paddingLeft,
+                paddingRight,
+                borderLeft,
+                borderRight,
+                fontSize: eventNameStyle.fontSize,
+                fontWeight: eventNameStyle.fontWeight,
+                fontFamily: eventNameStyle.fontFamily
+            },
+            calculations: {
+                rawWidth: eventNameRect.width,
+                totalPadding: paddingLeft + paddingRight,
+                totalBorders: borderLeft + borderRight,
+                calculatedWidth: availableWidth,
+                finalCachedWidth: this.cachedEventTextWidth
+            },
+            comparisonWithUserData: {
+                userReported: '52px',
+                ourMeasurement: `${this.cachedEventTextWidth}px`,
+                difference: `${(this.cachedEventTextWidth - 52).toFixed(1)}px`
+            }
         });
         
         return this.cachedEventTextWidth;
@@ -714,15 +804,28 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Clear cached measurements (call when layout changes)
     clearMeasurementCache() {
+        const hadCachedWidth = !!this.cachedEventTextWidth;
+        const hadCharsPerPixel = !!this.charsPerPixel;
+        
         this.cachedEventTextWidth = null;
         this.charsPerPixel = null;
-        logger.debug('CALENDAR', 'Measurement cache cleared');
+        
+        logger.info('CALENDAR', '🔍 CACHE_CLEAR: Measurement cache cleared', {
+            hadCachedWidth,
+            hadCharsPerPixel,
+            reason: 'layout_change'
+        });
     }
 
     // Clear cached event names (call when screen size changes)
     clearEventNameCache() {
+        const cacheSize = this.cachedEventNames.size;
         this.cachedEventNames.clear();
-        logger.debug('CALENDAR', 'Event name cache cleared');
+        
+        logger.info('CALENDAR', '🔍 CACHE_CLEAR: Event name cache cleared', {
+            previousCacheSize: cacheSize,
+            reason: 'screen_size_change'
+        });
     }
 
     // Get current breakpoint based on screen width
@@ -741,50 +844,72 @@ class DynamicCalendarLoader extends CalendarCore {
         const fullName = event.name || '';
         const hasShortName = !!(event.shortName || event.nickname);
         
-        // If we're in measurement mode (hideEvents), always use full name to avoid measurement loops
+        logger.info('CALENDAR', `🔍 EVENT_NAME_GEN: Generating event name elements`, {
+            eventName: fullName,
+            hasShortName,
+            hideEvents,
+            mode: hideEvents ? 'MEASUREMENT' : 'DISPLAY'
+        });
+        
+        // For measurement mode, use a representative name that will trigger proper measurement
+        // This avoids the chicken-and-egg problem where measurement needs width but width needs measurement
         if (hideEvents) {
-            logger.debug('CALENDAR', 'Measurement mode: using full name without caching', {
+            const measurementName = hasShortName ? (event.shortName || event.nickname) : fullName;
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Measurement mode - using representative name', {
                 eventName: fullName,
-                hideEvents: true
+                shortName: event.shortName || event.nickname || '',
+                measurementName,
+                hideEvents: true,
+                reason: 'measurement_mode_representative'
             });
-            return `<div class="event-name">${fullName}</div>`;
+            return `<div class="event-name">${measurementName}</div>`;
         }
+        
+        // DISPLAY MODE: Use full smart name logic with caching
         
         // If no shortname, just return the full name
         if (!hasShortName) {
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: No shortname available, using full name', {
+                eventName: fullName,
+                hideEvents,
+                reason: 'no_shortname_available'
+            });
             return `<div class="event-name">${fullName}</div>`;
         }
         
         // Create a cache key for this event + current breakpoint
         const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}-${this.currentBreakpoint}`;
         
-        // Check if we have cached name for this event at current breakpoint
+        // For display mode, check cache first
         if (this.cachedEventNames.has(eventKey)) {
             const cachedName = this.cachedEventNames.get(eventKey);
-            logger.debug('CALENDAR', 'Using cached event name', { 
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Using cached event name', { 
                 eventKey, 
                 breakpoint: this.currentBreakpoint, 
                 cachedName: cachedName,
-                hideEvents: false
+                hideEvents: false,
+                source: 'cache'
             });
             return `<div class="event-name">${cachedName}</div>`;
         }
         
-        // Calculate name for current breakpoint only
-        logger.debug('CALENDAR', 'Calculating event name for current breakpoint', { 
+        // Calculate name for current breakpoint (display mode only)
+        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Calculating event name for current breakpoint', { 
             eventKey, 
             breakpoint: this.currentBreakpoint,
-            hideEvents: false
+            hideEvents,
+            source: 'fresh_calculation'
         });
         const eventName = this.getSmartEventNameForBreakpoint(event, this.currentBreakpoint);
         
-        // Cache the result for real rendering only (not measurement mode)
+        // Cache the result for display mode
         this.cachedEventNames.set(eventKey, eventName);
-        logger.debug('CALENDAR', 'Cached calculated event name', {
+        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Cached calculated event name', {
             eventKey,
             calculatedName: eventName,
             shortName: event.shortName || event.nickname || '',
-            fullName: fullName
+            fullName: fullName,
+            cached: true
         });
         
         return `<div class="event-name">${eventName}</div>`;
@@ -1608,12 +1733,17 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.time('CALENDAR', 'Calendar display update');
         const filteredEvents = this.getFilteredEvents();
         
-        logger.info('CALENDAR', `Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
+        logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
             view: this.currentView,
             eventCount: filteredEvents.length,
             city: this.currentCity,
             hideEvents,
-            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events'
+            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events',
+            cachedMeasurements: {
+                eventTextWidth: this.cachedEventTextWidth,
+                charsPerPixel: this.charsPerPixel?.toFixed(4),
+                currentBreakpoint: this.currentBreakpoint
+            }
         });
         
         // Update calendar title
@@ -1912,7 +2042,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // STEP 1: Create a fake event for accurate width measurement
         const fakeEvent = {
             name: 'Sample Event Name For Width Measurement Testing',
-            shortName: 'Sample Event Name',
+            shortName: 'Sample Event', // Shorter than full name to trigger smart name logic
             bar: 'Sample Venue Name',
             time: '8:00 PM',
             day: 'Today',
@@ -1921,7 +2051,12 @@ class DynamicCalendarLoader extends CalendarCore {
             recurring: false
         };
         
-        logger.debug('CALENDAR', 'Step 1: Creating calendar structure with fake event (hideEvents: true)');
+        logger.info('CALENDAR', '🔍 RENDER: Step 1: Creating calendar structure with fake event (hideEvents: true)', {
+            fakeEventName: fakeEvent.name,
+            fakeEventShortName: fakeEvent.shortName,
+            fakeEventHasShortName: !!fakeEvent.shortName,
+            willTriggerSmartNameLogic: !!fakeEvent.shortName
+        });
         
         // Set the fake event as allEvents for measurement
         this.allEvents = [fakeEvent];
@@ -1930,7 +2065,7 @@ class DynamicCalendarLoader extends CalendarCore {
         this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true
         
         // STEP 2: Wait for DOM to be fully updated and then measure
-        logger.debug('CALENDAR', 'Step 2: Waiting for DOM to be ready for measurement');
+        logger.info('CALENDAR', '🔍 RENDER: Step 2: Waiting for DOM to be ready for measurement');
         
         // Use requestAnimationFrame to ensure DOM is rendered
         await new Promise(resolve => {
@@ -1940,29 +2075,71 @@ class DynamicCalendarLoader extends CalendarCore {
             });
         });
         
+        logger.info('CALENDAR', '🔍 RENDER: Step 2b: DOM ready, starting measurements');
+        
         // Measure the fake event width - should work reliably now
         const measurementWidth = this.getEventTextWidth();
         
         if (measurementWidth === null) {
-            logger.warn('CALENDAR', 'Failed to measure event text width - using fallback calculation');
+            logger.warn('CALENDAR', '🔍 RENDER: Failed to measure event text width - using fallback calculation');
             // Force calculate chars per pixel as fallback
             this.calculateCharsPerPixel();
         } else {
-            logger.info('CALENDAR', `Successfully measured event text width: ${measurementWidth}px`);
+            logger.info('CALENDAR', `🔍 RENDER: Successfully measured event text width: ${measurementWidth}px`);
+            // Now calculate chars per pixel using the measured width
+            const charsPerPixel = this.calculateCharsPerPixel();
+            logger.info('CALENDAR', `🔍 RENDER: Calculated charsPerPixel: ${charsPerPixel?.toFixed(4)} using measured width: ${measurementWidth}px`);
+            
+            // Verify our measurements with the test strings
+            this.verifyMeasurementsWithTestStrings();
+            
+            // Test with the user's specific test data
+            this.testCalculationsWithUserData();
         }
         
         // STEP 3: Load calendar data from the API
-        logger.debug('CALENDAR', 'Step 3: Loading real calendar data');
+        logger.info('CALENDAR', '🔍 RENDER: Step 3: Loading real calendar data');
         const data = await this.loadCalendarData(this.currentCity);
         
         if (!data) {
-            logger.error('CALENDAR', 'Failed to load calendar data');
+            logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data');
             return;
         }
         
         // STEP 4: Display the real events with hideEvents: false
-        logger.debug('CALENDAR', 'Step 4: Displaying real events (hideEvents: false)');
+        logger.info('CALENDAR', '🔍 RENDER: Step 4: Displaying real events (hideEvents: false)', {
+            eventCount: data.events.length,
+            cachedWidth: this.cachedEventTextWidth,
+            cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
+        });
         this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
+        
+        // STEP 5: Final validation and summary
+        logger.info('CALENDAR', '🔍 RENDER: Step 5: Final validation and summary', {
+            totalSteps: 5,
+            finalState: {
+                cachedEventTextWidth: this.cachedEventTextWidth,
+                cachedCharsPerPixel: this.charsPerPixel?.toFixed(4),
+                currentBreakpoint: this.currentBreakpoint,
+                screenWidth: window.innerWidth,
+                screenHeight: window.innerHeight,
+                visualZoom: ((window.visualViewport && window.visualViewport.scale) || 1).toFixed(2)
+            },
+            userTestDataComparison: {
+                userDebugData: {
+                    viewport: '440 × 956',
+                    charsPerLine: 7,
+                    eventWidth: '56px',
+                    zoom: '100%'
+                },
+                ourCalculatedData: {
+                    viewport: `${window.innerWidth} × ${window.innerHeight}`,
+                    charsPerLine: this.cachedEventTextWidth && this.charsPerPixel ? Math.floor(this.cachedEventTextWidth * this.charsPerPixel) : 'not calculated',
+                    eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px` : 'not measured',
+                    zoom: `${(((window.visualViewport && window.visualViewport.scale) || 1) * 100).toFixed(0)}%`
+                }
+            }
+        });
         
         logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
             eventCount: data.events.length,
@@ -2019,6 +2196,18 @@ class DynamicCalendarLoader extends CalendarCore {
             const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
             const significantWidthChange = Math.abs(newWidth - this.lastScreenWidth) > 50; // 50px threshold
             
+            logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change detected via ${eventType}`, {
+                eventType,
+                oldWidth: this.lastScreenWidth,
+                newWidth,
+                widthChange: newWidth - this.lastScreenWidth,
+                oldBreakpoint: this.currentBreakpoint,
+                newBreakpoint,
+                breakpointChanged,
+                significantWidthChange,
+                willClearCache: breakpointChanged || significantWidthChange
+            });
+            
             // Clear measurements on any significant resize, not just breakpoint changes
             if (breakpointChanged || significantWidthChange) {
                 const oldBreakpoint = this.currentBreakpoint;
@@ -2029,7 +2218,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.lastScreenWidth = newWidth;
                 this.currentBreakpoint = newBreakpoint;
                 
-                logger.debug('CALENDAR', `Significant layout change detected via ${eventType}`, {
+                logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Significant layout change detected via ${eventType}`, {
                     eventType,
                     oldBreakpoint,
                     newBreakpoint,
@@ -2037,15 +2226,23 @@ class DynamicCalendarLoader extends CalendarCore {
                     newWidth,
                     widthChange: newWidth - oldWidth,
                     breakpointChanged,
-                    significantWidthChange
+                    significantWidthChange,
+                    cacheCleared: true
                 });
                 
                 // Debounce the calendar re-render to avoid excessive updates
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
+                    logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Updating calendar display after ${eventType}`);
                     this.updateCalendarDisplay();
-                    logger.debug('CALENDAR', `Calendar display updated after ${eventType}`);
+                    logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Calendar display updated after ${eventType}`);
                 }, 150); // 150ms debounce
+            } else {
+                logger.debug('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change not significant enough to clear cache`, {
+                    eventType,
+                    widthChange: newWidth - this.lastScreenWidth,
+                    threshold: 50
+                });
             }
         };
         
@@ -2133,6 +2330,155 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
+    // Verify measurements with actual test strings (for debugging)
+    verifyMeasurementsWithTestStrings() {
+        if (!this.cachedEventTextWidth || !this.charsPerPixel) {
+            logger.warn('CALENDAR', '🔍 VERIFY: Cannot verify - measurements not ready');
+            return;
+        }
+        
+        try {
+            logger.info('CALENDAR', '🔍 VERIFY: Starting measurement verification with test strings');
+            
+            // Create test element with same styles as actual event names
+            const testElement = document.createElement('div');
+            testElement.className = 'event-name';
+            testElement.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: nowrap;
+                font-family: 'Poppins', sans-serif;
+                font-size: var(--event-name-font-size);
+                font-weight: var(--event-name-font-weight);
+                line-height: var(--event-name-line-height);
+            `;
+            
+            const testStrings = ['MEGAW', 'Megawo'];
+            const measurements = {};
+            
+            for (const testString of testStrings) {
+                testElement.textContent = testString;
+                document.body.appendChild(testElement);
+                
+                const rect = testElement.getBoundingClientRect();
+                const actualTextWidth = this.measureActualTextWidth(testString);
+                
+                measurements[testString] = {
+                    elementWidth: rect.width,
+                    textContentWidth: actualTextWidth,
+                    charCount: testString.length,
+                    pixelsPerCharElement: rect.width / testString.length,
+                    pixelsPerCharText: actualTextWidth / testString.length
+                };
+                
+                document.body.removeChild(testElement);
+            }
+            
+            // Calculate expected chars that would fit in our measured width
+            const expectedCharsInWidth = Math.floor(this.cachedEventTextWidth * this.charsPerPixel);
+            
+            logger.info('CALENDAR', '🔍 VERIFY: Measurement verification results', {
+                cachedEventTextWidth: this.cachedEventTextWidth,
+                cachedCharsPerPixel: this.charsPerPixel.toFixed(4),
+                expectedCharsInWidth,
+                testStringMeasurements: measurements,
+                comparisonWithUserData: {
+                    userReportedEventWidth: '52px',
+                    ourMeasuredEventWidth: `${this.cachedEventTextWidth}px`,
+                    userReportedMegawChars: 5,
+                    ourMeasuredMegawElementWidth: `${measurements.MEGAW?.elementWidth?.toFixed(2)}px`,
+                    ourMeasuredMegawTextWidth: `${measurements.MEGAW?.textContentWidth?.toFixed(2)}px`,
+                    userReportedMegawoChars: 6,
+                    ourMeasuredMegawoElementWidth: `${measurements.Megawo?.elementWidth?.toFixed(2)}px`,
+                    ourMeasuredMegawoTextWidth: `${measurements.Megawo?.textContentWidth?.toFixed(2)}px`
+                }
+            });
+            
+        } catch (error) {
+            logger.componentError('CALENDAR', '🔍 VERIFY: Error during measurement verification', error);
+        }
+    }
+
+    // Test method to validate calculations with user's test data
+    testCalculationsWithUserData() {
+        if (!this.cachedEventTextWidth || !this.charsPerPixel) {
+            logger.warn('CALENDAR', '🔍 USER_TEST: Cannot test - measurements not ready');
+            return;
+        }
+        
+        logger.info('CALENDAR', '🔍 USER_TEST: Testing calculations with user\'s test data');
+        
+        // Create test events with the exact strings the user tested
+        const testEvents = [
+            {
+                name: 'MEGAW Test Event',
+                shortName: 'MEGAW',
+                bar: 'Test Venue',
+                time: '8:00 PM',
+                day: 'Today',
+                startDate: new Date(),
+                slug: 'megaw-test',
+                recurring: false
+            },
+            {
+                name: 'Megawo Test Event', 
+                shortName: 'Megawo',
+                bar: 'Test Venue',
+                time: '8:00 PM',
+                day: 'Today',
+                startDate: new Date(),
+                slug: 'megawo-test',
+                recurring: false
+            }
+        ];
+        
+        for (const testEvent of testEvents) {
+            const calculatedName = this.getSmartEventNameForBreakpoint(testEvent, this.currentBreakpoint);
+            const charLimitPerLine = Math.floor(this.cachedEventTextWidth * this.charsPerPixel);
+            
+            logger.info('CALENDAR', `🔍 USER_TEST: Test event calculation results`, {
+                testEventShortName: testEvent.shortName,
+                calculatedName,
+                shortNameLength: testEvent.shortName.length,
+                calculatedNameLength: calculatedName.length,
+                charLimitPerLine,
+                fitsInLimit: calculatedName.length <= charLimitPerLine,
+                eventTextWidth: this.cachedEventTextWidth,
+                charsPerPixel: this.charsPerPixel.toFixed(4),
+                userReportedLength: testEvent.shortName === 'MEGAW' ? 5 : 6
+            });
+        }
+    }
+
+    // Measure actual text content width (separate from element width)
+    measureActualTextWidth(text) {
+        try {
+            // Create a temporary element to measure just the text content
+            const textElement = document.createElement('span');
+            textElement.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: nowrap;
+                font-family: 'Poppins', sans-serif;
+                font-size: var(--event-name-font-size);
+                font-weight: var(--event-name-font-weight);
+                line-height: var(--event-name-line-height);
+                padding: 0;
+                margin: 0;
+                border: none;
+            `;
+            textElement.textContent = text;
+            document.body.appendChild(textElement);
+            
+            const textWidth = textElement.getBoundingClientRect().width;
+            document.body.removeChild(textElement);
+            
+            return textWidth;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error measuring text width', error);
+            return null;
+        }
+    }
 }
 
 // Map interaction function

@@ -1,75 +1,80 @@
 {
-  "generated": "2025-08-05T04:40:02.034Z",
+  "generated": "2025-08-10T00:28:34.905Z",
   "files": [
     {
       "name": "breakpoint-test.html",
       "size": 34162,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.852Z"
+    },
+    {
+      "name": "character-calculation-test.html",
+      "size": 7693,
+      "modified": "2025-08-10T00:26:39.987Z"
     },
     {
       "name": "hero-variations-tester.html",
       "size": 26248,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.852Z"
     },
     {
       "name": "iframe-fix-test.html",
       "size": 9922,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.852Z"
     },
     {
       "name": "index.html",
       "size": 18216,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.852Z"
     },
     {
       "name": "style-test.html",
       "size": 26360,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "test-calendar-logging.html",
       "size": 68099,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "test-display-modes.html",
       "size": 10729,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "test-error-logging-fix.html",
       "size": 6806,
-      "modified": "2025-08-05T02:55:11.177Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "test-eventbrite-address-fix.html",
       "size": 7179,
-      "modified": "2025-08-05T02:55:11.181Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "test-google-sheets-loader.html",
       "size": 40540,
-      "modified": "2025-08-05T02:55:11.181Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "test-map-icons.html",
       "size": 61258,
-      "modified": "2025-08-05T02:55:11.181Z"
-    },
-    {
-      "name": "test-time-conflict-display.html",
-      "size": 24980,
-      "modified": "2025-08-05T04:39:55.493Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "test-unified-scraper.html",
       "size": 32064,
-      "modified": "2025-08-05T02:55:11.181Z"
+      "modified": "2025-08-07T18:06:54.856Z"
     },
     {
       "name": "ultimate-style-tester.html",
       "size": 116287,
-      "modified": "2025-08-05T02:55:11.181Z"
+      "modified": "2025-08-07T18:06:54.856Z"
+    },
+    {
+      "name": "validate-calculations.html",
+      "size": 12864,
+      "modified": "2025-08-10T00:28:31.615Z"
     }
   ]
 }
