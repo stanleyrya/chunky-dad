@@ -43,45 +43,25 @@ class SavedRunDisplay {
         // Read directory contents directly - no index needed
         try {
             const fm = FileManager.iCloud();
-            const base = jsonFileManager.getCurrentDir();
+            const documentsDir = fm.documentsDirectory();
+            const runsDir = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs');
             
-            // Try multiple possible locations for runs
-            const possibleRunsDirs = [
-                `${base}chunky-dad-scraper/runs`,           // If script is in main directory
-                `${base}adapters/chunky-dad-scraper/runs`,  // If runs are in adapters subfolder
-                `${base}../adapters/chunky-dad-scraper/runs` // If script is in subfolder, runs in adapters
-            ];
+            console.log(`📱 Display: Looking for runs in: ${runsDir}`);
             
-            console.log(`📱 Display: Base directory: ${base}`);
-            console.log(`📱 Display: Checking possible run locations...`);
-            
-            let runsDir = null;
-            let files = [];
-            
-            for (const dir of possibleRunsDirs) {
-                console.log(`📱 Display: Checking: ${dir}`);
-                if (fm.fileExists(dir)) {
-                    runsDir = dir;
-                    files = fm.listContents(dir);
-                    console.log(`📱 Display: ✓ Found runs directory: ${dir}`);
-                    console.log(`📱 Display: Found ${files.length} files: ${JSON.stringify(files)}`);
-                    break;
+            if (!fm.fileExists(runsDir)) {
+                console.log(`📱 Display: Runs directory does not exist: ${runsDir}`);
+                // Create directory structure
+                const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+                if (!fm.fileExists(rootDir)) {
+                    fm.createDirectory(rootDir, true);
                 }
-            }
-            
-            if (!runsDir) {
-                console.log(`📱 Display: No runs directory found in any expected location`);
-                // Create directory in the primary location
-                const primaryDir = `${base}chunky-dad-scraper`;
-                const primaryRunsDir = `${primaryDir}/runs`;
-                console.log(`📱 Display: Creating runs directory: ${primaryRunsDir}`);
-                if (!fm.fileExists(primaryDir)) {
-                    fm.createDirectory(primaryDir, true);
-                }
-                fm.createDirectory(primaryRunsDir, true);
-                console.log(`📱 Display: No saved runs found - runs directory was just created`);
+                fm.createDirectory(runsDir, true);
+                console.log(`📱 Display: Created runs directory - no saved runs found yet`);
                 return [];
             }
+            
+            const files = fm.listContents(runsDir) || [];
+            console.log(`📱 Display: Found ${files.length} files: ${JSON.stringify(files)}`);
             
             const jsonFiles = files.filter(name => name.endsWith('.json'));
             if (jsonFiles.length === 0) {
@@ -100,26 +80,17 @@ class SavedRunDisplay {
     loadSavedRun(runId) {
         try {
             const fm = FileManager.iCloud();
-            const base = jsonFileManager.getCurrentDir();
+            const documentsDir = fm.documentsDirectory();
+            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
             
-            // Try multiple possible locations for the run file
-            const possiblePaths = [
-                `chunky-dad-scraper/runs/${runId}.json`,           // Primary location
-                `adapters/chunky-dad-scraper/runs/${runId}.json`,  // If runs are in adapters subfolder
-                `../adapters/chunky-dad-scraper/runs/${runId}.json` // If script is in subfolder
-            ];
-            
-            for (const relPath of possiblePaths) {
-                const fullPath = base + relPath;
-                console.log(`📱 Display: Trying to load run from: ${fullPath}`);
-                if (fm.fileExists(fullPath)) {
-                    console.log(`📱 Display: ✓ Found run file at: ${relPath}`);
-                    return jsonFileManager.read(relPath);
-                }
+            console.log(`📱 Display: Loading run from: ${runFilePath}`);
+            if (!fm.fileExists(runFilePath)) {
+                console.log(`📱 Display: Run file does not exist: ${runFilePath}`);
+                return null;
             }
             
-            console.log(`📱 Display: Run file ${runId}.json not found in any expected location`);
-            return null;
+            const content = fm.readString(runFilePath);
+            return JSON.parse(content);
         } catch (e) {
             console.log(`📱 Display: Failed to load run ${runId}: ${e.message}`);
             return null;
