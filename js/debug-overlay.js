@@ -303,15 +303,39 @@ class DebugOverlay {
         let eventWidthInfo = '-';
         if (window.calendarLoader) {
             try {
-                const charsPerPixel = window.calendarLoader.charsPerPixel || window.calendarLoader.calculateCharsPerPixel();
-                const availableWidth = window.calendarLoader.getEventTextWidth();
-                const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
+                logger.info('SYSTEM', '🔍 DEBUG_OVERLAY: Getting character calculation data from calendar loader');
                 
-                charLimitInfo = charLimitPerLine.toString();
-                eventWidthInfo = `${availableWidth.toFixed(0)}px`;
+                // Use cached values from calendar loader - DON'T re-calculate
+                const charsPerPixel = window.calendarLoader.charsPerPixel; // Use cached value only
+                const availableWidth = window.calendarLoader.cachedEventTextWidth; // Use cached value only
+                
+                if (charsPerPixel && availableWidth) {
+                    const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
+                    
+                    charLimitInfo = charLimitPerLine.toString();
+                    eventWidthInfo = `${availableWidth.toFixed(0)}px`;
+                    
+                    logger.info('SYSTEM', '🔍 DEBUG_OVERLAY: Using cached calculation data', {
+                        charsPerPixel: charsPerPixel.toFixed(4),
+                        availableWidth: availableWidth.toFixed(2),
+                        charLimitPerLine,
+                        source: 'cached_values'
+                    });
+                } else {
+                    logger.warn('SYSTEM', '🔍 DEBUG_OVERLAY: Calendar loader measurements not ready yet', {
+                        hasCharsPerPixel: !!charsPerPixel,
+                        hasCachedWidth: !!availableWidth
+                    });
+                    charLimitInfo = 'Measuring...';
+                    eventWidthInfo = 'Measuring...';
+                }
             } catch (e) {
-                // Ignore errors if calendar loader methods aren't available
+                logger.warn('SYSTEM', '🔍 DEBUG_OVERLAY: Error accessing calendar loader data', e);
+                charLimitInfo = 'Error';
+                eventWidthInfo = 'Error';
             }
+        } else {
+            logger.debug('SYSTEM', '🔍 DEBUG_OVERLAY: Calendar loader not available');
         }
         
         if (screenSize) {
