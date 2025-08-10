@@ -1,15 +1,10 @@
 {
-  "generated": "2025-08-10T00:28:34.905Z",
+  "generated": "2025-08-10T00:32:18.570Z",
   "files": [
     {
       "name": "breakpoint-test.html",
       "size": 34162,
       "modified": "2025-08-07T18:06:54.852Z"
-    },
-    {
-      "name": "character-calculation-test.html",
-      "size": 7693,
-      "modified": "2025-08-10T00:26:39.987Z"
     },
     {
       "name": "hero-variations-tester.html",
@@ -70,11 +65,6 @@
       "name": "ultimate-style-tester.html",
       "size": 116287,
       "modified": "2025-08-07T18:06:54.856Z"
-    },
-    {
-      "name": "validate-calculations.html",
-      "size": 12864,
-      "modified": "2025-08-10T00:28:31.615Z"
     }
   ]
 }
