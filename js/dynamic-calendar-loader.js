@@ -2130,11 +2130,16 @@ class DynamicCalendarLoader extends CalendarCore {
         // STEP 2: Wait for DOM to be fully updated and then measure
         logger.info('CALENDAR', '🔍 RENDER: Step 2: Waiting for DOM to be ready for measurement');
         
-        // Use requestAnimationFrame to ensure DOM is rendered
+        // Use requestAnimationFrame to ensure DOM is rendered AND responsive CSS is applied
         await new Promise(resolve => {
             requestAnimationFrame(() => {
-                // Wait one more frame to be absolutely sure
-                requestAnimationFrame(resolve);
+                // Wait additional frames to ensure responsive CSS layout is fully applied
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Add a small timeout to ensure all CSS transitions/media queries are settled
+                        setTimeout(resolve, 50);
+                    });
+                });
             });
         });
         
