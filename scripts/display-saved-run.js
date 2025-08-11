@@ -96,7 +96,7 @@ class SavedRunDisplay {
         await alert.present();
     }
 
-    listSavedRuns() {
+    async listSavedRuns() {
         // Read directory contents directly - no index needed
         try {
             const fm = FileManager.iCloud();
@@ -130,9 +130,11 @@ class SavedRunDisplay {
             
             // Ensure iCloud files are downloaded before listing
             try {
-                fm.downloadFileFromiCloud(runsDir);
+                console.log(`📱 Display: Downloading directory from iCloud...`);
+                await fm.downloadFileFromiCloud(runsDir);
+                console.log(`📱 Display: Directory download completed`);
             } catch (downloadError) {
-                console.log(`📱 Display: Note - iCloud download attempt: ${downloadError.message}`);
+                console.log(`📱 Display: Directory download failed: ${downloadError.message}`);
             }
             
             // Double-check the directory we're about to list
@@ -141,17 +143,21 @@ class SavedRunDisplay {
             console.log(`📱 Display: Found ${files.length} files in runs directory: ${JSON.stringify(files)}`);
             
             // Filter out directories and only keep JSON files
-            const jsonFiles = files.filter(name => {
+            const jsonFiles = [];
+            for (const name of files) {
                 const filePath = fm.joinPath(runsDir, name);
                 try {
                     // Ensure each file is downloaded from iCloud
-                    fm.downloadFileFromiCloud(filePath);
-                    return name.endsWith('.json') && !fm.isDirectory(filePath);
+                    console.log(`📱 Display: Downloading file: ${name}`);
+                    await fm.downloadFileFromiCloud(filePath);
+                    if (name.endsWith('.json') && !fm.isDirectory(filePath)) {
+                        jsonFiles.push(name);
+                        console.log(`📱 Display: Added JSON file: ${name}`);
+                    }
                 } catch (error) {
                     console.log(`📱 Display: Error checking file ${name}: ${error.message}`);
-                    return false;
                 }
-            });
+            }
             
             console.log(`📱 Display: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`);
             
@@ -168,11 +174,11 @@ class SavedRunDisplay {
         }
     }
 
-    loadSavedRun(runId) {
+    async loadSavedRun(runId) {
         try {
             const fm = FileManager.iCloud();
             const documentsDir = fm.documentsDirectory();
-            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
+            let runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
             
             console.log(`📱 Display: Loading run from: ${runFilePath}`);
             if (!fm.fileExists(runFilePath)) {
@@ -180,23 +186,34 @@ class SavedRunDisplay {
                 return null;
             }
             
-            // Ensure file is downloaded from iCloud before reading
-            try {
-                fm.downloadFileFromiCloud(runFilePath);
-            } catch (downloadError) {
-                console.log(`📱 Display: Note - iCloud download attempt: ${downloadError.message}`);
-            }
+            // Robust iCloud download with multiple retries
+            let content = null;
+            const maxRetries = 3;
             
-            let content = fm.readString(runFilePath);
-            console.log(`📱 Display: Raw content type: ${typeof content}, content: ${content === null ? 'null' : content === undefined ? 'undefined' : 'valid'}`);
-            
-            // Retry if content is null (iCloud sync issue)
-            if (content === null || content === undefined) {
-                console.log(`📱 Display: Content null, retrying after brief delay...`);
-                await new Promise(resolve => Timer.schedule(1000, false, resolve));
-                fm.downloadFileFromiCloud(runFilePath);
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                console.log(`📱 Display: Download attempt ${attempt}/${maxRetries}`);
+                
+                try {
+                    // Force download from iCloud
+                    await fm.downloadFileFromiCloud(runFilePath);
+                    console.log(`📱 Display: Download completed for attempt ${attempt}`);
+                } catch (downloadError) {
+                    console.log(`📱 Display: Download attempt ${attempt} failed: ${downloadError.message}`);
+                }
+                
+                // Try to read the file
                 content = fm.readString(runFilePath);
-                console.log(`📱 Display: Retry result: ${content === null ? 'still null' : 'success'}`);
+                console.log(`📱 Display: Read attempt ${attempt} result: ${content === null ? 'null' : content === undefined ? 'undefined' : `${content.length} characters`}`);
+                
+                if (content !== null && content !== undefined && content.trim().length > 0) {
+                    console.log(`📱 Display: Successfully got content on attempt ${attempt}`);
+                    break;
+                }
+                
+                if (attempt < maxRetries) {
+                    console.log(`📱 Display: Waiting 2 seconds before retry...`);
+                    await new Promise(resolve => Timer.schedule(2000, false, resolve));
+                }
             }
             
             if (content === null || content === undefined) {
@@ -224,7 +241,7 @@ class SavedRunDisplay {
     async displaySavedRun(options = {}) {
         try {
             let runToShow = null;
-            const runs = this.listSavedRuns();
+            const runs = await this.listSavedRuns();
             if (!runs || runs.length === 0) {
                 await this.showError('No saved runs', 'No saved runs were found to display.\n\nTo create runs, first run the bear-event-scraper-unified.js script.\n\nRuns are saved in the chunky-dad-scraper/runs/ directory relative to where this script is located.');
                 return;
@@ -253,7 +270,7 @@ class SavedRunDisplay {
                 runToShow = runs[0].runId || runs[0];
             }
 
-            const saved = this.loadSavedRun(runToShow);
+            const saved = await this.loadSavedRun(runToShow);
             if (!saved) {
                 await this.showError('Load failed', `Could not load saved run: ${runToShow}`);
                 return;

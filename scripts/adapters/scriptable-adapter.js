@@ -190,9 +190,14 @@ class ScriptableAdapter {
         this.calendarMappings = config.calendarMappings || {};
         this.lastResults = null; // Store last results for calendar display
 
-
         // FileManager available for fallbacks
         this.fm = FileManager.iCloud();
+        
+        // Initialize directory paths
+        const documentsDir = this.fm.documentsDirectory();
+        this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
+        this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
+        this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
     }
 
     // HTTP Adapter Implementation
@@ -3303,14 +3308,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         if (response === 0) {
             // Before executing writes, attempt to persist capability by writing a temp file. If this fails, abort.
             await this.ensureRelativeStorageDirs();
-            const base = jsonFileManager.getCurrentDir();
-            const testRelPath = `chunky-dad-scraper/runs/.write-test.json`;
-            const testAbsPath = `${base}${testRelPath}`;
+            const testFilePath = this.fm.joinPath(this.runsDir, '.write-test.json');
             try {
-                jsonFileManager.write(testRelPath, { ts: new Date().toISOString() });
+                // Write test file directly using our FileManager
+                this.fm.writeString(testFilePath, JSON.stringify({ ts: new Date().toISOString() }));
                 // remove temp file
                 const fm = this.fm || FileManager.iCloud();
-                if (fm.fileExists(testAbsPath)) fm.remove(testAbsPath);
+                if (fm.fileExists(testFilePath)) fm.remove(testFilePath);
             } catch (e) {
                 const errorAlert = new Alert();
                 errorAlert.title = "Cannot Proceed";
@@ -3340,15 +3344,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     async ensureRelativeStorageDirs() {
         try {
             const fm = this.fm || FileManager.iCloud();
-            const documentsDir = fm.documentsDirectory();
-            const root = fm.joinPath(documentsDir, 'chunky-dad-scraper');
-            const runs = fm.joinPath(root, 'runs');
-            const logs = fm.joinPath(root, 'logs');
             
-            console.log(`📱 Scriptable: Ensuring directories in: ${root}`);
-            if (!fm.fileExists(root)) fm.createDirectory(root, true);
-            if (!fm.fileExists(runs)) fm.createDirectory(runs, true);
-            if (!fm.fileExists(logs)) fm.createDirectory(logs, true);
+            console.log(`📱 Scriptable: Ensuring directories in: ${this.baseDir}`);
+            if (!fm.fileExists(this.baseDir)) fm.createDirectory(this.baseDir, true);
+            if (!fm.fileExists(this.runsDir)) fm.createDirectory(this.runsDir, true);
+            if (!fm.fileExists(this.logsDir)) fm.createDirectory(this.logsDir, true);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
         }
@@ -3373,11 +3373,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     async saveRun(results) {
         if (!this.fm) return;
         try {
+            // Ensure directories exist first
+            await this.ensureRelativeStorageDirs();
+            
             const ts = new Date();
             const runId = this.getRunId(ts);
-            const fm = this.fm || FileManager.iCloud();
-            const documentsDir = fm.documentsDirectory();
-            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
+            const runFilePath = this.getRunFilePath(runId);
             
             const summary = {
                 runId,
@@ -3400,8 +3401,24 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 errors: results.errors || []
             };
 
+            // Ensure directory exists before writing (same pattern as FileLogger)
+            if (!this.fm.fileExists(this.runsDir)) {
+                try {
+                    this.fm.createDirectory(this.runsDir, true);
+                    console.log(`📱 Scriptable: Created runs directory: ${this.runsDir}`);
+                } catch (dirErr) {
+                    console.log(`📱 Scriptable: Directory creation failed: ${dirErr.message}`);
+                    throw dirErr;
+                }
+            }
+            
+            // Check if path is a directory
+            if (this.fm.fileExists(runFilePath) && this.fm.isDirectory(runFilePath)) {
+                throw new Error("Run file path is a directory, please delete!");
+            }
+            
             // Save run using absolute path
-            fm.writeString(runFilePath, JSON.stringify(payload));
+            this.fm.writeString(runFilePath, JSON.stringify(payload));
             console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${runFilePath}`);
             return runId;
         } catch (e) {
@@ -3413,8 +3430,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Read directory contents directly - no index needed
         try {
             const fm = this.fm || FileManager.iCloud();
-            const documentsDir = fm.documentsDirectory();
-            const runsPath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs');
+            const runsPath = this.runsDir;
             
             console.log(`📱 Scriptable: Looking for runs in: ${runsPath}`);
             if (!fm.fileExists(runsPath)) {
@@ -3459,8 +3475,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     loadSavedRun(runId) {
         try {
             const fm = this.fm || FileManager.iCloud();
-            const documentsDir = fm.documentsDirectory();
-            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
+            const runFilePath = this.getRunFilePath(runId);
             
             console.log(`📱 Scriptable: Loading run from: ${runFilePath}`);
             if (!fm.fileExists(runFilePath)) {
@@ -3554,8 +3569,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     async cleanupOldFiles(relDirPath, { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {}) {
-        const base = jsonFileManager.getCurrentDir();
-        const dirPath = `${base}${relDirPath}`;
+        // Use documents directory as base, not script directory
+        const documentsDir = this.fm.documentsDirectory();
+        const dirPath = this.fm.joinPath(documentsDir, relDirPath);
         const fm = this.fm || FileManager.iCloud();
         if (!fm.fileExists(dirPath)) return;
         const now = Date.now();
@@ -3578,13 +3594,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     // Log helpers (prefer user's file logger)
     getLogFilePath() {
-        const base = jsonFileManager.getCurrentDir();
         const date = new Date();
         const pad = n => String(n).padStart(2, '0');
         const y = date.getFullYear();
         const m = pad(date.getMonth() + 1);
         const d = pad(date.getDate());
-        return `${base}chunky-dad-scraper/logs/${y}-${m}-${d}.log`;
+        return this.fm.joinPath(this.logsDir, `${y}-${m}-${d}.log`);
     }
 
     async appendLogSummary(results) {
@@ -3604,12 +3619,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
                 try {
                     logger.log(line);
-                    const fullPath = this.getLogFilePath();
-                    const basePath = jsonFileManager.getCurrentDir();
-                    const relativePath = fullPath.startsWith(basePath) ? fullPath.substring(basePath.length) : fullPath;
-                    console.log(`📱 Scriptable: Writing log to relative path: ${relativePath}`);
-                    logger.writeLogs(relativePath);
-                    console.log(`📱 Scriptable: Successfully used FileLogger to write log`);
+                    // Use direct file writing instead of FileLogger to avoid path issues
+                    const logPath = this.getLogFilePath();
+                    
+                    // Ensure directory exists
+                    if (!this.fm.fileExists(this.logsDir)) {
+                        this.fm.createDirectory(this.logsDir, true);
+                    }
+                    
+                    // Write directly using our FileManager
+                    this.fm.writeString(logPath, logger.logs);
+                    console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
                     return;
                 } catch (loggerErr) {
                     console.log(`📱 Scriptable: FileLogger failed: ${loggerErr.message}, falling back to direct write`);
