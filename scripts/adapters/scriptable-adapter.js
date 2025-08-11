@@ -3353,7 +3353,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 return null;
             }
             
+            // Ensure file is downloaded from iCloud before reading
+            try {
+                fm.downloadFileFromiCloud(runFilePath);
+            } catch (downloadError) {
+                console.log(`📱 Scriptable: Note - iCloud download attempt: ${downloadError.message}`);
+            }
+            
             const content = fm.readString(runFilePath);
+            console.log(`📱 Scriptable: Raw content type: ${typeof content}, content: ${content === null ? 'null' : content === undefined ? 'undefined' : 'valid'}`);
+            
+            if (content === null || content === undefined) {
+                console.log(`📱 Scriptable: File content is null or undefined`);
+                return null;
+            }
+            
+            if (content.trim().length === 0) {
+                console.log(`📱 Scriptable: File content is empty`);
+                return null;
+            }
+            
+            console.log(`📱 Scriptable: Successfully read file, content length: ${content.length}`);
             return JSON.parse(content);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);

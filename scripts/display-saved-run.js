@@ -131,6 +131,18 @@ class SavedRunDisplay {
             }
             
             const content = fm.readString(runFilePath);
+            console.log(`📱 Display: Raw content type: ${typeof content}, content: ${content === null ? 'null' : content === undefined ? 'undefined' : 'valid'}`);
+            
+            if (content === null || content === undefined) {
+                console.log(`📱 Display: File content is null or undefined`);
+                return null;
+            }
+            
+            if (content.trim().length === 0) {
+                console.log(`📱 Display: File content is empty`);
+                return null;
+            }
+            
             console.log(`📱 Display: Successfully read file, content length: ${content.length}`);
             const parsed = JSON.parse(content);
             console.log(`📱 Display: Successfully parsed JSON, keys: ${Object.keys(parsed)}`);
