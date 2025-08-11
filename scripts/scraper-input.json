@@ -22,7 +22,7 @@
           "value": "MEGAWOOF",
           "merge": "clobber"
         },
-        "shortTitle": {
+        "shortName": {
           "value": "MEGA-WOOF",
           "merge": "upsert"
         },
@@ -54,6 +54,8 @@
   "calendarMappings": {
     "nyc": "chunky-dad-nyc",
     "la": "chunky-dad-la",
+    "denver": "chunky-dad-denver",
+    "vegas": "chunky-dad-vegas",
     "palm-springs": "chunky-dad-palm-springs",
     "seattle": "chunky-dad-seattle",
     "chicago": "chunky-dad-chicago",

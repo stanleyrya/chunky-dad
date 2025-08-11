@@ -203,7 +203,7 @@ Example:
     "value": "https://www.instagram.com/megawoof_america",
     "merge": "clobber"        // Always update Instagram
   },
-  "shortTitle": {
+  "shortName": {
     "value": "MEGA-WOOF",
     "merge": "upsert"         // Add if missing
   }

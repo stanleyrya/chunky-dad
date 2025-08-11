@@ -2847,7 +2847,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const fieldPriority = {
             // Core event info - keep name fields together
             'title': 1,
-            'shortTitle': 2,
+            'shortName': 2,
             
             'description': 5,
             'tea': 6,              // alias for description (kept if description missing)
@@ -3453,6 +3453,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
             const path = this.getLogFilePath();
+            
+            // Ensure the directory exists before writing
+            const dir = path.substring(0, path.lastIndexOf('/'));
+            if (!fm.fileExists(dir)) {
+                console.log(`📱 Scriptable: Creating log directory: ${dir}`);
+                fm.createDirectory(dir, true);
+            }
+            
             let existing = '';
             if (fm.fileExists(path)) {
                 try { existing = fm.readString(path) || ''; } catch (_) {}
