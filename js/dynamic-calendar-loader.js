@@ -503,36 +503,15 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         // Calculate how many characters can fit on one line
-        let charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
-        
-        // Validate the calculation makes sense - if it's too low, there might be an issue
-        const pixelsPerChar = 1 / charsPerPixel;
-        const estimatedWidthCheck = charLimitPerLine * pixelsPerChar;
-        
-        // Safety check: ensure character limit is reasonable for the available space
-        // For a 55px space, we should be able to fit at least 8-10 characters
-        const minReasonableChars = Math.max(6, Math.floor(availableWidth / 8)); // At least 6 chars, or 1 char per 8px
-        if (charLimitPerLine < minReasonableChars) {
-            logger.warn('CALENDAR', `🔍 SMART_NAME: Character limit seems too low (${charLimitPerLine}), applying minimum of ${minReasonableChars}`, {
-                originalLimit: charLimitPerLine,
-                adjustedLimit: minReasonableChars,
-                availableWidth: availableWidth.toFixed(2),
-                charsPerPixel: charsPerPixel.toFixed(4),
-                reason: 'safety_adjustment'
-            });
-            charLimitPerLine = minReasonableChars;
-        }
+        const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         
         logger.info('CALENDAR', `🔍 SMART_NAME: Dynamic char calculation for ${breakpoint}`, {
             availableWidth: availableWidth.toFixed(2),
             charsPerPixel: charsPerPixel.toFixed(4),
-            pixelsPerChar: pixelsPerChar.toFixed(2),
             charLimitPerLine,
             eventName: shortName,
             shortNameLength: shortName.length,
-            screenWidth: window.innerWidth,
-            validationCheck: `${charLimitPerLine} chars × ${pixelsPerChar.toFixed(2)}px/char = ${estimatedWidthCheck.toFixed(2)}px (should ≈ ${availableWidth.toFixed(2)}px)`,
-            calculationSanity: charLimitPerLine > 3 ? 'reasonable' : 'suspiciously low'
+            screenWidth: window.innerWidth
         });
         
         // Process the shortname - remove hyphens except escaped ones (\-)
@@ -661,88 +640,44 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
         
         try {
-            // Find an existing event-name element to use as a reference for styling context
-            const existingEventName = document.querySelector('.event-name');
-            if (!existingEventName) {
-                logger.warn('CALENDAR', '🔍 CALCULATION: No existing .event-name element found for style reference');
-                return 0.15; // More conservative fallback when we can't measure properly
-            }
-            
-            // NEW APPROACH: Measure character width directly in the actual event container
-            // This should be more accurate than using a universal ratio
-            const availableWidth = this.getEventTextWidth();
-            if (!availableWidth) {
-                logger.warn('CALENDAR', '🔍 CALCULATION: Could not get event text width for direct measurement');
-                return 0.15; // Fallback
-            }
-            
-            // Create a test element that exactly matches the real event name context
+            // Create a temporary element to measure character width
             const testElement = document.createElement('div');
-            testElement.className = 'event-name';
-            
-            // Clone the computed styles from the existing event name element
-            const referenceStyles = window.getComputedStyle(existingEventName);
+            testElement.className = 'event-name'; // Use the same class as actual event names
             testElement.style.cssText = `
                 position: absolute;
                 visibility: hidden;
                 white-space: nowrap;
-                width: ${availableWidth}px;
-                font-family: ${referenceStyles.fontFamily};
-                font-size: ${referenceStyles.fontSize};
-                font-weight: ${referenceStyles.fontWeight};
-                line-height: ${referenceStyles.lineHeight};
-                letter-spacing: ${referenceStyles.letterSpacing};
-                text-transform: ${referenceStyles.textTransform};
+                font-family: 'Poppins', sans-serif;
+                font-size: var(--event-name-font-size);
+                font-weight: var(--event-name-font-weight);
+                line-height: var(--event-name-line-height);
             `;
             
-            // Use a shorter, more representative test string and measure how it fits in the actual space
-            const testString = 'Bear Happy Hour';
+            // Use a string that better represents actual event names 
+            // Focus on uppercase letters and spaces which are more common in event titles
+            const testString = 'BEAR HAPPY HOUR NIGHT OUT WEEKLY SOCIAL EVENTS';
             testElement.textContent = testString;
+            document.body.appendChild(testElement);
             
-            // Insert the test element in the same parent as the reference element for proper CSS inheritance
-            existingEventName.parentNode.appendChild(testElement);
-            
-            const testWidth = testElement.getBoundingClientRect().width;
-            const testCharCount = testElement.textContent.length;
-            
-            // Calculate how much of the available width this test string uses
-            const utilizationRatio = testWidth / availableWidth;
-            
-            // Calculate characters per pixel based on how the test string fits in the actual space
-            let charsPerPixel;
-            if (utilizationRatio <= 1.0) {
-                // Test string fits completely, calculate based on actual usage
-                charsPerPixel = testCharCount / testWidth;
-            } else {
-                // Test string is too wide, scale down the ratio
-                charsPerPixel = testCharCount / availableWidth;
-            }
-            
-            const pixelsPerChar = 1 / charsPerPixel;
+            const width = testElement.getBoundingClientRect().width;
+            const charCount = testElement.textContent.length;
+            const pixelsPerChar = width / charCount;
+            let charsPerPixel = 1 / pixelsPerChar;
             
             // Get the computed styles to verify what we're actually using
             const computedStyles = window.getComputedStyle(testElement);
             const actualFontSize = computedStyles.fontSize;
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
-            const actualLetterSpacing = computedStyles.letterSpacing;
-            const actualTextTransform = computedStyles.textTransform;
             
-            // Also get the reference styles for comparison
-            const refFontSize = referenceStyles.fontSize;
-            const refFontWeight = referenceStyles.fontWeight;
-            const refLetterSpacing = referenceStyles.letterSpacing;
-            
-            // Get visual zoom for logging purposes only
+            // Get visual zoom for logging purposes only - don't adjust calculation
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
             
-            existingEventName.parentNode.removeChild(testElement);
+            document.body.removeChild(testElement);
             
             logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
-                availableWidth: availableWidth.toFixed(2),
-                testWidth: testWidth.toFixed(2),
-                testCharCount,
-                utilizationRatio: utilizationRatio.toFixed(3),
+                width: width.toFixed(2),
+                charCount,
                 pixelsPerChar: pixelsPerChar.toFixed(2),
                 charsPerPixel: charsPerPixel.toFixed(4),
                 visualZoom: visualZoom.toFixed(2),
@@ -750,21 +685,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
-                actualLetterSpacing,
-                actualTextTransform,
                 screenWidth: window.innerWidth,
                 testString: testString,
-                testStringLength: testString.length,
-                calculationMethod: utilizationRatio <= 1.0 ? 'direct_measurement' : 'scaled_to_fit',
-                calculationCheck: `${testCharCount} chars in ${testWidth.toFixed(2)}px (${utilizationRatio.toFixed(3)} of ${availableWidth.toFixed(2)}px available) = ${charsPerPixel.toFixed(4)} chars/px`,
-                styleComparison: {
-                    refFontSize: refFontSize,
-                    actualFontSize: actualFontSize,
-                    refLetterSpacing: refLetterSpacing,
-                    actualLetterSpacing: actualLetterSpacing,
-                    stylesMatch: refFontSize === actualFontSize && refLetterSpacing === actualLetterSpacing
-                },
-                note: 'Using direct measurement in actual event container for more accurate calculation'
+                note: 'Using uppercase-heavy test string to better match event name character distribution'
             });
             
             // Cache the result
@@ -773,7 +696,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return charsPerPixel;
         } catch (error) {
             logger.componentError('CALENDAR', 'Error calculating chars per pixel', error);
-            return 0.15; // More conservative fallback
+            return 0.1; // Conservative fallback
         }
     }
 
