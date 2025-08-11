@@ -3447,25 +3447,47 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Prefer embedded logger API
             if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
                 logger.log(line);
-                logger.writeLogs(this.getLogFilePath().replace(jsonFileManager.getCurrentDir(), ''));
+                const fullPath = this.getLogFilePath();
+                const basePath = jsonFileManager.getCurrentDir();
+                const relativePath = fullPath.startsWith(basePath) ? fullPath.substring(basePath.length) : fullPath;
+                console.log(`📱 Scriptable: Writing log to relative path: ${relativePath}`);
+                logger.writeLogs(relativePath);
                 return;
             }
             // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
             const path = this.getLogFilePath();
+            console.log(`📱 Scriptable: Fallback write to path: ${path}`);
             
             // Ensure the directory exists before writing
             const dir = path.substring(0, path.lastIndexOf('/'));
+            console.log(`📱 Scriptable: Checking directory: ${dir}`);
             if (!fm.fileExists(dir)) {
                 console.log(`📱 Scriptable: Creating log directory: ${dir}`);
                 fm.createDirectory(dir, true);
+            } else {
+                console.log(`📱 Scriptable: Directory exists: ${dir}`);
             }
             
             let existing = '';
             if (fm.fileExists(path)) {
-                try { existing = fm.readString(path) || ''; } catch (_) {}
+                try { 
+                    existing = fm.readString(path) || ''; 
+                    console.log(`📱 Scriptable: Read existing log file, length: ${existing.length}`);
+                } catch (readErr) {
+                    console.log(`📱 Scriptable: Failed to read existing log: ${readErr.message}`);
+                }
+            } else {
+                console.log(`📱 Scriptable: Log file doesn't exist, will create: ${path}`);
             }
-            fm.writeString(path, existing + line + '\n');
+            
+            try {
+                fm.writeString(path, existing + line + '\n');
+                console.log(`📱 Scriptable: Successfully wrote log entry`);
+            } catch (writeErr) {
+                console.log(`📱 Scriptable: Write failed: ${writeErr.message}`);
+                throw writeErr;
+            }
         } catch (e) {
             console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
         }
