@@ -663,10 +663,8 @@ class DynamicCalendarLoader extends CalendarCore {
             const width = testElement.getBoundingClientRect().width;
             const charCount = testElement.textContent.length;
             const pixelsPerChar = width / charCount;
-            let charsPerPixel = 1 / pixelsPerChar;
-            
-            // Apply defensive reduction to charsPerPixel to prevent edge overflow
-            charsPerPixel = charsPerPixel - 0.02;
+            // Apply defensive reduction of 0.02 to prevent edge overflow
+            const charsPerPixel = (1 / pixelsPerChar) - 0.02;
             
             // Get the computed styles to verify what we're actually using
             const computedStyles = window.getComputedStyle(testElement);
