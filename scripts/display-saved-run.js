@@ -44,24 +44,34 @@ class SavedRunDisplay {
         try {
             const fm = FileManager.iCloud();
             const documentsDir = fm.documentsDirectory();
-            const runsDir = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs');
+            const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+            const runsDir = fm.joinPath(rootDir, 'runs');
             
+            console.log(`📱 Display: Documents directory: ${documentsDir}`);
+            console.log(`📱 Display: Root directory: ${rootDir}`);
             console.log(`📱 Display: Looking for runs in: ${runsDir}`);
+            
+            // Debug: Check what's in the root directory
+            if (fm.fileExists(rootDir)) {
+                const rootFiles = fm.listContents(rootDir) || [];
+                console.log(`📱 Display: Root directory contents: ${JSON.stringify(rootFiles)}`);
+            }
+            
+            // Check if root directory exists first
+            if (!fm.fileExists(rootDir)) {
+                console.log(`📱 Display: Root directory does not exist: ${rootDir}`);
+                fm.createDirectory(rootDir, true);
+            }
             
             if (!fm.fileExists(runsDir)) {
                 console.log(`📱 Display: Runs directory does not exist: ${runsDir}`);
-                // Create directory structure
-                const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
-                if (!fm.fileExists(rootDir)) {
-                    fm.createDirectory(rootDir, true);
-                }
                 fm.createDirectory(runsDir, true);
                 console.log(`📱 Display: Created runs directory - no saved runs found yet`);
                 return [];
             }
             
             const files = fm.listContents(runsDir) || [];
-            console.log(`📱 Display: Found ${files.length} files: ${JSON.stringify(files)}`);
+            console.log(`📱 Display: Found ${files.length} files in runs directory: ${JSON.stringify(files)}`);
             
             // Filter out directories and only keep JSON files
             const jsonFiles = files.filter(name => {
