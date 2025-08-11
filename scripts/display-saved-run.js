@@ -43,11 +43,32 @@ class SavedRunDisplay {
         // Read directory contents directly - no index needed
         try {
             const fm = FileManager.iCloud();
-            const base = jsonFileManager.getCurrentDir();
-            const runsDir = `${base}chunky-dad-scraper/runs`;
-            if (!fm.fileExists(runsDir)) return [];
-            return fm.listContents(runsDir)
-                .filter(name => name.endsWith('.json'))
+            const documentsDir = fm.documentsDirectory();
+            const runsDir = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs');
+            
+            console.log(`📱 Display: Looking for runs in: ${runsDir}`);
+            
+            if (!fm.fileExists(runsDir)) {
+                console.log(`📱 Display: Runs directory does not exist: ${runsDir}`);
+                // Create directory structure
+                const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+                if (!fm.fileExists(rootDir)) {
+                    fm.createDirectory(rootDir, true);
+                }
+                fm.createDirectory(runsDir, true);
+                console.log(`📱 Display: Created runs directory - no saved runs found yet`);
+                return [];
+            }
+            
+            const files = fm.listContents(runsDir) || [];
+            console.log(`📱 Display: Found ${files.length} files: ${JSON.stringify(files)}`);
+            
+            const jsonFiles = files.filter(name => name.endsWith('.json'));
+            if (jsonFiles.length === 0) {
+                console.log(`📱 Display: No .json run files found in directory`);
+            }
+            
+            return jsonFiles
                 .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
                 .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
         } catch (e) {
@@ -58,8 +79,18 @@ class SavedRunDisplay {
 
     loadSavedRun(runId) {
         try {
-            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
-            return jsonFileManager.read(relPath);
+            const fm = FileManager.iCloud();
+            const documentsDir = fm.documentsDirectory();
+            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
+            
+            console.log(`📱 Display: Loading run from: ${runFilePath}`);
+            if (!fm.fileExists(runFilePath)) {
+                console.log(`📱 Display: Run file does not exist: ${runFilePath}`);
+                return null;
+            }
+            
+            const content = fm.readString(runFilePath);
+            return JSON.parse(content);
         } catch (e) {
             console.log(`📱 Display: Failed to load run ${runId}: ${e.message}`);
             return null;
@@ -73,7 +104,7 @@ class SavedRunDisplay {
             let runToShow = null;
             const runs = this.listSavedRuns();
             if (!runs || runs.length === 0) {
-                await this.showError('No saved runs', 'No saved runs were found to display.');
+                await this.showError('No saved runs', 'No saved runs were found to display.\n\nTo create runs, first run the bear-event-scraper-unified.js script.\n\nRuns are saved in the chunky-dad-scraper/runs/ directory relative to where this script is located.');
                 return;
             }
 

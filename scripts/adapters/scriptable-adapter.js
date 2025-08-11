@@ -3224,11 +3224,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     async ensureRelativeStorageDirs() {
         try {
-            const base = jsonFileManager.getCurrentDir();
-            const root = `${base}chunky-dad-scraper`;
-            const runs = `${root}/runs`;
-            const logs = `${root}/logs`;
             const fm = this.fm || FileManager.iCloud();
+            const documentsDir = fm.documentsDirectory();
+            const root = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+            const runs = fm.joinPath(root, 'runs');
+            const logs = fm.joinPath(root, 'logs');
+            
+            console.log(`📱 Scriptable: Ensuring directories in: ${root}`);
             if (!fm.fileExists(root)) fm.createDirectory(root, true);
             if (!fm.fileExists(runs)) fm.createDirectory(runs, true);
             if (!fm.fileExists(logs)) fm.createDirectory(logs, true);
@@ -3258,7 +3260,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         try {
             const ts = new Date();
             const runId = this.getRunId(ts);
-            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
+            const fm = this.fm || FileManager.iCloud();
+            const documentsDir = fm.documentsDirectory();
+            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
             
             const summary = {
                 runId,
@@ -3281,9 +3285,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 errors: results.errors || []
             };
 
-            // Save run via JSONFileManager
-            jsonFileManager.write(relPath, payload);
-            console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${relPath}`);
+            // Save run using absolute path
+            fm.writeString(runFilePath, JSON.stringify(payload));
+            console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${runFilePath}`);
             return runId;
         } catch (e) {
             console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
@@ -3293,9 +3297,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     listSavedRuns() {
         // Read directory contents directly - no index needed
         try {
-            const base = jsonFileManager.getCurrentDir();
-            const runsPath = `${base}chunky-dad-scraper/runs`;
-            const files = this.fm.listContents(runsPath) || [];
+            const fm = this.fm || FileManager.iCloud();
+            const documentsDir = fm.documentsDirectory();
+            const runsPath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs');
+            
+            console.log(`📱 Scriptable: Looking for runs in: ${runsPath}`);
+            if (!fm.fileExists(runsPath)) {
+                console.log(`📱 Scriptable: Runs directory does not exist: ${runsPath}`);
+                return [];
+            }
+            
+            const files = fm.listContents(runsPath) || [];
+            console.log(`📱 Scriptable: Found ${files.length} files: ${JSON.stringify(files)}`);
+            
             return files
                 .filter(name => name.endsWith('.json'))
                 .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
@@ -3308,8 +3322,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     loadSavedRun(runId) {
         try {
-            const relPath = `chunky-dad-scraper/runs/${runId}.json`;
-            return jsonFileManager.read(relPath);
+            const fm = this.fm || FileManager.iCloud();
+            const documentsDir = fm.documentsDirectory();
+            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
+            
+            console.log(`📱 Scriptable: Loading run from: ${runFilePath}`);
+            if (!fm.fileExists(runFilePath)) {
+                console.log(`📱 Scriptable: Run file does not exist: ${runFilePath}`);
+                return null;
+            }
+            
+            const content = fm.readString(runFilePath);
+            return JSON.parse(content);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
             return null;
