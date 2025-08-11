@@ -70,13 +70,27 @@ class SavedRunDisplay {
                 return [];
             }
             
+            // Ensure iCloud files are downloaded before listing
+            try {
+                fm.downloadFileFromiCloud(runsDir);
+            } catch (downloadError) {
+                console.log(`📱 Display: Note - iCloud download attempt: ${downloadError.message}`);
+            }
+            
             const files = fm.listContents(runsDir) || [];
             console.log(`📱 Display: Found ${files.length} files in runs directory: ${JSON.stringify(files)}`);
             
             // Filter out directories and only keep JSON files
             const jsonFiles = files.filter(name => {
                 const filePath = fm.joinPath(runsDir, name);
-                return name.endsWith('.json') && !fm.isDirectory(filePath);
+                try {
+                    // Ensure each file is downloaded from iCloud
+                    fm.downloadFileFromiCloud(filePath);
+                    return name.endsWith('.json') && !fm.isDirectory(filePath);
+                } catch (error) {
+                    console.log(`📱 Display: Error checking file ${name}: ${error.message}`);
+                    return false;
+                }
             });
             
             console.log(`📱 Display: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`);
@@ -106,8 +120,18 @@ class SavedRunDisplay {
                 return null;
             }
             
+            // Ensure file is downloaded from iCloud before reading
+            try {
+                fm.downloadFileFromiCloud(runFilePath);
+            } catch (downloadError) {
+                console.log(`📱 Display: Note - iCloud download attempt: ${downloadError.message}`);
+            }
+            
             const content = fm.readString(runFilePath);
-            return JSON.parse(content);
+            console.log(`📱 Display: Successfully read file, content length: ${content.length}`);
+            const parsed = JSON.parse(content);
+            console.log(`📱 Display: Successfully parsed JSON, keys: ${Object.keys(parsed)}`);
+            return parsed;
         } catch (e) {
             console.log(`📱 Display: Failed to load run ${runId}: ${e.message}`);
             return null;
