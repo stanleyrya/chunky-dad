@@ -176,10 +176,19 @@ class SavedRunDisplay {
 
     async loadSavedRun(runId) {
         try {
+            console.log(`📱 Display: loadSavedRun called with runId: ${JSON.stringify(runId)} (type: ${typeof runId})`);
+            
             const fm = FileManager.iCloud();
             const documentsDir = fm.documentsDirectory();
-            let runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
+            const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+            const runsDir = fm.joinPath(rootDir, 'runs');
+            const fileName = `${runId}.json`;
+            const runFilePath = fm.joinPath(runsDir, fileName);
             
+            console.log(`📱 Display: Path components - documentsDir: ${documentsDir}`);
+            console.log(`📱 Display: Path components - rootDir: ${rootDir}`);
+            console.log(`📱 Display: Path components - runsDir: ${runsDir}`);
+            console.log(`📱 Display: Path components - fileName: ${fileName}`);
             console.log(`📱 Display: Loading run from: ${runFilePath}`);
             if (!fm.fileExists(runFilePath)) {
                 console.log(`📱 Display: Run file does not exist: ${runFilePath}`);
@@ -270,7 +279,13 @@ class SavedRunDisplay {
                 runToShow = runs[0].runId || runs[0];
             }
 
-            const saved = await this.loadSavedRun(runToShow);
+            console.log(`📱 Display: About to load runToShow: ${JSON.stringify(runToShow)} (type: ${typeof runToShow})`);
+            
+            // Ensure runToShow is a string, not an object
+            const runIdString = typeof runToShow === 'string' ? runToShow : runToShow.runId || runToShow.toString();
+            console.log(`📱 Display: Final runId to load: ${runIdString}`);
+
+            const saved = await this.loadSavedRun(runIdString);
             if (!saved) {
                 await this.showError('Load failed', `Could not load saved run: ${runToShow}`);
                 return;
