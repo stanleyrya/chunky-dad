@@ -669,15 +669,18 @@ class DynamicCalendarLoader extends CalendarCore {
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
             
-            // Simple zoom adjustment: use visual viewport scale for zoom detection
+            // Get visual zoom for logging purposes only - don't adjust calculation
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
             
+            // REMOVED ZOOM ADJUSTMENT: getEventTextWidth() already measures at current zoom level
+            // The previous logic was double-correcting for zoom, causing exponential scaling
+            // Now charsPerPixel represents the true character density at current zoom
+            
+            // COMMENTED OUT - Keep for safety in case we made a mistake:
             // When zoomed IN (visualZoom > 1), text appears larger, so FEWER characters fit
             // When zoomed OUT (visualZoom < 1), text appears smaller, so MORE characters fit
             // Therefore, we DIVIDE by zoom level, not multiply
-            charsPerPixel = charsPerPixel / visualZoom;
-            
-
+            // charsPerPixel = charsPerPixel / visualZoom;
             
             document.body.removeChild(testElement);
             
@@ -691,7 +694,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontSize,
                 actualFontWeight,
                 actualFontFamily,
-                screenWidth: window.innerWidth
+                screenWidth: window.innerWidth,
+                note: 'Zoom adjustment removed - getEventTextWidth() already accounts for zoom'
             });
             
             // Cache the result
