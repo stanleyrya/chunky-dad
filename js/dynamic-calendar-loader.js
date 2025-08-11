@@ -512,7 +512,7 @@ class DynamicCalendarLoader extends CalendarCore {
             eventName: shortName,
             shortNameLength: shortName.length,
             screenWidth: window.innerWidth,
-            note: 'Using defensive charsPerPixel (~0.11) with 0.2px padding to prevent edge overflow'
+            note: 'Using defensive charsPerPixel (~0.11) with 0.02 direct reduction to prevent edge overflow'
         });
         
         // Process the shortname - remove hyphens except escaped ones (\-)
@@ -663,7 +663,8 @@ class DynamicCalendarLoader extends CalendarCore {
             const width = testElement.getBoundingClientRect().width;
             const charCount = testElement.textContent.length;
             const pixelsPerChar = width / charCount;
-            let charsPerPixel = 1 / pixelsPerChar;
+            // Apply defensive reduction of 0.02 to prevent edge overflow
+            const charsPerPixel = (1 / pixelsPerChar) - 0.02;
             
             // Get the computed styles to verify what we're actually using
             const computedStyles = window.getComputedStyle(testElement);
@@ -688,7 +689,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontFamily,
                 screenWidth: window.innerWidth,
                 testString: testString,
-                note: 'Base calculation - will be made more conservative via defensive padding in getEventTextWidth()'
+                note: 'Base calculation with 0.02 defensive reduction applied directly to charsPerPixel'
             });
             
             // Cache the result
@@ -748,11 +749,8 @@ class DynamicCalendarLoader extends CalendarCore {
         // Calculate the actual available width for text content
         const rawAvailableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
         
-        // DEFENSIVE TEXT FITTING: Apply extra padding to prevent text from hitting container edges
-        // By reducing available width by 0.2px (0.1px each side), we achieve a more conservative
-        // charsPerPixel calculation (~0.11 instead of ~0.13) that ensures text never overflows
-        const defensivePadding = 0.2; // 0.1px on each side for edge safety
-        const availableWidth = rawAvailableWidth - defensivePadding;
+        // No defensive padding applied to width - defensive reduction is applied directly to charsPerPixel calculation
+        const availableWidth = rawAvailableWidth;
         
         this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
         
@@ -777,10 +775,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 totalPadding: paddingLeft + paddingRight,
                 totalBorders: borderLeft + borderRight,
                 rawAvailableWidth: rawAvailableWidth,
-                defensivePadding: defensivePadding,
                 finalAvailableWidth: availableWidth,
                 finalCachedWidth: this.cachedEventTextWidth,
-                note: 'Applied 0.1px defensive padding on each side to prevent edge overflow'
+                note: 'No width padding applied - defensive reduction applied directly to charsPerPixel'
             }
         });
         
@@ -2113,9 +2110,9 @@ calculatedData: {
                 viewport: `${window.innerWidth} × ${window.innerHeight}`,
                 charsPerLine: this.cachedEventTextWidth && this.charsPerPixel ? Math.floor(this.cachedEventTextWidth * this.charsPerPixel) : 'not calculated',
                 charsPerPixel: this.charsPerPixel ? this.charsPerPixel.toFixed(4) : 'not calculated',
-                eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px (includes 0.2px defensive padding)` : 'not measured',
+                eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px (no padding - defensive applied to charsPerPixel)` : 'not measured',
                 zoom: `${(((window.visualViewport && window.visualViewport.scale) || 1) * 100).toFixed(0)}%`,
-                note: 'Defensive padding reduces effective width to achieve ~0.11 charsPerPixel (down from ~0.13)'
+                note: 'Defensive reduction of 0.02 applied directly to charsPerPixel to achieve ~0.11 (down from ~0.13)'
             }
         });
         
