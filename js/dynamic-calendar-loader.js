@@ -653,8 +653,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 line-height: var(--event-name-line-height);
             `;
             
-            // Use a representative string of average characters
-            const testString = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
+            // Use a string that better represents actual event names 
+            // Focus on uppercase letters without spaces (spaces are narrow and skew the average)
+            const testString = 'BEARHAPPYHOURNIGHTOUTWEEKLYSOCIALEVENTS';
             testElement.textContent = testString;
             document.body.appendChild(testElement);
             
@@ -672,16 +673,6 @@ class DynamicCalendarLoader extends CalendarCore {
             // Get visual zoom for logging purposes only - don't adjust calculation
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
             
-            // REMOVED ZOOM ADJUSTMENT: getEventTextWidth() already measures at current zoom level
-            // The previous logic was double-correcting for zoom, causing exponential scaling
-            // Now charsPerPixel represents the true character density at current zoom
-            
-            // COMMENTED OUT - Keep for safety in case we made a mistake:
-            // When zoomed IN (visualZoom > 1), text appears larger, so FEWER characters fit
-            // When zoomed OUT (visualZoom < 1), text appears smaller, so MORE characters fit
-            // Therefore, we DIVIDE by zoom level, not multiply
-            // charsPerPixel = charsPerPixel / visualZoom;
-            
             document.body.removeChild(testElement);
             
             logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
@@ -695,7 +686,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontWeight,
                 actualFontFamily,
                 screenWidth: window.innerWidth,
-                note: 'Zoom adjustment removed - getEventTextWidth() already accounts for zoom'
+                testString: testString,
+                note: 'Using all-caps test string without spaces to avoid narrow character skew'
             });
             
             // Cache the result
