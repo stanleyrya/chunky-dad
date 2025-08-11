@@ -123,9 +123,36 @@ class SavedRunDisplay {
             
             if (!fm.fileExists(runsDir)) {
                 console.log(`📱 Display: Runs directory does not exist: ${runsDir}`);
-                fm.createDirectory(runsDir, true);
-                console.log(`📱 Display: Created runs directory - no saved runs found yet`);
-                return [];
+                
+                // Check if files exist in the old wrong location (adapters/chunky-dad-scraper/runs/)
+                const oldWrongDir = fm.joinPath(documentsDir, 'adapters', 'chunky-dad-scraper', 'runs');
+                if (fm.fileExists(oldWrongDir)) {
+                    console.log(`📱 Display: Found files in old wrong location: ${oldWrongDir}`);
+                    console.log(`📱 Display: Migrating files from old location to correct location...`);
+                    
+                    // Create correct directory structure
+                    fm.createDirectory(runsDir, true);
+                    
+                    // Move files from wrong location to correct location
+                    const oldFiles = fm.listContents(oldWrongDir) || [];
+                    for (const fileName of oldFiles) {
+                        const oldPath = fm.joinPath(oldWrongDir, fileName);
+                        const newPath = fm.joinPath(runsDir, fileName);
+                        try {
+                            fm.downloadFileFromiCloud(oldPath);
+                            const content = fm.readString(oldPath);
+                            fm.writeString(newPath, content);
+                            console.log(`📱 Display: Migrated ${fileName} to correct location`);
+                        } catch (migrationError) {
+                            console.log(`📱 Display: Failed to migrate ${fileName}: ${migrationError.message}`);
+                        }
+                    }
+                    console.log(`📱 Display: Migration completed`);
+                } else {
+                    fm.createDirectory(runsDir, true);
+                    console.log(`📱 Display: Created runs directory - no saved runs found yet`);
+                    return [];
+                }
             }
             
             // Ensure iCloud files are downloaded before listing
@@ -172,12 +199,20 @@ class SavedRunDisplay {
         try {
             const fm = FileManager.iCloud();
             const documentsDir = fm.documentsDirectory();
-            const runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
+            let runFilePath = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs', `${runId}.json`);
             
             console.log(`📱 Display: Loading run from: ${runFilePath}`);
             if (!fm.fileExists(runFilePath)) {
                 console.log(`📱 Display: Run file does not exist: ${runFilePath}`);
-                return null;
+                
+                // Check if file exists in old wrong location
+                const oldWrongPath = fm.joinPath(documentsDir, 'adapters', 'chunky-dad-scraper', 'runs', `${runId}.json`);
+                if (fm.fileExists(oldWrongPath)) {
+                    console.log(`📱 Display: Found file in old wrong location, using: ${oldWrongPath}`);
+                    runFilePath = oldWrongPath; // Use the old path for this load
+                } else {
+                    return null;
+                }
             }
             
             // Ensure file is downloaded from iCloud before reading
