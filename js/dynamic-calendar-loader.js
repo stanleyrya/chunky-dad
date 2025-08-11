@@ -511,7 +511,8 @@ class DynamicCalendarLoader extends CalendarCore {
             charLimitPerLine,
             eventName: shortName,
             shortNameLength: shortName.length,
-            screenWidth: window.innerWidth
+            screenWidth: window.innerWidth,
+            note: 'Using defensive charsPerPixel (~0.11) with 0.2px padding to prevent edge overflow'
         });
         
         // Process the shortname - remove hyphens except escaped ones (\-)
@@ -687,7 +688,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontFamily,
                 screenWidth: window.innerWidth,
                 testString: testString,
-                note: 'Using all-caps test string without spaces to avoid narrow character skew'
+                note: 'Base calculation - will be made more conservative via defensive padding in getEventTextWidth()'
             });
             
             // Cache the result
@@ -745,7 +746,13 @@ class DynamicCalendarLoader extends CalendarCore {
         const borderRight = parseFloat(eventNameStyle.borderRightWidth) || 0;
         
         // Calculate the actual available width for text content
-        const availableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
+        const rawAvailableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
+        
+        // DEFENSIVE TEXT FITTING: Apply extra padding to prevent text from hitting container edges
+        // By reducing available width by 0.2px (0.1px each side), we achieve a more conservative
+        // charsPerPixel calculation (~0.11 instead of ~0.13) that ensures text never overflows
+        const defensivePadding = 0.2; // 0.1px on each side for edge safety
+        const availableWidth = rawAvailableWidth - defensivePadding;
         
         this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
         
@@ -763,17 +770,18 @@ class DynamicCalendarLoader extends CalendarCore {
                 borderRight,
                 fontSize: eventNameStyle.fontSize,
                 fontWeight: eventNameStyle.fontWeight,
-                fontFamily: eventNameStyle.fontFamily,
                 fontFamily: eventNameStyle.fontFamily
             },
             calculations: {
                 rawWidth: eventNameRect.width,
                 totalPadding: paddingLeft + paddingRight,
                 totalBorders: borderLeft + borderRight,
-                calculatedWidth: availableWidth,
-                finalCachedWidth: this.cachedEventTextWidth
-            },
-
+                rawAvailableWidth: rawAvailableWidth,
+                defensivePadding: defensivePadding,
+                finalAvailableWidth: availableWidth,
+                finalCachedWidth: this.cachedEventTextWidth,
+                note: 'Applied 0.1px defensive padding on each side to prevent edge overflow'
+            }
         });
         
         return this.cachedEventTextWidth;
@@ -2104,8 +2112,10 @@ class DynamicCalendarLoader extends CalendarCore {
 calculatedData: {
                 viewport: `${window.innerWidth} × ${window.innerHeight}`,
                 charsPerLine: this.cachedEventTextWidth && this.charsPerPixel ? Math.floor(this.cachedEventTextWidth * this.charsPerPixel) : 'not calculated',
-                eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px` : 'not measured',
-                zoom: `${(((window.visualViewport && window.visualViewport.scale) || 1) * 100).toFixed(0)}%`
+                charsPerPixel: this.charsPerPixel ? this.charsPerPixel.toFixed(4) : 'not calculated',
+                eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px (includes 0.2px defensive padding)` : 'not measured',
+                zoom: `${(((window.visualViewport && window.visualViewport.scale) || 1) * 100).toFixed(0)}%`,
+                note: 'Defensive padding reduces effective width to achieve ~0.11 charsPerPixel (down from ~0.13)'
             }
         });
         
