@@ -49,7 +49,8 @@ class SavedRunDisplay {
             
             console.log(`📱 Display: Documents directory: ${documentsDir}`);
             console.log(`📱 Display: Root directory: ${rootDir}`);
-            console.log(`📱 Display: Looking for runs in: ${runsDir}`);
+            console.log(`📱 Display: Runs directory path: ${runsDir}`);
+            console.log(`📱 Display: About to list contents of: ${runsDir}`);
             
             // Debug: Check what's in the root directory
             if (fm.fileExists(rootDir)) {
@@ -77,6 +78,8 @@ class SavedRunDisplay {
                 console.log(`📱 Display: Note - iCloud download attempt: ${downloadError.message}`);
             }
             
+            // Double-check the directory we're about to list
+            console.log(`📱 Display: VERIFICATION - About to call fm.listContents(${runsDir})`);
             const files = fm.listContents(runsDir) || [];
             console.log(`📱 Display: Found ${files.length} files in runs directory: ${JSON.stringify(files)}`);
             
