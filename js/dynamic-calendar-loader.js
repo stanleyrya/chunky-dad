@@ -676,6 +676,12 @@ class DynamicCalendarLoader extends CalendarCore {
             // The previous logic was double-correcting for zoom, causing exponential scaling
             // Now charsPerPixel represents the true character density at current zoom
             
+            // COMMENTED OUT - Keep for safety in case we made a mistake:
+            // When zoomed IN (visualZoom > 1), text appears larger, so FEWER characters fit
+            // When zoomed OUT (visualZoom < 1), text appears smaller, so MORE characters fit
+            // Therefore, we DIVIDE by zoom level, not multiply
+            // charsPerPixel = charsPerPixel / visualZoom;
+            
             document.body.removeChild(testElement);
             
             logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
