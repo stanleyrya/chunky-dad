@@ -654,8 +654,8 @@ class DynamicCalendarLoader extends CalendarCore {
             `;
             
             // Use a string that better represents actual event names 
-            // Focus on mixed case letters without excessive spaces (spaces are narrow and skew the average)
-            const testString = 'BearHappyHourNightOutWeeklySocialEvents';
+            // Focus on uppercase letters without spaces (spaces are narrow and skew the average)
+            const testString = 'BEARHAPPYHOURNIGHTOUTWEEKLYSOCIALEVENTS';
             testElement.textContent = testString;
             document.body.appendChild(testElement);
             
@@ -687,7 +687,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 actualFontFamily,
                 screenWidth: window.innerWidth,
                 testString: testString,
-                note: 'Using mixed-case test string without excessive spaces to avoid narrow character skew'
+                note: 'Using all-caps test string without spaces to avoid narrow character skew'
             });
             
             // Cache the result
