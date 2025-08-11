@@ -512,7 +512,7 @@ class DynamicCalendarLoader extends CalendarCore {
             eventName: shortName,
             shortNameLength: shortName.length,
             screenWidth: window.innerWidth,
-            note: 'Using defensive charsPerPixel (~0.11) with 0.2px padding to prevent edge overflow'
+            note: 'Using defensive charsPerPixel (~0.11) with 0.02px padding to prevent edge overflow'
         });
         
         // Process the shortname - remove hyphens except escaped ones (\-)
@@ -749,9 +749,9 @@ class DynamicCalendarLoader extends CalendarCore {
         const rawAvailableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
         
         // DEFENSIVE TEXT FITTING: Apply extra padding to prevent text from hitting container edges
-        // By reducing available width by 0.2px (0.1px each side), we achieve a more conservative
+        // By reducing available width by 0.02px (0.01px each side), we achieve a more conservative
         // charsPerPixel calculation (~0.11 instead of ~0.13) that ensures text never overflows
-        const defensivePadding = 0.2; // 0.1px on each side for edge safety
+        const defensivePadding = 0.02; // 0.01px on each side for edge safety
         const availableWidth = rawAvailableWidth - defensivePadding;
         
         this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
@@ -780,7 +780,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 defensivePadding: defensivePadding,
                 finalAvailableWidth: availableWidth,
                 finalCachedWidth: this.cachedEventTextWidth,
-                note: 'Applied 0.1px defensive padding on each side to prevent edge overflow'
+                note: 'Applied 0.01px defensive padding on each side to prevent edge overflow'
             }
         });
         
@@ -2113,7 +2113,7 @@ calculatedData: {
                 viewport: `${window.innerWidth} × ${window.innerHeight}`,
                 charsPerLine: this.cachedEventTextWidth && this.charsPerPixel ? Math.floor(this.cachedEventTextWidth * this.charsPerPixel) : 'not calculated',
                 charsPerPixel: this.charsPerPixel ? this.charsPerPixel.toFixed(4) : 'not calculated',
-                eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px (includes 0.2px defensive padding)` : 'not measured',
+                eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px (includes 0.02px defensive padding)` : 'not measured',
                 zoom: `${(((window.visualViewport && window.visualViewport.scale) || 1) * 100).toFixed(0)}%`,
                 note: 'Defensive padding reduces effective width to achieve ~0.11 charsPerPixel (down from ~0.13)'
             }
