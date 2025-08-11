@@ -3308,14 +3308,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         if (response === 0) {
             // Before executing writes, attempt to persist capability by writing a temp file. If this fails, abort.
             await this.ensureRelativeStorageDirs();
-            const base = jsonFileManager.getCurrentDir();
-            const testRelPath = `chunky-dad-scraper/runs/.write-test.json`;
-            const testAbsPath = `${base}${testRelPath}`;
+            const testFilePath = this.fm.joinPath(this.runsDir, '.write-test.json');
             try {
-                jsonFileManager.write(testRelPath, { ts: new Date().toISOString() });
+                // Write test file directly using our FileManager
+                this.fm.writeString(testFilePath, JSON.stringify({ ts: new Date().toISOString() }));
                 // remove temp file
                 const fm = this.fm || FileManager.iCloud();
-                if (fm.fileExists(testAbsPath)) fm.remove(testAbsPath);
+                if (fm.fileExists(testFilePath)) fm.remove(testFilePath);
             } catch (e) {
                 const errorAlert = new Alert();
                 errorAlert.title = "Cannot Proceed";
@@ -3570,8 +3569,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     async cleanupOldFiles(relDirPath, { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {}) {
-        const base = jsonFileManager.getCurrentDir();
-        const dirPath = `${base}${relDirPath}`;
+        // Use documents directory as base, not script directory
+        const documentsDir = this.fm.documentsDirectory();
+        const dirPath = this.fm.joinPath(documentsDir, relDirPath);
         const fm = this.fm || FileManager.iCloud();
         if (!fm.fileExists(dirPath)) return;
         const now = Date.now();
@@ -3594,13 +3594,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     // Log helpers (prefer user's file logger)
     getLogFilePath() {
-        const base = jsonFileManager.getCurrentDir();
         const date = new Date();
         const pad = n => String(n).padStart(2, '0');
         const y = date.getFullYear();
         const m = pad(date.getMonth() + 1);
         const d = pad(date.getDate());
-        return `${base}chunky-dad-scraper/logs/${y}-${m}-${d}.log`;
+        return this.fm.joinPath(this.logsDir, `${y}-${m}-${d}.log`);
     }
 
     async appendLogSummary(results) {
@@ -3620,12 +3619,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
                 try {
                     logger.log(line);
-                    const fullPath = this.getLogFilePath();
-                    const basePath = jsonFileManager.getCurrentDir();
-                    const relativePath = fullPath.startsWith(basePath) ? fullPath.substring(basePath.length) : fullPath;
-                    console.log(`📱 Scriptable: Writing log to relative path: ${relativePath}`);
-                    logger.writeLogs(relativePath);
-                    console.log(`📱 Scriptable: Successfully used FileLogger to write log`);
+                    // Use direct file writing instead of FileLogger to avoid path issues
+                    const logPath = this.getLogFilePath();
+                    
+                    // Ensure directory exists
+                    if (!this.fm.fileExists(this.logsDir)) {
+                        this.fm.createDirectory(this.logsDir, true);
+                    }
+                    
+                    // Write directly using our FileManager
+                    this.fm.writeString(logPath, logger.logs);
+                    console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
                     return;
                 } catch (loggerErr) {
                     console.log(`📱 Scriptable: FileLogger failed: ${loggerErr.message}, falling back to direct write`);
