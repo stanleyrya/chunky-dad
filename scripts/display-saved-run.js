@@ -44,26 +44,60 @@ class SavedRunDisplay {
         try {
             const fm = FileManager.iCloud();
             const documentsDir = fm.documentsDirectory();
-            const runsDir = fm.joinPath(documentsDir, 'chunky-dad-scraper', 'runs');
+            const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
+            const runsDir = fm.joinPath(rootDir, 'runs');
             
-            console.log(`📱 Display: Looking for runs in: ${runsDir}`);
+            console.log(`📱 Display: Documents directory: ${documentsDir}`);
+            console.log(`📱 Display: Root directory: ${rootDir}`);
+            console.log(`📱 Display: Runs directory path: ${runsDir}`);
+            console.log(`📱 Display: About to list contents of: ${runsDir}`);
+            
+            // Debug: Check what's in the root directory
+            if (fm.fileExists(rootDir)) {
+                const rootFiles = fm.listContents(rootDir) || [];
+                console.log(`📱 Display: Root directory contents: ${JSON.stringify(rootFiles)}`);
+            }
+            
+            // Check if root directory exists first
+            if (!fm.fileExists(rootDir)) {
+                console.log(`📱 Display: Root directory does not exist: ${rootDir}`);
+                fm.createDirectory(rootDir, true);
+            }
             
             if (!fm.fileExists(runsDir)) {
                 console.log(`📱 Display: Runs directory does not exist: ${runsDir}`);
-                // Create directory structure
-                const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
-                if (!fm.fileExists(rootDir)) {
-                    fm.createDirectory(rootDir, true);
-                }
                 fm.createDirectory(runsDir, true);
                 console.log(`📱 Display: Created runs directory - no saved runs found yet`);
                 return [];
             }
             
-            const files = fm.listContents(runsDir) || [];
-            console.log(`📱 Display: Found ${files.length} files: ${JSON.stringify(files)}`);
+            // Ensure iCloud files are downloaded before listing
+            try {
+                fm.downloadFileFromiCloud(runsDir);
+            } catch (downloadError) {
+                console.log(`📱 Display: Note - iCloud download attempt: ${downloadError.message}`);
+            }
             
-            const jsonFiles = files.filter(name => name.endsWith('.json'));
+            // Double-check the directory we're about to list
+            console.log(`📱 Display: VERIFICATION - About to call fm.listContents(${runsDir})`);
+            const files = fm.listContents(runsDir) || [];
+            console.log(`📱 Display: Found ${files.length} files in runs directory: ${JSON.stringify(files)}`);
+            
+            // Filter out directories and only keep JSON files
+            const jsonFiles = files.filter(name => {
+                const filePath = fm.joinPath(runsDir, name);
+                try {
+                    // Ensure each file is downloaded from iCloud
+                    fm.downloadFileFromiCloud(filePath);
+                    return name.endsWith('.json') && !fm.isDirectory(filePath);
+                } catch (error) {
+                    console.log(`📱 Display: Error checking file ${name}: ${error.message}`);
+                    return false;
+                }
+            });
+            
+            console.log(`📱 Display: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`);
+            
             if (jsonFiles.length === 0) {
                 console.log(`📱 Display: No .json run files found in directory`);
             }
@@ -89,8 +123,18 @@ class SavedRunDisplay {
                 return null;
             }
             
+            // Ensure file is downloaded from iCloud before reading
+            try {
+                fm.downloadFileFromiCloud(runFilePath);
+            } catch (downloadError) {
+                console.log(`📱 Display: Note - iCloud download attempt: ${downloadError.message}`);
+            }
+            
             const content = fm.readString(runFilePath);
-            return JSON.parse(content);
+            console.log(`📱 Display: Successfully read file, content length: ${content.length}`);
+            const parsed = JSON.parse(content);
+            console.log(`📱 Display: Successfully parsed JSON, keys: ${Object.keys(parsed)}`);
+            return parsed;
         } catch (e) {
             console.log(`📱 Display: Failed to load run ${runId}: ${e.message}`);
             return null;

@@ -3307,11 +3307,32 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 return [];
             }
             
+            // Ensure iCloud files are downloaded before listing
+            try {
+                fm.downloadFileFromiCloud(runsPath);
+            } catch (downloadError) {
+                console.log(`📱 Scriptable: Note - iCloud download attempt: ${downloadError.message}`);
+            }
+            
             const files = fm.listContents(runsPath) || [];
             console.log(`📱 Scriptable: Found ${files.length} files: ${JSON.stringify(files)}`);
             
-            return files
-                .filter(name => name.endsWith('.json'))
+            // Filter out directories and only keep JSON files
+            const jsonFiles = files.filter(name => {
+                const filePath = fm.joinPath(runsPath, name);
+                try {
+                    // Ensure each file is downloaded from iCloud
+                    fm.downloadFileFromiCloud(filePath);
+                    return name.endsWith('.json') && !fm.isDirectory(filePath);
+                } catch (error) {
+                    console.log(`📱 Scriptable: Error checking file ${name}: ${error.message}`);
+                    return false;
+                }
+            });
+            
+            console.log(`📱 Scriptable: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`);
+            
+            return jsonFiles
                 .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
                 .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
         } catch (e) {
