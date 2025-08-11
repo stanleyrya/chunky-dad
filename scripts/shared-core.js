@@ -649,11 +649,11 @@ class SharedCore {
             'cost': 'cover',
             
             // Name aliases
-            'shortname': 'shortTitle',
-            'shortername': 'shortTitle',
-            'shorter name': 'shortTitle',
-            'short title': 'shortTitle',
-            'shorttitle': 'shortTitle',
+            'shortname': 'shortName',
+            'shortername': 'shortName',
+            'shorter name': 'shortName',
+            'short title': 'shortName',
+            'shorttitle': 'shortName',
             
             // Social/web aliases (canonicalize case and common variants)
             'instagram': 'instagram',
