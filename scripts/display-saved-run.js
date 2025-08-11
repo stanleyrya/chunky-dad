@@ -63,7 +63,14 @@ class SavedRunDisplay {
             const files = fm.listContents(runsDir) || [];
             console.log(`📱 Display: Found ${files.length} files: ${JSON.stringify(files)}`);
             
-            const jsonFiles = files.filter(name => name.endsWith('.json'));
+            // Filter out directories and only keep JSON files
+            const jsonFiles = files.filter(name => {
+                const filePath = fm.joinPath(runsDir, name);
+                return name.endsWith('.json') && !fm.isDirectory(filePath);
+            });
+            
+            console.log(`📱 Display: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`);
+            
             if (jsonFiles.length === 0) {
                 console.log(`📱 Display: No .json run files found in directory`);
             }
