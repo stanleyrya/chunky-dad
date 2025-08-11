@@ -45,8 +45,65 @@ const performanceDebugger = new PerformanceDebugger()
  *  * write(relativePath, jsonObject): Writes JSON object to a relative path.
  *  * read(relativePath): Reads JSON object from a relative path.
  */
-class JSONFileManager{write(e,r){const t=this.getFileManager(),i=this.getCurrentDir()+e,l=e.split("/");if(l>1){const e=l[l.length-1],r=i.replace("/"+e,"");t.createDirectory(r,!0)}if(t.fileExists(i)&&t.isDirectory(i))throw"JSON file is a directory, please delete!";t.writeString(i,JSON.stringify(r))}read(e){const r=this.getFileManager(),t=this.getCurrentDir()+e;if(!r.fileExists(t))throw"JSON file does not exist! Could not load: "+t;if(r.isDirectory(t))throw"JSON file is a directory! Could not load: "+t;r.downloadFileFromiCloud(t);const i=JSON.parse(r.readString(t));if(null!==i)return i;throw"Could not read file as JSON! Could not load: "+t}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),r=module.filename;return r.replace(e.fileName(r,!0),"")}}
-const jsonFileManager = new JSONFileManager()
+class JSONFileManager {
+    write(relativePath, jsonObject) {
+        const fm = this.getFileManager();
+        const fullPath = this.getCurrentDir() + relativePath;
+        const pathParts = relativePath.split("/");
+        
+        // Create directory if needed
+        if (pathParts.length > 1) {
+            const fileName = pathParts[pathParts.length - 1];
+            const dirPath = fullPath.replace("/" + fileName, "");
+            fm.createDirectory(dirPath, true);
+        }
+        
+        // Check if path is a directory
+        if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
+            throw new Error("JSON file is a directory, please delete!");
+        }
+        
+        fm.writeString(fullPath, JSON.stringify(jsonObject));
+    }
+    
+    read(relativePath) {
+        const fm = this.getFileManager();
+        const fullPath = this.getCurrentDir() + relativePath;
+        
+        if (!fm.fileExists(fullPath)) {
+            throw new Error("JSON file does not exist! Could not load: " + fullPath);
+        }
+        
+        if (fm.isDirectory(fullPath)) {
+            throw new Error("JSON file is a directory! Could not load: " + fullPath);
+        }
+        
+        fm.downloadFileFromiCloud(fullPath);
+        const content = fm.readString(fullPath);
+        const parsed = JSON.parse(content);
+        
+        if (parsed !== null) {
+            return parsed;
+        }
+        
+        throw new Error("Could not read file as JSON! Could not load: " + fullPath);
+    }
+    
+    getFileManager() {
+        try {
+            return FileManager.iCloud();
+        } catch (e) {
+            return FileManager.local();
+        }
+    }
+    
+    getCurrentDir() {
+        const fm = this.getFileManager();
+        const filename = module.filename;
+        return filename.replace(fm.fileName(filename, true), "");
+    }
+}
+const jsonFileManager = new JSONFileManager();
 
 /**
  * Author: Ryan Stanley (stanleyrya@gmail.com)
@@ -61,7 +118,65 @@ const jsonFileManager = new JSONFileManager()
  *  * log(line): Adds the log line to the class' internal log object.
  *  * writeLogs(relativePath): Writes the stored logs to the relative file path.
  */
-class FileLogger{constructor(){this.logs=""}log(e){e instanceof Error?console.error(e):console.log(e),this.logs+=new Date+" - "+e+"\n"}writeLogs(e){const r=this.getFileManager(),t=this.getCurrentDir()+e,i=e.split("/");if(i>1){const e=i[i.length-1],l=t.replace("/"+e,"");r.createDirectory(l,!0)}if(r.fileExists(t)&&r.isDirectory(t))throw"Log file is a directory, please delete!";r.writeString(t,this.logs)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),r=module.filename;return r.replace(e.fileName(r,!0),"")}}
+class FileLogger {
+    constructor() {
+        this.logs = "";
+    }
+    
+    log(line) {
+        if (line instanceof Error) {
+            console.error(line);
+        } else {
+            console.log(line);
+        }
+        this.logs += new Date() + " - " + line + "\n";
+    }
+    
+    writeLogs(relativePath) {
+        const fm = this.getFileManager();
+        const fullPath = this.getCurrentDir() + relativePath;
+        const pathParts = relativePath.split("/");
+        
+        // Create directory if needed
+        if (pathParts.length > 1) {
+            const fileName = pathParts[pathParts.length - 1];
+            const dirPath = fullPath.replace("/" + fileName, "");
+            try {
+                fm.createDirectory(dirPath, true);
+            } catch (dirErr) {
+                console.log(`📱 FileLogger: Directory creation failed: ${dirErr.message}`);
+            }
+        }
+        
+        // Check if path is a directory
+        if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
+            throw new Error("Log file is a directory, please delete!");
+        }
+        
+        // Write the logs
+        try {
+            fm.writeString(fullPath, this.logs);
+            console.log(`📱 FileLogger: Successfully wrote logs to ${fullPath}`);
+        } catch (writeErr) {
+            console.log(`📱 FileLogger: Failed to write logs: ${writeErr.message}`);
+            throw writeErr;
+        }
+    }
+    
+    getFileManager() {
+        try {
+            return FileManager.iCloud();
+        } catch (e) {
+            return FileManager.local();
+        }
+    }
+    
+    getCurrentDir() {
+        const fm = this.getFileManager();
+        const filename = module.filename;
+        return filename.replace(fm.fileName(filename, true), "");
+    }
+}
 const logger = new FileLogger();
 
 class ScriptableAdapter {
@@ -3487,13 +3602,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
             // Prefer embedded logger API
             if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
-                logger.log(line);
-                const fullPath = this.getLogFilePath();
-                const basePath = jsonFileManager.getCurrentDir();
-                const relativePath = fullPath.startsWith(basePath) ? fullPath.substring(basePath.length) : fullPath;
-                console.log(`📱 Scriptable: Writing log to relative path: ${relativePath}`);
-                logger.writeLogs(relativePath);
-                return;
+                try {
+                    logger.log(line);
+                    const fullPath = this.getLogFilePath();
+                    const basePath = jsonFileManager.getCurrentDir();
+                    const relativePath = fullPath.startsWith(basePath) ? fullPath.substring(basePath.length) : fullPath;
+                    console.log(`📱 Scriptable: Writing log to relative path: ${relativePath}`);
+                    logger.writeLogs(relativePath);
+                    console.log(`📱 Scriptable: Successfully used FileLogger to write log`);
+                    return;
+                } catch (loggerErr) {
+                    console.log(`📱 Scriptable: FileLogger failed: ${loggerErr.message}, falling back to direct write`);
+                    // Continue to fallback method
+                }
             }
             // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
@@ -3503,28 +3624,38 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Ensure the directory exists before writing
             const dir = path.substring(0, path.lastIndexOf('/'));
             console.log(`📱 Scriptable: Checking directory: ${dir}`);
-            if (!fm.fileExists(dir)) {
-                console.log(`📱 Scriptable: Creating log directory: ${dir}`);
-                fm.createDirectory(dir, true);
-            } else {
-                console.log(`📱 Scriptable: Directory exists: ${dir}`);
+            
+            try {
+                if (!fm.fileExists(dir)) {
+                    console.log(`📱 Scriptable: Creating log directory: ${dir}`);
+                    fm.createDirectory(dir, true);
+                    console.log(`📱 Scriptable: Successfully created directory: ${dir}`);
+                } else {
+                    console.log(`📱 Scriptable: Directory exists: ${dir}`);
+                }
+            } catch (dirErr) {
+                console.log(`📱 Scriptable: Failed to create directory: ${dirErr.message}`);
+                throw dirErr;
             }
             
             let existing = '';
             if (fm.fileExists(path)) {
                 try { 
+                    fm.downloadFileFromiCloud(path); // Ensure file is synced
                     existing = fm.readString(path) || ''; 
                     console.log(`📱 Scriptable: Read existing log file, length: ${existing.length}`);
                 } catch (readErr) {
                     console.log(`📱 Scriptable: Failed to read existing log: ${readErr.message}`);
+                    existing = ''; // Continue with empty content
                 }
             } else {
                 console.log(`📱 Scriptable: Log file doesn't exist, will create: ${path}`);
             }
             
             try {
-                fm.writeString(path, existing + line + '\n');
-                console.log(`📱 Scriptable: Successfully wrote log entry`);
+                const newContent = existing + new Date().toISOString() + " - " + line + '\n';
+                fm.writeString(path, newContent);
+                console.log(`📱 Scriptable: Successfully wrote log entry (${newContent.length} chars total)`);
             } catch (writeErr) {
                 console.log(`📱 Scriptable: Write failed: ${writeErr.message}`);
                 throw writeErr;
