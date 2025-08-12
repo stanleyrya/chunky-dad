@@ -280,7 +280,8 @@ class EventbriteParser {
                 }
             }
             
-            const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
+            // Extract price from price_range field (e.g., "$11.58 - $34.72" -> "$11.58 - $34.72")
+            const price = eventData.price_range || '';
             const image = eventData.logo?.url || eventData.image?.url || '';
             
             // Extract city from event title for better event organization

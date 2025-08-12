@@ -246,12 +246,10 @@ class SharedCore {
                     );
                     const detailEvent = filteredEvents[0]; // Detail pages should only have one event
                     
-                    // Find the matching existing event by URL (check both website and legacy url fields)
+                    // Find the matching existing event by URL
                     const matchingEvent = existingEvents.find(event => 
-                        event.website === detailEvent.website || 
-                        event.url === detailEvent.website ||
+                        event.website === detailEvent.website ||
                         event.website === url ||
-                        event.url === url ||
                         (event.title && detailEvent.title && event.title.trim() === detailEvent.title.trim())
                     );
                     
@@ -463,7 +461,7 @@ class SharedCore {
         return {
             title: mergedEvent.title,
             notes: notes,
-            url: mergedEvent.website || mergedEvent.url // Use website field, fallback to url for backward compatibility
+            url: mergedEvent.website
         };
     }
 
@@ -664,7 +662,7 @@ class SharedCore {
             'fb': 'facebook',
             'website': 'website',
             'site': 'website',
-            'url': 'website', // Map legacy url field to website for consistency
+
             'twitter': 'twitter',
             'xtwitter': 'twitter',
             'x': 'twitter',
