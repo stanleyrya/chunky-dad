@@ -2144,11 +2144,459 @@ calculatedData: {
             : this.getMonthBounds(this.currentDate);
     }
 
+    // Show events for a specific day (used by calendar overview)
+    showDayEvents(dateString, events) {
+        const date = new Date(dateString);
+        
+        // Create modal or popup to show events
+        const modal = document.createElement('div');
+        modal.className = 'day-events-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Events for ${date.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    })}</h3>
+                    <button class="modal-close" onclick="this.closest('.day-events-modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    ${events.length > 0 
+                        ? events.map(event => `
+                            <div class="modal-event-item" data-event-slug="${event.slug}">
+                                <div class="event-name">${event.name}</div>
+                                <div class="event-details">
+                                    <span class="event-time">${event.time}</span>
+                                    <span class="event-venue">${event.bar}</span>
+                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('')
+                        : ''
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="switch-to-week" onclick="window.calendarLoader.switchToWeekView('${dateString}')">
+                        View Week
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.appendChild(modal);
+        
+        // Add click handler to close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
 
+    // Switch to week view for a specific date
+    switchToWeekView(dateString) {
+        this.currentDate = new Date(dateString);
+        this.currentView = 'week';
+        
+        // Update active button
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.view-btn[data-view="week"]').classList.add('active');
+        
+        // Remove modal
+        document.querySelector('.day-events-modal')?.remove();
+        
+        this.updateCalendarDisplay();
+    }
 
+    navigatePeriod(direction, skipAnimation = false) {
+        const delta = direction === 'next' ? 1 : -1;
+        
+        logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
+            currentView: this.currentView,
+            currentDate: this.currentDate.toISOString(),
+            skipAnimation
+        });
+        
+        if (this.currentView === 'week') {
+            this.currentDate.setDate(this.currentDate.getDate() + (delta * 7));
+        } else {
+            this.currentDate.setMonth(this.currentDate.getMonth() + delta);
+        }
+        
+        // Only update display immediately if not part of a swipe animation
+        if (skipAnimation) {
+            this.updateCalendarDisplay();
+        }
+    }
 
+    goToToday() {
+        this.currentDate = new Date();
+        this.updateCalendarDisplay();
+    }
 
+    formatDateRange(start, end) {
+        const options = { month: 'short', day: 'numeric' };
+        
+        if (this.currentView === 'week') {
+            if (start.getMonth() === end.getMonth()) {
+                return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}`;
+            } else {
+                return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
+            }
+        } else {
+            return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+    }
 
+    // Load calendar data for specific city (override to use CORS proxy)
+    async loadCalendarData(cityKey) {
+        const cityConfig = getCityConfig(cityKey);
+        if (!cityConfig || !cityConfig.calendarId) {
+            logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
+            return null;
+        }
+        
+        logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+        logger.info('CALENDAR', `🌐 Step 3: Starting API call to load calendar data for ${cityConfig.name}`, {
+            cityKey,
+            calendarId: cityConfig.calendarId,
+            step: 'Step 3: Loading real calendar data'
+        });
+        
+        try {
+            const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
+            const corsProxy = 'https://api.allorigins.win/raw?url=';
+            const fullUrl = corsProxy + encodeURIComponent(icalUrl);
+            
+            const response = await fetch(fullUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const icalText = await response.text();
+            logger.apiCall('CALENDAR', 'Successfully fetched iCal data', {
+                dataLength: icalText.length,
+                city: cityConfig.name,
+                url: icalUrl
+            });
+            
+            // Log sample of the fetched data for debugging
+            if (icalText.length > 0) {
+                logger.debug('CALENDAR', 'Raw iCal data sample', {
+                    firstLine: icalText.split('\n')[0],
+                    hasEvents: icalText.includes('BEGIN:VEVENT'),
+                    eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
+                    calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
+                    encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format'
+                });
+            } else {
+                logger.warn('CALENDAR', 'Empty iCal data received', {
+                    city: cityConfig.name,
+                    url: icalUrl
+                });
+            }
+            
+            const events = this.parseICalData(icalText);
+            
+            // Store all events for filtering
+            this.allEvents = events;
+            
+            this.eventsData = {
+                cityConfig,
+                events,
+                calendarTimezone: this.calendarTimezone,
+                timezoneData: this.timezoneData
+            };
+            
+            logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+            logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
+                eventCount: events.length,
+                cityKey,
+                calendarTimezone: this.calendarTimezone,
+                hasTimezoneData: !!this.timezoneData
+            });
+            return this.eventsData;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error loading calendar data', error);
+            this.showCalendarError();
+            return null;
+        }
+    }
+
+    // Show calendar error - only in the events container for cleaner display
+    showCalendarError() {
+        const errorMessage = `
+            <div class="error-message">
+                <h3>📅 Calendar Temporarily Unavailable</h3>
+                <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
+                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
+            </div>
+        `;
+        
+        // Only show error in the events container to avoid duplication
+        const eventsContainer = document.querySelector('.events-list');
+        if (eventsContainer) {
+            eventsContainer.innerHTML = errorMessage;
+        }
+    }
+
+    // Generate event card
+    generateEventCard(event) {
+        const linksHtml = event.links ? event.links.map(link => {
+            // Add appropriate emoji based on link type
+            let emoji = '🔗'; // default link emoji
+            const label = link.label.toLowerCase();
+            
+            if (label.includes('facebook')) emoji = '📘';
+            else if (label.includes('instagram')) emoji = '📷';
+            else if (label.includes('twitter')) emoji = '🐦';
+            else if (label.includes('website') || label.includes('site')) emoji = '🔗';
+            else if (label.includes('tickets') || label.includes('ticket')) emoji = '🎫';
+            else if (label.includes('rsvp')) emoji = '✅';
+            else if (label.includes('more info')) emoji = 'ℹ️';
+            
+            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`;
+        }).join(' ') : '';
+
+        const teaHtml = event.tea ? `
+            <div class="detail-row">
+                <span class="label">Tea:</span>
+                <span class="value">${event.tea}</span>
+            </div>
+        ` : '';
+
+        const locationHtml = event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
+            `<div class="detail-row">
+                <span class="label">Location:</span>
+                <span class="value">
+                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
+                        📍 ${event.bar || 'Location'}
+                    </a>
+                </span>
+            </div>` :
+            (event.bar ? `<div class="detail-row">
+                <span class="label">Bar:</span>
+                <span class="value">${event.bar}</span>
+            </div>` : '');
+
+        // Only show cover if it exists and has meaningful content
+        const coverHtml = event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
+            <div class="detail-row">
+                <span class="label">Cover:</span>
+                <span class="value">${event.cover}</span>
+            </div>
+        ` : '';
+
+        const recurringBadge = event.recurring ? 
+            `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
+        
+        const notCheckedBadge = event.notChecked ? 
+            `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
+
+        // Format day/time more concisely (e.g., "Thu 5pm-9pm")
+        const formatDayTime = (day, time) => {
+            // For desktop, show full day name; for mobile, show abbreviated
+            const isDesktop = window.innerWidth > 768;
+            const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
+            return `${displayDay} ${time}`;
+        };
+
+        return `
+            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
+                <div class="event-header">
+                    <h3>${event.name}</h3>
+                    <div class="event-meta">
+                        <div class="event-day">${formatDayTime(event.day, event.time)}</div>
+                        ${recurringBadge}
+                        ${notCheckedBadge}
+                    </div>
+                </div>
+                <div class="event-details">
+                    ${locationHtml}
+                    ${coverHtml}
+                    ${teaHtml}
+                    <div class="event-links">
+                        ${linksHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Filter events by current period
+    getFilteredEvents() {
+        // Handle case where allEvents is not yet loaded
+        if (!this.allEvents || !Array.isArray(this.allEvents)) {
+            return [];
+        }
+        
+        const { start, end } = this.getCurrentPeriodBounds();
+        
+        return this.allEvents.filter(event => {
+            if (!event.startDate) return false;
+            
+            // Filter out events marked as notChecked if configured to hide them
+            if (event.notChecked && this.config?.hideUncheckedEvents) {
+                logger.debug('CALENDAR', `Filtering out unchecked event: ${event.name}`);
+                return false;
+            }
+            
+            // For recurring events, check if they occur in this period
+            if (event.recurring) {
+                return this.isRecurringEventInPeriod(event, start, end);
+            }
+            
+            // For one-time events, check if they fall within the period
+            return this.isEventInPeriod(event.startDate, start, end);
+        });
+    }
+
+    isRecurringEventInPeriod(event, start, end) {
+        if (!event.startDate) return false;
+        
+        const current = new Date(start);
+        
+        // Check each day in the period
+        while (current <= end) {
+            if (this.isEventOccurringOnDate(event, current)) {
+                return true;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        
+        return false;
+    }
+
+    // Helper function to determine if a recurring event occurs on a specific date
+    isEventOccurringOnDate(event, date) {
+        if (!event.recurring || !event.startDate) return false;
+        
+        const eventDate = new Date(event.startDate);
+        const checkDate = new Date(date);
+        
+        // Normalize dates to compare only date parts, not time
+        eventDate.setHours(0, 0, 0, 0);
+        checkDate.setHours(0, 0, 0, 0);
+        
+        // Make sure we're not checking before the event started
+        if (checkDate < eventDate) return false;
+        
+        // Parse the recurrence rule to determine the pattern
+        const recurrence = event.recurrence || '';
+        
+        if (recurrence.includes('FREQ=WEEKLY')) {
+            // Weekly events: occur on the same day of the week
+            return eventDate.getDay() === checkDate.getDay();
+        } else if (recurrence.includes('FREQ=MONTHLY')) {
+            // Monthly events: handle both BYMONTHDAY and BYDAY patterns
+            if (recurrence.includes('BYMONTHDAY=')) {
+                const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
+                if (dayMatch) {
+                    const targetDay = parseInt(dayMatch[1]);
+                    // Check if this month has that many days
+                    const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
+                    return checkDate.getDate() === Math.min(targetDay, lastDayOfMonth);
+                }
+            } else if (recurrence.includes('BYDAY=')) {
+                // Handle BYDAY patterns like BYDAY=3TH (third Thursday) or BYDAY=-1SA (last Saturday)
+                const dayMatch = recurrence.match(/BYDAY=(-?\d+)([A-Z]{2})/);
+                if (dayMatch) {
+                    const occurrence = parseInt(dayMatch[1]); // 3 or -1 (negative means from end of month)
+                    const dayCode = dayMatch[2]; // TH, SA, etc.
+                    
+                    // Convert day code to day number (0 = Sunday, 6 = Saturday)
+                    const dayCodeToDayNumber = {
+                        'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
+                    };
+                    
+                    const targetDayOfWeek = dayCodeToDayNumber[dayCode];
+                    if (targetDayOfWeek === undefined) return false;
+                    
+                    // Check if the check date is the correct day of the week
+                    if (checkDate.getDay() !== targetDayOfWeek) return false;
+                    
+                    // Calculate the target date for this occurrence
+                    const targetDate = this.calculateByDayOccurrence(
+                        checkDate.getFullYear(), 
+                        checkDate.getMonth(), 
+                        occurrence, 
+                        targetDayOfWeek
+                    );
+                    
+                    return targetDate && checkDate.getTime() === targetDate.getTime();
+                }
+            }
+            
+            // Fallback: same day of month as original event, but handle month lengths
+            const originalDay = eventDate.getDate();
+            const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
+            const targetDay = Math.min(originalDay, lastDayOfMonth);
+            return checkDate.getDate() === targetDay;
+        } else if (recurrence.includes('FREQ=DAILY')) {
+            // Daily events: occur every day
+            return true;
+        } else if (recurrence.includes('FREQ=YEARLY')) {
+            // Yearly events: same month and day
+            return eventDate.getMonth() === checkDate.getMonth() && 
+                   eventDate.getDate() === checkDate.getDate();
+        }
+        
+        // Default fallback for other recurring patterns - use day of week
+        return eventDate.getDay() === checkDate.getDay();
+    }
+
+    // Helper function to calculate the specific occurrence of a day in a month
+    // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
+    // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
+    calculateByDayOccurrence(year, month, occurrence, dayOfWeek) {
+        try {
+            if (occurrence > 0) {
+                // Find the nth occurrence of the day (e.g., 3rd Thursday)
+                const firstOfMonth = new Date(year, month, 1);
+                const firstDayOfWeek = firstOfMonth.getDay();
+                
+                // Calculate days to add to get to the first occurrence of the target day
+                let daysToAdd = (dayOfWeek - firstDayOfWeek + 7) % 7;
+                
+                // Add weeks to get to the nth occurrence
+                daysToAdd += (occurrence - 1) * 7;
+                
+                const targetDate = new Date(year, month, 1 + daysToAdd);
+                
+                // Verify it's still in the same month
+                if (targetDate.getMonth() !== month) {
+                    return null;
+                }
+                
+                return targetDate;
+            } else if (occurrence === -1) {
+                // Find the last occurrence of the day (e.g., last Saturday)
+                const lastOfMonth = new Date(year, month + 1, 0);
+                const lastDayOfWeek = lastOfMonth.getDay();
+                
+                // Calculate days to subtract to get to the last occurrence of the target day
+                let daysToSubtract = (lastDayOfWeek - dayOfWeek + 7) % 7;
+                
+                const targetDate = new Date(year, month + 1, 0 - daysToSubtract);
+                
+                // Verify it's still in the same month
+                if (targetDate.getMonth() !== month) {
+                    return null;
+                }
+                
+                return targetDate;
+            }
+            
+            return null;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error calculating BYDAY occurrence', {
+                year, month, occurrence, dayOfWeek, error
+            });
+            return null;
+        }
+    }
 }
 
 // Map interaction function
