@@ -337,24 +337,19 @@ class SharedCore {
             event.key = key;
             
             if (!seen.has(key)) {
-                // Enrich event location data (handles TBA venue cleaning)
-                const enrichedEvent = this.enrichEventLocation(event);
-                seen.set(key, enrichedEvent);
-                deduplicated.push(enrichedEvent);
+                seen.set(key, event);
+                deduplicated.push(event);
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
                 const merged = this.mergeEventData(existing, event);
                 merged.key = key; // Ensure merged event has the key
-                
-                // Enrich merged event location data (handles TBA venue cleaning)
-                const enrichedMerged = this.enrichEventLocation(merged);
-                seen.set(key, enrichedMerged);
+                seen.set(key, merged);
                 
                 // Update in deduplicated array
                 const index = deduplicated.findIndex(e => e.key === key);
                 if (index !== -1) {
-                    deduplicated[index] = enrichedMerged;
+                    deduplicated[index] = merged;
                 }
             }
         }
