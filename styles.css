@@ -1946,8 +1946,14 @@ body.index-page main {
 .event-name {
     font-weight: 600;
     margin-bottom: 0.2rem;
-    word-wrap: normal;
-    overflow-wrap: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-height: calc(var(--event-name-line-height) * 3em);
 }
 
 .event-time {
@@ -4372,14 +4378,36 @@ footer {
     }
 }
 
-/* Event name styling - now handled dynamically in JavaScript */
+/* Event name styling - now handled dynamically in JavaScript with intelligent 3-line building */
 .event-name {
   font-size: var(--event-name-font-size);
   font-weight: var(--event-name-font-weight);
   line-height: var(--event-name-line-height);
   margin-bottom: 0.1rem;
-  word-wrap: normal;
-  overflow-wrap: normal;
+  
+  /* Let JavaScript handle the line building, CSS provides final overflow protection */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  
+  /* Provide 3-line clamp as final safety net */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  
+  /* Fallback for browsers that don't support line-clamp */
+  max-height: calc(var(--event-name-line-height) * 3em);
+}
+
+/* For browsers that don't support -webkit-line-clamp, use a more basic approach */
+@supports not (-webkit-line-clamp: 3) {
+  .event-name {
+    display: block;
+    max-height: calc(var(--event-name-line-height) * 3em);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 /* Legacy mobile-specific rules for compatibility */

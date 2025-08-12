@@ -438,13 +438,15 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Generate short name from bar name or event name
+    // The purpose of shortName is to provide BETTER BREAKPOINTS for word wrapping,
+    // not necessarily to be shorter in character count (e.g., "MEGA-WOOF" vs "MEGAWOOF")
     generateShortName(barName, eventName) {
         // Prefer event name if available, otherwise use bar name
         const sourceName = eventName || barName;
         if (!sourceName) return '';
         
         // Remove common words while preserving original casing
-        // Let the per-line logic handle all length trimming to avoid double-trimming
+        // Focus on creating natural breakpoints rather than just shortening
         const stopWords = ['the', 'and', 'or', 'at', 'in', 'on', 'with', 'for', 'of', 'to', 'a', 'an'];
         const words = sourceName.split(' ');
         const filteredWords = words.filter(word => !stopWords.includes(word.toLowerCase()));
@@ -454,8 +456,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return sourceName;
         }
         
-        // Return the filtered name without aggressive length trimming
-        // The getSmartEventNameForBreakpoint() function will handle per-screen trimming
+        // Return the filtered name - CSS word-wrap will handle the display
+        // The key is that this version should have better breakpoints than the original
         return filteredWords.join(' ');
     }
 
@@ -474,10 +476,10 @@ class DynamicCalendarLoader extends CalendarCore {
             breakpoint
         });
         
-        // If no shortname, return the full name
+        // If no shortname, return the full name processed for 3 lines
         if (!shortName) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, returning full name: "${fullName}"`);
-            return fullName;
+            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, processing full name: "${fullName}"`);
+            return this.buildThreeLineText(fullName, false, breakpoint); // fullName hyphens are always intentional
         }
         
         // Get characters per pixel ratio (calculated once and cached)
@@ -493,16 +495,15 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         // If measurement not ready yet, prefer shortName over fullName for real rendering
-        // Only use fullName as fallback during measurement mode (when we need consistent sizing)
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using short name instead of full name`, {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using short name processed for 3 lines`, {
                 shortName: shortName,
                 fullName: fullName
             });
-            return shortName;
+            return this.buildThreeLineText(shortName, true, breakpoint); // shortName hyphens are conditional
         }
         
-        // Calculate how many characters can fit on one line
+        // Calculate how many characters can fit per line
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         
         logger.info('CALENDAR', `🔍 SMART_NAME: Dynamic char calculation for ${breakpoint}`, {
@@ -511,129 +512,268 @@ class DynamicCalendarLoader extends CalendarCore {
             charLimitPerLine,
             eventName: shortName,
             shortNameLength: shortName.length,
+            fullNameLength: fullName.length,
             screenWidth: window.innerWidth,
-            note: 'Using defensive charsPerPixel (~0.11) with 0.02 direct reduction to prevent edge overflow'
+            note: 'Building 3-line layout with intelligent hyphenation'
         });
         
-        // Process the shortname - remove hyphens except escaped ones (\-)
-        const processedShortName = shortName.replace(/(?<!\\)-/g, '');
-        
-        // Split the name into words
-        const words = processedShortName.split(' ').filter(word => word.length > 0);
-        
-        // If the entire name fits on one line, return it
-        if (processedShortName.length <= charLimitPerLine) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Event name fits without hyphens: "${processedShortName}" (${processedShortName.length} <= ${charLimitPerLine})`);
-            return processedShortName;
+        // For very small character limits, try shorterName if available
+        if (charLimitPerLine <= 4 && event.shorterName?.trim()) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for very small space: "${event.shorterName}"`);
+            return this.buildThreeLineText(event.shorterName.trim(), true, breakpoint);
         }
         
-        // Try to fit the original hyphenated name on one line
-        if (shortName.length <= charLimitPerLine) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Event name fits with hyphens: "${shortName}" (${shortName.length} <= ${charLimitPerLine})`);
-            return shortName;
+        // PRIORITY 1: Try shortName first (provides better breakpoints)
+        const shortNameResult = this.buildThreeLineText(shortName, true, breakpoint, charLimitPerLine);
+        
+        // PRIORITY 2: Try fullName and compare quality
+        const fullNameResult = this.buildThreeLineText(fullName, false, breakpoint, charLimitPerLine);
+        
+        // Choose the better result based on how well it fits and utilizes space
+        const shortNameQuality = this.evaluateTextQuality(shortNameResult, charLimitPerLine);
+        const fullNameQuality = this.evaluateTextQuality(fullNameResult, charLimitPerLine);
+        
+        if (shortNameQuality.score >= fullNameQuality.score) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shortName result: "${shortNameResult}"`, {
+                shortNameQuality,
+                fullNameQuality,
+                reason: 'shortName_has_better_or_equal_quality'
+            });
+            return shortNameResult;
+        } else {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using fullName result: "${fullNameResult}"`, {
+                shortNameQuality,
+                fullNameQuality,
+                reason: 'fullName_has_better_quality'
+            });
+            return fullNameResult;
+        }
+    }
+
+    // Build text optimized for exactly 3 lines with intelligent hyphenation
+    buildThreeLineText(text, isShortName, breakpoint, charLimitPerLine = null) {
+        if (!text) return '';
+        
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Starting buildThreeLineText`, {
+            text,
+            isShortName,
+            breakpoint,
+            charLimitPerLine
+        });
+        
+        // If no character limit provided, use CSS word-wrap (fallback)
+        if (!charLimitPerLine) {
+            return isShortName ? this.processShortNameHyphens(text, false) : text;
         }
         
-        logger.info('CALENDAR', `🔍 SMART_NAME: Event name too long, needs truncation/hyphenation: "${shortName}" (${shortName.length} > ${charLimitPerLine})`);
+        // Process the text based on whether it's shortName or fullName
+        const processedText = isShortName ? this.processShortNameHyphens(text, true) : text;
         
-        // For very small character limits (4 or less), try to use shorterName if available
-        if (charLimitPerLine <= 4 && event.shorterName?.trim() && event.shorterName.trim().length <= charLimitPerLine) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for ${charLimitPerLine} char limit: "${event.shorterName}"`);
-            return event.shorterName.trim();
-        }
+        // Split into words for line building
+        const words = processedText.split(/\s+/).filter(word => word.length > 0);
         
-        // Build lines that respect the character limit per line
+        // Build up to 3 lines
         const lines = [];
         let currentLine = '';
         
         for (const word of words) {
-            // If adding this word would exceed the limit
-            if (currentLine && (currentLine + ' ' + word).length > charLimitPerLine) {
-                // If the current line has content, save it and start a new line
+            // If we already have 3 lines, stop
+            if (lines.length >= 3) break;
+            
+            // Check if adding this word would exceed line limit
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            
+            if (testLine.length <= charLimitPerLine) {
+                // Word fits, add it to current line
+                currentLine = testLine;
+            } else {
+                // Word doesn't fit
                 if (currentLine) {
+                    // Save current line and start new one
                     lines.push(currentLine);
                     currentLine = '';
-                }
-            }
-            
-            // Check if the word itself is too long for a line
-            if (word.length > charLimitPerLine) {
-                // First try to split at hyphens in the original word (before hyphen removal)
-                const originalWord = shortName.split(' ').find(orig => orig.replace(/(?<!\\)-/g, '') === word);
-                if (originalWord && originalWord.includes('-') && !originalWord.includes('\\-')) {
-                    const hyphenParts = originalWord.split('-').filter(part => part.length > 0);
-                    let tempLine = currentLine;
                     
-                    for (let i = 0; i < hyphenParts.length; i++) {
-                        const part = hyphenParts[i];
-                        const isLastPart = i === hyphenParts.length - 1;
-                        const partWithHyphen = isLastPart ? part : part + '-';
-                        
-                        if (tempLine && (tempLine + ' ' + partWithHyphen).length > charLimitPerLine) {
-                            lines.push(tempLine);
-                            tempLine = partWithHyphen;
+                    // If we already have 2 lines, this is the last line
+                    if (lines.length >= 2) {
+                        // Try to fit the word on the last line, with hyphenation if needed
+                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
+                        break;
+                    } else {
+                        // Try to fit the word on a new line
+                        if (word.length <= charLimitPerLine) {
+                            currentLine = word;
                         } else {
-                            tempLine = tempLine ? tempLine + ' ' + partWithHyphen : partWithHyphen;
-                        }
-                        
-                        // If even a single hyphen part is too long, truncate it
-                        if (partWithHyphen.length > charLimitPerLine) {
-                            if (tempLine === partWithHyphen) {
-                                lines.push(partWithHyphen.substring(0, charLimitPerLine - 1) + '…');
-                                tempLine = '';
+                            // Word is too long, try to hyphenate it
+                            const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
+                            if (hyphenated.firstPart) {
+                                lines.push(hyphenated.firstPart);
+                                currentLine = hyphenated.remainder || '';
+                            } else {
+                                currentLine = word.substring(0, charLimitPerLine);
                             }
-                            break;
                         }
                     }
-                    currentLine = tempLine;
                 } else {
-                    // If no hyphens to split on, truncate the word
-                    const truncatedWord = word.substring(0, charLimitPerLine - 1) + '…';
-                    if (currentLine) {
-                        lines.push(currentLine);
-                        lines.push(truncatedWord);
-                        currentLine = '';
+                    // No current line, but word is too long
+                    if (lines.length >= 2) {
+                        // This is the last line
+                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
+                        break;
                     } else {
-                        lines.push(truncatedWord);
+                        // Try to hyphenate the word
+                        const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
+                        if (hyphenated.firstPart) {
+                            lines.push(hyphenated.firstPart);
+                            currentLine = hyphenated.remainder || '';
+                        } else {
+                            currentLine = word.substring(0, charLimitPerLine);
+                        }
                     }
                 }
-            } else {
-                // Add the word to the current line
-                currentLine = currentLine ? currentLine + ' ' + word : word;
             }
         }
         
-        // Add the last line if it has content
-        if (currentLine) {
+        // Add the final line if it has content
+        if (currentLine && lines.length < 3) {
             lines.push(currentLine);
         }
         
-        // Join lines with line breaks (HTML will handle the display)
-        // Limit to 3 lines maximum for all breakpoints
-        const maxLines = 3;
-        const displayLines = lines.slice(0, maxLines);
+        const result = lines.join(' ');
         
-        // If we had to cut lines, add ellipsis to the last line
-        if (lines.length > maxLines && displayLines.length > 0) {
-            const lastLine = displayLines[displayLines.length - 1];
-            if (lastLine.length >= charLimitPerLine - 1) {
-                // Truncate the last line to make room for ellipsis
-                displayLines[displayLines.length - 1] = lastLine.substring(0, charLimitPerLine - 1) + '…';
-            } else {
-                displayLines[displayLines.length - 1] = lastLine + '…';
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result "${result}"`, {
+            originalText: text,
+            processedText,
+            linesBuilt: lines.length,
+            lines,
+            finalResult: result
+        });
+        
+        return result;
+    }
+    
+    // Process shortName hyphens based on whether we're splitting lines
+    processShortNameHyphens(text, willSplitLines) {
+        if (!text) return '';
+        
+        // For shortNames: 
+        // - If we're splitting lines, keep hyphens for better breakpoints
+        // - If we're not splitting lines, remove hyphens unless escaped with \
+        if (willSplitLines) {
+            // Keep all hyphens for line breaking, but respect escaped ones
+            return text.replace(/\\-/g, '§ESCAPED_HYPHEN§').replace(/§ESCAPED_HYPHEN§/g, '-');
+        } else {
+            // Remove hyphens except escaped ones (\-)
+            return text.replace(/(?<!\\)-/g, '').replace(/\\-/g, '-');
+        }
+    }
+    
+    // Hyphenate a word that's too long for a line
+    hyphenateWord(word, charLimit, isShortName) {
+        // First, try to split at existing hyphens (if it's a shortName or has intentional hyphens)
+        if (word.includes('-') && !word.includes('\\-')) {
+            const parts = word.split('-');
+            let builtPart = '';
+            let remainder = '';
+            
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                const partWithHyphen = i === parts.length - 1 ? part : part + '-';
+                
+                if (!builtPart) {
+                    if (partWithHyphen.length <= charLimit) {
+                        builtPart = partWithHyphen;
+                    } else {
+                        // Even the first part is too long
+                        return {
+                            firstPart: part.substring(0, charLimit - 1) + '…',
+                            remainder: ''
+                        };
+                    }
+                } else {
+                    const testPart = builtPart + partWithHyphen;
+                    if (testPart.length <= charLimit) {
+                        builtPart = testPart;
+                    } else {
+                        // This part would make it too long, so split here
+                        remainder = parts.slice(i).join('-');
+                        break;
+                    }
+                }
+            }
+            
+            if (builtPart) {
+                return { firstPart: builtPart, remainder };
             }
         }
         
-        // Return the multi-line name as a single string (CSS will handle wrapping)
-        const finalResult = displayLines.join(' ');
-        logger.info('CALENDAR', `🔍 SMART_NAME: Final result: "${finalResult}" (${finalResult.length} chars)`, {
-            originalShortName: shortName,
-            processedShortName,
-            charLimitPerLine,
-            linesCreated: displayLines.length,
-            finalLength: finalResult.length
-        });
+        // No natural hyphen break found, or it didn't help
+        // Calculate our own hyphenation point
+        if (charLimit <= 3) {
+            return { firstPart: word.substring(0, charLimit), remainder: '' };
+        }
         
-        return finalResult;
+        // Try to break at a reasonable point (leave room for hyphen)
+        const breakPoint = charLimit - 1;
+        return {
+            firstPart: word.substring(0, breakPoint) + '-',
+            remainder: word.substring(breakPoint)
+        };
+    }
+    
+    // Fit a word on the last line (3rd line) with truncation if needed
+    fitWordOnLastLine(word, charLimit, isShortName) {
+        if (word.length <= charLimit) {
+            return word;
+        }
+        
+        // Word is too long for last line, truncate with ellipsis
+        if (charLimit <= 1) {
+            return '…';
+        }
+        
+        return word.substring(0, charLimit - 1) + '…';
+    }
+    
+    // Evaluate the quality of a text result
+    evaluateTextQuality(text, charLimitPerLine) {
+        if (!text) return { score: 0, reason: 'empty_text' };
+        
+        const words = text.split(/\s+/);
+        const hasEllipsis = text.includes('…');
+        const lines = this.estimateLines(text, charLimitPerLine);
+        
+        // Calculate score based on various factors
+        let score = 100; // Start with perfect score
+        
+        // Penalize ellipsis (but not too heavily)
+        if (hasEllipsis) score -= 20;
+        
+        // Reward utilizing more lines (up to 3)
+        if (lines === 3) score += 10;
+        else if (lines === 2) score += 5;
+        
+        // Penalize very short results
+        if (text.length < charLimitPerLine) score -= 15;
+        
+        // Reward natural word boundaries
+        const naturalBreaks = (text.match(/[\s-]/g) || []).length;
+        score += naturalBreaks * 2;
+        
+        return {
+            score,
+            lines,
+            hasEllipsis,
+            wordCount: words.length,
+            naturalBreaks,
+            length: text.length,
+            reason: `score=${score}, lines=${lines}, ellipsis=${hasEllipsis}`
+        };
+    }
+    
+    // Estimate how many lines text will take
+    estimateLines(text, charLimitPerLine) {
+        if (!text || !charLimitPerLine) return 1;
+        return Math.min(3, Math.ceil(text.length / charLimitPerLine));
     }
 
     // Calculate characters per pixel ratio for dynamic text fitting
