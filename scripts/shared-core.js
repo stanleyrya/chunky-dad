@@ -337,19 +337,24 @@ class SharedCore {
             event.key = key;
             
             if (!seen.has(key)) {
-                seen.set(key, event);
-                deduplicated.push(event);
+                // Clean TBA venue data before storing
+                const cleanedEvent = this.cleanTBAVenueData(event);
+                seen.set(key, cleanedEvent);
+                deduplicated.push(cleanedEvent);
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
                 const merged = this.mergeEventData(existing, event);
                 merged.key = key; // Ensure merged event has the key
-                seen.set(key, merged);
+                
+                // Clean TBA venue data after merge
+                const cleanedMerged = this.cleanTBAVenueData(merged);
+                seen.set(key, cleanedMerged);
                 
                 // Update in deduplicated array
                 const index = deduplicated.findIndex(e => e.key === key);
                 if (index !== -1) {
-                    deduplicated[index] = merged;
+                    deduplicated[index] = cleanedMerged;
                 }
             }
         }
@@ -1505,37 +1510,30 @@ class SharedCore {
     }
 
     /**
-     * Generate Google Maps URL from venue data
-     * @param {Object} venue - Venue object with potential google_place_id, latitude, longitude
-     * @param {Object} coordinates - Coordinates object with lat, lng properties
-     * @param {string} venueName - Venue name to check for TBA/placeholder
-     * @returns {string} Google Maps URL or empty string
+     * Check if venue is TBA/placeholder
+     * @param {string} venueName - Venue name to check
+     * @returns {boolean} True if venue is TBA/placeholder
      */
-    generateGoogleMapsUrl(venue, coordinates, venueName) {
-        // Skip Google Maps for TBA/placeholder venues
-        const isTBAVenue = !venueName || venueName.toLowerCase().includes('tba') || venueName.toLowerCase().includes('to be announced');
-        
-        if (isTBAVenue) {
-            console.log(`🗺️ SharedCore: Skipping Google Maps for TBA venue: "${venueName}"`);
-            return '';
-        }
+    isTBAVenue(venueName) {
+        return !venueName || venueName.toLowerCase().includes('tba') || venueName.toLowerCase().includes('to be announced');
+    },
 
-        // Prefer Google Place ID for most accurate mapping
-        if (venue?.google_place_id) {
-            const url = `https://maps.google.com/?q=place_id:${venue.google_place_id}`;
-            console.log(`🗺️ SharedCore: Generated Google Maps URL from Place ID: ${url}`);
-            return url;
+    /**
+     * Clean event location data by filtering out TBA venue fake coordinates and addresses
+     * @param {Object} event - Event object to clean
+     * @returns {Object} Event object with cleaned location data
+     */
+    cleanTBAVenueData(event) {
+        if (this.isTBAVenue(event.bar)) {
+            console.log(`🗺️ SharedCore: Cleaning TBA venue data for "${event.title}" - removing fake coordinates, address, and gmaps`);
+            
+            // Remove fake location data for TBA venues
+            event.location = null;  // Coordinates are usually fake (city center)
+            event.address = null;   // Address is not real yet
+            event.gmaps = '';       // No point in Google Maps for fake location
         }
         
-        // Fallback to coordinates
-        if (coordinates && coordinates.lat && coordinates.lng) {
-            const url = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
-            console.log(`🗺️ SharedCore: Generated Google Maps URL from coordinates: ${url}`);
-            return url;
-        }
-
-        console.log(`🗺️ SharedCore: No Google Maps data available for venue: "${venueName}"`);
-        return '';
+        return event;
     }
 }
 
