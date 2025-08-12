@@ -246,9 +246,11 @@ class SharedCore {
                     );
                     const detailEvent = filteredEvents[0]; // Detail pages should only have one event
                     
-                    // Find the matching existing event by URL
+                    // Find the matching existing event by URL (check both website and legacy url fields)
                     const matchingEvent = existingEvents.find(event => 
-                        event.url === detailEvent.url || 
+                        event.website === detailEvent.website || 
+                        event.url === detailEvent.website ||
+                        event.website === url ||
                         event.url === url ||
                         (event.title && detailEvent.title && event.title.trim() === detailEvent.title.trim())
                     );
@@ -461,7 +463,7 @@ class SharedCore {
         return {
             title: mergedEvent.title,
             notes: notes,
-            url: mergedEvent.url
+            url: mergedEvent.website || mergedEvent.url // Use website field, fallback to url for backward compatibility
         };
     }
 
@@ -502,7 +504,7 @@ class SharedCore {
             endDate: resolvedEndDate,
             location: resolvedLocation,
             notes: mergedData.notes,
-            url: mergedData.url,
+            url: mergedData.url, // This comes from the mergeEventData result which handles website->url mapping
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
@@ -551,7 +553,7 @@ class SharedCore {
                 endDate: existingEvent.endDate || '',
                 location: existingEvent.location || '',
                 notes: existingEvent.notes || '',
-                url: existingEvent.url || '',
+                url: existingEvent.url || '', // Legacy field for comparison
                 // Add fields extracted from current notes for rich comparison
                 ...existingFields
             },
@@ -562,7 +564,7 @@ class SharedCore {
                 endDate: finalEvent.endDate,
                 location: finalEvent.location,
                 notes: finalEvent.notes,
-                url: finalEvent.url,
+                url: finalEvent.url, // This comes from mergeEventData which handles website->url mapping
                 // Include other new event fields for comparison
                 ...newEvent
             }
@@ -608,7 +610,7 @@ class SharedCore {
         if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         
         if (finalEvent.location !== existingEvent.location) changes.push('location');
-        if (finalEvent.url !== existingEvent.url) changes.push('url');
+        if (finalEvent.url !== existingEvent.url) changes.push('url'); // URL comparison for change detection
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
         
         finalEvent._changes = changes;
@@ -662,6 +664,7 @@ class SharedCore {
             'fb': 'facebook',
             'website': 'website',
             'site': 'website',
+            'url': 'website', // Map legacy url field to website for consistency
             'twitter': 'twitter',
             'xtwitter': 'twitter',
             'x': 'twitter',
