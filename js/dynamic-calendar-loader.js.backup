@@ -1,0 +1,2252 @@
+// Dynamic Google Calendar Loader - Supports multiple cities and calendars
+class DynamicCalendarLoader extends CalendarCore {
+    constructor() {
+        super();
+        this.currentCity = null;
+        this.currentCityConfig = null;
+        
+        // Initialization state to prevent multiple inits
+        this.isInitialized = false;
+        this.isInitializing = false;
+        this.controlsSetup = false;
+        
+        // View state management - enhanced with new calendar overview
+        this.currentView = 'week'; // 'week' or 'month'
+        this.currentDate = new Date();
+        
+        // Enhanced swipe functionality
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchCurrentX = 0;
+        this.touchCurrentY = 0;
+        this.touchEndX = 0;
+        this.touchEndY = 0;
+        this.minSwipeDistance = 30; // Minimum distance for a swipe (reduced for better responsiveness)
+        this.maxSwipeTime = 300; // Maximum time for a swipe (ms)
+        this.touchStartTime = 0;
+        this.isSwiping = false;
+        this.swipeThreshold = 80; // Distance to trigger navigation (reduced for better responsiveness)
+        this.swipeVelocity = 0;
+        this.lastTouchTime = 0;
+        this.lastTouchX = 0;
+        
+        // Set up message listener for testing interface
+        this.setupMessageListener();
+        
+        // Cache for event names - only recalculate on screen size change
+        this.cachedEventNames = new Map();
+        this.lastScreenWidth = window.innerWidth;
+        this.currentBreakpoint = this.getCurrentBreakpoint();
+        
+        // Set up window resize listener to clear measurement cache
+        this.setupResizeListener();
+        
+        logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
+    }
+
+    // Enhanced swipe detection methods
+    setupSwipeHandlers() {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) {
+            logger.warn('CALENDAR', 'Calendar grid not found for swipe setup');
+            return;
+        }
+
+        // Touch start
+        calendarGrid.addEventListener('touchstart', (e) => {
+            this.touchStartX = e.touches[0].clientX;
+            this.touchStartY = e.touches[0].clientY;
+            this.touchCurrentX = this.touchStartX;
+            this.touchCurrentY = this.touchStartY;
+            this.touchStartTime = Date.now();
+            this.isSwiping = false;
+            this.swipeVelocity = 0;
+            this.lastTouchTime = this.touchStartTime;
+            this.lastTouchX = this.touchStartX;
+            
+            logger.userInteraction('CALENDAR', 'Touch start detected', {
+                x: this.touchStartX,
+                y: this.touchStartY,
+                timestamp: this.touchStartTime
+            });
+        }, { passive: true });
+
+        // Touch move - track finger movement in real-time
+        calendarGrid.addEventListener('touchmove', (e) => {
+            if (!this.touchStartX) return; // No active touch
+            
+            this.touchCurrentX = e.touches[0].clientX;
+            this.touchCurrentY = e.touches[0].clientY;
+            const currentTime = Date.now();
+            
+            // Calculate velocity
+            const timeDelta = currentTime - this.lastTouchTime;
+            if (timeDelta > 0) {
+                const distanceDelta = this.touchCurrentX - this.lastTouchX;
+                this.swipeVelocity = distanceDelta / timeDelta;
+            }
+            
+            this.lastTouchTime = currentTime;
+            this.lastTouchX = this.touchCurrentX;
+            
+            // Calculate horizontal movement
+            const deltaX = this.touchCurrentX - this.touchStartX;
+            const deltaY = this.touchCurrentY - this.touchStartY;
+            
+            // Check if this is a horizontal swipe (reduced threshold for better responsiveness)
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 5) {
+                this.isSwiping = true;
+                
+                // Apply visual feedback - move the calendar with the finger
+                this.updateSwipeVisualFeedback(deltaX);
+                
+                // Prevent default to avoid scrolling
+                e.preventDefault();
+                
+                logger.debug('CALENDAR', 'Swipe in progress', {
+                    deltaX,
+                    deltaY,
+                    velocity: this.swipeVelocity,
+                    progress: Math.min(Math.abs(deltaX) / (window.innerWidth * 0.4), 1)
+                });
+            }
+        }, { passive: false });
+
+        // Touch end
+        calendarGrid.addEventListener('touchend', (e) => {
+            if (!this.touchStartX) return; // No active touch
+            
+            this.touchEndX = e.changedTouches[0].clientX;
+            this.touchEndY = e.changedTouches[0].clientY;
+            const touchEndTime = Date.now();
+            const duration = touchEndTime - this.touchStartTime;
+            
+            logger.userInteraction('CALENDAR', 'Touch end detected', {
+                x: this.touchEndX,
+                y: this.touchEndY,
+                duration,
+                isSwiping: this.isSwiping,
+                totalDistance: Math.sqrt(
+                    Math.pow(this.touchEndX - this.touchStartX, 2) + 
+                    Math.pow(this.touchEndY - this.touchStartY, 2)
+                )
+            });
+            
+            if (this.isSwiping) {
+                this.handleSwipe(duration);
+            } else {
+                // Only reset visual feedback if not swiping
+                this.resetSwipeVisualFeedback();
+            }
+            
+            // Reset touch state
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+            this.touchCurrentX = 0;
+            this.touchCurrentY = 0;
+            this.isSwiping = false;
+        }, { passive: true });
+
+        // Touch cancel
+        calendarGrid.addEventListener('touchcancel', (e) => {
+            this.resetSwipeVisualFeedback();
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+            this.touchCurrentX = 0;
+            this.touchCurrentY = 0;
+            this.isSwiping = false;
+        }, { passive: true });
+
+        logger.componentLoad('CALENDAR', 'Enhanced swipe handlers setup complete');
+    }
+
+    // Update visual feedback during swipe
+    updateSwipeVisualFeedback(deltaX) {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        // Calculate opacity and transform based on swipe distance
+        const maxDistance = window.innerWidth * 0.4; // 40% of screen width for better visual feedback
+        const progress = Math.min(Math.abs(deltaX) / maxDistance, 1);
+        const opacity = 1 - (progress * 0.2); // Reduce opacity as user swipes (less dramatic)
+        const translateX = deltaX * 0.5; // Move calendar with finger (50% of finger movement for more responsive feel)
+        
+        // Apply transform, opacity, subtle scale, and rotation effects
+        const scale = 1 - (progress * 0.05); // Slight scale down as user swipes
+        const rotation = (deltaX / window.innerWidth) * 2; // Subtle rotation based on swipe distance
+        calendarGrid.style.transform = `translateX(${translateX}px) scale(${scale}) rotateY(${rotation}deg)`;
+        calendarGrid.style.opacity = opacity;
+        
+        // Keep the same styling without background color changes
+        
+        // Add subtle shadow effect for depth
+        const shadowBlur = Math.min(progress * 20, 10);
+        const shadowOffset = Math.min(progress * 10, 5);
+        calendarGrid.style.boxShadow = `0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${progress * 0.3})`;
+        
+        // Add visual indicator for swipe direction
+        this.updateSwipeDirectionIndicator(deltaX, progress);
+    }
+
+    // Update swipe direction indicator
+    updateSwipeDirectionIndicator(deltaX, progress) {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        // Remove existing indicators
+        const existingIndicator = calendarGrid.querySelector('.swipe-direction-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        // Only show indicator if swipe is significant
+        if (progress > 0.1) {
+            const indicator = document.createElement('div');
+            indicator.className = 'swipe-direction-indicator';
+            indicator.style.cssText = `
+                position: absolute;
+                top: 50%;
+                ${deltaX > 0 ? 'right' : 'left'}: 20px;
+                transform: translateY(-50%);
+                background: var(--primary-color);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                z-index: 1000;
+                opacity: ${progress * 0.9};
+                transition: opacity 0.1s ease;
+                pointer-events: none;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            `;
+            indicator.textContent = deltaX > 0 ? '← Previous' : 'Next →';
+            
+            calendarGrid.appendChild(indicator);
+        }
+    }
+
+    // Reset visual feedback
+    resetSwipeVisualFeedback() {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        // Only reset if we're not in the middle of a transition animation
+        if (calendarGrid.style.transition && calendarGrid.style.transition.includes('0.3s')) {
+            logger.debug('CALENDAR', 'Skipping visual feedback reset during transition animation');
+            return;
+        }
+        
+        // Reset transform, opacity, scale, rotation, and shadow with smooth transition
+        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, box-shadow 0.2s ease-out';
+        calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
+        calendarGrid.style.opacity = '1';
+        calendarGrid.style.boxShadow = '';
+        
+        // Remove transition after animation completes
+        setTimeout(() => {
+            calendarGrid.style.transition = '';
+        }, 200);
+        
+        // Remove direction indicator
+        const indicator = calendarGrid.querySelector('.swipe-direction-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    handleSwipe(duration) {
+        const deltaX = this.touchEndX - this.touchStartX;
+        const deltaY = this.touchEndY - this.touchStartY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Check if it's a valid swipe
+        if (duration > this.maxSwipeTime || distance < this.minSwipeDistance) {
+            logger.debug('CALENDAR', 'Swipe invalid - too slow or too short', {
+                duration,
+                distance,
+                maxTime: this.maxSwipeTime,
+                minDistance: this.minSwipeDistance
+            });
+            // Reset visual feedback for invalid swipe
+            this.resetSwipeVisualFeedback();
+            return;
+        }
+        
+        // Check if it's more horizontal than vertical (swipe vs scroll)
+        if (Math.abs(deltaX) < Math.abs(deltaY)) {
+            logger.debug('CALENDAR', 'Swipe ignored - more vertical than horizontal');
+            // Reset visual feedback for vertical swipe
+            this.resetSwipeVisualFeedback();
+            return;
+        }
+        
+        // Determine swipe direction based on distance or velocity
+        const shouldNavigate = Math.abs(deltaX) > this.swipeThreshold || 
+                              Math.abs(this.swipeVelocity) > 0.3; // Lower velocity threshold for better responsiveness
+        
+        if (shouldNavigate) {
+            const direction = deltaX > 0 ? 'prev' : 'next';
+            logger.userInteraction('CALENDAR', `Swipe ${direction === 'prev' ? 'right' : 'left'} detected - navigating to ${direction} period`, {
+                distance: deltaX,
+                velocity: this.swipeVelocity
+            });
+            
+            // Animate the swipe transition
+            this.animateSwipeTransition(direction, deltaX);
+        } else {
+            logger.debug('CALENDAR', 'Swipe distance/velocity insufficient for navigation', {
+                distance: deltaX,
+                threshold: this.swipeThreshold,
+                velocity: this.swipeVelocity
+            });
+            // Reset visual feedback for insufficient swipe
+            this.resetSwipeVisualFeedback();
+        }
+    }
+
+    // Animate swipe transition with smooth off-screen movement
+    animateSwipeTransition(direction, deltaX) {
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+        
+        logger.debug('CALENDAR', 'Starting swipe transition animation', {
+            direction,
+            deltaX,
+            currentTransform: calendarGrid.style.transform
+        });
+        
+        // Calculate the target position (off-screen)
+        const screenWidth = window.innerWidth;
+        const targetTranslateX = direction === 'prev' ? screenWidth : -screenWidth;
+        
+        // Remove transition temporarily to set initial position
+        calendarGrid.style.transition = 'none';
+        
+        // Set the current position from the swipe
+        const currentTranslateX = deltaX * 0.5; // Match the visual feedback position
+        calendarGrid.style.transform = `translateX(${currentTranslateX}px) scale(1) rotateY(0deg)`;
+        
+        // Force a reflow to ensure the position is set
+        calendarGrid.offsetHeight;
+        
+        // Add smooth transition for the animation
+        calendarGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+        
+        // Animate to off-screen position
+        requestAnimationFrame(() => {
+            calendarGrid.style.transform = `translateX(${targetTranslateX}px) scale(0.95) rotateY(${direction === 'prev' ? 5 : -5}deg)`;
+            calendarGrid.style.opacity = '0.7';
+            
+            // After animation completes, update content and animate new content in
+            setTimeout(() => {
+                // Update the calendar content (skip immediate display update)
+                this.navigatePeriod(direction, false);
+                
+                // Update the display to get new content
+                this.updateCalendarDisplay();
+                
+                // Prepare new content to slide in from opposite direction
+                const newCalendarGrid = document.querySelector('.calendar-grid');
+                if (newCalendarGrid) {
+                    // Set initial position (off-screen from opposite direction)
+                    const initialTranslateX = direction === 'prev' ? -screenWidth : screenWidth;
+                    newCalendarGrid.style.transition = 'none';
+                    newCalendarGrid.style.transform = `translateX(${initialTranslateX}px) scale(0.95) rotateY(${direction === 'prev' ? -5 : 5}deg)`;
+                    newCalendarGrid.style.opacity = '0.7';
+                    
+                    // Force reflow
+                    newCalendarGrid.offsetHeight;
+                    
+                    // Animate to center position
+                    newCalendarGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+                    requestAnimationFrame(() => {
+                        newCalendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
+                        newCalendarGrid.style.opacity = '1';
+                        
+                        // Clean up after animation
+                        setTimeout(() => {
+                            newCalendarGrid.style.transition = '';
+                            newCalendarGrid.style.transform = '';
+                            newCalendarGrid.style.opacity = '';
+                        }, 300);
+                    });
+                }
+            }, 300);
+        });
+    }
+
+    // Get city from URL parameters
+    getCityFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const cityParam = urlParams.get('city');
+        
+        // If no city parameter, try to get from hash or default to new-york
+        if (!cityParam) {
+            const hash = window.location.hash.replace('#', '');
+            return hash || 'new-york';
+        }
+        
+        return cityParam;
+    }
+
+    // Set up city selector and populate with available cities
+    setupCitySelector() {
+        const availableCitiesList = document.getElementById('available-cities-list');
+        
+
+
+        // Populate available cities list for error page
+        if (availableCitiesList) {
+            availableCitiesList.innerHTML = getAvailableCities()
+                .filter(city => hasCityCalendar(city.key))
+                .map(city => `
+                    <a href="city.html?city=${city.key}" class="city-link">
+                        ${city.emoji} ${city.name}
+                    </a>
+                `).join('');
+        }
+    }
+
+    // Show error when city is not found or unavailable
+    showCityNotFound() {
+        const cityNotFound = document.querySelector('.city-not-found');
+        const cityPage = document.querySelector('.city-page');
+        
+        if (cityNotFound && cityPage) {
+            cityNotFound.style.display = 'block';
+            cityPage.style.display = 'none';
+        }
+        
+        document.title = 'City Not Found - chunky.dad';
+    }
+
+
+    // Override parseEventData to add city-specific data and short-name
+    parseEventData(calendarEvent) {
+        const eventData = super.parseEventData(calendarEvent);
+        if (eventData) {
+            eventData.citySlug = this.currentCity;
+            
+            // Only generate short-name if not provided by user
+            // This prevents double-trimming when user has already provided a shortName
+            if (!eventData.shortName) {
+                eventData.shortName = this.generateShortName(eventData.bar, eventData.name);
+            }
+        }
+        return eventData;
+    }
+
+    // Generate short name from bar name or event name
+    // The purpose of shortName is to provide BETTER BREAKPOINTS for word wrapping,
+    // not necessarily to be shorter in character count (e.g., "MEGA-WOOF" vs "MEGAWOOF")
+    generateShortName(barName, eventName) {
+        // Prefer event name if available, otherwise use bar name
+        const sourceName = eventName || barName;
+        if (!sourceName) return '';
+        
+        // Remove common words while preserving original casing
+        // Focus on creating natural breakpoints rather than just shortening
+        const stopWords = ['the', 'and', 'or', 'at', 'in', 'on', 'with', 'for', 'of', 'to', 'a', 'an'];
+        const words = sourceName.split(' ');
+        const filteredWords = words.filter(word => !stopWords.includes(word.toLowerCase()));
+        
+        // If we filtered out all words (e.g., "The"), use the original
+        if (filteredWords.length === 0) {
+            return sourceName;
+        }
+        
+        // Return the filtered name - CSS word-wrap will handle the display
+        // The key is that this version should have better breakpoints than the original
+        return filteredWords.join(' ');
+    }
+
+
+
+    getSmartEventNameForBreakpoint(event, breakpoint) {
+        logger.info('CALENDAR', `🔍 SMART_NAME: Starting getSmartEventNameForBreakpoint for breakpoint: ${breakpoint}`);
+        
+        // Get the nickname/shortname
+        const shortName = event.shortName || event.nickname || '';
+        const fullName = event.name || '';
+        
+        logger.info('CALENDAR', `🔍 SMART_NAME: Event names`, {
+            fullName,
+            shortName,
+            breakpoint
+        });
+        
+        // If no shortname, return the full name processed for 3 lines
+        if (!shortName) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, processing full name: "${fullName}"`);
+            return this.buildThreeLineText(fullName, false, breakpoint); // fullName hyphens are always intentional
+        }
+        
+        // Get characters per pixel ratio (calculated once and cached)
+        const charsPerPixel = this.charsPerPixel || this.calculateCharsPerPixel();
+        
+        // Get actual available width for event text
+        const availableWidth = this.getEventTextWidth();
+        
+        logger.info('CALENDAR', `🔍 SMART_NAME: Got measurement data`, {
+            charsPerPixel: charsPerPixel?.toFixed(4),
+            availableWidth: availableWidth?.toFixed(2),
+            breakpoint
+        });
+        
+        // If measurement not ready yet, prefer shortName over fullName for real rendering
+        if (availableWidth === null) {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using short name processed for 3 lines`, {
+                shortName: shortName,
+                fullName: fullName
+            });
+            return this.buildThreeLineText(shortName, true, breakpoint); // shortName hyphens are conditional
+        }
+        
+        // Calculate how many characters can fit per line
+        const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
+        
+        logger.info('CALENDAR', `🔍 SMART_NAME: Dynamic char calculation for ${breakpoint}`, {
+            availableWidth: availableWidth.toFixed(2),
+            charsPerPixel: charsPerPixel.toFixed(4),
+            charLimitPerLine,
+            eventName: shortName,
+            shortNameLength: shortName.length,
+            fullNameLength: fullName.length,
+            screenWidth: window.innerWidth,
+            note: 'Building 3-line layout with intelligent hyphenation'
+        });
+        
+        // For very small character limits, try shorterName if available
+        if (charLimitPerLine <= 4 && event.shorterName?.trim()) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for very small space: "${event.shorterName}"`);
+            return this.buildThreeLineText(event.shorterName.trim(), true, breakpoint);
+        }
+        
+        // PRIORITY 1: Try shortName first (provides better breakpoints)
+        const shortNameResult = this.buildThreeLineText(shortName, true, breakpoint, charLimitPerLine);
+        
+        // PRIORITY 2: Try fullName and compare quality
+        const fullNameResult = this.buildThreeLineText(fullName, false, breakpoint, charLimitPerLine);
+        
+        // Choose the better result based on how well it fits and utilizes space
+        const shortNameQuality = this.evaluateTextQuality(shortNameResult, charLimitPerLine);
+        const fullNameQuality = this.evaluateTextQuality(fullNameResult, charLimitPerLine);
+        
+        if (shortNameQuality.score >= fullNameQuality.score) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shortName result: "${shortNameResult}"`, {
+                shortNameQuality,
+                fullNameQuality,
+                reason: 'shortName_has_better_or_equal_quality'
+            });
+            return shortNameResult;
+        } else {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using fullName result: "${fullNameResult}"`, {
+                shortNameQuality,
+                fullNameQuality,
+                reason: 'fullName_has_better_quality'
+            });
+            return fullNameResult;
+        }
+    }
+
+    // Build text optimized for exactly 3 lines with intelligent word placement
+    // Prefers full lines over hyphenation (e.g., "Bear happy hour" on 3 lines instead of "Bear ha-ppy hour")
+    buildThreeLineText(text, isShortName, breakpoint, charLimitPerLine = null) {
+        if (!text) return '';
+        
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Starting buildThreeLineText with full-line preference`, {
+            text,
+            isShortName,
+            breakpoint,
+            charLimitPerLine
+        });
+        
+        // If no character limit provided, use CSS word-wrap (fallback)
+        if (!charLimitPerLine) {
+            return isShortName ? this.processShortNameHyphens(text, false) : text;
+        }
+        
+        // Process the text based on whether it's shortName or fullName
+        const processedText = isShortName ? this.processShortNameHyphens(text, true) : text;
+        
+        // Split into words for line building
+        const words = processedText.split(/\s+/).filter(word => word.length > 0);
+        
+        // NEW APPROACH: Try to distribute words across 3 lines optimally
+        const result = this.distributeWordsAcrossLines(words, charLimitPerLine, 3);
+        
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result with full-line preference: "${result}"`, {
+            originalText: text,
+            processedText,
+            wordCount: words.length,
+            finalResult: result,
+            approach: 'full_line_preference'
+        });
+        
+        return result;
+    }
+    
+    // Distribute words across lines optimally, preferring full words over hyphenation
+    distributeWordsAcrossLines(words, charLimitPerLine, maxLines) {
+        if (words.length === 0) return '';
+        
+        // Try different distribution strategies, starting with the most natural
+        
+        // Strategy 1: Natural word flow - let words flow naturally across lines
+        const naturalResult = this.tryNaturalWordFlow(words, charLimitPerLine, maxLines);
+        if (this.isGoodDistribution(naturalResult, charLimitPerLine, maxLines)) {
+            logger.debug('CALENDAR', '✅ Using natural word flow distribution', { result: naturalResult.join(' ') });
+            return naturalResult.join(' ');
+        }
+        
+        // Strategy 2: Balanced distribution - try to balance line lengths
+        const balancedResult = this.tryBalancedDistribution(words, charLimitPerLine, maxLines);
+        if (this.isGoodDistribution(balancedResult, charLimitPerLine, maxLines)) {
+            logger.debug('CALENDAR', '✅ Using balanced distribution', { result: balancedResult.join(' ') });
+            return balancedResult.join(' ');
+        }
+        
+        // Strategy 3: Aggressive fitting - use truncation if needed
+        const aggressiveResult = this.tryAggressiveFitting(words, charLimitPerLine, maxLines);
+        logger.debug('CALENDAR', '✅ Using aggressive fitting (fallback)', { result: aggressiveResult.join(' ') });
+        return aggressiveResult.join(' ');
+    }
+    
+    // Try natural word flow - words flow from line to line naturally
+    tryNaturalWordFlow(words, charLimitPerLine, maxLines) {
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            // If we've reached max lines, stop
+            if (lines.length >= maxLines) break;
+            
+            // Check if word fits on current line
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            
+            if (testLine.length <= charLimitPerLine) {
+                // Word fits, add it
+                currentLine = testLine;
+            } else {
+                // Word doesn't fit
+                if (currentLine) {
+                    // Save current line and start new one
+                    lines.push(currentLine);
+                    
+                    // If this is the last line, try to fit the word (possibly truncated)
+                    if (lines.length >= maxLines) {
+                        break;
+                    }
+                    
+                    // Start new line with this word (if it fits)
+                    if (word.length <= charLimitPerLine) {
+                        currentLine = word;
+                    } else {
+                        // Word is too long even for a new line
+                        // Only on the last line do we truncate, otherwise skip the word
+                        if (lines.length === maxLines - 1) {
+                            currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                            break;
+                        } else {
+                            // Skip this word and continue (it will be handled by other strategies)
+                            currentLine = '';
+                        }
+                    }
+                } else {
+                    // No current line content, but word is too long
+                    if (lines.length === maxLines - 1) {
+                        // This is the last line, truncate if needed
+                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                        break;
+                    } else {
+                        // Skip this word for now
+                        continue;
+                    }
+                }
+            }
+        }
+        
+        // Add the final line if it has content
+        if (currentLine && lines.length < maxLines) {
+            lines.push(currentLine);
+        }
+        
+        return lines;
+    }
+    
+    // Try balanced distribution - attempt to balance line lengths
+    tryBalancedDistribution(words, charLimitPerLine, maxLines) {
+        if (words.length <= maxLines) {
+            // If we have fewer words than lines, put one word per line
+            return words.slice(0, maxLines);
+        }
+        
+        // Calculate total character count and target characters per line
+        const totalChars = words.join(' ').length;
+        const targetCharsPerLine = Math.ceil(totalChars / maxLines);
+        
+        const lines = [];
+        let currentLine = '';
+        let currentLineTarget = Math.min(targetCharsPerLine, charLimitPerLine);
+        
+        for (let i = 0; i < words.length && lines.length < maxLines; i++) {
+            const word = words[i];
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            
+            // Check if we should start a new line
+            const shouldStartNewLine = currentLine && (
+                testLine.length > charLimitPerLine || // Exceeds hard limit
+                (testLine.length > currentLineTarget && lines.length < maxLines - 1) // Exceeds target and we have lines left
+            );
+            
+            if (shouldStartNewLine) {
+                lines.push(currentLine);
+                
+                // Adjust target for remaining lines
+                const remainingWords = words.slice(i);
+                const remainingChars = remainingWords.join(' ').length;
+                const remainingLines = maxLines - lines.length;
+                currentLineTarget = remainingLines > 0 ? Math.min(Math.ceil(remainingChars / remainingLines), charLimitPerLine) : charLimitPerLine;
+                
+                currentLine = word.length <= charLimitPerLine ? word : this.fitWordOnLastLine(word, charLimitPerLine, false);
+            } else {
+                if (testLine.length <= charLimitPerLine) {
+                    currentLine = testLine;
+                } else if (!currentLine) {
+                    // Single word too long for line
+                    currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                } else {
+                    // Word doesn't fit, save current line and start new one
+                    lines.push(currentLine);
+                    if (lines.length < maxLines) {
+                        currentLine = word.length <= charLimitPerLine ? word : this.fitWordOnLastLine(word, charLimitPerLine, false);
+                    }
+                }
+            }
+        }
+        
+        // Add final line
+        if (currentLine && lines.length < maxLines) {
+            lines.push(currentLine);
+        }
+        
+        return lines;
+    }
+    
+    // Try aggressive fitting - use truncation and other techniques to fit text
+    tryAggressiveFitting(words, charLimitPerLine, maxLines) {
+        const lines = [];
+        let wordIndex = 0;
+        
+        for (let lineNum = 0; lineNum < maxLines && wordIndex < words.length; lineNum++) {
+            let currentLine = '';
+            const isLastLine = lineNum === maxLines - 1;
+            
+            // Try to fit as many words as possible on this line
+            while (wordIndex < words.length) {
+                const word = words[wordIndex];
+                const testLine = currentLine ? currentLine + ' ' + word : word;
+                
+                if (testLine.length <= charLimitPerLine) {
+                    // Word fits
+                    currentLine = testLine;
+                    wordIndex++;
+                } else {
+                    // Word doesn't fit
+                    if (currentLine) {
+                        // We have content on this line, move to next line
+                        break;
+                    } else {
+                        // No content yet, this word is too long for the line
+                        if (isLastLine) {
+                            // Last line, truncate the word
+                            currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                            wordIndex++;
+                        } else {
+                            // Not last line, try hyphenation as last resort
+                            const hyphenated = this.hyphenateWord(word, charLimitPerLine, false);
+                            if (hyphenated.firstPart) {
+                                currentLine = hyphenated.firstPart;
+                                // Replace the word with its remainder for next iteration
+                                if (hyphenated.remainder) {
+                                    words[wordIndex] = hyphenated.remainder;
+                                } else {
+                                    wordIndex++;
+                                }
+                            } else {
+                                // Hyphenation failed, truncate
+                                currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                                wordIndex++;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+        }
+        
+        return lines;
+    }
+    
+    // Check if a distribution is good (all words fit, good line utilization)
+    isGoodDistribution(lines, charLimitPerLine, maxLines) {
+        if (lines.length === 0) return false;
+        if (lines.length > maxLines) return false;
+        
+        // Check if any line exceeds the character limit
+        for (const line of lines) {
+            if (line.length > charLimitPerLine) return false;
+        }
+        
+        // Check for reasonable line utilization (at least 50% of available space used)
+        const totalChars = lines.join('').length;
+        const totalAvailableChars = lines.length * charLimitPerLine;
+        const utilization = totalChars / totalAvailableChars;
+        
+        // Good distribution should use at least 40% of available space
+        return utilization >= 0.4;
+    }
+    
+    // Process shortName hyphens based on whether we're splitting lines
+    processShortNameHyphens(text, willSplitLines) {
+        if (!text) return '';
+        
+        // For shortNames: 
+        // - If we're splitting lines, keep hyphens for better breakpoints
+        // - If we're not splitting lines, remove hyphens unless escaped with \
+        if (willSplitLines) {
+            // Keep all hyphens for line breaking, but respect escaped ones
+            return text.replace(/\\-/g, '§ESCAPED_HYPHEN§').replace(/§ESCAPED_HYPHEN§/g, '-');
+        } else {
+            // Remove hyphens except escaped ones (\-)
+            return text.replace(/(?<!\\)-/g, '').replace(/\\-/g, '-');
+        }
+    }
+    
+    // Hyphenate a word that's too long for a line (used only as last resort)
+    hyphenateWord(word, charLimit, isShortName) {
+        // First, try to split at existing hyphens (if it's a shortName or has intentional hyphens)
+        if (word.includes('-') && !word.includes('\\-')) {
+            const parts = word.split('-');
+            let builtPart = '';
+            let remainder = '';
+            
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                const partWithHyphen = i === parts.length - 1 ? part : part + '-';
+                
+                if (!builtPart) {
+                    if (partWithHyphen.length <= charLimit) {
+                        builtPart = partWithHyphen;
+                    } else {
+                        // Even the first part is too long
+                        return {
+                            firstPart: part.substring(0, charLimit - 1) + '…',
+                            remainder: ''
+                        };
+                    }
+                } else {
+                    const testPart = builtPart + partWithHyphen;
+                    if (testPart.length <= charLimit) {
+                        builtPart = testPart;
+                    } else {
+                        // This part would make it too long, so split here
+                        remainder = parts.slice(i).join('-');
+                        break;
+                    }
+                }
+            }
+            
+            if (builtPart) {
+                return { firstPart: builtPart, remainder };
+            }
+        }
+        
+        // No natural hyphen break found, or it didn't help
+        // Calculate our own hyphenation point
+        if (charLimit <= 3) {
+            return { firstPart: word.substring(0, charLimit), remainder: '' };
+        }
+        
+        // Try to break at a reasonable point (leave room for hyphen)
+        const breakPoint = charLimit - 1;
+        return {
+            firstPart: word.substring(0, breakPoint) + '-',
+            remainder: word.substring(breakPoint)
+        };
+    }
+    
+    // Fit a word on the last line (3rd line) with truncation if needed
+    fitWordOnLastLine(word, charLimit, isShortName) {
+        if (word.length <= charLimit) {
+            return word;
+        }
+        
+        // Word is too long for last line, truncate with ellipsis
+        if (charLimit <= 1) {
+            return '…';
+        }
+        
+        return word.substring(0, charLimit - 1) + '…';
+    }
+    
+    // Evaluate the quality of a text result
+    evaluateTextQuality(text, charLimitPerLine) {
+        if (!text) return { score: 0, reason: 'empty_text' };
+        
+        const words = text.split(/\s+/);
+        const hasEllipsis = text.includes('…');
+        const lines = this.estimateLines(text, charLimitPerLine);
+        
+        // Calculate score based on various factors
+        let score = 100; // Start with perfect score
+        
+        // Penalize ellipsis (but not too heavily)
+        if (hasEllipsis) score -= 20;
+        
+        // Reward utilizing more lines (up to 3)
+        if (lines === 3) score += 10;
+        else if (lines === 2) score += 5;
+        
+        // Penalize very short results
+        if (text.length < charLimitPerLine) score -= 15;
+        
+        // Reward natural word boundaries
+        const naturalBreaks = (text.match(/[\s-]/g) || []).length;
+        score += naturalBreaks * 2;
+        
+        return {
+            score,
+            lines,
+            hasEllipsis,
+            wordCount: words.length,
+            naturalBreaks,
+            length: text.length,
+            reason: `score=${score}, lines=${lines}, ellipsis=${hasEllipsis}`
+        };
+    }
+    
+    // Estimate how many lines text will take
+    estimateLines(text, charLimitPerLine) {
+        if (!text || !charLimitPerLine) return 1;
+        return Math.min(3, Math.ceil(text.length / charLimitPerLine));
+    }
+
+    // Calculate characters per pixel ratio for dynamic text fitting
+    calculateCharsPerPixel() {
+        logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
+        
+        try {
+            // Create a temporary element to measure character width
+            const testElement = document.createElement('div');
+            testElement.className = 'event-name'; // Use the same class as actual event names
+            testElement.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: nowrap;
+                font-family: 'Poppins', sans-serif;
+                font-size: var(--event-name-font-size);
+                font-weight: var(--event-name-font-weight);
+                line-height: var(--event-name-line-height);
+            `;
+            
+            // Use a string that better represents actual event names 
+            // Focus on uppercase letters without spaces (spaces are narrow and skew the average)
+            const testString = 'BEARHAPPYHOURNIGHTOUTWEEKLYSOCIALEVENTS';
+            testElement.textContent = testString;
+            document.body.appendChild(testElement);
+            
+            const width = testElement.getBoundingClientRect().width;
+            const charCount = testElement.textContent.length;
+            const pixelsPerChar = width / charCount;
+            // Apply defensive reduction of 0.02 to prevent edge overflow
+            const charsPerPixel = (1 / pixelsPerChar) - 0.02;
+            
+            // Get the computed styles to verify what we're actually using
+            const computedStyles = window.getComputedStyle(testElement);
+            const actualFontSize = computedStyles.fontSize;
+            const actualFontWeight = computedStyles.fontWeight;
+            const actualFontFamily = computedStyles.fontFamily;
+            
+            // Get visual zoom for logging purposes only - don't adjust calculation
+            const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
+            
+            document.body.removeChild(testElement);
+            
+            logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
+                width: width.toFixed(2),
+                charCount,
+                pixelsPerChar: pixelsPerChar.toFixed(2),
+                charsPerPixel: charsPerPixel.toFixed(4),
+                visualZoom: visualZoom.toFixed(2),
+                zoomDirection: visualZoom > 1 ? 'zoomed in' : visualZoom < 1 ? 'zoomed out' : 'normal',
+                actualFontSize,
+                actualFontWeight,
+                actualFontFamily,
+                screenWidth: window.innerWidth,
+                testString: testString,
+                note: 'Base calculation with 0.02 defensive reduction applied directly to charsPerPixel'
+            });
+            
+            // Cache the result
+            this.charsPerPixel = charsPerPixel;
+            logger.info('CALENDAR', `🔍 CALCULATION: Cached charsPerPixel = ${charsPerPixel.toFixed(4)}`);
+            return charsPerPixel;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error calculating chars per pixel', error);
+            return 0.1; // Conservative fallback
+        }
+    }
+
+    // Get the actual width available for event text from the fake event rendered invisibly
+    getEventTextWidth() {
+        logger.info('CALENDAR', '🔍 MEASUREMENT: Starting getEventTextWidth()');
+        
+        // Check if we already have a cached measurement
+        if (this.cachedEventTextWidth) {
+            logger.info('CALENDAR', `🔍 MEASUREMENT: Using cached event text width: ${this.cachedEventTextWidth}px`);
+            return this.cachedEventTextWidth;
+        }
+        
+        // Find ALL event-name elements to understand what we're measuring
+        const allEventNames = document.querySelectorAll('.event-name');
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Found ${allEventNames.length} .event-name elements`);
+        
+        // Find the first visible event-name element (should be our measurement element)
+        const eventName = document.querySelector('.event-name');
+        
+        // If the element doesn't exist yet, we can't measure - return null to indicate measurement not ready
+        if (!eventName) {
+            logger.debug('CALENDAR', '🔍 MEASUREMENT: Event name element not found for measurement - DOM not ready yet');
+            return null;
+        }
+        
+        // Log details about the element we're measuring
+        const isVisible = eventName.offsetParent !== null;
+        const hasContent = eventName.textContent && eventName.textContent.trim().length > 0;
+        
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Measuring event-name element`, {
+            elementFound: true,
+            isVisible,
+            hasContent,
+            textContent: eventName.textContent,
+            tagName: eventName.tagName,
+            className: eventName.className
+        });
+        
+        // Measure the event name element directly - this IS the text container
+        const eventNameRect = eventName.getBoundingClientRect();
+        const eventNameStyle = window.getComputedStyle(eventName);
+        const paddingLeft = parseFloat(eventNameStyle.paddingLeft) || 0;
+        const paddingRight = parseFloat(eventNameStyle.paddingRight) || 0;
+        const borderLeft = parseFloat(eventNameStyle.borderLeftWidth) || 0;
+        const borderRight = parseFloat(eventNameStyle.borderRightWidth) || 0;
+        
+        // Calculate the actual available width for text content
+        const rawAvailableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
+        
+        // No defensive padding applied to width - defensive reduction is applied directly to charsPerPixel calculation
+        const availableWidth = rawAvailableWidth;
+        
+        this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
+        
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Measured actual event text width from .event-name element: ${this.cachedEventTextWidth}px`, {
+            elementRect: {
+                width: eventNameRect.width,
+                height: eventNameRect.height,
+                left: eventNameRect.left,
+                top: eventNameRect.top
+            },
+            computedStyle: {
+                paddingLeft,
+                paddingRight,
+                borderLeft,
+                borderRight,
+                fontSize: eventNameStyle.fontSize,
+                fontWeight: eventNameStyle.fontWeight,
+                fontFamily: eventNameStyle.fontFamily
+            },
+            calculations: {
+                rawWidth: eventNameRect.width,
+                totalPadding: paddingLeft + paddingRight,
+                totalBorders: borderLeft + borderRight,
+                rawAvailableWidth: rawAvailableWidth,
+                finalAvailableWidth: availableWidth,
+                finalCachedWidth: this.cachedEventTextWidth,
+                note: 'No width padding applied - defensive reduction applied directly to charsPerPixel'
+            }
+        });
+        
+        return this.cachedEventTextWidth;
+    }
+
+    // Clear cached measurements (call when layout changes)
+    clearMeasurementCache() {
+        const hadCachedWidth = !!this.cachedEventTextWidth;
+        const hadCharsPerPixel = !!this.charsPerPixel;
+        
+        this.cachedEventTextWidth = null;
+        this.charsPerPixel = null;
+        
+        logger.info('CALENDAR', '🔍 CACHE_CLEAR: Measurement cache cleared', {
+            hadCachedWidth,
+            hadCharsPerPixel,
+            reason: 'layout_change'
+        });
+    }
+
+    // Clear cached event names (call when screen size changes)
+    clearEventNameCache() {
+        const cacheSize = this.cachedEventNames.size;
+        this.cachedEventNames.clear();
+        
+        logger.info('CALENDAR', '🔍 CACHE_CLEAR: Event name cache cleared', {
+            previousCacheSize: cacheSize,
+            reason: 'screen_size_change'
+        });
+    }
+
+    // Get current breakpoint based on screen width
+    getCurrentBreakpoint() {
+        const width = window.innerWidth;
+        if (width <= 374) return 'xs';
+        if (width <= 767) return 'sm'; 
+        if (width <= 1023) return 'md';
+        return 'lg';
+    }
+
+    // Generate event name element for current breakpoint only
+    generateEventNameElements(event, hideEvents = false) {
+        const fullName = event.name || '';
+        const hasShortName = !!(event.shortName || event.nickname);
+        
+        logger.info('CALENDAR', `🔍 EVENT_NAME_GEN: Generating event name elements with improved text wrapping`, {
+            eventName: fullName,
+            hasShortName,
+            hideEvents,
+            mode: hideEvents ? 'MEASUREMENT' : 'DISPLAY',
+            approach: 'full_line_preference'
+        });
+        
+        // For measurement mode, use full name to get accurate width measurement
+        // This gives us a realistic event name length for proper width calculation
+        if (hideEvents) {
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Measurement mode - using full name for accurate measurement', {
+                eventName: fullName,
+                shortName: event.shortName || event.nickname || '',
+                hideEvents: true,
+                reason: 'measurement_mode_uses_full_name'
+            });
+            return `<div class="event-name">${fullName}</div>`;
+        }
+        
+        // DISPLAY MODE: Use full smart name logic with caching
+        
+        // If no shortname, just return the full name
+        if (!hasShortName) {
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: No shortname available, using full name', {
+                eventName: fullName,
+                hideEvents,
+                reason: 'no_shortname_available'
+            });
+            return `<div class="event-name">${fullName}</div>`;
+        }
+        
+        // Create a cache key for this event + current breakpoint
+        const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}-${this.currentBreakpoint}`;
+        
+        // For display mode, check cache first
+        if (this.cachedEventNames.has(eventKey)) {
+            const cachedName = this.cachedEventNames.get(eventKey);
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Using cached event name', { 
+                eventKey, 
+                breakpoint: this.currentBreakpoint, 
+                cachedName: cachedName,
+                hideEvents: false,
+                source: 'cache'
+            });
+            return `<div class="event-name">${cachedName}</div>`;
+        }
+        
+        // Calculate name for current breakpoint (display mode only)
+        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Calculating event name for current breakpoint', { 
+            eventKey, 
+            breakpoint: this.currentBreakpoint,
+            hideEvents,
+            source: 'fresh_calculation'
+        });
+        const eventName = this.getSmartEventNameForBreakpoint(event, this.currentBreakpoint);
+        
+        // Cache the result for display mode
+        this.cachedEventNames.set(eventKey, eventName);
+        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Cached calculated event name', {
+            eventKey,
+            calculatedName: eventName,
+            shortName: event.shortName || event.nickname || '',
+            fullName: fullName,
+            cached: true
+        });
+        
+        return `<div class="event-name">${eventName}</div>`;
+    }
+
+    // Generate calendar events (enhanced for week/month/calendar view)
+    generateCalendarEvents(events, hideEvents = false) {
+        const { start, end } = this.getCurrentPeriodBounds();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (this.currentView === 'week') {
+            return this.generateWeekView(events, start, end, today, hideEvents);
+        } else {
+            return this.generateMonthView(events, start, end, today, hideEvents);
+        }
+    }
+
+    generateWeekView(events, start, end, today, hideEvents = false) {
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = [];
+        
+        for (let i = 0; i < 7; i++) {
+            const currentDay = new Date(start);
+            currentDay.setDate(start.getDate() + i);
+            days.push(currentDay);
+        }
+
+        logger.debug('CALENDAR', `Generating week view with mobile-optimized event display`, {
+            eventCount: events.length,
+            weekStart: start.toISOString().split('T')[0],
+            weekEnd: end.toISOString().split('T')[0],
+            hideEvents
+        });
+
+        return days.map(day => {
+            const dayEvents = events.filter(event => {
+                if (!event.startDate) return false;
+                
+                if (event.recurring) {
+                    return this.isEventOccurringOnDate(event, day);
+                }
+                
+                const eventDate = new Date(event.startDate);
+                eventDate.setHours(0, 0, 0, 0);
+                const dayDate = new Date(day);
+                dayDate.setHours(0, 0, 0, 0);
+                
+                return eventDate.getTime() === dayDate.getTime();
+            });
+
+            const eventsHtml = dayEvents.length > 0 
+                ? dayEvents.map(event => {
+                    const mobileTime = this.formatTimeForMobile(event.time);
+                    
+                    return `
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                            ${this.generateEventNameElements(event, hideEvents)}
+                            <div class="event-time">${mobileTime}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
+                        </div>
+                    `;
+                }).join('')
+                : '';
+
+            const isToday = day.getTime() === today.getTime();
+            const currentClass = isToday ? ' current' : '';
+            const dayName = daysOfWeek[day.getDay()];
+            const eventCount = dayEvents.length;
+
+            return `
+                <div class="calendar-day week-view${currentClass}" data-day="${dayName}" data-date="${day.toISOString().split('T')[0]}">
+                    <div class="day-header">
+                        <h3>${dayName}</h3>
+                        <div class="day-meta">
+                            <div class="day-date">${day.getDate()}</div>
+                        </div>
+                    </div>
+                    <div class="daily-events">
+                        ${eventsHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    generateMonthView(events, start, end, today, hideEvents = false) {
+        // Add day headers first
+        const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const headerHtml = dayHeaders.map(day => `
+            <div class="calendar-day-header">
+                <h4>${day}</h4>
+            </div>
+        `).join('');
+        
+        // For month view, create a grid including days from previous/next month to fill the calendar
+        const firstDay = new Date(start);
+        const lastDay = new Date(end);
+        
+        // Get the first day of the calendar grid (might be from previous month)
+        const calendarStart = new Date(firstDay);
+        calendarStart.setDate(firstDay.getDate() - firstDay.getDay());
+        
+        // Calculate the minimum number of weeks needed to display the month
+        const totalDays = Math.ceil((lastDay.getTime() - calendarStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const weeksNeeded = Math.ceil(totalDays / 7);
+        
+        // Get the last day of the calendar grid (optimized to avoid extra rows)
+        const calendarEnd = new Date(calendarStart);
+        calendarEnd.setDate(calendarStart.getDate() + (weeksNeeded * 7) - 1);
+        
+        const days = [];
+        const current = new Date(calendarStart);
+        
+        while (current <= calendarEnd) {
+            days.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+        
+        logger.debug('CALENDAR', `Generated month view with ${weeksNeeded} weeks (${days.length} days)`, {
+            monthStart: start.toISOString().split('T')[0],
+            monthEnd: end.toISOString().split('T')[0],
+            calendarStart: calendarStart.toISOString().split('T')[0],
+            calendarEnd: calendarEnd.toISOString().split('T')[0],
+            weeksNeeded: weeksNeeded,
+            totalDays: days.length,
+            hideEvents
+        });
+
+        const daysHtml = days.map(day => {
+            const dayEvents = events.filter(event => {
+                if (!event.startDate) return false;
+                
+                if (event.recurring) {
+                    return this.isEventOccurringOnDate(event, day);
+                }
+                
+                const eventDate = new Date(event.startDate);
+                eventDate.setHours(0, 0, 0, 0);
+                const dayDate = new Date(day);
+                dayDate.setHours(0, 0, 0, 0);
+                
+                return eventDate.getTime() === dayDate.getTime();
+            });
+
+            const isToday = day.getTime() === today.getTime();
+            const isCurrentMonth = day.getMonth() === start.getMonth();
+            const currentClass = isToday ? ' current' : '';
+            const otherMonthClass = isCurrentMonth ? '' : ' other-month';
+            const hasEventsClass = dayEvents.length > 0 ? ' has-events' : '';
+
+            // Ultra-simplified month view: show only 2 events with shortened names for better mobile viewing
+            const eventsToShow = dayEvents.slice(0, 2);
+            const additionalEventsCount = Math.max(0, dayEvents.length - 2);
+            
+            const eventsHtml = eventsToShow.length > 0 
+                ? eventsToShow.map(event => {
+                    const mobileTime = this.formatTimeForMobile(event.time);
+                    
+                    return `
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                            ${this.generateEventNameElements(event, hideEvents)}
+                            <div class="event-time">${mobileTime}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
+                        </div>
+                    `;
+                }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
+                : '';
+
+            return `
+                <div class="calendar-day month-day${currentClass}${otherMonthClass}${hasEventsClass}" data-date="${day.toISOString().split('T')[0]}">
+                    <div class="day-header">
+                        <span class="day-number">${day.getDate()}</span>
+                        ${isToday ? `<span class="day-indicator">Today</span>` : ''}
+                    </div>
+                    <div class="day-events">
+                        ${eventsHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return headerHtml + daysHtml;
+    }
+
+    // Initialize map
+    initializeMap(cityConfig, events) {
+        const mapContainer = document.querySelector('#events-map');
+        if (!mapContainer || typeof L === 'undefined') return;
+
+        try {
+            // Remove existing map if it exists
+            if (window.eventsMap) {
+                window.eventsMap.remove();
+                window.eventsMap = null;
+            }
+
+            // Filter events with valid coordinates
+            const eventsWithCoords = events.filter(event => 
+                event.coordinates?.lat && event.coordinates?.lng && 
+                !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
+            );
+
+            // Set up default map center and zoom (lower zoom to show more area)
+            let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
+            let mapZoom = cityConfig.mapZoom || 10; // Reduced from 11 to 10 for better overview on desktop
+
+            const map = L.map('events-map', {
+                scrollWheelZoom: false,
+                doubleClickZoom: true,
+                touchZoom: true,
+                dragging: true,
+                zoomControl: true,
+                fullscreenControl: false
+            }).setView(mapCenter, mapZoom);
+
+            // Use clean US-based OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+
+
+
+            // Add "fit all markers" control
+            const fitMarkersControl = L.control({position: 'topleft'});
+            fitMarkersControl.onAdd = function() {
+                const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
+                div.innerHTML = `
+                    <button class="map-control-btn" onclick="fitAllMarkers()" title="Show All Events">
+                        🎯
+                    </button>
+                `;
+                return div;
+            };
+            fitMarkersControl.addTo(map);
+
+            // Add "my location" control
+            const myLocationControl = L.control({position: 'topleft'});
+            myLocationControl.onAdd = function() {
+                const div = L.DomUtil.create('div', 'leaflet-control-my-location');
+                div.innerHTML = `
+                    <button class="map-control-btn" onclick="showMyLocation()" title="Show My Location">
+                        📍
+                    </button>
+                `;
+                return div;
+            };
+            myLocationControl.addTo(map);
+
+            // Enable scroll wheel zoom only when Ctrl is pressed
+            map.on('wheel', function(e) {
+                if (e.originalEvent.ctrlKey) {
+                    map.scrollWheelZoom.enable();
+                } else {
+                    map.scrollWheelZoom.disable();
+                }
+            });
+
+            // Disable scroll wheel zoom when mouse leaves map
+            map.on('mouseout', function() {
+                map.scrollWheelZoom.disable();
+            });
+            
+            let markersAdded = 0;
+            const markers = []; // Store markers for fit all function
+            
+            // Create custom marker icon
+            const customIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `
+                    <div class="marker-pin">
+                        <div class="marker-icon"><img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="map-marker-icon"></div>
+                    </div>
+                `,
+                iconSize: [44, 56],
+                iconAnchor: [22, 56],
+                popupAnchor: [0, -56]
+            });
+
+            events.forEach(event => {
+                if (event.coordinates?.lat && event.coordinates?.lng && 
+                    !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
+                    const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
+                        icon: customIcon
+                    })
+                        .addTo(map)
+                        .bindPopup(`
+                            <div class="map-popup">
+                                <h4>${event.name}</h4>
+                                <p><strong>📍 ${event.bar || 'Location'}</strong></p>
+                                <p>📅 ${event.day} ${event.time}</p>
+                                ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<p>💰 ${event.cover}</p>` : ''}
+                                ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
+                            </div>
+                        `);
+                    markers.push(marker);
+                    markersAdded++;
+                }
+            });
+
+            // Fit map to show all markers using Leaflet's built-in bounds calculation
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                const isMobile = window.innerWidth <= 768;
+                map.fitBounds(group.getBounds(), {
+                    padding: [20, 20],
+                    maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
+                });
+            }
+
+            logger.componentLoad('MAP', `Map initialized with ${markersAdded} markers for ${cityConfig.name}`, {
+                markersAdded,
+                cityName: cityConfig.name,
+                mapCenter,
+                mapZoom
+            });
+            window.eventsMap = map;
+            window.eventsMapMarkers = markers; // Store markers globally for controls
+        } catch (error) {
+            logger.componentError('MAP', 'Failed to initialize map', error);
+        }
+    }
+
+    // Update calendar display with filtered events
+    updateCalendarDisplay(hideEvents = false) {
+        logger.time('CALENDAR', 'Calendar display update');
+        const filteredEvents = this.getFilteredEvents();
+        
+        logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
+            view: this.currentView,
+            eventCount: filteredEvents.length,
+            city: this.currentCity,
+            hideEvents,
+            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events',
+            cachedMeasurements: {
+                eventTextWidth: this.cachedEventTextWidth,
+                charsPerPixel: this.charsPerPixel?.toFixed(4),
+                currentBreakpoint: this.currentBreakpoint
+            }
+        });
+        
+        // Update calendar title
+        const calendarTitle = document.getElementById('calendar-title');
+        if (calendarTitle) {
+            calendarTitle.textContent = `What's the vibe?`;
+        }
+        
+        // Update date range
+        const dateRange = document.getElementById('date-range');
+        if (dateRange) {
+            const { start, end } = this.getCurrentPeriodBounds();
+            dateRange.textContent = this.formatDateRange(start, end);
+        }
+        
+        // Update calendar grid
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
+            
+            // For measurement mode, make the grid invisible to users but keep same layout constraints
+            if (hideEvents) {
+                // Keep the element in its normal position but hide it behind background
+                calendarGrid.style.position = 'relative';
+                calendarGrid.style.zIndex = '-999'; // Behind everything else
+                calendarGrid.style.opacity = '0'; // Invisible to users
+                calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
+                calendarGrid.style.visibility = 'visible'; // Still measurable by JS
+            } else {
+                // Reset to normal visibility
+                calendarGrid.style.position = '';
+                calendarGrid.style.zIndex = '';
+                calendarGrid.style.opacity = '1';
+                calendarGrid.style.pointerEvents = '';
+                calendarGrid.style.visibility = 'visible';
+            }
+            
+            this.attachCalendarInteractions();
+            
+            // Update grid layout based on view
+            if (this.currentView === 'month') {
+                calendarGrid.className = 'calendar-grid month-view-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                
+                // Calculate the optimal number of rows based on the actual content
+                const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
+                const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
+                const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
+                const totalRows = headerRows + dayRows;
+                
+                calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
+                
+                logger.debug('CALENDAR', `Updated month view grid layout`, {
+                    totalElements: dayElements.length,
+                    headerRows: headerRows,
+                    dayRows: dayRows,
+                    totalRows: totalRows
+                });
+            } else {
+                calendarGrid.className = 'calendar-grid week-view-grid';
+                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                calendarGrid.style.gridTemplateRows = 'auto';
+                calendarGrid.style.minHeight = 'auto';
+            }
+        }
+        
+        // Update events list (show for both week and month views)
+        const eventsList = document.querySelector('.events-list');
+        const eventsSection = document.querySelector('.events');
+        if (eventsList && eventsSection) {
+            eventsSection.style.display = 'block';
+            if (hideEvents) {
+                // Keep existing loading message when hideEvents is true
+                if (!eventsList.querySelector('.loading-message')) {
+                    eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
+                }
+            } else if (filteredEvents?.length > 0) {
+                eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
+            } else {
+                eventsList.innerHTML = '';
+            }
+        }
+        
+        // Update map (show for both week and month views)
+        const mapSection = document.querySelector('.events-map-section');
+        if (mapSection && !hideEvents) {
+            mapSection.style.display = 'block';
+            this.initializeMap(this.currentCityConfig, filteredEvents);
+        }
+        
+        logger.timeEnd('CALENDAR', 'Calendar display update');
+        logger.performance('CALENDAR', `Calendar display updated successfully`, {
+            view: this.currentView,
+            eventsDisplayed: filteredEvents.length,
+            city: this.currentCity,
+            hideEvents
+        });
+    }
+
+    // Set up calendar controls
+    setupCalendarControls() {
+        // Prevent duplicate event listeners
+        if (this.controlsSetup) {
+            logger.debug('CALENDAR', 'Calendar controls already set up, skipping');
+            return;
+        }
+        
+        logger.componentInit('CALENDAR', 'Setting up calendar controls');
+        
+        // View toggle buttons
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const newView = e.target.dataset.view;
+                if (newView !== this.currentView) {
+                    logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
+                    this.currentView = newView;
+                    
+                    // Update active button
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    this.updateCalendarDisplay();
+                }
+            });
+        });
+        
+        // Navigation buttons
+        const prevBtn = document.getElementById('prev-period');
+        const nextBtn = document.getElementById('next-period');
+        const todayBtn = document.getElementById('today-btn');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                logger.userInteraction('CALENDAR', 'Previous period clicked');
+                this.navigatePeriod('prev', true);
+            });
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                logger.userInteraction('CALENDAR', 'Next period clicked');
+                this.navigatePeriod('next', true);
+            });
+        }
+        
+        if (todayBtn) {
+            todayBtn.addEventListener('click', () => {
+                logger.userInteraction('CALENDAR', 'Today button clicked');
+                this.goToToday();
+            });
+        }
+        
+        // Setup swipe handlers for mobile navigation
+        this.setupSwipeHandlers();
+        
+        // Setup keyboard navigation
+        this.setupKeyboardHandlers();
+        
+        logger.componentLoad('CALENDAR', 'Calendar controls setup complete', {
+            hasNavigation: !!(prevBtn && nextBtn && todayBtn),
+            viewButtons: document.querySelectorAll('.view-btn').length
+        });
+        
+        this.controlsSetup = true;
+    }
+
+    setupKeyboardHandlers() {
+        document.addEventListener('keydown', (e) => {
+            // Only handle keyboard navigation when calendar is focused or visible
+            const calendarSection = document.querySelector('.weekly-calendar');
+            if (!calendarSection || calendarSection.classList.contains('content-hidden')) {
+                return;
+            }
+            
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    logger.userInteraction('CALENDAR', 'Left arrow key pressed - navigating to previous period');
+                    this.navigatePeriod('prev', true);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    logger.userInteraction('CALENDAR', 'Right arrow key pressed - navigating to next period');
+                    this.navigatePeriod('next', true);
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    logger.userInteraction('CALENDAR', 'Home key pressed - going to today');
+                    this.goToToday();
+                    break;
+            }
+        });
+        
+        logger.componentLoad('CALENDAR', 'Keyboard handlers setup complete');
+    }
+
+
+
+    // Update page content for city
+    updatePageContent(cityConfig, events, hideEvents = false) {
+        // Store city config for later use
+        this.currentCityConfig = cityConfig;
+        
+        // Update CTA text
+        const cityCTAText = document.getElementById('city-cta-text');
+        if (cityCTAText) {
+            cityCTAText.textContent = `Know about other bear events or venues in ${cityConfig.name}? Help us keep this guide current!`;
+        }
+
+        // Set up calendar controls
+        this.setupCalendarControls();
+
+        // Update calendar with initial display
+        const calendarSection = document.querySelector('.weekly-calendar');
+        calendarSection?.classList.remove('content-hidden');
+        
+        // Update events section
+        const eventsSection = document.querySelector('.events');
+        eventsSection?.classList.remove('content-hidden');
+
+        // Initialize map section
+        const mapSection = document.querySelector('.events-map-section');
+        mapSection?.classList.remove('content-hidden');
+
+        // Update page metadata
+        document.title = `${cityConfig.name} - chunky.dad Bear Guide`;
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.setAttribute('content', 
+                `Complete gay bear guide to ${cityConfig.name} - events, bars, and the hottest bear scene`
+            );
+        }
+        
+        // Update calendar display with hideEvents parameter
+        this.updateCalendarDisplay(hideEvents);
+    }
+
+    // Attach calendar interactions
+    attachCalendarInteractions() {
+        const eventItems = document.querySelectorAll('.event-item');
+        
+        eventItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const eventSlug = item.dataset.eventSlug;
+                logger.userInteraction('EVENT', `Calendar event clicked: ${eventSlug}`, {
+                    eventSlug,
+                    city: this.currentCity
+                });
+                
+                const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
+                if (eventCard) {
+                    eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    eventCard.classList.add('highlight');
+                    setTimeout(() => eventCard.classList.remove('highlight'), 2000);
+                    logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
+                } else {
+                    logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
+                }
+            });
+        });
+        
+        logger.debug('CALENDAR', `Attached interactions to ${eventItems.length} calendar items`);
+    }
+
+    // Main render function
+    async renderCityPage() {
+        this.currentCity = this.getCityFromURL();
+        this.currentCityConfig = getCityConfig(this.currentCity);
+        
+        logger.info('CITY', `Rendering city page for: ${this.currentCity}`);
+        
+        // Update header for current city
+        if (window.chunkyApp) {
+            window.chunkyApp.updateHeaderForCity(this.currentCity);
+        }
+        
+        // Set up city selector
+        this.setupCitySelector();
+        
+        // Check if city exists and has calendar
+        if (!this.currentCityConfig) {
+            logger.componentError('CITY', `City configuration not found: ${this.currentCity}`);
+            this.showCityNotFound();
+            return;
+        }
+        
+        if (!hasCityCalendar(this.currentCity)) {
+            logger.info('CITY', `City ${this.currentCity} doesn't have calendar configured yet`);
+            // Show empty calendar when no events are configured
+            this.updatePageContent(this.currentCityConfig, []);
+            return;
+        }
+        
+        logger.info('CALENDAR', 'Starting calendar initialization with proper order of operations');
+        
+        // STEP 1: Create a fake event for accurate width measurement
+        const fakeEvent = {
+            name: 'Sample Event Name For Width Measurement Testing',
+            shortName: 'Sample Event', // Shorter than full name to trigger smart name logic
+            bar: 'Sample Venue Name',
+            time: '8:00 PM',
+            day: 'Today',
+            startDate: new Date(),
+            slug: 'measurement-test',
+            recurring: false
+        };
+        
+        logger.info('CALENDAR', '🔍 RENDER: Step 1: Creating calendar structure with fake event (hideEvents: true)', {
+            fakeEventName: fakeEvent.name,
+            fakeEventShortName: fakeEvent.shortName,
+            fakeEventHasShortName: !!fakeEvent.shortName,
+            willTriggerSmartNameLogic: !!fakeEvent.shortName
+        });
+        
+        // Set the fake event as allEvents for measurement
+        this.allEvents = [fakeEvent];
+        
+        // Show calendar structure with fake event but hidden for measurements
+        this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true
+        
+        // STEP 2: Wait for DOM to be fully updated and then measure
+        logger.info('CALENDAR', '🔍 RENDER: Step 2: Waiting for DOM to be ready for measurement');
+        
+        // Use requestAnimationFrame to ensure DOM is rendered AND responsive CSS is applied
+        await new Promise(resolve => {
+            requestAnimationFrame(() => {
+                // Wait additional frames to ensure responsive CSS layout is fully applied
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Add a small timeout to ensure all CSS transitions/media queries are settled
+                        setTimeout(resolve, 50);
+                    });
+                });
+            });
+        });
+        
+        logger.info('CALENDAR', '🔍 RENDER: Step 2b: DOM ready, starting measurements');
+        
+        // Measure the fake event width - should work reliably now
+        const measurementWidth = this.getEventTextWidth();
+        
+        if (measurementWidth === null) {
+            logger.warn('CALENDAR', '🔍 RENDER: Failed to measure event text width - using fallback calculation');
+            // Force calculate chars per pixel as fallback
+            this.calculateCharsPerPixel();
+        } else {
+            logger.info('CALENDAR', `🔍 RENDER: Successfully measured event text width: ${measurementWidth}px`);
+            // Now calculate chars per pixel using the measured width
+            const charsPerPixel = this.calculateCharsPerPixel();
+            logger.info('CALENDAR', `🔍 RENDER: Calculated charsPerPixel: ${charsPerPixel?.toFixed(4)} using measured width: ${measurementWidth}px`);
+            
+
+        }
+        
+        // STEP 3: Load calendar data from the API
+        logger.info('CALENDAR', '🔍 RENDER: Step 3: Loading real calendar data');
+        const data = await this.loadCalendarData(this.currentCity);
+        
+        if (!data) {
+            logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data');
+            return;
+        }
+        
+        // STEP 4: Display the real events with hideEvents: false
+        logger.info('CALENDAR', '🔍 RENDER: Step 4: Displaying real events (hideEvents: false)', {
+            eventCount: data.events.length,
+            cachedWidth: this.cachedEventTextWidth,
+            cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
+        });
+        this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
+        
+        // STEP 5: Final validation and summary
+        logger.info('CALENDAR', '🔍 RENDER: Step 5: Final validation and summary', {
+            totalSteps: 5,
+            finalState: {
+                cachedEventTextWidth: this.cachedEventTextWidth,
+                cachedCharsPerPixel: this.charsPerPixel?.toFixed(4),
+                currentBreakpoint: this.currentBreakpoint,
+                screenWidth: window.innerWidth,
+                screenHeight: window.innerHeight,
+                visualZoom: ((window.visualViewport && window.visualViewport.scale) || 1).toFixed(2)
+            },
+calculatedData: {
+                viewport: `${window.innerWidth} × ${window.innerHeight}`,
+                charsPerLine: this.cachedEventTextWidth && this.charsPerPixel ? Math.floor(this.cachedEventTextWidth * this.charsPerPixel) : 'not calculated',
+                charsPerPixel: this.charsPerPixel ? this.charsPerPixel.toFixed(4) : 'not calculated',
+                eventWidth: this.cachedEventTextWidth ? `${this.cachedEventTextWidth}px (no padding - defensive applied to charsPerPixel)` : 'not measured',
+                zoom: `${(((window.visualViewport && window.visualViewport.scale) || 1) * 100).toFixed(0)}%`,
+                note: 'Defensive reduction of 0.02 applied directly to charsPerPixel to achieve ~0.11 (down from ~0.13)'
+            }
+        });
+        
+        logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
+            eventCount: data.events.length,
+            measurementWidth: measurementWidth
+        });
+    }
+
+    // Update characters per pixel ratio (for new dynamic system)
+    updateCharsPerPixel(newRatio) {
+        logger.info('CALENDAR', 'Characters per pixel ratio updated from test interface', newRatio);
+        
+        // Store the new single ratio
+        this.charsPerPixel = newRatio;
+        
+        // Force a refresh of the calendar display to apply new ratio
+        if (this.allEvents && this.allEvents.length > 0) {
+            this.updateCalendarDisplay();
+        }
+    }
+    
+    // Set up message listener for testing interface communication
+    setupMessageListener() {
+        window.addEventListener('message', (event) => {
+            try {
+                if (event.data && event.data.type) {
+                    switch (event.data.type) {
+
+                        case 'updatePixelRatio':
+                            this.updateCharsPerPixel(event.data.data);
+                            break;
+                        case 'addTestEvent':
+                            // Handle test event addition if needed
+                            logger.info('CALENDAR', 'Test event received from testing interface', event.data.data);
+                            break;
+                        default:
+                            logger.debug('CALENDAR', 'Unknown message type from testing interface', event.data.type);
+                    }
+                }
+            } catch (error) {
+                logger.error('CALENDAR', 'Error handling message from testing interface', error);
+            }
+        });
+        
+        logger.debug('CALENDAR', 'Message listener set up for testing interface communication');
+    }
+    
+    // Set up resize listener to clear measurement cache when layout changes
+    setupResizeListener() {
+        let resizeTimeout;
+        
+        const handleLayoutChange = (eventType = 'resize') => {
+            const newWidth = window.innerWidth;
+            const newBreakpoint = this.getCurrentBreakpoint();
+            const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
+            const significantWidthChange = Math.abs(newWidth - this.lastScreenWidth) > 50; // 50px threshold
+            
+            logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change detected via ${eventType}`, {
+                eventType,
+                oldWidth: this.lastScreenWidth,
+                newWidth,
+                widthChange: newWidth - this.lastScreenWidth,
+                oldBreakpoint: this.currentBreakpoint,
+                newBreakpoint,
+                breakpointChanged,
+                significantWidthChange,
+                willClearCache: breakpointChanged || significantWidthChange
+            });
+            
+            // Clear measurements on any significant resize, not just breakpoint changes
+            if (breakpointChanged || significantWidthChange) {
+                const oldBreakpoint = this.currentBreakpoint;
+                const oldWidth = this.lastScreenWidth;
+                
+                this.clearMeasurementCache();
+                this.clearEventNameCache();
+                this.lastScreenWidth = newWidth;
+                this.currentBreakpoint = newBreakpoint;
+                
+                logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Significant layout change detected via ${eventType}`, {
+                    eventType,
+                    oldBreakpoint,
+                    newBreakpoint,
+                    oldWidth,
+                    newWidth,
+                    widthChange: newWidth - oldWidth,
+                    breakpointChanged,
+                    significantWidthChange,
+                    cacheCleared: true
+                });
+                
+                // Debounce the calendar re-render to avoid excessive updates
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Updating calendar display after ${eventType}`);
+                    this.updateCalendarDisplay();
+                    logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Calendar display updated after ${eventType}`);
+                }, 150); // 150ms debounce
+            } else {
+                logger.debug('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change not significant enough to clear cache`, {
+                    eventType,
+                    widthChange: newWidth - this.lastScreenWidth,
+                    threshold: 50
+                });
+            }
+        };
+        
+        // Listen to window resize events
+        window.addEventListener('resize', () => handleLayoutChange('resize'));
+        
+        // Listen to orientation changes (important for mobile/tablet)
+        window.addEventListener('orientationchange', () => handleLayoutChange('orientationchange'));
+        
+        // Listen for visual viewport changes (crucial for iPad split screen)
+        if (window.visualViewport) {
+            // Use a separate timeout for visual viewport to handle rapid changes during split screen transitions
+            let visualViewportTimeout;
+            window.visualViewport.addEventListener('resize', () => {
+                clearTimeout(visualViewportTimeout);
+                visualViewportTimeout = setTimeout(() => {
+                    handleLayoutChange('visualViewport.resize');
+                }, 100); // Slightly shorter debounce for visual viewport to be more responsive
+            });
+            // Note: We don't listen to visualViewport scroll as that's just scrolling, not layout change
+        }
+        
+        logger.debug('CALENDAR', 'Layout change listeners set up for comprehensive detection', {
+            events: ['resize', 'orientationchange', 'visualViewport.resize'],
+            hasVisualViewport: !!window.visualViewport
+        });
+    }
+    
+
+    
+    // Add test event (for testing functionality)
+    addTestEvent(testEventData) {
+        logger.info('CALENDAR', 'Test event added from test interface', testEventData);
+        
+        if (!this.allEvents) {
+            this.allEvents = [];
+        }
+        
+        // Create a test event object that matches our event structure
+        const testEvent = {
+            name: testEventData.name,
+            shortName: testEventData.shortName,
+            bar: testEventData.venue,
+            time: testEventData.time,
+            day: 'Today',
+            startDate: new Date(),
+            slug: 'test-event-' + Date.now(),
+            recurring: false,
+            coordinates: null,
+            cover: 'Test Event',
+            tea: 'This is a test event for character limit testing',
+            links: []
+        };
+        
+        // Remove any existing test events
+        this.allEvents = this.allEvents.filter(event => !event.slug.startsWith('test-event-'));
+        
+        // Add the new test event
+        this.allEvents.unshift(testEvent);
+        
+        // Refresh the display
+        this.updateCalendarDisplay();
+    }
+
+    // Initialize
+    async init() {
+        // Prevent multiple initializations
+        if (this.isInitialized || this.isInitializing) {
+            logger.warn('CALENDAR', 'Calendar already initialized or initializing, skipping duplicate init');
+            return;
+        }
+        
+        this.isInitializing = true;
+        logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
+        
+        try {
+            await this.renderCityPage();
+            this.isInitialized = true;
+            logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Calendar initialization failed', error);
+            throw error;
+        } finally {
+            this.isInitializing = false;
+        }
+    }
+
+    // Format time for mobile display with simplified format (4a-5p)
+    formatTimeForMobile(timeString) {
+        if (!timeString) return '';
+        
+        // Check if it's a time range
+        const timeRangeRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
+        const match = timeString.match(timeRangeRegex);
+        
+        if (match) {
+            const startTime = match[1];
+            const endTime = match[2];
+            return this.simplifyTimeFormat(startTime) + '-' + this.simplifyTimeFormat(endTime);
+        }
+        
+        // For single times, just simplify
+        return this.simplifyTimeFormat(timeString);
+    }
+
+    // Convert time format to simplified version (4 AM -> 4a, 5 PM -> 5p)
+    simplifyTimeFormat(timeString) {
+        if (!timeString) return '';
+        
+        return timeString.replace(/(\d{1,2}(?::\d{2})?)\s*(AM|PM)/gi, (match, time, period) => {
+            return time + (period.toLowerCase() === 'am' ? 'a' : 'p');
+        });
+    }
+
+    getCurrentPeriodBounds() {
+        return this.currentView === 'week' 
+            ? this.getWeekBounds(this.currentDate)
+            : this.getMonthBounds(this.currentDate);
+    }
+
+
+
+
+
+
+}
+
+// Map interaction function
+function showOnMap(lat, lng, eventName, barName) {
+    if (window.eventsMap) {
+        // First scroll to the map section
+        const mapSection = document.querySelector('.events-map-section');
+        if (mapSection) {
+            mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // Then center the map on the location with a slight delay
+        setTimeout(() => {
+            window.eventsMap.setView([lat, lng], 16);
+            window.eventsMap.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    const latLng = layer.getLatLng();
+                    if (Math.abs(latLng.lat - lat) < 0.0001 && Math.abs(latLng.lng - lng) < 0.0001) {
+                        layer.openPopup();
+                    }
+                }
+            });
+        }, 300);
+        
+        logger.userInteraction('MAP', 'showOnMap called', { lat, lng, eventName, barName });
+    }
+}
+
+// Map control functions
+function fitAllMarkers() {
+    if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
+        const group = new L.featureGroup(window.eventsMapMarkers);
+        const isMobile = window.innerWidth <= 768;
+        window.eventsMap.fitBounds(group.getBounds(), {
+            padding: [20, 20],
+            maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
+        });
+        logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
+    }
+}
+
+
+
+function showMyLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                if (window.eventsMap) {
+                    // Remove existing location circle
+                    if (window.myLocationCircle) {
+                        window.eventsMap.removeLayer(window.myLocationCircle);
+                    }
+                    
+                    // Add location circle instead of marker
+                    window.myLocationCircle = L.circle([lat, lng], {
+                        color: '#4285f4',
+                        fillColor: '#4285f4',
+                        fillOpacity: 0.2,
+                        radius: 500,
+                        weight: 3
+                    }).addTo(window.eventsMap).bindPopup('📍 Your Location');
+                    
+                    // Calculate bounds that include both user location and all event markers
+                    const bounds = L.latLngBounds([[lat, lng]]);
+                    
+                    // Add all event markers to bounds
+                    if (window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
+                        window.eventsMapMarkers.forEach(marker => {
+                            bounds.extend(marker.getLatLng());
+                        });
+                        
+                        // Fit map to show both user location and all events
+                        window.eventsMap.fitBounds(bounds, {
+                            padding: [50, 50],
+                            maxZoom: 14
+                        });
+                    } else {
+                        // If no event markers, just center on user location
+                        window.eventsMap.setView([lat, lng], 14);
+                    }
+                    
+                    logger.userInteraction('MAP', 'My location shown with events visible', { lat, lng });
+                }
+            },
+            (error) => {
+                console.warn('Location access denied or unavailable:', error);
+                alert('Location access denied or unavailable. Please enable location services to use this feature.');
+            }
+        );
+    } else {
+        alert('Geolocation is not supported by this browser.');
+    }
+}
+
+// Export class for use in app.js - no auto-initialization
+if (typeof window !== 'undefined') {
+    window.DynamicCalendarLoader = DynamicCalendarLoader;
+}
