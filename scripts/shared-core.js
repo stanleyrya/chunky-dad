@@ -1503,6 +1503,40 @@ class SharedCore {
         
         return event;
     }
+
+    /**
+     * Generate Google Maps URL from venue data
+     * @param {Object} venue - Venue object with potential google_place_id, latitude, longitude
+     * @param {Object} coordinates - Coordinates object with lat, lng properties
+     * @param {string} venueName - Venue name to check for TBA/placeholder
+     * @returns {string} Google Maps URL or empty string
+     */
+    generateGoogleMapsUrl(venue, coordinates, venueName) {
+        // Skip Google Maps for TBA/placeholder venues
+        const isTBAVenue = !venueName || venueName.toLowerCase().includes('tba') || venueName.toLowerCase().includes('to be announced');
+        
+        if (isTBAVenue) {
+            console.log(`🗺️ SharedCore: Skipping Google Maps for TBA venue: "${venueName}"`);
+            return '';
+        }
+
+        // Prefer Google Place ID for most accurate mapping
+        if (venue?.google_place_id) {
+            const url = `https://maps.google.com/?q=place_id:${venue.google_place_id}`;
+            console.log(`🗺️ SharedCore: Generated Google Maps URL from Place ID: ${url}`);
+            return url;
+        }
+        
+        // Fallback to coordinates
+        if (coordinates && coordinates.lat && coordinates.lng) {
+            const url = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
+            console.log(`🗺️ SharedCore: Generated Google Maps URL from coordinates: ${url}`);
+            return url;
+        }
+
+        console.log(`🗺️ SharedCore: No Google Maps data available for venue: "${venueName}"`);
+        return '';
+    }
 }
 
 // Export for both environments

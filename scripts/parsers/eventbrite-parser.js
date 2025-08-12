@@ -343,15 +343,8 @@ class EventbriteParser {
                 }
             }
             
-            // Generate Google Maps URL from coordinates or Google Place ID
-            let gmapsUrl = '';
-            if (eventData.venue?.google_place_id) {
-                gmapsUrl = `https://maps.google.com/?q=place_id:${eventData.venue.google_place_id}`;
-                console.log(`🎫 Eventbrite: Generated Google Maps URL from Place ID for "${title}": ${gmapsUrl}`);
-            } else if (coordinates) {
-                gmapsUrl = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
-                console.log(`🎫 Eventbrite: Generated Google Maps URL from coordinates for "${title}": ${gmapsUrl}`);
-            }
+            // Generate Google Maps URL using shared utility logic
+            const gmapsUrl = this.generateGoogleMapsUrl(eventData.venue, coordinates, venue, title);
             
             const event = {
                 title: title,
@@ -360,7 +353,7 @@ class EventbriteParser {
                 endDate: endDate ? new Date(endDate) : null,
                 bar: venue, // Use 'bar' field name that calendar-core.js expects
                 location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
-                address: address,
+                address: this.isTBAVenue(venue) ? null : address, // Skip detailed address for TBA venues
                 city: city,
                 website: url, // Use 'website' field name that calendar-core.js expects
                 cover: price, // Use 'cover' field name that calendar-core.js expects
@@ -374,7 +367,6 @@ class EventbriteParser {
                     venue: venue,
                     url: url
                 })
-                cover: price, // Use 'cover' field name that calendar-core.js expects
             };
             
             // Apply all metadata fields from config
@@ -735,11 +727,53 @@ class EventbriteParser {
              return true;
          }
  
-         return false;
-     }
- }
- 
- // Export for both environments
+                 return false;
+    }
+
+    /**
+     * Check if venue is TBA/placeholder
+     * @param {string} venueName - Venue name to check
+     * @returns {boolean} True if venue is TBA/placeholder
+     */
+    isTBAVenue(venueName) {
+        return !venueName || venueName.toLowerCase().includes('tba') || venueName.toLowerCase().includes('to be announced');
+    }
+
+    /**
+     * Generate Google Maps URL from venue data (reusable by other parsers)
+     * @param {Object} venue - Venue object with potential google_place_id, latitude, longitude
+     * @param {Object} coordinates - Coordinates object with lat, lng properties
+     * @param {string} venueName - Venue name to check for TBA/placeholder
+     * @param {string} eventTitle - Event title for logging
+     * @returns {string} Google Maps URL or empty string
+     */
+    generateGoogleMapsUrl(venue, coordinates, venueName, eventTitle) {
+        // Skip Google Maps for TBA/placeholder venues
+        if (this.isTBAVenue(venueName)) {
+            console.log(`🎫 Eventbrite: Skipping Google Maps for TBA venue: "${venueName}"`);
+            return '';
+        }
+
+        // Prefer Google Place ID for most accurate mapping
+        if (venue?.google_place_id) {
+            const url = `https://maps.google.com/?q=place_id:${venue.google_place_id}`;
+            console.log(`🎫 Eventbrite: Generated Google Maps URL from Place ID for "${eventTitle}": ${url}`);
+            return url;
+        }
+        
+        // Fallback to coordinates
+        if (coordinates && coordinates.lat && coordinates.lng) {
+            const url = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
+            console.log(`🎫 Eventbrite: Generated Google Maps URL from coordinates for "${eventTitle}": ${url}`);
+            return url;
+        }
+
+        console.log(`🎫 Eventbrite: No Google Maps data available for venue: "${venueName}"`);
+        return '';
+    }
+}
+
+// Export for both environments
  if (typeof module !== 'undefined' && module.exports) {
      module.exports = { EventbriteParser };
  } else if (typeof window !== 'undefined') {
