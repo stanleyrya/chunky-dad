@@ -1,11 +1,11 @@
 // ============================================================================
-// GENERIC PARSER - PURE PARSING LOGIC
+// BEARRACUDA PARSER - PURE PARSING LOGIC
 // ============================================================================
 // ⚠️  AI ASSISTANT WARNING: This file contains PURE parsing logic only
 //
 // ✅ THIS FILE SHOULD CONTAIN:
 // ✅ Pure JavaScript parsing functions (HTML/JSON processing)
-// ✅ Generic venue extraction logic that works for most websites
+// ✅ Venue-specific extraction logic
 // ✅ Date/time parsing and formatting
 // ✅ Event object creation and validation
 //
@@ -19,12 +19,12 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
-class GenericParser {
+class BearraccudaParser {
     constructor(config = {}) {
         this.config = {
-            source: 'generic',
-            requireDetailPages: true,
-            maxAdditionalUrls: 15,
+            source: 'bearracuda',
+            requireDetailPages: false,
+            maxAdditionalUrls: 10,
             ...config
         };
         
@@ -38,13 +38,13 @@ class GenericParser {
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}) {
         try {
-            console.log(`🔧 Generic: Parsing events from ${htmlData.url}`);
+            console.log(`🐻 Bearraccuda: Parsing events from ${htmlData.url}`);
             
             const events = [];
             const html = htmlData.html;
             
             if (!html) {
-                console.warn('🔧 Generic: No HTML content to parse');
+                console.warn('🐻 Bearraccuda: No HTML content to parse');
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
             
@@ -58,7 +58,7 @@ class GenericParser {
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             }
             
-            console.log(`🔧 Generic: Found ${events.length} events, ${additionalLinks.length} additional links`);
+            console.log(`🐻 Bearraccuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
             
             return {
                 events: events,
@@ -68,7 +68,7 @@ class GenericParser {
             };
             
         } catch (error) {
-            console.error(`🔧 Generic: Error parsing events: ${error}`);
+            console.error(`🐻 Bearraccuda: Error parsing events: ${error}`);
             return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
         }
     }
@@ -78,20 +78,16 @@ class GenericParser {
         const events = [];
         
         try {
-            // Generic event patterns that work for most websites
+            // Bearraccuda-specific event patterns
             const eventPatterns = [
-                // Event containers with common class names
+                // Event containers
                 /<div[^>]*class="[^"]*event[^>]*>.*?<\/div>/gs,
                 /<div[^>]*class="[^"]*party[^>]*>.*?<\/div>/gs,
-                /<div[^>]*class="[^"]*show[^>]*>.*?<\/div>/gs,
-                /<div[^>]*class="[^"]*listing[^>]*>.*?<\/div>/gs,
-                // Article and post containers
-                /<article[^>]*>.*?<\/article>/gs,
-                /<div[^>]*class="[^"]*post[^>]*>.*?<\/div>/gs,
-                /<div[^>]*class="[^"]*entry[^>]*>.*?<\/div>/gs,
-                // List items that might contain events
-                /<li[^>]*class="[^"]*event[^>]*>.*?<\/li>/gs,
-                /<li[^>]*class="[^"]*party[^>]*>.*?<\/li>/gs
+                /<article[^>]*class="[^"]*event[^>]*>.*?<\/article>/gs,
+                /<section[^>]*class="[^"]*event[^>]*>.*?<\/section>/gs,
+                // Event cards or listings
+                /<div[^>]*class="[^"]*card[^>]*>.*?<\/div>/gs,
+                /<li[^>]*class="[^"]*event[^>]*>.*?<\/li>/gs
             ];
             
             for (const pattern of eventPatterns) {
@@ -104,18 +100,18 @@ class GenericParser {
                             events.push(event);
                         }
                     } catch (error) {
-                        console.warn(`🔧 Generic: Failed to parse HTML event element: ${error}`);
+                        console.warn(`🐻 Bearraccuda: Failed to parse HTML event element: ${error}`);
                     }
                 }
                 
                 if (events.length > 0) {
-                    console.log(`🔧 Generic: Found ${events.length} events using HTML pattern`);
+                    console.log(`🐻 Bearraccuda: Found ${events.length} events using HTML pattern`);
                     break;
                 }
             }
             
         } catch (error) {
-            console.warn(`🔧 Generic: Error parsing HTML events: ${error}`);
+            console.warn(`🐻 Bearraccuda: Error parsing HTML events: ${error}`);
         }
         
         return events;
@@ -124,88 +120,46 @@ class GenericParser {
     // Parse individual HTML event element
     parseHTMLEventElement(htmlElement, sourceUrl) {
         try {
-            // Extract title using multiple possible patterns
-            const titlePatterns = [
-                /<h[1-6][^>]*>([^<]+)<\/h[1-6]>/,
-                /class="[^"]*title[^>]*>([^<]+)</,
-                /class="[^"]*event-title[^>]*>([^<]+)</,
-                /class="[^"]*party-title[^>]*>([^<]+)</,
-                /class="[^"]*show-title[^>]*>([^<]+)</,
-                /class="[^"]*name[^>]*>([^<]+)</,
-                /<strong[^>]*>([^<]+)<\/strong>/,
-                /<b[^>]*>([^<]+)<\/b>/
-            ];
+            // Extract title - Bearraccuda often has distinctive naming
+            const titleMatch = htmlElement.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/) ||
+                              htmlElement.match(/class="[^"]*title[^>]*>([^<]+)</) ||
+                              htmlElement.match(/class="[^"]*event-title[^>]*>([^<]+)</) ||
+                              htmlElement.match(/class="[^"]*party-title[^>]*>([^<]+)</);
             
-            let title = '';
-            for (const pattern of titlePatterns) {
-                const match = htmlElement.match(pattern);
-                if (match && match[1].trim()) {
-                    title = match[1].trim();
-                    break;
-                }
-            }
+            const title = titleMatch ? titleMatch[1].trim() : 'Bearraccuda Event';
             
-            if (!title) {
-                title = 'Untitled Event';
-            }
+            // Extract date/time
+            const dateMatch = htmlElement.match(/class="[^"]*date[^>]*>([^<]+)</) ||
+                             htmlElement.match(/datetime="([^"]+)"/) ||
+                             htmlElement.match(/data-date="([^"]+)"/) ||
+                             htmlElement.match(/(\d{1,2}\/\d{1,2}\/\d{4})/) ||
+                             htmlElement.match(/(\d{4}-\d{2}-\d{2})/);
             
-            // Extract date/time using multiple patterns
-            const datePatterns = [
-                /class="[^"]*date[^>]*>([^<]+)</,
-                /class="[^"]*event-date[^>]*>([^<]+)</,
-                /class="[^"]*datetime[^>]*>([^<]+)</,
-                /datetime="([^"]+)"/,
-                /data-date="([^"]+)"/,
-                /(\d{1,2}\/\d{1,2}\/\d{4})/,
-                /(\d{4}-\d{2}-\d{2})/,
-                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i
-            ];
-            
-            let dateString = '';
-            for (const pattern of datePatterns) {
-                const match = htmlElement.match(pattern);
-                if (match && match[1]) {
-                    dateString = match[1].trim();
-                    break;
-                }
-            }
-            
+            const dateString = dateMatch ? dateMatch[1].trim() : '';
             const startDate = this.parseDate(dateString);
             
-            // Extract venue/location
-            const venuePatterns = [
-                /class="[^"]*venue[^>]*>([^<]+)</,
-                /class="[^"]*location[^>]*>([^<]+)</,
-                /class="[^"]*event-venue[^>]*>([^<]+)</,
-                /class="[^"]*address[^>]*>([^<]+)</,
-                /class="[^"]*place[^>]*>([^<]+)</
-            ];
+            // Extract venue/location - Bearraccuda parties are often at specific venues
+            const venueMatch = htmlElement.match(/class="[^"]*venue[^>]*>([^<]+)</) ||
+                              htmlElement.match(/class="[^"]*location[^>]*>([^<]+)</) ||
+                              htmlElement.match(/class="[^"]*club[^>]*>([^<]+)</);
             
-            let venue = '';
-            for (const pattern of venuePatterns) {
-                const match = htmlElement.match(pattern);
-                if (match && match[1].trim()) {
-                    venue = match[1].trim();
-                    break;
-                }
-            }
+            const venue = venueMatch ? venueMatch[1].trim() : '';
             
-            // Extract description
-            const descPatterns = [
-                /class="[^"]*description[^>]*>([^<]+)</,
-                /class="[^"]*details[^>]*>([^<]+)</,
-                /class="[^"]*summary[^>]*>([^<]+)</,
-                /class="[^"]*content[^>]*>([^<]+)</,
-                /<p[^>]*>([^<]+)<\/p>/
-            ];
+            // Extract description/details
+            const descMatch = htmlElement.match(/class="[^"]*description[^>]*>([^<]+)</) ||
+                             htmlElement.match(/class="[^"]*details[^>]*>([^<]+)</) ||
+                             htmlElement.match(/<p[^>]*>([^<]+)<\/p>/);
             
-            let description = '';
-            for (const pattern of descPatterns) {
-                const match = htmlElement.match(pattern);
-                if (match && match[1].trim()) {
-                    description = match[1].trim();
-                    break;
-                }
+            const description = descMatch ? descMatch[1].trim() : '';
+            
+            // Extract DJ/performer info if available
+            let performers = '';
+            const performerMatch = htmlElement.match(/class="[^"]*dj[^>]*>([^<]+)</) ||
+                                  htmlElement.match(/class="[^"]*performer[^>]*>([^<]+)</) ||
+                                  htmlElement.match(/class="[^"]*artist[^>]*>([^<]+)</);
+            
+            if (performerMatch) {
+                performers = performerMatch[1].trim();
             }
             
             // Extract URL if available
@@ -214,39 +168,30 @@ class GenericParser {
             
             const eventUrl = urlMatch ? this.normalizeUrl(urlMatch[1], sourceUrl) : sourceUrl;
             
-            // Extract price if available
-            const pricePatterns = [
-                /class="[^"]*price[^>]*>([^<]+)</,
-                /class="[^"]*cost[^>]*>([^<]+)</,
-                /\$(\d+(?:\.\d{2})?)/,
-                /(free|gratis|no charge)/i
-            ];
-            
-            let price = '';
-            for (const pattern of pricePatterns) {
-                const match = htmlElement.match(pattern);
-                if (match && match[1]) {
-                    price = match[1].trim();
-                    break;
-                }
-            }
-            
-            // City extraction will be handled by shared core during enrichment
+            // Extract city from text
+                        // City extraction will be handled by shared core during enrichment
             const city = null;
             
-            const event = {
+            // Combine description with performer info
+            let fullDescription = description;
+            if (performers) {
+                fullDescription = fullDescription ? `${fullDescription}\n\nPerformers: ${performers}` : `Performers: ${performers}`;
+            }
+            
+            let event = {
                 title: title,
-                description: description,
+                description: fullDescription,
                 startDate: startDate,
                 endDate: null,
                 bar: venue, // Use 'bar' field name that calendar-core.js expects
-                location: null, // No coordinates available in generic parsing
-                city: city,
+                location: null, // No coordinates available in bearracuda parsing
+                address: '', // Assuming address is not directly available in this regex
+                city: city || 'default',
                 website: eventUrl, // Use 'website' field name that calendar-core.js expects
-                cover: price || '', // Use 'cover' field name that calendar-core.js expects
+                cover: '', // Use 'cover' field name that calendar-core.js expects
                 image: '',
                 source: this.config.source,
-                isBearEvent: false // Will be filtered later based on keywords
+                isBearEvent: true // Bearraccuda events are always bear events
             };
             
             // Apply all metadata fields from config
@@ -275,7 +220,7 @@ class GenericParser {
             return event;
             
         } catch (error) {
-            console.warn(`🔧 Generic: Failed to parse HTML event element: ${error}`);
+            console.warn(`🐻 Bearraccuda: Failed to parse HTML event element: ${error}`);
             return null;
         }
     }
@@ -295,50 +240,38 @@ class GenericParser {
                 
                 while ((match = regex.exec(html)) !== null && matchCount < (pattern.maxMatches || 10)) {
                     const url = this.normalizeUrl(match[1], sourceUrl);
-                    if (this.isValidEventUrl(url, sourceUrl)) {
+                    if (this.isValidEventUrl(url)) {
                         urls.add(url);
                         matchCount++;
                     }
                 }
             }
             
-            console.log(`🔧 Generic: Extracted ${urls.size} additional URLs`);
+            console.log(`🐻 Bearraccuda: Extracted ${urls.size} additional URLs`);
             
         } catch (error) {
-            console.warn(`🔧 Generic: Error extracting additional URLs: ${error}`);
+            console.warn(`🐻 Bearraccuda: Error extracting additional URLs: ${error}`);
         }
         
         return Array.from(urls);
     }
 
     // Validate if URL is a valid event URL
-    isValidEventUrl(url, sourceUrl) {
+    isValidEventUrl(url) {
         if (!url || typeof url !== 'string') return false;
         
         try {
             const urlObj = new URL(url);
-            const sourceObj = new URL(sourceUrl);
             
-            // Should be from the same domain or subdomain
-            if (!urlObj.hostname.includes(sourceObj.hostname) && 
-                !sourceObj.hostname.includes(urlObj.hostname)) return false;
+            // Must be Bearraccuda domain or related
+            if (!urlObj.hostname.includes('bearracuda.com') && 
+                !urlObj.hostname.includes('bearraccuda.com')) return false;
             
             // Avoid admin, login, or social media links
-            const invalidPaths = [
-                '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
-                '#', 'javascript:', 'mailto:', 'tel:', 'sms:',
-                'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
-            ];
+            const invalidPaths = ['/admin', '/login', '/wp-admin', '/wp-login', '#', 'javascript:', 'mailto:'];
+            if (invalidPaths.some(invalid => url.includes(invalid))) return false;
             
-            if (invalidPaths.some(invalid => url.toLowerCase().includes(invalid))) return false;
-            
-            // Should contain event-related keywords in the path
-            const eventKeywords = ['event', 'party', 'show', 'calendar', 'listing'];
-            const hasEventKeyword = eventKeywords.some(keyword => 
-                urlObj.pathname.toLowerCase().includes(keyword)
-            );
-            
-            return hasEventKeyword;
+            return true;
             
         } catch (error) {
             return false;
@@ -359,14 +292,12 @@ class GenericParser {
             const formats = [
                 // MM/DD/YYYY
                 /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
-                // MM-DD-YYYY
-                /(\d{1,2})-(\d{1,2})-(\d{4})/,
-                // YYYY-MM-DD (ISO format)
-                /(\d{4})-(\d{2})-(\d{2})/,
                 // Month DD, YYYY
-                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i,
+                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})/i,
                 // DD Month YYYY
-                /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i
+                /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i,
+                // ISO format
+                /(\d{4})-(\d{2})-(\d{2})/
             ];
             
             for (const format of formats) {
@@ -395,15 +326,9 @@ class GenericParser {
                             const year = match[3];
                             date = new Date(`${year}-${month}-${day}`);
                         }
-                    } else if (match[3] && match[3].length === 4) {
-                        // YYYY-MM-DD format
-                        date = new Date(`${match[1]}-${match[2]}-${match[3]}`);
                     } else {
-                        // MM/DD/YYYY or MM-DD-YYYY format
-                        const month = match[1].padStart(2, '0');
-                        const day = match[2].padStart(2, '0');
-                        const year = match[3];
-                        date = new Date(`${year}-${month}-${day}`);
+                        // Numeric formats
+                        date = new Date(dateString);
                     }
                     
                     if (!isNaN(date.getTime())) {
@@ -419,7 +344,7 @@ class GenericParser {
             }
             
         } catch (error) {
-            console.warn(`🔧 Generic: Failed to parse date "${dateString}": ${error}`);
+            console.warn(`🐻 Bearraccuda: Failed to parse date "${dateString}": ${error}`);
         }
         
         return null;
@@ -455,10 +380,10 @@ class GenericParser {
 
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { GenericParser };
+    module.exports = { BearraccudaParser };
 } else if (typeof window !== 'undefined') {
-    window.GenericParser = GenericParser;
+    window.BearraccudaParser = BearraccudaParser;
 } else {
     // Scriptable environment
-    this.GenericParser = GenericParser;
+    this.BearraccudaParser = BearraccudaParser;
 }

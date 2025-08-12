@@ -1,0 +1,67 @@
+{
+  "config": {
+    "dryRun": true,
+    "daysToLookAhead": null
+  },
+  "parsers": [
+    {
+      "name": "Megawoof America",
+      "parser": "eventbrite",
+      "urls": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
+      "alwaysBear": true,
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 20,
+      "dryRun": true,
+      "daysToLookAhead": null,
+      "mergeMode": "upsert",
+      "urlFilters": {
+        "include": ["eventbrite\\.com\\/e\\/"]
+      },
+      "metadata": {
+        "title": {
+          "value": "MEGAWOOF",
+          "merge": "clobber"
+        },
+        "shortName": {
+          "value": "MEGA-WOOF",
+          "merge": "upsert"
+        },
+        "instagram": {
+          "value": "https://www.instagram.com/megawoof_america",
+          "merge": "clobber"
+        },
+        "description": {
+          "merge": "preserve"
+        },
+        "venue": {
+          "merge": "clobber"
+        },
+        "startDate": {
+          "merge": "clobber"
+        },
+        "endDate": {
+          "merge": "clobber"
+        },
+        "website": {
+          "merge": "upsert"
+        },
+        "gmaps": {
+          "merge": "upsert"
+        }
+      }
+    }
+  ],
+  "calendarMappings": {
+    "nyc": "chunky-dad-nyc",
+    "la": "chunky-dad-la",
+    "denver": "chunky-dad-denver",
+    "vegas": "chunky-dad-vegas",
+    "palm-springs": "chunky-dad-palm-springs",
+    "seattle": "chunky-dad-seattle",
+    "chicago": "chunky-dad-chicago",
+    "toronto": "chunky-dad-toronto",
+    "london": "chunky-dad-london",
+    "berlin": "chunky-dad-berlin",
+    "default": "chunky-dad-events"
+  }
+}
