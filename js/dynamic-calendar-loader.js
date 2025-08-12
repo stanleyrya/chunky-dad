@@ -550,11 +550,11 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Build text optimized for exactly 3 lines with intelligent hyphenation
+    // Build text optimized for exactly 3 lines, preferring full words over hyphenation
     buildThreeLineText(text, isShortName, breakpoint, charLimitPerLine = null) {
         if (!text) return '';
         
-        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Starting buildThreeLineText`, {
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Starting buildThreeLineText with full-word preference`, {
             text,
             isShortName,
             breakpoint,
@@ -572,7 +572,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Split into words for line building
         const words = processedText.split(/\s+/).filter(word => word.length > 0);
         
-        // Build up to 3 lines
+        // IMPROVED APPROACH: Try natural word flow first, only hyphenate as last resort
         const lines = [];
         let currentLine = '';
         
@@ -587,7 +587,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Word fits, add it to current line
                 currentLine = testLine;
             } else {
-                // Word doesn't fit
+                // Word doesn't fit - prefer to move to next line instead of hyphenating
                 if (currentLine) {
                     // Save current line and start new one
                     lines.push(currentLine);
@@ -595,7 +595,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     // If we already have 2 lines, this is the last line
                     if (lines.length >= 2) {
-                        // Try to fit the word on the last line, with hyphenation if needed
+                        // On last line, fit as much as possible (truncate if needed)
                         currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
                         break;
                     } else {
@@ -603,7 +603,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         if (word.length <= charLimitPerLine) {
                             currentLine = word;
                         } else {
-                            // Word is too long, try to hyphenate it
+                            // Word is too long even for new line - only now consider hyphenation
                             const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
                             if (hyphenated.firstPart) {
                                 lines.push(hyphenated.firstPart);
@@ -620,13 +620,17 @@ class DynamicCalendarLoader extends CalendarCore {
                         currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
                         break;
                     } else {
-                        // Try to hyphenate the word
-                        const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
-                        if (hyphenated.firstPart) {
-                            lines.push(hyphenated.firstPart);
-                            currentLine = hyphenated.remainder || '';
+                        // Only hyphenate if absolutely necessary (word longer than line)
+                        if (word.length > charLimitPerLine) {
+                            const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
+                            if (hyphenated.firstPart) {
+                                lines.push(hyphenated.firstPart);
+                                currentLine = hyphenated.remainder || '';
+                            } else {
+                                currentLine = word.substring(0, charLimitPerLine);
+                            }
                         } else {
-                            currentLine = word.substring(0, charLimitPerLine);
+                            currentLine = word;
                         }
                     }
                 }
