@@ -248,8 +248,8 @@ class SharedCore {
                     
                     // Find the matching existing event by URL
                     const matchingEvent = existingEvents.find(event => 
-                        event.url === detailEvent.url || 
-                        event.url === url ||
+                        event.website === detailEvent.website ||
+                        event.website === url ||
                         (event.title && detailEvent.title && event.title.trim() === detailEvent.title.trim())
                     );
                     
@@ -461,7 +461,7 @@ class SharedCore {
         return {
             title: mergedEvent.title,
             notes: notes,
-            url: mergedEvent.url
+            url: mergedEvent.website
         };
     }
 
@@ -502,7 +502,7 @@ class SharedCore {
             endDate: resolvedEndDate,
             location: resolvedLocation,
             notes: mergedData.notes,
-            url: mergedData.url,
+            url: mergedData.url, // This comes from the mergeEventData result which handles website->url mapping
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
@@ -551,7 +551,7 @@ class SharedCore {
                 endDate: existingEvent.endDate || '',
                 location: existingEvent.location || '',
                 notes: existingEvent.notes || '',
-                url: existingEvent.url || '',
+                url: existingEvent.url || '', // Legacy field for comparison
                 // Add fields extracted from current notes for rich comparison
                 ...existingFields
             },
@@ -562,7 +562,7 @@ class SharedCore {
                 endDate: finalEvent.endDate,
                 location: finalEvent.location,
                 notes: finalEvent.notes,
-                url: finalEvent.url,
+                url: finalEvent.url, // This comes from mergeEventData which handles website->url mapping
                 // Include other new event fields for comparison
                 ...newEvent
             }
@@ -608,7 +608,7 @@ class SharedCore {
         if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         
         if (finalEvent.location !== existingEvent.location) changes.push('location');
-        if (finalEvent.url !== existingEvent.url) changes.push('url');
+        if (finalEvent.url !== existingEvent.url) changes.push('url'); // URL comparison for change detection
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
         
         finalEvent._changes = changes;
@@ -662,6 +662,7 @@ class SharedCore {
             'fb': 'facebook',
             'website': 'website',
             'site': 'website',
+
             'twitter': 'twitter',
             'xtwitter': 'twitter',
             'x': 'twitter',
@@ -853,19 +854,40 @@ class SharedCore {
             event.city = this.extractCityFromEvent(event);
         }
         
-        // Only generate Google Maps link for full addresses
+        // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
+        const isTBAVenue = !event.bar || 
+                          event.bar.toLowerCase().includes('tba') || 
+                          event.bar.toLowerCase().includes('to be announced');
+        
+        if (isTBAVenue) {
+            console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected for "${event.title}" - removing fake location data`);
+            // Remove all location data for TBA venues (coordinates are usually fake city center)
+            event.location = null;
+            event.address = null;
+            event.gmaps = '';
+            return event;
+        }
+        
+        // Only generate Google Maps link for full addresses (isFullAddress handles TBA/placeholder detection)
         if (event.address && this.isFullAddress(event.address)) {
-            event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+            // Use parser-provided gmaps URL if available, otherwise generate from address
+            if (!event.gmaps) {
+                event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+            }
         } else if (!event.address) {
-            // No address provided: fall back to coordinates if available
+            // No address provided: fall back to coordinates if available (but not for TBA venues)
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-                event.gmaps = `https://maps.google.com/?q=${event.location}`;
+                // Use parser-provided gmaps URL if available, otherwise generate from coordinates
+                if (!event.gmaps) {
+                    event.gmaps = `https://maps.google.com/?q=${event.location}`;
+                }
             } else {
                 delete event.gmaps;
                 event.location = null;
             }
         } else {
-            // Address present but not full (placeholder): disable maps and coordinates
+            // Address present but not full (isFullAddress caught placeholder): disable maps and coordinates
+            console.log(`🗺️ SharedCore: Placeholder address "${event.address}" detected for "${event.title}" - removing fake location data`);
             delete event.gmaps;
             event.location = null;
             delete event.address;
@@ -888,8 +910,19 @@ class SharedCore {
         const cleanAddress = address.trim();
         if (cleanAddress.length < 10) return false; // Too short to be a full address
         
-        // Check for TBA or similar placeholder values
+        // Check for TBA or similar placeholder values (including venue names)
         if (/^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(cleanAddress)) {
+            return false;
+        }
+        
+        // Check for other placeholder patterns that indicate incomplete addresses
+        const placeholderPatterns = [
+            /^(venue|location|address)?\s*(tba|tbd|pending|coming soon|announced soon)$/i,
+            /^(details|info|information)?\s*(coming|to follow|tba|tbd)$/i,
+            /^(will be announced|location pending|venue pending)$/i
+        ];
+        
+        if (placeholderPatterns.some(pattern => pattern.test(cleanAddress))) {
             return false;
         }
         
@@ -1502,6 +1535,8 @@ class SharedCore {
         
         return event;
     }
+
+
 }
 
 // Export for both environments

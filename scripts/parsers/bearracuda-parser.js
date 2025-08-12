@@ -187,7 +187,7 @@ class BearraccudaParser {
                 location: null, // No coordinates available in bearracuda parsing
                 address: '', // Assuming address is not directly available in this regex
                 city: city || 'default',
-                url: eventUrl,
+                website: eventUrl, // Use 'website' field name that calendar-core.js expects
                 cover: '', // Use 'cover' field name that calendar-core.js expects
                 image: '',
                 source: this.config.source,

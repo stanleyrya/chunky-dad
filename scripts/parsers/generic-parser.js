@@ -242,11 +242,12 @@ class GenericParser {
                 bar: venue, // Use 'bar' field name that calendar-core.js expects
                 location: null, // No coordinates available in generic parsing
                 city: city,
-                url: eventUrl,
+                website: eventUrl, // Use 'website' field name that calendar-core.js expects
                 cover: price || '', // Use 'cover' field name that calendar-core.js expects
                 image: '',
                 source: this.config.source,
                 isBearEvent: false // Will be filtered later based on keywords
+                cover: price || '', // Use 'cover' field name that calendar-core.js expects
             };
             
             // Apply all metadata fields from config

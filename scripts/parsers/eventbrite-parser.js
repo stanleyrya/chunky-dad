@@ -257,7 +257,13 @@ class EventbriteParser {
             if (eventData.venue) {
                 venue = eventData.venue.name || null;
                 if (eventData.venue.address) {
-                    address = eventData.venue.address.localized_address_display || null;
+                    // Use full structured address if available, fallback to localized display
+                    const addr = eventData.venue.address;
+                    if (addr.address_1 && addr.city && addr.region) {
+                        address = `${addr.address_1}, ${addr.city}, ${addr.region} ${addr.postal_code || ''}`.trim();
+                    } else {
+                        address = addr.localized_address_display || null;
+                    }
                     console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
                     console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
@@ -266,6 +272,14 @@ class EventbriteParser {
                         coordinates = {
                             lat: eventData.venue.address.latitude,
                             lng: eventData.venue.address.longitude
+                        };
+                    }
+                    
+                    // Also check venue-level coordinates (sometimes more accurate)
+                    if (!coordinates && eventData.venue.latitude && eventData.venue.longitude) {
+                        coordinates = {
+                            lat: parseFloat(eventData.venue.latitude),
+                            lng: parseFloat(eventData.venue.longitude)
                         };
                     }
                 }
@@ -280,7 +294,21 @@ class EventbriteParser {
                 }
             }
             
-            const price = eventData.ticket_availability?.minimum_ticket_price?.display || '';
+            // Enhanced price extraction with availability info
+            let price = '';
+            if (eventData.is_free) {
+                price = 'Free';
+            } else if (eventData.price_range) {
+                price = eventData.price_range;
+                
+                // Add availability hint based on inventory type (applies to all ticket tiers)
+                if (eventData.inventory_type === 'limited') {
+                    const now = new Date();
+                    const month = now.getMonth() + 1;
+                    const day = now.getDate();
+                    price += ` (as of ${month}/${day})`;
+                }
+            }
             const image = eventData.logo?.url || eventData.image?.url || '';
             
             // Extract city from event title for better event organization
@@ -315,6 +343,16 @@ class EventbriteParser {
                 }
             }
             
+            // Generate Google Maps URL (SharedCore will filter out TBA venues)
+            let gmapsUrl = '';
+            if (eventData.venue?.google_place_id) {
+                gmapsUrl = `https://maps.google.com/?q=place_id:${eventData.venue.google_place_id}`;
+                console.log(`🎫 Eventbrite: Generated Google Maps URL from Place ID for "${title}": ${gmapsUrl}`);
+            } else if (coordinates) {
+                gmapsUrl = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
+                console.log(`🎫 Eventbrite: Generated Google Maps URL from coordinates for "${title}": ${gmapsUrl}`);
+            }
+            
             const event = {
                 title: title,
                 description: description,
@@ -324,9 +362,10 @@ class EventbriteParser {
                 location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: address,
                 city: city,
-                url: url,
+                website: url, // Use 'website' field name that calendar-core.js expects
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 image: image,
+                gmaps: gmapsUrl, // Google Maps URL for enhanced location access
                 source: this.config.source,
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
@@ -484,7 +523,7 @@ class EventbriteParser {
                 bar: venue, // Use 'bar' field name that calendar-core.js expects
                 location: null, // No coordinates available in HTML parsing
                 city: city,
-                url: url,
+                website: url, // Use 'website' field name that calendar-core.js expects
                 cover: '', // Use 'cover' field name that calendar-core.js expects
                 image: '',
                 source: this.config.source,
@@ -695,11 +734,11 @@ class EventbriteParser {
              return true;
          }
  
-         return false;
-     }
- }
- 
- // Export for both environments
+                 return false;
+    }
+}
+
+// Export for both environments
  if (typeof module !== 'undefined' && module.exports) {
      module.exports = { EventbriteParser };
  } else if (typeof window !== 'undefined') {
