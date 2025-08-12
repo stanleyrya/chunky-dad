@@ -854,7 +854,12 @@ class SharedCore {
     enrichEventLocation(event) {
         if (!event) return event;
         
-        // Check if venue is TBA/placeholder (includes venue name check)
+        // Extract city if not already present (parser may have set it for venue-specific logic)
+        if (!event.city) {
+            event.city = this.extractCityFromEvent(event);
+        }
+        
+        // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
         const isTBAVenue = !event.bar || 
                           event.bar.toLowerCase().includes('tba') || 
                           event.bar.toLowerCase().includes('to be announced');
@@ -865,27 +870,17 @@ class SharedCore {
             event.location = null;
             event.address = null;
             event.gmaps = '';
-            
-            // Still extract city for organization purposes
-            if (!event.city) {
-                event.city = this.extractCityFromEvent(event);
-            }
             return event;
         }
         
-        // Extract city if not already present (parser may have set it for venue-specific logic)
-        if (!event.city) {
-            event.city = this.extractCityFromEvent(event);
-        }
-        
-        // Only generate Google Maps link for full addresses
+        // Only generate Google Maps link for full addresses (isFullAddress handles TBA/placeholder detection)
         if (event.address && this.isFullAddress(event.address)) {
             // Use parser-provided gmaps URL if available, otherwise generate from address
             if (!event.gmaps) {
                 event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
             }
         } else if (!event.address) {
-            // No address provided: fall back to coordinates if available
+            // No address provided: fall back to coordinates if available (but not for TBA venues)
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
                 // Use parser-provided gmaps URL if available, otherwise generate from coordinates
                 if (!event.gmaps) {
@@ -896,7 +891,8 @@ class SharedCore {
                 event.location = null;
             }
         } else {
-            // Address present but not full (placeholder): disable maps and coordinates
+            // Address present but not full (isFullAddress caught placeholder): disable maps and coordinates
+            console.log(`🗺️ SharedCore: Placeholder address "${event.address}" detected for "${event.title}" - removing fake location data`);
             delete event.gmaps;
             event.location = null;
             delete event.address;
@@ -919,8 +915,19 @@ class SharedCore {
         const cleanAddress = address.trim();
         if (cleanAddress.length < 10) return false; // Too short to be a full address
         
-        // Check for TBA or similar placeholder values
+        // Check for TBA or similar placeholder values (including venue names)
         if (/^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(cleanAddress)) {
+            return false;
+        }
+        
+        // Check for other placeholder patterns that indicate incomplete addresses
+        const placeholderPatterns = [
+            /^(venue|location|address)?\s*(tba|tbd|pending|coming soon|announced soon)$/i,
+            /^(details|info|information)?\s*(coming|to follow|tba|tbd)$/i,
+            /^(will be announced|location pending|venue pending)$/i
+        ];
+        
+        if (placeholderPatterns.some(pattern => pattern.test(cleanAddress))) {
             return false;
         }
         
