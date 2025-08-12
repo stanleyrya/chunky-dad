@@ -352,7 +352,7 @@ class EventbriteParser {
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
                 bar: venue, // Use 'bar' field name that calendar-core.js expects
-                location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
+                location: (coordinates && !this.isTBAVenue(venue)) ? `${coordinates.lat}, ${coordinates.lng}` : null, // Skip coordinates for TBA venues (they're usually fake/placeholder)
                 address: this.isTBAVenue(venue) ? null : address, // Skip detailed address for TBA venues
                 city: city,
                 website: url, // Use 'website' field name that calendar-core.js expects
