@@ -337,24 +337,24 @@ class SharedCore {
             event.key = key;
             
             if (!seen.has(key)) {
-                // Clean TBA venue data before storing
-                const cleanedEvent = this.cleanTBAVenueData(event);
-                seen.set(key, cleanedEvent);
-                deduplicated.push(cleanedEvent);
+                // Enrich event location data (handles TBA venue cleaning)
+                const enrichedEvent = this.enrichEventLocation(event);
+                seen.set(key, enrichedEvent);
+                deduplicated.push(enrichedEvent);
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
                 const merged = this.mergeEventData(existing, event);
                 merged.key = key; // Ensure merged event has the key
                 
-                // Clean TBA venue data after merge
-                const cleanedMerged = this.cleanTBAVenueData(merged);
-                seen.set(key, cleanedMerged);
+                // Enrich merged event location data (handles TBA venue cleaning)
+                const enrichedMerged = this.enrichEventLocation(merged);
+                seen.set(key, enrichedMerged);
                 
                 // Update in deduplicated array
                 const index = deduplicated.findIndex(e => e.key === key);
                 if (index !== -1) {
-                    deduplicated[index] = cleanedMerged;
+                    deduplicated[index] = enrichedMerged;
                 }
             }
         }
@@ -854,6 +854,25 @@ class SharedCore {
     enrichEventLocation(event) {
         if (!event) return event;
         
+        // Check if venue is TBA/placeholder (includes venue name check)
+        const isTBAVenue = !event.bar || 
+                          event.bar.toLowerCase().includes('tba') || 
+                          event.bar.toLowerCase().includes('to be announced');
+        
+        if (isTBAVenue) {
+            console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected for "${event.title}" - removing fake location data`);
+            // Remove all location data for TBA venues (coordinates are usually fake city center)
+            event.location = null;
+            event.address = null;
+            event.gmaps = '';
+            
+            // Still extract city for organization purposes
+            if (!event.city) {
+                event.city = this.extractCityFromEvent(event);
+            }
+            return event;
+        }
+        
         // Extract city if not already present (parser may have set it for venue-specific logic)
         if (!event.city) {
             event.city = this.extractCityFromEvent(event);
@@ -861,11 +880,17 @@ class SharedCore {
         
         // Only generate Google Maps link for full addresses
         if (event.address && this.isFullAddress(event.address)) {
-            event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+            // Use parser-provided gmaps URL if available, otherwise generate from address
+            if (!event.gmaps) {
+                event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+            }
         } else if (!event.address) {
             // No address provided: fall back to coordinates if available
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-                event.gmaps = `https://maps.google.com/?q=${event.location}`;
+                // Use parser-provided gmaps URL if available, otherwise generate from coordinates
+                if (!event.gmaps) {
+                    event.gmaps = `https://maps.google.com/?q=${event.location}`;
+                }
             } else {
                 delete event.gmaps;
                 event.location = null;
@@ -1509,32 +1534,7 @@ class SharedCore {
         return event;
     }
 
-    /**
-     * Check if venue is TBA/placeholder
-     * @param {string} venueName - Venue name to check
-     * @returns {boolean} True if venue is TBA/placeholder
-     */
-    isTBAVenue(venueName) {
-        return !venueName || venueName.toLowerCase().includes('tba') || venueName.toLowerCase().includes('to be announced');
-    },
 
-    /**
-     * Clean event location data by filtering out TBA venue fake coordinates and addresses
-     * @param {Object} event - Event object to clean
-     * @returns {Object} Event object with cleaned location data
-     */
-    cleanTBAVenueData(event) {
-        if (this.isTBAVenue(event.bar)) {
-            console.log(`🗺️ SharedCore: Cleaning TBA venue data for "${event.title}" - removing fake coordinates, address, and gmaps`);
-            
-            // Remove fake location data for TBA venues
-            event.location = null;  // Coordinates are usually fake (city center)
-            event.address = null;   // Address is not real yet
-            event.gmaps = '';       // No point in Google Maps for fake location
-        }
-        
-        return event;
-    }
 }
 
 // Export for both environments
