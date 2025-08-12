@@ -301,12 +301,17 @@ class EventbriteParser {
             } else if (eventData.price_range) {
                 price = eventData.price_range;
                 
-                // Add availability hint based on inventory type
+                // Add availability hint based on inventory type (applies to all ticket tiers)
                 if (eventData.inventory_type === 'limited') {
                     const now = new Date();
                     const month = now.getMonth() + 1;
                     const day = now.getDate();
                     price += ` (limited as of ${month}/${day})`;
+                }
+                
+                // Add external ticketing note if applicable
+                if (eventData.is_externally_ticketed) {
+                    price += ' (external)';
                 }
             }
             const image = eventData.logo?.url || eventData.image?.url || '';
@@ -367,6 +372,10 @@ class EventbriteParser {
                 image: image,
                 gmaps: gmapsUrl, // Google Maps URL for enhanced location access
                 source: this.config.source,
+                // Additional useful fields from Eventbrite
+                format: eventData.format?.short_name || '', // e.g., "Party", "Performance"
+                category: eventData.category?.short_name || '', // e.g., "Music", "Community"
+                isOnline: eventData.online_event || false,
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
                     title: title,
