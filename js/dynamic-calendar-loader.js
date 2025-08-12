@@ -438,13 +438,15 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Generate short name from bar name or event name
+    // The purpose of shortName is to provide BETTER BREAKPOINTS for word wrapping,
+    // not necessarily to be shorter in character count (e.g., "MEGA-WOOF" vs "MEGAWOOF")
     generateShortName(barName, eventName) {
         // Prefer event name if available, otherwise use bar name
         const sourceName = eventName || barName;
         if (!sourceName) return '';
         
         // Remove common words while preserving original casing
-        // Let the per-line logic handle all length trimming to avoid double-trimming
+        // Focus on creating natural breakpoints rather than just shortening
         const stopWords = ['the', 'and', 'or', 'at', 'in', 'on', 'with', 'for', 'of', 'to', 'a', 'an'];
         const words = sourceName.split(' ');
         const filteredWords = words.filter(word => !stopWords.includes(word.toLowerCase()));
@@ -454,8 +456,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return sourceName;
         }
         
-        // Return the filtered name without aggressive length trimming
-        // The getSmartEventNameForBreakpoint() function will handle per-screen trimming
+        // Return the filtered name - CSS word-wrap will handle the display
+        // The key is that this version should have better breakpoints than the original
         return filteredWords.join(' ');
     }
 
@@ -494,7 +496,7 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If measurement not ready yet, prefer shortName over fullName for real rendering
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using short name instead of full name`, {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using short name for better breakpoints`, {
                 shortName: shortName,
                 fullName: fullName
             });
@@ -514,38 +516,91 @@ class DynamicCalendarLoader extends CalendarCore {
             shortNameLength: shortName.length,
             fullNameLength: fullName.length,
             screenWidth: window.innerWidth,
-            note: 'Now supporting up to 3 lines with CSS word-wrap'
+            note: 'Prioritizing shortName for better word breakpoints, regardless of length'
         });
         
-        // If shortName fits within 3 lines, use it
+        // PRIORITY 1: Always prefer shortName if it fits within 3 lines
+        // This is because shortName provides better breakpoints (e.g., "MEGA-WOOF" vs "MEGAWOOF")
         if (shortName.length <= maxCharsFor3Lines) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Short name fits within 3 lines: "${shortName}" (${shortName.length} <= ${maxCharsFor3Lines})`);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using short name for better breakpoints: "${shortName}" (${shortName.length} <= ${maxCharsFor3Lines})`, {
+                reason: 'shortName_fits_and_provides_better_breakpoints'
+            });
             return shortName;
         }
         
-        // If fullName fits within 3 lines and is shorter than shortName, use it
-        if (fullName.length <= maxCharsFor3Lines && fullName.length < shortName.length) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Full name fits within 3 lines and is shorter: "${fullName}" (${fullName.length} <= ${maxCharsFor3Lines})`);
-            return fullName;
+        // PRIORITY 2: If shortName doesn't fit, only consider fullName if it fits AND has significantly better breakpoints
+        if (fullName.length <= maxCharsFor3Lines) {
+            // Check if fullName has significantly better natural breakpoints than shortName
+            const shortNameBreakpoints = this.countGoodBreakpoints(shortName);
+            const fullNameBreakpoints = this.countGoodBreakpoints(fullName);
+            
+            // Only use fullName if it has at least 2 more breakpoints (significantly better)
+            // This maintains preference for shortName unless fullName is clearly superior
+            if (fullNameBreakpoints >= shortNameBreakpoints + 2) {
+                logger.info('CALENDAR', `🔍 SMART_NAME: Using full name for significantly better breakpoints: "${fullName}" (${fullName.length} <= ${maxCharsFor3Lines})`, {
+                    shortNameBreakpoints,
+                    fullNameBreakpoints,
+                    breakpointDifference: fullNameBreakpoints - shortNameBreakpoints,
+                    reason: 'fullName_has_significantly_better_breakpoints'
+                });
+                return fullName;
+            } else {
+                logger.info('CALENDAR', `🔍 SMART_NAME: Preferring shortName despite fullName fitting: "${shortName}"`, {
+                    shortNameBreakpoints,
+                    fullNameBreakpoints,
+                    breakpointDifference: fullNameBreakpoints - shortNameBreakpoints,
+                    reason: 'shortName_preferred_unless_fullName_significantly_better'
+                });
+            }
         }
         
-        // For very small character limits, try to use shorterName if available
+        // PRIORITY 3: For very small character limits, try shorterName if available
         if (charLimitPerLine <= 4 && event.shorterName?.trim() && event.shorterName.trim().length <= maxCharsFor3Lines) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for ${charLimitPerLine} char limit: "${event.shorterName}"`);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for very small space: "${event.shorterName}"`);
             return event.shorterName.trim();
         }
         
-        // If neither fits in 3 lines, prefer the shorter one and let CSS handle truncation with ellipsis
-        const preferredName = shortName.length <= fullName.length ? shortName : fullName;
-        
-        logger.info('CALENDAR', `🔍 SMART_NAME: Neither name fits in 3 lines, using shorter option: "${preferredName}" (${preferredName.length} chars)`, {
+        // PRIORITY 4: If nothing fits perfectly, still prefer shortName for better breakpoints
+        // CSS will handle the 3-line clamp with ellipsis
+        logger.info('CALENDAR', `🔍 SMART_NAME: Neither fits perfectly, using shortName for better breakpoints: "${shortName}" (${shortName.length} chars)`, {
             shortNameLength: shortName.length,
             fullNameLength: fullName.length,
-            selectedName: preferredName,
-            note: 'CSS will handle 3-line clamp with ellipsis'
+            selectedName: shortName,
+            note: 'CSS will handle 3-line clamp with ellipsis, shortName provides better word breaks'
         });
         
-        return preferredName;
+        return shortName;
+    }
+
+    // Helper function to count good breakpoints in a text string
+    // Good breakpoints are: spaces, hyphens, underscores, and natural word boundaries
+    countGoodBreakpoints(text) {
+        if (!text) return 0;
+        
+        // Count natural word boundaries (spaces, hyphens, underscores)
+        const spaceBreakpoints = (text.match(/\s/g) || []).length;
+        const hyphenBreakpoints = (text.match(/-/g) || []).length;
+        const underscoreBreakpoints = (text.match(/_/g) || []).length;
+        
+        // Count camelCase boundaries (lowercase followed by uppercase)
+        const camelCaseBreakpoints = (text.match(/[a-z][A-Z]/g) || []).length;
+        
+        // Count number boundaries (number followed by letter or vice versa)
+        const numberBreakpoints = (text.match(/[0-9][a-zA-Z]|[a-zA-Z][0-9]/g) || []).length;
+        
+        const totalBreakpoints = spaceBreakpoints + hyphenBreakpoints + underscoreBreakpoints + camelCaseBreakpoints + numberBreakpoints;
+        
+        logger.debug('CALENDAR', `🔍 BREAKPOINT_COUNT: Analyzing breakpoints for "${text}"`, {
+            text,
+            spaceBreakpoints,
+            hyphenBreakpoints,
+            underscoreBreakpoints,
+            camelCaseBreakpoints,
+            numberBreakpoints,
+            totalBreakpoints
+        });
+        
+        return totalBreakpoints;
     }
 
     // Calculate characters per pixel ratio for dynamic text fitting

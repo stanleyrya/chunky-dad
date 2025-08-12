@@ -4394,6 +4394,10 @@ footer {
   
   /* Fallback for browsers that don't support line-clamp */
   max-height: calc(var(--event-name-line-height) * 3em);
+  
+  /* Ensure hyphens and other breakpoints are preserved and used for breaking */
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 /* For browsers that don't support -webkit-line-clamp, use a more basic approach */
