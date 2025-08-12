@@ -550,11 +550,12 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Build text optimized for exactly 3 lines with intelligent hyphenation
+    // Build text optimized for exactly 3 lines with intelligent word placement
+    // Prefers full lines over hyphenation (e.g., "Bear happy hour" on 3 lines instead of "Bear ha-ppy hour")
     buildThreeLineText(text, isShortName, breakpoint, charLimitPerLine = null) {
         if (!text) return '';
         
-        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Starting buildThreeLineText`, {
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Starting buildThreeLineText with full-line preference`, {
             text,
             isShortName,
             breakpoint,
@@ -572,83 +573,243 @@ class DynamicCalendarLoader extends CalendarCore {
         // Split into words for line building
         const words = processedText.split(/\s+/).filter(word => word.length > 0);
         
-        // Build up to 3 lines
+        // NEW APPROACH: Try to distribute words across 3 lines optimally
+        const result = this.distributeWordsAcrossLines(words, charLimitPerLine, 3);
+        
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result with full-line preference: "${result}"`, {
+            originalText: text,
+            processedText,
+            wordCount: words.length,
+            finalResult: result,
+            approach: 'full_line_preference'
+        });
+        
+        return result;
+    }
+    
+    // Distribute words across lines optimally, preferring full words over hyphenation
+    distributeWordsAcrossLines(words, charLimitPerLine, maxLines) {
+        if (words.length === 0) return '';
+        
+        // Try different distribution strategies, starting with the most natural
+        
+        // Strategy 1: Natural word flow - let words flow naturally across lines
+        const naturalResult = this.tryNaturalWordFlow(words, charLimitPerLine, maxLines);
+        if (this.isGoodDistribution(naturalResult, charLimitPerLine, maxLines)) {
+            logger.debug('CALENDAR', '✅ Using natural word flow distribution', { result: naturalResult.join(' ') });
+            return naturalResult.join(' ');
+        }
+        
+        // Strategy 2: Balanced distribution - try to balance line lengths
+        const balancedResult = this.tryBalancedDistribution(words, charLimitPerLine, maxLines);
+        if (this.isGoodDistribution(balancedResult, charLimitPerLine, maxLines)) {
+            logger.debug('CALENDAR', '✅ Using balanced distribution', { result: balancedResult.join(' ') });
+            return balancedResult.join(' ');
+        }
+        
+        // Strategy 3: Aggressive fitting - use truncation if needed
+        const aggressiveResult = this.tryAggressiveFitting(words, charLimitPerLine, maxLines);
+        logger.debug('CALENDAR', '✅ Using aggressive fitting (fallback)', { result: aggressiveResult.join(' ') });
+        return aggressiveResult.join(' ');
+    }
+    
+    // Try natural word flow - words flow from line to line naturally
+    tryNaturalWordFlow(words, charLimitPerLine, maxLines) {
         const lines = [];
         let currentLine = '';
         
         for (const word of words) {
-            // If we already have 3 lines, stop
-            if (lines.length >= 3) break;
+            // If we've reached max lines, stop
+            if (lines.length >= maxLines) break;
             
-            // Check if adding this word would exceed line limit
+            // Check if word fits on current line
             const testLine = currentLine ? currentLine + ' ' + word : word;
             
             if (testLine.length <= charLimitPerLine) {
-                // Word fits, add it to current line
+                // Word fits, add it
                 currentLine = testLine;
             } else {
                 // Word doesn't fit
                 if (currentLine) {
                     // Save current line and start new one
                     lines.push(currentLine);
-                    currentLine = '';
                     
-                    // If we already have 2 lines, this is the last line
-                    if (lines.length >= 2) {
-                        // Try to fit the word on the last line, with hyphenation if needed
-                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
+                    // If this is the last line, try to fit the word (possibly truncated)
+                    if (lines.length >= maxLines) {
                         break;
+                    }
+                    
+                    // Start new line with this word (if it fits)
+                    if (word.length <= charLimitPerLine) {
+                        currentLine = word;
                     } else {
-                        // Try to fit the word on a new line
-                        if (word.length <= charLimitPerLine) {
-                            currentLine = word;
+                        // Word is too long even for a new line
+                        // Only on the last line do we truncate, otherwise skip the word
+                        if (lines.length === maxLines - 1) {
+                            currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                            break;
                         } else {
-                            // Word is too long, try to hyphenate it
-                            const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
-                            if (hyphenated.firstPart) {
-                                lines.push(hyphenated.firstPart);
-                                currentLine = hyphenated.remainder || '';
-                            } else {
-                                currentLine = word.substring(0, charLimitPerLine);
-                            }
+                            // Skip this word and continue (it will be handled by other strategies)
+                            currentLine = '';
                         }
                     }
                 } else {
-                    // No current line, but word is too long
-                    if (lines.length >= 2) {
-                        // This is the last line
-                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
+                    // No current line content, but word is too long
+                    if (lines.length === maxLines - 1) {
+                        // This is the last line, truncate if needed
+                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
                         break;
                     } else {
-                        // Try to hyphenate the word
-                        const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
-                        if (hyphenated.firstPart) {
-                            lines.push(hyphenated.firstPart);
-                            currentLine = hyphenated.remainder || '';
-                        } else {
-                            currentLine = word.substring(0, charLimitPerLine);
-                        }
+                        // Skip this word for now
+                        continue;
                     }
                 }
             }
         }
         
         // Add the final line if it has content
-        if (currentLine && lines.length < 3) {
+        if (currentLine && lines.length < maxLines) {
             lines.push(currentLine);
         }
         
-        const result = lines.join(' ');
+        return lines;
+    }
+    
+    // Try balanced distribution - attempt to balance line lengths
+    tryBalancedDistribution(words, charLimitPerLine, maxLines) {
+        if (words.length <= maxLines) {
+            // If we have fewer words than lines, put one word per line
+            return words.slice(0, maxLines);
+        }
         
-        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result "${result}"`, {
-            originalText: text,
-            processedText,
-            linesBuilt: lines.length,
-            lines,
-            finalResult: result
-        });
+        // Calculate total character count and target characters per line
+        const totalChars = words.join(' ').length;
+        const targetCharsPerLine = Math.ceil(totalChars / maxLines);
         
-        return result;
+        const lines = [];
+        let currentLine = '';
+        let currentLineTarget = Math.min(targetCharsPerLine, charLimitPerLine);
+        
+        for (let i = 0; i < words.length && lines.length < maxLines; i++) {
+            const word = words[i];
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            
+            // Check if we should start a new line
+            const shouldStartNewLine = currentLine && (
+                testLine.length > charLimitPerLine || // Exceeds hard limit
+                (testLine.length > currentLineTarget && lines.length < maxLines - 1) // Exceeds target and we have lines left
+            );
+            
+            if (shouldStartNewLine) {
+                lines.push(currentLine);
+                
+                // Adjust target for remaining lines
+                const remainingWords = words.slice(i);
+                const remainingChars = remainingWords.join(' ').length;
+                const remainingLines = maxLines - lines.length;
+                currentLineTarget = remainingLines > 0 ? Math.min(Math.ceil(remainingChars / remainingLines), charLimitPerLine) : charLimitPerLine;
+                
+                currentLine = word.length <= charLimitPerLine ? word : this.fitWordOnLastLine(word, charLimitPerLine, false);
+            } else {
+                if (testLine.length <= charLimitPerLine) {
+                    currentLine = testLine;
+                } else if (!currentLine) {
+                    // Single word too long for line
+                    currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                } else {
+                    // Word doesn't fit, save current line and start new one
+                    lines.push(currentLine);
+                    if (lines.length < maxLines) {
+                        currentLine = word.length <= charLimitPerLine ? word : this.fitWordOnLastLine(word, charLimitPerLine, false);
+                    }
+                }
+            }
+        }
+        
+        // Add final line
+        if (currentLine && lines.length < maxLines) {
+            lines.push(currentLine);
+        }
+        
+        return lines;
+    }
+    
+    // Try aggressive fitting - use truncation and other techniques to fit text
+    tryAggressiveFitting(words, charLimitPerLine, maxLines) {
+        const lines = [];
+        let wordIndex = 0;
+        
+        for (let lineNum = 0; lineNum < maxLines && wordIndex < words.length; lineNum++) {
+            let currentLine = '';
+            const isLastLine = lineNum === maxLines - 1;
+            
+            // Try to fit as many words as possible on this line
+            while (wordIndex < words.length) {
+                const word = words[wordIndex];
+                const testLine = currentLine ? currentLine + ' ' + word : word;
+                
+                if (testLine.length <= charLimitPerLine) {
+                    // Word fits
+                    currentLine = testLine;
+                    wordIndex++;
+                } else {
+                    // Word doesn't fit
+                    if (currentLine) {
+                        // We have content on this line, move to next line
+                        break;
+                    } else {
+                        // No content yet, this word is too long for the line
+                        if (isLastLine) {
+                            // Last line, truncate the word
+                            currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                            wordIndex++;
+                        } else {
+                            // Not last line, try hyphenation as last resort
+                            const hyphenated = this.hyphenateWord(word, charLimitPerLine, false);
+                            if (hyphenated.firstPart) {
+                                currentLine = hyphenated.firstPart;
+                                // Replace the word with its remainder for next iteration
+                                if (hyphenated.remainder) {
+                                    words[wordIndex] = hyphenated.remainder;
+                                } else {
+                                    wordIndex++;
+                                }
+                            } else {
+                                // Hyphenation failed, truncate
+                                currentLine = this.fitWordOnLastLine(word, charLimitPerLine, false);
+                                wordIndex++;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+        }
+        
+        return lines;
+    }
+    
+    // Check if a distribution is good (all words fit, good line utilization)
+    isGoodDistribution(lines, charLimitPerLine, maxLines) {
+        if (lines.length === 0) return false;
+        if (lines.length > maxLines) return false;
+        
+        // Check if any line exceeds the character limit
+        for (const line of lines) {
+            if (line.length > charLimitPerLine) return false;
+        }
+        
+        // Check for reasonable line utilization (at least 50% of available space used)
+        const totalChars = lines.join('').length;
+        const totalAvailableChars = lines.length * charLimitPerLine;
+        const utilization = totalChars / totalAvailableChars;
+        
+        // Good distribution should use at least 40% of available space
+        return utilization >= 0.4;
     }
     
     // Process shortName hyphens based on whether we're splitting lines
@@ -667,7 +828,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
     
-    // Hyphenate a word that's too long for a line
+    // Hyphenate a word that's too long for a line (used only as last resort)
     hyphenateWord(word, charLimit, isShortName) {
         // First, try to split at existing hyphens (if it's a shortName or has intentional hyphens)
         if (word.includes('-') && !word.includes('\\-')) {
@@ -959,18 +1120,17 @@ class DynamicCalendarLoader extends CalendarCore {
         return 'lg';
     }
 
-
-    
     // Generate event name element for current breakpoint only
     generateEventNameElements(event, hideEvents = false) {
         const fullName = event.name || '';
         const hasShortName = !!(event.shortName || event.nickname);
         
-        logger.info('CALENDAR', `🔍 EVENT_NAME_GEN: Generating event name elements`, {
+        logger.info('CALENDAR', `🔍 EVENT_NAME_GEN: Generating event name elements with improved text wrapping`, {
             eventName: fullName,
             hasShortName,
             hideEvents,
-            mode: hideEvents ? 'MEASUREMENT' : 'DISPLAY'
+            mode: hideEvents ? 'MEASUREMENT' : 'DISPLAY',
+            approach: 'full_line_preference'
         });
         
         // For measurement mode, use full name to get accurate width measurement
@@ -1033,500 +1193,6 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         return `<div class="event-name">${eventName}</div>`;
-    }
-
-    // Format time for mobile display with simplified format (4a-5p)
-    formatTimeForMobile(timeString) {
-        if (!timeString) return '';
-        
-        // Check if it's a time range
-        const timeRangeRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
-        const match = timeString.match(timeRangeRegex);
-        
-        if (match) {
-            const startTime = match[1];
-            const endTime = match[2];
-            return this.simplifyTimeFormat(startTime) + '-' + this.simplifyTimeFormat(endTime);
-        }
-        
-        // For single times, just simplify
-        return this.simplifyTimeFormat(timeString);
-    }
-
-    // Convert time format to simplified version (4 AM -> 4a, 5 PM -> 5p)
-    simplifyTimeFormat(timeString) {
-        if (!timeString) return '';
-        
-        return timeString.replace(/(\d{1,2}(?::\d{2})?)\s*(AM|PM)/gi, (match, time, period) => {
-            return time + (period.toLowerCase() === 'am' ? 'a' : 'p');
-        });
-    }
-
-    getCurrentPeriodBounds() {
-        return this.currentView === 'week' 
-            ? this.getWeekBounds(this.currentDate)
-            : this.getMonthBounds(this.currentDate);
-    }
-
-    // Show events for a specific day (used by calendar overview)
-    showDayEvents(dateString, events) {
-        const date = new Date(dateString);
-        
-        // Create modal or popup to show events
-        const modal = document.createElement('div');
-        modal.className = 'day-events-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Events for ${date.toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        month: 'long', 
-                        day: 'numeric' 
-                    })}</h3>
-                    <button class="modal-close" onclick="this.closest('.day-events-modal').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    ${events.length > 0 
-                        ? events.map(event => `
-                            <div class="modal-event-item" data-event-slug="${event.slug}">
-                                <div class="event-name">${event.name}</div>
-                                <div class="event-details">
-                                    <span class="event-time">${event.time}</span>
-                                    <span class="event-venue">${event.bar}</span>
-                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
-                                </div>
-                            </div>
-                        `).join('')
-                        : ''
-                    }
-                </div>
-                <div class="modal-footer">
-                    <button class="switch-to-week" onclick="window.calendarLoader.switchToWeekView('${dateString}')">
-                        View Week
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Add modal to page
-        document.body.appendChild(modal);
-        
-        // Add click handler to close modal when clicking outside
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-    }
-
-    // Switch to week view for a specific date
-    switchToWeekView(dateString) {
-        this.currentDate = new Date(dateString);
-        this.currentView = 'week';
-        
-        // Update active button
-        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('.view-btn[data-view="week"]').classList.add('active');
-        
-        // Remove modal
-        document.querySelector('.day-events-modal')?.remove();
-        
-        this.updateCalendarDisplay();
-    }
-
-    navigatePeriod(direction, skipAnimation = false) {
-        const delta = direction === 'next' ? 1 : -1;
-        
-        logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
-            currentView: this.currentView,
-            currentDate: this.currentDate.toISOString(),
-            skipAnimation
-        });
-        
-        if (this.currentView === 'week') {
-            this.currentDate.setDate(this.currentDate.getDate() + (delta * 7));
-        } else {
-            this.currentDate.setMonth(this.currentDate.getMonth() + delta);
-        }
-        
-        // Only update display immediately if not part of a swipe animation
-        if (skipAnimation) {
-            this.updateCalendarDisplay();
-        }
-    }
-
-    goToToday() {
-        this.currentDate = new Date();
-        this.updateCalendarDisplay();
-    }
-
-    formatDateRange(start, end) {
-        const options = { month: 'short', day: 'numeric' };
-        
-        if (this.currentView === 'week') {
-            if (start.getMonth() === end.getMonth()) {
-                return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}`;
-            } else {
-                return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
-            }
-        } else {
-            return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        }
-    }
-
-    // Load calendar data for specific city (override to use CORS proxy)
-    async loadCalendarData(cityKey) {
-        const cityConfig = getCityConfig(cityKey);
-        if (!cityConfig || !cityConfig.calendarId) {
-            logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
-            return null;
-        }
-        
-        logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-        logger.info('CALENDAR', `🌐 Step 3: Starting API call to load calendar data for ${cityConfig.name}`, {
-            cityKey,
-            calendarId: cityConfig.calendarId,
-            step: 'Step 3: Loading real calendar data'
-        });
-        
-        try {
-            const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
-            const corsProxy = 'https://api.allorigins.win/raw?url=';
-            const fullUrl = corsProxy + encodeURIComponent(icalUrl);
-            
-            const response = await fetch(fullUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const icalText = await response.text();
-            logger.apiCall('CALENDAR', 'Successfully fetched iCal data', {
-                dataLength: icalText.length,
-                city: cityConfig.name,
-                url: icalUrl
-            });
-            
-            // Log sample of the fetched data for debugging
-            if (icalText.length > 0) {
-                logger.debug('CALENDAR', 'Raw iCal data sample', {
-                    firstLine: icalText.split('\n')[0],
-                    hasEvents: icalText.includes('BEGIN:VEVENT'),
-                    eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
-                    calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
-                    encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format'
-                });
-            } else {
-                logger.warn('CALENDAR', 'Empty iCal data received', {
-                    city: cityConfig.name,
-                    url: icalUrl
-                });
-            }
-            
-            const events = this.parseICalData(icalText);
-            
-            // Store all events for filtering
-            this.allEvents = events;
-            
-            this.eventsData = {
-                cityConfig,
-                events,
-                calendarTimezone: this.calendarTimezone,
-                timezoneData: this.timezoneData
-            };
-            
-            logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-            logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
-                eventCount: events.length,
-                cityKey,
-                calendarTimezone: this.calendarTimezone,
-                hasTimezoneData: !!this.timezoneData
-            });
-            return this.eventsData;
-        } catch (error) {
-            logger.componentError('CALENDAR', 'Error loading calendar data', error);
-            this.showCalendarError();
-            return null;
-        }
-    }
-
-    // Show calendar error - only in the events container for cleaner display
-    showCalendarError() {
-        const errorMessage = `
-            <div class="error-message">
-                <h3>📅 Calendar Temporarily Unavailable</h3>
-                <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
-                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
-            </div>
-        `;
-        
-        // Only show error in the events container to avoid duplication
-        const eventsContainer = document.querySelector('.events-list');
-        if (eventsContainer) {
-            eventsContainer.innerHTML = errorMessage;
-        }
-
-    }
-
-
-
-
-
-
-
-    // Generate event card
-    generateEventCard(event) {
-        const linksHtml = event.links ? event.links.map(link => {
-            // Add appropriate emoji based on link type
-            let emoji = '🔗'; // default link emoji
-            const label = link.label.toLowerCase();
-            
-            if (label.includes('facebook')) emoji = '📘';
-            else if (label.includes('instagram')) emoji = '📷';
-            else if (label.includes('twitter')) emoji = '🐦';
-            else if (label.includes('website') || label.includes('site')) emoji = '🔗';
-            else if (label.includes('tickets') || label.includes('ticket')) emoji = '🎫';
-            else if (label.includes('rsvp')) emoji = '✅';
-            else if (label.includes('more info')) emoji = 'ℹ️';
-            
-            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`;
-        }).join(' ') : '';
-
-        const teaHtml = event.tea ? `
-            <div class="detail-row">
-                <span class="label">Tea:</span>
-                <span class="value">${event.tea}</span>
-            </div>
-        ` : '';
-
-        const locationHtml = event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
-            `<div class="detail-row">
-                <span class="label">Location:</span>
-                <span class="value">
-                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
-                        📍 ${event.bar || 'Location'}
-                    </a>
-                </span>
-            </div>` :
-            (event.bar ? `<div class="detail-row">
-                <span class="label">Bar:</span>
-                <span class="value">${event.bar}</span>
-            </div>` : '');
-
-        // Only show cover if it exists and has meaningful content
-        const coverHtml = event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
-            <div class="detail-row">
-                <span class="label">Cover:</span>
-                <span class="value">${event.cover}</span>
-            </div>
-        ` : '';
-
-        const recurringBadge = event.recurring ? 
-            `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
-        
-        const notCheckedBadge = event.notChecked ? 
-            `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
-
-        // Format day/time more concisely (e.g., "Thu 5pm-9pm")
-        const formatDayTime = (day, time) => {
-            // For desktop, show full day name; for mobile, show abbreviated
-            const isDesktop = window.innerWidth > 768;
-            const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
-            return `${displayDay} ${time}`;
-        };
-
-        return `
-            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
-                <div class="event-header">
-                    <h3>${event.name}</h3>
-                    <div class="event-meta">
-                        <div class="event-day">${formatDayTime(event.day, event.time)}</div>
-                        ${recurringBadge}
-                        ${notCheckedBadge}
-                    </div>
-                </div>
-                <div class="event-details">
-                    ${locationHtml}
-                    ${coverHtml}
-                    ${teaHtml}
-                    <div class="event-links">
-                        ${linksHtml}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Filter events by current period
-    getFilteredEvents() {
-        // Handle case where allEvents is not yet loaded
-        if (!this.allEvents || !Array.isArray(this.allEvents)) {
-            return [];
-        }
-        
-        const { start, end } = this.getCurrentPeriodBounds();
-        
-        return this.allEvents.filter(event => {
-            if (!event.startDate) return false;
-            
-            // Filter out events marked as notChecked if configured to hide them
-            if (event.notChecked && this.config?.hideUncheckedEvents) {
-                logger.debug('CALENDAR', `Filtering out unchecked event: ${event.name}`);
-                return false;
-            }
-            
-            // For recurring events, check if they occur in this period
-            if (event.recurring) {
-                return this.isRecurringEventInPeriod(event, start, end);
-            }
-            
-            // For one-time events, check if they fall within the period
-            return this.isEventInPeriod(event.startDate, start, end);
-        });
-    }
-
-    isRecurringEventInPeriod(event, start, end) {
-        if (!event.startDate) return false;
-        
-        const current = new Date(start);
-        
-        // Check each day in the period
-        while (current <= end) {
-            if (this.isEventOccurringOnDate(event, current)) {
-                return true;
-            }
-            current.setDate(current.getDate() + 1);
-        }
-        
-        return false;
-    }
-
-    // Helper function to determine if a recurring event occurs on a specific date
-    isEventOccurringOnDate(event, date) {
-        if (!event.recurring || !event.startDate) return false;
-        
-        const eventDate = new Date(event.startDate);
-        const checkDate = new Date(date);
-        
-        // Normalize dates to compare only date parts, not time
-        eventDate.setHours(0, 0, 0, 0);
-        checkDate.setHours(0, 0, 0, 0);
-        
-        // Make sure we're not checking before the event started
-        if (checkDate < eventDate) return false;
-        
-        // Parse the recurrence rule to determine the pattern
-        const recurrence = event.recurrence || '';
-        
-        if (recurrence.includes('FREQ=WEEKLY')) {
-            // Weekly events: occur on the same day of the week
-            return eventDate.getDay() === checkDate.getDay();
-        } else if (recurrence.includes('FREQ=MONTHLY')) {
-            // Monthly events: handle both BYMONTHDAY and BYDAY patterns
-            if (recurrence.includes('BYMONTHDAY=')) {
-                const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
-                if (dayMatch) {
-                    const targetDay = parseInt(dayMatch[1]);
-                    // Check if this month has that many days
-                    const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
-                    return checkDate.getDate() === Math.min(targetDay, lastDayOfMonth);
-                }
-            } else if (recurrence.includes('BYDAY=')) {
-                // Handle BYDAY patterns like BYDAY=3TH (third Thursday) or BYDAY=-1SA (last Saturday)
-                const dayMatch = recurrence.match(/BYDAY=(-?\d+)([A-Z]{2})/);
-                if (dayMatch) {
-                    const occurrence = parseInt(dayMatch[1]); // 3 or -1 (negative means from end of month)
-                    const dayCode = dayMatch[2]; // TH, SA, etc.
-                    
-                    // Convert day code to day number (0 = Sunday, 6 = Saturday)
-                    const dayCodeToDayNumber = {
-                        'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
-                    };
-                    
-                    const targetDayOfWeek = dayCodeToDayNumber[dayCode];
-                    if (targetDayOfWeek === undefined) return false;
-                    
-                    // Check if the check date is the correct day of the week
-                    if (checkDate.getDay() !== targetDayOfWeek) return false;
-                    
-                    // Calculate the target date for this occurrence
-                    const targetDate = this.calculateByDayOccurrence(
-                        checkDate.getFullYear(), 
-                        checkDate.getMonth(), 
-                        occurrence, 
-                        targetDayOfWeek
-                    );
-                    
-                    return targetDate && checkDate.getTime() === targetDate.getTime();
-                }
-            }
-            
-            // Fallback: same day of month as original event, but handle month lengths
-            const originalDay = eventDate.getDate();
-            const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
-            const targetDay = Math.min(originalDay, lastDayOfMonth);
-            return checkDate.getDate() === targetDay;
-        } else if (recurrence.includes('FREQ=DAILY')) {
-            // Daily events: occur every day
-            return true;
-        } else if (recurrence.includes('FREQ=YEARLY')) {
-            // Yearly events: same month and day
-            return eventDate.getMonth() === checkDate.getMonth() && 
-                   eventDate.getDate() === checkDate.getDate();
-        }
-        
-        // Default fallback for other recurring patterns - use day of week
-        return eventDate.getDay() === checkDate.getDay();
-    }
-
-    // Helper function to calculate the specific occurrence of a day in a month
-    // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
-    // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
-    calculateByDayOccurrence(year, month, occurrence, dayOfWeek) {
-        try {
-            if (occurrence > 0) {
-                // Find the nth occurrence of the day (e.g., 3rd Thursday)
-                const firstOfMonth = new Date(year, month, 1);
-                const firstDayOfWeek = firstOfMonth.getDay();
-                
-                // Calculate days to add to get to the first occurrence of the target day
-                let daysToAdd = (dayOfWeek - firstDayOfWeek + 7) % 7;
-                
-                // Add weeks to get to the nth occurrence
-                daysToAdd += (occurrence - 1) * 7;
-                
-                const targetDate = new Date(year, month, 1 + daysToAdd);
-                
-                // Verify it's still in the same month
-                if (targetDate.getMonth() !== month) {
-                    return null;
-                }
-                
-                return targetDate;
-            } else if (occurrence === -1) {
-                // Find the last occurrence of the day (e.g., last Saturday)
-                const lastOfMonth = new Date(year, month + 1, 0);
-                const lastDayOfWeek = lastOfMonth.getDay();
-                
-                // Calculate days to subtract to get to the last occurrence of the target day
-                let daysToSubtract = (lastDayOfWeek - dayOfWeek + 7) % 7;
-                
-                const targetDate = new Date(year, month + 1, 0 - daysToSubtract);
-                
-                // Verify it's still in the same month
-                if (targetDate.getMonth() !== month) {
-                    return null;
-                }
-                
-                return targetDate;
-            }
-            
-            return null;
-        } catch (error) {
-            logger.componentError('CALENDAR', 'Error calculating BYDAY occurrence', {
-                year, month, occurrence, dayOfWeek, error
-            });
-            return null;
-        }
     }
 
     // Generate calendar events (enhanced for week/month/calendar view)
@@ -2443,6 +2109,39 @@ calculatedData: {
         } finally {
             this.isInitializing = false;
         }
+    }
+
+    // Format time for mobile display with simplified format (4a-5p)
+    formatTimeForMobile(timeString) {
+        if (!timeString) return '';
+        
+        // Check if it's a time range
+        const timeRangeRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
+        const match = timeString.match(timeRangeRegex);
+        
+        if (match) {
+            const startTime = match[1];
+            const endTime = match[2];
+            return this.simplifyTimeFormat(startTime) + '-' + this.simplifyTimeFormat(endTime);
+        }
+        
+        // For single times, just simplify
+        return this.simplifyTimeFormat(timeString);
+    }
+
+    // Convert time format to simplified version (4 AM -> 4a, 5 PM -> 5p)
+    simplifyTimeFormat(timeString) {
+        if (!timeString) return '';
+        
+        return timeString.replace(/(\d{1,2}(?::\d{2})?)\s*(AM|PM)/gi, (match, time, period) => {
+            return time + (period.toLowerCase() === 'am' ? 'a' : 'p');
+        });
+    }
+
+    getCurrentPeriodBounds() {
+        return this.currentView === 'week' 
+            ? this.getWeekBounds(this.currentDate)
+            : this.getMonthBounds(this.currentDate);
     }
 
 
