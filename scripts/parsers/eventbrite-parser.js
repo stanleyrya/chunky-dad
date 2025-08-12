@@ -335,12 +335,8 @@ class EventbriteParser {
                     venue: venue,
                     url: url
                 })
+                cover: price, // Use 'cover' field name that calendar-core.js expects
             };
-            
-            // Only add cover field if price is available
-            if (price && price.trim() !== '') {
-                event.cover = price;
-            }
             
             // Apply all metadata fields from config
             if (parserConfig.metadata) {
@@ -490,7 +486,8 @@ class EventbriteParser {
                 location: null, // No coordinates available in HTML parsing
                 city: city,
                 website: url, // Use 'website' field name that calendar-core.js expects
-                image: '', // Don't set empty cover field - will be added separately if available
+                cover: '', // Use 'cover' field name that calendar-core.js expects
+                image: '',
                 source: this.config.source,
                 setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
                 // Properly handle bear event detection based on configuration
