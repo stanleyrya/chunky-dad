@@ -307,7 +307,7 @@ class SavedRunDisplay {
             const resultsLike = {
                 totalEvents: saved?.summary?.totals?.totalEvents || 0,
                 bearEvents: saved?.summary?.totals?.bearEvents || 0,
-                calendarEvents: saved?.summary?.totals?.calendarEvents || 0, // Show actual count from saved run
+                calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
                 analyzedEvents: saved?.analyzedEvents || null,
