@@ -2331,6 +2331,11 @@ class ScriptableAdapter {
                                 const lines = notes.split('\n');
                                 let formattedHtml = '';
                                 
+                                // Fields to exclude from display (derived/display-specific fields)
+                                const excludeFromDisplay = new Set([
+                                    'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
+                                ]);
+                                
                                 lines.forEach(line => {
                                     const trimmed = line.trim();
                                     if (trimmed === '') {
@@ -2343,6 +2348,12 @@ class ScriptableAdapter {
                                         // Key-value metadata line
                                         const key = line.substring(0, colonIndex).trim();
                                         const value = line.substring(colonIndex + 1).trim();
+                                        
+                                        // Skip fields that shouldn't be displayed
+                                        if (excludeFromDisplay.has(key)) {
+                                            return;
+                                        }
+                                        
                                         formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
                                     } else {
                                         // Freeform description line
@@ -2922,6 +2933,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const shouldIncludeField = (obj, field) => {
             if (field.startsWith('_')) return false;
             if (typeof obj[field] === 'function') return false;
+            
+            // Exclude derived/display-specific fields that shouldn't be displayed in comparison
+            const excludeFromComparison = new Set([
+                'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
+            ]);
+            if (excludeFromComparison.has(field)) return false;
+            
             return true;
         };
         
