@@ -304,13 +304,29 @@ class SavedRunDisplay {
                 }));
             }
             
+            // Clean derived fields from saved events to prevent display inconsistencies
+            let cleanedAnalyzedEvents = saved?.analyzedEvents || null;
+            if (cleanedAnalyzedEvents && Array.isArray(cleanedAnalyzedEvents)) {
+                const derivedFields = ['shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'];
+                cleanedAnalyzedEvents = cleanedAnalyzedEvents.map(event => {
+                    const cleanedEvent = { ...event };
+                    derivedFields.forEach(field => {
+                        if (cleanedEvent.hasOwnProperty(field)) {
+                            delete cleanedEvent[field];
+                            console.log(`🧹 Display: Removed derived field '${field}' from saved event "${cleanedEvent.title}"`);
+                        }
+                    });
+                    return cleanedEvent;
+                });
+            }
+
             const resultsLike = {
                 totalEvents: saved?.summary?.totals?.totalEvents || 0,
                 bearEvents: saved?.summary?.totals?.bearEvents || 0,
                 calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
-                analyzedEvents: saved?.analyzedEvents || null,
+                analyzedEvents: cleanedAnalyzedEvents,
                 config: config,
                 _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
             };

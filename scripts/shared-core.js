@@ -630,9 +630,27 @@ class SharedCore {
             });
         }
         
+        // Clean any derived/display fields that might have been added
+        this.cleanDerivedFields(finalEvent);
+        
         return finalEvent;
     }
     
+    // Clean derived/display-specific fields from event objects
+    cleanDerivedFields(event) {
+        // Fields that should never be part of the final event object for display or saving
+        const derivedFields = ['shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'];
+        
+        derivedFields.forEach(field => {
+            if (event.hasOwnProperty(field)) {
+                delete event[field];
+                console.log(`🧹 SharedCore: Removed derived field '${field}' from event "${event.title}"`);
+            }
+        });
+        
+        return event;
+    }
+
     // Parse notes back into field/value pairs
     parseNotesIntoFields(notes) {
         const fields = {};
@@ -711,6 +729,15 @@ class SharedCore {
                         fields[canonicalKey] = value;
                     }
                 }
+            }
+        });
+        
+        // Clean any derived/display fields that might have been parsed from old notes
+        const derivedFields = ['shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'];
+        derivedFields.forEach(field => {
+            if (fields.hasOwnProperty(field)) {
+                delete fields[field];
+                console.log(`🧹 SharedCore: Removed derived field '${field}' from parsed notes`);
             }
         });
         
