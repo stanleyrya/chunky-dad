@@ -523,12 +523,14 @@ class SharedCore {
         const fieldStrategiesForCompare = newEvent._fieldMergeStrategies || {};
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
 
-        // Add all fields from notes to the final event for display purposes
-        Object.keys(finalFields).forEach(fieldName => {
-            if (finalFields[fieldName] && !finalEvent[fieldName]) {
-                finalEvent[fieldName] = finalFields[fieldName];
-            }
-        });
+        // DO NOT add fields from notes as top-level properties - this causes mutations
+        // The fields are already in the notes where they belong
+        // Commenting out the mutation:
+        // Object.keys(finalFields).forEach(fieldName => {
+        //     if (finalFields[fieldName] && !finalEvent[fieldName]) {
+        //         finalEvent[fieldName] = finalFields[fieldName];
+        //     }
+        // });
         
         console.log(`🔄 SharedCore: Final merged event has ${Object.keys(finalFields).length} fields in notes`);
         
@@ -613,17 +615,18 @@ class SharedCore {
         
         finalEvent._changes = changes;
         
-        // Add extracted fields back to the event object for fields with 'preserve' strategy
-        // This ensures the object structure matches what gets saved and makes debugging easier
-        if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldMergeStrategies) {
-            Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
-                const strategy = finalEvent._fieldMergeStrategies[fieldName];
-                // Only add fields that were preserved (not overridden by new values)
-                if (strategy === 'preserve' && !finalEvent[fieldName]) {
-                    finalEvent[fieldName] = fieldInfo.value;
-                }
-            });
-        }
+        // DO NOT add extracted fields as top-level properties - this causes mutations
+        // The preserved fields are already in the notes where they belong
+        // Commenting out the mutation:
+        // if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldMergeStrategies) {
+        //     Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
+        //         const strategy = finalEvent._fieldMergeStrategies[fieldName];
+        //         // Only add fields that were preserved (not overridden by new values)
+        //         if (strategy === 'preserve' && !finalEvent[fieldName]) {
+        //             finalEvent[fieldName] = fieldInfo.value;
+        //         }
+        //     });
+        // }
         
         return finalEvent;
     }
