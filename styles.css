@@ -1946,9 +1946,9 @@ body.index-page main {
 .event-name {
     font-weight: 600;
     margin-bottom: 0.2rem;
-    word-wrap: normal;
-    overflow-wrap: normal;
-    hyphens: none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: manual;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -1967,6 +1967,9 @@ body.index-page main {
     font-size: 0.75rem;
     color: var(--text-secondary);
     font-weight: 500;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: manual;
 }
 
 .event-item:hover .event-time,
@@ -4385,10 +4388,10 @@ footer {
   line-height: var(--event-name-line-height);
   margin-bottom: 0.1rem;
   
-  /* Let JavaScript handle the line building completely */
-  word-wrap: normal;
-  overflow-wrap: normal;
-  hyphens: none;
+  /* Use soft hyphens for intelligent breaking */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: manual;
   word-break: normal;
   
   /* Provide 3-line clamp as final safety net */
