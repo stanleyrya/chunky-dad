@@ -1112,26 +1112,30 @@ class SharedCore {
             }
         });
         
-        // Create event with ONLY the fields that will actually be saved to calendar
-        // This ensures what we display matches exactly what gets saved
         const calendarEvent = {
-            // Core calendar fields (these are what actually get saved)
             title: event.title || event.name || 'Untitled Event',
             startDate: event.startDate,
             endDate: event.endDate || event.startDate,
             location: event.location,
             notes: this.formatEventNotes(eventForNotes),
-            url: event.url, // Optional URL field
-            
-            // Metadata for processing (not saved to calendar but needed for logic)
-            city: event.city || 'default', // Used for calendar selection
-            key: event.key, // Used for deduplication
+            url: event.url,
+            city: event.city || 'default', // Include city for calendar selection
+            key: event.key, // Key should already be set during deduplication
             _parserConfig: event._parserConfig, // Preserve parser config
             _fieldMergeStrategies: event._fieldMergeStrategies // Preserve field strategies
         };
         
-        // DO NOT copy over additional fields - only the above fields should be present
-        // This ensures the display shows exactly what will be saved
+        // Copy over all other fields that have values
+        const fieldsToExclude = new Set(['isBearEvent', 'source']);
+        Object.keys(event).forEach(key => {
+            if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
+                if (strategies[key] === 'preserve') return;
+                // Only copy fields that have values
+                if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
+                    calendarEvent[key] = event[key];
+                }
+            }
+        });
         
         return calendarEvent;
     }
