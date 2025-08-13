@@ -1209,6 +1209,9 @@ class SharedCore {
                 action: analysis.action,
                 reason: analysis.reason
             };
+            if (analysis.calendarName) {
+                analyzedEvent._analysis.calendarName = analysis.calendarName;
+            }
             analyzedEvent._action = analysis.action;
             
             // Handle merge action by creating complete final event object
@@ -1300,6 +1303,15 @@ class SharedCore {
     
     // Analyze a single event against existing events
     analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
+        // Check if this is a missing calendar response from the adapter
+        if (existingEventsData && existingEventsData.missingCalendar) {
+            return { 
+                action: 'missing_calendar', 
+                reason: `Calendar "${existingEventsData.calendarName}" does not exist`,
+                calendarName: existingEventsData.calendarName
+            };
+        }
+        
         if (!existingEventsData || existingEventsData.length === 0) {
             return { action: 'new', reason: 'No existing events found' };
         }

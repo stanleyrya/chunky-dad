@@ -328,7 +328,16 @@ class ScriptableAdapter {
             // Determine calendar name from city
             const city = event.city || 'default';
             const calendarName = this.calendarMappings[city] || `chunky-dad-${city}`;
-            const calendar = await this.getOrCreateCalendar(calendarName);
+            
+            // Check if calendar exists first
+            const calendars = await Calendar.forEvents();
+            const calendar = calendars.find(cal => cal.title === calendarName);
+            
+            if (!calendar) {
+                // Return a special marker to indicate missing calendar
+                // This will be handled by shared-core's analyzeEventAction
+                return { missingCalendar: true, calendarName: calendarName };
+            }
             
             // Parse dates from formatted event
             const startDate = event.startDate;
@@ -364,6 +373,12 @@ class ScriptableAdapter {
             
             for (const event of analyzedEvents) {
                 try {
+                    // Skip events with missing calendars
+                    if (event._action === 'missing_calendar') {
+                        console.log(`📱 Scriptable: Skipping event "${event.title}" - calendar missing: ${event._analysis?.calendarName || 'unknown'}`);
+                        continue;
+                    }
+                    
                     const city = event.city || 'default';
                     const calendarName = calendarMappings[city] || `chunky-dad-${city}`;
                     const calendar = await this.getOrCreateCalendar(calendarName);
@@ -719,13 +734,12 @@ class ScriptableAdapter {
             
             if (!calendar) {
                 console.log(`❌ Calendar "${calendarName}" doesn't exist - must be created manually first`);
-                // Mark event as missing calendar for display
-                event._action = 'missing_calendar';
-                event._analysis = {
-                    action: 'missing_calendar',
-                    reason: `Calendar "${calendarName}" does not exist`,
-                    calendarName: calendarName
-                };
+                // DO NOT MUTATE THE EVENT - just log the issue
+                // The event should already have its _action and _analysis from prepareEventsForCalendar
+                // If it doesn't have an action, it means this is a display-only check
+                if (!event._action) {
+                    console.log(`   Note: Event has no action set (display-only check)`);
+                }
                 continue;
             }
             
