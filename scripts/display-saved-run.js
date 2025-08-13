@@ -291,7 +291,8 @@ class SavedRunDisplay {
                 return;
             }
 
-            // Get the original configuration and events from the saved run
+            // Normalize to the same shape expected by display/present methods
+            // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
             let config = saved?.config;
             
             // If readOnly mode (default), force isDryRun override for all parsers
@@ -303,55 +304,20 @@ class SavedRunDisplay {
                 }));
             }
             
-            // Initialize adapter and run fresh analysis with current calendar state
-            const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
-            const { SharedCore } = importModule('shared-core');
-            this.adapter = new ScriptableAdapter();
-            
-            // Create shared core instance and run fresh analysis
-            const sharedCore = new SharedCore();
-            
-            // Get the raw events from the saved run (before analysis)
-            const rawEvents = [];
-            if (saved.parserResults) {
-                saved.parserResults.forEach(parserResult => {
-                    if (parserResult.events) {
-                        rawEvents.push(...parserResult.events);
-                    }
-                });
-            }
-            
-            if (rawEvents.length === 0) {
-                // Fallback to using saved analyzed events if raw events aren't available
-                const resultsLike = {
-                    totalEvents: saved?.summary?.totals?.totalEvents || 0,
-                    bearEvents: saved?.summary?.totals?.bearEvents || 0,
-                    calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
-                    errors: saved?.errors || [],
-                    parserResults: saved?.parserResults || [],
-                    analyzedEvents: saved?.analyzedEvents || null,
-                    config: config,
-                    _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
-                };
-                await this.adapter.displayResults(resultsLike);
-                return;
-            }
-            
-            // Run fresh analysis with current calendar state
-            const analyzedEvents = await sharedCore.prepareEventsForCalendar(rawEvents, this.adapter, config.config || config);
-            
-            // Create results object with fresh analysis
             const resultsLike = {
-                totalEvents: rawEvents.length,
-                bearEvents: rawEvents.length, // Assuming all events in saved runs are bear events
-                calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
+                totalEvents: saved?.summary?.totals?.totalEvents || 0,
+                bearEvents: saved?.summary?.totals?.bearEvents || 0,
+                calendarEvents: saved?.summary?.totals?.calendarEvents || 0, // Show actual count from saved run
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
-                analyzedEvents: analyzedEvents,
+                analyzedEvents: saved?.analyzedEvents || null,
                 config: config,
                 _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
             };
 
+            // Initialize adapter and display results
+            const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
+            this.adapter = new ScriptableAdapter();
             await this.adapter.displayResults(resultsLike);
         } catch (e) {
             console.log(`📱 Display: Failed to display saved run: ${e.message}`);
