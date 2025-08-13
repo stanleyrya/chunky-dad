@@ -571,9 +571,10 @@ class DynamicCalendarLoader extends CalendarCore {
             return isShortName ? this.processShortNameHyphens(text, false) : text;
         }
         
-        // For character-limited display, prefer natural word breaks over hyphenation
-        // Process the text based on whether it's shortName or fullName
-        const processedText = isShortName ? this.processShortNameHyphens(text, false) : text;
+        // For character-limited display, handle shortNames and fullNames differently:
+        // - shortNames with hyphens are designed to provide better breakpoints, so keep hyphens
+        // - fullNames should use natural word breaks without artificial hyphenation
+        const processedText = isShortName ? this.processShortNameHyphens(text, true) : text;
         
         // Split into words for line building
         const words = processedText.split(/\s+/).filter(word => word.length > 0);
@@ -585,29 +586,48 @@ class DynamicCalendarLoader extends CalendarCore {
         // Check if any individual word is too long for a line
         const hasLongWords = words.some(word => word.length > charLimitPerLine);
         
-        // For most cases, prefer CSS natural word wrapping over manual line building
-        // Only do manual processing for extreme cases where we need truncation
-        if (approxLinesNeeded <= 3 && !hasLongWords) {
-            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Text fits naturally, letting CSS handle wrapping`, {
+        // Decide whether to use CSS natural wrapping or manual line building:
+        // - For fullNames (isShortName=false): prefer CSS natural wrapping to avoid "hap-py" issues
+        // - For shortNames (isShortName=true): respect the intended breakpoints, but still avoid over-processing
+        
+        if (!isShortName && approxLinesNeeded <= 3 && !hasLongWords) {
+            // fullNames that fit naturally - let CSS handle to avoid inappropriate hyphenation
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: fullName fits naturally, letting CSS handle wrapping`, {
                 originalText: text,
                 processedText,
                 approxLinesNeeded,
                 charLimitPerLine,
                 hasLongWords,
+                isShortName,
                 finalResult: processedText
             });
             return processedText;
         }
         
-        // For cases where text might be too long but doesn't have extremely long words,
-        // still prefer CSS but with a more conservative approach
-        if (approxLinesNeeded <= 4 && !hasLongWords && charLimitPerLine >= 8) {
-            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Text slightly long but manageable, letting CSS handle with truncation fallback`, {
+        if (!isShortName && approxLinesNeeded <= 4 && !hasLongWords && charLimitPerLine >= 8) {
+            // fullNames that are slightly long but manageable - still let CSS handle
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: fullName slightly long but manageable, letting CSS handle`, {
                 originalText: text,
                 processedText,
                 approxLinesNeeded,
                 charLimitPerLine,
                 hasLongWords,
+                isShortName,
+                finalResult: processedText
+            });
+            return processedText;
+        }
+        
+        if (isShortName && approxLinesNeeded <= 3 && !hasLongWords && !processedText.includes('-')) {
+            // shortNames without hyphens that fit naturally - let CSS handle
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: shortName without hyphens fits naturally, letting CSS handle`, {
+                originalText: text,
+                processedText,
+                approxLinesNeeded,
+                charLimitPerLine,
+                hasLongWords,
+                isShortName,
+                hasHyphens: processedText.includes('-'),
                 finalResult: processedText
             });
             return processedText;
@@ -707,7 +727,8 @@ class DynamicCalendarLoader extends CalendarCore {
         // - Always respect escaped hyphens (\-)
         
         if (willSplitLines) {
-            // When splitting lines manually, keep all hyphens for better breakpoints
+            // When splitting lines manually, keep hyphens for better breakpoints
+            // shortNames with hyphens like "Bear-Night" are designed to break at the hyphen
             return text.replace(/\\-/g, '§ESCAPED_HYPHEN§').replace(/§ESCAPED_HYPHEN§/g, '-');
         } else {
             // When relying on CSS word-wrap, be more selective about hyphen removal
