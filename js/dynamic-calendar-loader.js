@@ -496,11 +496,15 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If measurement not ready yet, prefer shortName over fullName for real rendering
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using short name processed for 3 lines`, {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using processed name`, {
                 shortName: shortName,
-                fullName: fullName
+                fullName: fullName,
+                preferredName: shortName || fullName
             });
-            return this.buildThreeLineText(shortName, true, breakpoint); // shortName hyphens are conditional
+            // Use shortName if available, otherwise fullName, processed appropriately
+            const nameToUse = shortName || fullName;
+            const isShortName = !!shortName;
+            return this.buildThreeLineText(nameToUse, isShortName, breakpoint);
         }
         
         // Calculate how many characters can fit per line
@@ -562,17 +566,54 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         // If no character limit provided, use CSS word-wrap (fallback)
+        // For shortNames, only remove hyphens if we're not doing line splitting
         if (!charLimitPerLine) {
             return isShortName ? this.processShortNameHyphens(text, false) : text;
         }
         
+        // For character-limited display, prefer natural word breaks over hyphenation
         // Process the text based on whether it's shortName or fullName
-        const processedText = isShortName ? this.processShortNameHyphens(text, true) : text;
+        const processedText = isShortName ? this.processShortNameHyphens(text, false) : text;
         
         // Split into words for line building
         const words = processedText.split(/\s+/).filter(word => word.length > 0);
         
-        // IMPROVED APPROACH: Try natural word flow first, only hyphenate as last resort
+        // Calculate approximate lines needed with better estimation
+        const totalChars = processedText.length;
+        const approxLinesNeeded = Math.ceil(totalChars / charLimitPerLine);
+        
+        // Check if any individual word is too long for a line
+        const hasLongWords = words.some(word => word.length > charLimitPerLine);
+        
+        // For most cases, prefer CSS natural word wrapping over manual line building
+        // Only do manual processing for extreme cases where we need truncation
+        if (approxLinesNeeded <= 3 && !hasLongWords) {
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Text fits naturally, letting CSS handle wrapping`, {
+                originalText: text,
+                processedText,
+                approxLinesNeeded,
+                charLimitPerLine,
+                hasLongWords,
+                finalResult: processedText
+            });
+            return processedText;
+        }
+        
+        // For cases where text might be too long but doesn't have extremely long words,
+        // still prefer CSS but with a more conservative approach
+        if (approxLinesNeeded <= 4 && !hasLongWords && charLimitPerLine >= 8) {
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Text slightly long but manageable, letting CSS handle with truncation fallback`, {
+                originalText: text,
+                processedText,
+                approxLinesNeeded,
+                charLimitPerLine,
+                hasLongWords,
+                finalResult: processedText
+            });
+            return processedText;
+        }
+        
+        // Only use manual line building for cases where we need aggressive truncation
         const lines = [];
         let currentLine = '';
         
@@ -642,6 +683,7 @@ class DynamicCalendarLoader extends CalendarCore {
             lines.push(currentLine);
         }
         
+        // Return the processed text as a single string - CSS will handle line breaks
         const result = lines.join(' ');
         
         logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result "${result}"`, {
@@ -655,19 +697,61 @@ class DynamicCalendarLoader extends CalendarCore {
         return result;
     }
     
-    // Process shortName hyphens based on whether we're splitting lines
+    // Process shortName hyphens based on display context
     processShortNameHyphens(text, willSplitLines) {
         if (!text) return '';
         
-        // For shortNames: 
-        // - If we're splitting lines, keep hyphens for better breakpoints
-        // - If we're not splitting lines, remove hyphens unless escaped with \
+        // For shortNames, we want to be smart about hyphen removal:
+        // - Keep hyphens that are part of compound words (like "Co-Ed", "Ex-Military")
+        // - Remove hyphens that were added just for line breaking (like "Bear-Night" -> "Bear Night")
+        // - Always respect escaped hyphens (\-)
+        
         if (willSplitLines) {
-            // Keep all hyphens for line breaking, but respect escaped ones
+            // When splitting lines manually, keep all hyphens for better breakpoints
             return text.replace(/\\-/g, '§ESCAPED_HYPHEN§').replace(/§ESCAPED_HYPHEN§/g, '-');
         } else {
-            // Remove hyphens except escaped ones (\-)
-            return text.replace(/(?<!\\)-/g, '').replace(/\\-/g, '-');
+            // When relying on CSS word-wrap, be more selective about hyphen removal
+            // Only remove hyphens that seem to be artificial line-breaking aids
+            
+            // First, handle escaped hyphens
+            let processed = text.replace(/\\-/g, '§ESCAPED_HYPHEN§');
+            
+            // Remove hyphens in patterns that look like artificial line breaks:
+            // - "Bear-Night" -> "Bear Night" (common words separated by hyphen)
+            // - "Happy-Hour" -> "Happy Hour"
+            // But keep compound words like "Co-Ed", "Ex-Military", "Non-Stop"
+            
+            const words = processed.split(/\s+/);
+            const processedWords = words.map(word => {
+                if (!word.includes('-')) return word;
+                
+                // Split on hyphens and check if it looks like an artificial break
+                const parts = word.split('-');
+                if (parts.length === 2) {
+                    const [first, second] = parts;
+                    
+                    // Keep hyphens for:
+                    // - Short prefixes (Co-, Ex-, Non-, Pre-, Post-, Mid-, etc.)
+                    // - Common compound patterns
+                    if (first.length <= 3 || 
+                        ['Co', 'Ex', 'Non', 'Pre', 'Post', 'Mid', 'Sub', 'Pro', 'Anti'].includes(first) ||
+                        second.length <= 3) {
+                        return word; // Keep the hyphen
+                    }
+                    
+                    // For longer words that look like artificial breaks, remove hyphen
+                    if (first.length >= 4 && second.length >= 4) {
+                        return first + ' ' + second;
+                    }
+                }
+                
+                return word; // Keep as-is for complex hyphenated words
+            });
+            
+            processed = processedWords.join(' ');
+            
+            // Restore escaped hyphens
+            return processed.replace(/§ESCAPED_HYPHEN§/g, '-');
         }
     }
     
