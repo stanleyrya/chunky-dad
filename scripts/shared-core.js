@@ -524,8 +524,13 @@ class SharedCore {
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
 
         // Add all fields from notes to the final event for display purposes
+        // But exclude derived/display-specific fields that shouldn't be re-added
+        const excludeFromDisplay = new Set([
+            'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
+        ]);
+        
         Object.keys(finalFields).forEach(fieldName => {
-            if (finalFields[fieldName] && !finalEvent[fieldName]) {
+            if (finalFields[fieldName] && !finalEvent[fieldName] && !excludeFromDisplay.has(fieldName)) {
                 finalEvent[fieldName] = finalFields[fieldName];
             }
         });
