@@ -638,6 +638,12 @@ class SharedCore {
         const fields = {};
         const lines = notes.split('\n');
         
+        // Fields to exclude when parsing notes back into field objects
+        // These are derived/display-specific fields that shouldn't be re-added to event objects
+        const excludeFromParsing = new Set([
+            'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
+        ]);
+        
         // Map of normalized aliases (lowercased, spaces removed) to canonical field names
         const aliasToCanonical = {
             // Description aliases
@@ -699,7 +705,11 @@ class SharedCore {
                     const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
                         ? aliasToCanonical[normalizedKey]
                         : rawKey;
-                    fields[canonicalKey] = value;
+                    
+                    // Skip fields that should be excluded from parsing
+                    if (!excludeFromParsing.has(canonicalKey)) {
+                        fields[canonicalKey] = value;
+                    }
                 }
             }
         });
