@@ -1148,7 +1148,9 @@ class SharedCore {
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
-            'originalTitle', 'name' // These are usually duplicates of title
+            'originalTitle', 'name', // These are usually duplicates of title
+            // Derived/display-specific fields that should not be saved to notes
+            'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
         ]);
         
         // Add all fields that have values (merge logic has already determined correct values)
