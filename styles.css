@@ -1946,9 +1946,9 @@ body.index-page main {
 .event-name {
     font-weight: 600;
     margin-bottom: 0.2rem;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
+    word-wrap: normal;
+    overflow-wrap: normal;
+    hyphens: none;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -4385,10 +4385,11 @@ footer {
   line-height: var(--event-name-line-height);
   margin-bottom: 0.1rem;
   
-  /* Let JavaScript handle the line building, CSS provides final overflow protection */
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
+  /* Let JavaScript handle the line building completely */
+  word-wrap: normal;
+  overflow-wrap: normal;
+  hyphens: none;
+  word-break: normal;
   
   /* Provide 3-line clamp as final safety net */
   display: -webkit-box;

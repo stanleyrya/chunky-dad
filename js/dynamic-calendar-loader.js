@@ -527,7 +527,18 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.buildThreeLineText(event.shorterName.trim(), true, breakpoint);
         }
         
-        // PRIORITY 1: Try shortName first (provides better breakpoints)
+        // First check if shortName without hyphens can fit naturally
+        const shortNameWithoutHyphens = this.processShortNameHyphens(shortName, false);
+        const shortNameWithoutHyphensLength = shortNameWithoutHyphens.length;
+        const totalCharsAvailable = charLimitPerLine * 3; // We have 3 lines
+        
+        // If shortName without hyphens fits comfortably, use it
+        if (shortNameWithoutHyphensLength <= totalCharsAvailable * 0.9) { // 90% to leave some margin
+            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName without hyphens fits naturally: "${shortNameWithoutHyphens}"`);
+            return shortNameWithoutHyphens;
+        }
+        
+        // PRIORITY 1: Try shortName with intelligent hyphen handling
         const shortNameResult = this.buildThreeLineText(shortName, true, breakpoint, charLimitPerLine);
         
         // PRIORITY 2: Try fullName and compare quality
@@ -637,7 +648,9 @@ class DynamicCalendarLoader extends CalendarCore {
         const lines = [];
         let currentLine = '';
         
-        for (const word of words) {
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            
             // If we already have 3 lines, stop
             if (lines.length >= 3) break;
             
@@ -648,7 +661,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Word fits, add it to current line
                 currentLine = testLine;
             } else {
-                // Word doesn't fit - prefer to move to next line instead of hyphenating
+                // Word doesn't fit on current line
                 if (currentLine) {
                     // Save current line and start new one
                     lines.push(currentLine);
@@ -656,23 +669,22 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     // If we already have 2 lines, this is the last line
                     if (lines.length >= 2) {
-                        // On last line, fit as much as possible (truncate if needed)
-                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
-                        break;
-                    } else {
-                        // Try to fit the word on a new line
-                        if (word.length <= charLimitPerLine) {
-                            currentLine = word;
+                        // On last line, try to fit remaining words
+                        const remainingWords = words.slice(i);
+                        const remainingText = remainingWords.join(' ');
+                        
+                        if (remainingText.length <= charLimitPerLine) {
+                            // All remaining words fit on last line
+                            currentLine = remainingText;
+                            break;
                         } else {
-                            // Word is too long even for new line - only now consider hyphenation
-                            const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
-                            if (hyphenated.firstPart) {
-                                lines.push(hyphenated.firstPart);
-                                currentLine = hyphenated.remainder || '';
-                            } else {
-                                currentLine = word.substring(0, charLimitPerLine);
-                            }
+                            // Fit what we can on last line
+                            currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
+                            break;
                         }
+                    } else {
+                        // Not on last line yet - just move word to next line
+                        currentLine = word; // Even if it's too long, put it on new line
                     }
                 } else {
                     // No current line, but word is too long
@@ -681,18 +693,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
                         break;
                     } else {
-                        // Only hyphenate if absolutely necessary (word longer than line)
-                        if (word.length > charLimitPerLine) {
-                            const hyphenated = this.hyphenateWord(word, charLimitPerLine, isShortName);
-                            if (hyphenated.firstPart) {
-                                lines.push(hyphenated.firstPart);
-                                currentLine = hyphenated.remainder || '';
-                            } else {
-                                currentLine = word.substring(0, charLimitPerLine);
-                            }
-                        } else {
-                            currentLine = word;
-                        }
+                        // Just put the word on a new line, even if it's too long
+                        // Let CSS handle overflow rather than breaking words artificially
+                        currentLine = word;
                     }
                 }
             }
@@ -721,65 +724,36 @@ class DynamicCalendarLoader extends CalendarCore {
     processShortNameHyphens(text, willSplitLines) {
         if (!text) return '';
         
-        // For shortNames, we want to be smart about hyphen removal:
-        // - Keep hyphens that are part of compound words (like "Co-Ed", "Ex-Military")
-        // - Remove hyphens that were added just for line breaking (like "Bear-Night" -> "Bear Night")
-        // - Always respect escaped hyphens (\-)
+        // shortName hyphenation rules:
+        // - "-" indicates optional hyphenation points (can be removed if text fits)
+        // - "\-" indicates literal hyphens that must always be kept (part of the word)
+        // - Regular hyphens in normal titles should always be kept literally
+        
+        // First, preserve escaped hyphens by replacing them temporarily
+        let processed = text.replace(/\\-/g, '§ESCAPED_HYPHEN§');
+        
+        // Now all remaining "-" are optional hyphenation points
+        // If the text can fit without them, remove them
+        // Otherwise, keep them as breakpoints
         
         if (willSplitLines) {
-            // When splitting lines manually, keep hyphens for better breakpoints
-            // shortNames with hyphens like "Bear-Night" are designed to break at the hyphen
-            return text.replace(/\\-/g, '§ESCAPED_HYPHEN§').replace(/§ESCAPED_HYPHEN§/g, '-');
+            // When manually splitting lines, keep optional hyphens as breakpoints
+            // This allows us to break "Bear-Night" at the hyphen if needed
+            processed = processed; // Keep the hyphens for line breaking
         } else {
-            // When relying on CSS word-wrap, be more selective about hyphen removal
-            // Only remove hyphens that seem to be artificial line-breaking aids
-            
-            // First, handle escaped hyphens
-            let processed = text.replace(/\\-/g, '§ESCAPED_HYPHEN§');
-            
-            // Remove hyphens in patterns that look like artificial line breaks:
-            // - "Bear-Night" -> "Bear Night" (common words separated by hyphen)
-            // - "Happy-Hour" -> "Happy Hour"
-            // But keep compound words like "Co-Ed", "Ex-Military", "Non-Stop"
-            
-            const words = processed.split(/\s+/);
-            const processedWords = words.map(word => {
-                if (!word.includes('-')) return word;
-                
-                // Split on hyphens and check if it looks like an artificial break
-                const parts = word.split('-');
-                if (parts.length === 2) {
-                    const [first, second] = parts;
-                    
-                    // Keep hyphens for:
-                    // - Short prefixes (Co-, Ex-, Non-, Pre-, Post-, Mid-, etc.)
-                    // - Common compound patterns
-                    if (first.length <= 3 || 
-                        ['Co', 'Ex', 'Non', 'Pre', 'Post', 'Mid', 'Sub', 'Pro', 'Anti'].includes(first) ||
-                        second.length <= 3) {
-                        return word; // Keep the hyphen
-                    }
-                    
-                    // For longer words that look like artificial breaks, remove hyphen
-                    if (first.length >= 4 && second.length >= 4) {
-                        return first + ' ' + second;
-                    }
-                }
-                
-                return word; // Keep as-is for complex hyphenated words
-            });
-            
-            processed = processedWords.join(' ');
-            
-            // Restore escaped hyphens
-            return processed.replace(/§ESCAPED_HYPHEN§/g, '-');
+            // When text fits naturally, remove optional hyphens
+            // "Bear-Night" becomes "Bear Night" if it fits on one line
+            processed = processed.replace(/-/g, ' ');
         }
+        
+        // Restore escaped hyphens as literal hyphens
+        return processed.replace(/§ESCAPED_HYPHEN§/g, '-');
     }
     
     // Hyphenate a word that's too long for a line
     hyphenateWord(word, charLimit, isShortName) {
         // First, try to split at existing hyphens (if it's a shortName or has intentional hyphens)
-        if (word.includes('-') && !word.includes('\\-')) {
+        if (word.includes('-')) {
             const parts = word.split('-');
             let builtPart = '';
             let remainder = '';
@@ -792,10 +766,10 @@ class DynamicCalendarLoader extends CalendarCore {
                     if (partWithHyphen.length <= charLimit) {
                         builtPart = partWithHyphen;
                     } else {
-                        // Even the first part is too long
+                        // Even the first part is too long - don't hyphenate, just truncate
                         return {
-                            firstPart: part.substring(0, charLimit - 1) + '…',
-                            remainder: ''
+                            firstPart: part.substring(0, Math.min(part.length, charLimit)),
+                            remainder: parts.slice(i + 1).join('-')
                         };
                     }
                 } else {
@@ -815,17 +789,12 @@ class DynamicCalendarLoader extends CalendarCore {
             }
         }
         
-        // No natural hyphen break found, or it didn't help
-        // Calculate our own hyphenation point
-        if (charLimit <= 3) {
-            return { firstPart: word.substring(0, charLimit), remainder: '' };
-        }
-        
-        // Try to break at a reasonable point (leave room for hyphen)
-        const breakPoint = charLimit - 1;
+        // No natural hyphen break found
+        // DON'T add artificial hyphens - just return the word as-is
+        // Let it overflow to the next line naturally
         return {
-            firstPart: word.substring(0, breakPoint) + '-',
-            remainder: word.substring(breakPoint)
+            firstPart: word,
+            remainder: ''
         };
     }
     
