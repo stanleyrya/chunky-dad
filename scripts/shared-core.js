@@ -1112,31 +1112,26 @@ class SharedCore {
             }
         });
         
+        // Create event with ONLY the fields that will actually be saved to calendar
+        // This ensures what we display matches exactly what gets saved
         const calendarEvent = {
+            // Core calendar fields (these are what actually get saved)
             title: event.title || event.name || 'Untitled Event',
             startDate: event.startDate,
             endDate: event.endDate || event.startDate,
             location: event.location,
-            // Notes should reflect exactly what will be saved for NEW events (no 'preserve' fields)
             notes: this.formatEventNotes(eventForNotes),
-            // Don't use url field - it goes in notes instead
-            city: event.city || 'default', // Include city for calendar selection
-            key: event.key, // Key should already be set during deduplication
+            url: event.url, // Optional URL field
+            
+            // Metadata for processing (not saved to calendar but needed for logic)
+            city: event.city || 'default', // Used for calendar selection
+            key: event.key, // Used for deduplication
             _parserConfig: event._parserConfig, // Preserve parser config
             _fieldMergeStrategies: event._fieldMergeStrategies // Preserve field strategies
         };
         
-        // Copy over all other fields except those explicitly marked as 'preserve'
-        const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
-        Object.keys(event).forEach(key => {
-            if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
-                if (strategies[key] === 'preserve') return;
-                // Only copy fields that have values and should be included
-                if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
-                    calendarEvent[key] = event[key];
-                }
-            }
-        });
+        // DO NOT copy over additional fields - only the above fields should be present
+        // This ensures the display shows exactly what will be saved
         
         return calendarEvent;
     }

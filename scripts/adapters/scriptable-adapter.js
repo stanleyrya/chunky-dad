@@ -2799,19 +2799,79 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         let events = results.analyzedEvents;
         
-        // If this is from a saved run, convert date strings to Date objects
-        if (results && results._isDisplayingSavedRun && events.length > 0) {
-            events = events.map(event => {
-                const convertedEvent = { ...event };
-                if (typeof convertedEvent.startDate === 'string') {
-                    convertedEvent.startDate = new Date(convertedEvent.startDate);
+        // Normalize events to ensure consistency between fresh runs and saved runs
+        // We show what will be saved to calendar PLUS display-only fields from notes
+        events = events.map(event => {
+            // Parse fields from notes for display (these are in the notes but useful for UI)
+            const notesFields = {};
+            if (event.notes) {
+                const lines = event.notes.split('\n');
+                lines.forEach(line => {
+                    const colonIndex = line.indexOf(':');
+                    if (colonIndex > 0) {
+                        const fieldName = line.substring(0, colonIndex).trim();
+                        const fieldValue = line.substring(colonIndex + 1).trim();
+                        // Only extract commonly used display fields
+                        if (['venue', 'bar', 'day', 'time', 'recurring', 'recurrence'].includes(fieldName)) {
+                            notesFields[fieldName] = fieldValue;
+                        }
+                    }
+                });
+            }
+            
+            // Create a normalized event 
+            const normalizedEvent = {
+                // Core calendar fields (these ACTUALLY get saved to calendar)
+                title: event.title,
+                startDate: event.startDate,
+                endDate: event.endDate,
+                location: event.location,
+                notes: event.notes,
+                url: event.url,
+                
+                // Display-only fields extracted from notes (for UI convenience)
+                venue: notesFields.venue || event.venue,
+                bar: notesFields.bar || event.bar,
+                day: notesFields.day || event.day,
+                time: notesFields.time || event.time,
+                recurring: notesFields.recurring || event.recurring,
+                recurrence: notesFields.recurrence || event.recurrence,
+                
+                // Metadata needed for processing
+                _action: event._action,
+                _analysis: event._analysis,
+                city: event.city, // Used for calendar selection
+                key: event.key,   // Used for deduplication
+                
+                // Preserve merge-related metadata for display
+                _existingEvent: event._existingEvent,
+                _mergeDiff: event._mergeDiff,
+                _changes: event._changes,
+                _conflicts: event._conflicts,
+                _conflictAnalysis: event._conflictAnalysis,
+                _original: event._original,
+                _mergeInfo: event._mergeInfo,
+                _parserConfig: event._parserConfig,
+                _fieldMergeStrategies: event._fieldMergeStrategies
+            };
+            
+            // Convert date strings to Date objects if needed (for saved runs)
+            if (typeof normalizedEvent.startDate === 'string') {
+                normalizedEvent.startDate = new Date(normalizedEvent.startDate);
+            }
+            if (typeof normalizedEvent.endDate === 'string') {
+                normalizedEvent.endDate = new Date(normalizedEvent.endDate);
+            }
+            
+            // Remove undefined values to match JSON serialization behavior
+            Object.keys(normalizedEvent).forEach(key => {
+                if (normalizedEvent[key] === undefined) {
+                    delete normalizedEvent[key];
                 }
-                if (typeof convertedEvent.endDate === 'string') {
-                    convertedEvent.endDate = new Date(convertedEvent.endDate);
-                }
-                return convertedEvent;
             });
-        }
+            
+            return normalizedEvent;
+        });
         
         return events;
     }
