@@ -31,9 +31,12 @@
           "merge": "clobber"
         },
         "description": {
-          "merge": "preserve"
+          "merge": "upsert"
         },
-        "venue": {
+        "bar": {
+          "merge": "clobber"
+        },
+        "address": {
           "merge": "clobber"
         },
         "startDate": {
@@ -43,10 +46,70 @@
           "merge": "clobber"
         },
         "website": {
-          "merge": "upsert"
+          "merge": "clobber"
         },
         "gmaps": {
+          "merge": "clobber"
+        },
+        "image": {
+          "merge": "clobber"
+        },
+        "cover": {
+          "merge": "clobber"
+        }
+      }
+    },
+    {
+      "name": "Bear Happy Hour",
+      "parser": "eventbrite",
+      "urls": ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
+      "alwaysBear": true,
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 20,
+      "dryRun": true,
+      "daysToLookAhead": null,
+      "mergeMode": "upsert",
+      "urlFilters": {
+        "include": ["eventbrite\\.com\\/e\\/"]
+      },
+      "metadata": {
+        "title": {
           "merge": "upsert"
+        },
+        "shortName": {
+          "value": "Coach After Dark",
+          "merge": "upsert"
+        },
+        "instagram": {
+          "value": "https://www.instagram.com/coachafterdark",
+          "merge": "upsert"
+        },
+        "description": {
+          "merge": "upsert"
+        },
+        "bar": {
+          "merge": "clobber"
+        },
+        "address": {
+          "merge": "clobber"
+        },
+        "startDate": {
+          "merge": "clobber"
+        },
+        "endDate": {
+          "merge": "clobber"
+        },
+        "website": {
+          "merge": "clobber"
+        },
+        "gmaps": {
+          "merge": "clobber"
+        },
+        "image": {
+          "merge": "clobber"
+        },
+        "cover": {
+          "merge": "clobber"
         }
       }
     }
