@@ -727,99 +727,15 @@ class DynamicCalendarLoader extends CalendarCore {
             return processedText;
         }
         
-        // Only use manual line building for cases where we need aggressive truncation
-        const lines = [];
-        let currentLine = '';
-        
-        for (let i = 0; i < words.length; i++) {
-            const word = words[i];
-            
-            // If we already have 3 lines, stop
-            if (lines.length >= 3) break;
-            
-            // Check if adding this word would exceed line limit
-            const testLine = currentLine ? currentLine + ' ' + word : word;
-            
-            if (testLine.length <= charLimitPerLine) {
-                // Word fits, add it to current line
-                currentLine = testLine;
-            } else {
-                // Word doesn't fit on current line
-                if (currentLine) {
-                    // Save current line and start new one
-                    lines.push(currentLine);
-                    currentLine = '';
-                    
-                    // If we already have 2 lines, this is the last line
-                    if (lines.length >= 2) {
-                        // On last line, try to fit remaining words
-                        const remainingWords = words.slice(i);
-                        const remainingText = remainingWords.join(' ');
-                        
-                        if (remainingText.length <= charLimitPerLine) {
-                            // All remaining words fit on last line
-                            currentLine = remainingText;
-                            break;
-                        } else {
-                            // Fit what we can on last line
-                            currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
-                            break;
-                        }
-                    } else {
-                        // Not on last line yet - just move word to next line
-                        currentLine = word; // Even if it's too long, put it on new line
-                    }
-                } else {
-                    // No current line, but word is too long
-                    if (lines.length >= 2) {
-                        // This is the last line
-                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
-                        break;
-                    } else {
-                        // Just put the word on a new line, even if it's too long
-                        // Let CSS handle overflow rather than breaking words artificially
-                        currentLine = word;
-                    }
-                }
-            }
-        }
-        
-        // Add the final line if it has content
-        if (currentLine && lines.length < 3) {
-            lines.push(currentLine);
-        }
-        
-        // Return the processed text as a single string - CSS will handle line breaks
-        const result = lines.join(' ');
-        
-        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result "${result}"`, {
-            originalText: text,
-            processedText,
-            linesBuilt: lines.length,
-            lines,
-            finalResult: result
-        });
-        
-        return result;
+        // Avoid manual splitting — let CSS handle wrapping; return processed text
+        return processedText;
     }
     
 
     
 
     
-    // Fit a word on the last line (3rd line) with truncation if needed
-    fitWordOnLastLine(word, charLimit, isShortName) {
-        if (word.length <= charLimit) {
-            return word;
-        }
-        
-        // Word is too long for last line, truncate with ellipsis
-        if (charLimit <= 1) {
-            return '…';
-        }
-        
-        return word.substring(0, charLimit - 1) + '…';
-    }
+
     
     // Evaluate the quality of a text result
     evaluateTextQuality(text, charLimitPerLine) {
