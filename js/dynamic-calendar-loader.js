@@ -486,16 +486,7 @@ class DynamicCalendarLoader extends CalendarCore {
     
 
     
-    /**
-     * Process venue/bar names with soft hyphens
-     * Venue names typically need less aggressive hyphenation
-     */
-    processVenueName(venueName) {
-        if (!venueName) return venueName;
-        
-        // Just return the venue name as-is - let CSS handle line breaking
-        return venueName;
-    }
+
 
 
 
@@ -550,18 +541,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
 
-    // Process shortName hyphens based on display context
-    processShortNameHyphens(text) {
-        if (!text) return '';
-        
-        // Simple shortName hyphenation rules:
-        // - "-" becomes a soft hyphen (only shows when line breaks)
-        // - "\-" becomes a literal hyphen (always shows)
-        
-        // This is now handled by insertSoftHyphens() method
-        // Just return the text as-is since insertSoftHyphens handles the conversion
-        return text;
-    }
+
     
 
 
@@ -877,14 +857,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 <div class="modal-body">
                     ${events.length > 0 
                         ? events.map(event => `
-                            <div class="modal-event-item" data-event-slug="${event.slug}">
-                                <div class="event-name">${event.name}</div>
-                                <div class="event-details">
-                                    <span class="event-time">${event.time}</span>
-                                    <span class="event-venue">${this.processVenueName(event.bar)}</span>
-                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
+                                                            <div class="modal-event-item" data-event-slug="${event.slug}">
+                                    <div class="event-name">${event.name}</div>
+                                    <div class="event-details">
+                                        <span class="event-time">${event.time}</span>
+                                        <span class="event-venue">${event.bar}</span>
+                                        ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
+                                    </div>
                                 </div>
-                            </div>
                         `).join('')
                         : ''
                     }
@@ -1372,7 +1352,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${this.processVenueName(event.bar) || ''}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
                 }).join('')
@@ -1476,7 +1456,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${this.processVenueName(event.bar) || ''}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
                 }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
