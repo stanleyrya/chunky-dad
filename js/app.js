@@ -124,13 +124,19 @@ class ChunkyDadApp {
             // Always initialize core modules
             this.initializeCoreModules();
             
-            // Initialize page-specific modules
+            // Initialize page-specific modules (don't let them block each other)
             if (this.isCityPage || this.isTestPage) {
-                await this.initializeCityPageModules();
+                // Don't await city page modules to prevent hanging
+                this.initializeCityPageModules().catch(error => {
+                    logger.componentError('SYSTEM', 'City page module initialization failed', error);
+                });
             }
             
             if (this.isDirectoryPage) {
-                await this.initializeDirectoryPageModules();
+                // Don't await directory page modules to prevent hanging
+                this.initializeDirectoryPageModules().catch(error => {
+                    logger.componentError('SYSTEM', 'Directory page module initialization failed', error);
+                });
             }
             
             logger.componentLoad('SYSTEM', 'chunky.dad App initialization complete');
