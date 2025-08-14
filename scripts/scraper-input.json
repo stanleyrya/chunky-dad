@@ -49,7 +49,7 @@
           "merge": "upsert"
         },
         "cover": {
-          "merge": "upsert"
+          "merge": "clobber"
         }
       }
     },
@@ -97,7 +97,7 @@
           "merge": "upsert"
         },
         "cover": {
-          "merge": "upsert"
+          "merge": "clobber"
         }
       }
     }
