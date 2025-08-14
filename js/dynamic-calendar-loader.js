@@ -945,8 +945,8 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Load calendar data for specific city (override to use CORS proxy)
     async loadCalendarData(cityKey) {
-        const cityConfig = getCityConfig(cityKey);
-        if (!cityConfig || !cityConfig.calendarId) {
+        const cityConfig = this.getCityConfig(cityKey);
+        if (!cityConfig) {
             logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
             return null;
         }
@@ -958,63 +958,136 @@ class DynamicCalendarLoader extends CalendarCore {
             step: 'Step 3: Loading real calendar data'
         });
         
-        try {
-            const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
-            const corsProxy = 'https://api.allorigins.win/raw?url=';
+        // Multiple CORS proxy fallbacks to improve reliability
+        const corsProxies = [
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+            'https://api.codetabs.com/v1/proxy?quest='
+        ];
+        
+        const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
+        
+        for (let i = 0; i < corsProxies.length; i++) {
+            const corsProxy = corsProxies[i];
             const fullUrl = corsProxy + encodeURIComponent(icalUrl);
             
-            const response = await fetch(fullUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const icalText = await response.text();
-            logger.apiCall('CALENDAR', 'Successfully fetched iCal data', {
-                dataLength: icalText.length,
-                city: cityConfig.name,
-                url: icalUrl
-            });
-            
-            // Log sample of the fetched data for debugging
-            if (icalText.length > 0) {
-                logger.debug('CALENDAR', 'Raw iCal data sample', {
-                    firstLine: icalText.split('\n')[0],
-                    hasEvents: icalText.includes('BEGIN:VEVENT'),
-                    eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
-                    calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
-                    encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format'
+            try {
+                logger.debug('CALENDAR', `Attempting CORS proxy ${i + 1}/${corsProxies.length}`, {
+                    proxy: corsProxy,
+                    attempt: i + 1
                 });
-            } else {
-                logger.warn('CALENDAR', 'Empty iCal data received', {
+                
+                const response = await fetch(fullUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/calendar,text/plain,*/*'
+                    },
+                    // Add timeout to prevent hanging requests
+                    signal: AbortSignal.timeout(15000)
+                });
+                
+                if (!response.ok) {
+                    const errorMsg = `HTTP error! status: ${response.status} ${response.statusText}`;
+                    logger.warn('CALENDAR', `CORS proxy ${i + 1} failed`, {
+                        proxy: corsProxy,
+                        status: response.status,
+                        statusText: response.statusText,
+                        url: fullUrl
+                    });
+                    
+                    // If this isn't the last proxy, continue to next one
+                    if (i < corsProxies.length - 1) {
+                        continue;
+                    } else {
+                        throw new Error(errorMsg);
+                    }
+                }
+                
+                const icalText = await response.text();
+                
+                // Validate that we got actual iCal data, not an error page
+                if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
+                    logger.warn('CALENDAR', `CORS proxy ${i + 1} returned invalid data`, {
+                        proxy: corsProxy,
+                        dataLength: icalText?.length || 0,
+                        dataPreview: icalText?.substring(0, 100) || 'No data'
+                    });
+                    
+                    // If this isn't the last proxy, continue to next one
+                    if (i < corsProxies.length - 1) {
+                        continue;
+                    } else {
+                        throw new Error('All CORS proxies returned invalid iCal data');
+                    }
+                }
+                
+                logger.apiCall('CALENDAR', `Successfully fetched iCal data using proxy ${i + 1}`, {
+                    dataLength: icalText.length,
                     city: cityConfig.name,
-                    url: icalUrl
+                    url: icalUrl,
+                    proxyUsed: corsProxy
                 });
+                
+                // Log sample of the fetched data for debugging
+                if (icalText.length > 0) {
+                    logger.debug('CALENDAR', 'Raw iCal data sample', {
+                        firstLine: icalText.split('\n')[0],
+                        hasEvents: icalText.includes('BEGIN:VEVENT'),
+                        eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
+                        calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
+                        encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format'
+                    });
+                } else {
+                    logger.warn('CALENDAR', 'Empty iCal data received', {
+                        city: cityConfig.name,
+                        url: icalUrl
+                    });
+                }
+                
+                const events = this.parseICalData(icalText);
+                
+                // Store all events for filtering
+                this.allEvents = events;
+                
+                this.eventsData = {
+                    cityConfig,
+                    events,
+                    calendarTimezone: this.calendarTimezone,
+                    timezoneData: this.timezoneData
+                };
+                
+                logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+                logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
+                    eventCount: events.length,
+                    cityKey,
+                    calendarTimezone: this.calendarTimezone,
+                    hasTimezoneData: !!this.timezoneData,
+                    proxyUsed: corsProxy
+                });
+                return this.eventsData;
+                
+            } catch (error) {
+                logger.warn('CALENDAR', `CORS proxy ${i + 1} failed with error`, {
+                    proxy: corsProxy,
+                    error: error.message,
+                    errorName: error.name,
+                    attempt: i + 1,
+                    isTimeout: error.name === 'AbortError'
+                });
+                
+                // If this is the last proxy, log the final error
+                if (i === corsProxies.length - 1) {
+                    logger.componentError('CALENDAR', 'All CORS proxies failed - calendar data unavailable', {
+                        cityKey,
+                        cityName: cityConfig.name,
+                        totalAttempts: corsProxies.length,
+                        finalError: error.message,
+                        proxiesTried: corsProxies
+                    });
+                    this.showCalendarError();
+                    return null;
+                }
             }
-            
-            const events = this.parseICalData(icalText);
-            
-            // Store all events for filtering
-            this.allEvents = events;
-            
-            this.eventsData = {
-                cityConfig,
-                events,
-                calendarTimezone: this.calendarTimezone,
-                timezoneData: this.timezoneData
-            };
-            
-            logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-            logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
-                eventCount: events.length,
-                cityKey,
-                calendarTimezone: this.calendarTimezone,
-                hasTimezoneData: !!this.timezoneData
-            });
-            return this.eventsData;
-        } catch (error) {
-            logger.componentError('CALENDAR', 'Error loading calendar data', error);
-            this.showCalendarError();
-            return null;
         }
     }
 

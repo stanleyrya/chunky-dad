@@ -1,25 +1,73 @@
 // Global error handlers
 window.addEventListener('unhandledrejection', function(event) {
+    // Enhanced logging for promise rejections with better context
+    const reason = event.reason;
+    const isNetworkError = reason?.name === 'TypeError' && reason?.message?.includes('fetch');
+    const isCorsError = reason?.message?.includes('CORS') || reason?.message?.includes('cross-origin');
+    const isTimeoutError = reason?.name === 'AbortError' || reason?.message?.includes('timeout');
+    
     logger.error('SYSTEM', 'Unhandled promise rejection', {
-        reason: event.reason,
+        reason: reason,
         promise: event.promise,
-        message: event.reason?.message || 'Unknown error',
-        stack: event.reason?.stack || 'No stack trace'
+        message: reason?.message || 'Unknown error',
+        stack: reason?.stack || 'No stack trace',
+        errorType: reason?.name || 'Unknown',
+        isNetworkError,
+        isCorsError,
+        isTimeoutError,
+        url: window.location.href,
+        timestamp: new Date().toISOString()
     });
+    
+    // Log specific guidance for common error types
+    if (isNetworkError || isCorsError) {
+        logger.warn('SYSTEM', 'Network/CORS error detected - this may be related to external service availability', {
+            suggestion: 'Check browser console for more details and verify external services are accessible'
+        });
+    }
+    
+    if (isTimeoutError) {
+        logger.warn('SYSTEM', 'Timeout error detected - external service may be slow or unavailable', {
+            suggestion: 'Try refreshing the page or check network connectivity'
+        });
+    }
     
     // Don't prevent default - let errors show in console
     // event.preventDefault();
 });
 
 window.addEventListener('error', function(event) {
+    // Enhanced logging for script errors with better context
+    const isScriptError = event.message === 'Script error.' && !event.filename;
+    const isCrossOriginError = !event.filename || event.filename === '';
+    
     logger.error('SYSTEM', 'Global error', {
         message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
+        filename: event.filename || 'Unknown file',
+        lineno: event.lineno || 'Unknown line',
+        colno: event.colno || 'Unknown column',
         error: event.error,
-        stack: event.error?.stack
+        stack: event.error?.stack || 'No stack trace',
+        isScriptError,
+        isCrossOriginError,
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent
     });
+    
+    // Provide specific guidance for script errors
+    if (isScriptError || isCrossOriginError) {
+        logger.warn('SYSTEM', 'Cross-origin script error detected', {
+            explanation: 'This error typically occurs when external scripts fail to load or execute',
+            possibleCauses: [
+                'External service (CORS proxy, CDN) temporarily unavailable',
+                'Network connectivity issues',
+                'Browser security restrictions',
+                'External script contains errors'
+            ],
+            suggestion: 'Check browser network tab for failed requests and try refreshing the page'
+        });
+    }
 });
 
 // Main Application Module - Coordinates all other modules and handles initialization
