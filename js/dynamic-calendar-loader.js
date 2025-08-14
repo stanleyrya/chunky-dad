@@ -461,6 +461,15 @@ class DynamicCalendarLoader extends CalendarCore {
         return filteredWords.join(' ');
     }
 
+    // Apply shortName-only hyphen semantics: "-" => &shy;, "\\-" => literal "-"
+    applyShortNameHyphens(text) {
+        if (!text) return '';
+        const softHyphen = '&shy;';
+        let processed = text.replace(/\\-/g, '§HARD_HYPHEN§');
+        processed = processed.replace(/-/g, softHyphen);
+        return processed.replace(/§HARD_HYPHEN§/g, '-');
+    }
+
     // ========== SOFT HYPHENATION METHODS ==========
     
     /**
@@ -520,40 +529,10 @@ class DynamicCalendarLoader extends CalendarCore {
     
     /**
      * Aggressive hyphenation for short names
-     * Adds more break points since these names are meant to wrap better
+     * Deprecated: handled by applyShortNameHyphens
      */
     aggressiveHyphenation(text, softHyphen) {
-        let result = text;
-        
-        // Start with conservative rules
-        result = this.conservativeHyphenation(result, softHyphen);
-        
-        // Common prefixes in event names
-        const prefixes = ['after', 'under', 'over', 'inter', 'super', 'mega', 'ultra'];
-        
-        // Common suffixes in event names  
-        const suffixes = ['fest', 'land', 'night', 'party', 'dance', 'week', 'day'];
-        
-        // Add soft hyphens after common prefixes
-        prefixes.forEach(prefix => {
-            const regex = new RegExp(`\\b(${prefix})([A-Z])`, 'gi');
-            result = result.replace(regex, `$1${softHyphen}$2`);
-        });
-        
-        // Add soft hyphens before common suffixes
-        suffixes.forEach(suffix => {
-            const regex = new RegExp(`([a-z])(${suffix})\\b`, 'gi');
-            result = result.replace(regex, `$1${softHyphen}$2`);
-        });
-        
-        // Break up all-caps sequences at logical points (every 4-5 chars)
-        result = result.replace(/\b([A-Z]{4,5})([A-Z]{3,})\b/g, `$1${softHyphen}$2`);
-        
-        // Handle compound bear community terms
-        result = result.replace(/(bear|leather|woof|pride|boot|dance)([A-Z])/gi, `$1${softHyphen}$2`);
-        result = result.replace(/([a-z])(bear|leather|woof|pride|boot|dance)/gi, `$1${softHyphen}$2`);
-        
-        return result;
+        return text;
     }
     
     /**
@@ -584,8 +563,8 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // If no shortname, just apply soft hyphens to full name
         if (!shortName) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, adding soft hyphens to full name: "${fullName}"`);
-            return this.insertSoftHyphens(fullName, false);
+            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, using full name: "${fullName}"`);
+            return fullName;
         }
         
         // Get characters per pixel ratio (calculated once and cached)
@@ -607,7 +586,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 fullName: fullName,
                 preferredName: fullName
             });
-            return this.insertSoftHyphens(fullName, false);
+            return fullName;
         }
         
         // Calculate how many characters can fit per line
@@ -627,7 +606,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // For very small character limits, try shorterName if available
         if (charLimitPerLine <= 4 && event.shorterName?.trim()) {
             logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName with soft hyphens for very small space: "${event.shorterName}"`);
-            return this.insertSoftHyphens(event.shorterName.trim(), true);
+            return this.applyShortNameHyphens(event.shorterName.trim());
         }
         
         // Calculate total characters available (3 lines)
@@ -644,8 +623,8 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Prefer fullName whenever it fits within the available space
         if (fullName.length <= totalCharsAvailable) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits within space, using with soft hyphens: "${fullName}"`);
-            return this.insertSoftHyphens(fullName, false);
+            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits within space, using full name: "${fullName}"`);
+            return fullName;
         }
         
         // If the shortName (with optional hyphens not displayed) fits, use it
@@ -654,12 +633,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 originalShortName: shortName,
                 effectiveLength: shortNameLengthWithoutOptionalHyphens
             });
-            return this.insertSoftHyphens(shortName, true);
+            return this.applyShortNameHyphens(shortName);
         }
         
         // Default to shortName with aggressive soft hyphens for tight spaces
         logger.info('CALENDAR', `🔍 SMART_NAME: Space is tight, using shortName with aggressive soft hyphens: "${shortName}"`);
-        return this.insertSoftHyphens(shortName, true);
+        return this.applyShortNameHyphens(shortName);
     }
 
     // Build text optimized for exactly 3 lines, preferring full words over hyphenation
