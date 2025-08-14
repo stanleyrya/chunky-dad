@@ -483,8 +483,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return processed.replace(/§HARD_HYPHEN§/g, '-');
         }
         
-        // Full names: apply conservative soft hyphenation only
-        return this.conservativeHyphenation(text, softHyphen);
+        // Full names: do not add soft hyphens; preserve existing literal hyphens
+        return text;
     }
     
     /**
