@@ -31,7 +31,7 @@
           "merge": "clobber"
         },
         "description": {
-          "merge": "preserve"
+          "merge": "upsert"
         },
         "venue": {
           "merge": "clobber"
@@ -67,6 +67,9 @@
         "include": ["eventbrite\\.com\\/e\\/"]
       },
       "metadata": {
+        "title": {
+          "merge": "upsert"
+        },
         "shortName": {
           "value": "Coach After Dark",
           "merge": "upsert"
@@ -76,7 +79,7 @@
           "merge": "upsert"
         },
         "description": {
-          "merge": "preserve"
+          "merge": "upsert"
         },
         "venue": {
           "merge": "upsert"
