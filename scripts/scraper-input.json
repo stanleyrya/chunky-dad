@@ -49,6 +49,52 @@
           "merge": "upsert"
         }
       }
+    },
+    {
+      "name": "Bear Happy Hour",
+      "parser": "eventbrite",
+      "urls": ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
+      "alwaysBear": true,
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 20,
+      "dryRun": true,
+      "daysToLookAhead": null,
+      "mergeMode": "upsert",
+      "urlFilters": {
+        "include": ["eventbrite\\.com\\/e\\/"]
+      },
+      "metadata": {
+        "title": {
+          "value": "Coach After Dark",
+          "merge": "upsert"
+        },
+        "shortName": {
+          "value": "Coach After Dark",
+          "merge": "upsert"
+        },
+        "instagram": {
+          "value": "https://www.instagram.com/coachafterdark",
+          "merge": "upsert"
+        },
+        "description": {
+          "merge": "preserve"
+        },
+        "venue": {
+          "merge": "upsert"
+        },
+        "startDate": {
+          "merge": "clobber"
+        },
+        "endDate": {
+          "merge": "clobber"
+        },
+        "website": {
+          "merge": "upsert"
+        },
+        "gmaps": {
+          "merge": "upsert"
+        }
+      }
     }
   ],
   "calendarMappings": {
