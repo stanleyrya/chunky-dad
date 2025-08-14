@@ -461,6 +461,109 @@ class DynamicCalendarLoader extends CalendarCore {
         return filteredWords.join(' ');
     }
 
+    // ========== SOFT HYPHENATION METHODS ==========
+    
+    /**
+     * Insert soft hyphens at intelligent break points
+     * @param {string} text - The text to process
+     * @param {boolean} isShortName - Whether this is a shortened name (affects hyphenation strategy)
+     * @returns {string} Text with soft hyphens inserted
+     */
+    insertSoftHyphens(text, isShortName = false) {
+        if (!text) return text;
+        
+        // Use the HTML entity for soft hyphen
+        const softHyphen = '&shy;';
+        
+        // For short names, be more aggressive with hyphenation
+        // since they're already designed to be compact
+        if (isShortName) {
+            return this.aggressiveHyphenation(text, softHyphen);
+        } else {
+            return this.conservativeHyphenation(text, softHyphen);
+        }
+    }
+    
+    /**
+     * Conservative hyphenation for full names
+     * Only adds hyphens at very obvious break points
+     */
+    conservativeHyphenation(text, softHyphen) {
+        let result = text;
+        
+        // 1. Add soft hyphens between camelCase words
+        result = result.replace(/([a-z])([A-Z])/g, `$1${softHyphen}$2`);
+        
+        // 2. Add soft hyphens between uppercase sequences (MEGAWOOF -> MEGA-WOOF)
+        result = result.replace(/([A-Z]{3,})([A-Z][a-z])/g, `$1${softHyphen}$2`);
+        
+        // 3. Add soft hyphens after numbers
+        result = result.replace(/(\d+)([A-Za-z])/g, `$1${softHyphen}$2`);
+        
+        // 4. Add soft hyphens before numbers (except at start)
+        result = result.replace(/([A-Za-z])(\d+)/g, `$1${softHyphen}$2`);
+        
+        // 5. Handle very long words (12+ characters) - add hyphen in middle
+        result = result.replace(/\b(\w{6,})(\w{6,})\b/g, (match, p1, p2) => {
+            // Only if the word doesn't already have a soft hyphen
+            if (!match.includes(softHyphen)) {
+                return `${p1}${softHyphen}${p2}`;
+            }
+            return match;
+        });
+        
+        return result;
+    }
+    
+    /**
+     * Aggressive hyphenation for short names
+     * Adds more break points since these names are meant to wrap better
+     */
+    aggressiveHyphenation(text, softHyphen) {
+        let result = text;
+        
+        // Start with conservative rules
+        result = this.conservativeHyphenation(result, softHyphen);
+        
+        // Common prefixes in event names
+        const prefixes = ['after', 'under', 'over', 'inter', 'super', 'mega', 'ultra'];
+        
+        // Common suffixes in event names  
+        const suffixes = ['fest', 'land', 'night', 'party', 'dance', 'week', 'day'];
+        
+        // Add soft hyphens after common prefixes
+        prefixes.forEach(prefix => {
+            const regex = new RegExp(`\\b(${prefix})([A-Z])`, 'gi');
+            result = result.replace(regex, `$1${softHyphen}$2`);
+        });
+        
+        // Add soft hyphens before common suffixes
+        suffixes.forEach(suffix => {
+            const regex = new RegExp(`([a-z])(${suffix})\\b`, 'gi');
+            result = result.replace(regex, `$1${softHyphen}$2`);
+        });
+        
+        // Break up all-caps sequences at logical points (every 4-5 chars)
+        result = result.replace(/\b([A-Z]{4,5})([A-Z]{3,})\b/g, `$1${softHyphen}$2`);
+        
+        // Handle compound bear community terms
+        result = result.replace(/(bear|leather|woof|pride|boot|dance)([A-Z])/gi, `$1${softHyphen}$2`);
+        result = result.replace(/([a-z])(bear|leather|woof|pride|boot|dance)/gi, `$1${softHyphen}$2`);
+        
+        return result;
+    }
+    
+    /**
+     * Process venue/bar names with soft hyphens
+     * Venue names typically need less aggressive hyphenation
+     */
+    processVenueName(venueName) {
+        if (!venueName) return venueName;
+        
+        // Use conservative hyphenation for venue names
+        return this.conservativeHyphenation(venueName, '&shy;');
+    }
+
 
 
     getSmartEventNameForBreakpoint(event, breakpoint) {
@@ -476,10 +579,10 @@ class DynamicCalendarLoader extends CalendarCore {
             breakpoint
         });
         
-        // If no shortname, return the full name processed for 3 lines
+        // If no shortname, just apply soft hyphens to full name
         if (!shortName) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, processing full name: "${fullName}"`);
-            return this.buildThreeLineText(fullName, false, breakpoint); // fullName hyphens are always intentional
+            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, adding soft hyphens to full name: "${fullName}"`);
+            return this.insertSoftHyphens(fullName, false);
         }
         
         // Get characters per pixel ratio (calculated once and cached)
@@ -494,17 +597,15 @@ class DynamicCalendarLoader extends CalendarCore {
             breakpoint
         });
         
-        // If measurement not ready yet, prefer shortName over fullName for real rendering
+        // If measurement not ready yet, use shortName with soft hyphens
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using processed name`, {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using shortName with soft hyphens`, {
                 shortName: shortName,
                 fullName: fullName,
-                preferredName: shortName || fullName
+                preferredName: shortName
             });
-            // Use shortName if available, otherwise fullName, processed appropriately
-            const nameToUse = shortName || fullName;
-            const isShortName = !!shortName;
-            return this.buildThreeLineText(nameToUse, isShortName, breakpoint);
+            // Use shortName with soft hyphens
+            return this.insertSoftHyphens(shortName, true);
         }
         
         // Calculate how many characters can fit per line
@@ -518,51 +619,33 @@ class DynamicCalendarLoader extends CalendarCore {
             shortNameLength: shortName.length,
             fullNameLength: fullName.length,
             screenWidth: window.innerWidth,
-            note: 'Building 3-line layout with intelligent hyphenation'
+            note: 'Using soft hyphens for intelligent breaking'
         });
         
         // For very small character limits, try shorterName if available
         if (charLimitPerLine <= 4 && event.shorterName?.trim()) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for very small space: "${event.shorterName}"`);
-            return this.buildThreeLineText(event.shorterName.trim(), true, breakpoint);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName with soft hyphens for very small space: "${event.shorterName}"`);
+            return this.insertSoftHyphens(event.shorterName.trim(), true);
         }
         
-        // First check if shortName without hyphens can fit naturally
-        const shortNameWithoutHyphens = this.processShortNameHyphens(shortName, false);
-        const shortNameWithoutHyphensLength = shortNameWithoutHyphens.length;
-        const totalCharsAvailable = charLimitPerLine * 3; // We have 3 lines
+        // Calculate total characters available (3 lines)
+        const totalCharsAvailable = charLimitPerLine * 3;
         
-        // If shortName without hyphens fits comfortably, use it
-        if (shortNameWithoutHyphensLength <= totalCharsAvailable * 0.9) { // 90% to leave some margin
-            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName without hyphens fits naturally: "${shortNameWithoutHyphens}"`);
-            return shortNameWithoutHyphens;
+        // Check if shortName fits comfortably without needing fullName
+        if (shortName.length <= totalCharsAvailable * 0.7) { // 70% to leave margin
+            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName fits well, using with soft hyphens: "${shortName}"`);
+            return this.insertSoftHyphens(shortName, true);
         }
         
-        // PRIORITY 1: Try shortName with intelligent hyphen handling
-        const shortNameResult = this.buildThreeLineText(shortName, true, breakpoint, charLimitPerLine);
-        
-        // PRIORITY 2: Try fullName and compare quality
-        const fullNameResult = this.buildThreeLineText(fullName, false, breakpoint, charLimitPerLine);
-        
-        // Choose the better result based on how well it fits and utilizes space
-        const shortNameQuality = this.evaluateTextQuality(shortNameResult, charLimitPerLine);
-        const fullNameQuality = this.evaluateTextQuality(fullNameResult, charLimitPerLine);
-        
-        if (shortNameQuality.score >= fullNameQuality.score) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Using shortName result: "${shortNameResult}"`, {
-                shortNameQuality,
-                fullNameQuality,
-                reason: 'shortName_has_better_or_equal_quality'
-            });
-            return shortNameResult;
-        } else {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Using fullName result: "${fullNameResult}"`, {
-                shortNameQuality,
-                fullNameQuality,
-                reason: 'fullName_has_better_quality'
-            });
-            return fullNameResult;
+        // Check if fullName might be better (if it's not much longer)
+        if (fullName.length <= totalCharsAvailable * 0.85) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits reasonably, using with soft hyphens: "${fullName}"`);
+            return this.insertSoftHyphens(fullName, false);
         }
+        
+        // Default to shortName with aggressive soft hyphens for tight spaces
+        logger.info('CALENDAR', `🔍 SMART_NAME: Space is tight, using shortName with aggressive soft hyphens: "${shortName}"`);
+        return this.insertSoftHyphens(shortName, true);
     }
 
     // Build text optimized for exactly 3 lines, preferring full words over hyphenation
@@ -1170,7 +1253,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 <div class="event-name">${event.name}</div>
                                 <div class="event-details">
                                     <span class="event-time">${event.time}</span>
-                                    <span class="event-venue">${event.bar}</span>
+                                    <span class="event-venue">${this.processVenueName(event.bar)}</span>
                                     ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
                                 </div>
                             </div>
@@ -1661,7 +1744,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${event.bar || ''}</div>
+                            <div class="event-venue">${this.processVenueName(event.bar) || ''}</div>
                         </div>
                     `;
                 }).join('')
@@ -1765,7 +1848,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${event.bar || ''}</div>
+                            <div class="event-venue">${this.processVenueName(event.bar) || ''}</div>
                         </div>
                     `;
                 }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
