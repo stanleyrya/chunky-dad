@@ -473,30 +473,6 @@ class DynamicCalendarLoader extends CalendarCore {
     // ========== SOFT HYPHENATION METHODS ==========
     
     /**
-     * Insert soft hyphens at intelligent break points
-     * @param {string} text - The text to process
-     * @param {boolean} isShortName - Whether this is a shortened name (affects hyphenation strategy)
-     * @returns {string} Text with soft hyphens inserted
-     */
-    insertSoftHyphens(text, isShortName = false) {
-        if (!text) return text;
-        
-        const softHyphen = '&shy;';
-        
-        if (isShortName) {
-            // Manual hyphenation semantics for shortName only:
-            // - "-" (unescaped) -> soft hyphen opportunity (shown only when wrapping)
-            // - "\\-" (escaped) -> literal hyphen always displayed
-            let processed = text.replace(/\\-/g, '§HARD_HYPHEN§');
-            processed = processed.replace(/-/g, softHyphen);
-            return processed.replace(/§HARD_HYPHEN§/g, '-');
-        }
-        
-        // Full names: do not add soft hyphens; preserve existing literal hyphens
-        return text;
-    }
-    
-    /**
      * Conservative hyphenation for full names
      * Only adds hyphens at very obvious break points
      */
