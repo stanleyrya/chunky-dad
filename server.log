@@ -1,0 +1,2 @@
+127.0.0.1 - - [14/Aug/2025 22:24:40] "GET /city.html?city=new-york HTTP/1.1" 200 -
+127.0.0.1 - - [14/Aug/2025 22:24:53] "GET /city.html?city=new-york&debug=true HTTP/1.1" 200 -
