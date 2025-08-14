@@ -945,7 +945,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Load calendar data for specific city (override to use CORS proxy)
     async loadCalendarData(cityKey) {
-        const cityConfig = this.getCityConfig(cityKey);
+        const cityConfig = getCityConfig(cityKey);
         if (!cityConfig) {
             logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
             return null;
@@ -961,8 +961,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Multiple CORS proxy fallbacks to improve reliability
         const corsProxies = [
             'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://api.codetabs.com/v1/proxy?quest='
+            // Note: corsproxy.io and codetabs.com are currently returning errors, so removed
         ];
         
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
@@ -1005,14 +1004,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 const icalText = await response.text();
                 
-                logger.info('CALENDAR', `🔍 CORS_DEBUG: Successfully fetched data from proxy ${i + 1}`, {
-                    proxy: corsProxy,
-                    dataLength: icalText.length,
-                    hasBeginVCalendar: icalText.includes('BEGIN:VCALENDAR'),
-                    hasBeginVEvent: icalText.includes('BEGIN:VEVENT'),
-                    eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
-                    dataPreview: icalText.substring(0, 200)
-                });
+
                 
                 // Validate that we got actual iCal data, not an error page
                 if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
@@ -1058,21 +1050,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Store all events for filtering
                 this.allEvents = events;
                 
-                // Add debug logging to track what's happening with allEvents
-                logger.info('CALENDAR', '🔍 DEBUG: Events loaded and stored in this.allEvents', {
-                    eventCount: events.length,
-                    allEventsCount: this.allEvents.length,
-                    firstEventName: events[0]?.name || 'No events',
-                    firstEventDate: events[0]?.startDate || 'No date',
-                    allEventsFirstName: this.allEvents[0]?.name || 'No events in allEvents',
-                    eventsDetails: events.map(e => ({
-                        name: e.name,
-                        startDate: e.startDate,
-                        recurring: e.recurring,
-                        recurrence: e.recurrence,
-                        eventType: e.eventType
-                    }))
-                });
+
                 
                 this.eventsData = {
                     cityConfig,
@@ -1235,30 +1213,10 @@ class DynamicCalendarLoader extends CalendarCore {
             return [];
         }
         
-        logger.debug('CALENDAR', '🔍 FILTER: Starting event filtering', {
-            totalEvents: this.allEvents.length,
-            firstEventName: this.allEvents[0]?.name || 'No events',
-            currentView: this.currentView,
-            currentDate: this.currentDate.toISOString()
-        });
-        
         const { start, end } = this.getCurrentPeriodBounds();
         
-        // Add detailed period bounds logging
-        logger.info('CALENDAR', '🔍 FILTER: Current period bounds', {
-            periodStart: start.toISOString(),
-            periodEnd: end.toISOString(),
-            periodStartLocal: start.toLocaleDateString(),
-            periodEndLocal: end.toLocaleDateString(),
-            currentDateLocal: this.currentDate.toLocaleDateString(),
-            currentView: this.currentView
-        });
-        
         const filtered = this.allEvents.filter(event => {
-            if (!event.startDate) {
-                logger.debug('CALENDAR', `🔍 FILTER: Excluding event with no startDate: ${event.name}`);
-                return false;
-            }
+            if (!event.startDate) return false;
             
             // Filter out events marked as notChecked if configured to hide them
             if (event.notChecked && this.config?.hideUncheckedEvents) {
@@ -1268,31 +1226,11 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // For recurring events, check if they occur in this period
             if (event.recurring) {
-                const inPeriod = this.isRecurringEventInPeriod(event, start, end);
-                logger.debug('CALENDAR', `🔍 FILTER: Recurring event ${event.name} ${inPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
-                    eventDate: event.startDate,
-                    periodStart: start,
-                    periodEnd: end
-                });
-                return inPeriod;
+                return this.isRecurringEventInPeriod(event, start, end);
             }
             
             // For one-time events, check if they fall within the period
-            const inPeriod = this.isEventInPeriod(event.startDate, start, end);
-            logger.debug('CALENDAR', `🔍 FILTER: One-time event ${event.name} ${inPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
-                eventDate: event.startDate,
-                periodStart: start,
-                periodEnd: end
-            });
-            return inPeriod;
-        });
-        
-        logger.info('CALENDAR', '🔍 FILTER: Event filtering completed', {
-            totalEvents: this.allEvents.length,
-            filteredEvents: filtered.length,
-            periodStart: start,
-            periodEnd: end,
-            filteredEventNames: filtered.map(e => e.name)
+            return this.isEventInPeriod(event.startDate, start, end);
         });
         
         return filtered;
@@ -1326,37 +1264,14 @@ class DynamicCalendarLoader extends CalendarCore {
         checkDate.setHours(0, 0, 0, 0);
         
         // Make sure we're not checking before the event started
-        if (checkDate < eventDate) {
-            logger.debug('CALENDAR', `🔍 RECURRING: Event ${event.name} starts after check date`, {
-                eventStartDate: eventDate.toISOString(),
-                checkDate: checkDate.toISOString(),
-                result: false
-            });
-            return false;
-        }
+        if (checkDate < eventDate) return false;
         
         // Parse the recurrence rule to determine the pattern
         const recurrence = event.recurrence || '';
         
-        logger.debug('CALENDAR', `🔍 RECURRING: Checking if event ${event.name} occurs on ${checkDate.toLocaleDateString()}`, {
-            eventStartDate: eventDate.toISOString(),
-            checkDate: checkDate.toISOString(),
-            recurrence: recurrence,
-            eventStartDayOfWeek: eventDate.getDay(),
-            checkDayOfWeek: checkDate.getDay()
-        });
-        
         if (recurrence.includes('FREQ=WEEKLY')) {
             // Weekly events: occur on the same day of the week
-            const occurs = eventDate.getDay() === checkDate.getDay();
-            logger.debug('CALENDAR', `🔍 RECURRING: Weekly event ${event.name} ${occurs ? 'OCCURS' : 'DOES NOT OCCUR'} on ${checkDate.toLocaleDateString()}`, {
-                eventDayOfWeek: eventDate.getDay(),
-                checkDayOfWeek: checkDate.getDay(),
-                eventDayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][eventDate.getDay()],
-                checkDayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][checkDate.getDay()],
-                result: occurs
-            });
-            return occurs;
+            return eventDate.getDay() === checkDate.getDay();
         } else if (recurrence.includes('FREQ=MONTHLY')) {
             // Monthly events: handle both BYMONTHDAY and BYDAY patterns
             if (recurrence.includes('BYMONTHDAY=')) {
@@ -2159,21 +2074,7 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.info('CALENDAR', '🔍 RENDER: Step 3: Loading real calendar data');
         
         try {
-            logger.info('CALENDAR', '🔍 DEBUG: About to call loadCalendarData', {
-                currentCity: this.currentCity,
-                allEventsBeforeLoad: this.allEvents?.length || 0,
-                allEventsFirstNameBeforeLoad: this.allEvents?.[0]?.name || 'No events'
-            });
-            
             const data = await this.loadCalendarData(this.currentCity);
-            
-            logger.info('CALENDAR', '🔍 DEBUG: loadCalendarData returned', {
-                dataExists: !!data,
-                dataEventCount: data?.events?.length || 0,
-                dataFirstEventName: data?.events?.[0]?.name || 'No events',
-                allEventsAfterLoad: this.allEvents?.length || 0,
-                allEventsFirstNameAfterLoad: this.allEvents?.[0]?.name || 'No events'
-            });
             
             if (!data) {
                 logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing empty calendar');
@@ -2187,15 +2088,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 eventCount: data.events.length,
                 cachedWidth: this.cachedEventTextWidth,
                 cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
-            });
-            
-            // Debug: Check the state of this.allEvents before calling updatePageContent
-            logger.info('CALENDAR', '🔍 DEBUG: State before updatePageContent with real events', {
-                allEventsCount: this.allEvents?.length || 0,
-                allEventsFirstName: this.allEvents?.[0]?.name || 'No events',
-                dataEventsCount: data.events.length,
-                dataEventsFirstName: data.events[0]?.name || 'No events',
-                allEventsIsSameAsDataEvents: this.allEvents === data.events
             });
             
             this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
