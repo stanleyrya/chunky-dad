@@ -484,85 +484,9 @@ class DynamicCalendarLoader extends CalendarCore {
         return text;
     }
     
-    /**
-     * Conservative hyphenation for full names
-     * Only adds hyphens at very obvious break points
-     */
-    conservativeHyphenation(text, softHyphen) {
-        let result = text;
-        
-        // 1. Add soft hyphens between camelCase words
-        result = result.replace(/([a-z])([A-Z])/g, `$1${softHyphen}$2`);
-        
-        // 2. Add soft hyphens between uppercase sequences (MEGAWOOF -> MEGA-WOOF)
-        result = result.replace(/([A-Z]{3,})([A-Z][a-z])/g, `$1${softHyphen}$2`);
-        
-        // 3. Add soft hyphens after numbers
-        result = result.replace(/(\d+)([A-Za-z])/g, `$1${softHyphen}$2`);
-        
-        // 4. Add soft hyphens before numbers (except at start)
-        result = result.replace(/([A-Za-z])(\d+)/g, `$1${softHyphen}$2`);
-        
-        // 5. Handle very long words (12+ characters) - add hyphen in middle
-        result = result.replace(/\b(\w{6,})(\w{6,})\b/g, (match, p1, p2) => {
-            // Only if the word doesn't already have a soft hyphen
-            if (!match.includes(softHyphen)) {
-                return `${p1}${softHyphen}${p2}`;
-            }
-            return match;
-        });
-        
-        return result;
-    }
+
     
-    /**
-     * Aggressive hyphenation for short names
-     * Adds more break points since these names are meant to wrap better
-     */
-    aggressiveHyphenation(text, softHyphen) {
-        let result = text;
-        
-        // Start with conservative rules
-        result = this.conservativeHyphenation(result, softHyphen);
-        
-        // Common prefixes in event names
-        const prefixes = ['after', 'under', 'over', 'inter', 'super', 'mega', 'ultra'];
-        
-        // Common suffixes in event names  
-        const suffixes = ['fest', 'land', 'night', 'party', 'dance', 'week', 'day'];
-        
-        // Add soft hyphens after common prefixes
-        prefixes.forEach(prefix => {
-            const regex = new RegExp(`\\b(${prefix})([A-Z])`, 'gi');
-            result = result.replace(regex, `$1${softHyphen}$2`);
-        });
-        
-        // Add soft hyphens before common suffixes
-        suffixes.forEach(suffix => {
-            const regex = new RegExp(`([a-z])(${suffix})\\b`, 'gi');
-            result = result.replace(regex, `$1${softHyphen}$2`);
-        });
-        
-        // Break up all-caps sequences at logical points (every 4-5 chars)
-        result = result.replace(/\b([A-Z]{4,5})([A-Z]{3,})\b/g, `$1${softHyphen}$2`);
-        
-        // Handle compound bear community terms
-        result = result.replace(/(bear|leather|woof|pride|boot|dance)([A-Z])/gi, `$1${softHyphen}$2`);
-        result = result.replace(/([a-z])(bear|leather|woof|pride|boot|dance)/gi, `$1${softHyphen}$2`);
-        
-        return result;
-    }
-    
-    /**
-     * Process venue/bar names with soft hyphens
-     * Venue names typically need less aggressive hyphenation
-     */
-    processVenueName(venueName) {
-        if (!venueName) return venueName;
-        
-        // Use conservative hyphenation for venue names
-        return this.conservativeHyphenation(venueName, '&shy;');
-    }
+
 
 
 
@@ -617,35 +541,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
 
-    // Process shortName hyphens based on display context
-    processShortNameHyphens(text, willSplitLines) {
-        if (!text) return '';
-        
-        // shortName hyphenation rules:
-        // - "-" indicates optional hyphenation points (can be removed if text fits)
-        // - "\-" indicates literal hyphens that must always be kept (part of the word)
-        // - Regular hyphens in normal titles should always be kept literally
-        
-        // First, preserve escaped hyphens by replacing them temporarily
-        let processed = text.replace(/\\-/g, '§ESCAPED_HYPHEN§');
-        
-        // Now all remaining "-" are optional hyphenation points
-        // If the text can fit without them, remove them
-        // Otherwise, keep them as breakpoints
-        
-        if (willSplitLines) {
-            // When manually splitting lines, keep optional hyphens as breakpoints
-            // This allows us to break "Bear-Night" at the hyphen if needed
-            processed = processed; // Keep the hyphens for line breaking
-        } else {
-            // When text fits naturally, remove optional hyphens
-            // "Bear-Night" becomes "Bear Night" if it fits on one line
-            processed = processed.replace(/-/g, ' ');
-        }
-        
-        // Restore escaped hyphens as literal hyphens
-        return processed.replace(/§ESCAPED_HYPHEN§/g, '-');
-    }
+
     
 
 
@@ -961,14 +857,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 <div class="modal-body">
                     ${events.length > 0 
                         ? events.map(event => `
-                            <div class="modal-event-item" data-event-slug="${event.slug}">
-                                <div class="event-name">${event.name}</div>
-                                <div class="event-details">
-                                    <span class="event-time">${event.time}</span>
-                                    <span class="event-venue">${this.processVenueName(event.bar)}</span>
-                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
+                                                            <div class="modal-event-item" data-event-slug="${event.slug}">
+                                    <div class="event-name">${event.name}</div>
+                                    <div class="event-details">
+                                        <span class="event-time">${event.time}</span>
+                                        <span class="event-venue">${event.bar}</span>
+                                        ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
+                                    </div>
                                 </div>
-                            </div>
                         `).join('')
                         : ''
                     }
@@ -1456,7 +1352,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${this.processVenueName(event.bar) || ''}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
                 }).join('')
@@ -1560,7 +1456,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             <div class="event-time">${mobileTime}</div>
-                            <div class="event-venue">${this.processVenueName(event.bar) || ''}</div>
+                            <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
                 }).join('') + (additionalEventsCount > 0 ? `<div class="more-events">+${additionalEventsCount}</div>` : '')
