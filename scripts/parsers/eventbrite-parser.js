@@ -346,13 +346,13 @@ class EventbriteParser {
             // Generate Google Maps URL (SharedCore will filter out TBA venues)
             let gmapsUrl = '';
             if (eventData.venue?.google_place_id && coordinates) {
-                // Use iOS-compatible format with both coordinates and place_id
+                // Use iOS-compatible format with coordinates and place_id
                 gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${coordinates.lat}%2C${coordinates.lng}&query_place_id=${eventData.venue.google_place_id}`;
                 console.log(`🎫 Eventbrite: Generated iOS-compatible Google Maps URL from Place ID and coordinates for "${title}": ${gmapsUrl}`);
-            } else if (eventData.venue?.google_place_id) {
-                // Fallback to place_id only if no coordinates available
-                gmapsUrl = `https://maps.google.com/?q=place_id:${eventData.venue.google_place_id}`;
-                console.log(`🎫 Eventbrite: Generated Google Maps URL from Place ID only (no coordinates) for "${title}": ${gmapsUrl}`);
+            } else if (eventData.venue?.google_place_id && address) {
+                // Use iOS-compatible format with address and place_id (fallback if no coordinates)
+                gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}&query_place_id=${eventData.venue.google_place_id}`;
+                console.log(`🎫 Eventbrite: Generated iOS-compatible Google Maps URL from Place ID and address for "${title}": ${gmapsUrl}`);
             } else if (coordinates) {
                 gmapsUrl = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
                 console.log(`🎫 Eventbrite: Generated Google Maps URL from coordinates for "${title}": ${gmapsUrl}`);
