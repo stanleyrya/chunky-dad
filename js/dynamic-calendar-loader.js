@@ -493,16 +493,11 @@ class DynamicCalendarLoader extends CalendarCore {
     getSmartEventNameForBreakpoint(event, breakpoint) {
         logger.info('CALENDAR', `🔍 SMART_NAME: Starting getSmartEventNameForBreakpoint for breakpoint: ${breakpoint}`);
         
-        const shortName = event.shortName || event.nickname || '';
         const fullName = event.name || '';
+        const shorterName = event.shorter || '';
+        const shortName = event.shortName || event.nickname || '';
         
-        logger.info('CALENDAR', `🔍 SMART_NAME: Event names`, { fullName, shortName, breakpoint });
-        
-        // No shortname → use full name
-        if (!shortName) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, using full name: "${fullName}"`);
-            return fullName;
-        }
+        logger.info('CALENDAR', `🔍 SMART_NAME: Event names`, { fullName, shorterName, shortName, breakpoint });
         
         const charsPerPixel = this.charsPerPixel || this.calculateCharsPerPixel();
         const availableWidth = this.getEventTextWidth();
@@ -513,31 +508,36 @@ class DynamicCalendarLoader extends CalendarCore {
             breakpoint
         });
         
-        // Measurement not ready → prefer full name
+        // Measurement not ready → use full name as fallback
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready, preferring fullName`, { shortName, fullName });
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready, using fullName as fallback`);
             return fullName;
         }
         
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
         const totalCharsAvailable = charLimitPerLine * 3;
         
-        // Prefer fullName when it fits
+        // 1. Try full title if there's space for it
         if (fullName.length <= totalCharsAvailable) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits within space, using full name: "${fullName}"`);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Full title fits, using: "${fullName}"`);
             return fullName;
         }
         
-        // If shortName without optional hyphens fits, use it with soft hyphens
-        const shortNameEffective = shortName.replace(/\\-/g, '').replace(/-/g, '');
-        if (shortNameEffective.length <= totalCharsAvailable) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName (without optional '-') fits; using soft hyphens.`);
+        // 2. Try shorter name if there's space for it
+        if (shorterName && shorterName.length <= totalCharsAvailable) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Shorter name fits, using: "${shorterName}"`);
+            return shorterName;
+        }
+        
+        // 3. Otherwise use short name with soft hyphens (fallback)
+        if (shortName) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using short name with soft hyphens: "${shortName}"`);
             return this.insertSoftHyphens(shortName, true);
         }
         
-        // Default to shortName with soft hyphens
-        logger.info('CALENDAR', `🔍 SMART_NAME: Space is tight; using shortName with soft hyphens: "${shortName}"`);
-        return this.insertSoftHyphens(shortName, true);
+        // Final fallback to full name
+        logger.info('CALENDAR', `🔍 SMART_NAME: No short names available, using full name as final fallback: "${fullName}"`);
+        return fullName;
     }
 
 
