@@ -982,8 +982,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     headers: {
                         'Accept': 'text/calendar,text/plain,*/*'
                     },
-                    // Add timeout to prevent hanging requests
-                    signal: AbortSignal.timeout(15000)
+                    // Add timeout to prevent hanging requests (reduced to 10 seconds)
+                    signal: AbortSignal.timeout(10000)
                 });
                 
                 if (!response.ok) {
@@ -2062,20 +2062,31 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // STEP 3: Load calendar data from the API
         logger.info('CALENDAR', '🔍 RENDER: Step 3: Loading real calendar data');
-        const data = await this.loadCalendarData(this.currentCity);
         
-        if (!data) {
-            logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data');
+        try {
+            const data = await this.loadCalendarData(this.currentCity);
+            
+            if (!data) {
+                logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing empty calendar');
+                // Show empty calendar instead of hanging
+                this.updatePageContent(this.currentCityConfig, [], false);
+                return;
+            }
+            
+            // STEP 4: Display the real events with hideEvents: false
+            logger.info('CALENDAR', '🔍 RENDER: Step 4: Displaying real events (hideEvents: false)', {
+                eventCount: data.events.length,
+                cachedWidth: this.cachedEventTextWidth,
+                cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
+            });
+            this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
+            
+        } catch (error) {
+            logger.componentError('CALENDAR', '🔍 RENDER: Calendar loading failed with error', error);
+            // Show empty calendar with error message instead of hanging
+            this.updatePageContent(this.currentCityConfig, [], false);
             return;
         }
-        
-        // STEP 4: Display the real events with hideEvents: false
-        logger.info('CALENDAR', '🔍 RENDER: Step 4: Displaying real events (hideEvents: false)', {
-            eventCount: data.events.length,
-            cachedWidth: this.cachedEventTextWidth,
-            cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
-        });
-        this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
         
         // STEP 5: Final validation and summary
         logger.info('CALENDAR', '🔍 RENDER: Step 5: Final validation and summary', {
