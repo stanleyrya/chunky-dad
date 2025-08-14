@@ -523,9 +523,9 @@ class DynamicCalendarLoader extends CalendarCore {
             return fullName;
         }
         
-        // 2. Use shorter name if we have one (it's only 3 chars, always fits)
-        if (shorterName) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Full title too long, using shorter name: "${shorterName}"`);
+        // 2. Use shorter name if we only have space for that
+        if (shorterName && shorterName.length <= totalCharsAvailable) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Only space for shorter name, using: "${shorterName}"`);
             return shorterName;
         }
         
