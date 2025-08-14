@@ -945,7 +945,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Load calendar data for specific city (override to use CORS proxy)
     async loadCalendarData(cityKey) {
-        const cityConfig = this.getCityConfig(cityKey);
+        const cityConfig = getCityConfig(cityKey);
         if (!cityConfig) {
             logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
             return null;
@@ -958,11 +958,10 @@ class DynamicCalendarLoader extends CalendarCore {
             step: 'Step 3: Loading real calendar data'
         });
         
-        // Multiple CORS proxy fallbacks to improve reliability
+        // CORS proxy for calendar data fetching
         const corsProxies = [
-            'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://api.codetabs.com/v1/proxy?quest='
+            'https://api.allorigins.win/raw?url='
+            // Note: Other proxies like corsproxy.io and codetabs.com are currently broken
         ];
         
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
@@ -1004,6 +1003,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
                 
                 const icalText = await response.text();
+                
+
                 
                 // Validate that we got actual iCal data, not an error page
                 if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
@@ -1049,6 +1050,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Store all events for filtering
                 this.allEvents = events;
                 
+
+                
                 this.eventsData = {
                     cityConfig,
                     events,
@@ -1084,6 +1087,8 @@ class DynamicCalendarLoader extends CalendarCore {
                         finalError: error.message,
                         proxiesTried: corsProxies
                     });
+                    // Clear fake event from allEvents to prevent it from showing
+                    this.allEvents = [];
                     this.showCalendarError();
                     return null;
                 }
@@ -1202,12 +1207,17 @@ class DynamicCalendarLoader extends CalendarCore {
     getFilteredEvents() {
         // Handle case where allEvents is not yet loaded
         if (!this.allEvents || !Array.isArray(this.allEvents)) {
+            logger.debug('CALENDAR', '🔍 FILTER: No allEvents available for filtering', {
+                allEventsExists: !!this.allEvents,
+                allEventsType: typeof this.allEvents,
+                allEventsIsArray: Array.isArray(this.allEvents)
+            });
             return [];
         }
         
         const { start, end } = this.getCurrentPeriodBounds();
         
-        return this.allEvents.filter(event => {
+        const filtered = this.allEvents.filter(event => {
             if (!event.startDate) return false;
             
             // Filter out events marked as notChecked if configured to hide them
@@ -1224,6 +1234,8 @@ class DynamicCalendarLoader extends CalendarCore {
             // For one-time events, check if they fall within the period
             return this.isEventInPeriod(event.startDate, start, end);
         });
+        
+        return filtered;
     }
 
     isRecurringEventInPeriod(event, start, end) {
@@ -2067,8 +2079,10 @@ class DynamicCalendarLoader extends CalendarCore {
             const data = await this.loadCalendarData(this.currentCity);
             
             if (!data) {
-                logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing empty calendar');
-                // Show empty calendar instead of hanging
+                logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing error message');
+                // Clear fake event from allEvents to prevent it from showing
+                this.allEvents = [];
+                // Show empty calendar with error message instead of hanging
                 this.updatePageContent(this.currentCityConfig, [], false);
                 return;
             }
@@ -2079,10 +2093,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 cachedWidth: this.cachedEventTextWidth,
                 cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
             });
+            
             this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
             
         } catch (error) {
             logger.componentError('CALENDAR', '🔍 RENDER: Calendar loading failed with error', error);
+            // Clear fake event from allEvents to prevent it from showing
+            this.allEvents = [];
             // Show empty calendar with error message instead of hanging
             this.updatePageContent(this.currentCityConfig, [], false);
             return;

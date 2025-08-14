@@ -320,6 +320,8 @@ class CalendarCore {
                 // Store whether the original time was in UTC format (for debugging)
                 wasUTC: calendarEvent.start?._wasUTC || false
             };
+            
+
 
             // Parse description for additional data
             if (calendarEvent.description) {
