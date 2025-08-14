@@ -616,31 +616,7 @@ class DynamicCalendarLoader extends CalendarCore {
         return this.insertSoftHyphens(shortName, true);
     }
 
-    // Build text optimized for display, letting CSS handle wrapping
-    buildThreeLineText(text, isShortName, breakpoint, charLimitPerLine = null) {
-        if (!text) return '';
-        
-        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Processing text with simplified logic`, {
-            text,
-            isShortName,
-            breakpoint
-        });
-        
-        // For shortNames, apply soft-hyphenation to provide better breakpoints
-        // For fullNames, return as-is and let CSS handle wrapping
-        if (isShortName) {
-            const processedText = this.processShortNameHyphens(text, false);
-            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Applied shortName processing`, {
-                originalText: text,
-                processedText
-            });
-            return processedText;
-        }
-        
-        // For fullNames, just return the text - CSS will handle wrapping
-        return text;
-    }
-    
+
     // Process shortName hyphens based on display context
     processShortNameHyphens(text, willSplitLines) {
         if (!text) return '';
