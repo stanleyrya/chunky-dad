@@ -958,11 +958,10 @@ class DynamicCalendarLoader extends CalendarCore {
             step: 'Step 3: Loading real calendar data'
         });
         
-        // Multiple CORS proxy fallbacks to improve reliability
+        // CORS proxy for calendar data fetching
         const corsProxies = [
-            'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://api.codetabs.com/v1/proxy?quest='
+            'https://api.allorigins.win/raw?url='
+            // Note: Other proxies like corsproxy.io and codetabs.com are currently broken
         ];
         
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
