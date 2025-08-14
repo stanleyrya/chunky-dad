@@ -662,16 +662,13 @@ class DynamicCalendarLoader extends CalendarCore {
             charLimitPerLine
         });
         
-        // If no character limit provided, use CSS word-wrap (fallback)
-        // For shortNames, only remove hyphens if we're not doing line splitting
+        // If no character limit provided, let CSS wrap; shortName hyphens already mapped to &shy;
         if (!charLimitPerLine) {
-            return isShortName ? this.processShortNameHyphens(text, false) : text;
+            return isShortName ? this.insertSoftHyphens(text, true) : text;
         }
         
-        // For character-limited display, handle shortNames and fullNames differently:
-        // - shortNames with hyphens are designed to provide better breakpoints, so keep hyphens
-        // - fullNames should use natural word breaks without artificial hyphenation
-        const processedText = isShortName ? this.processShortNameHyphens(text, true) : text;
+        // For character-limited display, shortName already uses soft hyphens; fullName remains unchanged
+        const processedText = isShortName ? this.insertSoftHyphens(text, true) : text;
         
         // Split into words for line building
         const words = processedText.split(/\s+/).filter(word => word.length > 0);
@@ -806,60 +803,9 @@ class DynamicCalendarLoader extends CalendarCore {
         return result;
     }
     
-    // Process shortName hyphens based on display context
-    processShortNameHyphens(text, willSplitLines) {
-        if (!text) return '';
-        // Delegate to unified shortName hyphen handler: unescaped '-' => &shy;, '\-' stays '-'
-        return this.insertSoftHyphens(text, true);
-    }
+
     
-    // Hyphenate a word that's too long for a line
-    hyphenateWord(word, charLimit, isShortName) {
-        // First, try to split at existing hyphens (if it's a shortName or has intentional hyphens)
-        if (word.includes('-')) {
-            const parts = word.split('-');
-            let builtPart = '';
-            let remainder = '';
-            
-            for (let i = 0; i < parts.length; i++) {
-                const part = parts[i];
-                const partWithHyphen = i === parts.length - 1 ? part : part + '-';
-                
-                if (!builtPart) {
-                    if (partWithHyphen.length <= charLimit) {
-                        builtPart = partWithHyphen;
-                    } else {
-                        // Even the first part is too long - don't hyphenate, just truncate
-                        return {
-                            firstPart: part.substring(0, Math.min(part.length, charLimit)),
-                            remainder: parts.slice(i + 1).join('-')
-                        };
-                    }
-                } else {
-                    const testPart = builtPart + partWithHyphen;
-                    if (testPart.length <= charLimit) {
-                        builtPart = testPart;
-                    } else {
-                        // This part would make it too long, so split here
-                        remainder = parts.slice(i).join('-');
-                        break;
-                    }
-                }
-            }
-            
-            if (builtPart) {
-                return { firstPart: builtPart, remainder };
-            }
-        }
-        
-        // No natural hyphen break found
-        // DON'T add artificial hyphens - just return the word as-is
-        // Let it overflow to the next line naturally
-        return {
-            firstPart: word,
-            remainder: ''
-        };
-    }
+
     
     // Fit a word on the last line (3rd line) with truncation if needed
     fitWordOnLastLine(word, charLimit, isShortName) {
