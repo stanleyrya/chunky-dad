@@ -842,6 +842,29 @@ class SharedCore {
     }
     
     // ============================================================================
+    // GOOGLE MAPS URL GENERATION - iOS-compatible URL construction
+    // ============================================================================
+    
+    // Static method to generate iOS-compatible Google Maps URLs
+    // Works on Android, iOS (including iOS 11+), and web without API tokens
+    static generateGoogleMapsUrl({ coordinates, placeId, address }) {
+        if (placeId && coordinates) {
+            // Best case: use coordinates with place_id for maximum compatibility
+            return `https://www.google.com/maps/search/?api=1&query=${coordinates.lat}%2C${coordinates.lng}&query_place_id=${placeId}`;
+        } else if (placeId && address) {
+            // Fallback: use address with place_id (graceful degradation if place_id doesn't exist)
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}&query_place_id=${placeId}`;
+        } else if (coordinates) {
+            // Fallback: coordinates only
+            return `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
+        } else if (address) {
+            // Final fallback: address only
+            return `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+        }
+        return null;
+    }
+    
+    // ============================================================================
     // EVENT ENRICHMENT - Add Google Maps links, validate addresses, extract cities
     // ============================================================================
     
@@ -870,16 +893,19 @@ class SharedCore {
         
         // Only generate Google Maps link for full addresses (isFullAddress handles TBA/placeholder detection)
         if (event.address && this.isFullAddress(event.address)) {
-            // Use parser-provided gmaps URL if available, otherwise generate from address
+            // Use parser-provided gmaps URL if available, otherwise generate iOS-compatible URL from address
             if (!event.gmaps) {
-                event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+                event.gmaps = SharedCore.generateGoogleMapsUrl({ address: event.address });
             }
         } else if (!event.address) {
             // No address provided: fall back to coordinates if available (but not for TBA venues)
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-                // Use parser-provided gmaps URL if available, otherwise generate from coordinates
+                // Use parser-provided gmaps URL if available, otherwise generate iOS-compatible URL from coordinates
                 if (!event.gmaps) {
-                    event.gmaps = `https://maps.google.com/?q=${event.location}`;
+                    const [lat, lng] = event.location.split(',').map(coord => parseFloat(coord.trim()));
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        event.gmaps = SharedCore.generateGoogleMapsUrl({ coordinates: { lat, lng } });
+                    }
                 }
             } else {
                 delete event.gmaps;
