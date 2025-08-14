@@ -809,31 +809,8 @@ class DynamicCalendarLoader extends CalendarCore {
     // Process shortName hyphens based on display context
     processShortNameHyphens(text, willSplitLines) {
         if (!text) return '';
-        
-        // shortName hyphenation rules:
-        // - "-" indicates optional hyphenation points (can be removed if text fits)
-        // - "\-" indicates literal hyphens that must always be kept (part of the word)
-        // - Regular hyphens in normal titles should always be kept literally
-        
-        // First, preserve escaped hyphens by replacing them temporarily
-        let processed = text.replace(/\\-/g, '§ESCAPED_HYPHEN§');
-        
-        // Now all remaining "-" are optional hyphenation points
-        // If the text can fit without them, remove them
-        // Otherwise, keep them as breakpoints
-        
-        if (willSplitLines) {
-            // When manually splitting lines, keep optional hyphens as breakpoints
-            // This allows us to break "Bear-Night" at the hyphen if needed
-            processed = processed; // Keep the hyphens for line breaking
-        } else {
-            // When text fits naturally, remove optional hyphens
-            // "Bear-Night" becomes "Bear Night" if it fits on one line
-            processed = processed.replace(/-/g, ' ');
-        }
-        
-        // Restore escaped hyphens as literal hyphens
-        return processed.replace(/§ESCAPED_HYPHEN§/g, '-');
+        // Delegate to unified shortName hyphen handler: unescaped '-' => &shy;, '\-' stays '-'
+        return this.insertSoftHyphens(text, true);
     }
     
     // Hyphenate a word that's too long for a line
