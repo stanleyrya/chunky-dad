@@ -27,6 +27,14 @@ class DebugOverlay {
             xl: { min: 1200, max: Infinity, name: 'XL' }
         };
         
+        // Enhanced error tracking for debugging
+        this.errorHistory = [];
+        this.maxErrorHistory = 50;
+        this.setupErrorTracking();
+        
+        // Add error tracking panel
+        this.addErrorTrackingPanel();
+        
         if (this.isVisible) {
             this.init();
             logger.componentInit('SYSTEM', 'Debug overlay enabled - optimized version');
@@ -38,6 +46,161 @@ class DebugOverlay {
         return urlParams.get('debug') === 'true' || urlParams.has('debug');
     }
     
+    setupErrorTracking() {
+        // Track all errors with detailed context
+        const originalConsoleError = console.error;
+        const self = this;
+        
+        console.error = function(...args) {
+            // Call original console.error
+            originalConsoleError.apply(console, args);
+            
+            // Track error in debug overlay
+            self.trackError('console.error', args);
+        };
+        
+        // Enhanced window error tracking
+        window.addEventListener('error', (event) => {
+            this.trackError('window.error', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                error: event.error,
+                stack: event.error?.stack,
+                timestamp: new Date().toISOString(),
+                type: 'script-error'
+            });
+        });
+        
+        // Enhanced promise rejection tracking
+        window.addEventListener('unhandledrejection', (event) => {
+            this.trackError('unhandled-rejection', {
+                reason: event.reason,
+                message: event.reason?.message,
+                stack: event.reason?.stack,
+                timestamp: new Date().toISOString(),
+                type: 'promise-rejection'
+            });
+        });
+    }
+    
+    trackError(source, errorData) {
+        const errorEntry = {
+            id: Date.now() + Math.random(),
+            source,
+            data: errorData,
+            timestamp: new Date().toISOString(),
+            url: window.location.href
+        };
+        
+        this.errorHistory.unshift(errorEntry);
+        
+        // Keep only recent errors
+        if (this.errorHistory.length > this.maxErrorHistory) {
+            this.errorHistory = this.errorHistory.slice(0, this.maxErrorHistory);
+        }
+        
+        // Update error panel if visible
+        this.updateErrorPanel();
+    }
+    
+    addErrorTrackingPanel() {
+        const errorPanel = document.createElement('div');
+        errorPanel.id = 'debug-error-panel';
+        errorPanel.innerHTML = `
+            <div class="debug-section">
+                <h3>🚨 Error Tracking</h3>
+                <div class="debug-controls">
+                    <button onclick="debugOverlay.clearErrorHistory()">Clear Errors</button>
+                    <button onclick="debugOverlay.exportErrorHistory()">Export Errors</button>
+                    <span class="error-count">Errors: <span id="error-count">0</span></span>
+                </div>
+                <div id="error-list" class="error-list"></div>
+            </div>
+        `;
+        
+        this.overlay.appendChild(errorPanel);
+        this.updateErrorPanel();
+    }
+    
+    updateErrorPanel() {
+        const errorCountElement = document.getElementById('error-count');
+        const errorListElement = document.getElementById('error-list');
+        
+        if (!errorCountElement || !errorListElement) return;
+        
+        errorCountElement.textContent = this.errorHistory.length;
+        
+        if (this.errorHistory.length === 0) {
+            errorListElement.innerHTML = '<div class="no-errors">✅ No errors detected</div>';
+            return;
+        }
+        
+        const errorHtml = this.errorHistory.slice(0, 10).map(error => {
+            const isScriptError = error.data?.message === 'Script error.' || error.data?.type === 'script-error';
+            const isCorsError = error.data?.message?.includes('CORS') || error.data?.message?.includes('cross-origin');
+            const isNetworkError = error.data?.message?.includes('fetch') || error.data?.message?.includes('network');
+            
+            let errorType = 'Unknown';
+            let errorClass = 'error-unknown';
+            
+            if (isScriptError) {
+                errorType = 'Script Error';
+                errorClass = 'error-script';
+            } else if (isCorsError) {
+                errorType = 'CORS Error';
+                errorClass = 'error-cors';
+            } else if (isNetworkError) {
+                errorType = 'Network Error';
+                errorClass = 'error-network';
+            }
+            
+            return `
+                <div class="error-entry ${errorClass}">
+                    <div class="error-header">
+                        <span class="error-type">${errorType}</span>
+                        <span class="error-time">${new Date(error.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="error-message">${error.data?.message || 'No message'}</div>
+                    <div class="error-details">
+                        <small>Source: ${error.source} | File: ${error.data?.filename || 'Unknown'}</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        errorListElement.innerHTML = errorHtml;
+    }
+    
+    clearErrorHistory() {
+        this.errorHistory = [];
+        this.updateErrorPanel();
+        logger.info('SYSTEM', 'Debug overlay error history cleared');
+    }
+    
+    exportErrorHistory() {
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            errorCount: this.errorHistory.length,
+            errors: this.errorHistory
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chunky-dad-errors-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        logger.info('SYSTEM', 'Error history exported', {errorCount: this.errorHistory.length});
+    }
+
     init() {
         this.createOverlay();
         this.attachEventListeners();
