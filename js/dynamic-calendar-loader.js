@@ -472,28 +472,19 @@ class DynamicCalendarLoader extends CalendarCore {
     insertSoftHyphens(text, isShortName = false) {
         if (!text) return text;
         
-        // Use the HTML entity for soft hyphen
         const softHyphen = '&shy;';
         
-        // For short names, be more aggressive with hyphenation
-        // since they're already designed to be compact
-        let result = isShortName
-            ? this.aggressiveHyphenation(text, softHyphen)
-            : this.conservativeHyphenation(text, softHyphen);
-        
-        // Apply manual hyphenation semantics for shortName:
-        // - "-" (unescaped) => soft hyphen opportunity (only shows when breaking)
-        // - "\-" (escaped)  => literal hyphen that must always be displayed
         if (isShortName) {
-            // Temporarily protect escaped hyphens so we don't convert them
-            result = result.replace(/\\-/g, '§HARD_HYPHEN§');
-            // Convert all remaining hyphens to soft hyphens
-            result = result.replace(/-/g, softHyphen);
-            // Restore escaped hyphens as literal hyphens
-            result = result.replace(/§HARD_HYPHEN§/g, '-');
+            // Manual hyphenation semantics for shortName only:
+            // - "-" (unescaped) -> soft hyphen opportunity (shown only when wrapping)
+            // - "\\-" (escaped) -> literal hyphen always displayed
+            let processed = text.replace(/\\-/g, '§HARD_HYPHEN§');
+            processed = processed.replace(/-/g, softHyphen);
+            return processed.replace(/§HARD_HYPHEN§/g, '-');
         }
         
-        return result;
+        // Full names: apply conservative soft hyphenation only
+        return this.conservativeHyphenation(text, softHyphen);
     }
     
     /**
@@ -682,137 +673,69 @@ class DynamicCalendarLoader extends CalendarCore {
             charLimitPerLine
         });
         
-        // If no character limit provided, use CSS word-wrap (fallback)
-        // For shortNames, only remove hyphens if we're not doing line splitting
+        // If no character limit provided, let CSS handle wrapping; hyphens already processed upstream
         if (!charLimitPerLine) {
-            return isShortName ? this.processShortNameHyphens(text, false) : text;
+            return text;
         }
         
-        // For character-limited display, handle shortNames and fullNames differently:
-        // - shortNames with hyphens are designed to provide better breakpoints, so keep hyphens
-        // - fullNames should use natural word breaks without artificial hyphenation
-        const processedText = isShortName ? this.processShortNameHyphens(text, true) : text;
+        // Use the text as-is (soft/hard hyphens already applied by insertSoftHyphens)
+        const processedText = text;
         
         // Split into words for line building
         const words = processedText.split(/\s+/).filter(word => word.length > 0);
         
-        // Calculate approximate lines needed with better estimation
         const totalChars = processedText.length;
         const approxLinesNeeded = Math.ceil(totalChars / charLimitPerLine);
-        
-        // Check if any individual word is too long for a line
         const hasLongWords = words.some(word => word.length > charLimitPerLine);
         
-        // Decide whether to use CSS natural wrapping or manual line building:
-        // - For fullNames (isShortName=false): prefer CSS natural wrapping to avoid "hap-py" issues
-        // - For shortNames (isShortName=true): respect the intended breakpoints, but still avoid over-processing
-        
-        if (!isShortName && approxLinesNeeded <= 3 && !hasLongWords) {
-            // fullNames that fit naturally - let CSS handle to avoid inappropriate hyphenation
-            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: fullName fits naturally, letting CSS handle wrapping`, {
-                originalText: text,
-                processedText,
-                approxLinesNeeded,
-                charLimitPerLine,
-                hasLongWords,
-                isShortName,
-                finalResult: processedText
-            });
+        // Prefer natural wrapping for most cases
+        if (approxLinesNeeded <= 3 && !hasLongWords) {
             return processedText;
         }
         
-        if (!isShortName && approxLinesNeeded <= 4 && !hasLongWords && charLimitPerLine >= 8) {
-            // fullNames that are slightly long but manageable - still let CSS handle
-            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: fullName slightly long but manageable, letting CSS handle`, {
-                originalText: text,
-                processedText,
-                approxLinesNeeded,
-                charLimitPerLine,
-                hasLongWords,
-                isShortName,
-                finalResult: processedText
-            });
-            return processedText;
-        }
-        
-        if (isShortName && approxLinesNeeded <= 3 && !hasLongWords && !processedText.includes('-')) {
-            // shortNames without hyphens that fit naturally - let CSS handle
-            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: shortName without hyphens fits naturally, letting CSS handle`, {
-                originalText: text,
-                processedText,
-                approxLinesNeeded,
-                charLimitPerLine,
-                hasLongWords,
-                isShortName,
-                hasHyphens: processedText.includes('-'),
-                finalResult: processedText
-            });
-            return processedText;
-        }
-        
-        // Only use manual line building for cases where we need aggressive truncation
+        // Only build lines in extreme cases
         const lines = [];
         let currentLine = '';
         
         for (let i = 0; i < words.length; i++) {
             const word = words[i];
-            
-            // If we already have 3 lines, stop
             if (lines.length >= 3) break;
-            
-            // Check if adding this word would exceed line limit
             const testLine = currentLine ? currentLine + ' ' + word : word;
             
             if (testLine.length <= charLimitPerLine) {
-                // Word fits, add it to current line
                 currentLine = testLine;
             } else {
-                // Word doesn't fit on current line
                 if (currentLine) {
-                    // Save current line and start new one
                     lines.push(currentLine);
                     currentLine = '';
-                    
-                    // If we already have 2 lines, this is the last line
                     if (lines.length >= 2) {
-                        // On last line, try to fit remaining words
                         const remainingWords = words.slice(i);
                         const remainingText = remainingWords.join(' ');
-                        
                         if (remainingText.length <= charLimitPerLine) {
-                            // All remaining words fit on last line
                             currentLine = remainingText;
                             break;
                         } else {
-                            // Fit what we can on last line
                             currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
                             break;
                         }
                     } else {
-                        // Not on last line yet - just move word to next line
-                        currentLine = word; // Even if it's too long, put it on new line
+                        currentLine = word;
                     }
                 } else {
-                    // No current line, but word is too long
                     if (lines.length >= 2) {
-                        // This is the last line
                         currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
                         break;
                     } else {
-                        // Just put the word on a new line, even if it's too long
-                        // Let CSS handle overflow rather than breaking words artificially
                         currentLine = word;
                     }
                 }
             }
         }
         
-        // Add the final line if it has content
         if (currentLine && lines.length < 3) {
             lines.push(currentLine);
         }
         
-        // Return the processed text as a single string - CSS will handle line breaks
         const result = lines.join(' ');
         
         logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result "${result}"`, {
@@ -824,35 +747,6 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         return result;
-    }
-    
-    // Process shortName hyphens based on display context
-    processShortNameHyphens(text, willSplitLines) {
-        if (!text) return '';
-        
-        // shortName hyphenation rules:
-        // - "-" indicates optional hyphenation points (can be removed if text fits)
-        // - "\\-" indicates literal hyphens that must always be kept (part of the word)
-        // - Regular hyphens in normal titles should always be kept literally
-        
-        // First, preserve escaped hyphens by replacing them temporarily
-        let processed = text.replace(/\\-/g, '§ESCAPED_HYPHEN§');
-        
-        // Now all remaining "-" are optional hyphenation points
-        // If the text can fit without them, remove them
-        // Otherwise, keep them as breakpoints
-        
-        if (willSplitLines) {
-            // When manually splitting lines, keep optional hyphens for logic
-            processed = processed; // No-op; manual splitting logic will handle hyphenation
-        } else {
-            // When text fits naturally, remove optional hyphens entirely
-            // "Bear-Night" becomes "BearNight" if it fits on one line
-            processed = processed.replace(/-/g, '');
-        }
-        
-        // Restore escaped hyphens as literal hyphens
-        return processed.replace(/§ESCAPED_HYPHEN§/g, '-');
     }
     
     // Hyphenate a word that's too long for a line
