@@ -477,11 +477,23 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // For short names, be more aggressive with hyphenation
         // since they're already designed to be compact
+        let result = isShortName
+            ? this.aggressiveHyphenation(text, softHyphen)
+            : this.conservativeHyphenation(text, softHyphen);
+        
+        // Apply manual hyphenation semantics for shortName:
+        // - "-" (unescaped) => soft hyphen opportunity (only shows when breaking)
+        // - "\-" (escaped)  => literal hyphen that must always be displayed
         if (isShortName) {
-            return this.aggressiveHyphenation(text, softHyphen);
-        } else {
-            return this.conservativeHyphenation(text, softHyphen);
+            // Temporarily protect escaped hyphens so we don't convert them
+            result = result.replace(/\\-/g, '§HARD_HYPHEN§');
+            // Convert all remaining hyphens to soft hyphens
+            result = result.replace(/-/g, softHyphen);
+            // Restore escaped hyphens as literal hyphens
+            result = result.replace(/§HARD_HYPHEN§/g, '-');
         }
+        
+        return result;
     }
     
     /**
@@ -597,15 +609,14 @@ class DynamicCalendarLoader extends CalendarCore {
             breakpoint
         });
         
-        // If measurement not ready yet, use shortName with soft hyphens
+        // If measurement not ready yet, prefer full name for initial render
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using shortName with soft hyphens`, {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, preferring fullName with soft hyphens`, {
                 shortName: shortName,
                 fullName: fullName,
-                preferredName: shortName
+                preferredName: fullName
             });
-            // Use shortName with soft hyphens
-            return this.insertSoftHyphens(shortName, true);
+            return this.insertSoftHyphens(fullName, false);
         }
         
         // Calculate how many characters can fit per line
@@ -631,16 +642,28 @@ class DynamicCalendarLoader extends CalendarCore {
         // Calculate total characters available (3 lines)
         const totalCharsAvailable = charLimitPerLine * 3;
         
-        // Check if shortName fits comfortably without needing fullName
-        if (shortName.length <= totalCharsAvailable * 0.7) { // 70% to leave margin
-            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName fits well, using with soft hyphens: "${shortName}"`);
-            return this.insertSoftHyphens(shortName, true);
+        // Compute shortName length if optional hyphens are NOT shown (converted to soft hyphens)
+        const shortNameLengthWithoutOptionalHyphens = (() => {
+            // Protect escaped hyphens, strip optional ones, then restore
+            const protectedEscapes = shortName.replace(/\\-/g, '§HARD_HYPHEN§');
+            const noOptional = protectedEscapes.replace(/-/g, '');
+            const restored = noOptional.replace(/§HARD_HYPHEN§/g, '-');
+            return restored.length;
+        })();
+        
+        // Prefer fullName whenever it fits within the available space
+        if (fullName.length <= totalCharsAvailable) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits within space, using with soft hyphens: "${fullName}"`);
+            return this.insertSoftHyphens(fullName, false);
         }
         
-        // Check if fullName might be better (if it's not much longer)
-        if (fullName.length <= totalCharsAvailable * 0.85) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits reasonably, using with soft hyphens: "${fullName}"`);
-            return this.insertSoftHyphens(fullName, false);
+        // If the shortName (with optional hyphens not displayed) fits, use it
+        if (shortNameLengthWithoutOptionalHyphens <= totalCharsAvailable) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName (without optional hyphens) fits, using shortName with soft hyphens for optional '-'`, {
+                originalShortName: shortName,
+                effectiveLength: shortNameLengthWithoutOptionalHyphens
+            });
+            return this.insertSoftHyphens(shortName, true);
         }
         
         // Default to shortName with aggressive soft hyphens for tight spaces
@@ -809,7 +832,7 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // shortName hyphenation rules:
         // - "-" indicates optional hyphenation points (can be removed if text fits)
-        // - "\-" indicates literal hyphens that must always be kept (part of the word)
+        // - "\\-" indicates literal hyphens that must always be kept (part of the word)
         // - Regular hyphens in normal titles should always be kept literally
         
         // First, preserve escaped hyphens by replacing them temporarily
@@ -820,13 +843,12 @@ class DynamicCalendarLoader extends CalendarCore {
         // Otherwise, keep them as breakpoints
         
         if (willSplitLines) {
-            // When manually splitting lines, keep optional hyphens as breakpoints
-            // This allows us to break "Bear-Night" at the hyphen if needed
-            processed = processed; // Keep the hyphens for line breaking
+            // When manually splitting lines, keep optional hyphens for logic
+            processed = processed; // No-op; manual splitting logic will handle hyphenation
         } else {
-            // When text fits naturally, remove optional hyphens
-            // "Bear-Night" becomes "Bear Night" if it fits on one line
-            processed = processed.replace(/-/g, ' ');
+            // When text fits naturally, remove optional hyphens entirely
+            // "Bear-Night" becomes "BearNight" if it fits on one line
+            processed = processed.replace(/-/g, '');
         }
         
         // Restore escaped hyphens as literal hyphens
