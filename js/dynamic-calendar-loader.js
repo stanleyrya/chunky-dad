@@ -472,25 +472,96 @@ class DynamicCalendarLoader extends CalendarCore {
     insertSoftHyphens(text, isShortName = false) {
         if (!text) return text;
         
-        // For shortName, treat unescaped '-' as soft hyphens, and '\-' as literal '-'
-        if (isShortName) {
-            const softHyphen = '&shy;';
-            let processed = text.replace(/\\-/g, '§HARD_HYPHEN§');
-            processed = processed.replace(/-/g, softHyphen);
-            processed = processed.replace(/§HARD_HYPHEN§/g, '-');
-            return processed;
-        }
+        // Use the HTML entity for soft hyphen
+        const softHyphen = '&shy;';
         
-        // For fullName: do not add soft hyphens, preserve literal hyphens only
-        return text;
+        // For short names, be more aggressive with hyphenation
+        // since they're already designed to be compact
+        if (isShortName) {
+            return this.aggressiveHyphenation(text, softHyphen);
+        } else {
+            return this.conservativeHyphenation(text, softHyphen);
+        }
     }
     
-    // (Removed aggressiveHyphenation — not used anymore)
-
+    /**
+     * Conservative hyphenation for full names
+     * Only adds hyphens at very obvious break points
+     */
+    conservativeHyphenation(text, softHyphen) {
+        let result = text;
+        
+        // 1. Add soft hyphens between camelCase words
+        result = result.replace(/([a-z])([A-Z])/g, `$1${softHyphen}$2`);
+        
+        // 2. Add soft hyphens between uppercase sequences (MEGAWOOF -> MEGA-WOOF)
+        result = result.replace(/([A-Z]{3,})([A-Z][a-z])/g, `$1${softHyphen}$2`);
+        
+        // 3. Add soft hyphens after numbers
+        result = result.replace(/(\d+)([A-Za-z])/g, `$1${softHyphen}$2`);
+        
+        // 4. Add soft hyphens before numbers (except at start)
+        result = result.replace(/([A-Za-z])(\d+)/g, `$1${softHyphen}$2`);
+        
+        // 5. Handle very long words (12+ characters) - add hyphen in middle
+        result = result.replace(/\b(\w{6,})(\w{6,})\b/g, (match, p1, p2) => {
+            // Only if the word doesn't already have a soft hyphen
+            if (!match.includes(softHyphen)) {
+                return `${p1}${softHyphen}${p2}`;
+            }
+            return match;
+        });
+        
+        return result;
+    }
     
-    // Process venue/bar names (no soft hyphens for venues)
+    /**
+     * Aggressive hyphenation for short names
+     * Adds more break points since these names are meant to wrap better
+     */
+    aggressiveHyphenation(text, softHyphen) {
+        let result = text;
+        
+        // Start with conservative rules
+        result = this.conservativeHyphenation(result, softHyphen);
+        
+        // Common prefixes in event names
+        const prefixes = ['after', 'under', 'over', 'inter', 'super', 'mega', 'ultra'];
+        
+        // Common suffixes in event names  
+        const suffixes = ['fest', 'land', 'night', 'party', 'dance', 'week', 'day'];
+        
+        // Add soft hyphens after common prefixes
+        prefixes.forEach(prefix => {
+            const regex = new RegExp(`\\b(${prefix})([A-Z])`, 'gi');
+            result = result.replace(regex, `$1${softHyphen}$2`);
+        });
+        
+        // Add soft hyphens before common suffixes
+        suffixes.forEach(suffix => {
+            const regex = new RegExp(`([a-z])(${suffix})\\b`, 'gi');
+            result = result.replace(regex, `$1${softHyphen}$2`);
+        });
+        
+        // Break up all-caps sequences at logical points (every 4-5 chars)
+        result = result.replace(/\b([A-Z]{4,5})([A-Z]{3,})\b/g, `$1${softHyphen}$2`);
+        
+        // Handle compound bear community terms
+        result = result.replace(/(bear|leather|woof|pride|boot|dance)([A-Z])/gi, `$1${softHyphen}$2`);
+        result = result.replace(/([a-z])(bear|leather|woof|pride|boot|dance)/gi, `$1${softHyphen}$2`);
+        
+        return result;
+    }
+    
+    /**
+     * Process venue/bar names with soft hyphens
+     * Venue names typically need less aggressive hyphenation
+     */
     processVenueName(venueName) {
-        return venueName || '';
+        if (!venueName) return venueName;
+        
+        // Use conservative hyphenation for venue names
+        return this.conservativeHyphenation(venueName, '&shy;');
     }
 
 
@@ -508,10 +579,10 @@ class DynamicCalendarLoader extends CalendarCore {
             breakpoint
         });
         
-        // If no shortname, just use full name as-is
+        // If no shortname, just apply soft hyphens to full name
         if (!shortName) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, using full name: "${fullName}"`);
-            return fullName;
+            logger.info('CALENDAR', `🔍 SMART_NAME: No shortname available, adding soft hyphens to full name: "${fullName}"`);
+            return this.insertSoftHyphens(fullName, false);
         }
         
         // Get characters per pixel ratio (calculated once and cached)
@@ -526,14 +597,15 @@ class DynamicCalendarLoader extends CalendarCore {
             breakpoint
         });
         
-        // If measurement not ready yet, prefer full name
+        // If measurement not ready yet, use shortName with soft hyphens
         if (availableWidth === null) {
-            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, preferring fullName`, {
+            logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready for ${breakpoint}, using shortName with soft hyphens`, {
                 shortName: shortName,
                 fullName: fullName,
-                preferredName: fullName
+                preferredName: shortName
             });
-            return fullName;
+            // Use shortName with soft hyphens
+            return this.insertSoftHyphens(shortName, true);
         }
         
         // Calculate how many characters can fit per line
@@ -552,31 +624,1070 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // For very small character limits, try shorterName if available
         if (charLimitPerLine <= 4 && event.shorterName?.trim()) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName for very small space: "${event.shorterName}"`);
+            logger.info('CALENDAR', `🔍 SMART_NAME: Using shorterName with soft hyphens for very small space: "${event.shorterName}"`);
             return this.insertSoftHyphens(event.shorterName.trim(), true);
         }
         
         // Calculate total characters available (3 lines)
         const totalCharsAvailable = charLimitPerLine * 3;
         
-        // Prefer fullName whenever it fits within the available space
-        if (fullName.length <= totalCharsAvailable) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits within space, using full name: "${fullName}"`);
-            return fullName;
-        }
-        
-        // If the shortName without optional hyphens fits, use shortName with soft hyphens
-        const shortNameEffectiveLength = shortName
-            .replace(/\\-/g, '')   // keep literal hyphens counted as a single char
-            .replace(/-/g, '');      // remove optional hyphens from length calc
-        if (shortNameEffectiveLength.length <= totalCharsAvailable) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName (without optional '-') fits; using soft hyphens for optional '-'`);
+        // Check if shortName fits comfortably without needing fullName
+        if (shortName.length <= totalCharsAvailable * 0.7) { // 70% to leave margin
+            logger.info('CALENDAR', `🔍 SMART_NAME: ShortName fits well, using with soft hyphens: "${shortName}"`);
             return this.insertSoftHyphens(shortName, true);
         }
         
-        // Default to shortName with soft hyphens
-        logger.info('CALENDAR', `🔍 SMART_NAME: Space is tight; using shortName with soft hyphens: "${shortName}"`);
+        // Check if fullName might be better (if it's not much longer)
+        if (fullName.length <= totalCharsAvailable * 0.85) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: FullName fits reasonably, using with soft hyphens: "${fullName}"`);
+            return this.insertSoftHyphens(fullName, false);
+        }
+        
+        // Default to shortName with aggressive soft hyphens for tight spaces
+        logger.info('CALENDAR', `🔍 SMART_NAME: Space is tight, using shortName with aggressive soft hyphens: "${shortName}"`);
         return this.insertSoftHyphens(shortName, true);
+    }
+
+    // Build text optimized for exactly 3 lines, preferring full words over hyphenation
+    buildThreeLineText(text, isShortName, breakpoint, charLimitPerLine = null) {
+        if (!text) return '';
+        
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Starting buildThreeLineText with full-word preference`, {
+            text,
+            isShortName,
+            breakpoint,
+            charLimitPerLine
+        });
+        
+        // If no character limit provided, use CSS word-wrap (fallback)
+        // For shortNames, only remove hyphens if we're not doing line splitting
+        if (!charLimitPerLine) {
+            return isShortName ? this.processShortNameHyphens(text, false) : text;
+        }
+        
+        // For character-limited display, handle shortNames and fullNames differently:
+        // - shortNames with hyphens are designed to provide better breakpoints, so keep hyphens
+        // - fullNames should use natural word breaks without artificial hyphenation
+        const processedText = isShortName ? this.processShortNameHyphens(text, true) : text;
+        
+        // Split into words for line building
+        const words = processedText.split(/\s+/).filter(word => word.length > 0);
+        
+        // Calculate approximate lines needed with better estimation
+        const totalChars = processedText.length;
+        const approxLinesNeeded = Math.ceil(totalChars / charLimitPerLine);
+        
+        // Check if any individual word is too long for a line
+        const hasLongWords = words.some(word => word.length > charLimitPerLine);
+        
+        // Decide whether to use CSS natural wrapping or manual line building:
+        // - For fullNames (isShortName=false): prefer CSS natural wrapping to avoid "hap-py" issues
+        // - For shortNames (isShortName=true): respect the intended breakpoints, but still avoid over-processing
+        
+        if (!isShortName && approxLinesNeeded <= 3 && !hasLongWords) {
+            // fullNames that fit naturally - let CSS handle to avoid inappropriate hyphenation
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: fullName fits naturally, letting CSS handle wrapping`, {
+                originalText: text,
+                processedText,
+                approxLinesNeeded,
+                charLimitPerLine,
+                hasLongWords,
+                isShortName,
+                finalResult: processedText
+            });
+            return processedText;
+        }
+        
+        if (!isShortName && approxLinesNeeded <= 4 && !hasLongWords && charLimitPerLine >= 8) {
+            // fullNames that are slightly long but manageable - still let CSS handle
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: fullName slightly long but manageable, letting CSS handle`, {
+                originalText: text,
+                processedText,
+                approxLinesNeeded,
+                charLimitPerLine,
+                hasLongWords,
+                isShortName,
+                finalResult: processedText
+            });
+            return processedText;
+        }
+        
+        if (isShortName && approxLinesNeeded <= 3 && !hasLongWords && !processedText.includes('-')) {
+            // shortNames without hyphens that fit naturally - let CSS handle
+            logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: shortName without hyphens fits naturally, letting CSS handle`, {
+                originalText: text,
+                processedText,
+                approxLinesNeeded,
+                charLimitPerLine,
+                hasLongWords,
+                isShortName,
+                hasHyphens: processedText.includes('-'),
+                finalResult: processedText
+            });
+            return processedText;
+        }
+        
+        // Only use manual line building for cases where we need aggressive truncation
+        const lines = [];
+        let currentLine = '';
+        
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            
+            // If we already have 3 lines, stop
+            if (lines.length >= 3) break;
+            
+            // Check if adding this word would exceed line limit
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            
+            if (testLine.length <= charLimitPerLine) {
+                // Word fits, add it to current line
+                currentLine = testLine;
+            } else {
+                // Word doesn't fit on current line
+                if (currentLine) {
+                    // Save current line and start new one
+                    lines.push(currentLine);
+                    currentLine = '';
+                    
+                    // If we already have 2 lines, this is the last line
+                    if (lines.length >= 2) {
+                        // On last line, try to fit remaining words
+                        const remainingWords = words.slice(i);
+                        const remainingText = remainingWords.join(' ');
+                        
+                        if (remainingText.length <= charLimitPerLine) {
+                            // All remaining words fit on last line
+                            currentLine = remainingText;
+                            break;
+                        } else {
+                            // Fit what we can on last line
+                            currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
+                            break;
+                        }
+                    } else {
+                        // Not on last line yet - just move word to next line
+                        currentLine = word; // Even if it's too long, put it on new line
+                    }
+                } else {
+                    // No current line, but word is too long
+                    if (lines.length >= 2) {
+                        // This is the last line
+                        currentLine = this.fitWordOnLastLine(word, charLimitPerLine, isShortName);
+                        break;
+                    } else {
+                        // Just put the word on a new line, even if it's too long
+                        // Let CSS handle overflow rather than breaking words artificially
+                        currentLine = word;
+                    }
+                }
+            }
+        }
+        
+        // Add the final line if it has content
+        if (currentLine && lines.length < 3) {
+            lines.push(currentLine);
+        }
+        
+        // Return the processed text as a single string - CSS will handle line breaks
+        const result = lines.join(' ');
+        
+        logger.debug('CALENDAR', `🔍 BUILD_THREE_LINE: Built result "${result}"`, {
+            originalText: text,
+            processedText,
+            linesBuilt: lines.length,
+            lines,
+            finalResult: result
+        });
+        
+        return result;
+    }
+    
+    // Process shortName hyphens based on display context
+    processShortNameHyphens(text, willSplitLines) {
+        if (!text) return '';
+        
+        // shortName hyphenation rules:
+        // - "-" indicates optional hyphenation points (can be removed if text fits)
+        // - "\-" indicates literal hyphens that must always be kept (part of the word)
+        // - Regular hyphens in normal titles should always be kept literally
+        
+        // First, preserve escaped hyphens by replacing them temporarily
+        let processed = text.replace(/\\-/g, '§ESCAPED_HYPHEN§');
+        
+        // Now all remaining "-" are optional hyphenation points
+        // If the text can fit without them, remove them
+        // Otherwise, keep them as breakpoints
+        
+        if (willSplitLines) {
+            // When manually splitting lines, keep optional hyphens as breakpoints
+            // This allows us to break "Bear-Night" at the hyphen if needed
+            processed = processed; // Keep the hyphens for line breaking
+        } else {
+            // When text fits naturally, remove optional hyphens
+            // "Bear-Night" becomes "Bear Night" if it fits on one line
+            processed = processed.replace(/-/g, ' ');
+        }
+        
+        // Restore escaped hyphens as literal hyphens
+        return processed.replace(/§ESCAPED_HYPHEN§/g, '-');
+    }
+    
+    // Hyphenate a word that's too long for a line
+    hyphenateWord(word, charLimit, isShortName) {
+        // First, try to split at existing hyphens (if it's a shortName or has intentional hyphens)
+        if (word.includes('-')) {
+            const parts = word.split('-');
+            let builtPart = '';
+            let remainder = '';
+            
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                const partWithHyphen = i === parts.length - 1 ? part : part + '-';
+                
+                if (!builtPart) {
+                    if (partWithHyphen.length <= charLimit) {
+                        builtPart = partWithHyphen;
+                    } else {
+                        // Even the first part is too long - don't hyphenate, just truncate
+                        return {
+                            firstPart: part.substring(0, Math.min(part.length, charLimit)),
+                            remainder: parts.slice(i + 1).join('-')
+                        };
+                    }
+                } else {
+                    const testPart = builtPart + partWithHyphen;
+                    if (testPart.length <= charLimit) {
+                        builtPart = testPart;
+                    } else {
+                        // This part would make it too long, so split here
+                        remainder = parts.slice(i).join('-');
+                        break;
+                    }
+                }
+            }
+            
+            if (builtPart) {
+                return { firstPart: builtPart, remainder };
+            }
+        }
+        
+        // No natural hyphen break found
+        // DON'T add artificial hyphens - just return the word as-is
+        // Let it overflow to the next line naturally
+        return {
+            firstPart: word,
+            remainder: ''
+        };
+    }
+    
+    // Fit a word on the last line (3rd line) with truncation if needed
+    fitWordOnLastLine(word, charLimit, isShortName) {
+        if (word.length <= charLimit) {
+            return word;
+        }
+        
+        // Word is too long for last line, truncate with ellipsis
+        if (charLimit <= 1) {
+            return '…';
+        }
+        
+        return word.substring(0, charLimit - 1) + '…';
+    }
+    
+    // Evaluate the quality of a text result
+    evaluateTextQuality(text, charLimitPerLine) {
+        if (!text) return { score: 0, reason: 'empty_text' };
+        
+        const words = text.split(/\s+/);
+        const hasEllipsis = text.includes('…');
+        const lines = this.estimateLines(text, charLimitPerLine);
+        
+        // Calculate score based on various factors
+        let score = 100; // Start with perfect score
+        
+        // Penalize ellipsis (but not too heavily)
+        if (hasEllipsis) score -= 20;
+        
+        // Reward utilizing more lines (up to 3)
+        if (lines === 3) score += 10;
+        else if (lines === 2) score += 5;
+        
+        // Penalize very short results
+        if (text.length < charLimitPerLine) score -= 15;
+        
+        // Reward natural word boundaries
+        const naturalBreaks = (text.match(/[\s-]/g) || []).length;
+        score += naturalBreaks * 2;
+        
+        return {
+            score,
+            lines,
+            hasEllipsis,
+            wordCount: words.length,
+            naturalBreaks,
+            length: text.length,
+            reason: `score=${score}, lines=${lines}, ellipsis=${hasEllipsis}`
+        };
+    }
+    
+    // Estimate how many lines text will take
+    estimateLines(text, charLimitPerLine) {
+        if (!text || !charLimitPerLine) return 1;
+        return Math.min(3, Math.ceil(text.length / charLimitPerLine));
+    }
+
+    // Calculate characters per pixel ratio for dynamic text fitting
+    calculateCharsPerPixel() {
+        logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
+        
+        try {
+            // Create a temporary element to measure character width
+            const testElement = document.createElement('div');
+            testElement.className = 'event-name'; // Use the same class as actual event names
+            testElement.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: nowrap;
+                font-family: 'Poppins', sans-serif;
+                font-size: var(--event-name-font-size);
+                font-weight: var(--event-name-font-weight);
+                line-height: var(--event-name-line-height);
+            `;
+            
+            // Use a string that better represents actual event names 
+            // Focus on uppercase letters without spaces (spaces are narrow and skew the average)
+            const testString = 'BEARHAPPYHOURNIGHTOUTWEEKLYSOCIALEVENTS';
+            testElement.textContent = testString;
+            document.body.appendChild(testElement);
+            
+            const width = testElement.getBoundingClientRect().width;
+            const charCount = testElement.textContent.length;
+            const pixelsPerChar = width / charCount;
+            // Apply defensive reduction of 0.02 to prevent edge overflow
+            const charsPerPixel = (1 / pixelsPerChar) - 0.02;
+            
+            // Get the computed styles to verify what we're actually using
+            const computedStyles = window.getComputedStyle(testElement);
+            const actualFontSize = computedStyles.fontSize;
+            const actualFontWeight = computedStyles.fontWeight;
+            const actualFontFamily = computedStyles.fontFamily;
+            
+            // Get visual zoom for logging purposes only - don't adjust calculation
+            const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
+            
+            document.body.removeChild(testElement);
+            
+            logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
+                width: width.toFixed(2),
+                charCount,
+                pixelsPerChar: pixelsPerChar.toFixed(2),
+                charsPerPixel: charsPerPixel.toFixed(4),
+                visualZoom: visualZoom.toFixed(2),
+                zoomDirection: visualZoom > 1 ? 'zoomed in' : visualZoom < 1 ? 'zoomed out' : 'normal',
+                actualFontSize,
+                actualFontWeight,
+                actualFontFamily,
+                screenWidth: window.innerWidth,
+                testString: testString,
+                note: 'Base calculation with 0.02 defensive reduction applied directly to charsPerPixel'
+            });
+            
+            // Cache the result
+            this.charsPerPixel = charsPerPixel;
+            logger.info('CALENDAR', `🔍 CALCULATION: Cached charsPerPixel = ${charsPerPixel.toFixed(4)}`);
+            return charsPerPixel;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error calculating chars per pixel', error);
+            return 0.1; // Conservative fallback
+        }
+    }
+
+    // Get the actual width available for event text from the fake event rendered invisibly
+    getEventTextWidth() {
+        logger.info('CALENDAR', '🔍 MEASUREMENT: Starting getEventTextWidth()');
+        
+        // Check if we already have a cached measurement
+        if (this.cachedEventTextWidth) {
+            logger.info('CALENDAR', `🔍 MEASUREMENT: Using cached event text width: ${this.cachedEventTextWidth}px`);
+            return this.cachedEventTextWidth;
+        }
+        
+        // Find ALL event-name elements to understand what we're measuring
+        const allEventNames = document.querySelectorAll('.event-name');
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Found ${allEventNames.length} .event-name elements`);
+        
+        // Find the first visible event-name element (should be our measurement element)
+        const eventName = document.querySelector('.event-name');
+        
+        // If the element doesn't exist yet, we can't measure - return null to indicate measurement not ready
+        if (!eventName) {
+            logger.debug('CALENDAR', '🔍 MEASUREMENT: Event name element not found for measurement - DOM not ready yet');
+            return null;
+        }
+        
+        // Log details about the element we're measuring
+        const isVisible = eventName.offsetParent !== null;
+        const hasContent = eventName.textContent && eventName.textContent.trim().length > 0;
+        
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Measuring event-name element`, {
+            elementFound: true,
+            isVisible,
+            hasContent,
+            textContent: eventName.textContent,
+            tagName: eventName.tagName,
+            className: eventName.className
+        });
+        
+        // Measure the event name element directly - this IS the text container
+        const eventNameRect = eventName.getBoundingClientRect();
+        const eventNameStyle = window.getComputedStyle(eventName);
+        const paddingLeft = parseFloat(eventNameStyle.paddingLeft) || 0;
+        const paddingRight = parseFloat(eventNameStyle.paddingRight) || 0;
+        const borderLeft = parseFloat(eventNameStyle.borderLeftWidth) || 0;
+        const borderRight = parseFloat(eventNameStyle.borderRightWidth) || 0;
+        
+        // Calculate the actual available width for text content
+        const rawAvailableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
+        
+        // No defensive padding applied to width - defensive reduction is applied directly to charsPerPixel calculation
+        const availableWidth = rawAvailableWidth;
+        
+        this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
+        
+        logger.info('CALENDAR', `🔍 MEASUREMENT: Measured actual event text width from .event-name element: ${this.cachedEventTextWidth}px`, {
+            elementRect: {
+                width: eventNameRect.width,
+                height: eventNameRect.height,
+                left: eventNameRect.left,
+                top: eventNameRect.top
+            },
+            computedStyle: {
+                paddingLeft,
+                paddingRight,
+                borderLeft,
+                borderRight,
+                fontSize: eventNameStyle.fontSize,
+                fontWeight: eventNameStyle.fontWeight,
+                fontFamily: eventNameStyle.fontFamily
+            },
+            calculations: {
+                rawWidth: eventNameRect.width,
+                totalPadding: paddingLeft + paddingRight,
+                totalBorders: borderLeft + borderRight,
+                rawAvailableWidth: rawAvailableWidth,
+                finalAvailableWidth: availableWidth,
+                finalCachedWidth: this.cachedEventTextWidth,
+                note: 'No width padding applied - defensive reduction applied directly to charsPerPixel'
+            }
+        });
+        
+        return this.cachedEventTextWidth;
+    }
+
+    // Clear cached measurements (call when layout changes)
+    clearMeasurementCache() {
+        const hadCachedWidth = !!this.cachedEventTextWidth;
+        const hadCharsPerPixel = !!this.charsPerPixel;
+        
+        this.cachedEventTextWidth = null;
+        this.charsPerPixel = null;
+        
+        logger.info('CALENDAR', '🔍 CACHE_CLEAR: Measurement cache cleared', {
+            hadCachedWidth,
+            hadCharsPerPixel,
+            reason: 'layout_change'
+        });
+    }
+
+    // Clear cached event names (call when screen size changes)
+    clearEventNameCache() {
+        const cacheSize = this.cachedEventNames.size;
+        this.cachedEventNames.clear();
+        
+        logger.info('CALENDAR', '🔍 CACHE_CLEAR: Event name cache cleared', {
+            previousCacheSize: cacheSize,
+            reason: 'screen_size_change'
+        });
+    }
+
+    // Get current breakpoint based on screen width
+    getCurrentBreakpoint() {
+        const width = window.innerWidth;
+        if (width <= 374) return 'xs';
+        if (width <= 767) return 'sm'; 
+        if (width <= 1023) return 'md';
+        return 'lg';
+    }
+
+
+    
+    // Generate event name element for current breakpoint only
+    generateEventNameElements(event, hideEvents = false) {
+        const fullName = event.name || '';
+        const hasShortName = !!(event.shortName || event.nickname);
+        
+        logger.info('CALENDAR', `🔍 EVENT_NAME_GEN: Generating event name elements`, {
+            eventName: fullName,
+            hasShortName,
+            hideEvents,
+            mode: hideEvents ? 'MEASUREMENT' : 'DISPLAY'
+        });
+        
+        // For measurement mode, use full name to get accurate width measurement
+        // This gives us a realistic event name length for proper width calculation
+        if (hideEvents) {
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Measurement mode - using full name for accurate measurement', {
+                eventName: fullName,
+                shortName: event.shortName || event.nickname || '',
+                hideEvents: true,
+                reason: 'measurement_mode_uses_full_name'
+            });
+            return `<div class="event-name">${fullName}</div>`;
+        }
+        
+        // DISPLAY MODE: Use full smart name logic with caching
+        
+        // If no shortname, just return the full name
+        if (!hasShortName) {
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: No shortname available, using full name', {
+                eventName: fullName,
+                hideEvents,
+                reason: 'no_shortname_available'
+            });
+            return `<div class="event-name">${fullName}</div>`;
+        }
+        
+        // Create a cache key for this event + current breakpoint
+        const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}-${this.currentBreakpoint}`;
+        
+        // For display mode, check cache first
+        if (this.cachedEventNames.has(eventKey)) {
+            const cachedName = this.cachedEventNames.get(eventKey);
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Using cached event name', { 
+                eventKey, 
+                breakpoint: this.currentBreakpoint, 
+                cachedName: cachedName,
+                hideEvents: false,
+                source: 'cache'
+            });
+            return `<div class="event-name">${cachedName}</div>`;
+        }
+        
+        // Calculate name for current breakpoint (display mode only)
+        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Calculating event name for current breakpoint', { 
+            eventKey, 
+            breakpoint: this.currentBreakpoint,
+            hideEvents,
+            source: 'fresh_calculation'
+        });
+        const eventName = this.getSmartEventNameForBreakpoint(event, this.currentBreakpoint);
+        
+        // Cache the result for display mode
+        this.cachedEventNames.set(eventKey, eventName);
+        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Cached calculated event name', {
+            eventKey,
+            calculatedName: eventName,
+            shortName: event.shortName || event.nickname || '',
+            fullName: fullName,
+            cached: true
+        });
+        
+        return `<div class="event-name">${eventName}</div>`;
+    }
+
+    // Format time for mobile display with simplified format (4a-5p)
+    formatTimeForMobile(timeString) {
+        if (!timeString) return '';
+        
+        // Check if it's a time range
+        const timeRangeRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
+        const match = timeString.match(timeRangeRegex);
+        
+        if (match) {
+            const startTime = match[1];
+            const endTime = match[2];
+            return this.simplifyTimeFormat(startTime) + '-' + this.simplifyTimeFormat(endTime);
+        }
+        
+        // For single times, just simplify
+        return this.simplifyTimeFormat(timeString);
+    }
+
+    // Convert time format to simplified version (4 AM -> 4a, 5 PM -> 5p)
+    simplifyTimeFormat(timeString) {
+        if (!timeString) return '';
+        
+        return timeString.replace(/(\d{1,2}(?::\d{2})?)\s*(AM|PM)/gi, (match, time, period) => {
+            return time + (period.toLowerCase() === 'am' ? 'a' : 'p');
+        });
+    }
+
+    getCurrentPeriodBounds() {
+        return this.currentView === 'week' 
+            ? this.getWeekBounds(this.currentDate)
+            : this.getMonthBounds(this.currentDate);
+    }
+
+    // Show events for a specific day (used by calendar overview)
+    showDayEvents(dateString, events) {
+        const date = new Date(dateString);
+        
+        // Create modal or popup to show events
+        const modal = document.createElement('div');
+        modal.className = 'day-events-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Events for ${date.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    })}</h3>
+                    <button class="modal-close" onclick="this.closest('.day-events-modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    ${events.length > 0 
+                        ? events.map(event => `
+                            <div class="modal-event-item" data-event-slug="${event.slug}">
+                                <div class="event-name">${event.name}</div>
+                                <div class="event-details">
+                                    <span class="event-time">${event.time}</span>
+                                    <span class="event-venue">${this.processVenueName(event.bar)}</span>
+                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('')
+                        : ''
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="switch-to-week" onclick="window.calendarLoader.switchToWeekView('${dateString}')">
+                        View Week
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.appendChild(modal);
+        
+        // Add click handler to close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // Switch to week view for a specific date
+    switchToWeekView(dateString) {
+        this.currentDate = new Date(dateString);
+        this.currentView = 'week';
+        
+        // Update active button
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.view-btn[data-view="week"]').classList.add('active');
+        
+        // Remove modal
+        document.querySelector('.day-events-modal')?.remove();
+        
+        this.updateCalendarDisplay();
+    }
+
+    navigatePeriod(direction, skipAnimation = false) {
+        const delta = direction === 'next' ? 1 : -1;
+        
+        logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
+            currentView: this.currentView,
+            currentDate: this.currentDate.toISOString(),
+            skipAnimation
+        });
+        
+        if (this.currentView === 'week') {
+            this.currentDate.setDate(this.currentDate.getDate() + (delta * 7));
+        } else {
+            this.currentDate.setMonth(this.currentDate.getMonth() + delta);
+        }
+        
+        // Only update display immediately if not part of a swipe animation
+        if (skipAnimation) {
+            this.updateCalendarDisplay();
+        }
+    }
+
+    goToToday() {
+        this.currentDate = new Date();
+        this.updateCalendarDisplay();
+    }
+
+    formatDateRange(start, end) {
+        const options = { month: 'short', day: 'numeric' };
+        
+        if (this.currentView === 'week') {
+            if (start.getMonth() === end.getMonth()) {
+                return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}`;
+            } else {
+                return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
+            }
+        } else {
+            return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+    }
+
+    // Load calendar data for specific city (override to use CORS proxy)
+    async loadCalendarData(cityKey) {
+        const cityConfig = getCityConfig(cityKey);
+        if (!cityConfig || !cityConfig.calendarId) {
+            logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
+            return null;
+        }
+        
+        logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+        logger.info('CALENDAR', `🌐 Step 3: Starting API call to load calendar data for ${cityConfig.name}`, {
+            cityKey,
+            calendarId: cityConfig.calendarId,
+            step: 'Step 3: Loading real calendar data'
+        });
+        
+        try {
+            const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
+            const corsProxy = 'https://api.allorigins.win/raw?url=';
+            const fullUrl = corsProxy + encodeURIComponent(icalUrl);
+            
+            const response = await fetch(fullUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const icalText = await response.text();
+            logger.apiCall('CALENDAR', 'Successfully fetched iCal data', {
+                dataLength: icalText.length,
+                city: cityConfig.name,
+                url: icalUrl
+            });
+            
+            // Log sample of the fetched data for debugging
+            if (icalText.length > 0) {
+                logger.debug('CALENDAR', 'Raw iCal data sample', {
+                    firstLine: icalText.split('\n')[0],
+                    hasEvents: icalText.includes('BEGIN:VEVENT'),
+                    eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
+                    calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
+                    encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format'
+                });
+            } else {
+                logger.warn('CALENDAR', 'Empty iCal data received', {
+                    city: cityConfig.name,
+                    url: icalUrl
+                });
+            }
+            
+            const events = this.parseICalData(icalText);
+            
+            // Store all events for filtering
+            this.allEvents = events;
+            
+            this.eventsData = {
+                cityConfig,
+                events,
+                calendarTimezone: this.calendarTimezone,
+                timezoneData: this.timezoneData
+            };
+            
+            logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+            logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
+                eventCount: events.length,
+                cityKey,
+                calendarTimezone: this.calendarTimezone,
+                hasTimezoneData: !!this.timezoneData
+            });
+            return this.eventsData;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error loading calendar data', error);
+            this.showCalendarError();
+            return null;
+        }
+    }
+
+    // Show calendar error - only in the events container for cleaner display
+    showCalendarError() {
+        const errorMessage = `
+            <div class="error-message">
+                <h3>📅 Calendar Temporarily Unavailable</h3>
+                <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
+                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
+            </div>
+        `;
+        
+        // Only show error in the events container to avoid duplication
+        const eventsContainer = document.querySelector('.events-list');
+        if (eventsContainer) {
+            eventsContainer.innerHTML = errorMessage;
+        }
+
+    }
+
+
+
+
+
+
+
+    // Generate event card
+    generateEventCard(event) {
+        const linksHtml = event.links ? event.links.map(link => {
+            // Add appropriate emoji based on link type
+            let emoji = '🔗'; // default link emoji
+            const label = link.label.toLowerCase();
+            
+            if (label.includes('facebook')) emoji = '📘';
+            else if (label.includes('instagram')) emoji = '📷';
+            else if (label.includes('twitter')) emoji = '🐦';
+            else if (label.includes('website') || label.includes('site')) emoji = '🔗';
+            else if (label.includes('tickets') || label.includes('ticket')) emoji = '🎫';
+            else if (label.includes('rsvp')) emoji = '✅';
+            else if (label.includes('more info')) emoji = 'ℹ️';
+            
+            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`;
+        }).join(' ') : '';
+
+        const teaHtml = event.tea ? `
+            <div class="detail-row">
+                <span class="label">Tea:</span>
+                <span class="value">${event.tea}</span>
+            </div>
+        ` : '';
+
+        const locationHtml = event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
+            `<div class="detail-row">
+                <span class="label">Location:</span>
+                <span class="value">
+                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
+                        📍 ${event.bar || 'Location'}
+                    </a>
+                </span>
+            </div>` :
+            (event.bar ? `<div class="detail-row">
+                <span class="label">Bar:</span>
+                <span class="value">${event.bar}</span>
+            </div>` : '');
+
+        // Only show cover if it exists and has meaningful content
+        const coverHtml = event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
+            <div class="detail-row">
+                <span class="label">Cover:</span>
+                <span class="value">${event.cover}</span>
+            </div>
+        ` : '';
+
+        const recurringBadge = event.recurring ? 
+            `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
+        
+        const notCheckedBadge = event.notChecked ? 
+            `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
+
+        // Format day/time more concisely (e.g., "Thu 5pm-9pm")
+        const formatDayTime = (day, time) => {
+            // For desktop, show full day name; for mobile, show abbreviated
+            const isDesktop = window.innerWidth > 768;
+            const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
+            return `${displayDay} ${time}`;
+        };
+
+        return `
+            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
+                <div class="event-header">
+                    <h3>${event.name}</h3>
+                    <div class="event-meta">
+                        <div class="event-day">${formatDayTime(event.day, event.time)}</div>
+                        ${recurringBadge}
+                        ${notCheckedBadge}
+                    </div>
+                </div>
+                <div class="event-details">
+                    ${locationHtml}
+                    ${coverHtml}
+                    ${teaHtml}
+                    <div class="event-links">
+                        ${linksHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Filter events by current period
+    getFilteredEvents() {
+        // Handle case where allEvents is not yet loaded
+        if (!this.allEvents || !Array.isArray(this.allEvents)) {
+            return [];
+        }
+        
+        const { start, end } = this.getCurrentPeriodBounds();
+        
+        return this.allEvents.filter(event => {
+            if (!event.startDate) return false;
+            
+            // Filter out events marked as notChecked if configured to hide them
+            if (event.notChecked && this.config?.hideUncheckedEvents) {
+                logger.debug('CALENDAR', `Filtering out unchecked event: ${event.name}`);
+                return false;
+            }
+            
+            // For recurring events, check if they occur in this period
+            if (event.recurring) {
+                return this.isRecurringEventInPeriod(event, start, end);
+            }
+            
+            // For one-time events, check if they fall within the period
+            return this.isEventInPeriod(event.startDate, start, end);
+        });
+    }
+
+    isRecurringEventInPeriod(event, start, end) {
+        if (!event.startDate) return false;
+        
+        const current = new Date(start);
+        
+        // Check each day in the period
+        while (current <= end) {
+            if (this.isEventOccurringOnDate(event, current)) {
+                return true;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        
+        return false;
+    }
+
+    // Helper function to determine if a recurring event occurs on a specific date
+    isEventOccurringOnDate(event, date) {
+        if (!event.recurring || !event.startDate) return false;
+        
+        const eventDate = new Date(event.startDate);
+        const checkDate = new Date(date);
+        
+        // Normalize dates to compare only date parts, not time
+        eventDate.setHours(0, 0, 0, 0);
+        checkDate.setHours(0, 0, 0, 0);
+        
+        // Make sure we're not checking before the event started
+        if (checkDate < eventDate) return false;
+        
+        // Parse the recurrence rule to determine the pattern
+        const recurrence = event.recurrence || '';
+        
+        if (recurrence.includes('FREQ=WEEKLY')) {
+            // Weekly events: occur on the same day of the week
+            return eventDate.getDay() === checkDate.getDay();
+        } else if (recurrence.includes('FREQ=MONTHLY')) {
+            // Monthly events: handle both BYMONTHDAY and BYDAY patterns
+            if (recurrence.includes('BYMONTHDAY=')) {
+                const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
+                if (dayMatch) {
+                    const targetDay = parseInt(dayMatch[1]);
+                    // Check if this month has that many days
+                    const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
+                    return checkDate.getDate() === Math.min(targetDay, lastDayOfMonth);
+                }
+            } else if (recurrence.includes('BYDAY=')) {
+                // Handle BYDAY patterns like BYDAY=3TH (third Thursday) or BYDAY=-1SA (last Saturday)
+                const dayMatch = recurrence.match(/BYDAY=(-?\d+)([A-Z]{2})/);
+                if (dayMatch) {
+                    const occurrence = parseInt(dayMatch[1]); // 3 or -1 (negative means from end of month)
+                    const dayCode = dayMatch[2]; // TH, SA, etc.
+                    
+                    // Convert day code to day number (0 = Sunday, 6 = Saturday)
+                    const dayCodeToDayNumber = {
+                        'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
+                    };
+                    
+                    const targetDayOfWeek = dayCodeToDayNumber[dayCode];
+                    if (targetDayOfWeek === undefined) return false;
+                    
+                    // Check if the check date is the correct day of the week
+                    if (checkDate.getDay() !== targetDayOfWeek) return false;
+                    
+                    // Calculate the target date for this occurrence
+                    const targetDate = this.calculateByDayOccurrence(
+                        checkDate.getFullYear(), 
+                        checkDate.getMonth(), 
+                        occurrence, 
+                        targetDayOfWeek
+                    );
+                    
+                    return targetDate && checkDate.getTime() === targetDate.getTime();
+                }
+            }
+            
+            // Fallback: same day of month as original event, but handle month lengths
+            const originalDay = eventDate.getDate();
+            const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
+            const targetDay = Math.min(originalDay, lastDayOfMonth);
+            return checkDate.getDate() === targetDay;
+        } else if (recurrence.includes('FREQ=DAILY')) {
+            // Daily events: occur every day
+            return true;
+        } else if (recurrence.includes('FREQ=YEARLY')) {
+            // Yearly events: same month and day
+            return eventDate.getMonth() === checkDate.getMonth() && 
+                   eventDate.getDate() === checkDate.getDate();
+        }
+        
+        // Default fallback for other recurring patterns - use day of week
+        return eventDate.getDay() === checkDate.getDay();
+    }
+
+    // Helper function to calculate the specific occurrence of a day in a month
+    // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
+    // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
+    calculateByDayOccurrence(year, month, occurrence, dayOfWeek) {
+        try {
+            if (occurrence > 0) {
+                // Find the nth occurrence of the day (e.g., 3rd Thursday)
+                const firstOfMonth = new Date(year, month, 1);
+                const firstDayOfWeek = firstOfMonth.getDay();
+                
+                // Calculate days to add to get to the first occurrence of the target day
+                let daysToAdd = (dayOfWeek - firstDayOfWeek + 7) % 7;
+                
+                // Add weeks to get to the nth occurrence
+                daysToAdd += (occurrence - 1) * 7;
+                
+                const targetDate = new Date(year, month, 1 + daysToAdd);
+                
+                // Verify it's still in the same month
+                if (targetDate.getMonth() !== month) {
+                    return null;
+                }
+                
+                return targetDate;
+            } else if (occurrence === -1) {
+                // Find the last occurrence of the day (e.g., last Saturday)
+                const lastOfMonth = new Date(year, month + 1, 0);
+                const lastDayOfWeek = lastOfMonth.getDay();
+                
+                // Calculate days to subtract to get to the last occurrence of the target day
+                let daysToSubtract = (lastDayOfWeek - dayOfWeek + 7) % 7;
+                
+                const targetDate = new Date(year, month + 1, 0 - daysToSubtract);
+                
+                // Verify it's still in the same month
+                if (targetDate.getMonth() !== month) {
+                    return null;
+                }
+                
+                return targetDate;
+            }
+            
+            return null;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Error calculating BYDAY occurrence', {
+                year, month, occurrence, dayOfWeek, error
+            });
+            return null;
+        }
     }
 
     // Generate calendar events (enhanced for week/month/calendar view)
