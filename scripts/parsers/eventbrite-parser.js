@@ -343,28 +343,10 @@ class EventbriteParser {
                 }
             }
             
-            // Generate Google Maps URL using SharedCore's iOS-compatible method
+            // Don't generate Google Maps URL here - let SharedCore handle it with iOS-compatible logic
+            // Just pass the place_id data to SharedCore for processing
             let gmapsUrl = '';
-            
-            // Import SharedCore for static method access (works in both Node.js and browser environments)
-            const SharedCore = (typeof window !== 'undefined' && window.SharedCore) || 
-                             (typeof global !== 'undefined' && global.SharedCore) || 
-                             (typeof this !== 'undefined' && this.SharedCore);
-            
-            if (SharedCore) {
-                gmapsUrl = SharedCore.generateGoogleMapsUrl({
-                    coordinates: coordinates,
-                    placeId: eventData.venue?.google_place_id,
-                    address: address
-                });
-                
-                if (gmapsUrl) {
-                    const method = eventData.venue?.google_place_id ? 
-                        (coordinates ? 'Place ID + coordinates' : 'Place ID + address') : 
-                        (coordinates ? 'coordinates only' : 'address only');
-                    console.log(`🎫 Eventbrite: Generated iOS-compatible Google Maps URL using ${method} for "${title}": ${gmapsUrl}`);
-                }
-            }
+            console.log(`🎫 Eventbrite: Passing place_id "${eventData.venue?.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`)
             
             const event = {
                 title: title,
@@ -379,6 +361,7 @@ class EventbriteParser {
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 image: image,
                 gmaps: gmapsUrl, // Google Maps URL for enhanced location access
+                placeId: eventData.venue?.google_place_id || null, // Pass place_id to SharedCore for iOS-compatible URL generation
                 source: this.config.source,
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
