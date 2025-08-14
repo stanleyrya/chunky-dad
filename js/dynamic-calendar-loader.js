@@ -1220,11 +1220,6 @@ class DynamicCalendarLoader extends CalendarCore {
         const filtered = this.allEvents.filter(event => {
             if (!event.startDate) return false;
             
-            // Never show the measurement test event to users
-            if (event.name === 'Sample Event Name For Width Measurement Testing') {
-                return false;
-            }
-            
             // Filter out events marked as notChecked if configured to hide them
             if (event.notChecked && this.config?.hideUncheckedEvents) {
                 logger.debug('CALENDAR', `Filtering out unchecked event: ${event.name}`);
