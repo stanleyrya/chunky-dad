@@ -33,7 +33,10 @@
         "description": {
           "merge": "upsert"
         },
-        "venue": {
+        "bar": {
+          "merge": "clobber"
+        },
+        "address": {
           "merge": "clobber"
         },
         "startDate": {
@@ -43,10 +46,13 @@
           "merge": "clobber"
         },
         "website": {
-          "merge": "upsert"
+          "merge": "clobber"
         },
         "gmaps": {
-          "merge": "upsert"
+          "merge": "clobber"
+        },
+        "image": {
+          "merge": "clobber"
         },
         "cover": {
           "merge": "clobber"
@@ -81,8 +87,11 @@
         "description": {
           "merge": "upsert"
         },
-        "venue": {
-          "merge": "upsert"
+        "bar": {
+          "merge": "clobber"
+        },
+        "address": {
+          "merge": "clobber"
         },
         "startDate": {
           "merge": "clobber"
@@ -91,10 +100,13 @@
           "merge": "clobber"
         },
         "website": {
-          "merge": "upsert"
+          "merge": "clobber"
         },
         "gmaps": {
-          "merge": "upsert"
+          "merge": "clobber"
+        },
+        "image": {
+          "merge": "clobber"
         },
         "cover": {
           "merge": "clobber"
