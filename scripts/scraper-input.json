@@ -47,6 +47,9 @@
         },
         "gmaps": {
           "merge": "upsert"
+        },
+        "cover": {
+          "merge": "upsert"
         }
       }
     },
@@ -64,10 +67,6 @@
         "include": ["eventbrite\\.com\\/e\\/"]
       },
       "metadata": {
-        "title": {
-          "value": "Coach After Dark",
-          "merge": "upsert"
-        },
         "shortName": {
           "value": "Coach After Dark",
           "merge": "upsert"
@@ -92,6 +91,9 @@
           "merge": "upsert"
         },
         "gmaps": {
+          "merge": "upsert"
+        },
+        "cover": {
           "merge": "upsert"
         }
       }
