@@ -320,6 +320,20 @@ class CalendarCore {
                 // Store whether the original time was in UTC format (for debugging)
                 wasUTC: calendarEvent.start?._wasUTC || false
             };
+            
+            // Add detailed debug logging for each parsed event
+            logger.info('CALENDAR', `🔍 PARSE_EVENT: Parsing event "${calendarEvent.title}"`, {
+                originalTitle: calendarEvent.title,
+                originalStart: calendarEvent.start?.toString() || 'No start date',
+                originalStartISO: calendarEvent.start?.toISOString() || 'No start date',
+                originalRecurrence: calendarEvent.recurrence || 'No recurrence',
+                startTimezone: calendarEvent.startTimezone || 'No timezone',
+                calendarTimezone: this.calendarTimezone || 'No calendar timezone',
+                parsedStartDate: eventData.startDate?.toString() || 'No parsed start date',
+                parsedStartDateISO: eventData.startDate?.toISOString() || 'No parsed start date',
+                parsedRecurring: eventData.recurring,
+                parsedRecurrence: eventData.recurrence || 'No recurrence'
+            });
 
             // Parse description for additional data
             if (calendarEvent.description) {
