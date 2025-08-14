@@ -842,6 +842,29 @@ class SharedCore {
     }
     
     // ============================================================================
+    // GOOGLE MAPS URL GENERATION - iOS-compatible URL construction
+    // ============================================================================
+    
+    // Static method to generate iOS-compatible Google Maps URLs
+    // Works on Android, iOS (including iOS 11+), and web without API tokens
+    static generateGoogleMapsUrl({ coordinates, placeId, address }) {
+        if (placeId && coordinates) {
+            // Best case: use coordinates with place_id for maximum compatibility
+            return `https://www.google.com/maps/search/?api=1&query=${coordinates.lat}%2C${coordinates.lng}&query_place_id=${placeId}`;
+        } else if (placeId && address) {
+            // Fallback: use address with place_id (graceful degradation if place_id doesn't exist)
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}&query_place_id=${placeId}`;
+        } else if (coordinates) {
+            // Fallback: coordinates only
+            return `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
+        } else if (address) {
+            // Final fallback: address only
+            return `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+        }
+        return null;
+    }
+    
+    // ============================================================================
     // EVENT ENRICHMENT - Add Google Maps links, validate addresses, extract cities
     // ============================================================================
     
@@ -855,9 +878,9 @@ class SharedCore {
         }
         
         // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
-        const isTBAVenue = !event.bar || 
+        const isTBAVenue = event.bar && (
                           event.bar.toLowerCase().includes('tba') || 
-                          event.bar.toLowerCase().includes('to be announced');
+                          event.bar.toLowerCase().includes('to be announced'));
         
         if (isTBAVenue) {
             console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected for "${event.title}" - removing fake location data`);
@@ -865,26 +888,47 @@ class SharedCore {
             event.location = null;
             event.address = null;
             event.gmaps = '';
+            delete event.placeId; // Also remove place_id for TBA venues
             return event;
         }
         
-        // Only generate Google Maps link for full addresses (isFullAddress handles TBA/placeholder detection)
-        if (event.address && this.isFullAddress(event.address)) {
-            // Use parser-provided gmaps URL if available, otherwise generate from address
-            if (!event.gmaps) {
-                event.gmaps = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-            }
-        } else if (!event.address) {
-            // No address provided: fall back to coordinates if available (but not for TBA venues)
+        // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
+        if (!event.gmaps) {
+            // Parse coordinates from location field if available
+            let coordinates = null;
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-                // Use parser-provided gmaps URL if available, otherwise generate from coordinates
-                if (!event.gmaps) {
-                    event.gmaps = `https://maps.google.com/?q=${event.location}`;
+                const [lat, lng] = event.location.split(',').map(coord => parseFloat(coord.trim()));
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    coordinates = { lat, lng };
                 }
-            } else {
-                delete event.gmaps;
-                event.location = null;
             }
+            
+            // Use available data to generate iOS-compatible URL
+            const urlData = {
+                coordinates: coordinates,
+                placeId: event.placeId || null,
+                address: (event.address && this.isFullAddress(event.address)) ? event.address : null
+            };
+            
+            event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
+            
+            if (event.gmaps) {
+                const method = event.placeId ? 
+                    (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
+                    (coordinates ? 'coordinates only' : 'address only');
+                console.log(`🗺️ SharedCore: Generated iOS-compatible Google Maps URL using ${method} for "${event.title}"`);
+            }
+        }
+        
+        // Clean up location data based on what we have
+        if (event.address && this.isFullAddress(event.address)) {
+            // Keep address and gmaps URL
+        } else if (!event.address && event.location && event.gmaps) {
+            // Keep coordinates and gmaps URL
+        } else if (!event.address && event.location && !event.gmaps) {
+            // No valid address or gmaps URL - remove location data
+            delete event.gmaps;
+            event.location = null;
         } else {
             // Address present but not full (isFullAddress caught placeholder): disable maps and coordinates
             console.log(`🗺️ SharedCore: Placeholder address "${event.address}" detected for "${event.title}" - removing fake location data`);
@@ -892,6 +936,9 @@ class SharedCore {
             event.location = null;
             delete event.address;
         }
+        
+        // Clean up temporary placeId field (used only for URL generation)
+        delete event.placeId;
         
         return event;
     }

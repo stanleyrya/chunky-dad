@@ -343,15 +343,10 @@ class EventbriteParser {
                 }
             }
             
-            // Generate Google Maps URL (SharedCore will filter out TBA venues)
+            // Don't generate Google Maps URL here - let SharedCore handle it with iOS-compatible logic
+            // Just pass the place_id data to SharedCore for processing
             let gmapsUrl = '';
-            if (eventData.venue?.google_place_id) {
-                gmapsUrl = `https://maps.google.com/?q=place_id:${eventData.venue.google_place_id}`;
-                console.log(`🎫 Eventbrite: Generated Google Maps URL from Place ID for "${title}": ${gmapsUrl}`);
-            } else if (coordinates) {
-                gmapsUrl = `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
-                console.log(`🎫 Eventbrite: Generated Google Maps URL from coordinates for "${title}": ${gmapsUrl}`);
-            }
+            console.log(`🎫 Eventbrite: Passing place_id "${eventData.venue?.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`)
             
             const event = {
                 title: title,
@@ -366,6 +361,7 @@ class EventbriteParser {
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 image: image,
                 gmaps: gmapsUrl, // Google Maps URL for enhanced location access
+                placeId: eventData.venue?.google_place_id || null, // Pass place_id to SharedCore for iOS-compatible URL generation
                 source: this.config.source,
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
