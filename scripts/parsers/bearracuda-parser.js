@@ -23,7 +23,7 @@ class BearraccudaParser {
     constructor(config = {}) {
         this.config = {
             source: 'bearracuda',
-            requireDetailPages: false,
+            requireDetailPages: true, // Bearracuda uses individual event pages
             maxAdditionalUrls: 20,
             ...config
         };
@@ -48,16 +48,18 @@ class BearraccudaParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
             
-            // Try JSON parsing first (similar to eventbrite parser)
-            const jsonEvents = this.extractEventsFromJson(html, parserConfig);
-            if (jsonEvents.length > 0) {
-                console.log(`🐻 Bearracuda: Found ${jsonEvents.length} events in JSON data`);
-                events.push(...jsonEvents);
+            // Check if this is an individual event page
+            if (this.isEventDetailPage(html, htmlData.url)) {
+                console.log('🐻 Bearracuda: Detected individual event page');
+                const event = this.parseEventDetailPage(html, htmlData.url, parserConfig);
+                if (event) {
+                    events.push(event);
+                }
             } else {
-                console.log('🐻 Bearracuda: No events found in JSON data, trying HTML parsing');
-                // Fallback to HTML parsing
-                const htmlEvents = this.parseHTMLEvents(html, htmlData.url, parserConfig);
-                events.push(...htmlEvents);
+                // Try to parse as a listing page (though main /events/ returns 404)
+                console.log('🐻 Bearracuda: Trying to parse as event listing page');
+                const listingEvents = this.parseEventListingPage(html, htmlData.url, parserConfig);
+                events.push(...listingEvents);
             }
             
             // Extract additional URLs if required
@@ -81,361 +83,95 @@ class BearraccudaParser {
         }
     }
 
-    // Extract events from embedded JSON data (similar to eventbrite approach)
-    extractEventsFromJson(html, parserConfig = {}) {
-        const events = [];
+    // Check if this is an individual event detail page
+    isEventDetailPage(html, url) {
+        // Check URL pattern: /events/{city-event}/
+        if (!/\/events\/[^\/]+\/$/.test(url)) {
+            return false;
+        }
         
+        // Check for Bearracuda event page indicators
+        return html.includes('📅') || html.includes('🪩') || 
+               html.includes('Doors Open') || html.includes('Party Goes Until') ||
+               html.includes('elementor-heading-title') || html.includes('Heretic') ||
+               (html.includes('bearracuda') && html.includes('Atlanta'));
+    }
+
+    // Parse an individual event detail page
+    parseEventDetailPage(html, sourceUrl, parserConfig = {}) {
         try {
-            // Look for various JSON patterns that might contain event data
-            const jsonPatterns = [
-                // WordPress/Elementor data
-                /var\s+wp_data\s*=\s*({[\s\S]*?});/,
-                /window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});/,
-                /window\.__APP_DATA__\s*=\s*({[\s\S]*?});/,
-                // Generic JSON-LD structured data
-                /<script[^>]*type=["\']application\/ld\+json["\'][^>]*>([\s\S]*?)<\/script>/gi,
-                // Event data arrays
-                /"events":\s*(\[[\s\S]*?\])/,
-                /"eventList":\s*(\[[\s\S]*?\])/,
-                // Individual event objects
-                /"event":\s*({[\s\S]*?})/
-            ];
+            console.log(`🐻 Bearracuda: Parsing individual event page: ${sourceUrl}`);
             
-            for (const pattern of jsonPatterns) {
-                const matches = html.match(pattern);
-                if (matches) {
-                    for (const match of matches) {
-                        try {
-                            // For script tags, extract the content
-                            let jsonContent = match;
-                            if (pattern.source.includes('script')) {
-                                const contentMatch = match.match(/<script[^>]*>([\s\S]*?)<\/script>/);
-                                if (contentMatch) {
-                                    jsonContent = contentMatch[1];
-                                }
-                            } else if (pattern.source.includes('var\\s+') || pattern.source.includes('window')) {
-                                // Extract the JSON part from variable assignments
-                                const jsonMatch = match.match(/=\s*({[\s\S]*?});?$/);
-                                if (jsonMatch) {
-                                    jsonContent = jsonMatch[1];
-                                }
-                            }
-                            
-                            const jsonData = JSON.parse(jsonContent);
-                            const extractedEvents = this.extractEventsFromJsonData(jsonData, [], parserConfig);
-                            if (extractedEvents.length > 0) {
-                                events.push(...extractedEvents);
-                                console.log(`🐻 Bearracuda: Extracted ${extractedEvents.length} events from JSON pattern`);
-                            }
-                        } catch (parseError) {
-                            console.warn(`🐻 Bearracuda: Failed to parse JSON data: ${parseError}`);
-                        }
-                    }
-                }
+            // Extract title (usually the city name)
+            let title = this.extractTitle(html);
+            
+            // Extract date
+            const dateInfo = this.extractDate(html);
+            
+            // Extract time information
+            const timeInfo = this.extractTime(html);
+            
+            // Extract venue information
+            const venueInfo = this.extractVenue(html);
+            
+            // Extract address
+            const address = this.extractAddress(html);
+            
+            // Extract entertainment/performers
+            const performers = this.extractPerformers(html);
+            
+            // Extract ticket/external links
+            const links = this.extractExternalLinks(html);
+            
+            // Extract special info (like anniversary details)
+            const specialInfo = this.extractSpecialInfo(html);
+            
+            // Extract city from URL and title
+            const city = this.extractCityFromUrl(sourceUrl) || this.extractCityFromText(title);
+            
+            // Build description
+            let description = '';
+            if (specialInfo) description += specialInfo + '\n';
+            if (performers) description += 'Entertainment: ' + performers + '\n';
+            if (timeInfo.details) description += timeInfo.details + '\n';
+            description = description.trim();
+            
+            // Create start date
+            let startDate = null;
+            if (dateInfo && timeInfo.startTime) {
+                // Combine date and start time
+                startDate = this.combineDateTime(dateInfo, timeInfo.startTime);
+            } else if (dateInfo) {
+                startDate = dateInfo;
             }
             
-        } catch (error) {
-            console.warn(`🐻 Bearracuda: Error extracting JSON events: ${error}`);
-        }
-        
-        return events;
-    }
-
-    // Recursively search JSON data for event objects
-    extractEventsFromJsonData(data, events = [], parserConfig = {}) {
-        if (!data || typeof data !== 'object') return events;
-        
-        // Check if this object looks like an event
-        if (this.isEventObject(data)) {
-            // Only process future events
-            if (this.isFutureEvent(data)) {
-                const event = this.parseJsonEvent(data, null, parserConfig);
-                if (event) {
-                    events.push(event);
-                }
-            } else {
-                console.log(`🐻 Bearracuda: Skipping past event: ${data.name || data.title || 'Unknown'}`);
-            }
-        }
-        
-        // Recursively search nested objects and arrays
-        if (Array.isArray(data)) {
-            for (const item of data) {
-                this.extractEventsFromJsonData(item, events, parserConfig);
-            }
-        } else if (typeof data === 'object') {
-            for (const value of Object.values(data)) {
-                this.extractEventsFromJsonData(value, events, parserConfig);
-            }
-        }
-        
-        return events;
-    }
-
-    // Check if an object looks like an event
-    isEventObject(obj) {
-        return obj && 
-               typeof obj === 'object' && 
-               (obj.name || obj.title) &&
-               (obj.date || obj.startDate || obj.start_date || obj.start || obj.datetime) &&
-               !Array.isArray(obj);
-    }
-
-    // Check if an event is in the future (not past)
-    isFutureEvent(eventData) {
-        const now = new Date();
-        const startDate = eventData.date || eventData.startDate || eventData.start_date || eventData.start || eventData.datetime;
-        
-        if (!startDate) {
-            // If no start date, assume it might be future and let it through
-            return true;
-        }
-        
-        try {
-            const eventDate = new Date(startDate);
-            return eventDate > now;
-        } catch (error) {
-            console.warn(`🐻 Bearracuda: Invalid date format: ${startDate}`);
-            return true; // If we can't parse the date, let it through
-        }
-    }
-
-    // Parse a JSON event object into our standard format
-    parseJsonEvent(eventData, htmlContext = null, parserConfig = {}) {
-        try {
-            const title = eventData.name || eventData.title || 'Bearracuda Event';
-            const description = eventData.description || eventData.summary || eventData.content || '';
-            const startDate = eventData.date || eventData.startDate || eventData.start_date || eventData.start || eventData.datetime;
-            const endDate = eventData.endDate || eventData.end_date || eventData.end;
-            const url = eventData.url || eventData.link || eventData.permalink || '';
-            
-            // Enhanced venue processing
-            let venue = null;
-            let address = null;
-            let coordinates = null;
-            
-            if (eventData.venue) {
-                venue = typeof eventData.venue === 'string' ? eventData.venue : eventData.venue.name;
-                if (eventData.venue.address) {
-                    address = typeof eventData.venue.address === 'string' ? 
-                        eventData.venue.address : 
-                        `${eventData.venue.address.street || ''} ${eventData.venue.address.city || ''} ${eventData.venue.address.state || ''}`.trim();
-                }
-                
-                // Extract coordinates if available
-                if (eventData.venue.latitude && eventData.venue.longitude) {
-                    coordinates = {
-                        lat: parseFloat(eventData.venue.latitude),
-                        lng: parseFloat(eventData.venue.longitude)
-                    };
-                }
-            } else if (eventData.location) {
-                venue = typeof eventData.location === 'string' ? eventData.location : eventData.location.name;
-                if (eventData.location.address) {
-                    address = eventData.location.address;
+            // Create end date
+            let endDate = null;
+            if (dateInfo && timeInfo.endTime) {
+                endDate = this.combineDateTime(dateInfo, timeInfo.endTime);
+                // If end time is earlier than start time, assume it's next day
+                if (endDate <= startDate) {
+                    endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
                 }
             }
-            
-            // Extract price information
-            let price = '';
-            if (eventData.price !== undefined) {
-                if (eventData.price === 0 || eventData.price === '0') {
-                    price = 'Free';
-                } else {
-                    price = eventData.price.toString();
-                    if (!price.includes('$')) {
-                        price = '$' + price;
-                    }
-                }
-            } else if (eventData.ticket_price) {
-                price = eventData.ticket_price;
-            }
-            
-            const image = eventData.image || eventData.featured_image || eventData.thumbnail || '';
-            
-            // Extract city from event data
-            let city = this.extractCityFromEvent(eventData, url);
             
             const event = {
                 title: title,
                 description: description,
-                startDate: startDate ? new Date(startDate) : null,
-                endDate: endDate ? new Date(endDate) : null,
-                bar: venue, // Use 'bar' field name that calendar-core.js expects
-                location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string
+                startDate: startDate,
+                endDate: endDate,
+                bar: venueInfo.name, // Use 'bar' field name that calendar-core.js expects
+                location: null, // No coordinates available in HTML parsing
                 address: address,
                 city: city,
-                website: url, // Use 'website' field name that calendar-core.js expects
-                cover: price, // Use 'cover' field name that calendar-core.js expects
-                image: image,
+                website: links.eventbrite || sourceUrl, // Prefer eventbrite link if available
+                cover: '', // No cover charge info found in the sample
+                image: this.extractImage(html),
+                gmaps: this.generateGoogleMapsUrl(address),
                 source: this.config.source,
-                // Bearracuda events are always bear events
-                isBearEvent: true
-            };
-            
-            // Apply all metadata fields from config
-            if (parserConfig.metadata) {
-                Object.keys(parserConfig.metadata).forEach(key => {
-                    const metaValue = parserConfig.metadata[key];
-                    
-                    // All fields must use {value, merge} format
-                    if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
-                        // Only set value if it's defined (allows preserve without value)
-                        if ('value' in metaValue && metaValue.value !== undefined) {
-                            event[key] = metaValue.value;
-                        }
-                        
-                        // Store merge strategy for later use
-                        if (!event._fieldMergeStrategies) {
-                            event._fieldMergeStrategies = {};
-                        }
-                        event._fieldMergeStrategies[key] = metaValue.merge || 'preserve';
-                    }
-                });
-            }
-            
-            console.log(`🐻 Bearracuda: Created event "${title}" with URL: ${url}`);
-            
-            return event;
-            
-        } catch (error) {
-            console.warn(`🐻 Bearracuda: Failed to parse JSON event: ${error}`);
-            return null;
-        }
-    }
-
-    // Parse HTML events using regex (environment-agnostic)
-    parseHTMLEvents(html, sourceUrl, parserConfig = {}) {
-        const events = [];
-        
-        try {
-            // Bearracuda-specific event patterns - updated for better detection
-            const eventPatterns = [
-                // WordPress post/event containers
-                /<article[^>]*class="[^"]*post[^>]*>.*?<\/article>/gs,
-                /<div[^>]*class="[^"]*event[^>]*>.*?<\/div>/gs,
-                /<div[^>]*class="[^"]*party[^>]*>.*?<\/div>/gs,
-                // Elementor widgets (common on bearracuda.com)
-                /<div[^>]*class="[^"]*elementor-widget[^>]*>.*?<\/div>/gs,
-                /<section[^>]*class="[^"]*elementor-section[^>]*>.*?<\/section>/gs,
-                // Event cards or listings
-                /<div[^>]*class="[^"]*card[^>]*>.*?<\/div>/gs,
-                /<li[^>]*class="[^"]*event[^>]*>.*?<\/li>/gs,
-                // Generic containers that might contain events
-                /<div[^>]*id="[^"]*event[^>]*>.*?<\/div>/gs
-            ];
-            
-            for (const pattern of eventPatterns) {
-                const matches = html.match(pattern) || [];
-                
-                for (const match of matches) {
-                    try {
-                        const event = this.parseHTMLEventElement(match, sourceUrl, parserConfig);
-                        if (event && this.isFutureEvent(event)) {
-                            events.push(event);
-                        }
-                    } catch (error) {
-                        console.warn(`🐻 Bearracuda: Failed to parse HTML event element: ${error}`);
-                    }
-                }
-                
-                if (events.length > 0) {
-                    console.log(`🐻 Bearracuda: Found ${events.length} events using HTML pattern`);
-                    break;
-                }
-            }
-            
-        } catch (error) {
-            console.warn(`🐻 Bearracuda: Error parsing HTML events: ${error}`);
-        }
-        
-        return events;
-    }
-
-    // Parse individual HTML event element
-    parseHTMLEventElement(htmlElement, sourceUrl, parserConfig = {}) {
-        try {
-            // Extract title - Bearracuda often has distinctive naming
-            const titleMatch = htmlElement.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/) ||
-                              htmlElement.match(/class="[^"]*title[^>]*>([^<]+)</) ||
-                              htmlElement.match(/class="[^"]*event-title[^>]*>([^<]+)</) ||
-                              htmlElement.match(/class="[^"]*party-title[^>]*>([^<]+)</) ||
-                              htmlElement.match(/<a[^>]*>([^<]*(?:bearracuda|bear|party)[^<]*)<\/a>/i);
-            
-            const title = titleMatch ? titleMatch[1].trim() : 'Bearracuda Event';
-            
-            // Skip if title doesn't seem event-related
-            if (!this.isEventTitle(title)) {
-                return null;
-            }
-            
-            // Extract date/time with more patterns
-            const dateMatch = htmlElement.match(/class="[^"]*date[^>]*>([^<]+)</) ||
-                             htmlElement.match(/datetime="([^"]+)"/) ||
-                             htmlElement.match(/data-date="([^"]+)"/) ||
-                             htmlElement.match(/(\d{1,2}\/\d{1,2}\/\d{4})/) ||
-                             htmlElement.match(/(\d{4}-\d{2}-\d{2})/) ||
-                             htmlElement.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i);
-            
-            const dateString = dateMatch ? dateMatch[1].trim() : '';
-            const startDate = this.parseDate(dateString);
-            
-            // Extract venue/location - Bearracuda parties are often at specific venues
-            const venueMatch = htmlElement.match(/class="[^"]*venue[^>]*>([^<]+)</) ||
-                              htmlElement.match(/class="[^"]*location[^>]*>([^<]+)</) ||
-                              htmlElement.match(/class="[^"]*club[^>]*>([^<]+)</) ||
-                              htmlElement.match(/<address[^>]*>([^<]+)<\/address>/) ||
-                              htmlElement.match(/(?:at|@)\s+([^<\n,]+)/i);
-            
-            const venue = venueMatch ? venueMatch[1].trim() : '';
-            
-            // Extract description/details
-            const descMatch = htmlElement.match(/class="[^"]*description[^>]*>([^<]+)</) ||
-                             htmlElement.match(/class="[^"]*details[^>]*>([^<]+)</) ||
-                             htmlElement.match(/class="[^"]*content[^>]*>([^<]+)</) ||
-                             htmlElement.match(/<p[^>]*>([^<]+)<\/p>/);
-            
-            const description = descMatch ? descMatch[1].trim() : '';
-            
-            // Extract DJ/performer info if available
-            let performers = '';
-            const performerMatch = htmlElement.match(/class="[^"]*dj[^>]*>([^<]+)</) ||
-                                  htmlElement.match(/class="[^"]*performer[^>]*>([^<]+)</) ||
-                                  htmlElement.match(/class="[^"]*artist[^>]*>([^<]+)</) ||
-                                  htmlElement.match(/(?:dj|featuring|with)\s+([^<\n,]+)/i);
-            
-            if (performerMatch) {
-                performers = performerMatch[1].trim();
-            }
-            
-            // Extract URL if available
-            const urlMatch = htmlElement.match(/href="([^"]+)"/) ||
-                            htmlElement.match(/data-url="([^"]+)"/);
-            
-            const eventUrl = urlMatch ? this.normalizeUrl(urlMatch[1], sourceUrl) : sourceUrl;
-            
-            // Extract city from venue or title
-            const city = this.extractCityFromText(`${title} ${venue} ${description}`);
-            
-            // Combine description with performer info
-            let fullDescription = description;
-            if (performers) {
-                fullDescription = fullDescription ? `${fullDescription}\n\nPerformers: ${performers}` : `Performers: ${performers}`;
-            }
-            
-            const event = {
-                title: title,
-                description: fullDescription,
-                startDate: startDate,
-                endDate: null,
-                bar: venue, // Use 'bar' field name that calendar-core.js expects
-                location: null, // No coordinates available in HTML parsing
-                address: '', // Address would need to be extracted separately
-                city: city,
-                website: eventUrl, // Use 'website' field name that calendar-core.js expects
-                cover: '', // Use 'cover' field name that calendar-core.js expects
-                image: '',
-                source: this.config.source,
+                // Additional bearracuda-specific fields
+                facebookEvent: links.facebook,
+                ticketUrl: links.eventbrite,
                 isBearEvent: true // Bearracuda events are always bear events
             };
             
@@ -460,19 +196,270 @@ class BearraccudaParser {
                 });
             }
             
+            console.log(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate}`);
+            
             return event;
             
         } catch (error) {
-            console.warn(`🐻 Bearracuda: Failed to parse HTML event element: ${error}`);
+            console.warn(`🐻 Bearracuda: Failed to parse event detail page: ${error}`);
             return null;
         }
     }
 
-    // Check if a title looks like an event title
-    isEventTitle(title) {
-        const eventKeywords = ['bearracuda', 'party', 'event', 'bear', 'night', 'pride', 'dance', 'club'];
-        const titleLower = title.toLowerCase();
-        return eventKeywords.some(keyword => titleLower.includes(keyword)) || titleLower.length > 5;
+    // Parse event listing page (though main /events/ doesn't exist)
+    parseEventListingPage(html, sourceUrl, parserConfig = {}) {
+        const events = [];
+        
+        try {
+            // Look for event links on main page or other listing pages
+            const eventLinkPattern = /href="(https:\/\/bearracuda\.com\/events\/[^"]+)"/gi;
+            let match;
+            const eventUrls = new Set();
+            
+            while ((match = eventLinkPattern.exec(html)) !== null) {
+                eventUrls.add(match[1]);
+            }
+            
+            console.log(`🐻 Bearracuda: Found ${eventUrls.size} event links on listing page`);
+            
+            // For listing pages, we return empty events but provide additional links
+            // The actual parsing happens when the detail pages are processed
+            
+        } catch (error) {
+            console.warn(`🐻 Bearracuda: Error parsing listing page: ${error}`);
+        }
+        
+        return events;
+    }
+
+    // Extract title from page
+    extractTitle(html) {
+        // Look for the main heading in Elementor structure
+        const patterns = [
+            /<h1[^>]*class="[^"]*elementor-heading-title[^>]*>([^<]+)<\/h1>/i,
+            /<h1[^>]*>([^<]+)<\/h1>/i,
+            /<title>([^|<]+)/i
+        ];
+        
+        for (const pattern of patterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+                let title = match[1].trim();
+                // Clean up title
+                title = title.replace(/\s*\|\s*Bearracuda\.com$/, '');
+                if (title && title !== 'Page not found') {
+                    return title;
+                }
+            }
+        }
+        
+        return 'Bearracuda Event';
+    }
+
+    // Extract date from page
+    extractDate(html) {
+        // Look for date with emoji pattern: 📅  August 23, 2025
+        const datePattern = /📅\s*([^<]+)/;
+        const match = html.match(datePattern);
+        
+        if (match && match[1]) {
+            const dateString = match[1].trim();
+            console.log(`🐻 Bearracuda: Found date string: "${dateString}"`);
+            
+            // Parse various date formats
+            const parsedDate = this.parseDate(dateString);
+            if (parsedDate) {
+                return parsedDate;
+            }
+        }
+        
+        // Fallback: look for other date patterns
+        const fallbackPatterns = [
+            /(\w+\s+\d{1,2},\s+\d{4})/i, // "August 23, 2025"
+            /(\d{1,2}\/\d{1,2}\/\d{4})/,   // "8/23/2025"
+            /(\d{4}-\d{2}-\d{2})/          // "2025-08-23"
+        ];
+        
+        for (const pattern of fallbackPatterns) {
+            const match = html.match(pattern);
+            if (match) {
+                const parsedDate = this.parseDate(match[1]);
+                if (parsedDate) {
+                    return parsedDate;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    // Extract time information
+    extractTime(html) {
+        const result = {
+            startTime: null,
+            endTime: null,
+            details: null
+        };
+        
+        // Look for door time pattern: "Doors Open at 10:00 pm"
+        const doorPattern = /Doors Open at (\d{1,2}:\d{2}\s*[ap]m)/i;
+        const doorMatch = html.match(doorPattern);
+        if (doorMatch) {
+            result.startTime = this.parseTime(doorMatch[1]);
+            result.details = doorMatch[0];
+        }
+        
+        // Look for end time pattern: "Party Goes Until 3:00 am!"
+        const endPattern = /Party Goes Until (\d{1,2}:\d{2}\s*[ap]m)/i;
+        const endMatch = html.match(endPattern);
+        if (endMatch) {
+            result.endTime = this.parseTime(endMatch[1]);
+            if (result.details) {
+                result.details += ' - ' + endMatch[0];
+            } else {
+                result.details = endMatch[0];
+            }
+        }
+        
+        return result;
+    }
+
+    // Extract venue information
+    extractVenue(html) {
+        // Look for venue with emoji: 🪩  Heretic
+        const venuePattern = /🪩\s*([^<]+)/;
+        const match = html.match(venuePattern);
+        
+        if (match && match[1]) {
+            return {
+                name: match[1].trim(),
+                emoji: '🪩'
+            };
+        }
+        
+        return { name: '', emoji: '' };
+    }
+
+    // Extract address
+    extractAddress(html) {
+        // Look for address pattern: "2069 Cheshire Bridge Road, Atlanta, GA"
+        const addressPatterns = [
+            /<div[^>]*>(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})<\/div>/i, // "2069 Cheshire Bridge Road, Atlanta, GA"
+            /(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})/i, // Fallback without div tags
+            /(\d+\s+[^<>\n]+(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr)[^<>\n]*)/i
+        ];
+        
+        for (const pattern of addressPatterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+                return match[1].trim();
+            }
+        }
+        
+        return '';
+    }
+
+    // Extract performers/entertainment
+    extractPerformers(html) {
+        // Look for entertainment section: "Matt Consola"
+        const patterns = [
+            /🎧[^<]*<\/strong><br><p>([^<]+)<\/p>/i,
+            /Music\s*&\s*Entertainment[^<]*<\/strong><br><p>([^<]+)<\/p>/i,
+            /Entertainment[^<]*<\/strong>[^<]*<[^>]*>([^<]+)</i
+        ];
+        
+        for (const pattern of patterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+                return match[1].trim();
+            }
+        }
+        
+        return '';
+    }
+
+    // Extract external links (Facebook, Eventbrite)
+    extractExternalLinks(html) {
+        const links = {
+            facebook: null,
+            eventbrite: null
+        };
+        
+        // Extract Facebook event link
+        const fbPattern = /href="(https:\/\/www\.facebook\.com\/events\/[^"]+)"/i;
+        const fbMatch = html.match(fbPattern);
+        if (fbMatch) {
+            links.facebook = fbMatch[1];
+        }
+        
+        // Extract Eventbrite link
+        const ebPattern = /href="(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"/i;
+        const ebMatch = html.match(ebPattern);
+        if (ebMatch) {
+            links.eventbrite = ebMatch[1];
+        }
+        
+        return links;
+    }
+
+    // Extract special information (anniversaries, etc.)
+    extractSpecialInfo(html) {
+        // Look for special info like "16 YEAR ANNIVERSARY"
+        const patterns = [
+            /(\d+\s+YEAR\s+ANNIVERSARY)/i,
+            /<p>([^<]*ANNIVERSARY[^<]*)<\/p>/i,
+            /<p>([^<]*CELEBRATION[^<]*)<\/p>/i
+        ];
+        
+        for (const pattern of patterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+                return match[1].trim();
+            }
+        }
+        
+        return '';
+    }
+
+    // Extract image URL
+    extractImage(html) {
+        // Look for featured image in meta tags or img elements
+        const patterns = [
+            /property="og:image"\s+content="([^"]+)"/i,
+            /cuda-atlanta[^"]*\.jpg/i,
+            /bearracuda\.com\/wp-content\/uploads[^"]*\.(jpg|png|jpeg)/i
+        ];
+        
+        for (const pattern of patterns) {
+            const match = html.match(pattern);
+            if (match) {
+                return match[0].includes('content="') ? match[1] : match[0];
+            }
+        }
+        
+        return '';
+    }
+
+    // Extract city from URL
+    extractCityFromUrl(url) {
+        const urlPatterns = {
+            'atlanta': /atlantabearpride|atlanta/i,
+            'new-orleans': /new-orleans/i,
+            'chicago': /chicagoaug|chicago/i,
+            'denver': /denverpride|denver/i,
+            'sf': /sanfrancisco|sf/i,
+            'la': /losangeles|la/i,
+            'nyc': /newyork|nyc/i
+        };
+        
+        for (const [city, pattern] of Object.entries(urlPatterns)) {
+            if (pattern.test(url)) {
+                console.log(`🐻 Bearracuda: Extracted city "${city}" from URL: ${url}`);
+                return city;
+            }
+        }
+        
+        return null;
     }
 
     // Extract additional URLs for detail page processing
@@ -482,21 +469,29 @@ class BearraccudaParser {
         try {
             console.log(`🐻 Bearracuda: Extracting additional event URLs from HTML`);
             
-            // Look for event-specific URLs
+            // Look for bearracuda event URLs
             const urlPatterns = [
                 // Event detail page links
-                /href="([^"]*\/events\/[^"]*)">/gi,
-                /href="([^"]*\/event\/[^"]*)">/gi,
-                // WordPress post links that might be events
-                /href="([^"]*\/\d{4}\/\d{2}\/[^"]*)">/gi,
-                // Any link with bear-related keywords
-                /href="([^"]*(?:bear|party|pride|dance)[^"]*)">/gi
+                /href="(https:\/\/bearracuda\.com\/events\/[^"]+)"/gi,
+                // Relative event links
+                /href="(\/events\/[^"]+)"/gi
             ];
             
             for (const pattern of urlPatterns) {
                 let match;
                 while ((match = pattern.exec(html)) !== null) {
-                    const url = this.normalizeUrl(match[1], sourceUrl);
+                    let url = match[1];
+                    
+                    // Convert relative URLs to absolute
+                    if (url.startsWith('/')) {
+                        url = 'https://bearracuda.com' + url;
+                    }
+                    
+                    // Ensure URL ends with slash
+                    if (!url.endsWith('/')) {
+                        url += '/';
+                    }
+                    
                     if (this.isValidEventUrl(url, parserConfig)) {
                         urls.add(url);
                         console.log(`🐻 Bearracuda: Found event detail URL: ${url}`);
@@ -525,8 +520,11 @@ class BearraccudaParser {
         try {
             const urlObj = new URL(url);
             
-            // Must be Bearracuda domain or related
+            // Must be Bearracuda domain
             if (!urlObj.hostname.includes('bearracuda.com')) return false;
+            
+            // Must be event page pattern
+            if (!/\/events\/[^\/]+\/?$/.test(urlObj.pathname)) return false;
             
             // Avoid admin, login, or social media links
             const invalidPaths = ['/admin', '/login', '/wp-admin', '/wp-login', '#', 'javascript:', 'mailto:'];
@@ -564,29 +562,104 @@ class BearraccudaParser {
         }
     }
 
-    // Extract city from event data or URL
-    extractCityFromEvent(eventData, url) {
-        // Try venue address first
-        if (eventData.venue?.address) {
-            const address = eventData.venue.address;
-            const cityFromAddress = address.city || address.localized_area_display || '';
-            if (cityFromAddress) {
-                return this.normalizeCityName(cityFromAddress);
+    // Parse date string into Date object
+    parseDate(dateString) {
+        if (!dateString) return null;
+        
+        try {
+            // Clean up the date string
+            dateString = dateString.replace(/\s+/g, ' ').trim();
+            
+            // Try various date formats common in event listings
+            const formats = [
+                // Month DD, YYYY
+                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})/i,
+                // MM/DD/YYYY
+                /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
+                // ISO format
+                /(\d{4})-(\d{2})-(\d{2})/
+            ];
+            
+            for (const format of formats) {
+                const match = dateString.match(format);
+                if (match) {
+                    let date;
+                    
+                    if (format.source.includes('january|february')) {
+                        // Month name format
+                        const months = {
+                            'january': 0, 'february': 1, 'march': 2, 'april': 3,
+                            'may': 4, 'june': 5, 'july': 6, 'august': 7,
+                            'september': 8, 'october': 9, 'november': 10, 'december': 11
+                        };
+                        
+                        const month = months[match[1].toLowerCase()];
+                        const day = parseInt(match[2]);
+                        const year = parseInt(match[3]);
+                        date = new Date(year, month, day);
+                    } else {
+                        // Numeric formats
+                        date = new Date(dateString);
+                    }
+                    
+                    if (!isNaN(date.getTime())) {
+                        return date;
+                    }
+                }
             }
+            
+            // Fallback to Date constructor
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+            
+        } catch (error) {
+            console.warn(`🐻 Bearracuda: Failed to parse date "${dateString}": ${error}`);
         }
         
-        // Try location field
-        if (eventData.location) {
-            const location = typeof eventData.location === 'string' ? eventData.location : eventData.location.name || '';
-            const cityFromLocation = this.extractCityFromText(location);
-            if (cityFromLocation) {
-                return cityFromLocation;
+        return null;
+    }
+
+    // Parse time string to hours and minutes
+    parseTime(timeString) {
+        if (!timeString) return null;
+        
+        const timePattern = /(\d{1,2}):(\d{2})\s*(am|pm)/i;
+        const match = timeString.match(timePattern);
+        
+        if (match) {
+            let hours = parseInt(match[1]);
+            const minutes = parseInt(match[2]);
+            const ampm = match[3].toLowerCase();
+            
+            if (ampm === 'pm' && hours !== 12) {
+                hours += 12;
+            } else if (ampm === 'am' && hours === 12) {
+                hours = 0;
             }
+            
+            return { hours, minutes };
         }
         
-        // Try extracting from text
-        const searchText = `${eventData.name || eventData.title || ''} ${eventData.description || ''} ${url || ''}`;
-        return this.extractCityFromText(searchText);
+        return null;
+    }
+
+    // Combine date and time into a single Date object
+    combineDateTime(date, time) {
+        if (!date || !time) return date;
+        
+        const combined = new Date(date);
+        combined.setHours(time.hours, time.minutes, 0, 0);
+        return combined;
+    }
+
+    // Generate Google Maps URL from address
+    generateGoogleMapsUrl(address) {
+        if (!address) return '';
+        
+        const encoded = encodeURIComponent(address);
+        return `https://maps.google.com/maps?q=${encoded}`;
     }
 
     // Extract city from text content
@@ -612,7 +685,8 @@ class BearraccudaParser {
             'philadelphia': /(philadelphia|philly)/i,
             'dc': /(washington|dc)/i,
             'orlando': /(orlando)/i,
-            'tampa': /(tampa)/i
+            'tampa': /(tampa)/i,
+            'new-orleans': /(new orleans|nola)/i
         };
         
         for (const [city, pattern] of Object.entries(cityPatterns)) {
@@ -623,118 +697,6 @@ class BearraccudaParser {
         }
         
         return null;
-    }
-
-    // Parse date string into ISO format
-    parseDate(dateString) {
-        if (!dateString) return null;
-        
-        try {
-            // Clean up the date string
-            dateString = dateString.replace(/\s+/g, ' ').trim();
-            
-            // Try various date formats common in event listings
-            const formats = [
-                // MM/DD/YYYY
-                /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
-                // Month DD, YYYY
-                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})/i,
-                // DD Month YYYY
-                /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i,
-                // ISO format
-                /(\d{4})-(\d{2})-(\d{2})/
-            ];
-            
-            for (const format of formats) {
-                const match = dateString.match(format);
-                if (match) {
-                    let date;
-                    
-                    if (format.source.includes('january|february')) {
-                        // Month name format
-                        const months = {
-                            'january': '01', 'february': '02', 'march': '03', 'april': '04',
-                            'may': '05', 'june': '06', 'july': '07', 'august': '08',
-                            'september': '09', 'october': '10', 'november': '11', 'december': '12'
-                        };
-                        
-                        if (match[3]) {
-                            // Month DD, YYYY format
-                            const month = months[match[1].toLowerCase()];
-                            const day = match[2].padStart(2, '0');
-                            const year = match[3];
-                            date = new Date(`${year}-${month}-${day}`);
-                        } else {
-                            // DD Month YYYY format
-                            const day = match[1].padStart(2, '0');
-                            const month = months[match[2].toLowerCase()];
-                            const year = match[3];
-                            date = new Date(`${year}-${month}-${day}`);
-                        }
-                    } else {
-                        // Numeric formats
-                        date = new Date(dateString);
-                    }
-                    
-                    if (!isNaN(date.getTime())) {
-                        return date;
-                    }
-                }
-            }
-            
-            // Fallback to Date constructor
-            const date = new Date(dateString);
-            if (!isNaN(date.getTime())) {
-                return date;
-            }
-            
-        } catch (error) {
-            console.warn(`🐻 Bearracuda: Failed to parse date "${dateString}": ${error}`);
-        }
-        
-        return null;
-    }
-
-    // Normalize city names
-    normalizeCityName(cityName) {
-        const normalizations = {
-            'new york': 'nyc',
-            'new york city': 'nyc',
-            'manhattan': 'nyc',
-            'los angeles': 'la',
-            'san francisco': 'sf',
-            'las vegas': 'vegas'
-        };
-        
-        const lower = cityName.toLowerCase();
-        return normalizations[lower] || lower;
-    }
-
-    // Normalize URLs
-    normalizeUrl(url, baseUrl) {
-        if (!url) return null;
-        
-        // Remove HTML entities
-        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        
-        // Handle relative URLs
-        if (url.startsWith('/')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}//${base.host}${url}`;
-        }
-        
-        // Handle protocol-relative URLs
-        if (url.startsWith('//')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}${url}`;
-        }
-        
-        // Handle anchor links (skip them)
-        if (url.startsWith('#')) {
-            return null;
-        }
-        
-        return url;
     }
 }
 
