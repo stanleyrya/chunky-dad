@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Real Calendar Issue</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #f8d7da; }
+        .success { background: #d4edda; }
+        .warning { background: #fff3cd; }
+        pre { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Debug Real Calendar Issue</h1>
+    <p>This test exactly replicates the calendar loading logic to see why local data fails.</p>
+    <div id="logs"></div>
+
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+
+    <script>
+        const logs = document.getElementById('logs');
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<pre>[${new Date().toLocaleTimeString()}] ${message}</pre>`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+
+        async function debugRealIssue() {
+            addLog('🔍 Starting debug of real calendar loading issue...');
+            
+            const cityKey = 'new-york';
+            const cityConfig = getCityConfig(cityKey);
+            
+            if (!cityConfig) {
+                addLog('❌ No city config found', 'error');
+                return;
+            }
+            
+            addLog(`✅ City config found: ${cityConfig.name}`);
+            
+            // Test exact same logic as loadCalendarData()
+            const cachedDataUrl = `data/calendars/${cityKey}.ics`;
+            addLog(`🌐 Testing local data URL: ${cachedDataUrl}`);
+            
+            try {
+                addLog('📥 Attempting fetch...');
+                const response = await fetch(cachedDataUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/calendar,text/plain,*/*'
+                    },
+                    cache: 'default'
+                });
+                
+                addLog(`📊 Response status: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    addLog(`❌ Response not OK: ${response.status}`, 'error');
+                    addLog('🔄 This would trigger CORS fallback', 'warning');
+                    return;
+                }
+                
+                const icalText = await response.text();
+                addLog(`📄 Response text length: ${icalText.length} bytes`);
+                
+                // Validate iCal data
+                if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
+                    addLog('❌ Invalid iCal data - missing BEGIN:VCALENDAR', 'error');
+                    addLog(`📄 First 200 chars: ${icalText.substring(0, 200)}`, 'warning');
+                    addLog('🔄 This would trigger CORS fallback', 'warning');
+                    return;
+                }
+                
+                const eventCount = (icalText.match(/BEGIN:VEVENT/g) || []).length;
+                addLog(`✅ Valid iCal data with ${eventCount} events`, 'success');
+                addLog('🎯 LOCAL LOADING SHOULD WORK!', 'success');
+                
+                // Show first few lines for debugging
+                const firstLines = icalText.split('\n').slice(0, 5).join('\n');
+                addLog(`📄 First 5 lines:\n${firstLines}`);
+                
+            } catch (error) {
+                addLog(`❌ Fetch failed: ${error.message}`, 'error');
+                addLog(`📊 Error type: ${error.name}`, 'error');
+                addLog(`📊 Error stack: ${error.stack}`, 'error');
+                addLog('🔄 This would trigger CORS fallback', 'warning');
+            }
+        }
+        
+        // Run the test
+        debugRealIssue();
+    </script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Step-by-Step Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #f8d7da; }
+        .success { background: #d4edda; }
+        .warning { background: #fff3cd; }
+        pre { white-space: pre-wrap; }
+        .step { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Step-by-Step Debug</h1>
+    <div id="logs"></div>
+
+    <script>
+        const logs = document.getElementById('logs');
+        let stepCount = 0;
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<pre>[${new Date().toLocaleTimeString()}] ${message}</pre>`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+
+        function addStep(title) {
+            stepCount++;
+            const div = document.createElement('div');
+            div.className = 'step';
+            div.innerHTML = `<h3>Step ${stepCount}: ${title}</h3><div id="step-${stepCount}"></div>`;
+            logs.appendChild(div);
+            return document.getElementById(`step-${stepCount}`);
+        }
+
+        async function loadScriptStep(src, name) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    addLog(`✅ ${name} loaded successfully`, 'success');
+                    resolve();
+                };
+                script.onerror = (error) => {
+                    addLog(`❌ ${name} failed to load: ${error.message || 'Unknown error'}`, 'error');
+                    reject(new Error(`Failed to load ${name}`));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        async function debugStepByStep() {
+            try {
+                // Step 1: Load Logger
+                addStep('Load Logger');
+                await loadScriptStep('js/logger.js', 'Logger');
+                addLog(`Logger available: ${typeof logger !== 'undefined'}`);
+
+                // Step 2: Load City Config
+                addStep('Load City Config');
+                await loadScriptStep('js/city-config.js', 'City Config');
+                addLog(`getCityConfig available: ${typeof getCityConfig !== 'undefined'}`);
+                
+                // Test city config
+                const cityConfig = getCityConfig('new-york');
+                addLog(`New York config: ${cityConfig ? cityConfig.name : 'Not found'}`);
+
+                // Step 3: Load Calendar Core
+                addStep('Load Calendar Core');
+                await loadScriptStep('js/calendar-core.js', 'Calendar Core');
+                addLog(`CalendarCore available: ${typeof CalendarCore !== 'undefined'}`);
+
+                // Step 4: Load Dynamic Calendar Loader
+                addStep('Load Dynamic Calendar Loader');
+                await loadScriptStep('js/dynamic-calendar-loader.js', 'Dynamic Calendar Loader');
+                addLog(`DynamicCalendarLoader available: ${typeof DynamicCalendarLoader !== 'undefined'}`);
+
+                // Step 5: Test creating instance
+                addStep('Create Calendar Instance');
+                const calendarLoader = new DynamicCalendarLoader();
+                addLog('✅ Calendar instance created successfully', 'success');
+
+                // Step 6: Test basic methods
+                addStep('Test Basic Methods');
+                const testCity = calendarLoader.getCityFromURL();
+                addLog(`getCityFromURL result: ${testCity}`);
+                
+                // Add URL parameter for testing
+                const url = new URL(window.location);
+                url.searchParams.set('city', 'new-york');
+                window.history.replaceState({}, '', url);
+                
+                const testCity2 = calendarLoader.getCityFromURL();
+                addLog(`getCityFromURL with parameter: ${testCity2}`);
+
+                addLog('🎉 All steps completed successfully!', 'success');
+
+            } catch (error) {
+                addLog(`❌ Error at step ${stepCount}: ${error.message}`, 'error');
+                addLog(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        // Catch any global errors
+        window.addEventListener('error', (event) => {
+            addLog(`🚨 Global error caught: ${event.message}`, 'error');
+            addLog(`File: ${event.filename}:${event.lineno}:${event.colno}`, 'error');
+            if (event.error) {
+                addLog(`Stack: ${event.error.stack}`, 'error');
+            }
+        });
+
+        // Start debugging
+        debugStepByStep();
+    </script>
+</body>
+</html>

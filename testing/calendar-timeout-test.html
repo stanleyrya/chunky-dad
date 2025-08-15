@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Timeout Test - chunky.dad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .timeout-controls {
+            margin: 10px 0;
+        }
+        .timeout-controls input {
+            width: 80px;
+            padding: 5px;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📅 Calendar Timeout Test</h1>
+    <p>This page tests the calendar loading functionality with the new timeout settings.</p>
+
+    <div class="test-section">
+        <h2>🏙️ City Selection</h2>
+        <select id="citySelect">
+            <option value="new-york">New York</option>
+            <option value="seattle">Seattle</option>
+            <option value="los-angeles">Los Angeles</option>
+            <option value="chicago">Chicago</option>
+            <option value="toronto">Toronto</option>
+            <option value="london">London</option>
+            <option value="berlin">Berlin</option>
+        </select>
+    </div>
+
+    <div class="test-section">
+        <h2>⏱️ Timeout Settings</h2>
+        <div class="timeout-controls">
+            <label>Local Data Timeout: <input type="number" id="localTimeout" value="25" min="1" max="60"> seconds</label>
+            <label>CORS Fallback Timeout: <input type="number" id="corsTimeout" value="30" min="1" max="60"> seconds</label>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Tests</h2>
+        <button class="test-button" onclick="testLocalCalendarLoading()">Test Local Calendar Loading</button>
+        <button class="test-button" onclick="testCorsTimeout()">Test CORS Timeout (Fallback)</button>
+        <button class="test-button" onclick="testFullFlow()">Test Full Flow</button>
+        <button class="test-button" onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Status</h2>
+        <div id="status" class="status">Ready to test</div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Test Log</h2>
+        <div id="testLog" class="log">Test log will appear here...\n</div>
+    </div>
+
+    <script>
+        let testLog = document.getElementById('testLog');
+        let statusDiv = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            testLog.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            testLog.scrollTop = testLog.scrollHeight;
+        }
+
+        function setStatus(message, type = 'loading') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function clearLog() {
+            testLog.textContent = 'Test log cleared...\n';
+            setStatus('Ready to test', 'info');
+        }
+
+        async function testLocalCalendarLoading() {
+            const cityKey = document.getElementById('citySelect').value;
+            const timeout = parseInt(document.getElementById('localTimeout').value) * 1000;
+            
+            setStatus('Testing local calendar loading...', 'loading');
+            log(`Starting local calendar test for ${cityKey} with ${timeout/1000}s timeout`);
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                    log(`Test timeout after ${timeout/1000} seconds`, 'error');
+                }, timeout);
+
+                const startTime = Date.now();
+                const url = `data/calendars/${cityKey}.ics`;
+                log(`Fetching: ${url}`);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/calendar,text/plain,*/*'
+                    },
+                    cache: 'default',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                const elapsed = Date.now() - startTime;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const icalText = await response.text();
+                
+                if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
+                    throw new Error('Invalid iCal data received');
+                }
+
+                const eventCount = (icalText.match(/BEGIN:VEVENT/g) || []).length;
+                log(`✅ Success! Loaded ${(icalText.length/1024).toFixed(1)}KB with ${eventCount} events in ${elapsed}ms`, 'success');
+                setStatus(`Local calendar loaded successfully (${elapsed}ms)`, 'success');
+
+            } catch (error) {
+                const elapsed = Date.now() - startTime;
+                if (error.name === 'AbortError') {
+                    log(`❌ Timeout: Request aborted after ${elapsed}ms`, 'error');
+                    setStatus(`Local calendar loading timed out (${elapsed}ms)`, 'error');
+                } else {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    setStatus(`Local calendar loading failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function testCorsTimeout() {
+            const timeout = parseInt(document.getElementById('corsTimeout').value) * 1000;
+            
+            setStatus('Testing CORS timeout...', 'loading');
+            log(`Starting CORS timeout test with ${timeout/1000}s timeout`);
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                    log(`CORS test timeout after ${timeout/1000} seconds`, 'error');
+                }, timeout);
+
+                const startTime = Date.now();
+                const url = 'https://calendar.google.com/calendar/ical/fake-calendar-id/public/basic.ics';
+                log(`Attempting CORS request to: ${url}`);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/calendar,text/plain,*/*'
+                    },
+                    cache: 'no-cache',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                const elapsed = Date.now() - startTime;
+
+                log(`Unexpected success! Response: ${response.status} in ${elapsed}ms`, 'success');
+                setStatus(`CORS request succeeded unexpectedly (${elapsed}ms)`, 'success');
+
+            } catch (error) {
+                const elapsed = Date.now() - startTime;
+                if (error.name === 'AbortError') {
+                    log(`✅ Expected timeout: Request aborted after ${elapsed}ms`, 'success');
+                    setStatus(`CORS timeout working correctly (${elapsed}ms)`, 'success');
+                } else {
+                    log(`✅ Expected CORS error: ${error.message} after ${elapsed}ms`, 'success');
+                    setStatus(`CORS blocking working correctly (${elapsed}ms)`, 'success');
+                }
+            }
+        }
+
+        async function testFullFlow() {
+            const cityKey = document.getElementById('citySelect').value;
+            
+            setStatus('Testing full calendar loading flow...', 'loading');
+            log(`Starting full flow test for ${cityKey}`);
+
+            // First try local data
+            try {
+                await testLocalCalendarLoading();
+                log(`Full flow completed - local data loaded successfully`);
+            } catch (error) {
+                log(`Local data failed, would try CORS fallback: ${error.message}`);
+                
+                // Simulate fallback
+                log(`Simulating CORS fallback...`);
+                await testCorsTimeout();
+            }
+        }
+
+        // Initialize
+        log('Calendar timeout test initialized');
+        log('Ready to test calendar loading with new timeout settings');
+        log('Local timeout: 25 seconds, CORS timeout: 30 seconds');
+    </script>
+</body>
+</html>

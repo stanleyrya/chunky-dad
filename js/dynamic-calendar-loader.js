@@ -1136,13 +1136,22 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             this.updateLoadingMessage(1, 'direct');
             
-            const response = await fetch(icalUrl, {
+            // Simple timeout implementation using Promise.race
+            const fetchPromise = fetch(icalUrl, {
                 method: 'GET',
                 headers: {
                     'Accept': 'text/calendar,text/plain,*/*'
                 },
                 cache: 'no-cache'
             });
+            
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error('Request timed out after 25 seconds'));
+                }, 25000); // 25 second timeout for CORS fallback
+            });
+            
+            const response = await Promise.race([fetchPromise, timeoutPromise]);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1173,12 +1182,22 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.eventsData;
             
         } catch (error) {
-            logger.componentError('CALENDAR', 'Fallback failed: Calendar data unavailable', {
-                cityKey,
-                cityName: cityConfig.name,
-                fallbackError: error.message,
-                recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
-            });
+            // Handle timeout specifically
+            if (error.message.includes('timed out')) {
+                logger.componentError('CALENDAR', 'Fallback failed: CORS request timed out after 25 seconds', {
+                    cityKey,
+                    cityName: cityConfig.name,
+                    fallbackError: 'CORS timeout after 25 seconds',
+                    recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
+                });
+            } else {
+                logger.componentError('CALENDAR', 'Fallback failed: Calendar data unavailable', {
+                    cityKey,
+                    cityName: cityConfig.name,
+                    fallbackError: error.message,
+                    recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
+                });
+            }
             
             // Clear fake event from allEvents to prevent it from showing
             this.allEvents = [];
