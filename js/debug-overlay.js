@@ -48,6 +48,7 @@ class DebugOverlay {
     }
     
     init() {
+        logger.debug('SYSTEM', 'Debug overlay initializing...');
         this.createOverlay();
         this.setupEventListeners();
         this.startUpdateLoop();
@@ -56,6 +57,12 @@ class DebugOverlay {
         if (this.isMobile) {
             this.setupMobileOptimizations();
         }
+        
+        logger.info('SYSTEM', 'Debug overlay initialization complete', {
+            isVisible: this.isVisible,
+            viewState: this.viewState,
+            isMobile: this.isMobile
+        });
     }
     
     createOverlay() {
@@ -115,10 +122,10 @@ class DebugOverlay {
                 </div>
                 
                 <div class="debug-controls">
-                    <button class="debug-btn" onclick="debugOverlay.clearConsole()">Clear Console</button>
-                    <button class="debug-btn" onclick="debugOverlay.exportLogs()">Export Logs</button>
-                    <button class="debug-btn" onclick="debugOverlay.togglePersistence()">Toggle Persistence</button>
-                    <button class="debug-btn" onclick="debugOverlay.showNetworkInfo()">Network Info</button>
+                    <button class="debug-btn" id="debug-clear-console">Clear Console</button>
+                    <button class="debug-btn" id="debug-export-logs">Export Logs</button>
+                    <button class="debug-btn" id="debug-toggle-persistence">Toggle Persistence</button>
+                    <button class="debug-btn" id="debug-network-info">Network Info</button>
                 </div>
             </div>
         `;
@@ -177,6 +184,39 @@ class DebugOverlay {
         // Track user interactions
         document.addEventListener('click', () => {
             this.performanceMetrics.userInteractions++;
+        });
+        
+        // Debug control buttons
+        this.setupDebugControlButtons();
+    }
+    
+    setupDebugControlButtons() {
+        // Set up event listeners for debug control buttons
+        const buttons = [
+            { id: 'debug-clear-console', method: 'clearConsole' },
+            { id: 'debug-export-logs', method: 'exportLogs' },
+            { id: 'debug-toggle-persistence', method: 'togglePersistence' },
+            { id: 'debug-network-info', method: 'showNetworkInfo' }
+        ];
+        
+        buttons.forEach(({ id, method }) => {
+            const button = this.overlay.querySelector(`#${id}`);
+            if (button) {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        this[method]();
+                        logger.userInteraction('SYSTEM', `Debug button clicked: ${method}`);
+                    } catch (error) {
+                        logger.error('SYSTEM', `Debug button error: ${method}`, error);
+                        console.error(`Debug overlay button error (${method}):`, error);
+                    }
+                });
+                logger.debug('SYSTEM', `Debug button initialized: ${id}`);
+            } else {
+                logger.warn('SYSTEM', `Debug button not found: ${id}`);
+            }
         });
     }
     
@@ -509,6 +549,3 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('🐻 Debug overlay initialized. Type debugHelp() for commands.');
     }
 });
-
-// Ensure global access even before DOM ready
-window.debugOverlay = debugOverlay;
