@@ -32,12 +32,19 @@ class DebugOverlay {
         this.maxErrorHistory = 50;
         this.setupErrorTracking();
         
-        // Add error tracking panel
-        this.addErrorTrackingPanel();
+        // Debug initialization logging
+        logger.info('SYSTEM', 'Debug overlay constructor called', {
+            shouldShow: this.isVisible,
+            url: window.location.href,
+            debugParam: new URLSearchParams(window.location.search).get('debug'),
+            hasDebugParam: new URLSearchParams(window.location.search).has('debug')
+        });
         
         if (this.isVisible) {
             this.init();
             logger.componentInit('SYSTEM', 'Debug overlay enabled - optimized version');
+        } else {
+            logger.info('SYSTEM', 'Debug overlay not enabled - debug parameter not found');
         }
     }
     
@@ -292,7 +299,17 @@ class DebugOverlay {
         this.updateViewState();
         
         document.body.appendChild(this.overlay);
+        
+        // Add error tracking panel after overlay is created
+        this.addErrorTrackingPanel();
+        
         this.updateDebugInfo();
+        
+        logger.info('SYSTEM', 'Debug overlay DOM created and attached', {
+            overlayExists: !!this.overlay,
+            overlayVisible: this.overlay.style.display !== 'none',
+            overlayParent: this.overlay.parentNode?.tagName
+        });
     }
     
     attachEventListeners() {
