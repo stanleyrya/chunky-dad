@@ -175,7 +175,7 @@
     {
       "name": "Bearracuda Eventbrite",
       "parser": "eventbrite",
-      "enabled": true,
+      "enabled": false,
       "urls": ["https://www.eventbrite.com/o/bearracuda-21867032189"],
       "alwaysBear": true,
       "requireDetailPages": true,

@@ -50,22 +50,29 @@ class BearraccudaParser {
             
             // Check if this is an individual event page
             if (this.isEventDetailPage(html, htmlData.url)) {
-                console.log('🐻 Bearracuda: Detected individual event page');
+                console.log('🐻 Bearracuda: Detected individual event page, parsing event details...');
                 const event = this.parseEventDetailPage(html, htmlData.url, parserConfig);
                 if (event) {
+                    console.log(`🐻 Bearracuda: Successfully parsed event: ${event.title}`);
                     events.push(event);
+                } else {
+                    console.log('🐻 Bearracuda: Failed to parse event from detail page');
                 }
             } else {
                 // Try to parse as a listing page (though main /events/ returns 404)
                 console.log('🐻 Bearracuda: Trying to parse as event listing page');
                 const listingEvents = this.parseEventListingPage(html, htmlData.url, parserConfig);
+                console.log(`🐻 Bearracuda: Parsed ${listingEvents.length} events from listing page`);
                 events.push(...listingEvents);
             }
             
             // Extract additional URLs if required
             let additionalLinks = [];
             if (parserConfig.requireDetailPages) {
+                console.log('🐻 Bearracuda: Detail pages required, extracting additional URLs...');
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
+            } else {
+                console.log('🐻 Bearracuda: Detail pages not required, skipping URL extraction');
             }
             
             console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
@@ -213,6 +220,8 @@ class BearraccudaParser {
         const events = [];
         
         try {
+            console.log(`🐻 Bearracuda: Parsing listing page: ${sourceUrl}`);
+            
             // Look for event links on main page or other listing pages
             const eventLinkPattern = /href="(https:\/\/bearracuda\.com\/events\/[^"]+)"/gi;
             let match;
@@ -220,12 +229,14 @@ class BearraccudaParser {
             
             while ((match = eventLinkPattern.exec(html)) !== null) {
                 eventUrls.add(match[1]);
+                console.log(`🐻 Bearracuda: Found event link in listing: ${match[1]}`);
             }
             
             console.log(`🐻 Bearracuda: Found ${eventUrls.size} event links on listing page`);
             
             // For listing pages, we return empty events but provide additional links
             // The actual parsing happens when the detail pages are processed
+            console.log(`🐻 Bearracuda: Listing page parsing complete - returning 0 events (detail pages will be processed separately)`);
             
         } catch (error) {
             console.warn(`🐻 Bearracuda: Error parsing listing page: ${error}`);
@@ -470,43 +481,82 @@ class BearraccudaParser {
         
         try {
             console.log(`🐻 Bearracuda: Extracting additional event URLs from HTML`);
+            console.log(`🐻 Bearracuda: HTML length: ${html.length} characters`);
             
-            // Look for bearracuda event URLs
+            // Look for bearracuda event URLs with multiple patterns
             const urlPatterns = [
-                // Event detail page links
+                // Event detail page links with full URLs
                 /href="(https:\/\/bearracuda\.com\/events\/[^"]+)"/gi,
                 // Relative event links
-                /href="(\/events\/[^"]+)"/gi
+                /href="(\/events\/[^"]+)"/gi,
+                // Additional pattern to catch any missed links
+                /<a[^>]+href="([^"]*\/events\/[^"]*)"[^>]*>/gi
             ];
             
-            for (const pattern of urlPatterns) {
+            console.log(`🐻 Bearracuda: Testing ${urlPatterns.length} URL patterns`);
+            
+            for (let i = 0; i < urlPatterns.length; i++) {
+                const pattern = urlPatterns[i];
+                console.log(`🐻 Bearracuda: Testing pattern ${i + 1}: ${pattern.source}`);
+                
                 let match;
+                let matchCount = 0;
+                // Reset regex lastIndex to ensure we start from the beginning
+                pattern.lastIndex = 0;
+                
                 while ((match = pattern.exec(html)) !== null) {
                     let url = match[1];
+                    matchCount++;
+                    console.log(`🐻 Bearracuda: Pattern ${i + 1} match ${matchCount}: Found potential event URL: ${url}`);
                     
                     // Convert relative URLs to absolute
                     if (url.startsWith('/')) {
                         url = 'https://bearracuda.com' + url;
+                        console.log(`🐻 Bearracuda: Converted to absolute URL: ${url}`);
                     }
                     
                     // Ensure URL ends with slash
                     if (!url.endsWith('/')) {
                         url += '/';
+                        console.log(`🐻 Bearracuda: Added trailing slash: ${url}`);
                     }
                     
+                    console.log(`🐻 Bearracuda: Validating URL: ${url}`);
                     if (this.isValidEventUrl(url, parserConfig)) {
                         urls.add(url);
-                        console.log(`🐻 Bearracuda: Found event detail URL: ${url}`);
+                        console.log(`🐻 Bearracuda: ✓ Valid event detail URL: ${url}`);
+                    } else {
+                        console.log(`🐻 Bearracuda: ✗ Invalid event URL: ${url}`);
                     }
                     
                     // Limit to prevent infinite loops
                     if (urls.size >= (this.config.maxAdditionalUrls || 20)) {
+                        console.log(`🐻 Bearracuda: Reached maximum URL limit (${this.config.maxAdditionalUrls || 20})`);
                         break;
                     }
                 }
+                
+                console.log(`🐻 Bearracuda: Pattern ${i + 1} found ${matchCount} potential URLs`);
             }
             
             console.log(`🐻 Bearracuda: Extracted ${urls.size} additional event links`);
+            
+            // Log all found URLs for debugging
+            if (urls.size > 0) {
+                console.log(`🐻 Bearracuda: Final list of valid URLs:`);
+                Array.from(urls).forEach((url, index) => {
+                    console.log(`🐻 Bearracuda: ${index + 1}. ${url}`);
+                });
+            } else {
+                console.log(`🐻 Bearracuda: No valid URLs found. Debugging info:`);
+                console.log(`🐻 Bearracuda: - HTML contains 'bearracuda.com': ${html.includes('bearracuda.com')}`);
+                console.log(`🐻 Bearracuda: - HTML contains '/events/': ${html.includes('/events/')}`);
+                console.log(`🐻 Bearracuda: - HTML contains 'atlantabearpride': ${html.includes('atlantabearpride')}`);
+                
+                // Show a sample of the HTML to see what we're working with
+                const htmlSample = html.substring(0, 1000);
+                console.log(`🐻 Bearracuda: HTML sample (first 1000 chars): ${htmlSample}`);
+            }
             
         } catch (error) {
             console.warn(`🐻 Bearracuda: Error extracting additional URLs: ${error}`);
@@ -517,49 +567,85 @@ class BearraccudaParser {
 
     // Validate if URL is a valid event URL
     isValidEventUrl(url, parserConfig) {
-        if (!url || typeof url !== 'string') return false;
+        if (!url || typeof url !== 'string') {
+            console.log(`🐻 Bearracuda: URL validation failed - invalid URL: ${url}`);
+            return false;
+        }
         
         try {
             const urlObj = new URL(url);
+            console.log(`🐻 Bearracuda: Validating URL - hostname: ${urlObj.hostname}, pathname: ${urlObj.pathname}`);
             
             // Must be Bearracuda domain
-            if (!urlObj.hostname.includes('bearracuda.com')) return false;
+            if (!urlObj.hostname.includes('bearracuda.com')) {
+                console.log(`🐻 Bearracuda: URL validation failed - not bearracuda.com domain: ${urlObj.hostname}`);
+                return false;
+            }
             
             // Must be event page pattern
-            if (!/\/events\/[^\/]+\/?$/.test(urlObj.pathname)) return false;
+            if (!/\/events\/[^\/]+\/?$/.test(urlObj.pathname)) {
+                console.log(`🐻 Bearracuda: URL validation failed - doesn't match event path pattern: ${urlObj.pathname}`);
+                return false;
+            }
             
             // Avoid admin, login, or social media links
             const invalidPaths = ['/admin', '/login', '/wp-admin', '/wp-login', '#', 'javascript:', 'mailto:'];
-            if (invalidPaths.some(invalid => url.includes(invalid))) return false;
+            if (invalidPaths.some(invalid => url.includes(invalid))) {
+                console.log(`🐻 Bearracuda: URL validation failed - contains invalid path: ${url}`);
+                return false;
+            }
             
             // Apply URL filters if configured
             if (parserConfig.urlFilters) {
+                console.log(`🐻 Bearracuda: Applying URL filters to: ${url}`);
+                console.log(`🐻 Bearracuda: URL filters config:`, JSON.stringify(parserConfig.urlFilters));
+                
                 if (parserConfig.urlFilters.include) {
                     const includePatterns = Array.isArray(parserConfig.urlFilters.include) ? 
                         parserConfig.urlFilters.include : [parserConfig.urlFilters.include];
                     
-                    const matchesInclude = includePatterns.some(pattern => 
-                        new RegExp(pattern, 'i').test(url)
-                    );
+                    console.log(`🐻 Bearracuda: Testing include patterns:`, includePatterns);
                     
-                    if (!matchesInclude) return false;
+                    const matchesInclude = includePatterns.some(pattern => {
+                        const regex = new RegExp(pattern, 'i');
+                        const matches = regex.test(url);
+                        console.log(`🐻 Bearracuda: Pattern "${pattern}" ${matches ? 'MATCHES' : 'DOES NOT MATCH'} URL: ${url}`);
+                        return matches;
+                    });
+                    
+                    if (!matchesInclude) {
+                        console.log(`🐻 Bearracuda: URL validation failed - doesn't match any include patterns`);
+                        return false;
+                    }
                 }
                 
                 if (parserConfig.urlFilters.exclude) {
                     const excludePatterns = Array.isArray(parserConfig.urlFilters.exclude) ? 
                         parserConfig.urlFilters.exclude : [parserConfig.urlFilters.exclude];
                     
-                    const matchesExclude = excludePatterns.some(pattern => 
-                        new RegExp(pattern, 'i').test(url)
-                    );
+                    console.log(`🐻 Bearracuda: Testing exclude patterns:`, excludePatterns);
                     
-                    if (matchesExclude) return false;
+                    const matchesExclude = excludePatterns.some(pattern => {
+                        const regex = new RegExp(pattern, 'i');
+                        const matches = regex.test(url);
+                        console.log(`🐻 Bearracuda: Exclude pattern "${pattern}" ${matches ? 'MATCHES' : 'DOES NOT MATCH'} URL: ${url}`);
+                        return matches;
+                    });
+                    
+                    if (matchesExclude) {
+                        console.log(`🐻 Bearracuda: URL validation failed - matches exclude pattern`);
+                        return false;
+                    }
                 }
+            } else {
+                console.log(`🐻 Bearracuda: No URL filters configured`);
             }
             
+            console.log(`🐻 Bearracuda: URL validation passed: ${url}`);
             return true;
             
         } catch (error) {
+            console.log(`🐻 Bearracuda: URL validation failed - error parsing URL: ${error}`);
             return false;
         }
     }
