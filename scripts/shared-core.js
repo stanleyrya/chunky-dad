@@ -83,6 +83,13 @@ class SharedCore {
 
         for (let i = 0; i < config.parsers.length; i++) {
             const parserConfig = config.parsers[i];
+            
+            // Check if parser is enabled (default to true if not specified)
+            if (parserConfig.enabled === false) {
+                await displayAdapter.logInfo(`SYSTEM: Skipping disabled parser: ${parserConfig.name}`);
+                continue;
+            }
+            
             try {
                 await displayAdapter.logInfo(`SYSTEM: Processing parser ${i + 1}/${config.parsers.length}: ${parserConfig.name}`);
                 
