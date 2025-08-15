@@ -1,0 +1,177 @@
+name: Update Calendar Data
+
+on:
+  schedule:
+    # Run every 2 hours to keep calendar data fresh
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Allow manual triggering
+  push:
+    paths:
+      - 'js/city-config.js'
+      - '.github/workflows/update-calendar-data.yml'
+
+jobs:
+  update-calendar-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Create calendar data directory
+        run: mkdir -p data/calendars
+      
+      - name: Fetch calendar data
+        run: |
+          # Read city config and extract calendar IDs
+          node << 'EOF'
+          const fs = require('fs');
+          
+          // Read the city config file
+          const cityConfigContent = fs.readFileSync('js/city-config.js', 'utf8');
+          
+          // Extract CITY_CONFIG object (simple regex approach)
+          const configMatch = cityConfigContent.match(/const CITY_CONFIG = ({[\s\S]*?});/);
+          if (!configMatch) {
+            console.error('Could not extract CITY_CONFIG');
+            process.exit(1);
+          }
+          
+          // Parse the config (this is a simplified approach)
+          const configString = configMatch[1]
+            .replace(/'/g, '"')
+            .replace(/(\w+):/g, '"$1":')
+            .replace(/,\s*}/g, '}');
+          
+          let cityConfig;
+          try {
+            cityConfig = JSON.parse(`{${configString}}`);
+          } catch (e) {
+            console.error('Could not parse city config:', e.message);
+            process.exit(1);
+          }
+          
+          // Create fetch script for each city
+          const fetchPromises = [];
+          
+          for (const [cityKey, config] of Object.entries(cityConfig)) {
+            if (config.calendarId && config.visible) {
+              console.log(`Fetching calendar for ${config.name} (${cityKey})`);
+              
+              const icalUrl = `https://calendar.google.com/calendar/ical/${config.calendarId}/public/basic.ics`;
+              
+              fetchPromises.push(
+                fetch(icalUrl)
+                  .then(response => {
+                    if (!response.ok) {
+                      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                  })
+                  .then(icalData => {
+                    if (!icalData || !icalData.includes('BEGIN:VCALENDAR')) {
+                      throw new Error('Invalid iCal data received');
+                    }
+                    
+                    // Save the raw iCal data
+                    fs.writeFileSync(`data/calendars/${cityKey}.ics`, icalData);
+                    console.log(`✓ Saved calendar data for ${config.name}: ${icalData.length} characters`);
+                    
+                    return { cityKey, config, icalData };
+                  })
+                  .catch(error => {
+                    console.error(`✗ Failed to fetch calendar for ${config.name}:`, error.message);
+                    return { cityKey, config, error: error.message };
+                  })
+              );
+            }
+          }
+          
+          // Wait for all fetches to complete
+          Promise.all(fetchPromises)
+            .then(results => {
+              const summary = {
+                lastUpdated: new Date().toISOString(),
+                cities: {}
+              };
+              
+              let successCount = 0;
+              let errorCount = 0;
+              
+              results.forEach(result => {
+                if (result.error) {
+                  summary.cities[result.cityKey] = {
+                    name: result.config.name,
+                    status: 'error',
+                    error: result.error,
+                    lastUpdated: new Date().toISOString()
+                  };
+                  errorCount++;
+                } else {
+                  summary.cities[result.cityKey] = {
+                    name: result.config.name,
+                    status: 'success',
+                    dataLength: result.icalData.length,
+                    eventCount: (result.icalData.match(/BEGIN:VEVENT/g) || []).length,
+                    lastUpdated: new Date().toISOString()
+                  };
+                  successCount++;
+                }
+              });
+              
+              // Save summary
+              fs.writeFileSync('data/calendars/update-summary.json', JSON.stringify(summary, null, 2));
+              
+              console.log(`\n📊 Update Summary:`);
+              console.log(`✓ Successful: ${successCount}`);
+              console.log(`✗ Failed: ${errorCount}`);
+              console.log(`📅 Total cities processed: ${results.length}`);
+              
+              if (errorCount > 0) {
+                console.log(`\n⚠️  Some calendar updates failed. Check the logs above for details.`);
+              }
+            })
+            .catch(error => {
+              console.error('Fatal error during calendar updates:', error);
+              process.exit(1);
+            });
+          EOF
+      
+      - name: Commit updated calendar data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Calendar Update Bot"
+          
+          # Add all calendar data files
+          git add data/calendars/
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No calendar data changes to commit"
+          else
+            git commit -m "🗓️ Update calendar data - $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "✓ Calendar data updated and committed"
+          fi
+      
+      - name: Update test manifest if calendar data changed
+        run: |
+          if [ -f "testing/generate-manifest.js" ]; then
+            cd testing
+            node generate-manifest.js
+            cd ..
+            
+            # Commit manifest updates if any
+            if ! git diff --quiet testing/manifest.json; then
+              git add testing/manifest.json
+              git commit -m "📋 Update test manifest after calendar data update"
+              git push
+            fi
+          fi

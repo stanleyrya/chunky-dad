@@ -1,0 +1,41 @@
+{
+  "lastUpdated": "2024-12-19T12:00:00.000Z",
+  "cities": {
+    "new-york": {
+      "name": "New York",
+      "status": "pending",
+      "note": "Initial setup - calendar data will be fetched by GitHub Actions",
+      "lastUpdated": "2024-12-19T12:00:00.000Z"
+    },
+    "seattle": {
+      "name": "Seattle", 
+      "status": "pending",
+      "note": "Initial setup - calendar data will be fetched by GitHub Actions",
+      "lastUpdated": "2024-12-19T12:00:00.000Z"
+    },
+    "los-angeles": {
+      "name": "Los Angeles",
+      "status": "pending", 
+      "note": "Initial setup - calendar data will be fetched by GitHub Actions",
+      "lastUpdated": "2024-12-19T12:00:00.000Z"
+    },
+    "toronto": {
+      "name": "Toronto",
+      "status": "pending",
+      "note": "Initial setup - calendar data will be fetched by GitHub Actions", 
+      "lastUpdated": "2024-12-19T12:00:00.000Z"
+    },
+    "london": {
+      "name": "London",
+      "status": "pending",
+      "note": "Initial setup - calendar data will be fetched by GitHub Actions",
+      "lastUpdated": "2024-12-19T12:00:00.000Z"
+    },
+    "chicago": {
+      "name": "Chicago",
+      "status": "pending",
+      "note": "Initial setup - calendar data will be fetched by GitHub Actions",
+      "lastUpdated": "2024-12-19T12:00:00.000Z"
+    }
+  }
+}

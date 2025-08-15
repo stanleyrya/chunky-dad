@@ -1018,7 +1018,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Load calendar data for specific city (override to use CORS proxy)
+    // Load calendar data for specific city (uses cached data from GitHub Actions)
     async loadCalendarData(cityKey) {
         const cityConfig = getCityConfig(cityKey);
         if (!cityConfig) {
@@ -1027,203 +1027,163 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-        logger.info('CALENDAR', `🌐 Step 3: Starting API call to load calendar data for ${cityConfig.name}`, {
+        logger.info('CALENDAR', `🌐 Step 3: Loading cached calendar data for ${cityConfig.name}`, {
             cityKey,
             calendarId: cityConfig.calendarId,
-            step: 'Step 3: Loading real calendar data'
+            step: 'Step 3: Loading cached calendar data (no CORS proxies needed)'
         });
         
-        // Multiple CORS proxies with exponential backoff and much longer timeouts
-        const corsProxies = [
-            'https://api.allorigins.win/raw?url=',
-            'https://cors-anywhere.herokuapp.com/', // Alternative proxy
-            'https://api.codetabs.com/v1/proxy?quest=', // Another alternative
-            'https://api.allorigins.win/raw?url=', // Retry first proxy with longer timeout
-            'https://api.allorigins.win/raw?url='  // Final attempt with maximum patience
-        ];
+        // Try to load cached calendar data first
+        const cachedDataUrl = `data/calendars/${cityKey}.ics`;
         
-        // Exponential backoff with much more generous timeouts for CORS proxy requests
-        // Research shows CORS proxies often need 10-30 seconds, especially under load
-        const timeouts = [5000, 10000, 15000, 20000, 30000]; // 5s, 10s, 15s, 20s, 30s
-        const delays = [0, 2000, 5000, 8000, 12000]; // Exponential backoff: 0, 2s, 5s, 8s, 12s
+        try {
+            logger.debug('CALENDAR', `Attempting to load cached calendar data`, {
+                url: cachedDataUrl,
+                city: cityConfig.name,
+                method: 'cached_data_direct_fetch'
+            });
+            
+            // Update loading message
+            this.updateLoadingMessage(1, 'cached');
+            
+            const response = await fetch(cachedDataUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/calendar,text/plain,*/*'
+                },
+                cache: 'default' // Use browser cache for efficiency
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const icalText = await response.text();
+            
+            // Validate that we got actual iCal data
+            if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
+                throw new Error('Invalid iCal data in cached file');
+            }
+            
+            logger.apiCall('CALENDAR', `Successfully loaded cached calendar data`, {
+                dataLength: icalText.length,
+                city: cityConfig.name,
+                url: cachedDataUrl,
+                method: 'cached_data_success',
+                totalTimeElapsed: `${Date.now() - logger.getTimestamp('CALENDAR', `Loading ${cityConfig.name} calendar data`)}ms`
+            });
+            
+            // Log sample of the fetched data for debugging
+            logger.debug('CALENDAR', 'Cached iCal data validation', {
+                firstLine: icalText.split('\n')[0],
+                hasEvents: icalText.includes('BEGIN:VEVENT'),
+                eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
+                calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
+                encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format',
+                dataSize: `${(icalText.length / 1024).toFixed(1)}KB`,
+                source: 'cached_github_actions'
+            });
+            
+            const events = this.parseICalData(icalText);
+            
+            // Store all events for filtering
+            this.allEvents = events;
+            
+            this.eventsData = {
+                cityConfig,
+                events,
+                calendarTimezone: this.calendarTimezone,
+                timezoneData: this.timezoneData
+            };
+            
+            logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+            logger.componentLoad('CALENDAR', `Successfully processed cached calendar data for ${cityConfig.name}`, {
+                eventCount: events.length,
+                cityKey,
+                calendarTimezone: this.calendarTimezone,
+                hasTimezoneData: !!this.timezoneData,
+                method: 'cached_data_final_success',
+                source: 'github_actions_cache'
+            });
+            
+            return this.eventsData;
+            
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to load cached calendar data, trying fallback', {
+                cityKey,
+                cityName: cityConfig.name,
+                cachedDataUrl,
+                error: error.message,
+                errorName: error.name,
+                willTryFallback: true
+            });
+            
+            // Fallback: try to load directly from Google (will likely fail due to CORS, but worth trying)
+            return this.loadCalendarDataFallback(cityKey, cityConfig);
+        }
+    }
+    
+    // Fallback method: try direct Google Calendar access (will likely fail due to CORS)
+    async loadCalendarDataFallback(cityKey, cityConfig) {
+        logger.info('CALENDAR', 'Attempting fallback: direct Google Calendar access', {
+            cityKey,
+            cityName: cityConfig.name,
+            warning: 'This will likely fail due to CORS, but trying anyway'
+        });
         
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
         
-        for (let i = 0; i < corsProxies.length; i++) {
-            const corsProxy = corsProxies[i];
-            const timeout = timeouts[i] || timeouts[timeouts.length - 1];
-            const delay = delays[i] || 0;
-            const fullUrl = corsProxy + encodeURIComponent(icalUrl);
+        try {
+            this.updateLoadingMessage(1, 'direct');
             
-            // Wait before attempting (exponential backoff)
-            if (delay > 0) {
-                logger.debug('CALENDAR', `Exponential backoff: waiting ${delay}ms before attempt ${i + 1}`, {
-                    attempt: i + 1,
-                    delay: `${delay}ms`,
-                    reason: 'exponential_backoff'
-                });
-                await new Promise(resolve => setTimeout(resolve, delay));
+            const response = await fetch(icalUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/calendar,text/plain,*/*'
+                },
+                cache: 'no-cache'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
-            try {
-                logger.debug('CALENDAR', `Attempting connection ${i + 1}/${corsProxies.length}`, {
-                    proxy: corsProxy,
-                    attempt: i + 1,
-                    timeout: `${timeout}ms`,
-                    strategy: 'exponential_backoff_with_generous_timeouts'
-                });
-                
-                // Update loading message with current attempt info
-                this.updateLoadingMessage(i + 1, timeout);
-                
-                // Create AbortController for better browser compatibility
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => {
-                    controller.abort();
-                }, timeout);
-                
-                const response = await fetch(fullUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'text/calendar,text/plain,*/*',
-                        'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad calendar loader)'
-                    },
-                    signal: controller.signal,
-                    // Add cache control to potentially get faster responses
-                    cache: 'no-cache'
-                });
-                
-                // Clear timeout if request succeeds
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                    const errorMsg = `HTTP error! status: ${response.status} ${response.statusText}`;
-                    logger.warn('CALENDAR', `CORS proxy ${i + 1} returned HTTP error`, {
-                        proxy: corsProxy,
-                        status: response.status,
-                        statusText: response.statusText,
-                        url: fullUrl,
-                        timeout: `${timeout}ms`,
-                        willRetry: i < corsProxies.length - 1
-                    });
-                    
-                    // If this isn't the last proxy, continue to next one
-                    if (i < corsProxies.length - 1) {
-                        continue;
-                    } else {
-                        throw new Error(errorMsg);
-                    }
-                }
-                
-                const icalText = await response.text();
-                
-                // Validate that we got actual iCal data, not an error page
-                if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
-                    logger.warn('CALENDAR', `CORS proxy ${i + 1} returned invalid iCal data`, {
-                        proxy: corsProxy,
-                        dataLength: icalText?.length || 0,
-                        dataPreview: icalText?.substring(0, 100) || 'No data',
-                        timeout: `${timeout}ms`,
-                        willRetry: i < corsProxies.length - 1,
-                        validationFailed: 'missing_vcalendar_header'
-                    });
-                    
-                    // If this isn't the last proxy, continue to next one
-                    if (i < corsProxies.length - 1) {
-                        continue;
-                    } else {
-                        throw new Error('All CORS proxies returned invalid iCal data');
-                    }
-                }
-                
-                logger.apiCall('CALENDAR', `Successfully fetched iCal data using proxy ${i + 1}`, {
-                    dataLength: icalText.length,
-                    city: cityConfig.name,
-                    url: icalUrl,
-                    proxyUsed: corsProxy,
-                    attemptNumber: i + 1,
-                    timeout: `${timeout}ms`,
-                    totalTimeElapsed: `${Date.now() - logger.getTimestamp('CALENDAR', `Loading ${cityConfig.name} calendar data`)}ms`,
-                    strategy: 'exponential_backoff_success'
-                });
-                
-                // Log sample of the fetched data for debugging
-                if (icalText.length > 0) {
-                    logger.debug('CALENDAR', 'Raw iCal data validation', {
-                        firstLine: icalText.split('\n')[0],
-                        hasEvents: icalText.includes('BEGIN:VEVENT'),
-                        eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
-                        calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
-                        encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format',
-                        dataSize: `${(icalText.length / 1024).toFixed(1)}KB`
-                    });
-                } else {
-                    logger.warn('CALENDAR', 'Empty iCal data received', {
-                        city: cityConfig.name,
-                        url: icalUrl
-                    });
-                }
-                
-                const events = this.parseICalData(icalText);
-                
-                // Store all events for filtering
-                this.allEvents = events;
-                
-                this.eventsData = {
-                    cityConfig,
-                    events,
-                    calendarTimezone: this.calendarTimezone,
-                    timezoneData: this.timezoneData
-                };
-                
-                logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-                logger.componentLoad('CALENDAR', `Successfully processed calendar data for ${cityConfig.name}`, {
-                    eventCount: events.length,
-                    cityKey,
-                    calendarTimezone: this.calendarTimezone,
-                    hasTimezoneData: !!this.timezoneData,
-                    proxyUsed: corsProxy,
-                    attemptNumber: i + 1,
-                    timeout: `${timeout}ms`,
-                    strategy: 'exponential_backoff_final_success'
-                });
-                return this.eventsData;
-                
-            } catch (error) {
-                const isTimeout = error.name === 'AbortError';
-                const isNetworkError = error.name === 'TypeError' && error.message.includes('fetch');
-                
-                logger.warn('CALENDAR', `Connection ${i + 1} failed`, {
-                    proxy: corsProxy,
-                    error: error.message,
-                    errorName: error.name,
-                    attempt: i + 1,
-                    timeout: `${timeout}ms`,
-                    isTimeout,
-                    isNetworkError,
-                    willRetry: i < corsProxies.length - 1,
-                    nextDelay: i < corsProxies.length - 1 ? `${delays[i + 1] || 0}ms` : 'none'
-                });
-                
-                // If this is the last proxy, log the final error
-                if (i === corsProxies.length - 1) {
-                    logger.componentError('CALENDAR', 'All CORS proxies exhausted - calendar data unavailable', {
-                        cityKey,
-                        cityName: cityConfig.name,
-                        totalAttempts: corsProxies.length,
-                        finalError: error.message,
-                        proxiesTried: corsProxies,
-                        timeoutsUsed: timeouts,
-                        delaysUsed: delays,
-                        strategy: 'exponential_backoff_all_failed',
-                        recommendation: 'Try refreshing page in 30-60 seconds, or check CORS proxy status'
-                    });
-                    // Clear fake event from allEvents to prevent it from showing
-                    this.allEvents = [];
-                    this.showCalendarError();
-                    return null;
-                }
+            const icalText = await response.text();
+            
+            if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
+                throw new Error('Invalid iCal data received from Google');
             }
+            
+            logger.info('CALENDAR', '🎉 Fallback succeeded: Direct Google Calendar access worked!', {
+                cityKey,
+                dataLength: icalText.length,
+                note: 'This suggests Google may have added CORS headers'
+            });
+            
+            const events = this.parseICalData(icalText);
+            this.allEvents = events;
+            
+            this.eventsData = {
+                cityConfig,
+                events,
+                calendarTimezone: this.calendarTimezone,
+                timezoneData: this.timezoneData
+            };
+            
+            return this.eventsData;
+            
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Fallback failed: Calendar data unavailable', {
+                cityKey,
+                cityName: cityConfig.name,
+                fallbackError: error.message,
+                recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
+            });
+            
+            // Clear fake event from allEvents to prevent it from showing
+            this.allEvents = [];
+            this.showCalendarError();
+            return null;
         }
     }
 
@@ -1233,7 +1193,8 @@ class DynamicCalendarLoader extends CalendarCore {
             <div class="error-message">
                 <h3>📅 Calendar Temporarily Unavailable</h3>
                 <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
-                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
+                <p><strong>What's happening:</strong> Our calendar data is updated automatically every 2 hours. The latest update may not be available yet.</p>
+                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for the latest updates.</p>
             </div>
         `;
         
@@ -1245,12 +1206,17 @@ class DynamicCalendarLoader extends CalendarCore {
 
     }
 
-    // Update loading message with connection information
-    updateLoadingMessage(attemptNumber, timeout) {
+    // Update loading message with method information
+    updateLoadingMessage(attemptNumber, method) {
         const eventsList = document.querySelector('.events-list');
         if (eventsList) {
-            // Keep the user message simple and clean - no technical details about retries
-            const message = '📅 Loading events...';
+            // Show appropriate message based on loading method
+            let message = '📅 Loading events...';
+            if (method === 'cached') {
+                message = '📅 Loading events...';
+            } else if (method === 'direct') {
+                message = '📅 Loading events (trying direct access)...';
+            }
             
             const loadingDiv = eventsList.querySelector('.loading-message');
             if (loadingDiv) {
@@ -1260,14 +1226,14 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             // Keep detailed logging for debugging (hidden from users)
-            logger.debug('CALENDAR', 'Updated loading message (user sees clean message, technical details in logs)', {
+            logger.debug('CALENDAR', 'Updated loading message for new caching approach', {
                 attemptNumber,
-                timeout,
+                method,
                 userMessage: message,
                 technicalDetails: {
-                    attempt: `${attemptNumber}/5`,
-                    timeoutMs: timeout,
-                    strategy: 'exponential_backoff_user_friendly'
+                    attempt: attemptNumber,
+                    loadingMethod: method,
+                    strategy: 'cached_data_with_fallback'
                 }
             });
         }
