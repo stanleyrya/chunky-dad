@@ -120,6 +120,7 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 - City detection and calendar routing
 - Scalable URL processing with detail page support
 - Performance tracking and detailed reporting
+- Parser enable/disable functionality for selective processing
 
 ## 🔧 CONFIGURATION
 
@@ -148,6 +149,7 @@ The most specific merge strategy wins. For example, if a parser has `mergeMode: 
     {
       "name": "Venue Name",
       "parser": "eventbrite",  // Must match parser filename
+      "enabled": true,         // Set to false to temporarily disable parser
       "urls": ["https://venue.com/events"],
       "alwaysBear": true,      // Skip bear keyword filtering
       "requireDetailPages": true,
