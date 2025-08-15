@@ -32,12 +32,19 @@ class DebugOverlay {
         this.maxErrorHistory = 50;
         this.setupErrorTracking();
         
-        // Add error tracking panel
-        this.addErrorTrackingPanel();
+        // Debug initialization logging
+        logger.info('SYSTEM', 'Debug overlay constructor called', {
+            shouldShow: this.isVisible,
+            url: window.location.href,
+            debugParam: new URLSearchParams(window.location.search).get('debug'),
+            hasDebugParam: new URLSearchParams(window.location.search).has('debug')
+        });
         
         if (this.isVisible) {
             this.init();
             logger.componentInit('SYSTEM', 'Debug overlay enabled - optimized version');
+        } else {
+            logger.info('SYSTEM', 'Debug overlay not enabled - debug parameter not found');
         }
     }
     
@@ -292,7 +299,17 @@ class DebugOverlay {
         this.updateViewState();
         
         document.body.appendChild(this.overlay);
+        
+        // Add error tracking panel after overlay is created
+        this.addErrorTrackingPanel();
+        
         this.updateDebugInfo();
+        
+        logger.info('SYSTEM', 'Debug overlay DOM created and attached', {
+            overlayExists: !!this.overlay,
+            overlayVisible: this.overlay.style.display !== 'none',
+            overlayParent: this.overlay.parentNode?.tagName
+        });
     }
     
     attachEventListeners() {
@@ -864,3 +881,22 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     window.DebugOverlay = DebugOverlay;
 }
+
+// Manual debug overlay test function for troubleshooting
+window.testDebugOverlay = function() {
+    console.log('Testing debug overlay creation...');
+    console.log('URL params:', window.location.search);
+    console.log('Debug param:', new URLSearchParams(window.location.search).get('debug'));
+    console.log('Should show debug:', new URLSearchParams(window.location.search).has('debug'));
+    console.log('DebugOverlay class available:', typeof window.DebugOverlay);
+    console.log('Existing debug overlay:', window.debugOverlay);
+    
+    if (!window.debugOverlay && window.DebugOverlay) {
+        try {
+            window.debugOverlay = new window.DebugOverlay();
+            console.log('✅ Debug overlay created manually');
+        } catch (error) {
+            console.error('❌ Error creating debug overlay:', error);
+        }
+    }
+};
