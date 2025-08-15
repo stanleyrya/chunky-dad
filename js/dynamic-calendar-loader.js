@@ -1249,14 +1249,8 @@ class DynamicCalendarLoader extends CalendarCore {
     updateLoadingMessage(attemptNumber, timeout) {
         const eventsList = document.querySelector('.events-list');
         if (eventsList) {
-            let message;
-            if (attemptNumber === 1) {
-                message = '📅 Loading events...';
-            } else if (attemptNumber <= 3) {
-                message = `📅 Loading events... (${attemptNumber}/5)`;
-            } else {
-                message = `📅 Still loading... (${attemptNumber}/5) - This may take up to 30 seconds`;
-            }
+            // Keep the user message simple and clean - no technical details about retries
+            const message = '📅 Loading events...';
             
             const loadingDiv = eventsList.querySelector('.loading-message');
             if (loadingDiv) {
@@ -1265,11 +1259,16 @@ class DynamicCalendarLoader extends CalendarCore {
                 eventsList.innerHTML = `<div class="loading-message">${message}</div>`;
             }
             
-            logger.debug('CALENDAR', 'Updated loading message', {
+            // Keep detailed logging for debugging (hidden from users)
+            logger.debug('CALENDAR', 'Updated loading message (user sees clean message, technical details in logs)', {
                 attemptNumber,
                 timeout,
-                message,
-                strategy: 'exponential_backoff_user_feedback'
+                userMessage: message,
+                technicalDetails: {
+                    attempt: `${attemptNumber}/5`,
+                    timeoutMs: timeout,
+                    strategy: 'exponential_backoff_user_friendly'
+                }
             });
         }
     }
