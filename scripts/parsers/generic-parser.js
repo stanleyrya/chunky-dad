@@ -316,12 +316,20 @@ class GenericParser {
         if (!url || typeof url !== 'string') return false;
         
         try {
-            const urlObj = new URL(url);
-            const sourceObj = new URL(sourceUrl);
+            // Use simple URL parsing that works in Scriptable
+            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+            
+            const urlMatch = url.match(urlPattern);
+            const sourceMatch = sourceUrl.match(urlPattern);
+            
+            if (!urlMatch || !sourceMatch) return false;
+            
+            const urlHostname = urlMatch[2].split(':')[0]; // Remove port if present
+            const sourceHostname = sourceMatch[2].split(':')[0]; // Remove port if present
             
             // Should be from the same domain or subdomain
-            if (!urlObj.hostname.includes(sourceObj.hostname) && 
-                !sourceObj.hostname.includes(urlObj.hostname)) return false;
+            if (!urlHostname.includes(sourceHostname) && 
+                !sourceHostname.includes(urlHostname)) return false;
             
             // Avoid admin, login, or social media links
             const invalidPaths = [
@@ -434,14 +442,24 @@ class GenericParser {
         
         // Handle relative URLs
         if (url.startsWith('/')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}//${base.host}${url}`;
+            // Simple URL parsing for Scriptable compatibility
+            const urlPattern = /^(https?:)\/\/([^\/]+)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol, host] = match;
+                return `${protocol}//${host}${url}`;
+            }
         }
         
         // Handle protocol-relative URLs
         if (url.startsWith('//')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}${url}`;
+            // Simple URL parsing for Scriptable compatibility
+            const urlPattern = /^(https?:)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol] = match;
+                return `${protocol}${url}`;
+            }
         }
         
         // Handle anchor links (skip them)

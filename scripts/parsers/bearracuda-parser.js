@@ -573,18 +573,29 @@ class BearraccudaParser {
         }
         
         try {
-            const urlObj = new URL(url);
-            console.log(`🐻 Bearracuda: Validating URL - hostname: ${urlObj.hostname}, pathname: ${urlObj.pathname}`);
+            // Use simple URL parsing that works in Scriptable
+            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+            const match = url.match(urlPattern);
+            
+            if (!match) {
+                console.log(`🐻 Bearracuda: URL validation failed - invalid URL format: ${url}`);
+                return false;
+            }
+            
+            const [, protocol, host, pathname = '/', search = '', hash = ''] = match;
+            const hostname = host.split(':')[0]; // Remove port if present
+            
+            console.log(`🐻 Bearracuda: Validating URL - hostname: ${hostname}, pathname: ${pathname}`);
             
             // Must be Bearracuda domain
-            if (!urlObj.hostname.includes('bearracuda.com')) {
-                console.log(`🐻 Bearracuda: URL validation failed - not bearracuda.com domain: ${urlObj.hostname}`);
+            if (!hostname.includes('bearracuda.com')) {
+                console.log(`🐻 Bearracuda: URL validation failed - not bearracuda.com domain: ${hostname}`);
                 return false;
             }
             
             // Must be event page pattern
-            if (!/\/events\/[^\/]+\/?$/.test(urlObj.pathname)) {
-                console.log(`🐻 Bearracuda: URL validation failed - doesn't match event path pattern: ${urlObj.pathname}`);
+            if (!/\/events\/[^\/]+\/?$/.test(pathname)) {
+                console.log(`🐻 Bearracuda: URL validation failed - doesn't match event path pattern: ${pathname}`);
                 return false;
             }
             
