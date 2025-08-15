@@ -139,8 +139,8 @@ class BearraccudaParser {
             // Create start date
             let startDate = null;
             if (dateInfo && timeInfo.startTime) {
-                // Combine date and start time
-                startDate = this.combineDateTime(dateInfo, timeInfo.startTime);
+                // Combine date and start time with city timezone
+                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
@@ -148,7 +148,7 @@ class BearraccudaParser {
             // Create end date
             let endDate = null;
             if (dateInfo && timeInfo.endTime) {
-                endDate = this.combineDateTime(dateInfo, timeInfo.endTime);
+                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city);
                 // If end time is earlier than start time, assume it's next day
                 if (endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -172,6 +172,8 @@ class BearraccudaParser {
                 // Additional bearracuda-specific fields
                 facebookEvent: links.facebook,
                 ticketUrl: links.eventbrite,
+                eventbriteUrl: links.eventbrite, // Store eventbrite URL separately
+                detailPageUrl: sourceUrl, // Store the bearracuda detail page URL
                 isBearEvent: true // Bearracuda events are always bear events
             };
             
@@ -645,13 +647,54 @@ class BearraccudaParser {
         return null;
     }
 
-    // Combine date and time into a single Date object
-    combineDateTime(date, time) {
+    // Combine date and time into a single Date object with timezone handling
+    combineDateTime(date, time, city = null) {
         if (!date || !time) return date;
         
+        // Get timezone offset for the city
+        const timezoneOffset = this.getTimezoneOffsetForCity(city);
+        
+        // Create date in local timezone first
         const combined = new Date(date);
         combined.setHours(time.hours, time.minutes, 0, 0);
-        return combined;
+        
+        // Convert to UTC by adding the timezone offset
+        // Note: getTimezoneOffset returns minutes west of UTC, so we subtract
+        const utcTime = new Date(combined.getTime() - (timezoneOffset * 60 * 1000));
+        
+        console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} to UTC: ${utcTime.toISOString()}`);
+        
+        return utcTime;
+    }
+    
+    // Get timezone offset in minutes for a city
+    getTimezoneOffsetForCity(city) {
+        // City to timezone mapping (in minutes offset from UTC)
+        // Note: These are standard time offsets. DST handling would require more complex logic
+        const cityTimezones = {
+            'atlanta': -5 * 60,      // EST (UTC-5)
+            'chicago': -6 * 60,      // CST (UTC-6)
+            'denver': -7 * 60,       // MST (UTC-7)
+            'la': -8 * 60,           // PST (UTC-8)
+            'sf': -8 * 60,           // PST (UTC-8)
+            'seattle': -8 * 60,      // PST (UTC-8)
+            'portland': -8 * 60,     // PST (UTC-8)
+            'vegas': -8 * 60,        // PST (UTC-8)
+            'nyc': -5 * 60,          // EST (UTC-5)
+            'miami': -5 * 60,        // EST (UTC-5)
+            'boston': -5 * 60,       // EST (UTC-5)
+            'philadelphia': -5 * 60, // EST (UTC-5)
+            'dc': -5 * 60,           // EST (UTC-5)
+            'austin': -6 * 60,       // CST (UTC-6)
+            'dallas': -6 * 60,       // CST (UTC-6)
+            'houston': -6 * 60,      // CST (UTC-6)
+            'phoenix': -7 * 60,      // MST (UTC-7, no DST)
+            'orlando': -5 * 60,      // EST (UTC-5)
+            'tampa': -5 * 60,        // EST (UTC-5)
+            'new-orleans': -6 * 60   // CST (UTC-6)
+        };
+        
+        return cityTimezones[city] || -5 * 60; // Default to EST if city not found
     }
 
     // Generate Google Maps URL from address
