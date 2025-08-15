@@ -360,7 +360,7 @@ class CalendarCore {
                 };
             }
 
-            eventData.slug = this.generateSlug(eventData.name);
+            eventData.slug = this.generateSlug(eventData.name, calendarEvent.start);
 
             // Log timezone usage for debugging
             if (eventData.startTimezone || eventData.calendarTimezone) {
@@ -498,12 +498,20 @@ class CalendarCore {
     }
 
     // Generate URL slug from event name
-    generateSlug(name) {
-        return name.toLowerCase()
+    generateSlug(name, startDate = null) {
+        const baseSlug = name.toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
             .replace(/\s+/g, '-')
             .replace(/-+/g, '-')
             .trim();
+        
+        // Add date/time suffix to ensure uniqueness for events with same name
+        if (startDate) {
+            const timestamp = startDate.getTime();
+            return `${baseSlug}-${timestamp}`;
+        }
+        
+        return baseSlug;
     }
 
     // Date and time utility methods

@@ -1310,6 +1310,20 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.isEventInPeriod(event.startDate, start, end);
         });
         
+        // Sort events by upcoming time (earliest first)
+        filtered.sort((a, b) => {
+            const dateA = new Date(a.startDate);
+            const dateB = new Date(b.startDate);
+            
+            // If dates are the same, sort by start time
+            if (dateA.toDateString() === dateB.toDateString()) {
+                return dateA.getTime() - dateB.getTime();
+            }
+            
+            // Otherwise sort by date
+            return dateA.getTime() - dateB.getTime();
+        });
+        
         return filtered;
     }
 
@@ -1870,6 +1884,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
                 }
             } else if (filteredEvents?.length > 0) {
+                // Events are already sorted by upcoming time in getFilteredEvents()
                 eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
             } else {
                 eventsList.innerHTML = '';
