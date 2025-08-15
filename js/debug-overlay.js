@@ -881,3 +881,22 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     window.DebugOverlay = DebugOverlay;
 }
+
+// Manual debug overlay test function for troubleshooting
+window.testDebugOverlay = function() {
+    console.log('Testing debug overlay creation...');
+    console.log('URL params:', window.location.search);
+    console.log('Debug param:', new URLSearchParams(window.location.search).get('debug'));
+    console.log('Should show debug:', new URLSearchParams(window.location.search).has('debug'));
+    console.log('DebugOverlay class available:', typeof window.DebugOverlay);
+    console.log('Existing debug overlay:', window.debugOverlay);
+    
+    if (!window.debugOverlay && window.DebugOverlay) {
+        try {
+            window.debugOverlay = new window.DebugOverlay();
+            console.log('✅ Debug overlay created manually');
+        } catch (error) {
+            console.error('❌ Error creating debug overlay:', error);
+        }
+    }
+};

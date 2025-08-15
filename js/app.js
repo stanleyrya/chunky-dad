@@ -129,19 +129,6 @@ class ChunkyDadApp {
                 // Don't await city page modules to prevent hanging
                 this.initializeCityPageModules().catch(error => {
                     logger.componentError('SYSTEM', 'City page module initialization failed', error);
-                    
-                    // Show user-friendly error if calendar fails to load
-                    const eventsContainer = document.querySelector('.events-list');
-                    if (eventsContainer && eventsContainer.innerHTML.includes('Getting events...')) {
-                        eventsContainer.innerHTML = `
-                            <div class="error-message">
-                                <h3>📅 Events Temporarily Unavailable</h3>
-                                <p>We're having trouble loading events right now.</p>
-                                <p><strong>Try:</strong> Refreshing the page or check back in a few minutes.</p>
-                                <button onclick="location.reload()" class="retry-btn">🔄 Refresh Page</button>
-                            </div>
-                        `;
-                    }
                 });
             }
             
