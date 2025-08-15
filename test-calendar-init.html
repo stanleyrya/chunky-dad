@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Calendar Initialization</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #f8d7da; }
+        .success { background: #d4edda; }
+        pre { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Test Calendar Initialization</h1>
+    <div id="logs"></div>
+
+    <!-- Load all required scripts in the same order as city.html -->
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <script src="js/dynamic-calendar-loader.js"></script>
+
+    <script>
+        const logs = document.getElementById('logs');
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<pre>${message}</pre>`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+
+        async function testCalendarInit() {
+            addLog('🚀 Starting calendar initialization test...');
+            
+            try {
+                // Check if DynamicCalendarLoader is available
+                if (!window.DynamicCalendarLoader) {
+                    addLog('❌ DynamicCalendarLoader class not available', 'error');
+                    return;
+                }
+                addLog('✅ DynamicCalendarLoader class found');
+                
+                // Create instance
+                addLog('📦 Creating DynamicCalendarLoader instance...');
+                const calendarLoader = new DynamicCalendarLoader();
+                addLog('✅ Instance created successfully');
+                
+                // Make it globally accessible (like app.js does)
+                window.calendarLoader = calendarLoader;
+                addLog('✅ Made globally accessible as window.calendarLoader');
+                
+                // Simulate being on a city page by setting URL parameters
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('city', 'new-york');
+                window.history.replaceState({}, '', currentUrl);
+                addLog(`✅ Set URL to simulate city page: ${currentUrl}`);
+                
+                // Initialize
+                addLog('🔄 Calling calendarLoader.init()...');
+                await calendarLoader.init();
+                addLog('✅ Calendar initialization completed!', 'success');
+                
+                // Check if events were loaded
+                if (calendarLoader.allEvents && calendarLoader.allEvents.length > 0) {
+                    addLog(`✅ Events loaded: ${calendarLoader.allEvents.length} events`, 'success');
+                } else {
+                    addLog('⚠️ No events loaded or allEvents is empty', 'error');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Calendar initialization failed: ${error.message}`, 'error');
+                addLog(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+        
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            addLog(`[LOG] ${args.join(' ')}`);
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addLog(`[ERROR] ${args.join(' ')}`, 'error');
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addLog(`[WARN] ${args.join(' ')}`);
+            originalWarn.apply(console, args);
+        };
+        
+        // Run the test
+        testCalendarInit();
+    </script>
+</body>
+</html>

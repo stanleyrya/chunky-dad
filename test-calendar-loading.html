@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Calendar Loading Logic</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .step { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        pre { background: #f8f9fa; padding: 10px; overflow: auto; max-height: 200px; }
+    </style>
+</head>
+<body>
+    <h1>Test Calendar Loading Logic</h1>
+    <div id="steps"></div>
+
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/calendar-core.js"></script>
+
+    <script>
+        const steps = document.getElementById('steps');
+        
+        function addStep(title, success, details) {
+            const div = document.createElement('div');
+            div.className = `step ${success ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <h3>${success ? '✅' : '❌'} ${title}</h3>
+                <pre>${details}</pre>
+            `;
+            steps.appendChild(div);
+        }
+
+        async function testCalendarLoading() {
+            const cityKey = 'new-york';
+            
+            try {
+                // Step 1: Get city config
+                const cityConfig = getCityConfig(cityKey);
+                if (!cityConfig) {
+                    addStep('City Config', false, `No config found for ${cityKey}`);
+                    return;
+                }
+                addStep('City Config', true, `Found: ${cityConfig.name}\nCalendar ID: ${cityConfig.calendarId}`);
+                
+                // Step 2: Fetch calendar data
+                const cachedDataUrl = `data/calendars/${cityKey}.ics`;
+                const response = await fetch(cachedDataUrl);
+                
+                if (!response.ok) {
+                    addStep('Fetch Calendar', false, `HTTP ${response.status}: ${response.statusText}`);
+                    return;
+                }
+                addStep('Fetch Calendar', true, `Status: ${response.status}\nURL: ${cachedDataUrl}`);
+                
+                // Step 3: Get text
+                const icalText = await response.text();
+                addStep('Get Text', true, `Length: ${icalText.length} bytes\nFirst line: ${icalText.split('\n')[0]}`);
+                
+                // Step 4: Validate iCal data
+                if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
+                    addStep('Validate iCal', false, 'Invalid iCal data - missing BEGIN:VCALENDAR');
+                    return;
+                }
+                
+                const eventCount = (icalText.match(/BEGIN:VEVENT/g) || []).length;
+                addStep('Validate iCal', true, `Valid iCal data\nEvents found: ${eventCount}`);
+                
+                // Step 5: Parse with CalendarCore
+                const calendarCore = new CalendarCore();
+                const events = calendarCore.parseICalData(icalText);
+                
+                if (!events || events.length === 0) {
+                    addStep('Parse Events', false, 'No events parsed from iCal data');
+                    return;
+                }
+                
+                addStep('Parse Events', true, `Parsed ${events.length} events\nFirst event: ${events[0].name || 'No name'}`);
+                
+                // Step 6: Show sample event data
+                const sampleEvent = events[0];
+                const eventDetails = `
+Name: ${sampleEvent.name || 'N/A'}
+Day: ${sampleEvent.day || 'N/A'}
+Time: ${sampleEvent.time || 'N/A'}
+Bar: ${sampleEvent.bar || 'N/A'}
+Recurring: ${sampleEvent.recurring || false}
+Start Date: ${sampleEvent.startDate || 'N/A'}
+                `.trim();
+                
+                addStep('Sample Event', true, eventDetails);
+                
+                addStep('OVERALL RESULT', true, `✅ Calendar loading should work!\n${events.length} events successfully loaded and parsed.`);
+                
+            } catch (error) {
+                addStep('ERROR', false, `${error.message}\nStack: ${error.stack}`);
+            }
+        }
+        
+        // Run the test
+        testCalendarLoading();
+    </script>
+</body>
+</html>
