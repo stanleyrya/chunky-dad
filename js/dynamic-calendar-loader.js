@@ -1033,17 +1033,19 @@ class DynamicCalendarLoader extends CalendarCore {
             step: 'Step 3: Loading real calendar data'
         });
         
-        // CORS proxy for calendar data fetching - multiple attempts with progressive delays
+        // Multiple CORS proxies with exponential backoff and much longer timeouts
         const corsProxies = [
             'https://api.allorigins.win/raw?url=',
-            'https://api.allorigins.win/raw?url=', // Second attempt after 1s delay
-            'https://api.allorigins.win/raw?url='  // Third attempt after 3s delay
-            // Note: Other proxies like corsproxy.io and codetabs.com are currently broken
+            'https://cors-anywhere.herokuapp.com/', // Alternative proxy
+            'https://api.codetabs.com/v1/proxy?quest=', // Another alternative
+            'https://api.allorigins.win/raw?url=', // Retry first proxy with longer timeout
+            'https://api.allorigins.win/raw?url='  // Final attempt with maximum patience
         ];
         
-        // Progressive timeout strategy: start fast, get progressively more patient
-        const timeouts = [1000, 3000, 5000]; // 1s, 3s, 5s
-        const delays = [0, 1000, 3000]; // No delay for first attempt, then 1s, 3s delays
+        // Exponential backoff with much more generous timeouts for CORS proxy requests
+        // Research shows CORS proxies often need 10-30 seconds, especially under load
+        const timeouts = [5000, 10000, 15000, 20000, 30000]; // 5s, 10s, 15s, 20s, 30s
+        const delays = [0, 2000, 5000, 8000, 12000]; // Exponential backoff: 0, 2s, 5s, 8s, 12s
         
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
         
@@ -1053,11 +1055,12 @@ class DynamicCalendarLoader extends CalendarCore {
             const delay = delays[i] || 0;
             const fullUrl = corsProxy + encodeURIComponent(icalUrl);
             
-            // Wait before attempting (except for first attempt)
+            // Wait before attempting (exponential backoff)
             if (delay > 0) {
-                logger.debug('CALENDAR', `Waiting ${delay}ms before next attempt`, {
+                logger.debug('CALENDAR', `Exponential backoff: waiting ${delay}ms before attempt ${i + 1}`, {
                     attempt: i + 1,
-                    delay: `${delay}ms`
+                    delay: `${delay}ms`,
+                    reason: 'exponential_backoff'
                 });
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
@@ -1066,29 +1069,42 @@ class DynamicCalendarLoader extends CalendarCore {
                 logger.debug('CALENDAR', `Attempting connection ${i + 1}/${corsProxies.length}`, {
                     proxy: corsProxy,
                     attempt: i + 1,
-                    timeout: `${timeout}ms`
+                    timeout: `${timeout}ms`,
+                    strategy: 'exponential_backoff_with_generous_timeouts'
                 });
                 
                 // Update loading message with current attempt info
                 this.updateLoadingMessage(i + 1, timeout);
                 
+                // Create AbortController for better browser compatibility
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                }, timeout);
+                
                 const response = await fetch(fullUrl, {
                     method: 'GET',
                     headers: {
-                        'Accept': 'text/calendar,text/plain,*/*'
+                        'Accept': 'text/calendar,text/plain,*/*',
+                        'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad calendar loader)'
                     },
-                    // Progressive timeout: start with 1s, then 2s, then 3s
-                    signal: AbortSignal.timeout(timeout)
+                    signal: controller.signal,
+                    // Add cache control to potentially get faster responses
+                    cache: 'no-cache'
                 });
+                
+                // Clear timeout if request succeeds
+                clearTimeout(timeoutId);
                 
                 if (!response.ok) {
                     const errorMsg = `HTTP error! status: ${response.status} ${response.statusText}`;
-                    logger.warn('CALENDAR', `CORS proxy ${i + 1} failed`, {
+                    logger.warn('CALENDAR', `CORS proxy ${i + 1} returned HTTP error`, {
                         proxy: corsProxy,
                         status: response.status,
                         statusText: response.statusText,
                         url: fullUrl,
-                        timeout: `${timeout}ms`
+                        timeout: `${timeout}ms`,
+                        willRetry: i < corsProxies.length - 1
                     });
                     
                     // If this isn't the last proxy, continue to next one
@@ -1101,15 +1117,15 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 const icalText = await response.text();
                 
-
-                
                 // Validate that we got actual iCal data, not an error page
                 if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
-                    logger.warn('CALENDAR', `CORS proxy ${i + 1} returned invalid data`, {
+                    logger.warn('CALENDAR', `CORS proxy ${i + 1} returned invalid iCal data`, {
                         proxy: corsProxy,
                         dataLength: icalText?.length || 0,
                         dataPreview: icalText?.substring(0, 100) || 'No data',
-                        timeout: `${timeout}ms`
+                        timeout: `${timeout}ms`,
+                        willRetry: i < corsProxies.length - 1,
+                        validationFailed: 'missing_vcalendar_header'
                     });
                     
                     // If this isn't the last proxy, continue to next one
@@ -1127,17 +1143,19 @@ class DynamicCalendarLoader extends CalendarCore {
                     proxyUsed: corsProxy,
                     attemptNumber: i + 1,
                     timeout: `${timeout}ms`,
-                    totalTimeElapsed: `${Date.now() - logger.getTimestamp('CALENDAR', `Loading ${cityConfig.name} calendar data`)}ms`
+                    totalTimeElapsed: `${Date.now() - logger.getTimestamp('CALENDAR', `Loading ${cityConfig.name} calendar data`)}ms`,
+                    strategy: 'exponential_backoff_success'
                 });
                 
                 // Log sample of the fetched data for debugging
                 if (icalText.length > 0) {
-                    logger.debug('CALENDAR', 'Raw iCal data sample', {
+                    logger.debug('CALENDAR', 'Raw iCal data validation', {
                         firstLine: icalText.split('\n')[0],
                         hasEvents: icalText.includes('BEGIN:VEVENT'),
                         eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
                         calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
-                        encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format'
+                        encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format',
+                        dataSize: `${(icalText.length / 1024).toFixed(1)}KB`
                     });
                 } else {
                     logger.warn('CALENDAR', 'Empty iCal data received', {
@@ -1150,8 +1168,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 // Store all events for filtering
                 this.allEvents = events;
-                
-
                 
                 this.eventsData = {
                     cityConfig,
@@ -1168,31 +1184,39 @@ class DynamicCalendarLoader extends CalendarCore {
                     hasTimezoneData: !!this.timezoneData,
                     proxyUsed: corsProxy,
                     attemptNumber: i + 1,
-                    timeout: `${timeout}ms`
+                    timeout: `${timeout}ms`,
+                    strategy: 'exponential_backoff_final_success'
                 });
                 return this.eventsData;
                 
             } catch (error) {
                 const isTimeout = error.name === 'AbortError';
-                logger.warn('CALENDAR', `Connection ${i + 1} failed with error`, {
+                const isNetworkError = error.name === 'TypeError' && error.message.includes('fetch');
+                
+                logger.warn('CALENDAR', `Connection ${i + 1} failed`, {
                     proxy: corsProxy,
                     error: error.message,
                     errorName: error.name,
                     attempt: i + 1,
                     timeout: `${timeout}ms`,
-                    isTimeout
+                    isTimeout,
+                    isNetworkError,
+                    willRetry: i < corsProxies.length - 1,
+                    nextDelay: i < corsProxies.length - 1 ? `${delays[i + 1] || 0}ms` : 'none'
                 });
                 
                 // If this is the last proxy, log the final error
                 if (i === corsProxies.length - 1) {
-                    logger.componentError('CALENDAR', 'All CORS proxies failed - calendar data unavailable', {
+                    logger.componentError('CALENDAR', 'All CORS proxies exhausted - calendar data unavailable', {
                         cityKey,
                         cityName: cityConfig.name,
                         totalAttempts: corsProxies.length,
                         finalError: error.message,
                         proxiesTried: corsProxies,
                         timeoutsUsed: timeouts,
-                        delaysUsed: delays
+                        delaysUsed: delays,
+                        strategy: 'exponential_backoff_all_failed',
+                        recommendation: 'Try refreshing page in 30-60 seconds, or check CORS proxy status'
                     });
                     // Clear fake event from allEvents to prevent it from showing
                     this.allEvents = [];
@@ -1225,9 +1249,14 @@ class DynamicCalendarLoader extends CalendarCore {
     updateLoadingMessage(attemptNumber, timeout) {
         const eventsList = document.querySelector('.events-list');
         if (eventsList) {
-            const message = attemptNumber === 1 
-                ? '📅 Loading events...' 
-                : `📅 Loading events... (${attemptNumber}/3)`;
+            let message;
+            if (attemptNumber === 1) {
+                message = '📅 Loading events...';
+            } else if (attemptNumber <= 3) {
+                message = `📅 Loading events... (${attemptNumber}/5)`;
+            } else {
+                message = `📅 Still loading... (${attemptNumber}/5) - This may take up to 30 seconds`;
+            }
             
             const loadingDiv = eventsList.querySelector('.loading-message');
             if (loadingDiv) {
@@ -1239,7 +1268,8 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('CALENDAR', 'Updated loading message', {
                 attemptNumber,
                 timeout,
-                message
+                message,
+                strategy: 'exponential_backoff_user_feedback'
             });
         }
     }
