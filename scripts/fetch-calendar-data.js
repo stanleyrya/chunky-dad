@@ -20,18 +20,15 @@ if (!configMatch) {
     process.exit(1);
 }
 
-// Parse the config (simplified approach for testing)
-const configString = configMatch[1]
-    .replace(/'/g, '"')
-    .replace(/(\w+):/g, '"$1":')
-    .replace(/,\s*}/g, '}');
-
+// Parse the config using eval (safe in Node.js environment)
 let cityConfig;
 try {
-    cityConfig = JSON.parse(`{${configString}}`);
+    // Use eval to parse the JavaScript object literal safely
+    const configCode = `(${configMatch[1]})`;
+    cityConfig = eval(configCode);
 } catch (e) {
     console.error('❌ Could not parse city config:', e.message);
-    console.error('Config string:', configString.substring(0, 200) + '...');
+    console.error('Config match:', configMatch[1].substring(0, 200) + '...');
     process.exit(1);
 }
 
