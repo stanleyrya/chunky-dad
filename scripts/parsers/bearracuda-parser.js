@@ -164,7 +164,7 @@ class BearraccudaParser {
                 location: null, // No coordinates available in HTML parsing
                 address: address,
                 city: city,
-                website: links.eventbrite || sourceUrl, // Prefer eventbrite link if available
+                website: sourceUrl, // Always use the bearracuda.com detail page URL
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
                 gmaps: this.generateGoogleMapsUrl(address),
