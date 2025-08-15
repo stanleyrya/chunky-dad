@@ -1,5 +1,5 @@
 {
-  "generated": "2025-08-15T21:54:38.753Z",
+  "generated": "2025-08-15T23:25:18.950Z",
   "files": [
     {
       "name": "breakpoint-test.html",
@@ -40,11 +40,6 @@
       "name": "style-test.html",
       "size": 26360,
       "modified": "2025-08-15T21:47:45.860Z"
-    },
-    {
-      "name": "test-bearracuda-fix.html",
-      "size": 9189,
-      "modified": "2025-08-15T21:54:34.388Z"
     },
     {
       "name": "test-calendar-logging.html",
