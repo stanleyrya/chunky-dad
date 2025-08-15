@@ -765,6 +765,34 @@ class SharedCore {
     }
 
     // URL processing utilities
+    
+    // Scriptable-compatible URL parsing utility
+    parseUrl(url) {
+        if (!url || typeof url !== 'string') return null;
+        
+        try {
+            // Simple regex-based URL parsing that works in Scriptable
+            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+            const match = url.match(urlPattern);
+            
+            if (!match) return null;
+            
+            const [, protocol, host, pathname = '/', search = '', hash = ''] = match;
+            
+            return {
+                protocol,
+                host,
+                hostname: host.split(':')[0], // Remove port if present
+                pathname,
+                search,
+                hash,
+                href: url
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+    
     extractUrls(html, patterns, baseUrl) {
         const urls = new Set();
         
@@ -791,14 +819,18 @@ class SharedCore {
         
         // Handle relative URLs
         if (url.startsWith('/')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}//${base.host}${url}`;
+            const base = this.parseUrl(baseUrl);
+            if (base) {
+                return `${base.protocol}//${base.host}${url}`;
+            }
         }
         
         // Handle protocol-relative URLs
         if (url.startsWith('//')) {
-            const base = new URL(baseUrl);
-            return `${base.protocol}${url}`;
+            const base = this.parseUrl(baseUrl);
+            if (base) {
+                return `${base.protocol}${url}`;
+            }
         }
         
         return url;
@@ -807,12 +839,8 @@ class SharedCore {
     isValidUrl(url) {
         if (!url || typeof url !== 'string') return false;
         
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
-        }
+        const parsed = this.parseUrl(url);
+        return parsed !== null;
     }
 
     // Date utilities

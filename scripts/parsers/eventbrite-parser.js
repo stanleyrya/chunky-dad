@@ -616,14 +616,21 @@ class EventbriteParser {
      isValidEventUrl(url, parserConfig) {
          if (!url || typeof url !== 'string') return false;
          
-         try {
-             const urlObj = new URL(url);
-             
-             // Must be Eventbrite domain
-             if (!urlObj.hostname.includes('eventbrite.com')) return false;
-             
-             // Must be event page
-             if (!urlObj.pathname.includes('/e/')) return false;
+                 try {
+            // Use simple URL parsing that works in Scriptable
+            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+            const match = url.match(urlPattern);
+            
+            if (!match) return false;
+            
+            const [, protocol, host, pathname = '/', search = '', hash = ''] = match;
+            const hostname = host.split(':')[0]; // Remove port if present
+            
+            // Must be Eventbrite domain
+            if (!hostname.includes('eventbrite.com')) return false;
+            
+            // Must be event page
+            if (!pathname.includes('/e/')) return false;
              
              // Apply URL filters if configured
              if (parserConfig.urlFilters) {
@@ -697,17 +704,27 @@ class EventbriteParser {
          // Remove HTML entities
          url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
          
-         // Handle relative URLs
-         if (url.startsWith('/')) {
-             const base = new URL(baseUrl);
-             return `${base.protocol}//${base.host}${url}`;
-         }
-         
-         // Handle protocol-relative URLs
-         if (url.startsWith('//')) {
-             const base = new URL(baseUrl);
-             return `${base.protocol}${url}`;
-         }
+                 // Handle relative URLs
+        if (url.startsWith('/')) {
+            // Simple URL parsing for Scriptable compatibility
+            const urlPattern = /^(https?:)\/\/([^\/]+)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol, host] = match;
+                return `${protocol}//${host}${url}`;
+            }
+        }
+        
+        // Handle protocol-relative URLs
+        if (url.startsWith('//')) {
+            // Simple URL parsing for Scriptable compatibility
+            const urlPattern = /^(https?:)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol] = match;
+                return `${protocol}${url}`;
+            }
+        }
          
          return url;
      }
