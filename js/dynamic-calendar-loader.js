@@ -1033,31 +1033,42 @@ class DynamicCalendarLoader extends CalendarCore {
             step: 'Step 3: Loading real calendar data'
         });
         
-        // CORS proxy for calendar data fetching
+        // CORS proxy for calendar data fetching - multiple proxies for better reliability
         const corsProxies = [
-            'https://api.allorigins.win/raw?url='
+            'https://api.allorigins.win/raw?url=',
+            'https://api.allorigins.win/raw?url=', // Retry same proxy with different timeout
+            'https://api.allorigins.win/raw?url='  // Third attempt with longest timeout
             // Note: Other proxies like corsproxy.io and codetabs.com are currently broken
         ];
+        
+        // Progressive timeout strategy: start very fast, get progressively more patient
+        const timeouts = [1000, 2000, 3000]; // 1s, 2s, 3s
         
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
         
         for (let i = 0; i < corsProxies.length; i++) {
             const corsProxy = corsProxies[i];
+            const timeout = timeouts[i] || timeouts[timeouts.length - 1];
             const fullUrl = corsProxy + encodeURIComponent(icalUrl);
             
             try {
                 logger.debug('CALENDAR', `Attempting CORS proxy ${i + 1}/${corsProxies.length}`, {
                     proxy: corsProxy,
-                    attempt: i + 1
+                    attempt: i + 1,
+                    timeout: `${timeout}ms`,
+                    strategy: i === 0 ? 'lightning_attempt' : i === 1 ? 'quick_attempt' : 'standard_attempt'
                 });
+                
+                // Update loading message with current attempt info
+                this.updateLoadingMessage(i + 1, timeout);
                 
                 const response = await fetch(fullUrl, {
                     method: 'GET',
                     headers: {
                         'Accept': 'text/calendar,text/plain,*/*'
                     },
-                    // Add timeout to prevent hanging requests (reduced to 10 seconds)
-                    signal: AbortSignal.timeout(10000)
+                    // Progressive timeout: start with 1s, then 2s, then 3s
+                    signal: AbortSignal.timeout(timeout)
                 });
                 
                 if (!response.ok) {
@@ -1066,7 +1077,8 @@ class DynamicCalendarLoader extends CalendarCore {
                         proxy: corsProxy,
                         status: response.status,
                         statusText: response.statusText,
-                        url: fullUrl
+                        url: fullUrl,
+                        timeout: `${timeout}ms`
                     });
                     
                     // If this isn't the last proxy, continue to next one
@@ -1086,7 +1098,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     logger.warn('CALENDAR', `CORS proxy ${i + 1} returned invalid data`, {
                         proxy: corsProxy,
                         dataLength: icalText?.length || 0,
-                        dataPreview: icalText?.substring(0, 100) || 'No data'
+                        dataPreview: icalText?.substring(0, 100) || 'No data',
+                        timeout: `${timeout}ms`
                     });
                     
                     // If this isn't the last proxy, continue to next one
@@ -1101,7 +1114,10 @@ class DynamicCalendarLoader extends CalendarCore {
                     dataLength: icalText.length,
                     city: cityConfig.name,
                     url: icalUrl,
-                    proxyUsed: corsProxy
+                    proxyUsed: corsProxy,
+                    attemptNumber: i + 1,
+                    timeout: `${timeout}ms`,
+                    totalTimeElapsed: `${Date.now() - logger.getTimestamp('CALENDAR', `Loading ${cityConfig.name} calendar data`)}ms`
                 });
                 
                 // Log sample of the fetched data for debugging
@@ -1140,17 +1156,22 @@ class DynamicCalendarLoader extends CalendarCore {
                     cityKey,
                     calendarTimezone: this.calendarTimezone,
                     hasTimezoneData: !!this.timezoneData,
-                    proxyUsed: corsProxy
+                    proxyUsed: corsProxy,
+                    attemptNumber: i + 1,
+                    timeout: `${timeout}ms`
                 });
                 return this.eventsData;
                 
             } catch (error) {
+                const isTimeout = error.name === 'AbortError';
                 logger.warn('CALENDAR', `CORS proxy ${i + 1} failed with error`, {
                     proxy: corsProxy,
                     error: error.message,
                     errorName: error.name,
                     attempt: i + 1,
-                    isTimeout: error.name === 'AbortError'
+                    timeout: `${timeout}ms`,
+                    isTimeout,
+                    timeoutStrategy: i === 0 ? 'lightning_timeout' : i === 1 ? 'quick_timeout' : 'standard_timeout'
                 });
                 
                 // If this is the last proxy, log the final error
@@ -1160,7 +1181,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         cityName: cityConfig.name,
                         totalAttempts: corsProxies.length,
                         finalError: error.message,
-                        proxiesTried: corsProxies
+                        proxiesTried: corsProxies,
+                        timeoutsUsed: timeouts,
+                        allTimeouts: corsProxies.map((_, idx) => timeouts[idx] || timeouts[timeouts.length - 1])
                     });
                     // Clear fake event from allEvents to prevent it from showing
                     this.allEvents = [];
@@ -1178,6 +1201,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 <h3>📅 Calendar Temporarily Unavailable</h3>
                 <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
                 <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
+                <p class="error-details">We attempted multiple connections with progressive timeouts (1s → 2s → 3s) but couldn't reach the calendar service.</p>
             </div>
         `;
         
@@ -1187,6 +1211,30 @@ class DynamicCalendarLoader extends CalendarCore {
             eventsContainer.innerHTML = errorMessage;
         }
 
+    }
+
+    // Update loading message with retry information
+    updateLoadingMessage(attemptNumber, timeout) {
+        const eventsList = document.querySelector('.events-list');
+        if (eventsList) {
+                         const strategy = attemptNumber === 1 ? 'Lightning attempt' : 
+                           attemptNumber === 2 ? 'Quick attempt' : 'Standard attempt';
+            const message = `📅 Getting events... (${strategy}: ${timeout/1000}s timeout)`;
+            
+            const loadingDiv = eventsList.querySelector('.loading-message');
+            if (loadingDiv) {
+                loadingDiv.textContent = message;
+            } else {
+                eventsList.innerHTML = `<div class="loading-message">${message}</div>`;
+            }
+            
+            logger.debug('CALENDAR', 'Updated loading message', {
+                attemptNumber,
+                timeout,
+                strategy,
+                message
+            });
+        }
     }
 
 
@@ -2394,10 +2442,10 @@ calculatedData: {
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         
         try {
-            // Add timeout to prevent hanging initialization
+            // Add timeout to prevent hanging initialization - reduced to 10s to account for 3 fast retry attempts (1s + 2s + 3s + overhead)
             const initPromise = this.renderCityPage();
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Calendar initialization timeout after 15 seconds')), 15000);
+                setTimeout(() => reject(new Error('Calendar initialization timeout after 10 seconds')), 10000);
             });
             
             await Promise.race([initPromise, timeoutPromise]);
