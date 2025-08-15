@@ -114,6 +114,64 @@
           "merge": "clobber"
         }
       }
+    },
+    {
+      "name": "Bearracuda Events",
+      "parser": "bearracuda",
+      "enabled": true,
+      "urls": [
+        "https://bearracuda.com/events/",
+        "https://bearracuda.com/events/atlantabearpride/"
+      ],
+      "alwaysBear": true,
+      "requireDetailPages": true,
+      "maxAdditionalUrls": 20,
+      "dryRun": true,
+      "daysToLookAhead": null,
+      "mergeMode": "upsert",
+      "urlFilters": {
+        "include": ["bearracuda\\.com\\/events\\/"]
+      },
+      "metadata": {
+        "title": {
+          "merge": "upsert"
+        },
+        "shortName": {
+          "value": "Bearracuda",
+          "merge": "upsert"
+        },
+        "instagram": {
+          "value": "https://www.instagram.com/bearracuda",
+          "merge": "upsert"
+        },
+        "description": {
+          "merge": "upsert"
+        },
+        "bar": {
+          "merge": "clobber"
+        },
+        "address": {
+          "merge": "clobber"
+        },
+        "startDate": {
+          "merge": "clobber"
+        },
+        "endDate": {
+          "merge": "clobber"
+        },
+        "website": {
+          "merge": "clobber"
+        },
+        "gmaps": {
+          "merge": "clobber"
+        },
+        "image": {
+          "merge": "clobber"
+        },
+        "cover": {
+          "merge": "clobber"
+        }
+      }
     }
   ],
   "calendarMappings": {
