@@ -199,25 +199,41 @@ class DebugOverlay {
             { id: 'debug-network-info', method: 'showNetworkInfo' }
         ];
         
-        buttons.forEach(({ id, method }) => {
-            const button = this.overlay.querySelector(`#${id}`);
-            if (button) {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    try {
-                        this[method]();
-                        logger.userInteraction('SYSTEM', `Debug button clicked: ${method}`);
-                    } catch (error) {
-                        logger.error('SYSTEM', `Debug button error: ${method}`, error);
-                        console.error(`Debug overlay button error (${method}):`, error);
-                    }
-                });
-                logger.debug('SYSTEM', `Debug button initialized: ${id}`);
-            } else {
-                logger.warn('SYSTEM', `Debug button not found: ${id}`);
-            }
-        });
+        // Add small delay to ensure DOM is fully ready
+        setTimeout(() => {
+            buttons.forEach(({ id, method }) => {
+                const button = this.overlay.querySelector(`#${id}`);
+                if (button) {
+                    // Ensure button is clickable
+                    button.style.pointerEvents = 'auto';
+                    button.style.cursor = 'pointer';
+                    
+                    button.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        try {
+                            console.log(`Debug button clicked: ${method}`); // Add console log for immediate feedback
+                            this[method]();
+                            logger.userInteraction('SYSTEM', `Debug button clicked: ${method}`);
+                        } catch (error) {
+                            logger.error('SYSTEM', `Debug button error: ${method}`, error);
+                            console.error(`Debug overlay button error (${method}):`, error);
+                        }
+                    });
+                    
+                    // Also add mousedown event for better responsiveness
+                    button.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log(`Debug button mousedown: ${method}`);
+                    });
+                    
+                    logger.debug('SYSTEM', `Debug button initialized: ${id}`);
+                } else {
+                    logger.warn('SYSTEM', `Debug button not found: ${id}`);
+                }
+            });
+        }, 100); // Small delay to ensure DOM is ready
     }
     
     setupMobileOptimizations() {
