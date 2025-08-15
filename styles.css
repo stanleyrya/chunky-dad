@@ -3769,6 +3769,47 @@ footer {
     z-index: 10;
 }
 
+/* Error Message Styles */
+.error-message {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--background-lighter);
+    border-radius: 8px;
+    border-left: 4px solid #f44336;
+    margin: 20px 0;
+}
+
+.error-message h3 {
+    color: #f44336;
+    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+}
+
+.error-message p {
+    color: var(--text-secondary);
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.retry-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
 .no-events-message {
     text-align: center;
     padding: 40px 20px;

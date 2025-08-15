@@ -2304,12 +2304,33 @@ calculatedData: {
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         
         try {
-            await this.renderCityPage();
+            // Add timeout to prevent hanging initialization
+            const initPromise = this.renderCityPage();
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Calendar initialization timeout after 15 seconds')), 15000);
+            });
+            
+            await Promise.race([initPromise, timeoutPromise]);
             this.isInitialized = true;
             logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
         } catch (error) {
             logger.componentError('CALENDAR', 'Calendar initialization failed', error);
-            throw error;
+            
+            // Show error message in events container if initialization fails
+            const eventsContainer = document.querySelector('.events-list');
+            if (eventsContainer) {
+                eventsContainer.innerHTML = `
+                    <div class="error-message">
+                        <h3>📅 Calendar Loading Failed</h3>
+                        <p>We're having trouble loading events for this city.</p>
+                        <p><strong>Try:</strong> Refreshing the page or check back later.</p>
+                        <button onclick="location.reload()" class="retry-btn">🔄 Retry</button>
+                    </div>
+                `;
+            }
+            
+            // Don't throw error to prevent app from crashing
+            logger.warn('CALENDAR', 'Calendar initialization failed, but continuing app startup');
         } finally {
             this.isInitializing = false;
         }
