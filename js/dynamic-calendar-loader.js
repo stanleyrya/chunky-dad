@@ -1046,13 +1046,23 @@ class DynamicCalendarLoader extends CalendarCore {
             // Update loading message
             this.updateLoadingMessage(1, 'cached');
             
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, 25000); // 25 second timeout for local data loading
+            
             const response = await fetch(cachedDataUrl, {
                 method: 'GET',
                 headers: {
                     'Accept': 'text/calendar,text/plain,*/*'
                 },
-                cache: 'default' // Use browser cache for efficiency
+                cache: 'default', // Use browser cache for efficiency
+                signal: controller.signal
             });
+            
+            // Clear timeout if request completes
+            clearTimeout(timeoutId);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1109,14 +1119,25 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.eventsData;
             
         } catch (error) {
-            logger.warn('CALENDAR', 'Failed to load cached calendar data, trying fallback', {
-                cityKey,
-                cityName: cityConfig.name,
-                cachedDataUrl,
-                error: error.message,
-                errorName: error.name,
-                willTryFallback: true
-            });
+            // Handle timeout specifically
+            if (error.name === 'AbortError') {
+                logger.warn('CALENDAR', 'Cached calendar data loading timed out after 25 seconds, trying fallback', {
+                    cityKey,
+                    cityName: cityConfig.name,
+                    cachedDataUrl,
+                    error: 'Timeout after 25 seconds',
+                    willTryFallback: true
+                });
+            } else {
+                logger.warn('CALENDAR', 'Failed to load cached calendar data, trying fallback', {
+                    cityKey,
+                    cityName: cityConfig.name,
+                    cachedDataUrl,
+                    error: error.message,
+                    errorName: error.name,
+                    willTryFallback: true
+                });
+            }
             
             // Fallback: try to load directly from Google (will likely fail due to CORS, but worth trying)
             return this.loadCalendarDataFallback(cityKey, cityConfig);
@@ -1136,13 +1157,23 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             this.updateLoadingMessage(1, 'direct');
             
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, 30000); // 30 second timeout for CORS fallback
+            
             const response = await fetch(icalUrl, {
                 method: 'GET',
                 headers: {
                     'Accept': 'text/calendar,text/plain,*/*'
                 },
-                cache: 'no-cache'
+                cache: 'no-cache',
+                signal: controller.signal
             });
+            
+            // Clear timeout if request completes
+            clearTimeout(timeoutId);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1173,12 +1204,22 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.eventsData;
             
         } catch (error) {
-            logger.componentError('CALENDAR', 'Fallback failed: Calendar data unavailable', {
-                cityKey,
-                cityName: cityConfig.name,
-                fallbackError: error.message,
-                recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
-            });
+            // Handle timeout specifically
+            if (error.name === 'AbortError') {
+                logger.componentError('CALENDAR', 'Fallback failed: Calendar data request timed out after 30 seconds', {
+                    cityKey,
+                    cityName: cityConfig.name,
+                    fallbackError: 'Timeout after 30 seconds',
+                    recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
+                });
+            } else {
+                logger.componentError('CALENDAR', 'Fallback failed: Calendar data unavailable', {
+                    cityKey,
+                    cityName: cityConfig.name,
+                    fallbackError: error.message,
+                    recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
+                });
+            }
             
             // Clear fake event from allEvents to prevent it from showing
             this.allEvents = [];
