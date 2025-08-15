@@ -1136,23 +1136,22 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             this.updateLoadingMessage(1, 'direct');
             
-            // Create AbortController for timeout - ONLY for CORS requests
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
-                controller.abort();
-            }, 25000); // 25 second timeout for CORS fallback
-            
-            const response = await fetch(icalUrl, {
+            // Simple timeout implementation using Promise.race
+            const fetchPromise = fetch(icalUrl, {
                 method: 'GET',
                 headers: {
                     'Accept': 'text/calendar,text/plain,*/*'
                 },
-                cache: 'no-cache',
-                signal: controller.signal
+                cache: 'no-cache'
             });
             
-            // Clear timeout if request completes
-            clearTimeout(timeoutId);
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error('Request timed out after 25 seconds'));
+                }, 25000); // 25 second timeout for CORS fallback
+            });
+            
+            const response = await Promise.race([fetchPromise, timeoutPromise]);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1184,7 +1183,7 @@ class DynamicCalendarLoader extends CalendarCore {
             
         } catch (error) {
             // Handle timeout specifically
-            if (error.name === 'AbortError') {
+            if (error.message.includes('timed out')) {
                 logger.componentError('CALENDAR', 'Fallback failed: CORS request timed out after 25 seconds', {
                     cityKey,
                     cityName: cityConfig.name,
