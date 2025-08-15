@@ -456,9 +456,59 @@ class DynamicCalendarLoader extends CalendarCore {
             return sourceName;
         }
         
+        let result = filteredWords.join(' ');
+        
+        // For single long words, add intelligent hyphenation points for better breaking
+        if (filteredWords.length === 1 && filteredWords[0].length > 8) {
+            result = this.addIntelligentHyphens(filteredWords[0]);
+        }
+        
         // Return the filtered name - CSS word-wrap will handle the display
         // The key is that this version should have better breakpoints than the original
-        return filteredWords.join(' ');
+        return result;
+    }
+    
+    // Add intelligent hyphenation points to long single words
+    addIntelligentHyphens(word) {
+        if (!word || word.length <= 8) return word;
+        
+        // Common patterns for hyphenation in event names
+        const patterns = [
+            // Bear community specific terms
+            { pattern: /^(Rock)(strap)$/i, replacement: '$1-$2' },
+            { pattern: /^(Under)(wear)$/i, replacement: '$1-$2' },
+            { pattern: /^(Leather)(daddy|bear|night)$/i, replacement: '$1-$2' },
+            { pattern: /^(Bear)(night|party|weekend)$/i, replacement: '$1-$2' },
+            { pattern: /^(Happy)(hour)$/i, replacement: '$1-$2' },
+            { pattern: /^(After)(party|hours)$/i, replacement: '$1-$2' },
+            { pattern: /^(Pre)(game|party)$/i, replacement: '$1-$2' },
+            { pattern: /^(Post)(game|party|work)$/i, replacement: '$1-$2' },
+            { pattern: /^(Mid)(week|night)$/i, replacement: '$1-$2' },
+            { pattern: /^(Week)(end|night)$/i, replacement: '$1-$2' },
+            
+            // General compound word patterns
+            { pattern: /^(.{4,6})(night|party|fest|event)$/i, replacement: '$1-$2' },
+            { pattern: /^(night|party|bear)(.{4,})$/i, replacement: '$1-$2' },
+        ];
+        
+        // Try each pattern
+        for (const { pattern, replacement } of patterns) {
+            if (pattern.test(word)) {
+                const result = word.replace(pattern, replacement);
+                logger.debug('CALENDAR', `🔍 HYPHEN: Added intelligent hyphen to "${word}" → "${result}"`);
+                return result;
+            }
+        }
+        
+        // Fallback: add hyphen after 4-6 characters if no pattern matches
+        if (word.length > 8) {
+            const breakPoint = Math.min(6, Math.floor(word.length / 2));
+            const result = word.slice(0, breakPoint) + '-' + word.slice(breakPoint);
+            logger.debug('CALENDAR', `🔍 HYPHEN: Added fallback hyphen to "${word}" → "${result}"`);
+            return result;
+        }
+        
+        return word;
     }
 
     // ========== SOFT HYPHENATION METHODS ==========
@@ -515,17 +565,42 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
-        const totalCharsAvailable = charLimitPerLine * 3;
         
-        // 1. Use full title if there's space for it
-        if (fullName.length <= totalCharsAvailable) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Full title fits, using: "${fullName}"`);
+        logger.info('CALENDAR', `🔍 SMART_NAME: Character limit calculation`, {
+            availableWidth: availableWidth?.toFixed(2),
+            charsPerPixel: charsPerPixel?.toFixed(4),
+            charLimitPerLine,
+            fullNameLength: fullName.length,
+            shorterNameLength: shorterName?.length || 0,
+            shortNameLength: shortName?.length || 0
+        });
+        
+        // Check if the name can fit properly by considering word wrapping
+        // For names longer than one line, we need to be more conservative
+        const canFitInOneLineWithBreaking = (name) => {
+            // If the entire name fits in one line, it's definitely okay
+            if (name.length <= charLimitPerLine) {
+                return true;
+            }
+            
+            // For longer names, check if they can break nicely across lines
+            // We need to account for word boundaries and hyphenation
+            const words = name.split(/[\s-]+/);
+            const longestWord = Math.max(...words.map(word => word.length));
+            
+            // If the longest word fits in one line, the name can wrap
+            return longestWord <= charLimitPerLine;
+        };
+        
+        // 1. Use full title if it can fit properly with word wrapping
+        if (canFitInOneLineWithBreaking(fullName)) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Full title can fit with proper wrapping, using: "${fullName}"`);
             return fullName;
         }
         
-        // 2. Use shorter name if we only have space for that
-        if (shorterName && shorterName.length <= totalCharsAvailable) {
-            logger.info('CALENDAR', `🔍 SMART_NAME: Only space for shorter name, using: "${shorterName}"`);
+        // 2. Use shorter name if we have one and it fits properly
+        if (shorterName && canFitInOneLineWithBreaking(shorterName)) {
+            logger.info('CALENDAR', `🔍 SMART_NAME: Shorter name fits with proper wrapping, using: "${shorterName}"`);
             return shorterName;
         }
         
