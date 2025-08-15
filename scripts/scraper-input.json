@@ -120,10 +120,6 @@
       "parser": "bearracuda",
       "enabled": true,
       "urls": [
-        "https://bearracuda.com/events/atlantabearpride/",
-        "https://bearracuda.com/events/new-orleans/",
-        "https://bearracuda.com/events/chicagoaug/",
-        "https://bearracuda.com/events/denverpride/",
         "https://bearracuda.com/"
       ],
       "alwaysBear": true,
