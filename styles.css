@@ -5254,6 +5254,23 @@ footer {
     width: auto;
 }
 
+/* Ensure header and controls are always visible in minimized state */
+.debug-overlay.debug-minimized .debug-header {
+    display: flex !important;
+}
+
+.debug-overlay.debug-minimized .debug-header-controls {
+    display: flex !important;
+}
+
+.debug-overlay.debug-minimized .debug-close,
+.debug-overlay.debug-minimized .debug-toggle,
+.debug-overlay.debug-minimized .debug-minimize {
+    display: flex !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
 .debug-overlay.debug-full .debug-essential {
     display: none;
 }

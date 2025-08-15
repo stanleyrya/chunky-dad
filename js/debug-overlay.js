@@ -136,10 +136,31 @@ class DebugOverlay {
         header.addEventListener('mousedown', this.startDrag.bind(this));
         header.addEventListener('touchstart', this.startDrag.bind(this), { passive: false });
         
-        // Control buttons
-        closeBtn.addEventListener('click', () => this.hide());
-        toggleBtn.addEventListener('click', () => this.toggleView());
-        minimizeBtn.addEventListener('click', () => this.minimize());
+        // Double-click header to expand from minimized state
+        header.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.viewState === 'minimized') {
+                this.expand();
+            }
+        });
+        
+        // Control buttons with improved event handling
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hide();
+        });
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleView();
+        });
+        minimizeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.minimize();
+        });
         
         // Global events
         document.addEventListener('mousemove', this.handleDrag.bind(this));
@@ -256,6 +277,13 @@ class DebugOverlay {
         this.overlay.className = `debug-overlay debug-${this.viewState}`;
         localStorage.setItem('debug-view-state', this.viewState);
         
+        // Ensure the toggle button is always visible and clickable
+        const toggleBtn = this.overlay.querySelector('.debug-toggle');
+        if (toggleBtn) {
+            toggleBtn.style.display = 'flex';
+            toggleBtn.style.pointerEvents = 'auto';
+        }
+        
         logger.userInteraction('SYSTEM', `Debug view changed to ${this.viewState}`);
     }
     
@@ -263,6 +291,21 @@ class DebugOverlay {
         this.viewState = 'minimized';
         this.overlay.className = `debug-overlay debug-${this.viewState}`;
         localStorage.setItem('debug-view-state', this.viewState);
+        
+        // Ensure the toggle button is always visible and clickable when minimized
+        const toggleBtn = this.overlay.querySelector('.debug-toggle');
+        if (toggleBtn) {
+            toggleBtn.style.display = 'flex';
+            toggleBtn.style.pointerEvents = 'auto';
+        }
+    }
+    
+    // Add method to force expand from minimized state
+    expand() {
+        this.viewState = 'compact';
+        this.overlay.className = `debug-overlay debug-${this.viewState}`;
+        localStorage.setItem('debug-view-state', this.viewState);
+        logger.userInteraction('SYSTEM', 'Debug overlay expanded from minimized state');
     }
     
     hide() {
@@ -274,6 +317,13 @@ class DebugOverlay {
             clearInterval(this.updateInterval);
         }
         localStorage.removeItem('debug-enabled');
+    }
+    
+    show() {
+        if (!this.overlay) {
+            this.init();
+            logger.info('SYSTEM', 'Debug overlay shown');
+        }
     }
     
     startUpdateLoop() {
@@ -416,13 +466,49 @@ class DebugOverlay {
         const saved = localStorage.getItem('debug-position');
         return saved ? JSON.parse(saved) : null;
     }
+    
+    // Utility method to reset debug overlay state
+    resetState() {
+        localStorage.removeItem('debug-view-state');
+        localStorage.removeItem('debug-position');
+        this.viewState = 'compact';
+        this.position = { x: 20, y: 20 };
+        if (this.overlay) {
+            this.overlay.className = `debug-overlay debug-${this.viewState}`;
+            this.overlay.style.left = `${this.position.x}px`;
+            this.overlay.style.top = `${this.position.y}px`;
+        }
+        logger.info('SYSTEM', 'Debug overlay state reset to defaults');
+    }
 }
 
 // Initialize debug overlay
 let debugOverlay;
 document.addEventListener('DOMContentLoaded', () => {
     debugOverlay = new DebugOverlay();
+    
+    // Global access for console debugging
+    window.debugOverlay = debugOverlay;
+    
+    // Console helper commands
+    window.debugHelp = () => {
+        console.log(`
+🐻 Debug Overlay Console Commands:
+- debugOverlay.expand() - Force expand from minimized
+- debugOverlay.toggleView() - Cycle through view states
+- debugOverlay.resetState() - Reset to default state
+- debugOverlay.hide() - Hide the overlay
+- debugOverlay.show() - Show the overlay (if hidden)
+- Double-click header to expand when minimized
+- Current state: ${debugOverlay ? debugOverlay.viewState : 'not initialized'}
+        `);
+    };
+    
+    // Show help on initialization if debug is enabled
+    if (debugOverlay && debugOverlay.isVisible) {
+        console.log('🐻 Debug overlay initialized. Type debugHelp() for commands.');
+    }
 });
 
-// Global access for console debugging
+// Ensure global access even before DOM ready
 window.debugOverlay = debugOverlay;
