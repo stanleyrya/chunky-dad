@@ -2172,8 +2172,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing error message');
                 // Clear fake event from allEvents to prevent it from showing
                 this.allEvents = [];
-                // Show empty calendar with error message instead of hanging
-                this.updatePageContent(this.currentCityConfig, [], false);
+                // Show error message instead of empty calendar
+                this.showCalendarError();
                 return;
             }
             
@@ -2190,8 +2190,8 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.componentError('CALENDAR', '🔍 RENDER: Calendar loading failed with error', error);
             // Clear fake event from allEvents to prevent it from showing
             this.allEvents = [];
-            // Show empty calendar with error message instead of hanging
-            this.updatePageContent(this.currentCityConfig, [], false);
+            // Show error message instead of empty calendar
+            this.showCalendarError();
             return;
         }
         
