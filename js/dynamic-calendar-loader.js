@@ -1033,30 +1033,40 @@ class DynamicCalendarLoader extends CalendarCore {
             step: 'Step 3: Loading real calendar data'
         });
         
-        // CORS proxy for calendar data fetching - multiple proxies for better reliability
+        // CORS proxy for calendar data fetching - multiple attempts with progressive delays
         const corsProxies = [
             'https://api.allorigins.win/raw?url=',
-            'https://api.allorigins.win/raw?url=', // Retry same proxy with different timeout
-            'https://api.allorigins.win/raw?url='  // Third attempt with longest timeout
+            'https://api.allorigins.win/raw?url=', // Second attempt after 1s delay
+            'https://api.allorigins.win/raw?url='  // Third attempt after 3s delay
             // Note: Other proxies like corsproxy.io and codetabs.com are currently broken
         ];
         
-        // Progressive timeout strategy: start very fast, get progressively more patient
-        const timeouts = [1000, 2000, 3000]; // 1s, 2s, 3s
+        // Progressive timeout strategy: start fast, get progressively more patient
+        const timeouts = [1000, 3000, 5000]; // 1s, 3s, 5s
+        const delays = [0, 1000, 3000]; // No delay for first attempt, then 1s, 3s delays
         
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
         
         for (let i = 0; i < corsProxies.length; i++) {
             const corsProxy = corsProxies[i];
             const timeout = timeouts[i] || timeouts[timeouts.length - 1];
+            const delay = delays[i] || 0;
             const fullUrl = corsProxy + encodeURIComponent(icalUrl);
             
+            // Wait before attempting (except for first attempt)
+            if (delay > 0) {
+                logger.debug('CALENDAR', `Waiting ${delay}ms before next attempt`, {
+                    attempt: i + 1,
+                    delay: `${delay}ms`
+                });
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            
             try {
-                logger.debug('CALENDAR', `Attempting CORS proxy ${i + 1}/${corsProxies.length}`, {
+                logger.debug('CALENDAR', `Attempting connection ${i + 1}/${corsProxies.length}`, {
                     proxy: corsProxy,
                     attempt: i + 1,
-                    timeout: `${timeout}ms`,
-                    strategy: i === 0 ? 'lightning_attempt' : i === 1 ? 'quick_attempt' : 'standard_attempt'
+                    timeout: `${timeout}ms`
                 });
                 
                 // Update loading message with current attempt info
@@ -1164,14 +1174,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 
             } catch (error) {
                 const isTimeout = error.name === 'AbortError';
-                logger.warn('CALENDAR', `CORS proxy ${i + 1} failed with error`, {
+                logger.warn('CALENDAR', `Connection ${i + 1} failed with error`, {
                     proxy: corsProxy,
                     error: error.message,
                     errorName: error.name,
                     attempt: i + 1,
                     timeout: `${timeout}ms`,
-                    isTimeout,
-                    timeoutStrategy: i === 0 ? 'lightning_timeout' : i === 1 ? 'quick_timeout' : 'standard_timeout'
+                    isTimeout
                 });
                 
                 // If this is the last proxy, log the final error
@@ -1183,7 +1192,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         finalError: error.message,
                         proxiesTried: corsProxies,
                         timeoutsUsed: timeouts,
-                        allTimeouts: corsProxies.map((_, idx) => timeouts[idx] || timeouts[timeouts.length - 1])
+                        delaysUsed: delays
                     });
                     // Clear fake event from allEvents to prevent it from showing
                     this.allEvents = [];
@@ -1201,7 +1210,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 <h3>📅 Calendar Temporarily Unavailable</h3>
                 <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
                 <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for updates.</p>
-                <p class="error-details">We attempted multiple connections with progressive timeouts (1s → 2s → 3s) but couldn't reach the calendar service.</p>
             </div>
         `;
         
@@ -1213,13 +1221,13 @@ class DynamicCalendarLoader extends CalendarCore {
 
     }
 
-    // Update loading message with retry information
+    // Update loading message with connection information
     updateLoadingMessage(attemptNumber, timeout) {
         const eventsList = document.querySelector('.events-list');
         if (eventsList) {
-                         const strategy = attemptNumber === 1 ? 'Lightning attempt' : 
-                           attemptNumber === 2 ? 'Quick attempt' : 'Standard attempt';
-            const message = `📅 Getting events... (${strategy}: ${timeout/1000}s timeout)`;
+            const message = attemptNumber === 1 
+                ? '📅 Loading events...' 
+                : `📅 Loading events... (${attemptNumber}/3)`;
             
             const loadingDiv = eventsList.querySelector('.loading-message');
             if (loadingDiv) {
@@ -1231,7 +1239,6 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('CALENDAR', 'Updated loading message', {
                 attemptNumber,
                 timeout,
-                strategy,
                 message
             });
         }
@@ -2442,10 +2449,10 @@ calculatedData: {
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         
         try {
-            // Add timeout to prevent hanging initialization - reduced to 10s to account for 3 fast retry attempts (1s + 2s + 3s + overhead)
+            // Add timeout to prevent hanging initialization - 15s to account for delays + timeouts (0 + 1s + 3s delays + 1s + 3s + 5s timeouts + overhead)
             const initPromise = this.renderCityPage();
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Calendar initialization timeout after 10 seconds')), 10000);
+                setTimeout(() => reject(new Error('Calendar initialization timeout after 15 seconds')), 15000);
             });
             
             await Promise.race([initPromise, timeoutPromise]);
