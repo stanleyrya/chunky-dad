@@ -614,8 +614,13 @@ class SharedCore {
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
 
         // Add all fields from notes to the final event for display purposes
+        // But exclude derived/display-specific fields that shouldn't be re-added
+        const excludeFromDisplay = new Set([
+            'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
+        ]);
+        
         Object.keys(finalFields).forEach(fieldName => {
-            if (finalFields[fieldName] && !finalEvent[fieldName]) {
+            if (finalFields[fieldName] && !finalEvent[fieldName] && !excludeFromDisplay.has(fieldName)) {
                 finalEvent[fieldName] = finalFields[fieldName];
             }
         });
@@ -715,13 +720,37 @@ class SharedCore {
             });
         }
         
+        // Clean any derived/display fields that might have been added
+        this.cleanDerivedFields(finalEvent);
+        
         return finalEvent;
     }
     
+    // Clean derived/display-specific fields from event objects
+    cleanDerivedFields(event) {
+        // Fields that should never be part of the final event object for display or saving
+        const derivedFields = ['shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'];
+        
+        derivedFields.forEach(field => {
+            if (event.hasOwnProperty(field)) {
+                delete event[field];
+                console.log(`🧹 SharedCore: Removed derived field '${field}' from event "${event.title}"`);
+            }
+        });
+        
+        return event;
+    }
+
     // Parse notes back into field/value pairs
     parseNotesIntoFields(notes) {
         const fields = {};
         const lines = notes.split('\n');
+        
+        // Fields to exclude when parsing notes back into field objects
+        // These are derived/display-specific fields that shouldn't be re-added to event objects
+        const excludeFromParsing = new Set([
+            'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
+        ]);
         
         // Map of normalized aliases (lowercased, spaces removed) to canonical field names
         const aliasToCanonical = {
@@ -784,8 +813,21 @@ class SharedCore {
                     const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
                         ? aliasToCanonical[normalizedKey]
                         : rawKey;
-                    fields[canonicalKey] = value;
+                    
+                    // Skip fields that should be excluded from parsing
+                    if (!excludeFromParsing.has(canonicalKey)) {
+                        fields[canonicalKey] = value;
+                    }
                 }
+            }
+        });
+        
+        // Clean any derived/display fields that might have been parsed from old notes
+        const derivedFields = ['shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'];
+        derivedFields.forEach(field => {
+            if (fields.hasOwnProperty(field)) {
+                delete fields[field];
+                console.log(`🧹 SharedCore: Removed derived field '${field}' from parsed notes`);
             }
         });
         
@@ -1313,7 +1355,9 @@ class SharedCore {
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
-            'originalTitle', 'name' // These are usually duplicates of title
+            'originalTitle', 'name', // These are usually duplicates of title
+            // Derived/display-specific fields that should not be saved to notes
+            'shortTitle', 'shortName', 'shorterName', 'gmaps', 'key'
         ]);
         
         // Add all fields that have values (merge logic has already determined correct values)
