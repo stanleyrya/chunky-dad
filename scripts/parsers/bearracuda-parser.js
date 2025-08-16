@@ -366,8 +366,52 @@ class BearraccudaParser {
 
     // Extract address
     extractAddress(html) {
-        // Look for address pattern: "2069 Cheshire Bridge Road, Atlanta, GA" or "619 E. Pine St, Seattle, WA"
-        const addressPatterns = [
+        // Look for address pattern in text-editor widgets first (most reliable for Bearracuda)
+        const textEditorPatterns = [
+            // Match addresses in elementor text-editor widgets
+            /<div class="elementor-widget-container"[^>]*>\s*(\d+\s+[NSEW]\.?\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})\s*<\/div>/i,
+            /<div class="elementor-widget-container"[^>]*>\s*([^<]*\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2}[^<]*)\s*<\/div>/i,
+            // Look for addresses in paragraph tags within widgets
+            /<p[^>]*>(\d+\s+[NSEW]\.?\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})<\/p>/i,
+        ];
+        
+        // Try text editor patterns first
+        for (const pattern of textEditorPatterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+                let address = match[1].trim();
+                
+                // Clean HTML entities and normalize
+                address = address.replace(/&nbsp;/g, ' ')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&quot;/g, '"')
+                                .replace(/\s+/g, ' ')
+                                .trim();
+                
+                // Skip if this looks like JavaScript code or contains suspicious content
+                if (address.includes('function') || 
+                    address.includes('window.') || 
+                    address.includes('document.') ||
+                    address.includes('return') ||
+                    address.includes('%') ||
+                    address.includes('javascript') ||
+                    address.length > 100) {
+                    console.log(`🐻 Bearracuda: Skipping suspicious address content: ${address.substring(0, 50)}...`);
+                    continue;
+                }
+                
+                // Final validation - should look like a real address
+                if (/^\d+\s+[A-Za-z\s\.,]+[A-Z]{2}$/.test(address.replace(/[,\s]+/g, ' ').trim())) {
+                    console.log(`🐻 Bearracuda: Extracted valid address: ${address}`);
+                    return address;
+                }
+            }
+        }
+        
+        // Fallback to original patterns if text editor patterns don't work
+        const fallbackPatterns = [
             // Match addresses in div tags, avoiding script content
             /<div[^>]*>(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})<\/div>/i, 
             // Match addresses in paragraph tags
@@ -380,7 +424,7 @@ class BearraccudaParser {
             /(\d+\s+[^<>\n]+(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Pine|Bridge)[^<>\n]*)/i
         ];
         
-        for (const pattern of addressPatterns) {
+        for (const pattern of fallbackPatterns) {
             const match = html.match(pattern);
             if (match && match[1]) {
                 let address = match[1].trim();
@@ -482,16 +526,17 @@ class BearraccudaParser {
 
     // Extract full description content
     extractFullDescription(html) {
-        // Look for detailed event descriptions in various formats
+        // Look for detailed event descriptions in various formats, avoiding cookie consent text
         const descriptionPatterns = [
+            // Look for content in text-editor widgets that contains event details (most reliable for Bearracuda)
+            /<div class="elementor-widget-container"[^>]*>\s*<p>([^<]*(?:cruise|meet|consent|clothing|phone|photos|floor|wristband|adventure|choose)[^<]*)<\/p>/gi,
+            /<div class="elementor-widget-container"[^>]*>([^<]*(?:cruise|meet|consent|clothing|phone|photos|floor|wristband|adventure|choose)[^<]*)<\/div>/gi,
             // Look for content in paragraph tags that contains detailed descriptions
-            /<p[^>]*>([^<]*(?:wristband|choose|adventure|cruise|meet|consent|clothes check)[^<]*)<\/p>/gi,
+            /<p[^>]*>([^<]*(?:cruise|meet|consent|clothing|phone|photos|floor|wristband|adventure|choose)[^<]*)<\/p>/gi,
             // Look for content after specific headings or before contact info
-            /<p[^>]*>([^<]{100,})<\/p>/gi, // Long paragraphs likely to be descriptions
+            /<p[^>]*>([^<]{50,})<\/p>/gi, // Long paragraphs likely to be descriptions
             // Look for content in divs with specific classes
             /<div[^>]*class="[^"]*content[^"]*"[^>]*>([^<]+)<\/div>/gi,
-            // Look for text blocks with event details
-            /([^<>\n]*(?:returns to|invite you|grab a wristband|choose your own|cruise and meet|consent is mandatory|clothes check)[^<>\n]*)/gi
         ];
         
         let descriptions = [];
@@ -500,7 +545,7 @@ class BearraccudaParser {
             let match;
             while ((match = pattern.exec(html)) !== null) {
                 let desc = match[1].trim();
-                if (desc && desc.length > 50) { // Only include substantial content
+                if (desc && desc.length > 20) { // Only include substantial content
                     // Clean HTML entities and normalize whitespace
                     desc = desc.replace(/&nbsp;/g, ' ')
                               .replace(/&amp;/g, '&')
@@ -509,6 +554,11 @@ class BearraccudaParser {
                               .replace(/&quot;/g, '"')
                               .replace(/\s+/g, ' ')
                               .trim();
+                    
+                    // Filter out cookie consent text and other unwanted content
+                    if (this.isCookieConsentText(desc) || this.isUnwantedContent(desc)) {
+                        continue;
+                    }
                     
                     // Avoid duplicates
                     if (!descriptions.some(existing => existing.includes(desc) || desc.includes(existing))) {
@@ -520,6 +570,44 @@ class BearraccudaParser {
         
         // Join descriptions with double newlines for readability
         return descriptions.length > 0 ? descriptions.join('\n\n') : '';
+    }
+
+    // Check if text is cookie consent related
+    isCookieConsentText(text) {
+        const cookieIndicators = [
+            'this website uses cookies',
+            'cookie consent',
+            'cookies that are categorized as necessary',
+            'third-party cookies',
+            'analyze and understand how you use',
+            'stored on your browser',
+            'opt-out of these cookies',
+            'browsing experience',
+            'essential for the working of basic functionalities',
+            'cookies will be stored in your browser only with your consent'
+        ];
+        
+        const lowerText = text.toLowerCase();
+        return cookieIndicators.some(indicator => lowerText.includes(indicator));
+    }
+
+    // Check if text is other unwanted content
+    isUnwantedContent(text) {
+        const unwantedIndicators = [
+            'manage consent',
+            'privacy overview',
+            'cookie settings',
+            'save & accept',
+            'necessary cookies are absolutely essential',
+            'performance cookies are used to understand',
+            'analytical cookies are used to understand',
+            'advertisement cookies are used to provide',
+            'functional cookies help to perform',
+            'uncategorized cookies are those that are being analyzed'
+        ];
+        
+        const lowerText = text.toLowerCase();
+        return unwantedIndicators.some(indicator => lowerText.includes(indicator));
     }
 
     // Extract image URL
