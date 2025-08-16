@@ -245,13 +245,15 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 const parseResult = parser.parseEvents(htmlData, parserConfig);
                 
-                // Instead of adding new events, use detail page data to enrich existing events
+                // Process detail page events - either enrich existing or add new events
                 if (parseResult.events && parseResult.events.length > 0) {
                     // Apply field merge strategies before using detail event
                     const filteredEvents = parseResult.events.map(event => 
                         this.applyFieldMergeStrategies(event, parserConfig)
                     );
-                    const detailEvent = filteredEvents[0]; // Detail pages should only have one event
+                    
+                    // Process each event from the detail page (usually just one)
+                    for (const detailEvent of filteredEvents) {
                     
                     // Find the matching existing event by URL
                     const matchingEvent = existingEvents.find(event => 
@@ -274,8 +276,13 @@ class SharedCore {
                         
                         await displayAdapter.logInfo(`SYSTEM: Enriched event "${matchingEvent.title}" with detail page data and location info`);
                     } else {
-                        await displayAdapter.logWarn(`SYSTEM: Could not match detail page ${url} to existing event`);
+                        // No matching existing event found - add this as a new event
+                        // This handles parsers like Bearracuda that create events primarily from detail pages
+                        this.enrichEventLocation(detailEvent);
+                        existingEvents.push(detailEvent);
+                        await displayAdapter.logInfo(`SYSTEM: Added new event "${detailEvent.title}" from detail page ${url}`);
                     }
+                    } // End for loop processing each detail event
                 }
             } catch (error) {
                 await displayAdapter.logWarn(`SYSTEM: Failed to process detail page URL: ${url}`);
