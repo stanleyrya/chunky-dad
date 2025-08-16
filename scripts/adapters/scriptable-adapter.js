@@ -1099,12 +1099,8 @@ class ScriptableAdapter {
             
             if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
                 // Only prompt if we haven't already executed (calendarEvents would be > 0)
-                const globalDryRun = results.config?.config?.dryRun;
-                const parserDryRun = results.config?.parsers?.some(p => p.dryRun === true);
-                const isDryRun = globalDryRun || parserDryRun;
+                const isDryRun = results.config?.config?.dryRun;
                 
-                console.log(`📱 Scriptable: - globalDryRun: ${globalDryRun}`);
-                console.log(`📱 Scriptable: - parserDryRun: ${parserDryRun}`);
                 console.log(`📱 Scriptable: - isDryRun: ${isDryRun}`);
                 
                 if (!isDryRun) {
