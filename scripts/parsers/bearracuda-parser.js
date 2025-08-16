@@ -567,7 +567,7 @@ class BearraccudaParser {
 
     // Extract additional URLs for detail page processing
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
-        const urls = new Set();
+        const urls = [];
         
         try {
             console.log(`🐻 Bearracuda: Extracting additional event URLs from HTML`);
@@ -584,9 +584,6 @@ class BearraccudaParser {
             ];
             
             console.log(`🐻 Bearracuda: Testing ${urlPatterns.length} URL patterns`);
-            
-            // Collect all potential URLs first, then deduplicate
-            const potentialUrls = new Set();
             
             for (let i = 0; i < urlPatterns.length; i++) {
                 const pattern = urlPatterns[i];
@@ -609,38 +606,30 @@ class BearraccudaParser {
                         url += '/';
                     }
                     
-                    // Add to potential URLs set (automatically deduplicates)
-                    potentialUrls.add(url);
+                    // Validate and add URL (shared-core will handle deduplication)
+                    if (this.isValidEventUrl(url, parserConfig)) {
+                        urls.push(url);
+                        console.log(`🐻 Bearracuda: ✓ Found valid event URL: ${url}`);
+                    } else {
+                        console.log(`🐻 Bearracuda: ✗ Invalid event URL: ${url}`);
+                    }
                     
-                    // Limit to prevent infinite loops
-                    if (potentialUrls.size >= (this.config.maxAdditionalUrls || 20)) {
+                    // Limit to prevent infinite loops (shared-core will also limit)
+                    if (urls.length >= (this.config.maxAdditionalUrls || 20)) {
                         console.log(`🐻 Bearracuda: Reached maximum URL limit (${this.config.maxAdditionalUrls || 20})`);
                         break;
                     }
                 }
                 
-                console.log(`🐻 Bearracuda: Pattern ${i + 1} found ${potentialUrls.size} unique URLs so far`);
+                console.log(`🐻 Bearracuda: Pattern ${i + 1} found ${urls.length} valid URLs total so far`);
             }
             
-            console.log(`🐻 Bearracuda: Found ${potentialUrls.size} potential unique URLs, validating...`);
+            console.log(`🐻 Bearracuda: Extracted ${urls.length} additional event links`);
             
-            // Now validate each unique URL
-            for (const url of potentialUrls) {
-                console.log(`🐻 Bearracuda: Validating URL: ${url}`);
-                if (this.isValidEventUrl(url, parserConfig)) {
-                    urls.add(url);
-                    console.log(`🐻 Bearracuda: ✓ Valid event detail URL: ${url}`);
-                } else {
-                    console.log(`🐻 Bearracuda: ✗ Invalid event URL: ${url}`);
-                }
-            }
-            
-            console.log(`🐻 Bearracuda: Extracted ${urls.size} additional event links`);
-            
-            // Log all found URLs for debugging
-            if (urls.size > 0) {
-                console.log(`🐻 Bearracuda: Final list of valid URLs:`);
-                Array.from(urls).forEach((url, index) => {
+            // Log found URLs for debugging
+            if (urls.length > 0) {
+                console.log(`🐻 Bearracuda: Found URLs (before shared-core deduplication):`);
+                urls.forEach((url, index) => {
                     console.log(`🐻 Bearracuda: ${index + 1}. ${url}`);
                 });
             } else {
@@ -658,7 +647,7 @@ class BearraccudaParser {
             console.warn(`🐻 Bearracuda: Error extracting additional URLs: ${error}`);
         }
         
-        return Array.from(urls);
+        return urls;
     }
 
     // Validate if URL is a valid event URL
