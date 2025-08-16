@@ -546,16 +546,6 @@ class EventbriteParser {
         try {
             console.log(`🎫 Eventbrite: Extracting additional event URLs from JSON data`);
             
-            // Check URL discovery depth configuration
-            const maxDepth = parserConfig.urlDiscoveryDepth || 1;
-            console.log(`🎫 Eventbrite: URL discovery depth limit: ${maxDepth}`);
-            
-            // Check if URL discovery is disabled
-            if (!parserConfig.requireDetailPages || parserConfig.maxAdditionalUrls === 0) {
-                console.log(`🎫 Eventbrite: URL discovery disabled by configuration (requireDetailPages: ${parserConfig.requireDetailPages}, maxAdditionalUrls: ${parserConfig.maxAdditionalUrls})`);
-                return [];
-            }
-            
             // Look for window.__SERVER_DATA__ which contains the event information
             const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
             

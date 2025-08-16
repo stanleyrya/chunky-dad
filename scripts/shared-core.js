@@ -183,9 +183,14 @@ class SharedCore {
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
                 if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs for detail pages...`);
+                    
+                    // Deduplicate additional URLs before processing
+                    const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
+                    await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs to process`);
+                    
                     await this.enrichEventsWithDetailPages(
                         allEvents,
-                        parseResult.additionalLinks, 
+                        deduplicatedUrls, 
                         parser, 
                         parserConfig, 
                         httpAdapter, 
@@ -249,7 +254,7 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Create a modified parser config that controls further URL discovery based on depth
-                // This ensures we follow the pattern: source → detail → data (controlled by urlDiscoveryDepth)
+                // If we're at max depth, disable further URL discovery entirely
                 const shouldAllowMoreUrls = currentDepth < maxDepth;
                 const detailPageConfig = {
                     ...parserConfig,
@@ -259,21 +264,28 @@ class SharedCore {
                 
                 const parseResult = parser.parseEvents(htmlData, detailPageConfig);
                 
-                // Log URL discovery behavior
+                // Handle additional URLs if depth allows
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
                     if (shouldAllowMoreUrls) {
                         await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs (depth ${currentDepth + 1} allowed)`);
+                        
+                        // Deduplicate URLs before recursive processing
+                        const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
+                        await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs for depth ${currentDepth + 1}`);
+                        
                         // Recursively process additional URLs if we haven't reached max depth
-                        await this.enrichEventsWithDetailPages(
-                            existingEvents,
-                            parseResult.additionalLinks,
-                            parser,
-                            parserConfig,
-                            httpAdapter,
-                            displayAdapter,
-                            processedUrls,
-                            currentDepth + 1
-                        );
+                        if (deduplicatedUrls.length > 0) {
+                            await this.enrichEventsWithDetailPages(
+                                existingEvents,
+                                deduplicatedUrls,
+                                parser,
+                                parserConfig,
+                                httpAdapter,
+                                displayAdapter,
+                                processedUrls,
+                                currentDepth + 1
+                            );
+                        }
                     } else {
                         await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached - ignoring to prevent recursion`);
                     }
@@ -324,6 +336,36 @@ class SharedCore {
         }
     }
 
+    // Generic URL deduplication utility
+    deduplicateUrls(urls, processedUrls = new Set()) {
+        if (!urls || !Array.isArray(urls)) {
+            return [];
+        }
+        
+        const uniqueUrls = new Set();
+        const result = [];
+        
+        for (const url of urls) {
+            if (!url || typeof url !== 'string') {
+                continue;
+            }
+            
+            // Skip if already processed globally
+            if (processedUrls.has(url)) {
+                continue;
+            }
+            
+            // Skip if already in this batch
+            if (uniqueUrls.has(url)) {
+                continue;
+            }
+            
+            uniqueUrls.add(url);
+            result.push(url);
+        }
+        
+        return result;
+    }
 
 
     // Pure utility functions

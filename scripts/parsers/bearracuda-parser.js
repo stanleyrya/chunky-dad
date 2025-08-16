@@ -573,22 +573,6 @@ class BearraccudaParser {
             console.log(`🐻 Bearracuda: Extracting additional event URLs from HTML`);
             console.log(`🐻 Bearracuda: HTML length: ${html.length} characters`);
             
-            // Check URL discovery depth configuration
-            const maxDepth = parserConfig.urlDiscoveryDepth || 1;
-            console.log(`🐻 Bearracuda: URL discovery depth limit: ${maxDepth}`);
-            
-            // Check if this is already a detail page - if so, don't extract more URLs to prevent recursion
-            if (this.isEventDetailPage(html, sourceUrl)) {
-                console.log(`🐻 Bearracuda: This is a detail page, skipping URL extraction to prevent recursion`);
-                return [];
-            }
-            
-            // Check if URL discovery is disabled
-            if (!parserConfig.requireDetailPages || parserConfig.maxAdditionalUrls === 0) {
-                console.log(`🐻 Bearracuda: URL discovery disabled by configuration (requireDetailPages: ${parserConfig.requireDetailPages}, maxAdditionalUrls: ${parserConfig.maxAdditionalUrls})`);
-                return [];
-            }
-            
             // Look for bearracuda event URLs with multiple patterns
             const urlPatterns = [
                 // Event detail page links with full URLs
