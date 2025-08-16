@@ -65,7 +65,7 @@
       "name": "Bear Happy Hour",
       "parser": "eventbrite",
       "enabled": false,
-      "urls": ["https://www.eventbrite.com/o/bear-happy-hour-18118978189"],
+      "urls": ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       "alwaysBear": true,
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
