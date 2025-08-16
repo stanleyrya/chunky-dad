@@ -613,12 +613,14 @@ class SharedCore {
         const fieldStrategiesForCompare = newEvent._fieldMergeStrategies || {};
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
 
-        // Add all fields from notes to the final event for display purposes
-        Object.keys(finalFields).forEach(fieldName => {
-            if (finalFields[fieldName] && !finalEvent[fieldName]) {
-                finalEvent[fieldName] = finalFields[fieldName];
-            }
-        });
+        // DO NOT add fields from notes as top-level properties - this causes mutations
+        // The fields are already in the notes where they belong
+        // Commenting out the mutation:
+        // Object.keys(finalFields).forEach(fieldName => {
+        //     if (finalFields[fieldName] && !finalEvent[fieldName]) {
+        //         finalEvent[fieldName] = finalFields[fieldName];
+        //     }
+        // });
         
         console.log(`🔄 SharedCore: Final merged event has ${Object.keys(finalFields).length} fields in notes`);
         
@@ -703,17 +705,18 @@ class SharedCore {
         
         finalEvent._changes = changes;
         
-        // Add extracted fields back to the event object for fields with 'preserve' strategy
-        // This ensures the object structure matches what gets saved and makes debugging easier
-        if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldMergeStrategies) {
-            Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
-                const strategy = finalEvent._fieldMergeStrategies[fieldName];
-                // Only add fields that were preserved (not overridden by new values)
-                if (strategy === 'preserve' && !finalEvent[fieldName]) {
-                    finalEvent[fieldName] = fieldInfo.value;
-                }
-            });
-        }
+        // DO NOT add extracted fields as top-level properties - this causes mutations
+        // The preserved fields are already in the notes where they belong
+        // Commenting out the mutation:
+        // if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldMergeStrategies) {
+        //     Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
+        //         const strategy = finalEvent._fieldMergeStrategies[fieldName];
+        //         // Only add fields that were preserved (not overridden by new values)
+        //         if (strategy === 'preserve' && !finalEvent[fieldName]) {
+        //             finalEvent[fieldName] = fieldInfo.value;
+        //         }
+        //     });
+        // }
         
         return finalEvent;
     }
@@ -1279,21 +1282,20 @@ class SharedCore {
             startDate: event.startDate,
             endDate: event.endDate || event.startDate,
             location: event.location,
-            // Notes should reflect exactly what will be saved for NEW events (no 'preserve' fields)
             notes: this.formatEventNotes(eventForNotes),
-            // Don't use url field - it goes in notes instead
+            url: event.url,
             city: event.city || 'default', // Include city for calendar selection
             key: event.key, // Key should already be set during deduplication
             _parserConfig: event._parserConfig, // Preserve parser config
             _fieldMergeStrategies: event._fieldMergeStrategies // Preserve field strategies
         };
         
-        // Copy over all other fields except those explicitly marked as 'preserve'
-        const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
+        // Copy over all other fields that have values
+        const fieldsToExclude = new Set(['isBearEvent', 'source']);
         Object.keys(event).forEach(key => {
             if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
                 if (strategies[key] === 'preserve') return;
-                // Only copy fields that have values and should be included
+                // Only copy fields that have values
                 if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
                     calendarEvent[key] = event[key];
                 }
@@ -1374,6 +1376,9 @@ class SharedCore {
                 action: analysis.action,
                 reason: analysis.reason
             };
+            if (analysis.calendarName) {
+                analyzedEvent._analysis.calendarName = analysis.calendarName;
+            }
             analyzedEvent._action = analysis.action;
             
             // Handle merge action by creating complete final event object
@@ -1465,6 +1470,15 @@ class SharedCore {
     
     // Analyze a single event against existing events
     analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
+        // Check if this is a missing calendar response from the adapter
+        if (existingEventsData && existingEventsData.missingCalendar) {
+            return { 
+                action: 'missing_calendar', 
+                reason: `Calendar "${existingEventsData.calendarName}" does not exist`,
+                calendarName: existingEventsData.calendarName
+            };
+        }
+        
         if (!existingEventsData || existingEventsData.length === 0) {
             return { action: 'new', reason: 'No existing events found' };
         }

@@ -328,7 +328,16 @@ class ScriptableAdapter {
             // Determine calendar name from city
             const city = event.city || 'default';
             const calendarName = this.calendarMappings[city] || `chunky-dad-${city}`;
-            const calendar = await this.getOrCreateCalendar(calendarName);
+            
+            // Check if calendar exists first
+            const calendars = await Calendar.forEvents();
+            const calendar = calendars.find(cal => cal.title === calendarName);
+            
+            if (!calendar) {
+                // Return a special marker to indicate missing calendar
+                // This will be handled by shared-core's analyzeEventAction
+                return { missingCalendar: true, calendarName: calendarName };
+            }
             
             // Parse dates from formatted event
             const startDate = event.startDate;
@@ -364,6 +373,12 @@ class ScriptableAdapter {
             
             for (const event of analyzedEvents) {
                 try {
+                    // Skip events with missing calendars
+                    if (event._action === 'missing_calendar') {
+                        console.log(`📱 Scriptable: Skipping event "${event.title}" - calendar missing: ${event._analysis?.calendarName || 'unknown'}`);
+                        continue;
+                    }
+                    
                     const city = event.city || 'default';
                     const calendarName = calendarMappings[city] || `chunky-dad-${city}`;
                     const calendar = await this.getOrCreateCalendar(calendarName);
@@ -719,13 +734,12 @@ class ScriptableAdapter {
             
             if (!calendar) {
                 console.log(`❌ Calendar "${calendarName}" doesn't exist - must be created manually first`);
-                // Mark event as missing calendar for display
-                event._action = 'missing_calendar';
-                event._analysis = {
-                    action: 'missing_calendar',
-                    reason: `Calendar "${calendarName}" does not exist`,
-                    calendarName: calendarName
-                };
+                // DO NOT MUTATE THE EVENT - just log the issue
+                // The event should already have its _action and _analysis from prepareEventsForCalendar
+                // If it doesn't have an action, it means this is a display-only check
+                if (!event._action) {
+                    console.log(`   Note: Event has no action set (display-only check)`);
+                }
                 continue;
             }
             
@@ -2785,19 +2799,33 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         let events = results.analyzedEvents;
         
-        // If this is from a saved run, convert date strings to Date objects
-        if (results && results._isDisplayingSavedRun && events.length > 0) {
-            events = events.map(event => {
-                const convertedEvent = { ...event };
-                if (typeof convertedEvent.startDate === 'string') {
-                    convertedEvent.startDate = new Date(convertedEvent.startDate);
-                }
-                if (typeof convertedEvent.endDate === 'string') {
-                    convertedEvent.endDate = new Date(convertedEvent.endDate);
-                }
-                return convertedEvent;
-            });
+        // Normalize events to match what gets saved/loaded
+        // Fresh runs go through JSON serialization to match saved runs behavior
+        // This ensures both paths show EXACTLY the same data structure
+        if (!results._isDisplayingSavedRun) {
+            // Fresh run: simulate JSON serialization/deserialization to match saved runs
+            // This removes undefined values, functions, and converts dates to strings and back
+            try {
+                const jsonString = JSON.stringify(events);
+                events = JSON.parse(jsonString);
+            } catch (e) {
+                console.log('📱 Scriptable: Warning - could not normalize events through JSON:', e.message);
+            }
         }
+        
+        // Convert date strings to Date objects (for both fresh and saved runs now)
+        events = events.map(event => {
+            const eventCopy = { ...event };
+            
+            if (typeof eventCopy.startDate === 'string') {
+                eventCopy.startDate = new Date(eventCopy.startDate);
+            }
+            if (typeof eventCopy.endDate === 'string') {
+                eventCopy.endDate = new Date(eventCopy.endDate);
+            }
+            
+            return eventCopy;
+        });
         
         return events;
     }
