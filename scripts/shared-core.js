@@ -183,9 +183,14 @@ class SharedCore {
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
                 if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs for detail pages...`);
+                    
+                    // Deduplicate additional URLs before processing
+                    const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
+                    await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs to process`);
+                    
                     await this.enrichEventsWithDetailPages(
                         allEvents,
-                        parseResult.additionalLinks, 
+                        deduplicatedUrls, 
                         parser, 
                         parserConfig, 
                         httpAdapter, 
@@ -231,19 +236,60 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls) {
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1) {
         const maxUrls = parserConfig.maxAdditionalUrls || 12;
         const urlsToProcess = additionalLinks.slice(0, maxUrls);
+        const maxDepth = parserConfig.urlDiscoveryDepth || 1;
 
-        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment`);
+        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
 
         for (const url of urlsToProcess) {
-            if (processedUrls.has(url)) continue;
+            if (processedUrls.has(url)) {
+                await displayAdapter.logInfo(`SYSTEM: Skipping already processed URL: ${url}`);
+                continue;
+            }
             processedUrls.add(url);
 
             try {
                 const htmlData = await httpAdapter.fetchData(url);
-                const parseResult = parser.parseEvents(htmlData, parserConfig);
+                
+                // Create a modified parser config that controls further URL discovery based on depth
+                // If we're at max depth, disable further URL discovery entirely
+                const shouldAllowMoreUrls = currentDepth < maxDepth;
+                const detailPageConfig = {
+                    ...parserConfig,
+                    requireDetailPages: shouldAllowMoreUrls,
+                    maxAdditionalUrls: shouldAllowMoreUrls ? parserConfig.maxAdditionalUrls : 0
+                };
+                
+                const parseResult = parser.parseEvents(htmlData, detailPageConfig);
+                
+                // Handle additional URLs if depth allows
+                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                    if (shouldAllowMoreUrls) {
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs (depth ${currentDepth + 1} allowed)`);
+                        
+                        // Deduplicate URLs before recursive processing
+                        const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
+                        await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs for depth ${currentDepth + 1}`);
+                        
+                        // Recursively process additional URLs if we haven't reached max depth
+                        if (deduplicatedUrls.length > 0) {
+                            await this.enrichEventsWithDetailPages(
+                                existingEvents,
+                                deduplicatedUrls,
+                                parser,
+                                parserConfig,
+                                httpAdapter,
+                                displayAdapter,
+                                processedUrls,
+                                currentDepth + 1
+                            );
+                        }
+                    } else {
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached - ignoring to prevent recursion`);
+                    }
+                }
                 
                 // Process detail page events - either enrich existing or add new events
                 if (parseResult.events && parseResult.events.length > 0) {
@@ -290,6 +336,36 @@ class SharedCore {
         }
     }
 
+    // Generic URL deduplication utility
+    deduplicateUrls(urls, processedUrls = new Set()) {
+        if (!urls || !Array.isArray(urls)) {
+            return [];
+        }
+        
+        const uniqueUrls = new Set();
+        const result = [];
+        
+        for (const url of urls) {
+            if (!url || typeof url !== 'string') {
+                continue;
+            }
+            
+            // Skip if already processed globally
+            if (processedUrls.has(url)) {
+                continue;
+            }
+            
+            // Skip if already in this batch
+            if (uniqueUrls.has(url)) {
+                continue;
+            }
+            
+            uniqueUrls.add(url);
+            result.push(url);
+        }
+        
+        return result;
+    }
 
 
     // Pure utility functions

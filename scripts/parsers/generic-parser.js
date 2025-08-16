@@ -285,6 +285,8 @@ class GenericParser {
         const urls = new Set();
         
         try {
+            console.log(`🔧 Generic: Extracting additional event URLs`);
+            
             // Use configured URL patterns or defaults
             const patterns = parserConfig.urlPatterns || this.urlPatterns;
             
