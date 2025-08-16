@@ -1,19 +1,19 @@
 {
   "config": {
-    "dryRun": false,
+    "dryRun": true,
     "daysToLookAhead": null
   },
   "parsers": [
     {
       "name": "Megawoof America",
       "parser": "eventbrite",
-      "enabled": true,
+      "enabled": false,
       "urls": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       "alwaysBear": true,
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": false,
+      "dryRun": true,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
@@ -70,7 +70,7 @@
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": false,
+      "dryRun": true,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
@@ -128,7 +128,7 @@
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": false,
+      "dryRun": true,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
@@ -184,7 +184,7 @@
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": false,
+      "dryRun": true,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
@@ -237,9 +237,6 @@
     "la": "chunky-dad-la",
     "denver": "chunky-dad-denver",
     "vegas": "chunky-dad-vegas",
-    "atlanta": "chunky-dad-atlanta",
-    "new-orleans": "chunky-dad-new-orleans",
-    "sf": "chunky-dad-sf",
     "palm-springs": "chunky-dad-palm-springs",
     "seattle": "chunky-dad-seattle",
     "portland": "chunky-dad-portland",
