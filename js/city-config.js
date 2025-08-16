@@ -71,6 +71,60 @@ const CITY_CONFIG = {
         coordinates: { lat: 33.8303, lng: -116.5453 },
         mapZoom: 10,
         visible: true
+    },
+    'denver': {
+        name: 'Denver',
+        emoji: '🏔️',
+        tagline: 'Mile High bears',
+        calendarId: 'f3307ec83ddf4121f09dfa98258a6c1d5dd8ed2de085229f37cb872ef8618b21@group.calendar.google.com',
+        coordinates: { lat: 39.7392, lng: -104.9903 },
+        mapZoom: 10,
+        visible: true
+    },
+    'vegas': {
+        name: 'Las Vegas',
+        emoji: '🎰',
+        tagline: 'Sin City bears',
+        calendarId: '20f1119eed191bee892ccf0410942cc2e78382997086e0124683c4f2542fabff@group.calendar.google.com',
+        coordinates: { lat: 36.1699, lng: -115.1398 },
+        mapZoom: 10,
+        visible: true
+    },
+    'atlanta': {
+        name: 'Atlanta',
+        emoji: '🍑',
+        tagline: 'Southern bear hospitality',
+        calendarId: '98595c7c2e4db0e6fa1384cf3184e0fb302b5a9886499f3a222f19e5004800bc@group.calendar.google.com',
+        coordinates: { lat: 33.7490, lng: -84.3880 },
+        mapZoom: 10,
+        visible: true
+    },
+    'new-orleans': {
+        name: 'New Orleans',
+        emoji: '🎷',
+        tagline: 'Big Easy bears',
+        calendarId: '8bf2d8417df78aa8b7f852e5a0a301d1ea3cef7547bd5d8b638bdfe61c8dd3e9@group.calendar.google.com',
+        coordinates: { lat: 29.9511, lng: -90.0715 },
+        mapZoom: 10,
+        visible: true
+    },
+    'sf': {
+        name: 'San Francisco',
+        emoji: '🌉',
+        tagline: 'Golden Gate bears',
+        calendarId: '2f2e6cde722236a41a43325818baaa3775288bd2b4796a98b943e158bf62eb81@group.calendar.google.com',
+        coordinates: { lat: 37.7749, lng: -122.4194 },
+        mapZoom: 10,
+        visible: true
+    },
+    'portland': {
+        name: 'Portland',
+        emoji: '🌲',
+        tagline: 'Keep Portland beary',
+        calendarId: '53033822a075eb914e2958dfa7aea363aac4084d29043bc5490761cbf8bf08dd@group.calendar.google.com',
+        coordinates: { lat: 45.5152, lng: -122.6784 },
+        mapZoom: 10,
+        visible: true
     }
 };
 
