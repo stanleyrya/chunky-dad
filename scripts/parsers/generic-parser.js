@@ -285,6 +285,18 @@ class GenericParser {
         const urls = new Set();
         
         try {
+            console.log(`🔧 Generic: Extracting additional event URLs`);
+            
+            // Check URL discovery depth configuration
+            const maxDepth = parserConfig.urlDiscoveryDepth || 1;
+            console.log(`🔧 Generic: URL discovery depth limit: ${maxDepth}`);
+            
+            // Check if URL discovery is disabled
+            if (!parserConfig.requireDetailPages || parserConfig.maxAdditionalUrls === 0) {
+                console.log(`🔧 Generic: URL discovery disabled by configuration (requireDetailPages: ${parserConfig.requireDetailPages}, maxAdditionalUrls: ${parserConfig.maxAdditionalUrls})`);
+                return [];
+            }
+            
             // Use configured URL patterns or defaults
             const patterns = parserConfig.urlPatterns || this.urlPatterns;
             

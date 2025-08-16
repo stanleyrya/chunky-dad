@@ -231,19 +231,53 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls) {
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1) {
         const maxUrls = parserConfig.maxAdditionalUrls || 12;
         const urlsToProcess = additionalLinks.slice(0, maxUrls);
+        const maxDepth = parserConfig.urlDiscoveryDepth || 1;
 
-        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment`);
+        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
 
         for (const url of urlsToProcess) {
-            if (processedUrls.has(url)) continue;
+            if (processedUrls.has(url)) {
+                await displayAdapter.logInfo(`SYSTEM: Skipping already processed URL: ${url}`);
+                continue;
+            }
             processedUrls.add(url);
 
             try {
                 const htmlData = await httpAdapter.fetchData(url);
-                const parseResult = parser.parseEvents(htmlData, parserConfig);
+                
+                // Create a modified parser config that controls further URL discovery based on depth
+                // This ensures we follow the pattern: source → detail → data (controlled by urlDiscoveryDepth)
+                const shouldAllowMoreUrls = currentDepth < maxDepth;
+                const detailPageConfig = {
+                    ...parserConfig,
+                    requireDetailPages: shouldAllowMoreUrls,
+                    maxAdditionalUrls: shouldAllowMoreUrls ? parserConfig.maxAdditionalUrls : 0
+                };
+                
+                const parseResult = parser.parseEvents(htmlData, detailPageConfig);
+                
+                // Log URL discovery behavior
+                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                    if (shouldAllowMoreUrls) {
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs (depth ${currentDepth + 1} allowed)`);
+                        // Recursively process additional URLs if we haven't reached max depth
+                        await this.enrichEventsWithDetailPages(
+                            existingEvents,
+                            parseResult.additionalLinks,
+                            parser,
+                            parserConfig,
+                            httpAdapter,
+                            displayAdapter,
+                            processedUrls,
+                            currentDepth + 1
+                        );
+                    } else {
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached - ignoring to prevent recursion`);
+                    }
+                }
                 
                 // Process detail page events - either enrich existing or add new events
                 if (parseResult.events && parseResult.events.length > 0) {

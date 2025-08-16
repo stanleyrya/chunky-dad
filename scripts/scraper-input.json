@@ -125,6 +125,7 @@
       "alwaysBear": true,
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
+      "urlDiscoveryDepth": 1,
       "dryRun": true,
       "daysToLookAhead": null,
       "mergeMode": "upsert",

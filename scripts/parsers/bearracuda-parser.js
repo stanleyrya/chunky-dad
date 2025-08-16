@@ -573,6 +573,22 @@ class BearraccudaParser {
             console.log(`🐻 Bearracuda: Extracting additional event URLs from HTML`);
             console.log(`🐻 Bearracuda: HTML length: ${html.length} characters`);
             
+            // Check URL discovery depth configuration
+            const maxDepth = parserConfig.urlDiscoveryDepth || 1;
+            console.log(`🐻 Bearracuda: URL discovery depth limit: ${maxDepth}`);
+            
+            // Check if this is already a detail page - if so, don't extract more URLs to prevent recursion
+            if (this.isEventDetailPage(html, sourceUrl)) {
+                console.log(`🐻 Bearracuda: This is a detail page, skipping URL extraction to prevent recursion`);
+                return [];
+            }
+            
+            // Check if URL discovery is disabled
+            if (!parserConfig.requireDetailPages || parserConfig.maxAdditionalUrls === 0) {
+                console.log(`🐻 Bearracuda: URL discovery disabled by configuration (requireDetailPages: ${parserConfig.requireDetailPages}, maxAdditionalUrls: ${parserConfig.maxAdditionalUrls})`);
+                return [];
+            }
+            
             // Look for bearracuda event URLs with multiple patterns
             const urlPatterns = [
                 // Event detail page links with full URLs
@@ -585,48 +601,54 @@ class BearraccudaParser {
             
             console.log(`🐻 Bearracuda: Testing ${urlPatterns.length} URL patterns`);
             
+            // Collect all potential URLs first, then deduplicate
+            const potentialUrls = new Set();
+            
             for (let i = 0; i < urlPatterns.length; i++) {
                 const pattern = urlPatterns[i];
                 console.log(`🐻 Bearracuda: Testing pattern ${i + 1}: ${pattern.source}`);
                 
                 let match;
-                let matchCount = 0;
                 // Reset regex lastIndex to ensure we start from the beginning
                 pattern.lastIndex = 0;
                 
                 while ((match = pattern.exec(html)) !== null) {
                     let url = match[1];
-                    matchCount++;
-                    console.log(`🐻 Bearracuda: Pattern ${i + 1} match ${matchCount}: Found potential event URL: ${url}`);
                     
                     // Convert relative URLs to absolute
                     if (url.startsWith('/')) {
                         url = 'https://bearracuda.com' + url;
-                        console.log(`🐻 Bearracuda: Converted to absolute URL: ${url}`);
                     }
                     
                     // Ensure URL ends with slash
                     if (!url.endsWith('/')) {
                         url += '/';
-                        console.log(`🐻 Bearracuda: Added trailing slash: ${url}`);
                     }
                     
-                    console.log(`🐻 Bearracuda: Validating URL: ${url}`);
-                    if (this.isValidEventUrl(url, parserConfig)) {
-                        urls.add(url);
-                        console.log(`🐻 Bearracuda: ✓ Valid event detail URL: ${url}`);
-                    } else {
-                        console.log(`🐻 Bearracuda: ✗ Invalid event URL: ${url}`);
-                    }
+                    // Add to potential URLs set (automatically deduplicates)
+                    potentialUrls.add(url);
                     
                     // Limit to prevent infinite loops
-                    if (urls.size >= (this.config.maxAdditionalUrls || 20)) {
+                    if (potentialUrls.size >= (this.config.maxAdditionalUrls || 20)) {
                         console.log(`🐻 Bearracuda: Reached maximum URL limit (${this.config.maxAdditionalUrls || 20})`);
                         break;
                     }
                 }
                 
-                console.log(`🐻 Bearracuda: Pattern ${i + 1} found ${matchCount} potential URLs`);
+                console.log(`🐻 Bearracuda: Pattern ${i + 1} found ${potentialUrls.size} unique URLs so far`);
+            }
+            
+            console.log(`🐻 Bearracuda: Found ${potentialUrls.size} potential unique URLs, validating...`);
+            
+            // Now validate each unique URL
+            for (const url of potentialUrls) {
+                console.log(`🐻 Bearracuda: Validating URL: ${url}`);
+                if (this.isValidEventUrl(url, parserConfig)) {
+                    urls.add(url);
+                    console.log(`🐻 Bearracuda: ✓ Valid event detail URL: ${url}`);
+                } else {
+                    console.log(`🐻 Bearracuda: ✗ Invalid event URL: ${url}`);
+                }
             }
             
             console.log(`🐻 Bearracuda: Extracted ${urls.size} additional event links`);
