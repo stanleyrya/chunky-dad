@@ -1092,14 +1092,39 @@ class ScriptableAdapter {
             
             // After displaying results, prompt for calendar execution if we have analyzed events
             // Don't prompt when displaying saved runs (they should use isDryRun override instead)
+            console.log('📱 Scriptable: Debug - Checking execution prompt conditions:');
+            console.log(`📱 Scriptable: - analyzedEvents: ${results.analyzedEvents?.length || 0}`);
+            console.log(`📱 Scriptable: - calendarEvents: ${results.calendarEvents || 0}`);
+            console.log(`📱 Scriptable: - _isDisplayingSavedRun: ${results._isDisplayingSavedRun || false}`);
+            
             if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
-                // Only prompt if we haven't already executed (calendarEvents would be > 0)
-                const isDryRun = results.config?.parsers?.some(p => p.dryRun === true);
-                if (!isDryRun) {
+                // Check if we have any events from non-dry-run parsers
+                const eventsFromActiveParsers = results.analyzedEvents.filter(event => {
+                    const parserConfig = results.config?.parsers?.find(p => p.name === event._parserConfig?.name);
+                    const isParserDryRun = parserConfig?.dryRun === true;
+                    return !isParserDryRun;
+                });
+                
+                const globalDryRun = results.config?.config?.dryRun;
+                const hasActiveEvents = eventsFromActiveParsers.length > 0;
+                
+                console.log(`📱 Scriptable: - globalDryRun: ${globalDryRun}`);
+                console.log(`📱 Scriptable: - eventsFromActiveParsers: ${eventsFromActiveParsers.length}`);
+                console.log(`📱 Scriptable: - hasActiveEvents: ${hasActiveEvents}`);
+                
+                if (!globalDryRun && hasActiveEvents) {
                     console.log('📱 Scriptable: Prompting for calendar execution...');
-                    const executedCount = await this.promptForCalendarExecution(results.analyzedEvents, results.config);
+                    const executedCount = await this.promptForCalendarExecution(eventsFromActiveParsers, results.config);
                     results.calendarEvents = executedCount;
+                } else {
+                    if (globalDryRun) {
+                        console.log('📱 Scriptable: Skipping prompt due to global dry run mode');
+                    } else if (!hasActiveEvents) {
+                        console.log('📱 Scriptable: Skipping prompt - all events are from dry run parsers');
+                    }
                 }
+            } else {
+                console.log('📱 Scriptable: Skipping prompt due to conditions not met');
             }
             
         } catch (error) {
@@ -3276,6 +3301,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
+
+
     // Prompt user for calendar execution after displaying results
     async promptForCalendarExecution(analyzedEvents, config) {
         if (!analyzedEvents || analyzedEvents.length === 0) {
@@ -3684,6 +3711,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
         }
     }
+
 }
 
 // Export for Scriptable environment
