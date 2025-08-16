@@ -3276,51 +3276,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         }
     }
 
-    // Present rich UI display and handle calendar execution based on context
-    async presentRichResults(results) {
-        try {
-            console.log('📱 Scriptable: Preparing rich HTML UI display...');
-            
-            // TODO: Generate and present the actual HTML display here
-            // For now, we'll focus on the execution logic
-            
-            console.log('📱 Scriptable: ✓ Rich HTML display completed');
-            
-            // Handle calendar execution based on context and data
-            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents) {
-                const isDryRun = results.config?.config?.dryRun || false;
-                
-                if (!isDryRun) {
-                    // Detect execution context
-                    const isWidget = results.config?.widgetParameter !== undefined;
-                    const isBackground = typeof config !== 'undefined' ? !config.runsInApp : false; // Scriptable background execution
-                    
-                    if (isWidget || isBackground) {
-                        // Auto-execute for widget/background mode
-                        console.log('📱 Scriptable: Auto-execution mode - processing calendar actions');
-                        const executedCount = await this.executeCalendarActions(results.analyzedEvents, results.config);
-                        results.calendarEvents = executedCount;
-                        console.log(`📱 Scriptable: ✓ Auto-executed ${executedCount} calendar actions`);
-                    } else {
-                        // Interactive mode - prompt user
-                        console.log('📱 Scriptable: Prompting for calendar execution...');
-                        const executedCount = await this.promptForCalendarExecution(results.analyzedEvents, results.config);
-                        results.calendarEvents = executedCount;
-                    }
-                } else {
-                    console.log('📱 Scriptable: Dry run mode - skipping calendar execution');
-                }
-            } else if (!results.analyzedEvents || results.analyzedEvents.length === 0) {
-                console.log('📱 Scriptable: No events to process for calendar');
-            } else if (results.calendarEvents) {
-                console.log('📱 Scriptable: Calendar events already processed');
-            }
-            
-        } catch (error) {
-            console.error(`📱 Scriptable: ✗ Failed to present rich results: ${error.message}`);
-            throw error;
-        }
-    }
+
 
     // Prompt user for calendar execution after displaying results
     async promptForCalendarExecution(analyzedEvents, config) {
