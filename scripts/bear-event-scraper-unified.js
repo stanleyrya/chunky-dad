@@ -237,7 +237,7 @@ class BearEventScraperOrchestrator {
                 let calendarEvents = 0;
                 
                 // Check if we should add to calendar
-                const isDryRun = config.parsers.some(p => p.dryRun === true);
+                const isDryRun = config.config.dryRun;
                 
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 console.log('🐻 Orchestrator: Analyzing events for calendar actions...');
