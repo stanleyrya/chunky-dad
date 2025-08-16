@@ -133,14 +133,22 @@ class BearraccudaParser {
             // Extract special info (like anniversary details)
             const specialInfo = this.extractSpecialInfo(html);
             
+            // Extract full description content
+            const fullDescription = this.extractFullDescription(html);
+            
             // Extract city from URL and title
             const city = this.extractCityFromUrl(sourceUrl) || this.extractCityFromText(title);
             
             // Build description
             let description = '';
-            if (specialInfo) description += specialInfo + '\n';
-            if (performers) description += 'Entertainment: ' + performers + '\n';
-            if (timeInfo.details) description += timeInfo.details + '\n';
+            if (fullDescription) {
+                description += fullDescription + '\n';
+            } else {
+                // Fallback to old logic if full description not found
+                if (specialInfo) description += specialInfo + '\n';
+                if (performers) description += 'Entertainment: ' + performers + '\n';
+                if (timeInfo.details) description += timeInfo.details + '\n';
+            }
             description = description.trim();
             
             // Create start date
@@ -344,8 +352,11 @@ class BearraccudaParser {
         const match = html.match(venuePattern);
         
         if (match && match[1]) {
+            let venueName = match[1].trim();
+            // Clean HTML entities like &nbsp;
+            venueName = venueName.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
             return {
-                name: match[1].trim(),
+                name: venueName,
                 emoji: '🪩'
             };
         }
@@ -355,20 +366,55 @@ class BearraccudaParser {
 
     // Extract address
     extractAddress(html) {
-        // Look for address pattern: "2069 Cheshire Bridge Road, Atlanta, GA"
+        // Look for address pattern: "2069 Cheshire Bridge Road, Atlanta, GA" or "619 E. Pine St, Seattle, WA"
         const addressPatterns = [
-            /<div[^>]*>(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})<\/div>/i, // "2069 Cheshire Bridge Road, Atlanta, GA"
-            /(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})/i, // Fallback without div tags
-            /(\d+\s+[^<>\n]+(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr)[^<>\n]*)/i
+            // Match addresses in div tags, avoiding script content
+            /<div[^>]*>(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})<\/div>/i, 
+            // Match addresses in paragraph tags
+            /<p[^>]*>(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})<\/p>/i,
+            // Match addresses with directional prefixes like "619 E. Pine St"
+            /(\d+\s+[NSEW]\.?\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})/i,
+            // Standard address pattern without tags
+            /(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})/i,
+            // Street name patterns
+            /(\d+\s+[^<>\n]+(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Pine|Bridge)[^<>\n]*)/i
         ];
         
         for (const pattern of addressPatterns) {
             const match = html.match(pattern);
             if (match && match[1]) {
-                return match[1].trim();
+                let address = match[1].trim();
+                
+                // Skip if this looks like JavaScript code or contains suspicious content
+                if (address.includes('function') || 
+                    address.includes('window.') || 
+                    address.includes('document.') ||
+                    address.includes('return') ||
+                    address.includes('%') ||
+                    address.includes('javascript') ||
+                    address.length > 100) {
+                    console.log(`🐻 Bearracuda: Skipping suspicious address content: ${address.substring(0, 50)}...`);
+                    continue;
+                }
+                
+                // Clean HTML entities and normalize
+                address = address.replace(/&nbsp;/g, ' ')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&quot;/g, '"')
+                                .replace(/\s+/g, ' ')
+                                .trim();
+                
+                // Final validation - should look like a real address
+                if (/^\d+\s+[A-Za-z\s\.,]+[A-Z]{2}$/.test(address.replace(/[,\s]+/g, ' ').trim())) {
+                    console.log(`🐻 Bearracuda: Extracted valid address: ${address}`);
+                    return address;
+                }
             }
         }
         
+        console.log(`🐻 Bearracuda: No valid address found`);
         return '';
     }
 
@@ -434,6 +480,48 @@ class BearraccudaParser {
         return '';
     }
 
+    // Extract full description content
+    extractFullDescription(html) {
+        // Look for detailed event descriptions in various formats
+        const descriptionPatterns = [
+            // Look for content in paragraph tags that contains detailed descriptions
+            /<p[^>]*>([^<]*(?:wristband|choose|adventure|cruise|meet|consent|clothes check)[^<]*)<\/p>/gi,
+            // Look for content after specific headings or before contact info
+            /<p[^>]*>([^<]{100,})<\/p>/gi, // Long paragraphs likely to be descriptions
+            // Look for content in divs with specific classes
+            /<div[^>]*class="[^"]*content[^"]*"[^>]*>([^<]+)<\/div>/gi,
+            // Look for text blocks with event details
+            /([^<>\n]*(?:returns to|invite you|grab a wristband|choose your own|cruise and meet|consent is mandatory|clothes check)[^<>\n]*)/gi
+        ];
+        
+        let descriptions = [];
+        
+        for (const pattern of descriptionPatterns) {
+            let match;
+            while ((match = pattern.exec(html)) !== null) {
+                let desc = match[1].trim();
+                if (desc && desc.length > 50) { // Only include substantial content
+                    // Clean HTML entities and normalize whitespace
+                    desc = desc.replace(/&nbsp;/g, ' ')
+                              .replace(/&amp;/g, '&')
+                              .replace(/&lt;/g, '<')
+                              .replace(/&gt;/g, '>')
+                              .replace(/&quot;/g, '"')
+                              .replace(/\s+/g, ' ')
+                              .trim();
+                    
+                    // Avoid duplicates
+                    if (!descriptions.some(existing => existing.includes(desc) || desc.includes(existing))) {
+                        descriptions.push(desc);
+                    }
+                }
+            }
+        }
+        
+        // Join descriptions with double newlines for readability
+        return descriptions.length > 0 ? descriptions.join('\n\n') : '';
+    }
+
     // Extract image URL
     extractImage(html) {
         // Look for featured image in meta tags or img elements
@@ -462,7 +550,9 @@ class BearraccudaParser {
             'denver': /denverpride|denver/i,
             'sf': /sanfrancisco|sf/i,
             'la': /losangeles|la/i,
-            'nyc': /newyork|nyc/i
+            'nyc': /newyork|nyc/i,
+            'seattle': /treasureseattle|seattle/i,
+            'portland': /treasureportland|portland/i
         };
         
         for (const [city, pattern] of Object.entries(urlPatterns)) {
@@ -798,8 +888,26 @@ class BearraccudaParser {
     generateGoogleMapsUrl(address) {
         if (!address) return '';
         
-        const encoded = encodeURIComponent(address);
-        return `https://maps.google.com/maps?q=${encoded}`;
+        // Additional validation to prevent corrupted URLs
+        if (address.includes('function') || 
+            address.includes('window.') || 
+            address.includes('document.') ||
+            address.includes('javascript') ||
+            address.includes('%') ||
+            address.length > 100) {
+            console.log(`🐻 Bearracuda: Skipping Google Maps URL generation for suspicious address: ${address.substring(0, 50)}...`);
+            return '';
+        }
+        
+        try {
+            const encoded = encodeURIComponent(address);
+            const url = `https://maps.google.com/maps?q=${encoded}`;
+            console.log(`🐻 Bearracuda: Generated Google Maps URL: ${url}`);
+            return url;
+        } catch (error) {
+            console.log(`🐻 Bearracuda: Error generating Google Maps URL: ${error}`);
+            return '';
+        }
     }
 
     // Extract city from text content
