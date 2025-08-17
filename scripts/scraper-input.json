@@ -1,6 +1,6 @@
 {
   "config": {
-    "dryRun": true,
+    "dryRun": false,
     "daysToLookAhead": null
   },
   "parsers": [
@@ -13,7 +13,7 @@
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": true,
+      "dryRun": false,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
@@ -70,7 +70,7 @@
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": true,
+      "dryRun": false,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
@@ -128,7 +128,7 @@
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": true,
+      "dryRun": false,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
@@ -184,7 +184,7 @@
       "requireDetailPages": true,
       "maxAdditionalUrls": 20,
       "urlDiscoveryDepth": 1,
-      "dryRun": true,
+      "dryRun": false,
       "daysToLookAhead": null,
       "mergeMode": "upsert",
       "urlFilters": {
