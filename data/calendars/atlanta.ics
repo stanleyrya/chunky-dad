@@ -5,4 +5,29 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-atlanta
 X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20250824T100000Z
+DTEND:20250824T150000Z
+DTSTAMP:20250817T042828Z
+UID:6320CBDC-A129-4BB6-B24E-3DC38AC4488F
+CREATED:20250817T042340Z
+DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 10:00 pm - Part
+ y Goes Until 3:00 am\nbar: Heretic\nwebsite: https://bearracuda.com/events/
+ atlantabearpride/\nimage: https://bearracuda.com/wp-content/uploads/2024/12
+ /cuda-atlanta-august_2025-web.jpg\ngmaps: https://maps.google.com/maps?q=20
+ 69%20Cheshire%20Bridge%20Road%2C%20Atlanta%2C%20GA\nfacebookEvent: https://
+ www.facebook.com/events/1024483639785684/\nticketUrl: https://www.eventbrit
+ e.com/e/bearracuda-atlanta-16-year-anniversary-tickets-1364601091599\nevent
+ briteUrl: https://www.eventbrite.com/e/bearracuda-atlanta-16-year-anniversa
+ ry-tickets-1364601091599\ndetailPageUrl: https://bearracuda.com/events/atla
+ ntabearpride/\nshortName: Bearracuda\ninstagram: https://www.instagram.com/
+ bearracuda\nkey: atlanta|2025-08-24|heretic|bearracuda
+LAST-MODIFIED:20250817T042341Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Atlanta
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

@@ -5,4 +5,25 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
+BEGIN:VEVENT
+DTSTART:20250830T100000Z
+DTEND:20250830T150000Z
+DTSTAMP:20250817T042828Z
+UID:583D71BC-91BF-4B60-BD14-3F9BD530AD05
+CREATED:20250817T042337Z
+DESCRIPTION:description: Decor & Photos by Dusti Cunningham\n\nThe VIP area
+  is the GA Lower Balcony\, which includes VIP bar\, seating and viewing are
+ a for guests.\nbar: Joy Theatre\nwebsite: https://bearracuda.com/events/new
+ -orleans/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-no
+ la-august-2025-web.jpg\ndetailPageUrl: https://bearracuda.com/events/new-or
+ leans/\nshortName: Bearracuda\ninstagram: https://www.instagram.com/bearrac
+ uda\nkey: new-orleans|2025-08-30|joy theatre|bearracuda
+LAST-MODIFIED:20250817T042337Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:NEW ORLEANS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

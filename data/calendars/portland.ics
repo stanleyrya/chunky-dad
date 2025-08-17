@@ -5,4 +5,29 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-portland
 X-WR-TIMEZONE:America/Los_Angeles
+BEGIN:VEVENT
+DTSTART:20250914T120000Z
+DTEND:20250914T170000Z
+DTSTAMP:20250817T042828Z
+UID:0C91BC0F-29F4-4FAD-815C-E659190676DC
+CREATED:20250817T042341Z
+DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 9:00 pm - Party
+  Goes Until 2:00 am\nbar: NOVA PDX\nwebsite: https://bearracuda.com/events/
+ pdx16/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-portl
+ and-september_2025-web.jpg\ngmaps: https://maps.google.com/maps?q=722%20E%2
+ 0Burnside%2C%20Portland%2C%20OR\nfacebookEvent: https://www.facebook.com/ev
+ ents/751830650923430/\nticketUrl: https://www.eventbrite.com/e/bearracuda-p
+ ortland-16-year-anniversary-tickets-1546221061819\neventbriteUrl: https://w
+ ww.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1546221
+ 061819\ndetailPageUrl: https://bearracuda.com/events/pdx16/\nshortName: Bea
+ rracuda\ninstagram: https://www.instagram.com/bearracuda\nkey: portland-16t
+ h-anniversary|2025-09-14|nova pdx|bearracuda
+LAST-MODIFIED:20250817T042341Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Portland 16th Anniversary
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

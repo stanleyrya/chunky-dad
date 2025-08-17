@@ -45,7 +45,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250720T150000
 DTEND;TZID=America/Los_Angeles:20250720T210000
 RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20250817T032202Z
+DTSTAMP:20250817T042828Z
 UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
 CREATED:20250719T050204Z
 DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
@@ -62,7 +62,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Vancouver:20250717T170000
 DTEND;TZID=America/Vancouver:20250717T210000
 RRULE:FREQ=WEEKLY
-DTSTAMP:20250817T032202Z
+DTSTAMP:20250817T042828Z
 UID:9vnvsm6kjpievu62279lco139k@google.com
 CREATED:20250715T045103Z
 DESCRIPTION:Tea: Popular happy hour that changes location every week.\nShor
@@ -76,20 +76,23 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250817T050000Z
 DTEND:20250817T100000Z
-DTSTAMP:20250817T032202Z
+DTSTAMP:20250817T042828Z
 UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
 CREATED:20250719T045039Z
 DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
   😈 Be sure to follow them on IG for location\, updates\, and more!\ninstag
  ram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|t
- ba|eventbrite\nbar: TBA\nurl: https://www.eventbrite.com/e/duro-summer-nigh
- t-foam-edition-tickets-1446957562019\nimage: https://img.evbuc.com/https%3A
- %2F%2Fcdn.evbuc.com%2Fimages%2F1074412243%2F185013722403%2F1%2Foriginal.202
- 50716-002220?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=
- 75&sharp=10&fp-x=0.5&fp-y=0.5&s=59b8e3f4c9f6ab9142960372a78ee67d\nshortName
- : MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-summer-night-foam-e
- dition-tickets-1446957562019\ncover: $11.58 - $36.83 (as of 8/13)
-LAST-MODIFIED:20250814T035156Z
+ ba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/du
+ ro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbu
+ c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%
+ 2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
+ %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
+ 04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
+ ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
+ of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
+ %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k
+LAST-MODIFIED:20250817T033530Z
+LOCATION:33.9139036\, -118.2805709
 SEQUENCE:1
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
@@ -98,7 +101,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20250817T032202Z
+DTSTAMP:20250817T042828Z
 UID:E4EF602F-5052-4246-9754-412A698B335F
 CREATED:20250809T173609Z
 DESCRIPTION:bar: Falcon North\nurl: https://www.eventbrite.com/e/megawoof-a
@@ -107,13 +110,12 @@ DESCRIPTION:bar: Falcon North\nurl: https://www.eventbrite.com/e/megawoof-a
  F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=for
  mat%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f5
  4c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/mega
- woof_america\ngmaps: https://maps.google.com/?q=place_id:ChIJ91NzVy4z3YARBN
- uS8BZHBGg\nkey: megawoof|2025-08-30|falcon north|eventbrite\nwebsite: https
- ://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1
- 520432868639\ncover: $11.58 - $21 (as of 8/13)\ndescription: LONG BEACH — W
- E’RE BACK! \n The bears of MEGAWOOF \nreturn to close out the Summer Tour i
- n you —\nSATURDAY\, AUGUST 30th  and it’s all goin
-LAST-MODIFIED:20250814T035157Z
+ woof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.874
+ 45400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg\nkey:
+  megawoof|2025-08-30|falcon north|eventbrite\nwebsite: https://www.eventbri
+ te.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\nc
+ over: $11.58 - $21 (as of 8/16)\ndescription: LONG BEACH — WE’RE BACK!
+LAST-MODIFIED:20250817T033530Z
 LOCATION:33.87445400000001\, -118.1680614
 SEQUENCE:0
 STATUS:CONFIRMED
