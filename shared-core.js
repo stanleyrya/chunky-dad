@@ -462,8 +462,8 @@ class SharedCore {
             console.log(`🔄 SharedCore: Using original title for deduplication: "${event.title}" → "${title}"`);
         }
         
-        // Special handling for Bearracuda events to normalize titles between parsers
-        title = this.normalizeBearracudaTitle(title, event);
+        // Apply dynamic key transformations based on parser configuration
+        title = this.applyKeyTransformations(title, event, 'title');
         
         // Generic text normalization for better deduplication
         // This handles titles with special characters, spacing variations, etc.
@@ -486,8 +486,8 @@ class SharedCore {
         }
         
         const date = this.normalizeEventDate(event.startDate);
-        const venue = String(event.bar || '').toLowerCase().trim();
-        const source = this.normalizeSourceForDeduplication(event.source || '', event);
+        const venue = this.applyKeyTransformations(event.bar || '', event, 'venue');
+        const source = this.applyKeyTransformations(event.source || '', event, 'source');
         
         const key = `${title}|${date}|${venue}|${source}`;
         console.log(`🔄 SharedCore: Created event key: "${key}" for event "${event.title}"`);
@@ -495,113 +495,43 @@ class SharedCore {
         return key;
     }
 
-    // Normalize Bearracuda titles to match between website and Eventbrite parsers
-    normalizeBearracudaTitle(title, event) {
-        if (!event || !this.isBearracudaEvent(event)) {
-            return title;
+    // Apply dynamic key transformations based on parser configuration
+    applyKeyTransformations(value, event, fieldType) {
+        if (!event || !event._parserConfig || !event._parserConfig.keyTransformations) {
+            return String(value).toLowerCase().trim();
         }
         
-        const originalTitle = title;
+        const transformations = event._parserConfig.keyTransformations[fieldType];
+        if (!transformations || !Array.isArray(transformations)) {
+            return String(value).toLowerCase().trim();
+        }
         
-        // For Bearracuda Eventbrite events, extract the city name from full titles
-        // Examples: "bearracuda atlanta 16 year anniversary!" → "atlanta"
-        //          "bearracuda portland 16 year anniversary" → "portland" 
-        //          "bearracuda sf presents: horse meat disco" → "sf"
-        if (title.includes('bearracuda')) {
-            // Remove "bearracuda" prefix and common suffixes
-            let cityTitle = title
-                .replace(/^bearracuda\s+/i, '')
-                .replace(/\s+(16\s+years?|anniversary|presents?).*$/i, '')
-                .trim();
-                
-            // Handle special cases
-            if (cityTitle.includes('sf ') || cityTitle === 'sf') {
-                cityTitle = 'sf';
-            } else if (cityTitle.includes('seattle')) {
-                cityTitle = 'seattle';  
-            } else if (cityTitle.includes('portland')) {
-                cityTitle = 'portland';
-            } else if (cityTitle.includes('atlanta')) {
-                cityTitle = 'atlanta';
-            } else if (cityTitle.includes('chicago')) {
-                cityTitle = 'chicago';
-            } else if (cityTitle.includes('denver')) {
-                cityTitle = 'denver';
-            } else if (cityTitle.includes('new orleans') || cityTitle.includes('new-orleans')) {
-                cityTitle = 'new-orleans';
-            }
-            
-            if (cityTitle !== originalTitle) {
-                console.log(`🔄 SharedCore: Normalized Bearracuda title: "${originalTitle}" → "${cityTitle}"`);
-                return cityTitle;
+        let transformedValue = String(value).toLowerCase().trim();
+        const originalValue = transformedValue;
+        
+        // Apply each transformation in order
+        for (const transformation of transformations) {
+            if (transformation.type === 'replace') {
+                const regex = new RegExp(transformation.pattern, transformation.flags || 'gi');
+                transformedValue = transformedValue.replace(regex, transformation.replacement || '');
+            } else if (transformation.type === 'extract') {
+                const regex = new RegExp(transformation.pattern, transformation.flags || 'gi');
+                const match = transformedValue.match(regex);
+                if (match && match[transformation.group || 1]) {
+                    transformedValue = match[transformation.group || 1];
+                }
+            } else if (transformation.type === 'set') {
+                transformedValue = transformation.value;
             }
         }
         
-        return title;
-    }
-
-    // Check if this is a Bearracuda event (from either parser)
-    isBearracudaEvent(event) {
-        if (!event) return false;
+        transformedValue = transformedValue.trim();
         
-        // Check source
-        const source = String(event.source || '').toLowerCase();
-        if (source === 'bearracuda') return true;
-        
-        // Check if it's Bearracuda from Eventbrite
-        if (source === 'eventbrite' && this.isBearracudaEventbriteSource(event)) {
-            return true;
+        if (transformedValue !== originalValue) {
+            console.log(`🔄 SharedCore: Applied ${fieldType} transformation: "${originalValue}" → "${transformedValue}"`);
         }
         
-        // Check title for bearracuda keyword
-        const title = String(event.title || '').toLowerCase();
-        if (title.includes('bearracuda')) return true;
-        
-        return false;
-    }
-
-    // Normalize source names for deduplication to handle same organization from different parsers
-    normalizeSourceForDeduplication(source, event) {
-        const normalizedSource = String(source).toLowerCase().trim();
-        
-        // Handle Bearracuda events from both website and Eventbrite parsers
-        // Both should be treated as the same source for deduplication
-        if (normalizedSource === 'bearracuda') {
-            return 'bearracuda';
-        }
-        
-        // Check if this is a Bearracuda event from the Eventbrite parser
-        if (normalizedSource === 'eventbrite' && event && this.isBearracudaEventbriteSource(event)) {
-            console.log(`🔄 SharedCore: Normalizing Bearracuda Eventbrite source: "eventbrite" → "bearracuda"`);
-            return 'bearracuda';
-        }
-        
-        return normalizedSource;
-    }
-
-    // Check if this is a Bearracuda event from the Eventbrite parser
-    // This is determined by checking the parser configuration context
-    isBearracudaEventbriteSource(event) {
-        if (!event || !event._parserConfig) {
-            return false;
-        }
-        
-        const parserConfig = event._parserConfig;
-        
-        // Check if this is the Bearracuda Eventbrite parser specifically
-        // We can identify it by the parser name or URL pattern
-        if (parserConfig.name && parserConfig.name.toLowerCase().includes('bearracuda')) {
-            return true;
-        }
-        
-        // Also check URLs for bearracuda.eventbrite.com patterns
-        if (parserConfig.urls && Array.isArray(parserConfig.urls)) {
-            return parserConfig.urls.some(url => 
-                url.includes('bearracuda') && url.includes('eventbrite.com')
-            );
-        }
-        
-        return false;
+        return transformedValue;
     }
 
     // Enhanced merge function that respects field-level merge strategies

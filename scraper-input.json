@@ -134,6 +134,42 @@
       "urlFilters": {
         "include": ["bearracuda\\.com\\/events\\/"]
       },
+      "keyTransformations": {
+        "title": [
+          {
+            "type": "replace",
+            "pattern": "^sf\\s+.*",
+            "replacement": "sf",
+            "flags": "i"
+          }
+        ],
+        "source": [
+          {
+            "type": "set",
+            "value": "bearracuda"
+          }
+        ],
+        "venue": [
+          {
+            "type": "replace",
+            "pattern": "^the\\s+",
+            "replacement": "",
+            "flags": "i"
+          },
+          {
+            "type": "replace",
+            "pattern": "\\s+(sf|seattle|portland|chicago|denver|atlanta)$",
+            "replacement": "",
+            "flags": "i"
+          },
+          {
+            "type": "replace",
+            "pattern": "public\\s+works.*",
+            "replacement": "public works",
+            "flags": "i"
+          }
+        ]
+      },
       "metadata": {
         "title": {
           "merge": "upsert"
@@ -189,6 +225,42 @@
       "mergeMode": "upsert",
       "urlFilters": {
         "include": ["eventbrite\\.com\\/e\\/"]
+      },
+      "keyTransformations": {
+        "title": [
+          {
+            "type": "replace",
+            "pattern": "^sf\\s+.*",
+            "replacement": "sf",
+            "flags": "i"
+          }
+        ],
+        "source": [
+          {
+            "type": "set",
+            "value": "bearracuda"
+          }
+        ],
+        "venue": [
+          {
+            "type": "replace",
+            "pattern": "^the\\s+",
+            "replacement": "",
+            "flags": "i"
+          },
+          {
+            "type": "replace",
+            "pattern": "\\s+(sf|seattle|portland|chicago|denver|atlanta)$",
+            "replacement": "",
+            "flags": "i"
+          },
+          {
+            "type": "replace",
+            "pattern": "public\\s+works.*",
+            "replacement": "public works",
+            "flags": "i"
+          }
+        ]
       },
       "metadata": {
         "title": {
