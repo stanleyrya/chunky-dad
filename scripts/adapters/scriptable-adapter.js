@@ -1108,6 +1108,7 @@ class ScriptableAdapter {
                 const globalDryRun = results.config?.config?.dryRun;
                 const hasActiveEvents = eventsFromActiveParsers.length > 0;
                 
+                console.log(`📱 Scriptable: - DEBUG config object: ${JSON.stringify(results.config?.config, null, 2)}`);
                 console.log(`📱 Scriptable: - globalDryRun: ${globalDryRun}`);
                 console.log(`📱 Scriptable: - eventsFromActiveParsers: ${eventsFromActiveParsers.length}`);
                 console.log(`📱 Scriptable: - hasActiveEvents: ${hasActiveEvents}`);
