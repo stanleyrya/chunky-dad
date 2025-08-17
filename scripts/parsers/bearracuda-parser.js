@@ -917,53 +917,139 @@ class BearraccudaParser {
         return null;
     }
 
-    // Combine date and time into a single Date object with timezone handling
+    // Get timezone identifier for a city (for dynamic DST handling)
+    getTimezoneForCity(city) {
+        // City to IANA timezone identifier mapping
+        // These handle DST automatically
+        const cityTimezones = {
+            'atlanta': 'America/New_York',
+            'chicago': 'America/Chicago', 
+            'denver': 'America/Denver',
+            'la': 'America/Los_Angeles',
+            'sf': 'America/Los_Angeles',
+            'seattle': 'America/Los_Angeles',
+            'portland': 'America/Los_Angeles',
+            'vegas': 'America/Los_Angeles',
+            'nyc': 'America/New_York',
+            'miami': 'America/New_York',
+            'boston': 'America/New_York',
+            'philadelphia': 'America/New_York',
+            'dc': 'America/New_York',
+            'austin': 'America/Chicago',
+            'dallas': 'America/Chicago',
+            'houston': 'America/Chicago',
+            'phoenix': 'America/Phoenix',      // No DST
+            'orlando': 'America/New_York',
+            'tampa': 'America/New_York',
+            'new-orleans': 'America/Chicago'
+        };
+        
+        return cityTimezones[city] || 'America/New_York'; // Default to Eastern if city not found
+    }
+
+    // Combine date and time into a single Date object with dynamic timezone handling
     combineDateTime(date, time, city = null) {
         if (!date || !time) return date;
         
-        // Get timezone offset for the city
-        const timezoneOffset = this.getTimezoneOffsetForCity(city);
+        // Get timezone identifier for the city
+        const timezone = this.getTimezoneForCity(city);
+        
+        // Create the date string in the city's local timezone
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(time.hours).padStart(2, '0');
+        const minutes = String(time.minutes).padStart(2, '0');
+        
+        // Create date string in local timezone format
+        const localDateString = `${year}-${month}-${day}T${hours}:${minutes}:00`;
+        
+        try {
+            // Use a temporary date to determine the timezone offset for this specific date
+            // This automatically handles DST transitions
+            const tempDate = new Date(`${year}-${month}-${day}T12:00:00`);
+            
+            // Get the timezone offset for this specific date in this city
+            // Using Intl.DateTimeFormat to get accurate offset including DST
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+            
+            const parts = formatter.formatToParts(tempDate);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            
+            if (offsetPart && offsetPart.value) {
+                // Parse offset like "GMT-04:00" or "GMT+09:00"
+                const offsetMatch = offsetPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+                if (offsetMatch) {
+                    const sign = offsetMatch[1] === '+' ? 1 : -1;
+                    const offsetHours = parseInt(offsetMatch[2]);
+                    const offsetMinutes = parseInt(offsetMatch[3]);
+                    const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
+                    
+                    // Create local time and convert to UTC
+                    const localTime = new Date(date);
+                    localTime.setHours(time.hours, time.minutes, 0, 0);
+                    const utcTime = new Date(localTime.getTime() - (totalOffsetMinutes * 60 * 1000));
+                    
+                    console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
+                    
+                    return utcTime;
+                }
+            }
+            
+            // Fallback: use the old method if Intl formatting fails
+            console.log(`🐻 Bearracuda: Warning - Could not determine dynamic timezone for ${city}, using fallback`);
+            return this.combineDateTime_fallback(date, time, city);
+            
+        } catch (error) {
+            console.log(`🐻 Bearracuda: Error in dynamic timezone conversion: ${error.message}, using fallback`);
+            return this.combineDateTime_fallback(date, time, city);
+        }
+    }
+    
+    // Fallback method with the updated DST-aware static mappings
+    combineDateTime_fallback(date, time, city = null) {
+        // Get timezone offset for the city (DST-aware static mappings)
+        const timezoneOffset = this.getTimezoneOffsetForCity_DST(city);
         
         // Create date in local timezone first
         const combined = new Date(date);
         combined.setHours(time.hours, time.minutes, 0, 0);
         
         // Convert to UTC by subtracting the timezone offset
-        // timezoneOffset is negative for timezones behind UTC (like EST = -300 minutes)
-        // To convert local time to UTC: subtract the offset (which adds time for negative offsets)
         const utcTime = new Date(combined.getTime() - (timezoneOffset * 60 * 1000));
         
-        console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} to UTC: ${utcTime.toISOString()}`);
+        console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} to UTC (fallback): ${utcTime.toISOString()}`);
         
         return utcTime;
     }
-    
-    // Get timezone offset in minutes for a city
-    getTimezoneOffsetForCity(city) {
-        // City to timezone mapping (in minutes offset from UTC)
+
+    // DST-aware static timezone mappings (fallback)
+    getTimezoneOffsetForCity_DST(city) {
         // Updated for Daylight Saving Time (active March-November in most US cities)
-        // Most bear events happen during DST period, so using daylight time offsets
         const cityTimezones = {
-            'atlanta': -4 * 60,      // EDT (UTC-4) - was EST (UTC-5)
-            'chicago': -5 * 60,      // CDT (UTC-5) - was CST (UTC-6)
-            'denver': -6 * 60,       // MDT (UTC-6) - was MST (UTC-7)
-            'la': -7 * 60,           // PDT (UTC-7) - was PST (UTC-8)
-            'sf': -7 * 60,           // PDT (UTC-7) - was PST (UTC-8)
-            'seattle': -7 * 60,      // PDT (UTC-7) - was PST (UTC-8)
-            'portland': -7 * 60,     // PDT (UTC-7) - was PST (UTC-8)
-            'vegas': -7 * 60,        // PDT (UTC-7) - was PST (UTC-8)
-            'nyc': -4 * 60,          // EDT (UTC-4) - was EST (UTC-5)
-            'miami': -4 * 60,        // EDT (UTC-4) - was EST (UTC-5)
-            'boston': -4 * 60,       // EDT (UTC-4) - was EST (UTC-5)
-            'philadelphia': -4 * 60, // EDT (UTC-4) - was EST (UTC-5)
-            'dc': -4 * 60,           // EDT (UTC-4) - was EST (UTC-5)
-            'austin': -5 * 60,       // CDT (UTC-5) - was CST (UTC-6)
-            'dallas': -5 * 60,       // CDT (UTC-5) - was CST (UTC-6)
-            'houston': -5 * 60,      // CDT (UTC-5) - was CST (UTC-6)
-            'phoenix': -7 * 60,      // MST (UTC-7, no DST) - unchanged
-            'orlando': -4 * 60,      // EDT (UTC-4) - was EST (UTC-5)
-            'tampa': -4 * 60,        // EDT (UTC-4) - was EST (UTC-5)
-            'new-orleans': -5 * 60   // CDT (UTC-5) - was CST (UTC-6)
+            'atlanta': -4 * 60,      // EDT (UTC-4)
+            'chicago': -5 * 60,      // CDT (UTC-5)
+            'denver': -6 * 60,       // MDT (UTC-6)
+            'la': -7 * 60,           // PDT (UTC-7)
+            'sf': -7 * 60,           // PDT (UTC-7)
+            'seattle': -7 * 60,      // PDT (UTC-7)
+            'portland': -7 * 60,     // PDT (UTC-7)
+            'vegas': -7 * 60,        // PDT (UTC-7)
+            'nyc': -4 * 60,          // EDT (UTC-4)
+            'miami': -4 * 60,        // EDT (UTC-4)
+            'boston': -4 * 60,       // EDT (UTC-4)
+            'philadelphia': -4 * 60, // EDT (UTC-4)
+            'dc': -4 * 60,           // EDT (UTC-4)
+            'austin': -5 * 60,       // CDT (UTC-5)
+            'dallas': -5 * 60,       // CDT (UTC-5)
+            'houston': -5 * 60,      // CDT (UTC-5)
+            'phoenix': -7 * 60,      // MST (UTC-7, no DST)
+            'orlando': -4 * 60,      // EDT (UTC-4)
+            'tampa': -4 * 60,        // EDT (UTC-4)
+            'new-orleans': -5 * 60   // CDT (UTC-5)
         };
         
         return cityTimezones[city] || -4 * 60; // Default to EDT if city not found
