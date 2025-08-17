@@ -447,47 +447,75 @@ class SharedCore {
         return deduplicated;
     }
 
-    createEventKey(event) {
+    createEventKey(event, format = null) {
         // Debug the event structure
         if (typeof event.title !== 'string') {
             console.log(`🔍 DEBUG: event.title type: ${typeof event.title}, value: ${JSON.stringify(event.title)}`);
             console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
         }
         
-        // Use original title if available (before metadata override), otherwise use current title
-        let title = String(event.originalTitle || event.title || '').toLowerCase().trim();
-        const wasOverridden = event.originalTitle && event.originalTitle !== event.title;
-        
-        if (wasOverridden) {
-            console.log(`🔄 SharedCore: Using original title for deduplication: "${event.title}" → "${title}"`);
+        // Determine the format to use
+        let keyFormat = format;
+        if (!keyFormat && event._parserConfig && event._parserConfig.keyTemplate) {
+            keyFormat = event._parserConfig.keyTemplate;
         }
         
-        // Generic text normalization for better deduplication
-        // This handles titles with special characters, spacing variations, etc.
-        const originalTitle = title;
-        
-        // Normalize text patterns with special characters between letters
-        // Examples: "D>U>R>O!", "A-B-C", "X Y Z" -> normalized forms
-        title = title
-            // Replace sequences of special chars between letters with a single hyphen
-            .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
-            // Remove trailing special characters after words
-            .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
-            // Collapse multiple spaces/hyphens into single hyphen
-            .replace(/[\s\-]+/g, '-')
-            // Remove leading/trailing hyphens
-            .replace(/^-+|-+$/g, '');
-        
-        if (title !== originalTitle) {
-            console.log(`🔄 SharedCore: Normalized title for deduplication: "${originalTitle}" → "${title}"`);
+        // Default format is the traditional pipe-separated format
+        if (!keyFormat) {
+            keyFormat = '${normalizedTitle}|${date}|${venue}|${source}';
         }
         
-        const date = this.normalizeEventDate(event.startDate);
-        const venue = String(event.bar || '').toLowerCase().trim();
-        const source = String(event.source || '').toLowerCase().trim();
+        const key = this.generateKeyFromFormat(event, keyFormat);
+        console.log(`🔄 SharedCore: Generated key from format "${keyFormat}": "${key}" for event "${event.title}"`);
         
-        const key = `${title}|${date}|${venue}|${source}`;
-        console.log(`🔄 SharedCore: Created event key: "${key}" for event "${event.title}"`);
+        return key;
+    }
+
+    // Generate key from format string using event data
+    generateKeyFromFormat(event, format) {
+        if (!format) {
+            throw new Error('Format is required for generateKeyFromFormat');
+        }
+        
+        let key = format;
+        
+        // Extract city from event data
+        const city = this.extractCityFromEvent(event);
+        
+        // Handle normalized title (with the original title normalization logic)
+        let normalizedTitle = String(event.originalTitle || event.title || '').toLowerCase().trim();
+        
+        // Apply the original title normalization for ${normalizedTitle}
+        if (format.includes('${normalizedTitle}')) {
+            const originalTitle = normalizedTitle;
+            
+            // Generic text normalization for better deduplication
+            normalizedTitle = normalizedTitle
+                // Replace sequences of special chars between letters with a single hyphen
+                .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
+                // Remove trailing special characters after words
+                .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
+                // Collapse multiple spaces/hyphens into single hyphen
+                .replace(/[\s\-]+/g, '-')
+                // Remove leading/trailing hyphens
+                .replace(/^-+|-+$/g, '');
+            
+            if (normalizedTitle !== originalTitle) {
+                console.log(`🔄 SharedCore: Normalized title for deduplication: "${originalTitle}" → "${normalizedTitle}"`);
+            }
+        }
+        
+        // Replace template variables
+        key = key.replace(/\$\{title\}/g, String(event.title || '').toLowerCase().trim());
+        key = key.replace(/\$\{normalizedTitle\}/g, normalizedTitle);
+        key = key.replace(/\$\{startDate\}/g, this.normalizeEventDate(event.startDate));
+        key = key.replace(/\$\{date\}/g, this.normalizeEventDate(event.startDate));
+        key = key.replace(/\$\{venue\}/g, String(event.bar || '').toLowerCase().trim());
+        key = key.replace(/\$\{source\}/g, String(event.source || '').toLowerCase().trim());
+        key = key.replace(/\$\{city\}/g, city.toLowerCase().trim());
+        
+        // Clean up the key
+        key = key.toLowerCase().trim();
         
         return key;
     }
@@ -816,12 +844,11 @@ class SharedCore {
             const date = new Date(dateInput);
             if (isNaN(date.getTime())) return '';
             
-            // Use a consistent date format that ignores time zone differences
-            // This uses the local date components to create a date string
-            // that will be the same regardless of the device's timezone
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
+            // Use UTC date components to ensure consistent keys regardless of timezone
+            // This prevents keys from changing based on when/where the script is run
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
             
             return `${year}-${month}-${day}`;
         } catch (error) {
@@ -1191,10 +1218,39 @@ class SharedCore {
     }
     
     // Extract city from event data or URL
-    extractCityFromEvent(eventData, url) {
+    extractCityFromEvent(event) {
+        // Try city field first
+        if (event.city) {
+            return String(event.city);
+        }
+        
+        // Try to extract from title
+        const title = String(event.title || '').toLowerCase();
+        
+        // Check for city names in title
+        for (const [patterns, city] of Object.entries(this.cityMappings)) {
+            const cityPatterns = patterns.split('|');
+            for (const pattern of cityPatterns) {
+                if (title.includes(pattern)) {
+                    return city;
+                }
+            }
+        }
+        
+        // Try to extract from venue address or name
+        const venue = String(event.bar || '').toLowerCase();
+        for (const [patterns, city] of Object.entries(this.cityMappings)) {
+            const cityPatterns = patterns.split('|');
+            for (const pattern of cityPatterns) {
+                if (venue.includes(pattern)) {
+                    return city;
+                }
+            }
+        }
+        
         // Try venue address first (keeping venue for backward compatibility with eventbrite data structure)
-        if (eventData.venue?.address) {
-            const address = eventData.venue.address;
+        if (event.venue?.address) {
+            const address = event.venue.address;
             const cityFromAddress = address.city || address.localized_area_display || '';
             if (cityFromAddress) {
                 return this.normalizeCityName(cityFromAddress);
@@ -1202,23 +1258,21 @@ class SharedCore {
         }
         
         // Try address field
-        if (eventData.address) {
-            const cityFromAddress = this.extractCityFromAddress(eventData.address);
+        if (event.address) {
+            const cityFromAddress = this.extractCityFromAddress(event.address);
             if (cityFromAddress) {
                 return cityFromAddress;
             }
         }
         
         // Try extracting from text content
-        const searchText = `${eventData.title || eventData.name || ''} ${eventData.description || ''} ${eventData.bar || ''} ${url || ''}`;
+        const searchText = `${event.title || event.name || ''} ${event.description || ''} ${event.bar || ''}`;
         const cityFromText = this.extractCityFromText(searchText);
         if (cityFromText) {
             return cityFromText;
         }
         
-
-        
-        return null;
+        return 'unknown';
     }
     
     // Normalize city name to lowercase, handle common variations

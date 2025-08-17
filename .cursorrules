@@ -56,10 +56,10 @@ Static website for gay bear travel guide with city guides, events, and bear-owne
 
 **SCRIPTABLE FILE ORGANIZATION**: 
 - **Development**: ALWAYS edit files in the `scripts/` directory - this is the source of truth
-- **Deployment**: When deploying to Scriptable app locally, manually copy files from `scripts/` to root
-- **NEVER create or edit root-level Scriptable files directly** - they are deployment copies only
+- **NEVER create or edit root-level Scriptable files directly** - they are not used
 - **Git repository**: Only the `scripts/` versions should be committed to Git
 - The `chunky-dad/` folder contains organized backup copies for reference
+- **For Scriptable app**: Use files directly from `scripts/` directory - no copying needed
 
 ## Testing Directory
 - **Auto-updating manifest**: When adding new HTML files to testing/, run `npm run update-test-manifest`
