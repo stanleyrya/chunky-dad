@@ -928,8 +928,9 @@ class BearraccudaParser {
         const combined = new Date(date);
         combined.setHours(time.hours, time.minutes, 0, 0);
         
-        // Convert to UTC by adding the timezone offset
-        // Note: getTimezoneOffset returns minutes west of UTC, so we subtract
+        // Convert to UTC by subtracting the timezone offset
+        // timezoneOffset is negative for timezones behind UTC (like EST = -300 minutes)
+        // To convert local time to UTC: subtract the offset (which adds time for negative offsets)
         const utcTime = new Date(combined.getTime() - (timezoneOffset * 60 * 1000));
         
         console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} to UTC: ${utcTime.toISOString()}`);
