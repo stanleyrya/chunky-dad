@@ -454,6 +454,14 @@ class SharedCore {
             console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
         }
         
+        // Check if parser has a custom key template
+        if (event._parserConfig && event._parserConfig.keyTemplate) {
+            const customKey = this.generateKeyFromTemplate(event, event._parserConfig.keyTemplate);
+            console.log(`🔄 SharedCore: Generated custom key: "${customKey}" for event "${event.title}"`);
+            return customKey;
+        }
+        
+        // Use default key generation
         // Use original title if available (before metadata override), otherwise use current title
         let title = String(event.originalTitle || event.title || '').toLowerCase().trim();
         const wasOverridden = event.originalTitle && event.originalTitle !== event.title;
@@ -461,9 +469,6 @@ class SharedCore {
         if (wasOverridden) {
             console.log(`🔄 SharedCore: Using original title for deduplication: "${event.title}" → "${title}"`);
         }
-        
-        // Apply dynamic key transformations based on parser configuration
-        title = this.applyKeyTransformations(title, event, 'title');
         
         // Generic text normalization for better deduplication
         // This handles titles with special characters, spacing variations, etc.
@@ -486,8 +491,8 @@ class SharedCore {
         }
         
         const date = this.normalizeEventDate(event.startDate);
-        const venue = this.applyKeyTransformations(event.bar || '', event, 'venue');
-        const source = this.applyKeyTransformations(event.source || '', event, 'source');
+        const venue = String(event.bar || '').toLowerCase().trim();
+        const source = String(event.source || '').toLowerCase().trim();
         
         const key = `${title}|${date}|${venue}|${source}`;
         console.log(`🔄 SharedCore: Created event key: "${key}" for event "${event.title}"`);
@@ -495,43 +500,27 @@ class SharedCore {
         return key;
     }
 
-    // Apply dynamic key transformations based on parser configuration
-    applyKeyTransformations(value, event, fieldType) {
-        if (!event || !event._parserConfig || !event._parserConfig.keyTransformations) {
-            return String(value).toLowerCase().trim();
-        }
+    // Generate key from template using event data
+    generateKeyFromTemplate(event, template) {
+        if (!template) return this.createEventKey(event);
         
-        const transformations = event._parserConfig.keyTransformations[fieldType];
-        if (!transformations || !Array.isArray(transformations)) {
-            return String(value).toLowerCase().trim();
-        }
+        let key = template;
         
-        let transformedValue = String(value).toLowerCase().trim();
-        const originalValue = transformedValue;
+        // Extract city from event data
+        const city = this.extractCityFromEvent(event);
         
-        // Apply each transformation in order
-        for (const transformation of transformations) {
-            if (transformation.type === 'replace') {
-                const regex = new RegExp(transformation.pattern, transformation.flags || 'gi');
-                transformedValue = transformedValue.replace(regex, transformation.replacement || '');
-            } else if (transformation.type === 'extract') {
-                const regex = new RegExp(transformation.pattern, transformation.flags || 'gi');
-                const match = transformedValue.match(regex);
-                if (match && match[transformation.group || 1]) {
-                    transformedValue = match[transformation.group || 1];
-                }
-            } else if (transformation.type === 'set') {
-                transformedValue = transformation.value;
-            }
-        }
+        // Replace template variables
+        key = key.replace(/\$\{title\}/g, String(event.title || '').toLowerCase().trim());
+        key = key.replace(/\$\{startDate\}/g, this.normalizeEventDate(event.startDate));
+        key = key.replace(/\$\{date\}/g, this.normalizeEventDate(event.startDate));
+        key = key.replace(/\$\{venue\}/g, String(event.bar || '').toLowerCase().trim());
+        key = key.replace(/\$\{source\}/g, String(event.source || '').toLowerCase().trim());
+        key = key.replace(/\$\{city\}/g, city.toLowerCase().trim());
         
-        transformedValue = transformedValue.trim();
+        // Clean up the key
+        key = key.toLowerCase().trim();
         
-        if (transformedValue !== originalValue) {
-            console.log(`🔄 SharedCore: Applied ${fieldType} transformation: "${originalValue}" → "${transformedValue}"`);
-        }
-        
-        return transformedValue;
+        return key;
     }
 
     // Enhanced merge function that respects field-level merge strategies
@@ -1233,10 +1222,39 @@ class SharedCore {
     }
     
     // Extract city from event data or URL
-    extractCityFromEvent(eventData, url) {
+    extractCityFromEvent(event) {
+        // Try city field first
+        if (event.city) {
+            return String(event.city);
+        }
+        
+        // Try to extract from title
+        const title = String(event.title || '').toLowerCase();
+        
+        // Check for city names in title
+        for (const [patterns, city] of Object.entries(this.cityMappings)) {
+            const cityPatterns = patterns.split('|');
+            for (const pattern of cityPatterns) {
+                if (title.includes(pattern)) {
+                    return city;
+                }
+            }
+        }
+        
+        // Try to extract from venue address or name
+        const venue = String(event.bar || '').toLowerCase();
+        for (const [patterns, city] of Object.entries(this.cityMappings)) {
+            const cityPatterns = patterns.split('|');
+            for (const pattern of cityPatterns) {
+                if (venue.includes(pattern)) {
+                    return city;
+                }
+            }
+        }
+        
         // Try venue address first (keeping venue for backward compatibility with eventbrite data structure)
-        if (eventData.venue?.address) {
-            const address = eventData.venue.address;
+        if (event.venue?.address) {
+            const address = event.venue.address;
             const cityFromAddress = address.city || address.localized_area_display || '';
             if (cityFromAddress) {
                 return this.normalizeCityName(cityFromAddress);
@@ -1244,23 +1262,21 @@ class SharedCore {
         }
         
         // Try address field
-        if (eventData.address) {
-            const cityFromAddress = this.extractCityFromAddress(eventData.address);
+        if (event.address) {
+            const cityFromAddress = this.extractCityFromAddress(event.address);
             if (cityFromAddress) {
                 return cityFromAddress;
             }
         }
         
         // Try extracting from text content
-        const searchText = `${eventData.title || eventData.name || ''} ${eventData.description || ''} ${eventData.bar || ''} ${url || ''}`;
+        const searchText = `${event.title || event.name || ''} ${event.description || ''} ${event.bar || ''}`;
         const cityFromText = this.extractCityFromText(searchText);
         if (cityFromText) {
             return cityFromText;
         }
         
-
-        
-        return null;
+        return 'unknown';
     }
     
     // Normalize city name to lowercase, handle common variations
