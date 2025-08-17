@@ -460,63 +460,54 @@ class SharedCore {
             keyFormat = event._parserConfig.keyTemplate;
         }
         
-        // If we have a custom format, use template generation
-        if (keyFormat) {
-            const customKey = this.generateKeyFromFormat(event, keyFormat);
-            console.log(`🔄 SharedCore: Generated key from format "${keyFormat}": "${customKey}" for event "${event.title}"`);
-            return customKey;
+        // Default format is the traditional pipe-separated format
+        if (!keyFormat) {
+            keyFormat = '${normalizedTitle}|${date}|${venue}|${source}';
         }
         
-        // Use default key generation
-        // Use original title if available (before metadata override), otherwise use current title
-        let title = String(event.originalTitle || event.title || '').toLowerCase().trim();
-        const wasOverridden = event.originalTitle && event.originalTitle !== event.title;
-        
-        if (wasOverridden) {
-            console.log(`🔄 SharedCore: Using original title for deduplication: "${event.title}" → "${title}"`);
-        }
-        
-        // Generic text normalization for better deduplication
-        // This handles titles with special characters, spacing variations, etc.
-        const originalTitle = title;
-        
-        // Normalize text patterns with special characters between letters
-        // Examples: "D>U>R>O!", "A-B-C", "X Y Z" -> normalized forms
-        title = title
-            // Replace sequences of special chars between letters with a single hyphen
-            .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
-            // Remove trailing special characters after words
-            .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
-            // Collapse multiple spaces/hyphens into single hyphen
-            .replace(/[\s\-]+/g, '-')
-            // Remove leading/trailing hyphens
-            .replace(/^-+|-+$/g, '');
-        
-        if (title !== originalTitle) {
-            console.log(`🔄 SharedCore: Normalized title for deduplication: "${originalTitle}" → "${title}"`);
-        }
-        
-        const date = this.normalizeEventDate(event.startDate);
-        const venue = String(event.bar || '').toLowerCase().trim();
-        const source = String(event.source || '').toLowerCase().trim();
-        
-        const key = `${title}|${date}|${venue}|${source}`;
-        console.log(`🔄 SharedCore: Created default event key: "${key}" for event "${event.title}"`);
+        const key = this.generateKeyFromFormat(event, keyFormat);
+        console.log(`🔄 SharedCore: Generated key from format "${keyFormat}": "${key}" for event "${event.title}"`);
         
         return key;
     }
 
     // Generate key from format string using event data
     generateKeyFromFormat(event, format) {
-        if (!format) return this.createEventKey(event);
+        if (!format) {
+            throw new Error('Format is required for generateKeyFromFormat');
+        }
         
         let key = format;
         
         // Extract city from event data
         const city = this.extractCityFromEvent(event);
         
+        // Handle normalized title (with the original title normalization logic)
+        let normalizedTitle = String(event.originalTitle || event.title || '').toLowerCase().trim();
+        
+        // Apply the original title normalization for ${normalizedTitle}
+        if (format.includes('${normalizedTitle}')) {
+            const originalTitle = normalizedTitle;
+            
+            // Generic text normalization for better deduplication
+            normalizedTitle = normalizedTitle
+                // Replace sequences of special chars between letters with a single hyphen
+                .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
+                // Remove trailing special characters after words
+                .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
+                // Collapse multiple spaces/hyphens into single hyphen
+                .replace(/[\s\-]+/g, '-')
+                // Remove leading/trailing hyphens
+                .replace(/^-+|-+$/g, '');
+            
+            if (normalizedTitle !== originalTitle) {
+                console.log(`🔄 SharedCore: Normalized title for deduplication: "${originalTitle}" → "${normalizedTitle}"`);
+            }
+        }
+        
         // Replace template variables
         key = key.replace(/\$\{title\}/g, String(event.title || '').toLowerCase().trim());
+        key = key.replace(/\$\{normalizedTitle\}/g, normalizedTitle);
         key = key.replace(/\$\{startDate\}/g, this.normalizeEventDate(event.startDate));
         key = key.replace(/\$\{date\}/g, this.normalizeEventDate(event.startDate));
         key = key.replace(/\$\{venue\}/g, String(event.bar || '').toLowerCase().trim());
