@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Extraction Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background-color: #d4edda; }
+        .fail { background-color: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>Bearracuda Parser City Extraction Test</h1>
+    <div id="results"></div>
+
+    <script src="../scripts/parsers/bearracuda-parser.js"></script>
+    <script>
+        // Test cases for city extraction
+        const testCases = [
+            // URL extraction tests
+            { type: 'URL', input: 'https://bearracuda.com/events/pdx16/', expected: 'portland', description: 'Portland PDX URL' },
+            { type: 'URL', input: 'https://bearracuda.com/events/atlantabearpride/', expected: 'atlanta', description: 'Atlanta URL' },
+            { type: 'URL', input: 'https://bearracuda.com/events/chicagoaug/', expected: 'chicago', description: 'Chicago URL' },
+            { type: 'URL', input: 'https://bearracuda.com/events/treasureseattle/', expected: 'seattle', description: 'Seattle URL' },
+            
+            // Text extraction tests
+            { type: 'TEXT', input: 'Portland 16th Anniversary', expected: 'portland', description: 'Portland in title' },
+            { type: 'TEXT', input: 'Los Angeles Bear Party', expected: 'la', description: 'Los Angeles in title' },
+            { type: 'TEXT', input: 'LA Bear Night', expected: 'la', description: 'LA abbreviation' },
+            { type: 'TEXT', input: 'Atlanta Bear Pride', expected: 'atlanta', description: 'Atlanta in title' },
+            { type: 'TEXT', input: 'Chicago Summer Event', expected: 'chicago', description: 'Chicago in title' },
+            { type: 'TEXT', input: 'Seattle Treasure Trail', expected: 'seattle', description: 'Seattle in title' }
+        ];
+
+        function runTests() {
+            const parser = new BearraccudaParser();
+            const results = document.getElementById('results');
+            let passCount = 0;
+            let totalCount = testCases.length;
+
+            testCases.forEach((testCase, index) => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-case';
+                
+                let actual;
+                if (testCase.type === 'URL') {
+                    actual = parser.extractCityFromUrl(testCase.input);
+                } else {
+                    actual = parser.extractCityFromText(testCase.input);
+                }
+                
+                const passed = actual === testCase.expected;
+                if (passed) passCount++;
+                
+                testDiv.classList.add(passed ? 'pass' : 'fail');
+                testDiv.innerHTML = `
+                    <strong>Test ${index + 1}: ${testCase.description}</strong><br>
+                    Type: ${testCase.type}<br>
+                    Input: "${testCase.input}"<br>
+                    Expected: "${testCase.expected}"<br>
+                    Actual: "${actual}"<br>
+                    Result: ${passed ? 'PASS' : 'FAIL'}
+                `;
+                
+                results.appendChild(testDiv);
+            });
+
+            // Summary
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.marginTop = '20px';
+            summaryDiv.style.fontWeight = 'bold';
+            summaryDiv.innerHTML = `
+                <h2>Summary: ${passCount}/${totalCount} tests passed</h2>
+                ${passCount === totalCount ? '✅ All tests passed!' : '❌ Some tests failed'}
+            `;
+            results.appendChild(summaryDiv);
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

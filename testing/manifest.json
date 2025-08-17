@@ -1,95 +1,100 @@
 {
-  "generated": "2025-08-17T00:02:35.697Z",
+  "generated": "2025-08-17T00:04:07.611Z",
   "files": [
     {
       "name": "breakpoint-test.html",
       "size": 34161,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.954Z"
     },
     {
       "name": "calendar-timeout-test.html",
       "size": 9897,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.954Z"
     },
     {
       "name": "debug-calendar-loading.html",
       "size": 4061,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.954Z"
     },
     {
       "name": "hero-variations-tester.html",
       "size": 26248,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.954Z"
     },
     {
       "name": "iframe-fix-test.html",
       "size": 9922,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.954Z"
     },
     {
       "name": "index.html",
       "size": 18216,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "simple-calendar-test.html",
       "size": 1795,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "style-test.html",
       "size": 26360,
-      "modified": "2025-08-17T00:02:32.126Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-calendar-logging.html",
       "size": 68099,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
+    },
+    {
+      "name": "test-city-extraction.html",
+      "size": 3926,
+      "modified": "2025-08-17T00:04:04.013Z"
     },
     {
       "name": "test-direct-google-calendar.html",
       "size": 8920,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-display-modes.html",
       "size": 10729,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-error-logging-fix.html",
       "size": 6806,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-eventbrite-address-fix.html",
       "size": 7179,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-google-sheets-loader.html",
       "size": 40540,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-hyphenation-fix.html",
       "size": 6108,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-map-icons.html",
       "size": 61258,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "test-unified-scraper.html",
       "size": 32064,
-      "modified": "2025-08-17T00:02:32.127Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     },
     {
       "name": "ultimate-style-tester.html",
       "size": 116287,
-      "modified": "2025-08-17T00:02:32.128Z"
+      "modified": "2025-08-16T14:57:02.958Z"
     }
   ]
 }
