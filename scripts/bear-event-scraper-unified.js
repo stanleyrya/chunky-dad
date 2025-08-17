@@ -242,11 +242,19 @@ class BearEventScraperOrchestrator {
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 console.log('🐻 Orchestrator: Analyzing events for calendar actions...');
                 
-                const analyzedEvents = await sharedCore.prepareEventsForCalendar(results.allProcessedEvents, finalAdapter, config.config);
+                // Perform cross-parser deduplication to merge events from different parsers
+                console.log(`🐻 Orchestrator: Performing cross-parser deduplication on ${results.allProcessedEvents.length} events...`);
+                const deduplicatedEvents = sharedCore.deduplicateEvents(results.allProcessedEvents);
+                console.log(`🐻 Orchestrator: ✓ After cross-parser deduplication: ${deduplicatedEvents.length} unique events`);
+                
+                const analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
                 console.log(`🐻 Orchestrator: ✓ Analyzed ${analyzedEvents.length} events for calendar actions`);
                 
                 // Store analyzed events back into results for display
                 results.analyzedEvents = analyzedEvents;
+                
+                // Update totals to reflect cross-parser deduplication
+                results.deduplicatedEvents = deduplicatedEvents.length;
 
                 // Determine execution mode based on environment
                 const hasDisplay = this.isScriptable || this.isWeb;
