@@ -6,36 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-denver
 X-WR-TIMEZONE:America/Denver
 BEGIN:VEVENT
-DTSTART:20250824T030000Z
-DTEND:20250824T103000Z
-DTSTAMP:20250817T161642Z
-UID:9C11EA14-6B16-40DA-8915-DF990E1BB4F3
-CREATED:20250817T033528Z
-DESCRIPTION:description: Get ready for the ultimate party experience at MEG
- AWOOF AMERICA DENVER: MASSIVE 2 Parties 1 Ticket - double the fun\, double 
- the excitement!\nbar: Trade\nwebsite: https://www.eventbrite.com/e/megawoof
- -america-denver-massive-2-parties-1-ticket-tickets-1381219547849\ncover: $1
- 6.84 - $27.37 (as of 8/16)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.
- evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-1439
- 13?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=1
- 0&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928\ngmaps: https://
- www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_pla
- ce_id=ChIJly0oIDt_bIcRWYKaXvlNsQY\nshortName: MEGA-WOOF\ninstagram: https:/
- /www.instagram.com/megawoof_america\nkey: megawoof|2025-08-23|trade|eventbr
- ite
-LAST-MODIFIED:20250817T033528Z
-LOCATION:39.7239346\, -104.9987819
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250907T110000Z
 DTEND:20250907T160000Z
-DTSTAMP:20250817T161642Z
+DTSTAMP:20250817T181948Z
 UID:E1710FE3-7013-4C7D-9C5E-AE2307C38979
 CREATED:20250817T042338Z
 DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 9:00 pm - Party
@@ -49,6 +22,33 @@ LAST-MODIFIED:20250817T042338Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:DENVER
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250824T030000Z
+DTEND:20250824T103000Z
+DTSTAMP:20250817T181948Z
+UID:9C11EA14-6B16-40DA-8915-DF990E1BB4F3
+CREATED:20250817T033528Z
+DESCRIPTION:description: Get ready for the ultimate party experience at MEG
+ AWOOF AMERICA DENVER: MASSIVE 2 Parties 1 Ticket - double the fun\, double 
+ the excitement!\nbar: Trade\nwebsite: https://www.eventbrite.com/e/megawoof
+ -america-denver-massive-2-parties-1-ticket-tickets-1381219547849\ncover: $1
+ 6.84 - $27.37 (as of 8/17)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.
+ evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-1439
+ 13?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=1
+ 0&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928\ngmaps: https://
+ www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_pla
+ ce_id=ChIJly0oIDt_bIcRWYKaXvlNsQY\nshortName: MEGA-WOOF\ninstagram: https:/
+ /www.instagram.com/megawoof_america\nkey: megawoof|2025-08-23|trade|eventbr
+ ite
+LAST-MODIFIED:20250817T171420Z
+LOCATION:39.7239346\, -104.9987819
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
