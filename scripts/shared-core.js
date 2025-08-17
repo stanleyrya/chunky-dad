@@ -447,17 +447,23 @@ class SharedCore {
         return deduplicated;
     }
 
-    createEventKey(event) {
+    createEventKey(event, format = null) {
         // Debug the event structure
         if (typeof event.title !== 'string') {
             console.log(`🔍 DEBUG: event.title type: ${typeof event.title}, value: ${JSON.stringify(event.title)}`);
             console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
         }
         
-        // Check if parser has a custom key template
-        if (event._parserConfig && event._parserConfig.keyTemplate) {
-            const customKey = this.generateKeyFromTemplate(event, event._parserConfig.keyTemplate);
-            console.log(`🔄 SharedCore: Generated custom key: "${customKey}" for event "${event.title}"`);
+        // Determine the format to use
+        let keyFormat = format;
+        if (!keyFormat && event._parserConfig && event._parserConfig.keyTemplate) {
+            keyFormat = event._parserConfig.keyTemplate;
+        }
+        
+        // If we have a custom format, use template generation
+        if (keyFormat) {
+            const customKey = this.generateKeyFromFormat(event, keyFormat);
+            console.log(`🔄 SharedCore: Generated key from format "${keyFormat}": "${customKey}" for event "${event.title}"`);
             return customKey;
         }
         
@@ -495,16 +501,16 @@ class SharedCore {
         const source = String(event.source || '').toLowerCase().trim();
         
         const key = `${title}|${date}|${venue}|${source}`;
-        console.log(`🔄 SharedCore: Created event key: "${key}" for event "${event.title}"`);
+        console.log(`🔄 SharedCore: Created default event key: "${key}" for event "${event.title}"`);
         
         return key;
     }
 
-    // Generate key from template using event data
-    generateKeyFromTemplate(event, template) {
-        if (!template) return this.createEventKey(event);
+    // Generate key from format string using event data
+    generateKeyFromFormat(event, format) {
+        if (!format) return this.createEventKey(event);
         
-        let key = template;
+        let key = format;
         
         // Extract city from event data
         const city = this.extractCityFromEvent(event);
