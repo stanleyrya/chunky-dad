@@ -920,7 +920,7 @@ class BearraccudaParser {
     // Get timezone identifier for a city (for dynamic DST handling)
     getTimezoneForCity(city) {
         // City to IANA timezone identifier mapping
-        // These handle DST automatically
+        // These handle DST automatically and match all cities from SharedCore
         const cityTimezones = {
             'atlanta': 'America/New_York',
             'chicago': 'America/Chicago', 
@@ -941,7 +941,13 @@ class BearraccudaParser {
             'phoenix': 'America/Phoenix',      // No DST
             'orlando': 'America/New_York',
             'tampa': 'America/New_York',
-            'new-orleans': 'America/Chicago'
+            'new-orleans': 'America/Chicago',
+            'palm-springs': 'America/Los_Angeles',
+            'san-diego': 'America/Los_Angeles',
+            'sacramento': 'America/Los_Angeles',
+            'toronto': 'America/Toronto',
+            'london': 'Europe/London',
+            'berlin': 'Europe/Berlin'
         };
         
         return cityTimezones[city] || 'America/New_York'; // Default to Eastern if city not found
@@ -1029,27 +1035,43 @@ class BearraccudaParser {
     // DST-aware static timezone mappings (fallback)
     getTimezoneOffsetForCity_DST(city) {
         // Updated for Daylight Saving Time (active March-November in most US cities)
+        // Includes all cities from SharedCore cityMappings
         const cityTimezones = {
+            // US Eastern Time (EDT/EST)
             'atlanta': -4 * 60,      // EDT (UTC-4)
-            'chicago': -5 * 60,      // CDT (UTC-5)
-            'denver': -6 * 60,       // MDT (UTC-6)
-            'la': -7 * 60,           // PDT (UTC-7)
-            'sf': -7 * 60,           // PDT (UTC-7)
-            'seattle': -7 * 60,      // PDT (UTC-7)
-            'portland': -7 * 60,     // PDT (UTC-7)
-            'vegas': -7 * 60,        // PDT (UTC-7)
             'nyc': -4 * 60,          // EDT (UTC-4)
             'miami': -4 * 60,        // EDT (UTC-4)
             'boston': -4 * 60,       // EDT (UTC-4)
             'philadelphia': -4 * 60, // EDT (UTC-4)
             'dc': -4 * 60,           // EDT (UTC-4)
+            'orlando': -4 * 60,      // EDT (UTC-4)
+            'tampa': -4 * 60,        // EDT (UTC-4)
+            
+            // US Central Time (CDT/CST)
+            'chicago': -5 * 60,      // CDT (UTC-5)
             'austin': -5 * 60,       // CDT (UTC-5)
             'dallas': -5 * 60,       // CDT (UTC-5)
             'houston': -5 * 60,      // CDT (UTC-5)
+            'new-orleans': -5 * 60,  // CDT (UTC-5)
+            
+            // US Mountain Time (MDT/MST)
+            'denver': -6 * 60,       // MDT (UTC-6)
             'phoenix': -7 * 60,      // MST (UTC-7, no DST)
-            'orlando': -4 * 60,      // EDT (UTC-4)
-            'tampa': -4 * 60,        // EDT (UTC-4)
-            'new-orleans': -5 * 60   // CDT (UTC-5)
+            
+            // US Pacific Time (PDT/PST)
+            'la': -7 * 60,           // PDT (UTC-7)
+            'sf': -7 * 60,           // PDT (UTC-7)
+            'seattle': -7 * 60,      // PDT (UTC-7)
+            'portland': -7 * 60,     // PDT (UTC-7)
+            'vegas': -7 * 60,        // PDT (UTC-7)
+            'palm-springs': -7 * 60, // PDT (UTC-7)
+            'san-diego': -7 * 60,    // PDT (UTC-7)
+            'sacramento': -7 * 60,   // PDT (UTC-7)
+            
+            // International (approximate DST-aware offsets)
+            'toronto': -4 * 60,      // EDT (UTC-4) - Canada follows similar DST rules
+            'london': +1 * 60,       // BST (UTC+1) - British Summer Time
+            'berlin': +2 * 60        // CEST (UTC+2) - Central European Summer Time
         };
         
         return cityTimezones[city] || -4 * 60; // Default to EDT if city not found
