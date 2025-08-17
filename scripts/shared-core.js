@@ -578,8 +578,15 @@ class SharedCore {
         
         return {
             title: mergedEvent.title,
+            startDate: mergedEvent.startDate,
+            endDate: mergedEvent.endDate,
+            location: mergedEvent.location,
             notes: notes,
-            url: mergedEvent.website
+            url: mergedEvent.website,
+            city: mergedEvent.city || newEvent.city || existingEvent.city, // Preserve city field
+            key: mergedEvent.key || newEvent.key,
+            _parserConfig: mergedEvent._parserConfig || newEvent._parserConfig,
+            _fieldMergeStrategies: mergedEvent._fieldMergeStrategies
         };
     }
 
