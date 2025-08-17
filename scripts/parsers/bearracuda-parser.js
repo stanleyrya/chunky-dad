@@ -640,7 +640,7 @@ class BearraccudaParser {
             'la': /losangeles|la/i,
             'nyc': /newyork|nyc/i,
             'seattle': /treasureseattle|seattle/i,
-            'portland': /treasureportland|portland/i
+            'portland': /treasureportland|portland|pdx/i
         };
         
         for (const [city, pattern] of Object.entries(urlPatterns)) {
@@ -1001,7 +1001,7 @@ class BearraccudaParser {
             'atlanta': /(atlanta|atl)/i,
             'denver': /(denver)/i,
             'vegas': /(vegas|las vegas)/i,
-            'la': /(los angeles|la|long beach)/i,
+            'la': /(los angeles|\bla\b|long beach)/i,
             'nyc': /(new york|nyc|manhattan)/i,
             'chicago': /(chicago)/i,
             'miami': /(miami)/i,
