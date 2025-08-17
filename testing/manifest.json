@@ -1,5 +1,5 @@
 {
-  "generated": "2025-08-17T00:04:07.611Z",
+  "generated": "2025-08-17T02:21:14.680Z",
   "files": [
     {
       "name": "breakpoint-test.html",
@@ -45,11 +45,6 @@
       "name": "test-calendar-logging.html",
       "size": 68099,
       "modified": "2025-08-16T14:57:02.958Z"
-    },
-    {
-      "name": "test-city-extraction.html",
-      "size": 3926,
-      "modified": "2025-08-17T00:04:04.013Z"
     },
     {
       "name": "test-direct-google-calendar.html",
