@@ -941,31 +941,32 @@ class BearraccudaParser {
     // Get timezone offset in minutes for a city
     getTimezoneOffsetForCity(city) {
         // City to timezone mapping (in minutes offset from UTC)
-        // Note: These are standard time offsets. DST handling would require more complex logic
+        // Updated for Daylight Saving Time (active March-November in most US cities)
+        // Most bear events happen during DST period, so using daylight time offsets
         const cityTimezones = {
-            'atlanta': -5 * 60,      // EST (UTC-5)
-            'chicago': -6 * 60,      // CST (UTC-6)
-            'denver': -7 * 60,       // MST (UTC-7)
-            'la': -8 * 60,           // PST (UTC-8)
-            'sf': -8 * 60,           // PST (UTC-8)
-            'seattle': -8 * 60,      // PST (UTC-8)
-            'portland': -8 * 60,     // PST (UTC-8)
-            'vegas': -8 * 60,        // PST (UTC-8)
-            'nyc': -5 * 60,          // EST (UTC-5)
-            'miami': -5 * 60,        // EST (UTC-5)
-            'boston': -5 * 60,       // EST (UTC-5)
-            'philadelphia': -5 * 60, // EST (UTC-5)
-            'dc': -5 * 60,           // EST (UTC-5)
-            'austin': -6 * 60,       // CST (UTC-6)
-            'dallas': -6 * 60,       // CST (UTC-6)
-            'houston': -6 * 60,      // CST (UTC-6)
-            'phoenix': -7 * 60,      // MST (UTC-7, no DST)
-            'orlando': -5 * 60,      // EST (UTC-5)
-            'tampa': -5 * 60,        // EST (UTC-5)
-            'new-orleans': -6 * 60   // CST (UTC-6)
+            'atlanta': -4 * 60,      // EDT (UTC-4) - was EST (UTC-5)
+            'chicago': -5 * 60,      // CDT (UTC-5) - was CST (UTC-6)
+            'denver': -6 * 60,       // MDT (UTC-6) - was MST (UTC-7)
+            'la': -7 * 60,           // PDT (UTC-7) - was PST (UTC-8)
+            'sf': -7 * 60,           // PDT (UTC-7) - was PST (UTC-8)
+            'seattle': -7 * 60,      // PDT (UTC-7) - was PST (UTC-8)
+            'portland': -7 * 60,     // PDT (UTC-7) - was PST (UTC-8)
+            'vegas': -7 * 60,        // PDT (UTC-7) - was PST (UTC-8)
+            'nyc': -4 * 60,          // EDT (UTC-4) - was EST (UTC-5)
+            'miami': -4 * 60,        // EDT (UTC-4) - was EST (UTC-5)
+            'boston': -4 * 60,       // EDT (UTC-4) - was EST (UTC-5)
+            'philadelphia': -4 * 60, // EDT (UTC-4) - was EST (UTC-5)
+            'dc': -4 * 60,           // EDT (UTC-4) - was EST (UTC-5)
+            'austin': -5 * 60,       // CDT (UTC-5) - was CST (UTC-6)
+            'dallas': -5 * 60,       // CDT (UTC-5) - was CST (UTC-6)
+            'houston': -5 * 60,      // CDT (UTC-5) - was CST (UTC-6)
+            'phoenix': -7 * 60,      // MST (UTC-7, no DST) - unchanged
+            'orlando': -4 * 60,      // EDT (UTC-4) - was EST (UTC-5)
+            'tampa': -4 * 60,        // EDT (UTC-4) - was EST (UTC-5)
+            'new-orleans': -5 * 60   // CDT (UTC-5) - was CST (UTC-6)
         };
         
-        return cityTimezones[city] || -5 * 60; // Default to EST if city not found
+        return cityTimezones[city] || -4 * 60; // Default to EDT if city not found
     }
 
     // Generate Google Maps URL from address
