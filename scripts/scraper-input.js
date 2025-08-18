@@ -371,35 +371,6 @@ const scraperConfig = {
       timezone: "Europe/Berlin",
       patterns: ["berlin"]
     }
-  },
-  
-  // Legacy calendar mappings for backward compatibility
-  calendarMappings: {
-    "nyc": "chunky-dad-nyc",
-    "la": "chunky-dad-la",
-    "sf": "chunky-dad-sf",
-    "atlanta": "chunky-dad-atlanta",
-    "miami": "chunky-dad-miami",
-    "denver": "chunky-dad-denver",
-    "vegas": "chunky-dad-vegas",
-    "palm-springs": "chunky-dad-palm-springs",
-    "sitges": "chunky-dad-sitges",
-    "seattle": "chunky-dad-seattle",
-    "portland": "chunky-dad-portland",
-    "chicago": "chunky-dad-chicago",
-    "new-orleans": "chunky-dad-new-orleans",
-    "boston": "chunky-dad-boston",
-    "philadelphia": "chunky-dad-philadelphia",
-    "austin": "chunky-dad-austin",
-    "dallas": "chunky-dad-dallas",
-    "houston": "chunky-dad-houston",
-    "phoenix": "chunky-dad-phoenix",
-    "san-diego": "chunky-dad-san-diego",
-    "sacramento": "chunky-dad-sacramento",
-    "toronto": "chunky-dad-toronto",
-    "london": "chunky-dad-london",
-    "berlin": "chunky-dad-berlin",
-    "default": "chunky-dad-events"
   }
 };
 

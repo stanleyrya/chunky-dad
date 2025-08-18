@@ -187,7 +187,8 @@ class ScriptableAdapter {
             ...config
         };
         
-        this.calendarMappings = config.calendarMappings || {};
+        // Generate calendar mappings from cities configuration
+        this.calendarMappings = this.generateCalendarMappings(config.cities || {});
         this.lastResults = null; // Store last results for calendar display
 
         // FileManager available for fallbacks
