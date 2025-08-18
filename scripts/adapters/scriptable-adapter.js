@@ -206,7 +206,8 @@ class ScriptableAdapter {
         if (city && this.cities[city] && this.cities[city].calendar) {
             return this.cities[city].calendar;
         }
-        return city === 'default' ? 'chunky-dad-events' : `chunky-dad-${city}`;
+        // Return fallback name - system will handle missing calendar appropriately
+        return `chunky-dad-${city}`;
     }
 
     // HTTP Adapter Implementation
