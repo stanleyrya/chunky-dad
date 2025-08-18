@@ -1026,9 +1026,9 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
         
-        // Check for forceProxy URL parameter
+        // Check for forceProxy URL parameter (default: true)
         const urlParams = new URLSearchParams(window.location.search);
-        const forceProxy = urlParams.get('forceProxy') === 'true';
+        const forceProxy = urlParams.get('forceProxy') !== 'false';
         
         logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
         
