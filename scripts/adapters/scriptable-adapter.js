@@ -201,6 +201,26 @@ class ScriptableAdapter {
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
     }
 
+    // Generate calendar mappings from cities configuration
+    generateCalendarMappings(cities = {}) {
+        const mappings = {};
+        
+        // Extract calendar names from cities configuration
+        for (const [cityKey, cityConfig] of Object.entries(cities)) {
+            if (cityConfig && cityConfig.calendar) {
+                mappings[cityKey] = cityConfig.calendar;
+            }
+        }
+        
+        // Add default calendar if not already present
+        if (!mappings.default) {
+            mappings.default = "chunky-dad-events";
+        }
+        
+        console.log(`📱 Scriptable: Generated calendar mappings: ${JSON.stringify(mappings)}`);
+        return mappings;
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
