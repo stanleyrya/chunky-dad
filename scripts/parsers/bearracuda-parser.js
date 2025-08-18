@@ -136,8 +136,8 @@ class BearraccudaParser {
             // Extract full description content
             const fullDescription = this.extractFullDescription(html);
             
-            // Extract city from URL and title
-            const city = this.extractCityFromUrl(sourceUrl) || this.extractCityFromText(title);
+            // City extraction will be handled by shared core during enrichment
+            const city = null;
             
             // Build description
             let description = '';
@@ -151,11 +151,11 @@ class BearraccudaParser {
             }
             description = description.trim();
             
-            // Create start date
+            // Create simple date objects without complex timezone logic
             let startDate = null;
             if (dateInfo && timeInfo.startTime) {
-                // Combine date and start time with city timezone
-                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city);
+                startDate = new Date(dateInfo);
+                startDate.setHours(timeInfo.startTime.hours, timeInfo.startTime.minutes, 0, 0);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
@@ -163,7 +163,8 @@ class BearraccudaParser {
             // Create end date
             let endDate = null;
             if (dateInfo && timeInfo.endTime) {
-                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city);
+                endDate = new Date(dateInfo);
+                endDate.setHours(timeInfo.endTime.hours, timeInfo.endTime.minutes, 0, 0);
                 // If end time is earlier than start time, assume it's next day
                 if (endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -629,29 +630,6 @@ class BearraccudaParser {
         return '';
     }
 
-    // Extract city from URL
-    extractCityFromUrl(url) {
-        const urlPatterns = {
-            'atlanta': /atlantabearpride|atlanta/i,
-            'new-orleans': /new-orleans/i,
-            'chicago': /chicagoaug|chicago/i,
-            'denver': /denverpride|denver/i,
-            'sf': /sanfrancisco|sf/i,
-            'la': /losangeles|la/i,
-            'nyc': /newyork|nyc/i,
-            'seattle': /treasureseattle|seattle/i,
-            'portland': /treasureportland|portland|pdx/i
-        };
-        
-        for (const [city, pattern] of Object.entries(urlPatterns)) {
-            if (pattern.test(url)) {
-                console.log(`🐻 Bearracuda: Extracted city "${city}" from URL: ${url}`);
-                return city;
-            }
-        }
-        
-        return null;
-    }
 
     // Extract additional URLs for detail page processing
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
@@ -917,116 +895,8 @@ class BearraccudaParser {
         return null;
     }
 
-    // Get timezone identifier for a city (for dynamic DST handling)
-    getTimezoneForCity(city) {
-        // City to IANA timezone identifier mapping
-        // These handle DST automatically and match all cities from SharedCore
-        const cityTimezones = {
-            'atlanta': 'America/New_York',
-            'chicago': 'America/Chicago', 
-            'denver': 'America/Denver',
-            'la': 'America/Los_Angeles',
-            'sf': 'America/Los_Angeles',
-            'seattle': 'America/Los_Angeles',
-            'portland': 'America/Los_Angeles',
-            'vegas': 'America/Los_Angeles',
-            'nyc': 'America/New_York',
-            'miami': 'America/New_York',
-            'boston': 'America/New_York',
-            'philadelphia': 'America/New_York',
-            'dc': 'America/New_York',
-            'austin': 'America/Chicago',
-            'dallas': 'America/Chicago',
-            'houston': 'America/Chicago',
-            'phoenix': 'America/Phoenix',      // No DST
-            'orlando': 'America/New_York',
-            'tampa': 'America/New_York',
-            'new-orleans': 'America/Chicago',
-            'palm-springs': 'America/Los_Angeles',
-            'sitges': 'Europe/Madrid',
-            'san-diego': 'America/Los_Angeles',
-            'sacramento': 'America/Los_Angeles',
-            'toronto': 'America/Toronto',
-            'london': 'Europe/London',
-            'berlin': 'Europe/Berlin'
-        };
-        
-        return cityTimezones[city] || 'America/New_York'; // Default to Eastern if city not found
-    }
 
-    // Combine date and time into a single Date object with dynamic timezone handling
-    combineDateTime(date, time, city = null) {
-        if (!date || !time) return date;
-        
-        // Get timezone identifier for the city
-        const timezone = this.getTimezoneForCity(city);
-        
-        // Create the date string in the city's local timezone
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(time.hours).padStart(2, '0');
-        const minutes = String(time.minutes).padStart(2, '0');
-        
-        // Create date string in local timezone format
-        const localDateString = `${year}-${month}-${day}T${hours}:${minutes}:00`;
-        
-        try {
-            // Use a temporary date to determine the timezone offset for this specific date
-            // This automatically handles DST transitions
-            const tempDate = new Date(`${year}-${month}-${day}T12:00:00`);
-            
-            // Get the timezone offset for this specific date in this city
-            // Using Intl.DateTimeFormat to get accurate offset including DST
-            const formatter = new Intl.DateTimeFormat('en', {
-                timeZone: timezone,
-                timeZoneName: 'longOffset'
-            });
-            
-            const parts = formatter.formatToParts(tempDate);
-            const offsetPart = parts.find(part => part.type === 'timeZoneName');
-            
-            if (offsetPart && offsetPart.value) {
-                // Parse offset like "GMT-04:00" or "GMT+09:00"
-                const offsetMatch = offsetPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
-                if (offsetMatch) {
-                    const sign = offsetMatch[1] === '+' ? 1 : -1;
-                    const offsetHours = parseInt(offsetMatch[2]);
-                    const offsetMinutes = parseInt(offsetMatch[3]);
-                    const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
-                    
-                    // Create local time and convert to UTC
-                    const localTime = new Date(date);
-                    localTime.setHours(time.hours, time.minutes, 0, 0);
-                    const utcTime = new Date(localTime.getTime() - (totalOffsetMinutes * 60 * 1000));
-                    
-                    console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
-                    
-                    return utcTime;
-                }
-            }
-            
-            // Fallback: use the old method if Intl formatting fails
-            console.log(`🐻 Bearracuda: Warning - Could not determine dynamic timezone for ${city}, using fallback`);
-            return this.combineDateTime_fallback(date, time, city);
-            
-        } catch (error) {
-            console.log(`🐻 Bearracuda: Error in dynamic timezone conversion: ${error.message}, using fallback`);
-            return this.combineDateTime_fallback(date, time, city);
-        }
-    }
     
-    // Fallback method with the updated DST-aware static mappings
-    // Simple fallback method - just create a basic Date object
-    combineDateTime_fallback(date, time, city = null) {
-        // Create a simple Date object without complex timezone calculations
-        const combined = new Date(date);
-        combined.setHours(time.hours, time.minutes, 0, 0);
-        
-        console.log(`🐻 Bearracuda: Combined date/time for ${city}: ${combined.toISOString()}`);
-        
-        return combined;
-    }
 
 
 
@@ -1056,42 +926,6 @@ class BearraccudaParser {
         }
     }
 
-    // Extract city from text content
-    extractCityFromText(text) {
-        if (!text) return null;
-        
-        const cityPatterns = {
-            'atlanta': /(atlanta|atl)/i,
-            'denver': /(denver)/i,
-            'vegas': /(vegas|las vegas)/i,
-            'la': /(los angeles|\bla\b|long beach)/i,
-            'nyc': /(new york|nyc|manhattan)/i,
-            'chicago': /(chicago)/i,
-            'miami': /(miami)/i,
-            'sf': /(san francisco|sf)/i,
-            'seattle': /(seattle)/i,
-            'portland': /(portland)/i,
-            'austin': /(austin)/i,
-            'dallas': /(dallas)/i,
-            'houston': /(houston)/i,
-            'phoenix': /(phoenix)/i,
-            'boston': /(boston)/i,
-            'philadelphia': /(philadelphia|philly)/i,
-            'dc': /(washington|dc)/i,
-            'orlando': /(orlando)/i,
-            'tampa': /(tampa)/i,
-            'new-orleans': /(new orleans|nola)/i
-        };
-        
-        for (const [city, pattern] of Object.entries(cityPatterns)) {
-            if (pattern.test(text)) {
-                console.log(`🐻 Bearracuda: Extracted city "${city}" from text: "${text.substring(0, 100)}..."`);
-                return city;
-            }
-        }
-        
-        return null;
-    }
 }
 
 // Export for both environments
