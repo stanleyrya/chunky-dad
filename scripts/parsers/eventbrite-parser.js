@@ -53,8 +53,6 @@ class EventbriteParser {
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
-            } else {
-                console.log('🎫 Eventbrite: No events found in JSON data - this may be an individual event page or empty organizer page');
             }
             
             // Extract additional URLs if required (regardless of JSON vs HTML parsing)
@@ -124,13 +122,22 @@ class EventbriteParser {
                         const eventData = serverData.event;
                         
                         if (eventData.url && eventData.name && this.isFutureEvent(eventData)) {
+                            // Add venue info from components for detail pages (minimal enhancement)
+                            if (serverData.components?.eventMap && !eventData.venue?.name) {
+                                const mapData = serverData.components.eventMap;
+                                eventData.venue = {
+                                    name: mapData.venueName,
+                                    address: mapData.venueAddress,
+                                    latitude: mapData.location?.latitude,
+                                    longitude: mapData.location?.longitude
+                                };
+                            }
+                            
                             const event = this.parseJsonEvent(eventData, null, parserConfig);
                             if (event) {
                                 events.push(event);
                                 console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
                             }
-                        } else {
-                            console.log('🎫 Eventbrite: Individual event is not a future event or missing required data');
                         }
                         
                         if (events.length > 0) {
@@ -143,36 +150,18 @@ class EventbriteParser {
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.past_events) {
                         const pastEvents = serverData.view_data.events.past_events;
                         console.log(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (not included)`);
+                        
+
                     }
                     
+
+                    
                 } catch (parseError) {
-                    console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__:', parseError);
+                    console.warn('🎫 Eventbrite: Failed to parse JSON data:', parseError);
                 }
             }
             
-            // Fallback: Look for other JSON patterns if __SERVER_DATA__ didn't work
-            const jsonPatterns = [
-                /__INITIAL_STATE__\s*=\s*({.+?});/,
-                /"events":\s*(\[.+?\])/,
-                /"future_events":\s*(\[.+?\])/
-            ];
-            
-            for (const pattern of jsonPatterns) {
-                const match = html.match(pattern);
-                if (match) {
-                    try {
-                        const jsonData = JSON.parse(match[1]);
-                        const extractedEvents = this.extractEventsFromJsonData(jsonData, [], parserConfig);
-                        if (extractedEvents.length > 0) {
-                            events.push(...extractedEvents);
-                            console.log(`🎫 Eventbrite: Extracted ${extractedEvents.length} events from JSON pattern`);
-                            break;
-                        }
-                    } catch (parseError) {
-                        console.warn(`🎫 Eventbrite: Failed to parse JSON data: ${parseError}`);
-                    }
-                }
-            }
+
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting JSON events: ${error}`);
@@ -181,50 +170,47 @@ class EventbriteParser {
         return events;
     }
 
-    // Recursively search JSON data for event objects
-    extractEventsFromJsonData(data, events = [], parserConfig = {}) {
-        if (!data || typeof data !== 'object') return events;
-        
-        // Check if this object looks like an event
-        if (this.isEventObject(data)) {
-            // Only process future events
-            if (this.isFutureEvent(data)) {
-                const event = this.parseJsonEvent(data, null, parserConfig);
-                if (event) {
-                    events.push(event);
-                }
-            } else {
-                console.log(`🎫 Eventbrite: Skipping past event: ${data.name || data.title || 'Unknown'}`);
-            }
-        }
-        
-        // Recursively search nested objects and arrays
-        if (Array.isArray(data)) {
-            for (const item of data) {
-                this.extractEventsFromJsonData(item, events, parserConfig);
-            }
-        } else if (typeof data === 'object') {
-            for (const value of Object.values(data)) {
-                this.extractEventsFromJsonData(value, events, parserConfig);
-            }
-        }
-        
-        return events;
-    }
+
+
+
 
     // Check if an object looks like an event
     isEventObject(obj) {
-        return obj && 
-               typeof obj === 'object' && 
-               (obj.name || obj.title) &&
-               (obj.start || obj.start_date || obj.startDate) &&
-               !Array.isArray(obj);
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+            return false;
+        }
+        
+        // Check for name/title
+        const hasName = obj.name || obj.title || (obj.name && obj.name.text);
+        
+        // Check for date/time fields (be more flexible)
+        const hasDate = obj.start || obj.start_date || obj.startDate || obj.start_time || 
+                       obj.event_start || obj.date || obj.datetime ||
+                       (obj.start && obj.start.utc) ||
+                       (obj.dates && (obj.dates.start || obj.dates.startDate));
+        
+        // Also check for URL as an indicator this might be an event
+        const hasUrl = obj.url || obj.vanity_url || obj.event_url;
+        
+        // More flexible matching - need name and either date or URL
+        return hasName && (hasDate || hasUrl);
     }
 
     // Check if an event is in the future (not past)
     isFutureEvent(eventData) {
         const now = new Date();
-        const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
+        
+        // Handle both date formats: detail pages use start.utc, organizer pages use start: {utc: ...}
+        let startDate;
+        if (eventData.start && typeof eventData.start === 'object' && eventData.start.utc) {
+            // Organizer page format: start: {utc: "2025-08-24T03:00:00Z"}
+            startDate = eventData.start.utc;
+        } else if (typeof eventData.start === 'string') {
+            // Detail page format: start: "2025-08-24T03:00:00Z" or start_date
+            startDate = eventData.start || eventData.start_date || eventData.startDate;
+        } else {
+            startDate = eventData.start_date || eventData.startDate || eventData.start;
+        }
         
         if (!startDate) {
             // If no start date, assume it might be future and let it through
@@ -243,11 +229,35 @@ class EventbriteParser {
     // Parse a JSON event object into our standard format
     parseJsonEvent(eventData, htmlContext = null, parserConfig = {}) {
         try {
+            // Handle both organizer page format (name.text) and detail page format (name as string)
             const title = eventData.name?.text || eventData.name || eventData.title || '';
             const description = eventData.description || eventData.summary || '';
-            const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
-            const endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
+            
+            // Handle both date formats: detail pages use start.utc, organizer pages use start: {utc: ...}
+            let startDate, endDate;
+            if (eventData.start && typeof eventData.start === 'object' && eventData.start.utc) {
+                // Organizer page format: start: {utc: "2025-08-24T03:00:00Z"}
+                startDate = eventData.start.utc;
+            } else if (typeof eventData.start === 'string') {
+                // Detail page format: start: "2025-08-24T03:00:00Z" or start_date
+                startDate = eventData.start || eventData.start_date || eventData.startDate;
+            } else {
+                startDate = eventData.start_date || eventData.startDate || eventData.start;
+            }
+            
+            if (eventData.end && typeof eventData.end === 'object' && eventData.end.utc) {
+                // Organizer page format: end: {utc: "2025-08-24T10:30:00Z"}
+                endDate = eventData.end.utc;
+            } else if (typeof eventData.end === 'string') {
+                // Detail page format: end: "2025-08-24T10:30:00Z" or end_date
+                endDate = eventData.end || eventData.end_date || eventData.endDate;
+            } else {
+                endDate = eventData.end_date || eventData.endDate || eventData.end;
+            }
+            
             const url = eventData.url || eventData.vanity_url || '';
+            
+
             
             // Enhanced venue processing - get both name and address
             let venue = null;
@@ -285,14 +295,7 @@ class EventbriteParser {
                 }
             }
             
-            // HTML address extraction fallback if JSON address is not available
-            if (!address && htmlContext) {
-                console.log(`🎫 Eventbrite: No address in JSON data, trying HTML extraction for "${title}"`);
-                address = this.extractAddressFromHtml(htmlContext, venue);
-                if (address) {
-                    console.log(`🎫 Eventbrite: Found address via HTML extraction: "${address}"`);
-                }
-            }
+
             
             // Enhanced price extraction with availability info
             let price = '';
@@ -406,138 +409,7 @@ class EventbriteParser {
         }
     }
 
-    // Parse HTML events using regex (environment-agnostic)
-    parseHTMLEvents(html, sourceUrl) {
-        const events = [];
-        
-        try {
-            // Multiple selector strategies for different Eventbrite layouts
-            const eventPatterns = [
-                // Modern Eventbrite event cards
-                /<div[^>]*data-testid="event-card[^>]*>.*?<\/div>/gs,
-                /<div[^>]*class="[^"]*event-card[^>]*>.*?<\/div>/gs,
-                /<article[^>]*class="[^"]*event[^>]*>.*?<\/article>/gs,
-                // Event links
-                /<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>.*?<\/a>/gs
-            ];
-            
-            for (const pattern of eventPatterns) {
-                const matches = html.match(pattern) || [];
-                
-                for (const match of matches) {
-                    try {
-                        const event = this.parseHTMLEventElement(match, sourceUrl);
-                        if (event) {
-                            events.push(event);
-                        }
-                    } catch (error) {
-                        console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
-                    }
-                }
-                
-                if (events.length > 0) {
-                    console.log(`🎫 Eventbrite: Found ${events.length} events using HTML pattern`);
-                    break;
-                }
-            }
-            
-        } catch (error) {
-            console.warn(`🎫 Eventbrite: Error parsing HTML events: ${error}`);
-        }
-        
-        return events;
-    }
 
-    // Parse individual HTML event element
-    parseHTMLEventElement(htmlElement, sourceUrl) {
-        try {
-            // Extract title
-            const titleMatch = htmlElement.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/) ||
-                              htmlElement.match(/title="([^"]+)"/) ||
-                              htmlElement.match(/>([^<]+)</);
-            const title = titleMatch ? titleMatch[1].trim() : '';
-            
-            // Extract URL
-            const urlMatch = htmlElement.match(/href="([^"]*\/e\/[^"]*)"/) ||
-                            htmlElement.match(/href="([^"]*eventbrite\.com[^"]*)"/) ||
-                            htmlElement.match(/href="([^"]+)"/);
-            const url = urlMatch ? this.normalizeUrl(urlMatch[1], sourceUrl) : '';
-            
-            // Extract date/time
-            const dateMatch = htmlElement.match(/datetime="([^"]+)"/) ||
-                             htmlElement.match(/data-date="([^"]+)"/) ||
-                             htmlElement.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
-            const startDate = dateMatch ? dateMatch[1] : null;
-            
-            // Extract venue/location
-            const venueMatch = htmlElement.match(/<span[^>]*class="[^"]*location[^>]*>([^<]+)<\/span>/) ||
-                              htmlElement.match(/<div[^>]*class="[^"]*venue[^>]*>([^<]+)<\/div>/) ||
-                              htmlElement.match(/location[^>]*>([^<]+)</i);
-            const venue = venueMatch ? venueMatch[1].trim() : '';
-            
-            if (!title) {
-                return null;
-            }
-            
-            // Extract city from event title for better event organization
-            let city = null;
-            
-            // Generic city extraction from title - useful for events that include city in their name
-            if (title) {
-                // Check if title contains a specific city
-                if (/(atlanta)/i.test(title)) city = 'atlanta';
-                else if (/(denver)/i.test(title)) city = 'denver';
-                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
-                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
-                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
-                else if (/(chicago)/i.test(title)) city = 'chicago';
-                else if (/(miami)/i.test(title)) city = 'miami';
-                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
-                else if (/(seattle)/i.test(title)) city = 'seattle';
-                else if (/(portland)/i.test(title)) city = 'portland';
-                else if (/(austin)/i.test(title)) city = 'austin';
-                else if (/(dallas)/i.test(title)) city = 'dallas';
-                else if (/(houston)/i.test(title)) city = 'houston';
-                else if (/(phoenix)/i.test(title)) city = 'phoenix';
-                else if (/(boston)/i.test(title)) city = 'boston';
-                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else if (/(los angeles|la)/i.test(title)) city = 'la';
-                else if (/(washington|dc)/i.test(title)) city = 'dc';
-                else if (/(orlando)/i.test(title)) city = 'orlando';
-                else if (/(tampa)/i.test(title)) city = 'tampa';
-                
-                if (city) {
-                    console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
-                }
-            }
-            
-            return {
-                title: title,
-                description: '',
-                startDate: startDate ? new Date(startDate) : null,
-                endDate: null,
-                bar: venue, // Use 'bar' field name that calendar-core.js expects
-                location: null, // No coordinates available in HTML parsing
-                city: city,
-                website: url, // Use 'website' field name that calendar-core.js expects
-                cover: '', // Use 'cover' field name that calendar-core.js expects
-                image: '',
-                source: this.config.source,
-                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
-                // Properly handle bear event detection based on configuration
-                isBearEvent: this.config.alwaysBear || this.isBearEvent({
-                    title: title,
-                    description: '',
-                    venue: venue,
-                    url: url
-                })
-            };
-            
-        } catch (error) {
-            console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
-            return null;
-        }
-    }
 
     // Extract additional URLs for detail page processing (from JSON data, not HTML links)
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
@@ -664,38 +536,7 @@ class EventbriteParser {
          }
      }
  
-     // Extract city from event data or URL
-     extractCityFromEvent(eventData, url) {
-         // Try venue address first
-         if (eventData.venue?.address) {
-             const address = eventData.venue.address;
-             const cityFromAddress = address.city || address.localized_area_display || '';
-             if (cityFromAddress) {
-                 return this.normalizeCityName(cityFromAddress);
-             }
-         }
-         
-         // Try extracting from text
-         const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
-         return this.extractCityFromText(searchText);
-     }
- 
- 
- 
-     // Normalize city names
-     normalizeCityName(cityName) {
-         const normalizations = {
-             'new york': 'nyc',
-             'new york city': 'nyc',
-             'manhattan': 'nyc',
-             'los angeles': 'la',
-             'san francisco': 'sf',
-             'las vegas': 'vegas'
-         };
-         
-         const lower = cityName.toLowerCase();
-         return normalizations[lower] || lower;
-     }
+     
  
      // Normalize URLs
      normalizeUrl(url, baseUrl) {
