@@ -1026,14 +1026,15 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
         
-        // Check for forceProxy URL parameter (default: true)
+        // Check for proxy URL parameter - only use proxy when explicitly requested
         const urlParams = new URLSearchParams(window.location.search);
-        const forceProxy = urlParams.get('forceProxy') !== 'false';
+        const useProxy = urlParams.has('proxy');
         
         logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
         
-        // If forceProxy is true, skip cached data and go directly to proxy
-        if (forceProxy) {
+        // If proxy parameter is set, skip cached data and go directly to proxy
+        if (useProxy) {
+            logger.info('CALENDAR', 'Proxy parameter detected - using proxy for calendar data');
             const proxyResult = await this.loadCalendarDataViaProxy(cityKey, cityConfig);
             if (proxyResult) return proxyResult;
             return this.loadCalendarDataFallback(cityKey, cityConfig);
