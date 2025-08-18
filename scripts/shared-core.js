@@ -22,7 +22,7 @@
 
 
 class SharedCore {
-    constructor() {
+    constructor(cityMappings = {}) {
         this.visitedUrls = new Set();
         this.bearKeywords = [
             'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
@@ -30,38 +30,8 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
-        // City mapping for consistent location detection across all parsers
-        this.cityMappings = {
-            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-            'los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles': 'la',
-            'san francisco|sf|castro': 'sf',
-            'chicago|chi': 'chicago',
-            'atlanta|atl': 'atlanta',
-            'miami|south beach|miami beach': 'miami',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'denver': 'denver',
-            'las vegas|vegas': 'vegas',
-            'boston': 'boston',
-            'philadelphia|philly': 'philadelphia',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix',
-            'long beach': 'la',  // Long Beach is part of LA metro area
-            'santa monica': 'la',
-            'palm springs': 'palm-springs',  // Palm Springs gets its own area
-            'sitges': 'sitges',  // Sitges gets its own area
-            'san diego': 'san diego',
-            'sacramento': 'sacramento',
-            'san jose': 'sf',  // Bay Area
-            'oakland': 'sf',   // Bay Area
-            'fort lauderdale': 'miami',
-            'key west': 'miami',
-            'toronto': 'toronto',
-            'london': 'london',
-            'berlin': 'berlin'
-        };
+        // City mapping passed from js/city-config.js via orchestrator
+        this.cityMappings = cityMappings;
     }
 
     // Pure business logic for processing events

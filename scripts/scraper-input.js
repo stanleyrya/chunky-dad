@@ -275,6 +275,39 @@ const scraperConfig = {
     "london": "chunky-dad-london",
     "berlin": "chunky-dad-berlin",
     "default": "chunky-dad-events"
+  },
+  
+  // City mapping patterns for consistent location detection (consolidated from shared-core)
+  cityMappings: {
+    'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
+    'los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles': 'la',
+    'san francisco|sf|castro': 'sf',
+    'chicago|chi': 'chicago',
+    'atlanta|atl': 'atlanta',
+    'miami|south beach|miami beach': 'miami',
+    'seattle': 'seattle',
+    'portland': 'portland',
+    'denver': 'denver',
+    'las vegas|vegas': 'vegas',
+    'boston': 'boston',
+    'philadelphia|philly': 'philadelphia',
+    'austin': 'austin',
+    'dallas': 'dallas',
+    'houston': 'houston',
+    'phoenix': 'phoenix',
+    'long beach': 'la',
+    'santa monica': 'la',
+    'palm springs': 'palm-springs',
+    'sitges': 'sitges',
+    'san diego': 'san-diego',
+    'sacramento': 'sacramento',
+    'san jose': 'sf',
+    'oakland': 'sf',
+    'fort lauderdale': 'miami',
+    'key west': 'miami',
+    'toronto': 'toronto',
+    'london': 'london',
+    'berlin': 'berlin'
   }
 };
 
