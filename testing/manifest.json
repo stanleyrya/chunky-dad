@@ -1,95 +1,76 @@
 {
-  "generated": "2025-08-17T22:13:56.131Z",
   "files": [
     {
       "name": "breakpoint-test.html",
-      "size": 34161,
-      "modified": "2025-08-17T22:13:52.321Z"
+      "size": 34161
     },
     {
       "name": "calendar-timeout-test.html",
-      "size": 9897,
-      "modified": "2025-08-17T22:13:52.321Z"
+      "size": 9897
     },
     {
       "name": "debug-calendar-loading.html",
-      "size": 4061,
-      "modified": "2025-08-17T22:13:52.321Z"
+      "size": 4061
     },
     {
       "name": "hero-variations-tester.html",
-      "size": 26248,
-      "modified": "2025-08-17T22:13:52.321Z"
+      "size": 26248
     },
     {
       "name": "iframe-fix-test.html",
-      "size": 9922,
-      "modified": "2025-08-17T22:13:52.321Z"
+      "size": 9922
     },
     {
       "name": "index.html",
-      "size": 18216,
-      "modified": "2025-08-17T22:13:52.321Z"
+      "size": 18216
     },
     {
       "name": "simple-calendar-test.html",
-      "size": 1795,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 1795
     },
     {
       "name": "style-test.html",
-      "size": 26360,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 26360
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 68099,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 68099
     },
     {
       "name": "test-direct-google-calendar.html",
-      "size": 8920,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 8920
     },
     {
       "name": "test-display-modes.html",
-      "size": 10729,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 10729
     },
     {
       "name": "test-error-logging-fix.html",
-      "size": 6806,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 6806
     },
     {
       "name": "test-eventbrite-address-fix.html",
-      "size": 7179,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 7179
     },
     {
       "name": "test-google-sheets-loader.html",
-      "size": 40540,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 40540
     },
     {
       "name": "test-hyphenation-fix.html",
-      "size": 6108,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 6108
     },
     {
       "name": "test-map-icons.html",
-      "size": 61258,
-      "modified": "2025-08-17T22:13:52.322Z"
+      "size": 61258
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 32064,
-      "modified": "2025-08-17T22:13:52.323Z"
+      "size": 32064
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 116287,
-      "modified": "2025-08-17T22:13:52.323Z"
+      "size": 116287
     }
   ]
 }

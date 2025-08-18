@@ -153,15 +153,18 @@ jobs:
           # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "No calendar data changes to commit"
+            echo "CALENDAR_CHANGED=false" >> $GITHUB_ENV
           else
             git commit -m "🗓️ Update calendar data - $(date -u '+%Y-%m-%d %H:%M UTC')"
             git push
             echo "✓ Calendar data updated and committed"
+            echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
       
-      - name: Update test manifest if calendar data changed
+      - name: Update test manifest only if calendar data changed
         run: |
-          if [ -f "testing/generate-manifest.js" ]; then
+          if [ "$CALENDAR_CHANGED" = "true" ] && [ -f "testing/generate-manifest.js" ]; then
+            echo "Calendar data changed, updating test manifest..."
             cd testing
             node generate-manifest.js
             cd ..
@@ -171,5 +174,10 @@ jobs:
               git add testing/manifest.json
               git commit -m "📋 Update test manifest after calendar data update"
               git push
+              echo "✓ Test manifest updated and committed"
+            else
+              echo "No manifest changes after regeneration"
             fi
+          else
+            echo "Skipping test manifest update - no calendar data changes"
           fi
