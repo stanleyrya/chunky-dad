@@ -187,8 +187,8 @@ class ScriptableAdapter {
             ...config
         };
         
-        // Generate calendar mappings from cities configuration
-        this.calendarMappings = this.generateCalendarMappings(config.cities || {});
+        // Store cities configuration for calendar mapping
+        this.cities = config.cities || {};
         this.lastResults = null; // Store last results for calendar display
 
         // FileManager available for fallbacks
@@ -199,6 +199,15 @@ class ScriptableAdapter {
         this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
         this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
+    }
+
+    // Get calendar name for a city
+    getCalendarName(city) {
+        if (city && this.cities[city] && this.cities[city].calendar) {
+            return this.cities[city].calendar;
+        }
+        // Return fallback name - system will handle missing calendar appropriately
+        return `chunky-dad-${city}`;
     }
 
     // HTTP Adapter Implementation
@@ -330,7 +339,7 @@ class ScriptableAdapter {
         try {
             // Determine calendar name from city
             const city = event.city || 'default';
-            const calendarName = this.calendarMappings[city] || `chunky-dad-${city}`;
+            const calendarName = this.getCalendarName(city);
             const calendar = await this.getOrCreateCalendar(calendarName);
             
             // Parse dates from formatted event
@@ -363,12 +372,10 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
             
             let processedCount = 0;
-            const calendarMappings = config.calendarMappings || this.calendarMappings;
-            
             for (const event of analyzedEvents) {
                 try {
                     const city = event.city || 'default';
-                    const calendarName = calendarMappings[city] || `chunky-dad-${city}`;
+                    const calendarName = this.getCalendarName(city);
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
                     switch (event._action) {
@@ -2907,7 +2914,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     // Helper to get calendar name for display purposes only
     getCalendarNameForDisplay(event) {
         const city = event.city || 'default';
-        return this.calendarMappings[city] || `chunky-dad-${city}`;
+        return this.getCalendarName(city);
     }
     
     // Check if event has actual differences to show
