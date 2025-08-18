@@ -6,24 +6,27 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-sf
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
-DTSTART:20250927T120000Z
-DTEND:20250927T180000Z
-DTSTAMP:20250817T221355Z
-UID:496568E4-DB43-4E71-BAB8-264792482917
-CREATED:20250817T042342Z
-DESCRIPTION:description: Main Floor: Horse Meat Disco\n\nDecor and photos b
- y Dusti Cunningham\nbar: Public Works\nwebsite: https://bearracuda.com/even
- ts/flsm-friday/\nimage: https://bearracuda.com/wp-content/uploads/2025/05/h
- md2025.jpg\nfacebookEvent: https://www.facebook.com/events/564754916670823/
- \nticketUrl: https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets
- -1370410668199\neventbriteUrl: https://www.eventbrite.com/e/bearracuda-sf-f
- lsm-friday-tickets-1370410668199\ndetailPageUrl: https://bearracuda.com/eve
- nts/flsm-friday/\nshortName: Bearracuda\ninstagram: https://www.instagram.c
- om/bearracuda\nkey: sf-hmd|2025-09-27|public works|bearracuda
-LAST-MODIFIED:20250817T042342Z
+DTSTART:20250927T040000Z
+DTEND:20250927T100000Z
+DTSTAMP:20250818T001053Z
+UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
+CREATED:20250817T231656Z
+DESCRIPTION:description: Friday\, September 26th\, 2025\nPUBLIC WORKS - 161
+  Erie\, San Francisco\nbar: The Public Works SF\nwebsite: https://www.event
+ brite.com/e/bearracuda-sf-presents-horse-meat-disco-tickets-1370410668199\n
+ cover: $57.79 - $99.99 (as of 8/17)\nimage: https://img.evbuc.com/https%3A%
+ 2F%2Fcdn.evbuc.com%2Fimages%2F1049150793%2F301420936599%2F1%2Foriginal.2025
+ 0609-182908?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=7
+ 5&sharp=10&fp-x=0.95928030303&fp-y=0.546428571429&s=d35c06cc2c1af43a15659d8
+ eb0ad5e93\ngmaps: https://www.google.com/maps/search/?api=1&query=37.768913
+ 7%2C-122.4192514&query_place_id=ChIJa4c8OyF-j4AR4kopWZOJZPM\nshortName: Bea
+ rracuda\ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-s
+ f-presents-horse-meat-disco|2025-09-27|the public works sf|eventbrite
+LAST-MODIFIED:20250817T231657Z
+LOCATION:37.7689137\, -122.4192514
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:SF HMD
+SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

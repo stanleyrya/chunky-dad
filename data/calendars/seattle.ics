@@ -45,7 +45,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250717T190000
 DTEND;TZID=America/Los_Angeles:20250718T020000
 RRULE:FREQ=MONTHLY;BYDAY=3TH
-DTSTAMP:20250817T221354Z
+DTSTAMP:20250818T001053Z
 UID:1dl55f6fm4qqv42go7r3nj5st9@google.com
 CREATED:20250712T180301Z
 DESCRIPTION:Bar: Diesel<br>Google Maps: <a href="https://maps.app.goo.gl/yD
@@ -66,7 +66,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20250706T140000
 DTEND;TZID=America/New_York:20250706T190000
 RRULE:FREQ=WEEKLY;BYDAY=SU
-DTSTAMP:20250817T221354Z
+DTSTAMP:20250818T001053Z
 UID:6irujvg3effpkdu42krgr91osj@google.com
 CREATED:20250712T180301Z
 DESCRIPTION:Instagram: <a href="https://www.instagram.com/southseattlebears
@@ -81,26 +81,25 @@ SUMMARY:South Seattle Bear Social
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250927T120000Z
-DTEND:20250927T180000Z
-DTSTAMP:20250817T221354Z
-UID:FD161464-98CC-4393-9C48-353288799817
-CREATED:20250817T042336Z
-DESCRIPTION:description: Cruise and meet on 3 floors. No clothing restricti
- ons\, 21+. No phone use or photos past the first floor. Consent is mandator
- y.\nbar: MASSIVE\nwebsite: https://bearracuda.com/events/treasureseattle/\n
- image: https://bearracuda.com/wp-content/uploads/2025/04/treasuretrailweb.j
- pg\ngmaps: https://maps.google.com/maps?q=619%20E.%20Pine%20St%2C%20Seattle
- %2C%20WA\nfacebookEvent: https://www.facebook.com/events/1113055394051303\n
- ticketUrl: https://www.eventbrite.com/e/treasure-trail-seattle-tickets-1497
- 840042889\neventbriteUrl: https://www.eventbrite.com/e/treasure-trail-seatt
- le-tickets-1497840042889\ndetailPageUrl: https://bearracuda.com/events/trea
- sureseattle/\nshortName: Bearracuda\ninstagram: https://www.instagram.com/b
- earracuda\nkey: treasure-trail➲➲seattle|2025-09-27|massive|bearracuda
-LAST-MODIFIED:20250817T042336Z
+DTSTART:20251011T040000Z
+DTEND:20251011T100000Z
+DTSTAMP:20250818T001053Z
+UID:9DF93D82-1411-44C0-BE63-00037416BB38
+CREATED:20250817T231654Z
+DESCRIPTION:description: Bearracuda Seattle\nat MASSIVE\nbar: MASSIVE\nwebs
+ ite: https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-1
+ 565073299369\ncover: $24.89 - $30.54 (as of 8/17)\nimage: https://img.evbuc
+ .com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1090213523%2F301420936599%2F1%2
+ Foriginal.20250807-052450?crop=focalpoint&fit=crop&h=230&w=460&auto=format%
+ 2Ccompress&q=75&sharp=10&fp-x=0.321022727273&fp-y=0.491694352159&s=271ac3ab
+ 58bd0fa9c95006f9ddb17f7d\ngmaps: https://maps.google.com/?q=47.6150572\,-12
+ 2.3236574\nshortName: Bearracuda\ninstagram: https://www.instagram.com/bear
+ racuda\nkey: bearracuda-seattle-serious-wood|2025-10-11|massive|eventbrite
+LAST-MODIFIED:20250817T231655Z
+LOCATION:47.6150572\, -122.3236574
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Treasure Trail➲➲SEATTLE
+SUMMARY:Bearracuda Seattle: SERIOUS WOOD
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

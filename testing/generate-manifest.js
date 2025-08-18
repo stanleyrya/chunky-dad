@@ -11,15 +11,15 @@ const files = fs.readdirSync(testingDir)
     const stats = fs.statSync(path.join(testingDir, file));
     return {
       name: file,
-      size: stats.size,
-      modified: stats.mtime.toISOString()
+      size: stats.size
+      // Removed modified timestamp to prevent unnecessary changes during CI
     };
   })
   .sort((a, b) => a.name.localeCompare(b.name));
 
 // Create manifest
 const manifest = {
-  generated: new Date().toISOString(),
+  // Removed generated timestamp to prevent unnecessary changes during CI
   files: files
 };
 
