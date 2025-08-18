@@ -155,7 +155,7 @@ class BearraccudaParser {
             let startDate = null;
             if (dateInfo && timeInfo.startTime) {
                 // Combine date and start time with city timezone
-                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city);
+                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city, parserConfig);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
@@ -163,7 +163,7 @@ class BearraccudaParser {
             // Create end date
             let endDate = null;
             if (dateInfo && timeInfo.endTime) {
-                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city);
+                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city, parserConfig);
                 // If end time is earlier than start time, assume it's next day
                 if (endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -919,29 +919,13 @@ class BearraccudaParser {
 
     // Get timezone identifier for a city using centralized configuration
     getTimezoneForCity(city, config = null) {
-        // If config with cities is provided, use it
-        if (config && config.cities && config.cities[city]) {
-            return config.cities[city].timezone;
+        // Config with cities must be provided - no fallbacks
+        if (!config || !config.cities || !config.cities[city]) {
+            console.log(`🐻 Bearracuda: No timezone configuration found for city: ${city}`);
+            return null;
         }
         
-        // Fallback to basic timezone mapping if config not available
-        const basicTimezones = {
-            'nyc': 'America/New_York',
-            'la': 'America/Los_Angeles', 
-            'sf': 'America/Los_Angeles',
-            'chicago': 'America/Chicago',
-            'atlanta': 'America/New_York',
-            'miami': 'America/New_York',
-            'seattle': 'America/Los_Angeles',
-            'denver': 'America/Denver',
-            'vegas': 'America/Los_Angeles',
-            'phoenix': 'America/Phoenix',
-            'toronto': 'America/Toronto',
-            'london': 'Europe/London',
-            'berlin': 'Europe/Berlin'
-        };
-        
-        return basicTimezones[city] || 'America/New_York';
+        return config.cities[city].timezone;
     }
 
     // Combine date and time into a single Date object with timezone handling
@@ -950,6 +934,12 @@ class BearraccudaParser {
         
         // Get timezone identifier for the city
         const timezone = this.getTimezoneForCity(city, config);
+        
+        // If no timezone configuration is available, return null
+        if (!timezone) {
+            console.log(`🐻 Bearracuda: Cannot convert time for ${city} - no timezone config, returning null`);
+            return null;
+        }
         
         // Create the date string in the city's local timezone
         const year = date.getFullYear();
