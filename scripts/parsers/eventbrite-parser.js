@@ -154,7 +154,51 @@ class EventbriteParser {
                         console.log('🎫 Eventbrite: Found individual event data in JSON');
                         const eventData = serverData.event;
                         
+                        // Detail pages have different structure - event.name is string, not object
+                        console.log(`🎫 Eventbrite: Individual event structure - name: ${typeof eventData.name}, start: ${typeof eventData.start}`);
+                        
                         if (eventData.url && eventData.name && this.isFutureEvent(eventData)) {
+                            // Enrich event data with venue info from components if available
+                            if (serverData.components && serverData.components.eventMap) {
+                                const mapData = serverData.components.eventMap;
+                                eventData.venue = {
+                                    name: mapData.venueName,
+                                    address: mapData.venueAddress,
+                                    latitude: mapData.location?.latitude,
+                                    longitude: mapData.location?.longitude
+                                };
+                                console.log(`🎫 Eventbrite: Enhanced event with venue data: ${mapData.venueName}`);
+                            }
+                            
+                            // Get description from structured content if available
+                            if (serverData.components && serverData.components.eventDescription) {
+                                eventData.description = serverData.components.eventDescription.summary || '';
+                            }
+                            
+                            // Get pricing from event_listing_response if available
+                            if (serverData.event_listing_response && serverData.event_listing_response.tickets) {
+                                const tickets = serverData.event_listing_response.tickets;
+                                if (tickets.availability) {
+                                    const minPrice = tickets.availability.minimumTicketPrice;
+                                    const maxPrice = tickets.availability.maximumTicketPrice;
+                                    if (minPrice && maxPrice) {
+                                        eventData.price_range = `${minPrice.display} - ${maxPrice.display}`;
+                                        console.log(`🎫 Eventbrite: Found pricing: ${eventData.price_range}`);
+                                    } else if (minPrice) {
+                                        eventData.price_range = `From ${minPrice.display}`;
+                                    }
+                                }
+                            }
+                            
+                            // Get image from eventHero if available
+                            if (serverData.components && serverData.components.eventHero && serverData.components.eventHero.items) {
+                                const heroItem = serverData.components.eventHero.items[0];
+                                if (heroItem && heroItem.croppedLogoUrl600) {
+                                    eventData.logo = { url: heroItem.croppedLogoUrl600 };
+                                    console.log(`🎫 Eventbrite: Found event image: ${heroItem.croppedLogoUrl600}`);
+                                }
+                            }
+                            
                             const event = this.parseJsonEvent(eventData, null, parserConfig);
                             if (event) {
                                 events.push(event);
@@ -162,6 +206,7 @@ class EventbriteParser {
                             }
                         } else {
                             console.log('🎫 Eventbrite: Individual event is not a future event or missing required data');
+                            console.log(`🎫 Eventbrite: Event data: url=${!!eventData.url}, name=${!!eventData.name}, isFuture=${this.isFutureEvent(eventData)}`);
                         }
                         
                         if (events.length > 0) {
@@ -399,7 +444,18 @@ class EventbriteParser {
     // Check if an event is in the future (not past)
     isFutureEvent(eventData) {
         const now = new Date();
-        const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
+        
+        // Handle both date formats: detail pages use start.utc, organizer pages use start: {utc: ...}
+        let startDate;
+        if (eventData.start && typeof eventData.start === 'object' && eventData.start.utc) {
+            // Organizer page format: start: {utc: "2025-08-24T03:00:00Z"}
+            startDate = eventData.start.utc;
+        } else if (typeof eventData.start === 'string') {
+            // Detail page format: start: "2025-08-24T03:00:00Z" or start_date
+            startDate = eventData.start || eventData.start_date || eventData.startDate;
+        } else {
+            startDate = eventData.start_date || eventData.startDate || eventData.start;
+        }
         
         if (!startDate) {
             // If no start date, assume it might be future and let it through
@@ -408,7 +464,9 @@ class EventbriteParser {
         
         try {
             const eventDate = new Date(startDate);
-            return eventDate > now;
+            const isFuture = eventDate > now;
+            console.log(`🎫 Eventbrite: Date check for "${eventData.name?.text || eventData.name}": ${startDate} -> ${isFuture ? 'FUTURE' : 'PAST'}`);
+            return isFuture;
         } catch (error) {
             console.warn(`🎫 Eventbrite: Invalid date format: ${startDate}`);
             return true; // If we can't parse the date, let it through
@@ -418,11 +476,35 @@ class EventbriteParser {
     // Parse a JSON event object into our standard format
     parseJsonEvent(eventData, htmlContext = null, parserConfig = {}) {
         try {
+            // Handle both organizer page format (name.text) and detail page format (name as string)
             const title = eventData.name?.text || eventData.name || eventData.title || '';
             const description = eventData.description || eventData.summary || '';
-            const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
-            const endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
+            
+            // Handle both date formats: detail pages use start.utc, organizer pages use start: {utc: ...}
+            let startDate, endDate;
+            if (eventData.start && typeof eventData.start === 'object' && eventData.start.utc) {
+                // Organizer page format: start: {utc: "2025-08-24T03:00:00Z"}
+                startDate = eventData.start.utc;
+            } else if (typeof eventData.start === 'string') {
+                // Detail page format: start: "2025-08-24T03:00:00Z" or start_date
+                startDate = eventData.start || eventData.start_date || eventData.startDate;
+            } else {
+                startDate = eventData.start_date || eventData.startDate || eventData.start;
+            }
+            
+            if (eventData.end && typeof eventData.end === 'object' && eventData.end.utc) {
+                // Organizer page format: end: {utc: "2025-08-24T10:30:00Z"}
+                endDate = eventData.end.utc;
+            } else if (typeof eventData.end === 'string') {
+                // Detail page format: end: "2025-08-24T10:30:00Z" or end_date
+                endDate = eventData.end || eventData.end_date || eventData.endDate;
+            } else {
+                endDate = eventData.end_date || eventData.endDate || eventData.end;
+            }
+            
             const url = eventData.url || eventData.vanity_url || '';
+            
+            console.log(`🎫 Eventbrite: Parsing event "${title}" - start: ${startDate}, end: ${endDate}`);
             
             // Enhanced venue processing - get both name and address
             let venue = null;
