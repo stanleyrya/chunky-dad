@@ -77,27 +77,28 @@ class WebAdapter {
     // Configuration Loading
     async loadConfiguration() {
         try {
-            console.log('🌐 Web: Loading configuration from scraper-input.json');
+            console.log('🌐 Web: Loading configuration from scraper-input.js');
             
             let config;
             
             // Check if we're in Node.js environment
             if (typeof window === 'undefined' && typeof require !== 'undefined') {
-                // Node.js environment - use file system
-                const fs = require('fs');
-                const path = require('path');
-                const configPath = path.join(__dirname, '..', 'scraper-input.json');
-                const configData = fs.readFileSync(configPath, 'utf8');
-                config = JSON.parse(configData);
+                // Node.js environment - use require to load JS module
+                const configPath = require('path').join(__dirname, '..', 'scraper-input.js');
+                delete require.cache[require.resolve(configPath)]; // Clear cache for fresh load
+                config = require(configPath);
             } else {
-                // Browser environment - use fetch
-                const response = await fetch('./scraper-input.json');
+                // Browser environment - load JS file and evaluate
+                const response = await fetch('./scraper-input.js');
                 
                 if (!response.ok) {
                     throw new Error(`Configuration file not found: ${response.status} ${response.statusText}`);
                 }
                 
-                config = await response.json();
+                const configText = await response.text();
+                // Execute the JS file to get the configuration
+                eval(configText);
+                config = window.scraperConfig;
             }
             
             console.log('🌐 Web: ✓ Configuration loaded successfully');
