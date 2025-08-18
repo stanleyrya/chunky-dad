@@ -943,6 +943,7 @@ class BearraccudaParser {
             'tampa': 'America/New_York',
             'new-orleans': 'America/Chicago',
             'palm-springs': 'America/Los_Angeles',
+            'sitges': 'Europe/Madrid',
             'san-diego': 'America/Los_Angeles',
             'sacramento': 'America/Los_Angeles',
             'toronto': 'America/Toronto',
@@ -1065,6 +1066,7 @@ class BearraccudaParser {
             'portland': -7 * 60,     // PDT (UTC-7)
             'vegas': -7 * 60,        // PDT (UTC-7)
             'palm-springs': -7 * 60, // PDT (UTC-7)
+            'sitges': 1 * 60,         // CET (UTC+1)
             'san-diego': -7 * 60,    // PDT (UTC-7)
             'sacramento': -7 * 60,   // PDT (UTC-7)
             

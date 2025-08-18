@@ -67,7 +67,7 @@ const CITY_CONFIG = {
         name: 'Palm Springs',
         emoji: '🌴',
         tagline: 'Desert bear oasis',
-        calendarId: 'placeholder-palm-springs-calendar-id@group.calendar.google.com',
+        calendarId: '80d296cd29b21c9b88e6b01123d2f9bd9c1776b702a51cc7a60767e44f177e7b@group.calendar.google.com',
         coordinates: { lat: 33.8303, lng: -116.5453 },
         mapZoom: 10,
         visible: true
@@ -123,6 +123,15 @@ const CITY_CONFIG = {
         tagline: 'Keep Portland beary',
         calendarId: '53033822a075eb914e2958dfa7aea363aac4084d29043bc5490761cbf8bf08dd@group.calendar.google.com',
         coordinates: { lat: 45.5152, lng: -122.6784 },
+        mapZoom: 10,
+        visible: true
+    },
+    'sitges': {
+        name: 'Sitges',
+        emoji: '🏖️',
+        tagline: 'Mediterranean bear paradise',
+        calendarId: 'b06b7387f73b91fad4d0dd4bd4413acd62424356482d7e59092d4a61c5803088@group.calendar.google.com',
+        coordinates: { lat: 41.2379, lng: 1.8057 },
         mapZoom: 10,
         visible: true
     }

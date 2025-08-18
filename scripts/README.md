@@ -165,6 +165,7 @@ const scraperConfig = {
     "nyc": "chunky-dad-nyc",
     "la": "chunky-dad-la",
     "palm-springs": "chunky-dad-palm-springs",
+    "sitges": "chunky-dad-sitges",
     "seattle": "chunky-dad-seattle",
     "chicago": "chunky-dad-chicago",
     "toronto": "chunky-dad-toronto",
