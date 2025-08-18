@@ -1026,14 +1026,20 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
         
-        logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-        logger.info('CALENDAR', `🌐 Step 3: Loading cached calendar data for ${cityConfig.name}`, {
-            cityKey,
-            calendarId: cityConfig.calendarId,
-            step: 'Step 3: Loading cached calendar data (no CORS proxies needed)'
-        });
+        // Check for forceProxy URL parameter (default: true)
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceProxy = urlParams.get('forceProxy') !== 'false';
         
-        // Try to load cached calendar data first
+        logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
+        
+        // If forceProxy is true, skip cached data and go directly to proxy
+        if (forceProxy) {
+            const proxyResult = await this.loadCalendarDataViaProxy(cityKey, cityConfig);
+            if (proxyResult) return proxyResult;
+            return this.loadCalendarDataFallback(cityKey, cityConfig);
+        }
+        
+        // Normal flow: Try to load cached calendar data first
         const cachedDataUrl = this.buildLocalCalendarUrl(cityKey);
         
         try {
