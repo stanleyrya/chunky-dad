@@ -36,7 +36,7 @@ class GenericParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
-    parseEvents(htmlData, parserConfig = {}) {
+    parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
             console.log(`🔧 Generic: Parsing events from ${htmlData.url}`);
             

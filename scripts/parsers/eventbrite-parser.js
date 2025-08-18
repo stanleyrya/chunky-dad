@@ -36,7 +36,7 @@ class EventbriteParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
-    parseEvents(htmlData, parserConfig = {}) {
+    parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
             console.log(`🎫 Eventbrite: Parsing events from ${htmlData.url}`);
             

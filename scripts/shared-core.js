@@ -94,7 +94,7 @@ class SharedCore {
             try {
                 await displayAdapter.logInfo(`SYSTEM: Processing parser ${i + 1}/${config.parsers.length}: ${parserConfig.name}`);
                 
-                const parserResult = await this.processParser(parserConfig, httpAdapter, displayAdapter, parsers);
+                const parserResult = await this.processParser(parserConfig, config, httpAdapter, displayAdapter, parsers);
                 results.parserResults.push(parserResult);
                 results.totalEvents += parserResult.totalEvents;
                 results.bearEvents += parserResult.bearEvents;
@@ -125,7 +125,7 @@ class SharedCore {
         return results;
     }
 
-    async processParser(parserConfig, httpAdapter, displayAdapter, parsers) {
+    async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers) {
         const parserName = parserConfig.parser;
         const parser = parsers[parserName];
         
@@ -161,7 +161,8 @@ class SharedCore {
                 await displayAdapter.logInfo(`SYSTEM: HTML data received: ${htmlData?.html?.length || 0} characters`);
                 
                 await displayAdapter.logInfo(`SYSTEM: Parsing events with ${parserName} parser...`);
-                const parseResult = parser.parseEvents(htmlData, parserConfig);
+                // Pass parser config and city config separately
+                const parseResult = parser.parseEvents(htmlData, parserConfig, mainConfig.cities);
                 
                 await displayAdapter.logInfo(`SYSTEM: Parse result: ${parseResult?.events?.length || 0} events found`);
                 if (parseResult?.additionalLinks) {
@@ -263,7 +264,8 @@ class SharedCore {
                     maxAdditionalUrls: shouldAllowMoreUrls ? parserConfig.maxAdditionalUrls : 0
                 };
                 
-                const parseResult = parser.parseEvents(htmlData, detailPageConfig);
+                // Pass detail page config and city config separately
+                const parseResult = parser.parseEvents(htmlData, detailPageConfig, mainConfig.cities);
                 
                 // Handle additional URLs if depth allows
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
