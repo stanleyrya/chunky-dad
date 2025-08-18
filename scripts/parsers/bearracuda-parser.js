@@ -36,7 +36,7 @@ class BearraccudaParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
-    parseEvents(htmlData, parserConfig = {}) {
+    parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
             console.log(`🐻 Bearracuda: Parsing events from ${htmlData.url}`);
             
@@ -51,7 +51,7 @@ class BearraccudaParser {
             // Check if this is an individual event page
             if (this.isEventDetailPage(html, htmlData.url)) {
                 console.log('🐻 Bearracuda: Detected individual event page, parsing event details...');
-                const event = this.parseEventDetailPage(html, htmlData.url, parserConfig);
+                const event = this.parseEventDetailPage(html, htmlData.url, parserConfig, cityConfig);
                 if (event) {
                     console.log(`🐻 Bearracuda: Successfully parsed event: ${event.title}`);
                     events.push(event);
@@ -61,7 +61,7 @@ class BearraccudaParser {
             } else {
                 // Try to parse as a listing page (though main /events/ returns 404)
                 console.log('🐻 Bearracuda: Trying to parse as event listing page');
-                const listingEvents = this.parseEventListingPage(html, htmlData.url, parserConfig);
+                const listingEvents = this.parseEventListingPage(html, htmlData.url, parserConfig, cityConfig);
                 console.log(`🐻 Bearracuda: Parsed ${listingEvents.length} events from listing page`);
                 events.push(...listingEvents);
             }
@@ -105,7 +105,7 @@ class BearraccudaParser {
     }
 
     // Parse an individual event detail page
-    parseEventDetailPage(html, sourceUrl, parserConfig = {}) {
+    parseEventDetailPage(html, sourceUrl, parserConfig = {}, cityConfig = null) {
         try {
             console.log(`🐻 Bearracuda: Parsing individual event page: ${sourceUrl}`);
             
@@ -155,7 +155,7 @@ class BearraccudaParser {
             let startDate = null;
             if (dateInfo && timeInfo.startTime) {
                 // Combine date and start time with city timezone
-                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city, parserConfig);
+                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city, cityConfig);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
@@ -163,7 +163,7 @@ class BearraccudaParser {
             // Create end date
             let endDate = null;
             if (dateInfo && timeInfo.endTime) {
-                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city, parserConfig);
+                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city, cityConfig);
                 // If end time is earlier than start time, assume it's next day
                 if (endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -224,7 +224,7 @@ class BearraccudaParser {
     }
 
     // Parse event listing page (though main /events/ doesn't exist)
-    parseEventListingPage(html, sourceUrl, parserConfig = {}) {
+    parseEventListingPage(html, sourceUrl, parserConfig = {}, cityConfig = null) {
         const events = [];
         
         try {
@@ -918,22 +918,22 @@ class BearraccudaParser {
     }
 
     // Get timezone identifier for a city using centralized configuration
-    getTimezoneForCity(city, config = null) {
-        // Config with cities must be provided - no fallbacks
-        if (!config || !config.cities || !config.cities[city]) {
+    getTimezoneForCity(city, cityConfig = null) {
+        // City config must be provided - no fallbacks
+        if (!cityConfig || !cityConfig[city]) {
             console.log(`🐻 Bearracuda: No timezone configuration found for city: ${city}`);
             return null;
         }
         
-        return config.cities[city].timezone;
+        return cityConfig[city].timezone;
     }
 
     // Combine date and time into a single Date object with timezone handling
-    combineDateTime(date, time, city = null, config = null) {
+    combineDateTime(date, time, city = null, cityConfig = null) {
         if (!date || !time) return date;
         
         // Get timezone identifier for the city
-        const timezone = this.getTimezoneForCity(city, config);
+        const timezone = this.getTimezoneForCity(city, cityConfig);
         
         // If no timezone configuration is available, return null
         if (!timezone) {
