@@ -311,37 +311,8 @@ class EventbriteParser {
             }
             const image = eventData.logo?.url || eventData.image?.url || '';
             
-            // Extract city from event title for better event organization
-            let city = null;
-            
-            // Generic city extraction from title - useful for events that include city in their name
-            if (title) {
-                // Check if title contains a specific city
-                if (/(atlanta)/i.test(title)) city = 'atlanta';
-                else if (/(denver)/i.test(title)) city = 'denver';
-                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
-                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
-                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
-                else if (/(chicago)/i.test(title)) city = 'chicago';
-                else if (/(miami)/i.test(title)) city = 'miami';
-                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
-                else if (/(seattle)/i.test(title)) city = 'seattle';
-                else if (/(portland)/i.test(title)) city = 'portland';
-                else if (/(austin)/i.test(title)) city = 'austin';
-                else if (/(dallas)/i.test(title)) city = 'dallas';
-                else if (/(houston)/i.test(title)) city = 'houston';
-                else if (/(phoenix)/i.test(title)) city = 'phoenix';
-                else if (/(boston)/i.test(title)) city = 'boston';
-                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else if (/(los angeles|la)/i.test(title)) city = 'la';
-                else if (/(washington|dc)/i.test(title)) city = 'dc';
-                else if (/(orlando)/i.test(title)) city = 'orlando';
-                else if (/(tampa)/i.test(title)) city = 'tampa';
-                
-                if (city) {
-                    console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
-                }
-            }
+            // City extraction will be handled by shared core during enrichment
+            const city = null;
             
             // Don't generate Google Maps URL here - let SharedCore handle it with iOS-compatible logic
             // Just pass the place_id data to SharedCore for processing
@@ -479,37 +450,8 @@ class EventbriteParser {
                 return null;
             }
             
-            // Extract city from event title for better event organization
-            let city = null;
-            
-            // Generic city extraction from title - useful for events that include city in their name
-            if (title) {
-                // Check if title contains a specific city
-                if (/(atlanta)/i.test(title)) city = 'atlanta';
-                else if (/(denver)/i.test(title)) city = 'denver';
-                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
-                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
-                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
-                else if (/(chicago)/i.test(title)) city = 'chicago';
-                else if (/(miami)/i.test(title)) city = 'miami';
-                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
-                else if (/(seattle)/i.test(title)) city = 'seattle';
-                else if (/(portland)/i.test(title)) city = 'portland';
-                else if (/(austin)/i.test(title)) city = 'austin';
-                else if (/(dallas)/i.test(title)) city = 'dallas';
-                else if (/(houston)/i.test(title)) city = 'houston';
-                else if (/(phoenix)/i.test(title)) city = 'phoenix';
-                else if (/(boston)/i.test(title)) city = 'boston';
-                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else if (/(los angeles|la)/i.test(title)) city = 'la';
-                else if (/(washington|dc)/i.test(title)) city = 'dc';
-                else if (/(orlando)/i.test(title)) city = 'orlando';
-                else if (/(tampa)/i.test(title)) city = 'tampa';
-                
-                if (city) {
-                    console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
-                }
-            }
+            // City extraction will be handled by shared core during enrichment
+            const city = null;
             
             return {
                 title: title,
@@ -664,91 +606,6 @@ class EventbriteParser {
          }
      }
  
-     // Extract city from event data or URL
-     extractCityFromEvent(eventData, url) {
-         // Try venue address first
-         if (eventData.venue?.address) {
-             const address = eventData.venue.address;
-             const cityFromAddress = address.city || address.localized_area_display || '';
-             if (cityFromAddress) {
-                 return this.normalizeCityName(cityFromAddress);
-             }
-         }
-         
-         // Try extracting from text
-         const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
-         return this.extractCityFromText(searchText);
-     }
- 
- 
- 
-     // Normalize city names
-     normalizeCityName(cityName) {
-         const normalizations = {
-             'new york': 'nyc',
-             'new york city': 'nyc',
-             'manhattan': 'nyc',
-             'los angeles': 'la',
-             'san francisco': 'sf',
-             'las vegas': 'vegas'
-         };
-         
-         const lower = cityName.toLowerCase();
-         return normalizations[lower] || lower;
-     }
- 
-     // Normalize URLs
-     normalizeUrl(url, baseUrl) {
-         if (!url) return null;
-         
-         // Remove HTML entities
-         url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-         
-                 // Handle relative URLs
-        if (url.startsWith('/')) {
-            // Simple URL parsing for Scriptable compatibility
-            const urlPattern = /^(https?:)\/\/([^\/]+)/;
-            const match = baseUrl.match(urlPattern);
-            if (match) {
-                const [, protocol, host] = match;
-                return `${protocol}//${host}${url}`;
-            }
-        }
-        
-        // Handle protocol-relative URLs
-        if (url.startsWith('//')) {
-            // Simple URL parsing for Scriptable compatibility
-            const urlPattern = /^(https?:)/;
-            const match = baseUrl.match(urlPattern);
-            if (match) {
-                const [, protocol] = match;
-                return `${protocol}${url}`;
-            }
-        }
-         
-         return url;
-     }
- 
-     // Check if an event is a bear event based on keywords and title
-     isBearEvent(event) {
-         // Handle title objects (from Eventbrite JSON) vs strings
-         const title = typeof event.title === 'object' && event.title.text ? event.title.text : (event.title || '');
-         const description = event.description || '';
-         const venue = event.venue || '';
-         const url = event.url || '';
- 
-         // Check if the title, description, venue, or URL contains bear keywords
-         if (this.bearKeywords.some(keyword => 
-             title.toLowerCase().includes(keyword) || 
-             description.toLowerCase().includes(keyword) || 
-             venue.toLowerCase().includes(keyword) || 
-             url.toLowerCase().includes(keyword)
-         )) {
-             return true;
-         }
- 
-                 return false;
-    }
 }
 
 // Export for both environments
