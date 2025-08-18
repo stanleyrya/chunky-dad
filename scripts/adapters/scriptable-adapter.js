@@ -266,7 +266,7 @@ class ScriptableAdapter {
     async loadConfiguration() {
         try {
             console.log('📱 Scriptable: Starting configuration loading process...');
-            console.log('📱 Scriptable: Loading configuration from iCloud Drive/Scriptable/scraper-input.json');
+            console.log('📱 Scriptable: Loading configuration from iCloud Drive/Scriptable/scraper-input.js');
             
             const fm = FileManager.iCloud();
             console.log('📱 Scriptable: ✓ FileManager.iCloud() created');
@@ -274,7 +274,7 @@ class ScriptableAdapter {
             const scriptableDir = fm.documentsDirectory();
             console.log(`📱 Scriptable: Documents directory: ${scriptableDir}`);
             
-            const configPath = fm.joinPath(scriptableDir, 'scraper-input.json');
+            const configPath = fm.joinPath(scriptableDir, 'scraper-input.js');
             console.log(`📱 Scriptable: Configuration path: ${configPath}`);
             
             if (!fm.fileExists(configPath)) {
@@ -286,7 +286,7 @@ class ScriptableAdapter {
                 } catch (listError) {
                     console.log(`📱 Scriptable: ✗ Failed to list directory contents: ${listError.message}`);
                 }
-                throw new Error('Configuration file not found at iCloud Drive/Scriptable/scraper-input.json');
+                throw new Error('Configuration file not found at iCloud Drive/Scriptable/scraper-input.js');
             }
             
             console.log('📱 Scriptable: ✓ Configuration file exists, reading...');
@@ -297,9 +297,11 @@ class ScriptableAdapter {
                 throw new Error('Configuration file is empty');
             }
             
-            console.log('📱 Scriptable: Parsing JSON configuration...');
-            const config = JSON.parse(configText);
-            console.log('📱 Scriptable: ✓ JSON parsed successfully');
+            console.log('📱 Scriptable: Loading JavaScript configuration...');
+            // Use importModule to load the JS configuration file
+            const configModule = importModule('scraper-input');
+            const config = configModule || eval(configText);
+            console.log('📱 Scriptable: ✓ JavaScript configuration loaded successfully');
             
             // Validate configuration structure
             if (!config.parsers || !Array.isArray(config.parsers)) {

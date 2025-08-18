@@ -11,7 +11,7 @@ This directory contains Scriptable automation scripts for parsing bear community
 scripts/
 ├── README.md                           # This file - READ BEFORE EDITING
 ├── scriptable-complete-api.md          # Scriptable API reference
-├── scraper-input.json                  # Runtime configuration
+├── scraper-input.js                    # Runtime configuration
 ├── bear-event-scraper-unified.js       # Lightweight orchestrator (environment detection only)
 ├── shared-core.js                      # Pure JavaScript business logic (NO environment code)
 ├── adapters/                           # Environment-specific implementations
@@ -138,28 +138,30 @@ Merge strategies can be configured at multiple levels:
 
 The most specific merge strategy wins. For example, if a parser has `mergeMode: "clobber"` but a field has `merge: "preserve"`, that field will be preserved while others are clobbered.
 
-### Main Configuration (`scraper-input.json`)
-```json
-{
-  "config": {
-    "dryRun": true,           // When false, allows calendar modifications
-    "daysToLookAhead": null   // Limit future events (null = unlimited)
+### Main Configuration (`scraper-input.js`)
+
+**Note**: Configuration is now in JavaScript format instead of JSON, allowing for better maintainability and comments. The file exports a configuration object that works in both Scriptable and web environments.
+
+const scraperConfig = {
+  config: {
+    dryRun: true,           // When false, allows calendar modifications
+    daysToLookAhead: null   // Limit future events (null = unlimited)
   },
-  "parsers": [
+  parsers: [
     {
-      "name": "Venue Name",
-      "parser": "eventbrite",  // Must match parser filename
-      "enabled": true,         // Set to false to temporarily disable parser
-      "urls": ["https://venue.com/events"],
-      "alwaysBear": true,      // Skip bear keyword filtering
-      "requireDetailPages": true,
-      "maxAdditionalUrls": 20,
-      "allowlist": ["keyword1", "keyword2"],
-      "city": "nyc",
-      "mergeMode": "upsert"   // Per-parser merge mode: "upsert" or "clobber"
+      name: "Venue Name",
+      parser: "eventbrite",  // Must match parser filename
+      enabled: true,         // Set to false to temporarily disable parser
+      urls: ["https://venue.com/events"],
+      alwaysBear: true,      // Skip bear keyword filtering
+      requireDetailPages: true,
+      maxAdditionalUrls: 20,
+      allowlist: ["keyword1", "keyword2"],
+      city: "nyc",
+      mergeMode: "upsert"   // Per-parser merge mode: "upsert" or "clobber"
     }
   ],
-  "calendarMappings": {
+  calendarMappings: {
     "nyc": "chunky-dad-nyc",
     "la": "chunky-dad-la",
     "palm-springs": "chunky-dad-palm-springs",
@@ -170,18 +172,21 @@ The most specific merge strategy wins. For example, if a parser has `mergeMode: 
     "berlin": "chunky-dad-berlin",
     "default": "chunky-dad-events"
   }
-}
+};
+
+// Export the configuration
+scraperConfig;
 ```
 
 ### Metadata Fields
 The `metadata` object in parser configuration requires explicit merge strategies for each field. All fields must use the object format with `merge` property.
 
 #### Field Format:
-```json
+```javascript
 {
-  "fieldName": {
-    "value": "field value",    // Optional - can be omitted for preserve
-    "merge": "strategy"        // Required - defaults to "preserve" if omitted
+  fieldName: {
+    value: "field value",    // Optional - can be omitted for preserve
+    merge: "strategy"        // Required - defaults to "preserve" if omitted
   }
 }
 ```
@@ -192,22 +197,22 @@ The `metadata` object in parser configuration requires explicit merge strategies
 - **`clobber`**: Always replace existing value with new value
 
 Example:
-```json
-"metadata": {
-  "title": {
-    "value": "MEGAWOOF",
-    "merge": "clobber"        // Always replace title
+```javascript
+metadata: {
+  title: {
+    value: "MEGAWOOF",
+    merge: "clobber"        // Always replace title
   },
-  "description": {
-    "merge": "preserve"       // Keep existing, no value needed
+  description: {
+    merge: "preserve"       // Keep existing, no value needed
   },
-  "instagram": {
-    "value": "https://www.instagram.com/megawoof_america",
-    "merge": "clobber"        // Always update Instagram
+  instagram: {
+    value: "https://www.instagram.com/megawoof_america",
+    merge: "clobber"        // Always update Instagram
   },
-  "shortName": {
-    "value": "MEGA-WOOF",
-    "merge": "upsert"         // Add if missing
+  shortName: {
+    value: "MEGA-WOOF",
+    merge: "upsert"         // Add if missing
   }
 }
 ```
@@ -231,7 +236,7 @@ Example:
    - `parsers/eventbrite-parser.js`
    - `parsers/bearracuda-parser.js`
    - `parsers/generic-parser.js`
-3. Copy `scraper-input.json` to **iCloud Drive/Scriptable/** folder
+3. Copy `scraper-input.js` to **iCloud Drive/Scriptable/** folder
 4. Run `bear-event-scraper-unified.js` or `display-saved-run.js`
 5. Set `dryRun: false` when ready for live calendar updates
 
@@ -239,7 +244,7 @@ Example:
 
 ### For Web Testing
 1. Load all script files in HTML with proper script tags
-2. Ensure `scraper-input.json` is accessible via HTTP
+2. Ensure `scraper-input.js` is accessible via HTTP
 3. Use web adapter for browser-specific functionality
 
 ## 📖 DEVELOPMENT GUIDELINES
@@ -260,7 +265,7 @@ Example:
 
 ### Scriptable Environment
 - Check Scriptable app console for colored log output
-- Verify `scraper-input.json` exists in iCloud Drive/Scriptable/
+- Verify `scraper-input.js` exists in iCloud Drive/Scriptable/
 - Test calendar permissions and access
 - **CRITICAL**: Scriptable console methods (log, warn, error) only accept ONE parameter
   - ❌ `console.log('message:', error)` - BREAKS in Scriptable
