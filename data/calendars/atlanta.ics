@@ -6,26 +6,26 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-atlanta
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20250824T100000Z
-DTEND:20250824T150000Z
-DTSTAMP:20250817T221355Z
-UID:6320CBDC-A129-4BB6-B24E-3DC38AC4488F
-CREATED:20250817T042340Z
-DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 10:00 pm - Part
- y Goes Until 3:00 am\nbar: Heretic\nwebsite: https://bearracuda.com/events/
- atlantabearpride/\nimage: https://bearracuda.com/wp-content/uploads/2024/12
- /cuda-atlanta-august_2025-web.jpg\ngmaps: https://maps.google.com/maps?q=20
- 69%20Cheshire%20Bridge%20Road%2C%20Atlanta%2C%20GA\nfacebookEvent: https://
- www.facebook.com/events/1024483639785684/\nticketUrl: https://www.eventbrit
- e.com/e/bearracuda-atlanta-16-year-anniversary-tickets-1364601091599\nevent
- briteUrl: https://www.eventbrite.com/e/bearracuda-atlanta-16-year-anniversa
- ry-tickets-1364601091599\ndetailPageUrl: https://bearracuda.com/events/atla
- ntabearpride/\nshortName: Bearracuda\ninstagram: https://www.instagram.com/
- bearracuda\nkey: atlanta|2025-08-24|heretic|bearracuda
-LAST-MODIFIED:20250817T042341Z
+DTSTART:20250824T020000Z
+DTEND:20250824T070000Z
+DTSTAMP:20250818T001053Z
+UID:6603D191-FFD6-4D13-89CE-03BD5C0A3D4F
+CREATED:20250817T231653Z
+DESCRIPTION:description: 16 YEAR ANNIVERSARY\nbar: Heretic\nwebsite: https:
+ //www.eventbrite.com/e/bearracuda-atlanta-16-year-anniversary-tickets-13646
+ 01091599\ncover: $20.73 - $26.82 (as of 8/17)\nimage: https://img.evbuc.com
+ /https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1030030273%2F301420936599%2F1%2Fori
+ ginal.20250513-190933?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Cco
+ mpress&q=75&sharp=10&fp-x=0.0142045454545&fp-y=0.478571428571&s=3ecb099cc8f
+ 9d16e98d8ea2b078ddca7\ngmaps: https://www.google.com/maps/search/?api=1&que
+ ry=33.81158%2C-84.3554&query_place_id=ChIJHfQbk9cF9YgRffpBbinNqZk\nshortNam
+ e: Bearracuda\ninstagram: https://www.instagram.com/bearracuda\nkey: bearra
+ cuda-atlanta-16-year-anniversary|2025-08-24|heretic|eventbrite
+LAST-MODIFIED:20250817T231653Z
+LOCATION:33.81158\, -84.3554
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Atlanta
+SUMMARY:Bearracuda Atlanta 16 Year Anniversary!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

@@ -6,30 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-denver
 X-WR-TIMEZONE:America/Denver
 BEGIN:VEVENT
-DTSTART:20250907T110000Z
-DTEND:20250907T160000Z
-DTSTAMP:20250817T221355Z
-UID:E1710FE3-7013-4C7D-9C5E-AE2307C38979
-CREATED:20250817T042338Z
-DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 9:00 pm - Party
-  Goes Until 2:00 am\nbar: Summit\nwebsite: https://bearracuda.com/events/de
- nverpride/\nimage: https://bearracuda.com/wp-content/uploads/2025/01/den16w
- eb.jpg\nfacebookEvent: https://www.facebook.com/events/747044714674555\ndet
- ailPageUrl: https://bearracuda.com/events/denverpride/\nshortName: Bearracu
- da\ninstagram: https://www.instagram.com/bearracuda\nkey: denver|2025-09-07
- |summit|bearracuda
-LAST-MODIFIED:20250817T042338Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:DENVER
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250824T030000Z
 DTEND:20250824T103000Z
-DTSTAMP:20250817T221355Z
+DTSTAMP:20250818T001053Z
 UID:9C11EA14-6B16-40DA-8915-DF990E1BB4F3
 CREATED:20250817T033528Z
 DESCRIPTION:description: Get ready for the ultimate party experience at MEG
