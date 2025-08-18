@@ -182,6 +182,9 @@ const scraperConfig = {
         },
         cover: {
           merge: "clobber"
+        },
+        key: {
+          merge: "clobber"
         }
       }
     },
@@ -238,6 +241,9 @@ const scraperConfig = {
           merge: "clobber"
         },
         cover: {
+          merge: "clobber"
+        },
+        key: {
           merge: "clobber"
         }
       }
