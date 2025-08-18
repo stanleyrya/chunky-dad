@@ -8,21 +8,20 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250927T040000Z
 DTEND:20250927T100000Z
-DTSTAMP:20250818T043438Z
+DTSTAMP:20250818T062516Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
-DESCRIPTION:description: Friday\, September 26th\, 2025\nPUBLIC WORKS - 161
-  Erie\, San Francisco\nbar: The Public Works SF\nwebsite: https://www.event
- brite.com/e/bearracuda-sf-presents-horse-meat-disco-tickets-1370410668199\n
- cover: $57.79 - $99.99 (as of 8/17)\nimage: https://img.evbuc.com/https%3A%
- 2F%2Fcdn.evbuc.com%2Fimages%2F1049150793%2F301420936599%2F1%2Foriginal.2025
- 0609-182908?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=7
- 5&sharp=10&fp-x=0.95928030303&fp-y=0.546428571429&s=d35c06cc2c1af43a15659d8
- eb0ad5e93\ngmaps: https://www.google.com/maps/search/?api=1&query=37.768913
- 7%2C-122.4192514&query_place_id=ChIJa4c8OyF-j4AR4kopWZOJZPM\nshortName: Bea
- rracuda\ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-s
- f-presents-horse-meat-disco|2025-09-27|the public works sf|eventbrite
-LAST-MODIFIED:20250817T231657Z
+DESCRIPTION:description: Friday\, September 26th\, 2025\nbar: The Public Wo
+ rks SF\nwebsite: https://www.eventbrite.com/e/bearracuda-sf-presents-horse-
+ meat-disco-tickets-1370410668199\ncover: $57.79 - $99.99 (as of 8/17)\nimag
+ e: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1049150793%
+ 2F301420936599%2F1%2Foriginal.20250609-182908?crop=focalpoint&fit=crop&h=23
+ 0&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.95928030303&fp-y=0.5464
+ 28571429&s=d35c06cc2c1af43a15659d8eb0ad5e93\ngmaps: https://www.google.com/
+ maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=ChIJa4c8O
+ yF-j4AR4kopWZOJZPM\nshortName: Bear-rac-uda\ninstagram: https://www.instagr
+ am.com/bearracuda\nkey: bearracuda-2025-09-27-sf
+LAST-MODIFIED:20250818T055548Z
 LOCATION:37.7689137\, -122.4192514
 SEQUENCE:0
 STATUS:CONFIRMED

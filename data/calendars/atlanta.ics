@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20250824T020000Z
 DTEND:20250824T070000Z
-DTSTAMP:20250818T043438Z
+DTSTAMP:20250818T062516Z
 UID:6603D191-FFD6-4D13-89CE-03BD5C0A3D4F
 CREATED:20250817T231653Z
 DESCRIPTION:description: 16 YEAR ANNIVERSARY\nbar: Heretic\nwebsite: https:
@@ -19,9 +19,9 @@ DESCRIPTION:description: 16 YEAR ANNIVERSARY\nbar: Heretic\nwebsite: https:
  mpress&q=75&sharp=10&fp-x=0.0142045454545&fp-y=0.478571428571&s=3ecb099cc8f
  9d16e98d8ea2b078ddca7\ngmaps: https://www.google.com/maps/search/?api=1&que
  ry=33.81158%2C-84.3554&query_place_id=ChIJHfQbk9cF9YgRffpBbinNqZk\nshortNam
- e: Bearracuda\ninstagram: https://www.instagram.com/bearracuda\nkey: bearra
- cuda-atlanta-16-year-anniversary|2025-08-24|heretic|eventbrite
-LAST-MODIFIED:20250817T231653Z
+ e: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nkey: bear
+ racuda-2025-08-24-atlanta
+LAST-MODIFIED:20250818T055548Z
 LOCATION:33.81158\, -84.3554
 SEQUENCE:0
 STATUS:CONFIRMED
