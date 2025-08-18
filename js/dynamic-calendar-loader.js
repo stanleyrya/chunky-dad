@@ -1026,14 +1026,37 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
         
+        // Check for forceProxy URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceProxy = urlParams.get('forceProxy') === 'true';
+        
         logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-        logger.info('CALENDAR', `🌐 Step 3: Loading cached calendar data for ${cityConfig.name}`, {
+        logger.info('CALENDAR', `🌐 Step 3: Loading calendar data for ${cityConfig.name}`, {
             cityKey,
             calendarId: cityConfig.calendarId,
-            step: 'Step 3: Loading cached calendar data (no CORS proxies needed)'
+            forceProxy,
+            step: forceProxy ? 'Step 3: Forcing proxy loading (testing mode)' : 'Step 3: Loading cached calendar data (no CORS proxies needed)'
         });
         
-        // Try to load cached calendar data first
+        // If forceProxy is true, skip cached data and go directly to proxy
+        if (forceProxy) {
+            logger.info('CALENDAR', '🔄 FORCE_PROXY: Skipping cached data, forcing proxy usage for testing', {
+                cityKey,
+                cityName: cityConfig.name,
+                reason: 'forceProxy=true URL parameter detected'
+            });
+            
+            // Go directly to proxy loading
+            const proxyResult = await this.loadCalendarDataViaProxy(cityKey, cityConfig);
+            if (proxyResult) {
+                return proxyResult;
+            }
+            
+            // If proxy fails, try direct fallback
+            return this.loadCalendarDataFallback(cityKey, cityConfig);
+        }
+        
+        // Normal flow: Try to load cached calendar data first
         const cachedDataUrl = this.buildLocalCalendarUrl(cityKey);
         
         try {
@@ -1144,20 +1167,34 @@ class DynamicCalendarLoader extends CalendarCore {
     
     // Try multiple free CORS proxies to fetch Google Calendar ICS
     async loadCalendarDataViaProxy(cityKey, cityConfig) {
+        // Check if this is being forced via URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceProxy = urlParams.get('forceProxy') === 'true';
+        
         const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
         const proxyBuilders = [
             (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
             (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
         ];
         
+        if (forceProxy) {
+            logger.info('CALENDAR', '🔄 FORCE_PROXY: Starting forced proxy loading for testing', {
+                cityKey,
+                cityName: cityConfig.name,
+                totalProxies: proxyBuilders.length,
+                directGoogleUrl: icalUrl
+            });
+        }
+        
         for (let i = 0; i < proxyBuilders.length; i++) {
             const proxyUrl = proxyBuilders[i](icalUrl);
             try {
                 this.updateLoadingMessage(i + 1, 'proxy');
-                logger.info('CALENDAR', 'Attempting to load calendar via CORS proxy', {
+                logger.info('CALENDAR', `Attempting to load calendar via CORS proxy${forceProxy ? ' (FORCED)' : ''}`, {
                     cityKey,
                     proxyIndex: i,
-                    proxyUrlPreview: proxyUrl.split('?')[0]
+                    proxyUrlPreview: proxyUrl.split('?')[0],
+                    forceProxy
                 });
                 
                 const fetchPromise = fetch(proxyUrl, {
@@ -1181,10 +1218,12 @@ class DynamicCalendarLoader extends CalendarCore {
                     throw new Error('Invalid iCal data received via proxy');
                 }
                 
-                logger.apiCall('CALENDAR', 'Successfully loaded calendar via CORS proxy', {
+                logger.apiCall('CALENDAR', `Successfully loaded calendar via CORS proxy${forceProxy ? ' (FORCED)' : ''}`, {
                     cityKey,
                     proxyIndex: i,
-                    dataLength: icalText.length
+                    dataLength: icalText.length,
+                    forceProxy,
+                    proxyService: proxyUrl.split('?')[0]
                 });
                 
                 const events = this.parseICalData(icalText);
@@ -1198,17 +1237,18 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 return this.eventsData;
             } catch (error) {
-                logger.warn('CALENDAR', 'CORS proxy attempt failed', {
+                logger.warn('CALENDAR', `CORS proxy attempt failed${forceProxy ? ' (FORCED)' : ''}`, {
                     cityKey,
                     proxyIndex: i,
-                    error: error.message
+                    error: error.message,
+                    forceProxy
                 });
                 // Try next proxy
                 continue;
             }
         }
         
-        logger.componentError('CALENDAR', 'All CORS proxy attempts failed');
+        logger.componentError('CALENDAR', `All CORS proxy attempts failed${forceProxy ? ' (FORCED)' : ''}`);
         return null;
     }
      
