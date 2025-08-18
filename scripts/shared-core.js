@@ -51,6 +51,7 @@ class SharedCore {
             'long beach': 'la',  // Long Beach is part of LA metro area
             'santa monica': 'la',
             'palm springs': 'palm-springs',  // Palm Springs gets its own area
+            'sitges': 'sitges',  // Sitges gets its own area
             'san diego': 'san diego',
             'sacramento': 'sacramento',
             'san jose': 'sf',  // Bay Area
@@ -1149,7 +1150,7 @@ class SharedCore {
         
         // Check if it's just a city name (common city patterns to exclude)
         const cityOnlyPatterns = [
-            /^(new york|nyc|los angeles|san francisco|chicago|atlanta|miami|seattle|portland|denver|las vegas|vegas|boston|philadelphia|austin|dallas|houston|phoenix|toronto|london|berlin|palm springs)$/i,
+            /^(new york|nyc|los angeles|san francisco|chicago|atlanta|miami|seattle|portland|denver|las vegas|vegas|boston|philadelphia|austin|dallas|houston|phoenix|toronto|london|berlin|palm springs|sitges)$/i,
             /^[a-z\s]{3,25}$/i // Simple city name pattern (3-25 characters, letters and spaces only)
         ];
         
