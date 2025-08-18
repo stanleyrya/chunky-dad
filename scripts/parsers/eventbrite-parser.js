@@ -121,11 +121,9 @@ class EventbriteParser {
                         console.log('🎫 Eventbrite: Found individual event data in JSON');
                         const eventData = serverData.event;
                         
-
-                        
                         if (eventData.url && eventData.name && this.isFutureEvent(eventData)) {
-                            // Enrich event data with venue info from components if available
-                            if (serverData.components && serverData.components.eventMap) {
+                            // Add venue info from components for detail pages (minimal enhancement)
+                            if (serverData.components?.eventMap && !eventData.venue?.name) {
                                 const mapData = serverData.components.eventMap;
                                 eventData.venue = {
                                     name: mapData.venueName,
@@ -133,34 +131,6 @@ class EventbriteParser {
                                     latitude: mapData.location?.latitude,
                                     longitude: mapData.location?.longitude
                                 };
-
-                            }
-                            
-                            // Get description from structured content if available
-                            if (serverData.components && serverData.components.eventDescription) {
-                                eventData.description = serverData.components.eventDescription.summary || '';
-                            }
-                            
-                            // Get pricing from event_listing_response if available
-                            if (serverData.event_listing_response && serverData.event_listing_response.tickets) {
-                                const tickets = serverData.event_listing_response.tickets;
-                                if (tickets.availability) {
-                                    const minPrice = tickets.availability.minimumTicketPrice;
-                                    const maxPrice = tickets.availability.maximumTicketPrice;
-                                    if (minPrice && maxPrice) {
-                                        eventData.price_range = `${minPrice.display} - ${maxPrice.display}`;
-                                    } else if (minPrice) {
-                                        eventData.price_range = `From ${minPrice.display}`;
-                                    }
-                                }
-                            }
-                            
-                            // Get image from eventHero if available
-                            if (serverData.components && serverData.components.eventHero && serverData.components.eventHero.items) {
-                                const heroItem = serverData.components.eventHero.items[0];
-                                if (heroItem && heroItem.croppedLogoUrl600) {
-                                    eventData.logo = { url: heroItem.croppedLogoUrl600 };
-                                }
                             }
                             
                             const event = this.parseJsonEvent(eventData, null, parserConfig);
