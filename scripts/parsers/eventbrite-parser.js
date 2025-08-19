@@ -314,15 +314,6 @@ class EventbriteParser {
                 }
             }
             
-            // HTML address extraction fallback if JSON address is not available
-            if (!address && htmlContext) {
-                console.log(`🎫 Eventbrite: No address in JSON data, trying HTML extraction for "${title}"`);
-                address = this.extractAddressFromHtml(htmlContext, venue);
-                if (address) {
-                    console.log(`🎫 Eventbrite: Found address via HTML extraction: "${address}"`);
-                }
-            }
-            
             // Enhanced price extraction with availability info
             let price = '';
             if (eventData.is_free) {
@@ -431,139 +422,6 @@ class EventbriteParser {
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to parse JSON event: ${error}`);
-            return null;
-        }
-    }
-
-    // Parse HTML events using regex (environment-agnostic)
-    parseHTMLEvents(html, sourceUrl) {
-        const events = [];
-        
-        try {
-            // Multiple selector strategies for different Eventbrite layouts
-            const eventPatterns = [
-                // Modern Eventbrite event cards
-                /<div[^>]*data-testid="event-card[^>]*>.*?<\/div>/gs,
-                /<div[^>]*class="[^"]*event-card[^>]*>.*?<\/div>/gs,
-                /<article[^>]*class="[^"]*event[^>]*>.*?<\/article>/gs,
-                // Event links
-                /<a[^>]*href="[^"]*\/e\/[^"]*"[^>]*>.*?<\/a>/gs
-            ];
-            
-            for (const pattern of eventPatterns) {
-                const matches = html.match(pattern) || [];
-                
-                for (const match of matches) {
-                    try {
-                        const event = this.parseHTMLEventElement(match, sourceUrl);
-                        if (event) {
-                            events.push(event);
-                        }
-                    } catch (error) {
-                        console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
-                    }
-                }
-                
-                if (events.length > 0) {
-                    console.log(`🎫 Eventbrite: Found ${events.length} events using HTML pattern`);
-                    break;
-                }
-            }
-            
-        } catch (error) {
-            console.warn(`🎫 Eventbrite: Error parsing HTML events: ${error}`);
-        }
-        
-        return events;
-    }
-
-    // Parse individual HTML event element
-    parseHTMLEventElement(htmlElement, sourceUrl) {
-        try {
-            // Extract title
-            const titleMatch = htmlElement.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/) ||
-                              htmlElement.match(/title="([^"]+)"/) ||
-                              htmlElement.match(/>([^<]+)</);
-            const title = titleMatch ? titleMatch[1].trim() : '';
-            
-            // Extract URL
-            const urlMatch = htmlElement.match(/href="([^"]*\/e\/[^"]*)"/) ||
-                            htmlElement.match(/href="([^"]*eventbrite\.com[^"]*)"/) ||
-                            htmlElement.match(/href="([^"]+)"/);
-            const url = urlMatch ? this.normalizeUrl(urlMatch[1], sourceUrl) : '';
-            
-            // Extract date/time
-            const dateMatch = htmlElement.match(/datetime="([^"]+)"/) ||
-                             htmlElement.match(/data-date="([^"]+)"/) ||
-                             htmlElement.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
-            const startDate = dateMatch ? dateMatch[1] : null;
-            
-            // Extract venue/location
-            const venueMatch = htmlElement.match(/<span[^>]*class="[^"]*location[^>]*>([^<]+)<\/span>/) ||
-                              htmlElement.match(/<div[^>]*class="[^"]*venue[^>]*>([^<]+)<\/div>/) ||
-                              htmlElement.match(/location[^>]*>([^<]+)</i);
-            const venue = venueMatch ? venueMatch[1].trim() : '';
-            
-            if (!title) {
-                return null;
-            }
-            
-            // Extract city from event title for better event organization
-            let city = null;
-            
-            // Generic city extraction from title - useful for events that include city in their name
-            if (title) {
-                // Check if title contains a specific city
-                if (/(atlanta)/i.test(title)) city = 'atlanta';
-                else if (/(denver)/i.test(title)) city = 'denver';
-                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
-                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
-                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
-                else if (/(chicago)/i.test(title)) city = 'chicago';
-                else if (/(miami)/i.test(title)) city = 'miami';
-                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
-                else if (/(seattle)/i.test(title)) city = 'seattle';
-                else if (/(portland)/i.test(title)) city = 'portland';
-                else if (/(austin)/i.test(title)) city = 'austin';
-                else if (/(dallas)/i.test(title)) city = 'dallas';
-                else if (/(houston)/i.test(title)) city = 'houston';
-                else if (/(phoenix)/i.test(title)) city = 'phoenix';
-                else if (/(boston)/i.test(title)) city = 'boston';
-                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else if (/(los angeles|la)/i.test(title)) city = 'la';
-                else if (/(washington|dc)/i.test(title)) city = 'dc';
-                else if (/(orlando)/i.test(title)) city = 'orlando';
-                else if (/(tampa)/i.test(title)) city = 'tampa';
-                
-                if (city) {
-                    console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
-                }
-            }
-            
-            return {
-                title: title,
-                description: '',
-                startDate: startDate ? new Date(startDate) : null,
-                endDate: null,
-                bar: venue, // Use 'bar' field name that calendar-core.js expects
-                location: null, // No coordinates available in HTML parsing
-                city: city,
-                website: url, // Use 'website' field name that calendar-core.js expects
-                cover: '', // Use 'cover' field name that calendar-core.js expects
-                image: '',
-                source: this.config.source,
-                setDescription: parserConfig.metadata?.setDescription !== false, // Default to true unless explicitly false
-                // Properly handle bear event detection based on configuration
-                isBearEvent: this.config.alwaysBear || this.isBearEvent({
-                    title: title,
-                    description: '',
-                    venue: venue,
-                    url: url
-                })
-            };
-            
-        } catch (error) {
-            console.warn(`🎫 Eventbrite: Failed to parse HTML event element: ${error}`);
             return null;
         }
     }
@@ -708,9 +566,9 @@ class EventbriteParser {
          const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
          return this.extractCityFromText(searchText);
      }
- 
- 
- 
+
+
+
      // Normalize city names
      normalizeCityName(cityName) {
          const normalizations = {
@@ -765,7 +623,7 @@ class EventbriteParser {
          const description = event.description || '';
          const venue = event.venue || '';
          const url = event.url || '';
- 
+
          // Check if the title, description, venue, or URL contains bear keywords
          if (this.bearKeywords.some(keyword => 
              title.toLowerCase().includes(keyword) || 
@@ -775,7 +633,7 @@ class EventbriteParser {
          )) {
              return true;
          }
- 
+
                  return false;
     }
 }
