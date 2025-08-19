@@ -512,10 +512,11 @@ class EventbriteParser {
                 }
             }
             
-            // Fallback: Try to extract URLs from JSON-LD structured data with date filtering
-            // Note: Only use this fallback if we found 0 future events, and filter out past events
-            if (urls.size === 0) {
-                console.log('🎫 Eventbrite: No URLs found in server data, trying JSON-LD fallback with date filtering');
+            // JSON-LD fallback disabled: If we successfully parsed the main JSON but found 0 future events,
+            // that's the correct result. JSON-LD often contains past events that would fail detail page parsing.
+            // Only use JSON-LD fallback if the main JSON parsing completely failed.
+            if (urls.size === 0 && !serverDataMatch) {
+                console.log('🎫 Eventbrite: Main JSON parsing failed, trying JSON-LD fallback as last resort');
                 
                 // Look for JSON-LD event objects with dates
                 const jsonLdPattern = /{"position":\d+,"@type":"ListItem","item":{[^}]*"startDate":"([^"]+)"[^}]*"url":"(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"[^}]*}}/g;
@@ -558,6 +559,8 @@ class EventbriteParser {
                 } else {
                     console.log('🎫 Eventbrite: No structured JSON-LD events found for URL extraction');
                 }
+            } else if (urls.size === 0) {
+                console.log('🎫 Eventbrite: No future events found in main JSON - this is correct, not using JSON-LD fallback for past events');
             }
             
             console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
