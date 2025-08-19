@@ -124,14 +124,36 @@ class EventbriteParser {
                         console.log('🎫 Eventbrite: Found individual event data in JSON');
                         const eventData = serverData.event;
                         
-                        if (eventData.url && eventData.name && this.isFutureEvent(eventData)) {
-                            const event = this.parseJsonEvent(eventData, null, parserConfig, serverData);
+                        // Detail pages have different field structure - adapt the event data
+                        const adaptedEventData = {
+                            ...eventData,
+                            // Ensure we have the required fields for validation
+                            url: eventData.url || htmlData.url, // fallback to current page URL
+                            name: eventData.name || eventData.title || '', // detail pages have name as string
+                            // Map date fields from detail page format
+                            start: eventData.start || eventData.startDate,
+                            end: eventData.end || eventData.endDate
+                        };
+                        
+                        // More lenient validation for detail pages
+                        const hasRequiredFields = adaptedEventData.name && (adaptedEventData.url || htmlData.url);
+                        const isFuture = this.isFutureEvent(adaptedEventData);
+                        
+                        console.log(`🎫 Eventbrite: Detail page validation - hasFields: ${hasRequiredFields}, isFuture: ${isFuture}, name: "${adaptedEventData.name}"`);
+                        
+                        if (hasRequiredFields && isFuture) {
+                            const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData);
                             if (event) {
                                 events.push(event);
                                 console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
+                            } else {
+                                console.log('🎫 Eventbrite: parseJsonEvent returned null for detail page event');
                             }
                         } else {
-                            console.log('🎫 Eventbrite: Individual event is not a future event or missing required data');
+                            const reasons = [];
+                            if (!hasRequiredFields) reasons.push('missing required fields');
+                            if (!isFuture) reasons.push('not a future event');
+                            console.log(`🎫 Eventbrite: Skipping individual event: ${reasons.join(', ')}`);
                         }
                         
                         if (events.length > 0) {
@@ -151,29 +173,7 @@ class EventbriteParser {
                 }
             }
             
-            // Fallback: Look for other JSON patterns if __SERVER_DATA__ didn't work
-            const jsonPatterns = [
-                /__INITIAL_STATE__\s*=\s*({.+?});/,
-                /"events":\s*(\[.+?\])/,
-                /"future_events":\s*(\[.+?\])/
-            ];
-            
-            for (const pattern of jsonPatterns) {
-                const match = html.match(pattern);
-                if (match) {
-                    try {
-                        const jsonData = JSON.parse(match[1]);
-                        const extractedEvents = this.extractEventsFromJsonData(jsonData, [], parserConfig, null);
-                        if (extractedEvents.length > 0) {
-                            events.push(...extractedEvents);
-                            console.log(`🎫 Eventbrite: Extracted ${extractedEvents.length} events from JSON pattern`);
-                            break;
-                        }
-                    } catch (parseError) {
-                        console.warn(`🎫 Eventbrite: Failed to parse JSON data: ${parseError}`);
-                    }
-                }
-            }
+
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting JSON events: ${error}`);
@@ -182,61 +182,31 @@ class EventbriteParser {
         return events;
     }
 
-    // Recursively search JSON data for event objects
-    extractEventsFromJsonData(data, events = [], parserConfig = {}, serverData = null) {
-        if (!data || typeof data !== 'object') return events;
-        
-        // Check if this object looks like an event
-        if (this.isEventObject(data)) {
-            // Only process future events
-            if (this.isFutureEvent(data)) {
-                const event = this.parseJsonEvent(data, null, parserConfig, serverData);
-                if (event) {
-                    events.push(event);
-                }
-            } else {
-                console.log(`🎫 Eventbrite: Skipping past event: ${data.name || data.title || 'Unknown'}`);
-            }
-        }
-        
-        // Recursively search nested objects and arrays
-        if (Array.isArray(data)) {
-            for (const item of data) {
-                this.extractEventsFromJsonData(item, events, parserConfig, serverData);
-            }
-        } else if (typeof data === 'object') {
-            for (const value of Object.values(data)) {
-                this.extractEventsFromJsonData(value, events, parserConfig, serverData);
-            }
-        }
-        
-        return events;
-    }
 
-    // Check if an object looks like an event
-    isEventObject(obj) {
-        return obj && 
-               typeof obj === 'object' && 
-               (obj.name || obj.title) &&
-               (obj.start || obj.start_date || obj.startDate) &&
-               !Array.isArray(obj);
-    }
 
     // Check if an event is in the future (not past)
     isFutureEvent(eventData) {
         const now = new Date();
-        const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
+        let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
+        
+        // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
+        if (typeof startDate === 'object' && startDate.utc) {
+            startDate = startDate.utc;
+        }
         
         if (!startDate) {
             // If no start date, assume it might be future and let it through
+            console.warn(`🎫 Eventbrite: No start date found for event, assuming future`);
             return true;
         }
         
         try {
             const eventDate = new Date(startDate);
-            return eventDate > now;
+            const isFuture = eventDate > now;
+            console.log(`🎫 Eventbrite: Date check - event: ${eventDate.toISOString()}, now: ${now.toISOString()}, isFuture: ${isFuture}`);
+            return isFuture;
         } catch (error) {
-            console.warn(`🎫 Eventbrite: Invalid date format: ${startDate}`);
+            console.warn(`🎫 Eventbrite: Invalid date format: ${startDate}, error: ${error}`);
             return true; // If we can't parse the date, let it through
         }
     }
@@ -254,8 +224,19 @@ class EventbriteParser {
             }
             
             // Handle both organizer page format (start.utc) and detail page format (start as string)
-            const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
-            const endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
+            // Detail pages may have start/end as timezone objects with utc field
+            let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
+            let endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
+            
+            // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
+            if (typeof startDate === 'object' && startDate.utc) {
+                startDate = startDate.utc;
+            }
+            if (typeof endDate === 'object' && endDate.utc) {
+                endDate = endDate.utc;
+            }
+            
+            console.log(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
             const url = eventData.url || eventData.vanity_url || '';
             
             // Enhanced venue processing - get both name and address from multiple sources
@@ -471,24 +452,7 @@ class EventbriteParser {
                 }
             }
             
-            // Fallback: Try to extract URLs from JSON-LD structured data
-            if (urls.size === 0) {
-                console.log('🎫 Eventbrite: No URLs found in server data, trying JSON-LD fallback');
-                const jsonLdMatch = html.match(/"url":"(https:\/\/www\.eventbrite\.com\/e\/[^\"]+)"/g);
-                
-                if (jsonLdMatch) {
-                    jsonLdMatch.forEach(match => {
-                        const urlMatch = match.match(/"url":"([^\"]+)"/);
-                        if (urlMatch && urlMatch[1]) {
-                            const eventUrl = urlMatch[1];
-                            if (this.isValidEventUrl(eventUrl, parserConfig)) {
-                                urls.add(eventUrl);
-                                console.log(`🎫 Eventbrite: Found event URL in JSON-LD: ${eventUrl}`);
-                            }
-                        }
-                    });
-                }
-            }
+
             
             console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
             
