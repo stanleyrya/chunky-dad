@@ -52,12 +52,20 @@ class BearraccudaParser {
             const isDetailPage = this.isEventDetailPage(html, htmlData.url);
             console.log(`🐻 Bearracuda: Page type detection result: ${isDetailPage ? 'detail page' : 'listing page'}`);
             
+            let additionalLinks = [];
+            
             if (isDetailPage) {
                 console.log('🐻 Bearracuda: Detected individual event page, parsing event details...');
                 const event = this.parseEventDetailPage(html, htmlData.url, parserConfig, cityConfig);
                 if (event) {
                     console.log(`🐻 Bearracuda: Successfully parsed event: ${event.title}`);
                     events.push(event);
+                    
+                    // If eventbrite URL is found, add it as an additional link for depth=2 processing
+                    if (event.eventbriteUrl && parserConfig.requireDetailPages) {
+                        additionalLinks.push(event.eventbriteUrl);
+                        console.log(`🐻 Bearracuda: Added eventbrite URL as additional link: ${event.eventbriteUrl}`);
+                    }
                 } else {
                     console.log('🐻 Bearracuda: Failed to parse event from detail page - parseEventDetailPage returned null');
                 }
@@ -69,12 +77,12 @@ class BearraccudaParser {
                 events.push(...listingEvents);
             }
             
-            // Extract additional URLs if required
-            let additionalLinks = [];
-            if (parserConfig.requireDetailPages) {
+            // Extract additional URLs if required (for listing pages)
+            if (parserConfig.requireDetailPages && !isDetailPage) {
                 console.log('🐻 Bearracuda: Detail pages required, extracting additional URLs...');
-                additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
-            } else {
+                const extractedLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
+                additionalLinks.push(...extractedLinks);
+            } else if (!isDetailPage) {
                 console.log('🐻 Bearracuda: Detail pages not required, skipping URL extraction');
             }
             
