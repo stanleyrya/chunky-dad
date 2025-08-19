@@ -512,27 +512,51 @@ class EventbriteParser {
                 }
             }
             
-            // Fallback: Try to extract URLs from JSON-LD structured data
-            // Note: Only use this fallback if we found 0 future events, as JSON-LD may contain past events
+            // Fallback: Try to extract URLs from JSON-LD structured data with date filtering
+            // Note: Only use this fallback if we found 0 future events, and filter out past events
             if (urls.size === 0) {
-                console.log('🎫 Eventbrite: No URLs found in server data, trying JSON-LD fallback');
-                console.log('🎫 Eventbrite: WARNING - JSON-LD fallback may include past events that will fail detail page parsing');
-                const jsonLdMatch = html.match(/"url":"(https:\/\/www\.eventbrite\.com\/e\/[^\"]+)"/g);
+                console.log('🎫 Eventbrite: No URLs found in server data, trying JSON-LD fallback with date filtering');
                 
-                if (jsonLdMatch) {
+                // Look for JSON-LD event objects with dates
+                const jsonLdPattern = /{"position":\d+,"@type":"ListItem","item":{[^}]*"startDate":"([^"]+)"[^}]*"url":"(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"[^}]*}}/g;
+                const jsonLdMatches = html.match(jsonLdPattern);
+                
+                if (jsonLdMatches) {
+                    const now = new Date();
                     let jsonLdCount = 0;
-                    jsonLdMatch.forEach(match => {
-                        const urlMatch = match.match(/"url":"([^\"]+)"/);
-                        if (urlMatch && urlMatch[1]) {
+                    let skippedPastCount = 0;
+                    
+                    jsonLdMatches.forEach(match => {
+                        const startDateMatch = match.match(/"startDate":"([^"]+)"/);
+                        const urlMatch = match.match(/"url":"(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"/);
+                        
+                        if (startDateMatch && urlMatch) {
+                            const startDate = startDateMatch[1];
                             const eventUrl = urlMatch[1];
-                            if (this.isValidEventUrl(eventUrl, parserConfig)) {
-                                urls.add(eventUrl);
-                                jsonLdCount++;
-                                console.log(`🎫 Eventbrite: Found event URL in JSON-LD: ${eventUrl}`);
+                            
+                            try {
+                                const eventDate = new Date(startDate);
+                                if (eventDate > now) {
+                                    // This is a future event
+                                    if (this.isValidEventUrl(eventUrl, parserConfig)) {
+                                        urls.add(eventUrl);
+                                        jsonLdCount++;
+                                        console.log(`🎫 Eventbrite: Found future event URL in JSON-LD: ${eventUrl} (${startDate})`);
+                                    }
+                                } else {
+                                    // This is a past event, skip it
+                                    skippedPastCount++;
+                                    console.log(`🎫 Eventbrite: Skipping past event URL from JSON-LD: ${eventUrl} (${startDate})`);
+                                }
+                            } catch (dateError) {
+                                console.warn(`🎫 Eventbrite: Invalid date in JSON-LD: ${startDate}, skipping URL: ${eventUrl}`);
                             }
                         }
                     });
-                    console.log(`🎫 Eventbrite: JSON-LD extracted ${jsonLdCount} URLs (may include past events)`);
+                    
+                    console.log(`🎫 Eventbrite: JSON-LD processed ${jsonLdMatches.length} events: ${jsonLdCount} future URLs extracted, ${skippedPastCount} past events skipped`);
+                } else {
+                    console.log('🎫 Eventbrite: No structured JSON-LD events found for URL extraction');
                 }
             }
             
