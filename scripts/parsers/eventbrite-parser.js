@@ -173,29 +173,8 @@ class EventbriteParser {
                 }
             }
             
-            // Fallback: Look for other JSON patterns if __SERVER_DATA__ didn't work
-            const jsonPatterns = [
-                /__INITIAL_STATE__\s*=\s*({.+?});/,
-                /"events":\s*(\[.+?\])/,
-                /"future_events":\s*(\[.+?\])/
-            ];
-            
-            for (const pattern of jsonPatterns) {
-                const match = html.match(pattern);
-                if (match) {
-                    try {
-                        const jsonData = JSON.parse(match[1]);
-                        const extractedEvents = this.extractEventsFromJsonData(jsonData, [], parserConfig, null);
-                        if (extractedEvents.length > 0) {
-                            events.push(...extractedEvents);
-                            console.log(`🎫 Eventbrite: Extracted ${extractedEvents.length} events from JSON pattern`);
-                            break;
-                        }
-                    } catch (parseError) {
-                        console.warn(`🎫 Eventbrite: Failed to parse JSON data: ${parseError}`);
-                    }
-                }
-            }
+            // No fallbacks - if window.__SERVER_DATA__ doesn't work, we're done
+            // This prevents processing past events from other JSON structures
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting JSON events: ${error}`);
@@ -204,45 +183,7 @@ class EventbriteParser {
         return events;
     }
 
-    // Recursively search JSON data for event objects
-    extractEventsFromJsonData(data, events = [], parserConfig = {}, serverData = null) {
-        if (!data || typeof data !== 'object') return events;
-        
-        // Check if this object looks like an event
-        if (this.isEventObject(data)) {
-            // Only process future events
-            if (this.isFutureEvent(data)) {
-                const event = this.parseJsonEvent(data, null, parserConfig, serverData);
-                if (event) {
-                    events.push(event);
-                }
-            } else {
-                console.log(`🎫 Eventbrite: Skipping past event: ${data.name || data.title || 'Unknown'}`);
-            }
-        }
-        
-        // Recursively search nested objects and arrays
-        if (Array.isArray(data)) {
-            for (const item of data) {
-                this.extractEventsFromJsonData(item, events, parserConfig, serverData);
-            }
-        } else if (typeof data === 'object') {
-            for (const value of Object.values(data)) {
-                this.extractEventsFromJsonData(value, events, parserConfig, serverData);
-            }
-        }
-        
-        return events;
-    }
-
-    // Check if an object looks like an event
-    isEventObject(obj) {
-        return obj && 
-               typeof obj === 'object' && 
-               (obj.name || obj.title) &&
-               (obj.start || obj.start_date || obj.startDate) &&
-               !Array.isArray(obj);
-    }
+    // Fallback methods removed - parser now only uses window.__SERVER_DATA__
 
     // Check if an event is in the future (not past)
     isFutureEvent(eventData) {
@@ -512,55 +453,10 @@ class EventbriteParser {
                 }
             }
             
-            // JSON-LD fallback disabled: If we successfully parsed the main JSON but found 0 future events,
-            // that's the correct result. JSON-LD often contains past events that would fail detail page parsing.
-            // Only use JSON-LD fallback if the main JSON parsing completely failed.
-            if (urls.size === 0 && !serverDataMatch) {
-                console.log('🎫 Eventbrite: Main JSON parsing failed, trying JSON-LD fallback as last resort');
-                
-                // Look for JSON-LD event objects with dates
-                const jsonLdPattern = /{"position":\d+,"@type":"ListItem","item":{[^}]*"startDate":"([^"]+)"[^}]*"url":"(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"[^}]*}}/g;
-                const jsonLdMatches = html.match(jsonLdPattern);
-                
-                if (jsonLdMatches) {
-                    const now = new Date();
-                    let jsonLdCount = 0;
-                    let skippedPastCount = 0;
-                    
-                    jsonLdMatches.forEach(match => {
-                        const startDateMatch = match.match(/"startDate":"([^"]+)"/);
-                        const urlMatch = match.match(/"url":"(https:\/\/www\.eventbrite\.com\/e\/[^"]+)"/);
-                        
-                        if (startDateMatch && urlMatch) {
-                            const startDate = startDateMatch[1];
-                            const eventUrl = urlMatch[1];
-                            
-                            try {
-                                const eventDate = new Date(startDate);
-                                if (eventDate > now) {
-                                    // This is a future event
-                                    if (this.isValidEventUrl(eventUrl, parserConfig)) {
-                                        urls.add(eventUrl);
-                                        jsonLdCount++;
-                                        console.log(`🎫 Eventbrite: Found future event URL in JSON-LD: ${eventUrl} (${startDate})`);
-                                    }
-                                } else {
-                                    // This is a past event, skip it
-                                    skippedPastCount++;
-                                    console.log(`🎫 Eventbrite: Skipping past event URL from JSON-LD: ${eventUrl} (${startDate})`);
-                                }
-                            } catch (dateError) {
-                                console.warn(`🎫 Eventbrite: Invalid date in JSON-LD: ${startDate}, skipping URL: ${eventUrl}`);
-                            }
-                        }
-                    });
-                    
-                    console.log(`🎫 Eventbrite: JSON-LD processed ${jsonLdMatches.length} events: ${jsonLdCount} future URLs extracted, ${skippedPastCount} past events skipped`);
-                } else {
-                    console.log('🎫 Eventbrite: No structured JSON-LD events found for URL extraction');
-                }
-            } else if (urls.size === 0) {
-                console.log('🎫 Eventbrite: No future events found in main JSON - this is correct, not using JSON-LD fallback for past events');
+            // No JSON-LD fallback - we only use window.__SERVER_DATA__
+            // If that doesn't contain future events, then there are no future events to process
+            if (urls.size === 0) {
+                console.log('🎫 Eventbrite: No future event URLs found - this organizer has no upcoming events');
             }
             
             console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
