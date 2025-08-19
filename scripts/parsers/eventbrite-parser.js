@@ -173,8 +173,7 @@ class EventbriteParser {
                 }
             }
             
-            // No fallbacks - if window.__SERVER_DATA__ doesn't work, we're done
-            // This prevents processing past events from other JSON structures
+
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting JSON events: ${error}`);
@@ -183,7 +182,7 @@ class EventbriteParser {
         return events;
     }
 
-    // Fallback methods removed - parser now only uses window.__SERVER_DATA__
+
 
     // Check if an event is in the future (not past)
     isFutureEvent(eventData) {
@@ -453,11 +452,7 @@ class EventbriteParser {
                 }
             }
             
-            // No JSON-LD fallback - we only use window.__SERVER_DATA__
-            // If that doesn't contain future events, then there are no future events to process
-            if (urls.size === 0) {
-                console.log('🎫 Eventbrite: No future event URLs found - this organizer has no upcoming events');
-            }
+
             
             console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
             
