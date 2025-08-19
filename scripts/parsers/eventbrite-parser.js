@@ -97,16 +97,17 @@ class EventbriteParser {
                         console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data (organizer page)`);
                         
                         futureEvents.forEach(eventData => {
-                            if (eventData.url && eventData.name && eventData.name.text) {
+                            if (eventData.url && eventData.name && (eventData.name.text || typeof eventData.name === 'string')) {
                                 // Double-check that it's actually a future event
                                 if (this.isFutureEvent(eventData)) {
-                                    const event = this.parseJsonEvent(eventData, null, parserConfig);
+                                    const event = this.parseJsonEvent(eventData, null, parserConfig, serverData);
                                     if (event) {
                                         events.push(event);
                                         console.log(`🎫 Eventbrite: Parsed future event: ${event.title} (${event.startDate || event.date})`);
                                     }
                                 } else {
-                                    console.log(`🎫 Eventbrite: Skipping non-future event from future_events: ${eventData.name.text}`);
+                                    const eventName = eventData.name?.text || eventData.name || 'Unknown';
+                                    console.log(`🎫 Eventbrite: Skipping non-future event from future_events: ${eventName}`);
                                 }
                             }
                         });
@@ -124,7 +125,7 @@ class EventbriteParser {
                         const eventData = serverData.event;
                         
                         if (eventData.url && eventData.name && this.isFutureEvent(eventData)) {
-                            const event = this.parseJsonEvent(eventData, null, parserConfig);
+                            const event = this.parseJsonEvent(eventData, null, parserConfig, serverData);
                             if (event) {
                                 events.push(event);
                                 console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
@@ -162,7 +163,7 @@ class EventbriteParser {
                 if (match) {
                     try {
                         const jsonData = JSON.parse(match[1]);
-                        const extractedEvents = this.extractEventsFromJsonData(jsonData, [], parserConfig);
+                        const extractedEvents = this.extractEventsFromJsonData(jsonData, [], parserConfig, null);
                         if (extractedEvents.length > 0) {
                             events.push(...extractedEvents);
                             console.log(`🎫 Eventbrite: Extracted ${extractedEvents.length} events from JSON pattern`);
@@ -182,14 +183,14 @@ class EventbriteParser {
     }
 
     // Recursively search JSON data for event objects
-    extractEventsFromJsonData(data, events = [], parserConfig = {}) {
+    extractEventsFromJsonData(data, events = [], parserConfig = {}, serverData = null) {
         if (!data || typeof data !== 'object') return events;
         
         // Check if this object looks like an event
         if (this.isEventObject(data)) {
             // Only process future events
             if (this.isFutureEvent(data)) {
-                const event = this.parseJsonEvent(data, null, parserConfig);
+                const event = this.parseJsonEvent(data, null, parserConfig, serverData);
                 if (event) {
                     events.push(event);
                 }
@@ -201,11 +202,11 @@ class EventbriteParser {
         // Recursively search nested objects and arrays
         if (Array.isArray(data)) {
             for (const item of data) {
-                this.extractEventsFromJsonData(item, events, parserConfig);
+                this.extractEventsFromJsonData(item, events, parserConfig, serverData);
             }
         } else if (typeof data === 'object') {
             for (const value of Object.values(data)) {
-                this.extractEventsFromJsonData(value, events, parserConfig);
+                this.extractEventsFromJsonData(value, events, parserConfig, serverData);
             }
         }
         
@@ -241,22 +242,51 @@ class EventbriteParser {
     }
 
     // Parse a JSON event object into our standard format
-    parseJsonEvent(eventData, htmlContext = null, parserConfig = {}) {
+    parseJsonEvent(eventData, htmlContext = null, parserConfig = {}, serverData = null) {
         try {
+            // Handle both organizer page format (name.text) and detail page format (name as string)
             const title = eventData.name?.text || eventData.name || eventData.title || '';
-            const description = eventData.description || eventData.summary || '';
+            
+            // Get description from multiple sources, including detail page components
+            let description = eventData.description || eventData.summary || '';
+            if (!description && serverData?.components?.eventDescription?.summary) {
+                description = serverData.components.eventDescription.summary;
+            }
+            
+            // Handle both organizer page format (start.utc) and detail page format (start as string)
             const startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
             const endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
             const url = eventData.url || eventData.vanity_url || '';
             
-            // Enhanced venue processing - get both name and address
+            // Enhanced venue processing - get both name and address from multiple sources
             let venue = null;
             let address = null;
             let coordinates = null;
             
+            // First try detail page venue data (from serverData.components.eventMap)
+            if (serverData?.components?.eventMap) {
+                const eventMap = serverData.components.eventMap;
+                venue = eventMap.venueName || venue;
+                address = eventMap.venueAddress || address;
+                
+                // Extract coordinates from detail page location data
+                if (eventMap.location && eventMap.location.latitude && eventMap.location.longitude) {
+                    coordinates = {
+                        lat: eventMap.location.latitude,
+                        lng: eventMap.location.longitude
+                    };
+                }
+                
+                if (venue || address) {
+                    console.log(`🎫 Eventbrite: Detail page venue data for "${title}": venue="${venue}", address="${address}"`);
+                }
+            }
+            
+            // Fallback to standard event venue data if not found in detail page components
             if (eventData.venue) {
-                venue = eventData.venue.name || null;
-                if (eventData.venue.address) {
+                venue = venue || eventData.venue.name;
+                
+                if (eventData.venue.address && !address) {
                     // Use full structured address if available, fallback to localized display
                     const addr = eventData.venue.address;
                     if (addr.address_1 && addr.city && addr.region) {
@@ -265,10 +295,9 @@ class EventbriteParser {
                         address = addr.localized_address_display || null;
                     }
                     console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
-                    console.log(`🎫 Eventbrite: Full address data:`, JSON.stringify(eventData.venue.address, null, 2));
                     
-                    // Extract coordinates if available; shared-core will later suppress for placeholders
-                    if (eventData.venue.address.latitude && eventData.venue.address.longitude) {
+                    // Extract coordinates if available and not already found; shared-core will later suppress for placeholders
+                    if (!coordinates && eventData.venue.address.latitude && eventData.venue.address.longitude) {
                         coordinates = {
                             lat: eventData.venue.address.latitude,
                             lng: eventData.venue.address.longitude
