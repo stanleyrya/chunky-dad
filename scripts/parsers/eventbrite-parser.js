@@ -120,6 +120,8 @@ class EventbriteParser {
                     }
                     
                     // Check for individual event data (individual event pages)
+                    console.log('🎫 Eventbrite: Debug - serverData top-level keys:', Object.keys(serverData));
+                    
                     if (serverData.event) {
                         console.log('🎫 Eventbrite: Found individual event data in JSON');
                         const eventData = serverData.event;
@@ -160,6 +162,27 @@ class EventbriteParser {
                             console.log(`🎫 Eventbrite: Successfully extracted individual event from JSON data`);
                             return events;
                         }
+                    } else {
+                        console.log('🎫 Eventbrite: No serverData.event found in detail page');
+                        
+                        // Check for alternative event data locations in detail pages
+                        if (serverData.event_listing_response) {
+                            console.log('🎫 Eventbrite: Found event_listing_response, keys:', Object.keys(serverData.event_listing_response));
+                        }
+                        
+                        // Check if event data is nested elsewhere
+                        if (serverData.components && serverData.components.eventDetails) {
+                            console.log('🎫 Eventbrite: Found components.eventDetails, keys:', Object.keys(serverData.components.eventDetails));
+                        }
+                        
+                        // Log a sample of available data for debugging
+                        console.log('🎫 Eventbrite: Available serverData structure for debugging:');
+                        console.log('🎫 Eventbrite: - event:', !!serverData.event);
+                        console.log('🎫 Eventbrite: - event_listing_response:', !!serverData.event_listing_response);
+                        console.log('🎫 Eventbrite: - components:', !!serverData.components);
+                        if (serverData.components) {
+                            console.log('🎫 Eventbrite: - components keys:', Object.keys(serverData.components));
+                        }
                     }
                     
                     // Also check for past events if needed for debugging (but don't include them)
@@ -169,7 +192,8 @@ class EventbriteParser {
                     }
                     
                 } catch (parseError) {
-                    console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__:', parseError);
+                    console.warn(`🎫 Eventbrite: Failed to parse window.__SERVER_DATA__: ${parseError.message}`);
+                    console.warn(`🎫 Eventbrite: JSON parse error at position: ${parseError.message.includes('position') ? parseError.message : 'unknown'}`);
                 }
             }
             
