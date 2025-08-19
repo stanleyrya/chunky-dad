@@ -86,10 +86,13 @@ class EventbriteParser {
             // Look for window.__SERVER_DATA__ which contains the event information
             const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
             
+            console.log(`🎫 Eventbrite: Searching for window.__SERVER_DATA__ in ${html.length} characters of HTML`);
+            console.log(`🎫 Eventbrite: window.__SERVER_DATA__ pattern found: ${!!serverDataMatch}`);
+            
             if (serverDataMatch && serverDataMatch[1]) {
                 try {
                     const serverData = JSON.parse(serverDataMatch[1]);
-                    console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
+                    console.log('🎫 Eventbrite: Successfully parsed window.__SERVER_DATA__');
                     
                     // Check for events in view_data.events.future_events (organizer pages)
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
@@ -166,23 +169,61 @@ class EventbriteParser {
                         console.log('🎫 Eventbrite: No serverData.event found in detail page');
                         
                         // Check for alternative event data locations in detail pages
+                        console.log('🎫 Eventbrite: Searching for event data in alternative locations...');
+                        
+                        // Try event_listing_response
                         if (serverData.event_listing_response) {
                             console.log('🎫 Eventbrite: Found event_listing_response, keys:', Object.keys(serverData.event_listing_response));
+                            
+                            // Check if event data is in event_listing_response
+                            if (serverData.event_listing_response.event) {
+                                console.log('🎫 Eventbrite: Found event data in event_listing_response.event');
+                                const eventData = serverData.event_listing_response.event;
+                                
+                                const adaptedEventData = {
+                                    ...eventData,
+                                    url: eventData.url || htmlData.url,
+                                    name: eventData.name || eventData.title || '',
+                                    start: eventData.start || eventData.startDate,
+                                    end: eventData.end || eventData.endDate
+                                };
+                                
+                                const hasRequiredFields = adaptedEventData.name && (adaptedEventData.url || htmlData.url);
+                                const isFuture = this.isFutureEvent(adaptedEventData);
+                                
+                                console.log(`🎫 Eventbrite: event_listing_response validation - hasFields: ${hasRequiredFields}, isFuture: ${isFuture}, name: "${adaptedEventData.name}"`);
+                                
+                                if (hasRequiredFields && isFuture) {
+                                    const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData);
+                                    if (event) {
+                                        events.push(event);
+                                        console.log(`🎫 Eventbrite: Parsed event from event_listing_response: ${event.title}`);
+                                    }
+                                }
+                            }
                         }
                         
-                        // Check if event data is nested elsewhere
-                        if (serverData.components && serverData.components.eventDetails) {
-                            console.log('🎫 Eventbrite: Found components.eventDetails, keys:', Object.keys(serverData.components.eventDetails));
+                        // Try components.eventDetails or other component locations
+                        if (serverData.components) {
+                            console.log('🎫 Eventbrite: Found components, keys:', Object.keys(serverData.components));
+                            
+                            if (serverData.components.eventDetails) {
+                                console.log('🎫 Eventbrite: Found components.eventDetails, keys:', Object.keys(serverData.components.eventDetails));
+                            }
+                            
+                            // Check eventHero component for event data
+                            if (serverData.components.eventHero) {
+                                console.log('🎫 Eventbrite: Found components.eventHero, keys:', Object.keys(serverData.components.eventHero));
+                            }
                         }
                         
-                        // Log a sample of available data for debugging
+                        // Log comprehensive debugging info
                         console.log('🎫 Eventbrite: Available serverData structure for debugging:');
                         console.log('🎫 Eventbrite: - event:', !!serverData.event);
                         console.log('🎫 Eventbrite: - event_listing_response:', !!serverData.event_listing_response);
                         console.log('🎫 Eventbrite: - components:', !!serverData.components);
-                        if (serverData.components) {
-                            console.log('🎫 Eventbrite: - components keys:', Object.keys(serverData.components));
-                        }
+                        console.log('🎫 Eventbrite: - organizer:', !!serverData.organizer);
+                        console.log('🎫 Eventbrite: - view_data:', !!serverData.view_data);
                     }
                     
                     // Also check for past events if needed for debugging (but don't include them)
