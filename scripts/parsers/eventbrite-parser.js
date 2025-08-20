@@ -126,26 +126,22 @@ class EventbriteParser {
                         console.log('🎫 Eventbrite: Found individual event data in JSON');
                         const eventData = serverData.event;
                         
-                        // Detail pages have different field structure - merge venue data from components
+                        // Detail pages have slightly different field structure - just normalize the key fields
                         const adaptedEventData = {
                             ...eventData,
-                            // Ensure we have the required fields for validation
-                            url: eventData.url || (htmlData ? htmlData.url : ''),
-                            name: eventData.name || eventData.title || '', // detail pages have name as string
-                            // Map date fields from detail page format (already in correct format)
-                            start: eventData.start,
-                            end: eventData.end,
-                            // Add venue data from components.eventMap if available
-                            venue: serverData.components?.eventMap ? {
-                                name: serverData.components.eventMap.venueName,
+                            // Normalize name field (detail pages use string, main pages use object)
+                            name: { text: eventData.name || eventData.title || '' },
+                            // Add venue data from components.eventMap if the venue object is incomplete
+                            venue: eventData.venue?.name ? eventData.venue : {
+                                name: serverData.components?.eventMap?.venueName || '',
                                 address: {
-                                    localized_address_display: serverData.components.eventMap.venueAddress,
-                                    latitude: serverData.components.eventMap.location?.latitude,
-                                    longitude: serverData.components.eventMap.location?.longitude
+                                    localized_address_display: serverData.components?.eventMap?.venueAddress || '',
+                                    latitude: serverData.components?.eventMap?.location?.latitude,
+                                    longitude: serverData.components?.eventMap?.location?.longitude
                                 },
-                                latitude: serverData.components.eventMap.location?.latitude,
-                                longitude: serverData.components.eventMap.location?.longitude
-                            } : eventData.venue
+                                latitude: serverData.components?.eventMap?.location?.latitude,
+                                longitude: serverData.components?.eventMap?.location?.longitude
+                            }
                         };
                         
                         // More lenient validation for detail pages
@@ -240,22 +236,10 @@ class EventbriteParser {
             // Handle both organizer page format (name.text) and detail page format (name as string)
             const title = eventData.name?.text || eventData.name || eventData.title || '';
             
-            // Get description from multiple sources, including detail page components
+            // Get description from multiple sources
             let description = eventData.description || eventData.summary || '';
-            
-            // Try to get description from structured content (detail pages)
-            if (!description && serverData?.structuredContent?.modules) {
-                const textModule = serverData.structuredContent.modules.find(module => module.type === 'text');
-                if (textModule && textModule.text) {
-                    // Strip HTML tags for clean description
-                    description = textModule.text.replace(/<[^>]*>/g, '').trim();
-                    console.log(`🎫 Eventbrite: Found description in structuredContent: "${description.substring(0, 100)}..."`);
-                }
-            }
-            
-            // Fallback to summary from event_listing_response
-            if (!description && serverData?.event_listing_response) {
-                description = serverData.event_listing_response.summary || '';
+            if (!description && serverData?.components?.eventDescription?.summary) {
+                description = serverData.components.eventDescription.summary;
             }
             
             // Handle both organizer page format (start.utc) and detail page format (start as string)
@@ -279,24 +263,7 @@ class EventbriteParser {
             let address = null;
             let coordinates = null;
             
-            // First try detail page venue data (from serverData.components.eventMap)
-            if (serverData?.components?.eventMap) {
-                const eventMap = serverData.components.eventMap;
-                venue = eventMap.venueName || venue;
-                address = eventMap.venueAddress || address;
-                
-                // Extract coordinates from detail page location data
-                if (eventMap.location && eventMap.location.latitude && eventMap.location.longitude) {
-                    coordinates = {
-                        lat: eventMap.location.latitude,
-                        lng: eventMap.location.longitude
-                    };
-                }
-                
-                console.log(`🎫 Eventbrite: Detail page venue data for "${title}": venue="${venue}", address="${address}"`);
-            }
-            
-            // Fallback to standard event venue data if not found in detail page components
+            // Enhanced venue processing - get both name and address from multiple sources
             if (eventData.venue) {
                 venue = venue || eventData.venue.name;
                 
@@ -342,48 +309,8 @@ class EventbriteParser {
                     const day = now.getDate();
                     price += ` (as of ${month}/${day})`;
                 }
-            } else if (serverData?.event_listing_response?.tickets?.availability) {
-                // Detail pages have pricing in event_listing_response
-                const availability = serverData.event_listing_response.tickets.availability;
-                const minPrice = availability.minimumTicketPrice?.display || '';
-                const maxPrice = availability.maximumTicketPrice?.display || '';
-                
-                if (minPrice && maxPrice) {
-                    // Clean up the USD suffix and format consistently
-                    const cleanMin = minPrice.replace(' USD', '');
-                    const cleanMax = maxPrice.replace(' USD', '');
-                    price = `$${cleanMin} - $${cleanMax}`;
-                    
-                    const now = new Date();
-                    const month = now.getMonth() + 1;
-                    const day = now.getDate();
-                    price += ` (as of ${month}/${day})`;
-                    
-                    console.log(`🎫 Eventbrite: Detail page pricing for "${title}": ${price}`);
-                }
             }
-            // Enhanced image extraction for detail pages
-            let image = eventData.logo?.url || eventData.image?.url || '';
-            
-            // Try to get image from eventHero (detail pages)
-            if (!image && serverData?.eventHero?.items) {
-                const heroItem = serverData.eventHero.items[0];
-                if (heroItem) {
-                    image = heroItem.croppedLogoUrl480 || heroItem.croppedLogoUrl600 || heroItem.croppedLogoUrl940 || '';
-                    if (image) {
-                        console.log(`🎫 Eventbrite: Found image in eventHero for "${title}"`);
-                    }
-                }
-            }
-            
-            // Try structured content widgets (herocarousel)
-            if (!image && serverData?.structuredContent?.widgets) {
-                const heroWidget = serverData.structuredContent.widgets.find(w => w.type === 'herocarousel');
-                if (heroWidget?.data?.slides?.[0]?.image?.url) {
-                    image = heroWidget.data.slides[0].image.url;
-                    console.log(`🎫 Eventbrite: Found image in structuredContent for "${title}"`);
-                }
-            }
+            const image = eventData.logo?.url || eventData.image?.url || '';
             
             // Extract city from event title for better event organization
             let city = null;
