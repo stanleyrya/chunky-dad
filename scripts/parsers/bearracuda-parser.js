@@ -290,33 +290,22 @@ class BearraccudaParser {
                 });
             }
             
-            // Even if some fields are missing, create the event if we have basic information
-            // This ensures we get some results even if the HTML structure has changed
-            const hasBasicInfo = title && (title !== 'Bearracuda Event' || dateInfo || venueInfo.name || city);
-            
-            if (hasBasicInfo) {
-                console.log(`🐻 Bearracuda: Created event "${title}" for ${city || 'unknown city'} on ${startDate || 'unknown date'}`);
-                return event;
-            } else {
-                // Create a basic event with minimal information if we have a title or city
-                if (title && title !== 'Bearracuda Event') {
-                    console.warn(`🐻 Bearracuda: Creating minimal event with limited information`);
-                    console.warn(`🐻 Bearracuda: - Title: "${title}"`);
-                    console.warn(`🐻 Bearracuda: - Has date: ${!!dateInfo}`);
-                    console.warn(`🐻 Bearracuda: - Has venue: ${!!venueInfo.name}`);
-                    console.warn(`🐻 Bearracuda: - Has city: ${!!city}`);
-                    
-                    // Return the event anyway with whatever information we have
-                    return event;
-                } else {
-                    console.warn(`🐻 Bearracuda: Insufficient information to create event - skipping`);
-                    console.warn(`🐻 Bearracuda: - Title: "${title}"`);
-                    console.warn(`🐻 Bearracuda: - Has date: ${!!dateInfo}`);
-                    console.warn(`🐻 Bearracuda: - Has venue: ${!!venueInfo.name}`);
-                    console.warn(`🐻 Bearracuda: - Has city: ${!!city}`);
-                    return null;
-                }
+            // Validate that we have minimum required information
+            if (!title || title === 'Bearracuda Event') {
+                console.warn(`🐻 Bearracuda: No valid title found - cannot create event`);
+                return null;
             }
+            if (!dateInfo) {
+                console.warn(`🐻 Bearracuda: No date information found - cannot create event`);
+                return null;
+            }
+            if (!city) {
+                console.warn(`🐻 Bearracuda: No city information found - cannot create event`);
+                return null;
+            }
+            
+            console.log(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate || dateInfo}`);
+            return event;
             
         } catch (error) {
             console.warn(`🐻 Bearracuda: Failed to parse event detail page ${sourceUrl}: ${error}`);
@@ -329,34 +318,6 @@ class BearraccudaParser {
                 console.warn(`🐻 Bearracuda: Contains title tag: ${html.includes('<title>')}`);
                 console.warn(`🐻 Bearracuda: Contains elementor: ${html.includes('elementor')}`);
                 console.warn(`🐻 Bearracuda: Contains bearracuda: ${html.toLowerCase().includes('bearracuda')}`);
-                
-                // Try to create a minimal event with just the URL and city info
-                console.warn(`🐻 Bearracuda: Attempting to create minimal event as fallback`);
-                try {
-                    const fallbackCity = this.extractCityFromUrl(sourceUrl);
-                    if (fallbackCity) {
-                        const fallbackEvent = {
-                            title: `Bearracuda ${fallbackCity.charAt(0).toUpperCase() + fallbackCity.slice(1)}`,
-                            description: 'Bearracuda bear dance party',
-                            startDate: null,
-                            endDate: null,
-                            bar: '',
-                            location: null,
-                            address: '',
-                            city: fallbackCity,
-                            website: sourceUrl,
-                            cover: '',
-                            image: '',
-                            gmaps: '',
-                            source: this.config.source,
-                            isBearEvent: true
-                        };
-                        console.warn(`🐻 Bearracuda: Created fallback event: ${fallbackEvent.title}`);
-                        return fallbackEvent;
-                    }
-                } catch (fallbackError) {
-                    console.warn(`🐻 Bearracuda: Fallback event creation also failed: ${fallbackError}`);
-                }
             }
             
             return null;
