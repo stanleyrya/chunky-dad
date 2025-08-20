@@ -116,17 +116,12 @@ class BearraccudaParser {
             { name: 'event meta', test: () => html.includes('events/') && html.includes('wp-json') }, // WordPress event post
             { name: 'event schema', test: () => html.includes('"@type":"Event"') }, // JSON-LD event schema
             { name: 'city name in content', test: () => {
-                // Use city config if available, otherwise fallback to basic list
-                if (cityConfig) {
-                    return Object.values(cityConfig).some(city => 
-                        city.patterns && city.patterns.some(pattern => 
-                            html.toLowerCase().includes(pattern.toLowerCase())
-                        )
-                    );
-                } else {
-                    const cityNames = ['Atlanta', 'Chicago', 'Denver', 'Seattle', 'Portland', 'New Orleans', 'San Francisco', 'Los Angeles', 'New York', 'Miami'];
-                    return cityNames.some(city => html.includes(city));
-                }
+                if (!cityConfig) return false;
+                return Object.values(cityConfig).some(city => 
+                    city.patterns && city.patterns.some(pattern => 
+                        html.toLowerCase().includes(pattern.toLowerCase())
+                    )
+                );
             }},
             // Additional indicators for current Bearracuda site structure
             { name: 'wordpress post', test: () => html.includes('wp-json/wp/v2/events/') }, // WordPress event post type
@@ -782,9 +777,14 @@ class BearraccudaParser {
         return '';
     }
 
-    // Extract city from URL using city config patterns plus Bearracuda-specific URL patterns
+    // Extract city from URL using only city config patterns
     extractCityFromUrl(url, cityConfig = null) {
-        // Bearracuda-specific URL patterns that map to city keys
+        if (!cityConfig) {
+            console.log(`🐻 Bearracuda: No city config provided - cannot extract city from URL`);
+            return null;
+        }
+        
+        // Bearracuda-specific URL patterns that map to city keys - only use these to map to config keys
         const bearracudaUrlPatterns = {
             'atlanta': /atlantabearpride|atlanta/i,
             'new-orleans': /new-orleans/i,
@@ -798,23 +798,21 @@ class BearraccudaParser {
             'miami': /flsm-friday|miami|folsom/i
         };
         
-        // First try Bearracuda-specific patterns
+        // Try Bearracuda-specific patterns but only if the city exists in config
         for (const [city, pattern] of Object.entries(bearracudaUrlPatterns)) {
-            if (pattern.test(url)) {
+            if (pattern.test(url) && cityConfig[city]) {
                 console.log(`🐻 Bearracuda: Extracted city "${city}" from URL using Bearracuda pattern: ${url}`);
                 return city;
             }
         }
         
-        // If city config is available, try those patterns too
-        if (cityConfig) {
-            for (const [cityKey, cityData] of Object.entries(cityConfig)) {
-                if (cityData.patterns) {
-                    for (const pattern of cityData.patterns) {
-                        if (url.toLowerCase().includes(pattern.toLowerCase())) {
-                            console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from URL using config pattern "${pattern}": ${url}`);
-                            return cityKey;
-                        }
+        // Try city config patterns
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns) {
+                for (const pattern of cityData.patterns) {
+                    if (url.toLowerCase().includes(pattern.toLowerCase())) {
+                        console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from URL using config pattern "${pattern}": ${url}`);
+                        return cityKey;
                     }
                 }
             }
@@ -1189,19 +1187,20 @@ class BearraccudaParser {
         }
     }
 
-    // Extract city from text content using city config patterns
+    // Extract city from text content using only city config patterns
     extractCityFromText(text, cityConfig = null) {
         if (!text) return null;
+        if (!cityConfig) {
+            console.log(`🐻 Bearracuda: No city config provided - cannot extract city from text`);
+            return null;
+        }
         
-        // Use city config if available
-        if (cityConfig) {
-            for (const [cityKey, cityData] of Object.entries(cityConfig)) {
-                if (cityData.patterns) {
-                    for (const pattern of cityData.patterns) {
-                        if (text.toLowerCase().includes(pattern.toLowerCase())) {
-                            console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from text using config pattern "${pattern}": "${text.substring(0, 100)}..."`);
-                            return cityKey;
-                        }
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns) {
+                for (const pattern of cityData.patterns) {
+                    if (text.toLowerCase().includes(pattern.toLowerCase())) {
+                        console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from text using config pattern "${pattern}": "${text.substring(0, 100)}..."`);
+                        return cityKey;
                     }
                 }
             }
