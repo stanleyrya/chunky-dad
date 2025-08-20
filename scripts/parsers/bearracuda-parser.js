@@ -116,9 +116,16 @@ class BearraccudaParser {
             { name: 'event meta', test: () => html.includes('events/') && html.includes('wp-json') }, // WordPress event post
             { name: 'event schema', test: () => html.includes('"@type":"Event"') }, // JSON-LD event schema
             { name: 'city name in content', test: () => {
-                const cityNames = ['Atlanta', 'Chicago', 'Denver', 'Seattle', 'Portland', 'New Orleans'];
+                const cityNames = ['Atlanta', 'Chicago', 'Denver', 'Seattle', 'Portland', 'New Orleans', 'San Francisco', 'Los Angeles', 'New York', 'Miami'];
                 return cityNames.some(city => html.includes(city));
-            }}
+            }},
+            // Additional indicators for current Bearracuda site structure
+            { name: 'wordpress post', test: () => html.includes('wp-json/wp/v2/events/') }, // WordPress event post type
+            { name: 'event content', test: () => html.includes('event') || html.includes('Event') },
+            { name: 'dance party content', test: () => html.includes('dance') || html.includes('party') || html.includes('Party') },
+            { name: 'venue content', test: () => html.includes('venue') || html.includes('Venue') || html.includes('location') },
+            { name: 'date content', test: () => /\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(html) },
+            { name: 'time content', test: () => /\d{1,2}:\d{2}\s*(am|pm|AM|PM)/.test(html) }
         ];
         
         const matchingIndicators = indicators.filter(indicator => {
@@ -141,8 +148,8 @@ class BearraccudaParser {
             console.log(`🐻 Bearracuda: ${html.substring(0, 500)}`);
         }
         
-        // Consider it an event page if we find at least 2 indicators (more flexible than before)
-        const isEventPage = matchingIndicators.length >= 2;
+        // Consider it an event page if we find at least 1 indicator (more flexible than before)
+        const isEventPage = matchingIndicators.length >= 1;
         console.log(`🐻 Bearracuda: Event page detection result: ${isEventPage}`);
         
         return isEventPage;
@@ -291,12 +298,24 @@ class BearraccudaParser {
                 console.log(`🐻 Bearracuda: Created event "${title}" for ${city || 'unknown city'} on ${startDate || 'unknown date'}`);
                 return event;
             } else {
-                console.warn(`🐻 Bearracuda: Insufficient information to create event - skipping`);
-                console.warn(`🐻 Bearracuda: - Title: "${title}"`);
-                console.warn(`🐻 Bearracuda: - Has date: ${!!dateInfo}`);
-                console.warn(`🐻 Bearracuda: - Has venue: ${!!venueInfo.name}`);
-                console.warn(`🐻 Bearracuda: - Has city: ${!!city}`);
-                return null;
+                // Create a basic event with minimal information if we have a title or city
+                if (title && title !== 'Bearracuda Event') {
+                    console.warn(`🐻 Bearracuda: Creating minimal event with limited information`);
+                    console.warn(`🐻 Bearracuda: - Title: "${title}"`);
+                    console.warn(`🐻 Bearracuda: - Has date: ${!!dateInfo}`);
+                    console.warn(`🐻 Bearracuda: - Has venue: ${!!venueInfo.name}`);
+                    console.warn(`🐻 Bearracuda: - Has city: ${!!city}`);
+                    
+                    // Return the event anyway with whatever information we have
+                    return event;
+                } else {
+                    console.warn(`🐻 Bearracuda: Insufficient information to create event - skipping`);
+                    console.warn(`🐻 Bearracuda: - Title: "${title}"`);
+                    console.warn(`🐻 Bearracuda: - Has date: ${!!dateInfo}`);
+                    console.warn(`🐻 Bearracuda: - Has venue: ${!!venueInfo.name}`);
+                    console.warn(`🐻 Bearracuda: - Has city: ${!!city}`);
+                    return null;
+                }
             }
             
         } catch (error) {
@@ -310,6 +329,34 @@ class BearraccudaParser {
                 console.warn(`🐻 Bearracuda: Contains title tag: ${html.includes('<title>')}`);
                 console.warn(`🐻 Bearracuda: Contains elementor: ${html.includes('elementor')}`);
                 console.warn(`🐻 Bearracuda: Contains bearracuda: ${html.toLowerCase().includes('bearracuda')}`);
+                
+                // Try to create a minimal event with just the URL and city info
+                console.warn(`🐻 Bearracuda: Attempting to create minimal event as fallback`);
+                try {
+                    const fallbackCity = this.extractCityFromUrl(sourceUrl);
+                    if (fallbackCity) {
+                        const fallbackEvent = {
+                            title: `Bearracuda ${fallbackCity.charAt(0).toUpperCase() + fallbackCity.slice(1)}`,
+                            description: 'Bearracuda bear dance party',
+                            startDate: null,
+                            endDate: null,
+                            bar: '',
+                            location: null,
+                            address: '',
+                            city: fallbackCity,
+                            website: sourceUrl,
+                            cover: '',
+                            image: '',
+                            gmaps: '',
+                            source: this.config.source,
+                            isBearEvent: true
+                        };
+                        console.warn(`🐻 Bearracuda: Created fallback event: ${fallbackEvent.title}`);
+                        return fallbackEvent;
+                    }
+                } catch (fallbackError) {
+                    console.warn(`🐻 Bearracuda: Fallback event creation also failed: ${fallbackError}`);
+                }
             }
             
             return null;
@@ -775,8 +822,9 @@ class BearraccudaParser {
             'sf': /sanfrancisco|sf/i,
             'la': /losangeles|la/i,
             'nyc': /newyork|nyc/i,
-            'seattle': /treasureseattle|seattle/i,
-            'portland': /treasureportland|portland|pdx/i
+            'seattle': /treasureseattle|seattlewood|seattle/i,
+            'portland': /treasureportland|treasure-trailpdx|portland-50|pdx16|pdx|portland/i,
+            'miami': /flsm-friday|miami|folsom/i
         };
         
         for (const [city, pattern] of Object.entries(urlPatterns)) {
