@@ -1445,7 +1445,7 @@ class SharedCore {
         const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
         Object.keys(event).forEach(key => {
             if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
-                if (strategies[key] === 'preserve') return;
+                if (priorities[key]?.merge === 'preserve') return;
                 // Only copy fields that have values and should be included
                 if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
                     calendarEvent[key] = event[key];
