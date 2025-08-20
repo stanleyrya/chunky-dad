@@ -335,6 +335,10 @@ class SharedCore {
                 }
             } catch (error) {
                 await displayAdapter.logWarn(`SYSTEM: Failed to process detail page URL: ${url}`);
+                await displayAdapter.logWarn(`SYSTEM: Detail page error: ${error.message || 'Unknown error'}`);
+                if (error.stack) {
+                    await displayAdapter.logWarn(`SYSTEM: Detail page stack trace: ${error.stack.split('\n')[0]}`);
+                }
             }
         }
     }

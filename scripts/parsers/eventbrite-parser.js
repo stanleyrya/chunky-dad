@@ -49,7 +49,7 @@ class EventbriteParser {
             }
             
             // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
-            const jsonEvents = this.extractEventsFromJson(html, parserConfig);
+            const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData);
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
@@ -79,7 +79,7 @@ class EventbriteParser {
     }
 
     // Extract events from embedded JSON data (modern Eventbrite)
-    extractEventsFromJson(html, parserConfig = {}) {
+    extractEventsFromJson(html, parserConfig = {}, htmlData = null) {
         const events = [];
         
         try {
@@ -126,19 +126,26 @@ class EventbriteParser {
                         console.log('🎫 Eventbrite: Found individual event data in JSON');
                         const eventData = serverData.event;
                         
-                        // Detail pages have different field structure - adapt the event data
+                        // Detail pages have slightly different field structure - just normalize the key fields
                         const adaptedEventData = {
                             ...eventData,
-                            // Ensure we have the required fields for validation
-                            url: eventData.url || htmlData.url, // fallback to current page URL
-                            name: eventData.name || eventData.title || '', // detail pages have name as string
-                            // Map date fields from detail page format
-                            start: eventData.start || eventData.startDate,
-                            end: eventData.end || eventData.endDate
+                            // Normalize name field (detail pages use string, main pages use object)
+                            name: { text: eventData.name || eventData.title || '' },
+                            // Add venue data from components.eventMap if the venue object is incomplete
+                            venue: eventData.venue?.name ? eventData.venue : {
+                                name: serverData.components?.eventMap?.venueName || '',
+                                address: {
+                                    localized_address_display: serverData.components?.eventMap?.venueAddress || '',
+                                    latitude: serverData.components?.eventMap?.location?.latitude,
+                                    longitude: serverData.components?.eventMap?.location?.longitude
+                                },
+                                latitude: serverData.components?.eventMap?.location?.latitude,
+                                longitude: serverData.components?.eventMap?.location?.longitude
+                            }
                         };
                         
                         // More lenient validation for detail pages
-                        const hasRequiredFields = adaptedEventData.name && (adaptedEventData.url || htmlData.url);
+                        const hasRequiredFields = adaptedEventData.name && (adaptedEventData.url || (htmlData ? htmlData.url : ''));
                         const isFuture = this.isFutureEvent(adaptedEventData);
                         
                         console.log(`🎫 Eventbrite: Detail page validation - hasFields: ${hasRequiredFields}, isFuture: ${isFuture}, name: "${adaptedEventData.name}"`);
@@ -164,18 +171,6 @@ class EventbriteParser {
                         }
                     } else {
                         console.log('🎫 Eventbrite: No serverData.event found in detail page');
-                        
-                        // Check for alternative event data locations in detail pages
-                        if (serverData.event_listing_response) {
-                            console.log('🎫 Eventbrite: Found event_listing_response, keys:', Object.keys(serverData.event_listing_response));
-                        }
-                        
-                        // Check if event data is nested elsewhere
-                        if (serverData.components && serverData.components.eventDetails) {
-                            console.log('🎫 Eventbrite: Found components.eventDetails, keys:', Object.keys(serverData.components.eventDetails));
-                        }
-                        
-                        // Log a sample of available data for debugging
                         console.log('🎫 Eventbrite: Available serverData structure for debugging:');
                         console.log('🎫 Eventbrite: - event:', !!serverData.event);
                         console.log('🎫 Eventbrite: - event_listing_response:', !!serverData.event_listing_response);
@@ -241,7 +236,7 @@ class EventbriteParser {
             // Handle both organizer page format (name.text) and detail page format (name as string)
             const title = eventData.name?.text || eventData.name || eventData.title || '';
             
-            // Get description from multiple sources, including detail page components
+            // Get description from multiple sources
             let description = eventData.description || eventData.summary || '';
             if (!description && serverData?.components?.eventDescription?.summary) {
                 description = serverData.components.eventDescription.summary;
@@ -268,26 +263,7 @@ class EventbriteParser {
             let address = null;
             let coordinates = null;
             
-            // First try detail page venue data (from serverData.components.eventMap)
-            if (serverData?.components?.eventMap) {
-                const eventMap = serverData.components.eventMap;
-                venue = eventMap.venueName || venue;
-                address = eventMap.venueAddress || address;
-                
-                // Extract coordinates from detail page location data
-                if (eventMap.location && eventMap.location.latitude && eventMap.location.longitude) {
-                    coordinates = {
-                        lat: eventMap.location.latitude,
-                        lng: eventMap.location.longitude
-                    };
-                }
-                
-                if (venue || address) {
-                    console.log(`🎫 Eventbrite: Detail page venue data for "${title}": venue="${venue}", address="${address}"`);
-                }
-            }
-            
-            // Fallback to standard event venue data if not found in detail page components
+            // Enhanced venue processing - get both name and address from multiple sources
             if (eventData.venue) {
                 venue = venue || eventData.venue.name;
                 
