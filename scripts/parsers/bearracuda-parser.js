@@ -49,14 +49,17 @@ class BearraccudaParser {
             }
             
             // Check if this is an individual event page
-            if (this.isEventDetailPage(html, htmlData.url)) {
+            const isDetailPage = this.isEventDetailPage(html, htmlData.url);
+            console.log(`🐻 Bearracuda: Page type detection result: ${isDetailPage ? 'detail page' : 'listing page'}`);
+            
+            if (isDetailPage) {
                 console.log('🐻 Bearracuda: Detected individual event page, parsing event details...');
                 const event = this.parseEventDetailPage(html, htmlData.url, parserConfig, cityConfig);
                 if (event) {
                     console.log(`🐻 Bearracuda: Successfully parsed event: ${event.title}`);
                     events.push(event);
                 } else {
-                    console.log('🐻 Bearracuda: Failed to parse event from detail page');
+                    console.log('🐻 Bearracuda: Failed to parse event from detail page - parseEventDetailPage returned null');
                 }
             } else {
                 // Try to parse as a listing page (though main /events/ returns 404)
@@ -94,14 +97,55 @@ class BearraccudaParser {
     isEventDetailPage(html, url) {
         // Check URL pattern: /events/{city-event}/
         if (!/\/events\/[^\/]+\/$/.test(url)) {
+            console.log(`🐻 Bearracuda: URL pattern check failed for: ${url}`);
             return false;
         }
         
-        // Check for Bearracuda event page indicators
-        return html.includes('📅') || html.includes('🪩') || 
-               html.includes('Doors Open') || html.includes('Party Goes Until') ||
-               html.includes('elementor-heading-title') || html.includes('Heretic') ||
-               (html.includes('bearracuda') && html.includes('Atlanta'));
+        // Enhanced detection with more indicators and better logging
+        const indicators = [
+            { name: 'calendar emoji', test: () => html.includes('📅') },
+            { name: 'disco ball emoji', test: () => html.includes('🪩') },
+            { name: 'doors open text', test: () => html.includes('Doors Open') },
+            { name: 'party goes until text', test: () => html.includes('Party Goes Until') },
+            { name: 'elementor heading', test: () => html.includes('elementor-heading-title') },
+            { name: 'heretic venue', test: () => html.includes('Heretic') },
+            { name: 'bearracuda brand', test: () => html.includes('bearracuda') || html.includes('Bearracuda') },
+            { name: 'event page title', test: () => html.includes('<title>') && !html.includes('Page not found') },
+            { name: 'wp-content', test: () => html.includes('wp-content') }, // WordPress content indicator
+            { name: 'elementor widget', test: () => html.includes('elementor-widget') }, // Elementor page builder
+            { name: 'event meta', test: () => html.includes('events/') && html.includes('wp-json') }, // WordPress event post
+            { name: 'event schema', test: () => html.includes('"@type":"Event"') }, // JSON-LD event schema
+            { name: 'city name in content', test: () => {
+                const cityNames = ['Atlanta', 'Chicago', 'Denver', 'Seattle', 'Portland', 'New Orleans'];
+                return cityNames.some(city => html.includes(city));
+            }}
+        ];
+        
+        const matchingIndicators = indicators.filter(indicator => {
+            try {
+                return indicator.test();
+            } catch (error) {
+                console.log(`🐻 Bearracuda: Error testing indicator ${indicator.name}: ${error}`);
+                return false;
+            }
+        });
+        
+        console.log(`🐻 Bearracuda: Event page detection for ${url}:`);
+        console.log(`🐻 Bearracuda: Found ${matchingIndicators.length}/${indicators.length} indicators:`);
+        matchingIndicators.forEach(indicator => {
+            console.log(`🐻 Bearracuda: ✓ ${indicator.name}`);
+        });
+        
+        if (matchingIndicators.length === 0) {
+            console.log(`🐻 Bearracuda: No indicators found. HTML sample (first 500 chars):`);
+            console.log(`🐻 Bearracuda: ${html.substring(0, 500)}`);
+        }
+        
+        // Consider it an event page if we find at least 2 indicators (more flexible than before)
+        const isEventPage = matchingIndicators.length >= 2;
+        console.log(`🐻 Bearracuda: Event page detection result: ${isEventPage}`);
+        
+        return isEventPage;
     }
 
     // Parse an individual event detail page
@@ -165,9 +209,35 @@ class BearraccudaParser {
             if (dateInfo && timeInfo.endTime) {
                 endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city, cityConfig);
                 // If end time is earlier than start time, assume it's next day
-                if (endDate <= startDate) {
+                if (endDate && startDate && endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
                 }
+            }
+            
+            // Log parsing results for debugging
+            console.log(`🐻 Bearracuda: Parsing results for ${sourceUrl}:`);
+            console.log(`🐻 Bearracuda: - Title: "${title}"`);
+            console.log(`🐻 Bearracuda: - Date: ${dateInfo ? dateInfo.toISOString() : 'null'}`);
+            console.log(`🐻 Bearracuda: - Start time: ${timeInfo.startTime ? `${timeInfo.startTime.hours}:${timeInfo.startTime.minutes}` : 'null'}`);
+            console.log(`🐻 Bearracuda: - End time: ${timeInfo.endTime ? `${timeInfo.endTime.hours}:${timeInfo.endTime.minutes}` : 'null'}`);
+            console.log(`🐻 Bearracuda: - Venue: "${venueInfo.name}"`);
+            console.log(`🐻 Bearracuda: - Address: "${address}"`);
+            console.log(`🐻 Bearracuda: - City: "${city}"`);
+            console.log(`🐻 Bearracuda: - Start Date: ${startDate ? startDate.toISOString() : 'null'}`);
+            console.log(`🐻 Bearracuda: - End Date: ${endDate ? endDate.toISOString() : 'null'}`);
+            
+            // Validate that we have minimum required information
+            if (!title || title === 'Bearracuda Event') {
+                console.warn(`🐻 Bearracuda: Warning - No specific title found, using generic title`);
+            }
+            if (!dateInfo) {
+                console.warn(`🐻 Bearracuda: Warning - No date information found`);
+            }
+            if (!venueInfo.name) {
+                console.warn(`🐻 Bearracuda: Warning - No venue information found`);
+            }
+            if (!city) {
+                console.warn(`🐻 Bearracuda: Warning - No city information found`);
             }
             
             const event = {
@@ -213,12 +283,35 @@ class BearraccudaParser {
                 });
             }
             
-            console.log(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate}`);
+            // Even if some fields are missing, create the event if we have basic information
+            // This ensures we get some results even if the HTML structure has changed
+            const hasBasicInfo = title && (title !== 'Bearracuda Event' || dateInfo || venueInfo.name || city);
             
-            return event;
+            if (hasBasicInfo) {
+                console.log(`🐻 Bearracuda: Created event "${title}" for ${city || 'unknown city'} on ${startDate || 'unknown date'}`);
+                return event;
+            } else {
+                console.warn(`🐻 Bearracuda: Insufficient information to create event - skipping`);
+                console.warn(`🐻 Bearracuda: - Title: "${title}"`);
+                console.warn(`🐻 Bearracuda: - Has date: ${!!dateInfo}`);
+                console.warn(`🐻 Bearracuda: - Has venue: ${!!venueInfo.name}`);
+                console.warn(`🐻 Bearracuda: - Has city: ${!!city}`);
+                return null;
+            }
             
         } catch (error) {
-            console.warn(`🐻 Bearracuda: Failed to parse event detail page: ${error}`);
+            console.warn(`🐻 Bearracuda: Failed to parse event detail page ${sourceUrl}: ${error}`);
+            console.warn(`🐻 Bearracuda: Error details: ${error.stack || error.message || error}`);
+            
+            // Provide debugging information
+            console.warn(`🐻 Bearracuda: HTML length: ${html ? html.length : 'undefined'} characters`);
+            if (html) {
+                console.warn(`🐻 Bearracuda: HTML sample: ${html.substring(0, 200)}...`);
+                console.warn(`🐻 Bearracuda: Contains title tag: ${html.includes('<title>')}`);
+                console.warn(`🐻 Bearracuda: Contains elementor: ${html.includes('elementor')}`);
+                console.warn(`🐻 Bearracuda: Contains bearracuda: ${html.toLowerCase().includes('bearracuda')}`);
+            }
+            
             return null;
         }
     }
@@ -255,62 +348,105 @@ class BearraccudaParser {
 
     // Extract title from page
     extractTitle(html) {
-        // Look for the main heading in Elementor structure
+        console.log(`🐻 Bearracuda: Extracting title from HTML`);
+        
+        // Look for the main heading in Elementor structure and other patterns
         const patterns = [
-            /<h1[^>]*class="[^"]*elementor-heading-title[^>]*>([^<]+)<\/h1>/i,
-            /<h1[^>]*>([^<]+)<\/h1>/i,
-            /<title>([^|<]+)/i
+            { name: 'elementor h1', pattern: /<h1[^>]*class="[^"]*elementor-heading-title[^>]*>([^<]+)<\/h1>/i },
+            { name: 'any h1', pattern: /<h1[^>]*>([^<]+)<\/h1>/i },
+            { name: 'title tag', pattern: /<title>([^|<]+)/i },
+            { name: 'og:title', pattern: /<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i },
+            { name: 'elementor heading span', pattern: /<span[^>]*class="[^"]*elementor-heading-title[^>]*>([^<]+)<\/span>/i }
         ];
         
-        for (const pattern of patterns) {
+        for (const { name, pattern } of patterns) {
             const match = html.match(pattern);
             if (match && match[1]) {
                 let title = match[1].trim();
+                
                 // Clean up title
                 title = title.replace(/\s*\|\s*Bearracuda\.com$/, '');
-                if (title && title !== 'Page not found') {
+                title = title.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                
+                if (title && title !== 'Page not found' && title.length > 0) {
+                    console.log(`🐻 Bearracuda: Found title using ${name}: "${title}"`);
                     return title;
                 }
             }
         }
         
+        // Try to extract city name from URL as fallback
+        const urlMatch = html.match(/bearracuda\.com\/events\/([^\/]+)/);
+        if (urlMatch && urlMatch[1]) {
+            const citySlug = urlMatch[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            console.log(`🐻 Bearracuda: Using city slug as title fallback: "${citySlug}"`);
+            return `Bearracuda ${citySlug}`;
+        }
+        
+        console.log(`🐻 Bearracuda: No title found, using default`);
         return 'Bearracuda Event';
     }
 
     // Extract date from page
     extractDate(html) {
-        // Look for date with emoji pattern: 📅  August 23, 2025
-        const datePattern = /📅\s*([^<]+)/;
-        const match = html.match(datePattern);
+        console.log(`🐻 Bearracuda: Extracting date from HTML`);
         
-        if (match && match[1]) {
-            const dateString = match[1].trim();
-            console.log(`🐻 Bearracuda: Found date string: "${dateString}"`);
+        // Look for date with emoji pattern: 📅  August 23, 2025
+        const emojiDatePattern = /📅\s*([^<\n]+)/;
+        const emojiMatch = html.match(emojiDatePattern);
+        
+        if (emojiMatch && emojiMatch[1]) {
+            const dateString = emojiMatch[1].trim();
+            console.log(`🐻 Bearracuda: Found emoji date string: "${dateString}"`);
             
             // Parse various date formats
             const parsedDate = this.parseDate(dateString);
             if (parsedDate) {
+                console.log(`🐻 Bearracuda: Successfully parsed emoji date: ${parsedDate}`);
                 return parsedDate;
             }
         }
         
-        // Fallback: look for other date patterns
-        const fallbackPatterns = [
-            /(\w+\s+\d{1,2},\s+\d{4})/i, // "August 23, 2025"
-            /(\d{1,2}\/\d{1,2}\/\d{4})/,   // "8/23/2025"
-            /(\d{4}-\d{2}-\d{2})/          // "2025-08-23"
+        // Look for structured data dates
+        const structuredDatePatterns = [
+            /"startDate":\s*"([^"]+)"/i,
+            /"dateTime":\s*"([^"]+)"/i,
+            /property="event:start_time"\s+content="([^"]+)"/i
         ];
         
-        for (const pattern of fallbackPatterns) {
+        for (const pattern of structuredDatePatterns) {
             const match = html.match(pattern);
-            if (match) {
+            if (match && match[1]) {
+                console.log(`🐻 Bearracuda: Found structured date: "${match[1]}"`);
                 const parsedDate = this.parseDate(match[1]);
                 if (parsedDate) {
+                    console.log(`🐻 Bearracuda: Successfully parsed structured date: ${parsedDate}`);
                     return parsedDate;
                 }
             }
         }
         
+        // Fallback: look for other date patterns in content
+        const fallbackPatterns = [
+            { name: 'month day year', pattern: /(\w+\s+\d{1,2},?\s+\d{4})/i },
+            { name: 'mm/dd/yyyy', pattern: /(\d{1,2}\/\d{1,2}\/\d{4})/ },
+            { name: 'yyyy-mm-dd', pattern: /(\d{4}-\d{2}-\d{2})/ },
+            { name: 'day month year', pattern: /(\d{1,2}\s+\w+\s+\d{4})/i }
+        ];
+        
+        for (const { name, pattern } of fallbackPatterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+                console.log(`🐻 Bearracuda: Found ${name} date pattern: "${match[1]}"`);
+                const parsedDate = this.parseDate(match[1]);
+                if (parsedDate) {
+                    console.log(`🐻 Bearracuda: Successfully parsed ${name} date: ${parsedDate}`);
+                    return parsedDate;
+                }
+            }
+        }
+        
+        console.log(`🐻 Bearracuda: No date found in HTML`);
         return null;
     }
 
