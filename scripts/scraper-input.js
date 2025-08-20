@@ -15,8 +15,9 @@ const scraperConfig = {
   parsers: [
     {
       name: "Megawoof America",
+      enabled: true,
       parser: "eventbrite",
-      enabled: false,
+      enabled: true,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
       requireDetailPages: true,
@@ -73,7 +74,7 @@ const scraperConfig = {
     {
       name: "Bear Happy Hour",
       parser: "eventbrite",
-      enabled: false,
+      enabled: true,
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
       requireDetailPages: true,
