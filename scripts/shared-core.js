@@ -62,6 +62,36 @@ class SharedCore {
             'london': 'london',
             'berlin': 'berlin'
         };
+        
+        // URL-to-parser mapping for automatic parser detection
+        this.urlParserMappings = [
+            {
+                pattern: /eventbrite\.com/i,
+                parser: 'eventbrite'
+            },
+            {
+                pattern: /bearracuda\.com/i,
+                parser: 'bearracuda'
+            }
+            // Generic parser will be used as fallback if no pattern matches
+        ];
+    }
+
+    // Detect parser type from URL - allows automatic parser selection based on URL patterns
+    // This enables configurations to omit the 'parser' field and have it auto-detected
+    detectParserFromUrl(url) {
+        if (!url) {
+            return 'generic';
+        }
+        
+        for (const mapping of this.urlParserMappings) {
+            if (mapping.pattern.test(url)) {
+                return mapping.parser;
+            }
+        }
+        
+        // Default to generic parser if no pattern matches
+        return 'generic';
     }
 
     // Pure business logic for processing events
@@ -126,7 +156,20 @@ class SharedCore {
     }
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers) {
-        const parserName = parserConfig.parser;
+        let parserName = parserConfig.parser;
+        
+        // If no parser is explicitly configured, try to detect from the first URL
+        if (!parserName && parserConfig.urls && parserConfig.urls.length > 0) {
+            parserName = this.detectParserFromUrl(parserConfig.urls[0]);
+            await displayAdapter.logInfo(`SYSTEM: No parser specified, detected '${parserName}' from URL: ${parserConfig.urls[0]}`);
+        }
+        
+        // Fallback to generic parser if still no parser found
+        if (!parserName) {
+            parserName = 'generic';
+            await displayAdapter.logInfo('SYSTEM: No parser specified and no URLs provided, using generic parser');
+        }
+        
         const parser = parsers[parserName];
         
         if (!parser) {
