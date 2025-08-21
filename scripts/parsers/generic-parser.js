@@ -177,7 +177,6 @@ class GenericParser {
                 /class="[^"]*venue[^>]*>([^<]+)</,
                 /class="[^"]*location[^>]*>([^<]+)</,
                 /class="[^"]*event-venue[^>]*>([^<]+)</,
-                /class="[^"]*address[^>]*>([^<]+)</,
                 /class="[^"]*place[^>]*>([^<]+)</
             ];
             
@@ -187,6 +186,43 @@ class GenericParser {
                 if (match && match[1].trim()) {
                     venue = match[1].trim();
                     break;
+                }
+            }
+            
+            // Extract address
+            const addressPatterns = [
+                /class="[^"]*address[^>]*>([^<]+)</,
+                /class="[^"]*event-address[^>]*>([^<]+)</,
+                /class="[^"]*location-address[^>]*>([^<]+)</,
+                // Match addresses with street numbers and common patterns
+                /(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})/i,
+                // Match addresses in paragraph tags
+                /<p[^>]*>(\d+\s+[^,<]+,\s*[^,<]+,\s*[A-Z]{2})<\/p>/i,
+                // Match structured address data
+                /data-address="([^"]+)"/,
+                /address="([^"]+)"/
+            ];
+            
+            let address = '';
+            for (const pattern of addressPatterns) {
+                const match = htmlElement.match(pattern);
+                if (match && match[1].trim()) {
+                    address = match[1].trim();
+                    // Clean HTML entities
+                    address = address.replace(/&nbsp;/g, ' ')
+                                   .replace(/&amp;/g, '&')
+                                   .replace(/&lt;/g, '<')
+                                   .replace(/&gt;/g, '>')
+                                   .replace(/&quot;/g, '"')
+                                   .replace(/\s+/g, ' ')
+                                   .trim();
+                    
+                    // Basic validation - should look like a real address
+                    if (address.length > 10 && /\d/.test(address)) {
+                        break;
+                    } else {
+                        address = '';
+                    }
                 }
             }
             
@@ -241,8 +277,9 @@ class GenericParser {
                 endDate: null,
                 bar: venue, // Use 'bar' field name that calendar-core.js expects
                 location: null, // No coordinates available in generic parsing
+                address: address, // Use extracted address
                 city: city,
-                website: eventUrl, // Use 'website' field name that calendar-core.js expects
+                url: eventUrl, // Use consistent 'url' field name across all parsers
                 cover: price || '', // Use 'cover' field name that calendar-core.js expects
                 image: '',
                 source: this.config.source,
@@ -344,8 +381,9 @@ class GenericParser {
             
             // Should contain event-related keywords in the path
             const eventKeywords = ['event', 'party', 'show', 'calendar', 'listing'];
+            const pathname = urlMatch[3] || '/';
             const hasEventKeyword = eventKeywords.some(keyword => 
-                urlObj.pathname.toLowerCase().includes(keyword)
+                pathname.toLowerCase().includes(keyword)
             );
             
             return hasEventKeyword;

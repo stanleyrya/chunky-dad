@@ -260,7 +260,7 @@ class BearraccudaParser {
                 location: null, // No coordinates available in HTML parsing
                 address: address,
                 city: city,
-                website: sourceUrl, // Always use the bearracuda.com detail page URL
+                url: sourceUrl, // Use consistent 'url' field name across all parsers
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
                 gmaps: this.generateGoogleMapsUrl(address),
@@ -269,7 +269,6 @@ class BearraccudaParser {
                 facebookEvent: links.facebook,
                 ticketUrl: links.eventbrite,
                 eventbriteUrl: links.eventbrite, // Store eventbrite URL separately
-                detailPageUrl: sourceUrl, // Store the bearracuda detail page URL
                 isBearEvent: true // Bearracuda events are always bear events
             };
             

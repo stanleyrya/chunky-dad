@@ -382,7 +382,7 @@ class EventbriteParser {
                 location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: address,
                 city: city,
-                website: url, // Use 'website' field name that calendar-core.js expects
+                url: url, // Use consistent 'url' field name across all parsers
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 image: image,
                 gmaps: gmapsUrl, // Google Maps URL for enhanced location access
