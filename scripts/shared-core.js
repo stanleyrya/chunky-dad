@@ -203,9 +203,17 @@ class SharedCore {
                 
                 await displayAdapter.logInfo(`SYSTEM: HTML data received: ${htmlData?.html?.length || 0} characters`);
                 
-                await displayAdapter.logInfo(`SYSTEM: Parsing events with ${parserName} parser...`);
+                // Detect parser for this specific URL (allows mid-run switching)
+                const urlParserName = parserConfig.parser || this.detectParserFromUrl(url);
+                const urlParser = parsers[urlParserName];
+                
+                if (urlParserName !== parserName) {
+                    await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
+                }
+                
+                await displayAdapter.logInfo(`SYSTEM: Parsing events with ${urlParserName} parser...`);
                 // Pass parser config and city config separately
-                const parseResult = parser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
                 
                 await displayAdapter.logInfo(`SYSTEM: Parse result: ${parseResult?.events?.length || 0} events found`);
                 if (parseResult?.additionalLinks) {
@@ -236,7 +244,7 @@ class SharedCore {
                     await this.enrichEventsWithDetailPages(
                         allEvents,
                         deduplicatedUrls, 
-                        parser, 
+                        parsers, 
                         parserConfig, 
                         httpAdapter, 
                         displayAdapter,
@@ -283,7 +291,7 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null) {
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null) {
         const maxUrls = parserConfig.maxAdditionalUrls || 12;
         const urlsToProcess = additionalLinks.slice(0, maxUrls);
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
@@ -309,8 +317,12 @@ class SharedCore {
                     maxAdditionalUrls: shouldAllowMoreUrls ? parserConfig.maxAdditionalUrls : 0
                 };
                 
+                // Detect parser for this specific URL (allows mid-run switching)
+                const urlParserName = parserConfig.parser || this.detectParserFromUrl(url);
+                const urlParser = parsers[urlParserName];
+                
                 // Pass detail page config and city config separately
-                const parseResult = parser.parseEvents(htmlData, detailPageConfig, mainConfig?.cities || null);
+                const parseResult = urlParser.parseEvents(htmlData, detailPageConfig, mainConfig?.cities || null);
                 
                 // Handle additional URLs if depth allows
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
@@ -326,7 +338,7 @@ class SharedCore {
                             await this.enrichEventsWithDetailPages(
                                 existingEvents,
                                 deduplicatedUrls,
-                                parser,
+                                parsers,
                                 parserConfig,
                                 httpAdapter,
                                 displayAdapter,
