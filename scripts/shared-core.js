@@ -30,6 +30,40 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
+        // URL pattern-based parser routing
+        this.urlParserMappings = [
+            {
+                name: 'eventbrite-organizer',
+                pattern: /^https?:\/\/(?:www\.)?eventbrite\.com\/o\/[^\/]+\/?$/,
+                parser: 'eventbrite',
+                description: 'Eventbrite organizer pages'
+            },
+            {
+                name: 'eventbrite-event',
+                pattern: /^https?:\/\/(?:www\.)?eventbrite\.com\/e\/[^\/]+/,
+                parser: 'eventbrite',
+                description: 'Eventbrite individual event pages'
+            },
+            {
+                name: 'bearracuda-main',
+                pattern: /^https?:\/\/(?:www\.)?bearracuda\.com\/?$/,
+                parser: 'bearracuda',
+                description: 'Bearracuda main page'
+            },
+            {
+                name: 'bearracuda-event',
+                pattern: /^https?:\/\/(?:www\.)?bearracuda\.com\/events\/[^\/]+/,
+                parser: 'bearracuda',
+                description: 'Bearracuda event detail pages'
+            },
+            {
+                name: 'generic',
+                pattern: /.*/,
+                parser: 'generic',
+                description: 'Fallback for unrecognized URLs'
+            }
+        ];
+        
         // City mapping for consistent location detection across all parsers
         this.cityMappings = {
             'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
@@ -190,24 +224,31 @@ class SharedCore {
                     const { regularUrls, crossParserUrls } = this.separateAdditionalUrls(parseResult.additionalLinks);
                     
                     if (regularUrls.length > 0) {
-                        await displayAdapter.logInfo(`SYSTEM: Processing ${regularUrls.length} regular detail page URLs...`);
+                        await displayAdapter.logInfo(`SYSTEM: Processing ${regularUrls.length} regular URLs with dynamic routing...`);
                         
                         // Deduplicate regular URLs before processing
                         const deduplicatedUrls = this.deduplicateUrls(regularUrls, processedUrls);
-                        await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique regular URLs to process`);
+                        await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs to process`);
                         
-                        await this.enrichEventsWithDetailPages(
-                            allEvents,
-                            deduplicatedUrls, 
-                            parser, 
-                            parserConfig, 
-                            httpAdapter, 
-                            displayAdapter,
-                            processedUrls,
-                            undefined,
-                            mainConfig
-                        );
-                        await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
+                        // Process URLs with dynamic parser selection
+                        for (const url of deduplicatedUrls) {
+                            await this.processUrlWithDynamicParser(
+                                url,
+                                allEvents,
+                                httpAdapter,
+                                displayAdapter,
+                                parsers,
+                                processedUrls,
+                                mainConfig,
+                                {
+                                    // Inherit some settings from the original parser config
+                                    alwaysBear: parserConfig.alwaysBear,
+                                    mergeMode: parserConfig.mergeMode,
+                                    metadata: parserConfig.metadata || {}
+                                }
+                            );
+                        }
+                        await displayAdapter.logSuccess(`SYSTEM: Processed ${deduplicatedUrls.length} URLs with dynamic routing`);
                     }
                     
                     if (crossParserUrls.length > 0) {
@@ -416,6 +457,98 @@ class SharedCore {
         }
         
         return { regularUrls, crossParserUrls };
+    }
+
+    // Dynamically determine which parser to use for a given URL
+    determineParserForUrl(url) {
+        if (!url || typeof url !== 'string') {
+            return { parser: 'generic', mapping: this.urlParserMappings[this.urlParserMappings.length - 1] };
+        }
+
+        for (const mapping of this.urlParserMappings) {
+            if (mapping.pattern.test(url)) {
+                return { parser: mapping.parser, mapping: mapping };
+            }
+        }
+
+        // Fallback to generic (should never reach here due to .* pattern)
+        return { parser: 'generic', mapping: this.urlParserMappings[this.urlParserMappings.length - 1] };
+    }
+
+    // Process URLs with dynamic parser selection
+    async processUrlWithDynamicParser(url, allEvents, httpAdapter, displayAdapter, parsers, processedUrls, mainConfig, defaultConfig = {}) {
+        if (processedUrls.has(url)) {
+            await displayAdapter.logInfo(`SYSTEM: Skipping already processed URL: ${url}`);
+            return;
+        }
+
+        processedUrls.add(url);
+
+        try {
+            // Determine which parser to use
+            const { parser: parserName, mapping } = this.determineParserForUrl(url);
+            await displayAdapter.logInfo(`SYSTEM: Dynamic routing: ${url} → ${parserName} parser (${mapping.description})`);
+
+            const parser = parsers[parserName];
+            if (!parser) {
+                await displayAdapter.logWarn(`SYSTEM: Parser '${parserName}' not available for URL: ${url}`);
+                return;
+            }
+
+            // Fetch the URL content
+            const htmlData = await httpAdapter.fetchData(url);
+
+            // Create a dynamic parser config
+            const dynamicConfig = {
+                name: `Dynamic ${mapping.description}`,
+                parser: parserName,
+                requireDetailPages: false, // Prevent infinite loops for now
+                alwaysBear: true, // Assume URLs from bear event sources are bear events
+                metadata: {},
+                ...defaultConfig
+            };
+
+            // Parse with the selected parser
+            const parseResult = parser.parseEvents(htmlData, dynamicConfig, mainConfig?.cities || null);
+
+            if (parseResult.events && parseResult.events.length > 0) {
+                // Apply field merge strategies and enrich events
+                const filteredEvents = parseResult.events.map(event => 
+                    this.applyFieldMergeStrategies(event, dynamicConfig)
+                );
+                const enrichedEvents = filteredEvents.map(event => this.enrichEventLocation(event));
+
+                // Add events to the collection
+                allEvents.push(...enrichedEvents);
+                await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} events from dynamic URL: ${url}`);
+
+                // Process any additional URLs discovered
+                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: Found ${parseResult.additionalLinks.length} additional URLs from dynamic parsing`);
+                    
+                    // Process additional URLs recursively with dynamic routing
+                    for (const additionalUrl of parseResult.additionalLinks.slice(0, 10)) { // Limit to prevent infinite loops
+                        if (typeof additionalUrl === 'string') {
+                            await this.processUrlWithDynamicParser(
+                                additionalUrl, 
+                                allEvents, 
+                                httpAdapter, 
+                                displayAdapter, 
+                                parsers, 
+                                processedUrls, 
+                                mainConfig, 
+                                defaultConfig
+                            );
+                        }
+                    }
+                }
+            } else {
+                await displayAdapter.logInfo(`SYSTEM: No events found from dynamic URL: ${url}`);
+            }
+
+        } catch (error) {
+            await displayAdapter.logError(`SYSTEM: Failed to process dynamic URL ${url}: ${error.message || 'Unknown error'}`);
+        }
     }
 
     // Process cross-parser URLs by routing them to the appropriate parser
