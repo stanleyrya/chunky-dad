@@ -309,8 +309,8 @@ class SharedCore {
                     
                     // Find the matching existing event by URL
                     const matchingEvent = existingEvents.find(event => 
-                        event.website === detailEvent.website ||
-                        event.website === url ||
+                        event.url === detailEvent.url ||
+                        event.url === url ||
                         (event.title && detailEvent.title && event.title.trim() === detailEvent.title.trim())
                     );
                     
@@ -592,7 +592,7 @@ class SharedCore {
             endDate: mergedEvent.endDate,
             location: mergedEvent.location,
             notes: notes,
-            url: mergedEvent.website,
+            url: mergedEvent.url, // Now consistent across all parsers
             city: mergedEvent.city || newEvent.city || existingEvent.city, // Preserve city field
             key: mergedEvent.key || newEvent.key,
             _parserConfig: mergedEvent._parserConfig || newEvent._parserConfig,
