@@ -784,29 +784,7 @@ class BearraccudaParser {
             return null;
         }
         
-        // Bearracuda-specific URL patterns that map to city keys - only use these to map to config keys
-        const bearracudaUrlPatterns = {
-            'atlanta': /atlantabearpride|atlanta/i,
-            'new-orleans': /new-orleans/i,
-            'chicago': /chicagoaug|chicago/i,
-            'denver': /denverpride|denver/i,
-            'sf': /sanfrancisco|sf/i,
-            'la': /losangeles|la/i,
-            'nyc': /newyork|nyc/i,
-            'seattle': /treasureseattle|seattlewood|seattle/i,
-            'portland': /treasureportland|treasure-trailpdx|portland-50|pdx16|pdx|portland/i,
-            'miami': /flsm-friday|miami|folsom/i
-        };
-        
-        // Try Bearracuda-specific patterns but only if the city exists in config
-        for (const [city, pattern] of Object.entries(bearracudaUrlPatterns)) {
-            if (pattern.test(url) && cityConfig[city]) {
-                console.log(`🐻 Bearracuda: Extracted city "${city}" from URL using Bearracuda pattern: ${url}`);
-                return city;
-            }
-        }
-        
-        // Try city config patterns
+        // Use only city config patterns - no hardcoded assumptions
         for (const [cityKey, cityData] of Object.entries(cityConfig)) {
             if (cityData.patterns) {
                 for (const pattern of cityData.patterns) {
@@ -818,6 +796,7 @@ class BearraccudaParser {
             }
         }
         
+        console.log(`🐻 Bearracuda: No city patterns matched URL: ${url}`);
         return null;
     }
 
