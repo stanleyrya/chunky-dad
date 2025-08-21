@@ -162,7 +162,7 @@ class SharedCore {
                 
                 await displayAdapter.logInfo(`SYSTEM: Parsing events with ${parserName} parser...`);
                 // Pass parser config and city config separately
-                const parseResult = parser.parseEvents(htmlData, parserConfig, mainConfig.cities);
+                const parseResult = parser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
                 
                 await displayAdapter.logInfo(`SYSTEM: Parse result: ${parseResult?.events?.length || 0} events found`);
                 if (parseResult?.additionalLinks) {
@@ -197,7 +197,9 @@ class SharedCore {
                         parserConfig, 
                         httpAdapter, 
                         displayAdapter,
-                        processedUrls
+                        processedUrls,
+                        1,
+                        mainConfig
                     );
                     await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
                 }
@@ -238,7 +240,7 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1) {
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parser, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null) {
         const maxUrls = parserConfig.maxAdditionalUrls || 12;
         const urlsToProcess = additionalLinks.slice(0, maxUrls);
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
@@ -265,7 +267,7 @@ class SharedCore {
                 };
                 
                 // Pass detail page config and city config separately
-                const parseResult = parser.parseEvents(htmlData, detailPageConfig, mainConfig.cities);
+                const parseResult = parser.parseEvents(htmlData, detailPageConfig, mainConfig?.cities || null);
                 
                 // Handle additional URLs if depth allows
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
@@ -286,7 +288,8 @@ class SharedCore {
                                 httpAdapter,
                                 displayAdapter,
                                 processedUrls,
-                                currentDepth + 1
+                                currentDepth + 1,
+                                mainConfig
                             );
                         }
                     } else {
@@ -335,6 +338,10 @@ class SharedCore {
                 }
             } catch (error) {
                 await displayAdapter.logWarn(`SYSTEM: Failed to process detail page URL: ${url}`);
+                await displayAdapter.logError(`SYSTEM: Detail page error: ${error.message || error}`);
+                if (error.stack) {
+                    await displayAdapter.logError(`SYSTEM: Detail page stack trace: ${error.stack}`);
+                }
             }
         }
     }

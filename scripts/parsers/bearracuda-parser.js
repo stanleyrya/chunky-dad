@@ -259,7 +259,7 @@ class BearraccudaParser {
                 bar: venueInfo.name, // Use 'bar' field name that calendar-core.js expects
                 location: null, // No coordinates available in HTML parsing
                 address: address,
-                city: city,
+                city: city || 'unknown',
                 website: sourceUrl, // Always use the bearracuda.com detail page URL
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
@@ -304,8 +304,9 @@ class BearraccudaParser {
                 return null;
             }
             if (!city) {
-                console.warn(`🐻 Bearracuda: No city information found - cannot create event`);
-                return null;
+                console.warn(`🐻 Bearracuda: No city information found - will use 'unknown' as fallback`);
+                // Don't return null - we can still create the event with unknown city
+                // The calendar system will route it to the default calendar
             }
             
             console.log(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate || dateInfo}`);
