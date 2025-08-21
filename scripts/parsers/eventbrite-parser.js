@@ -49,7 +49,7 @@ class EventbriteParser {
             }
             
             // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
-            const jsonEvents = this.extractEventsFromJson(html, parserConfig);
+            const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData);
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
@@ -78,18 +78,101 @@ class EventbriteParser {
         }
     }
 
+    // Helper method to extract a complete JSON object by matching braces
+    extractJsonObject(html, startIndex) {
+        let braceCount = 0;
+        let inString = false;
+        let i = startIndex;
+        
+        // Find the opening brace
+        while (i < html.length && html[i] !== '{') {
+            i++;
+        }
+        
+        if (i >= html.length) {
+            return null;
+        }
+        
+        const start = i;
+        braceCount = 1;
+        i++;
+        
+        // Track through the JSON to find the matching closing brace
+        while (i < html.length && braceCount > 0) {
+            const char = html[i];
+            const prevChar = i > 0 ? html[i - 1] : '';
+            
+            // Handle string state more carefully
+            if (char === '"') {
+                // Count the number of preceding backslashes
+                let backslashCount = 0;
+                let j = i - 1;
+                while (j >= 0 && html[j] === '\\') {
+                    backslashCount++;
+                    j--;
+                }
+                
+                // If there's an even number of backslashes (including 0), the quote is not escaped
+                if (backslashCount % 2 === 0) {
+                    inString = !inString;
+                }
+            } else if (!inString) {
+                if (char === '{') {
+                    braceCount++;
+                } else if (char === '}') {
+                    braceCount--;
+                }
+            }
+            
+            i++;
+        }
+        
+        if (braceCount === 0) {
+            // Find the semicolon that ends the statement
+            let endIndex = i;
+            while (endIndex < html.length && html[endIndex] !== ';') {
+                endIndex++;
+            }
+            
+            let jsonString = html.substring(start, i);
+            
+            // Clean up control characters that can break JSON parsing
+            // More aggressive cleaning of problematic characters
+            jsonString = jsonString
+                // Remove control characters except tab, newline, carriage return
+                .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+                // Fix common HTML entity issues that might have leaked through
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                // Remove any remaining non-printable characters
+                .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+            
+            return jsonString;
+        }
+        
+        return null;
+    }
+
     // Extract events from embedded JSON data (modern Eventbrite)
-    extractEventsFromJson(html, parserConfig = {}) {
+    extractEventsFromJson(html, parserConfig = {}, htmlData = null) {
         const events = [];
         
         try {
             // Look for window.__SERVER_DATA__ which contains the event information
-            const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
+            // Use a more robust approach to extract the JSON by finding the start and matching braces
+            const startPattern = /window\.__SERVER_DATA__\s*=\s*/;
+            const startMatch = html.match(startPattern);
             
-            if (serverDataMatch && serverDataMatch[1]) {
-                try {
-                    const serverData = JSON.parse(serverDataMatch[1]);
-                    console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
+            if (startMatch) {
+                const startIndex = startMatch.index + startMatch[0].length;
+                const jsonString = this.extractJsonObject(html, startIndex);
+                
+                if (jsonString) {
+                    try {
+                        const serverData = JSON.parse(jsonString);
+                        console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
                     
                     // Check for events in view_data.events.future_events (organizer pages)
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
@@ -191,9 +274,66 @@ class EventbriteParser {
                         console.log(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (not included)`);
                     }
                     
-                } catch (parseError) {
-                    console.warn(`🎫 Eventbrite: Failed to parse window.__SERVER_DATA__: ${parseError.message}`);
-                    console.warn(`🎫 Eventbrite: JSON parse error at position: ${parseError.message.includes('position') ? parseError.message : 'unknown'}`);
+                    } catch (parseError) {
+                        console.warn(`🎫 Eventbrite: Failed to parse window.__SERVER_DATA__: ${parseError.message}`);
+                        console.warn(`🎫 Eventbrite: JSON parse error at position: ${parseError.message.includes('position') ? parseError.message : 'unknown'}`);
+                        
+                        // Fallback: try the original regex approach
+                        console.log('🎫 Eventbrite: Attempting fallback regex extraction...');
+                        try {
+                            const fallbackMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
+                            if (fallbackMatch && fallbackMatch[1]) {
+                                const serverData = JSON.parse(fallbackMatch[1]);
+                                console.log('🎫 Eventbrite: Fallback extraction successful');
+                                
+                                // Continue with the same logic as above...
+                                if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
+                                    const futureEvents = serverData.view_data.events.future_events;
+                                    console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in fallback JSON data`);
+                                    
+                                    futureEvents.forEach(eventData => {
+                                        if (eventData.url && eventData.name && (eventData.name.text || typeof eventData.name === 'string')) {
+                                            if (this.isFutureEvent(eventData)) {
+                                                const event = this.parseJsonEvent(eventData, null, parserConfig, serverData);
+                                                if (event) {
+                                                    events.push(event);
+                                                    console.log(`🎫 Eventbrite: Parsed future event (fallback): ${event.title} (${event.startDate || event.date})`);
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                                
+                                // Check for individual event data
+                                if (serverData.event) {
+                                    console.log('🎫 Eventbrite: Found individual event data in fallback JSON');
+                                    const eventData = serverData.event;
+                                    const adaptedEventData = {
+                                        ...eventData,
+                                        url: eventData.url || htmlData.url,
+                                        name: eventData.name || eventData.title || '',
+                                        start: eventData.start || eventData.startDate,
+                                        end: eventData.end || eventData.endDate
+                                    };
+                                    
+                                    const hasRequiredFields = adaptedEventData.name && (adaptedEventData.url || htmlData.url);
+                                    const isFuture = this.isFutureEvent(adaptedEventData);
+                                    
+                                    if (hasRequiredFields && isFuture) {
+                                        const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData);
+                                        if (event) {
+                                            events.push(event);
+                                            console.log(`🎫 Eventbrite: Parsed individual event (fallback): ${event.title} (${event.startDate || event.date})`);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (fallbackError) {
+                            console.warn(`🎫 Eventbrite: Fallback extraction also failed: ${fallbackError.message}`);
+                        }
+                    }
+                } else {
+                    console.warn('🎫 Eventbrite: Could not extract valid JSON from window.__SERVER_DATA__');
                 }
             }
             
@@ -439,11 +579,17 @@ class EventbriteParser {
             console.log(`🎫 Eventbrite: Extracting additional event URLs from JSON data`);
             
             // Look for window.__SERVER_DATA__ which contains the event information
-            const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
+            // Use the same robust JSON extraction approach
+            const startPattern = /window\.__SERVER_DATA__\s*=\s*/;
+            const startMatch = html.match(startPattern);
             
-            if (serverDataMatch && serverDataMatch[1]) {
-                try {
-                    const serverData = JSON.parse(serverDataMatch[1]);
+            if (startMatch) {
+                const startIndex = startMatch.index + startMatch[0].length;
+                const jsonString = this.extractJsonObject(html, startIndex);
+                
+                if (jsonString) {
+                    try {
+                        const serverData = JSON.parse(jsonString);
                     
                     // Extract URLs from future_events
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
@@ -471,8 +617,11 @@ class EventbriteParser {
                     // Note: We only extract URLs from future events that we actually found
                     // Past events are not relevant for detail page processing
                     
-                } catch (error) {
-                    console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction:', error);
+                    } catch (error) {
+                        console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction:', error);
+                    }
+                } else {
+                    console.warn('🎫 Eventbrite: Could not extract valid JSON from window.__SERVER_DATA__ for URL extraction');
                 }
             }
             
