@@ -75,15 +75,15 @@ class BearraccudaParser {
             if (parserConfig.requireDetailPages) {
                 console.log('🐻 Bearracuda: Detail pages required, extracting additional URLs...');
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
-                
-                // Also extract Eventbrite URLs from parsed events - they'll be routed dynamically
-                const eventbriteUrls = this.extractEventbriteUrlsFromEvents(events);
-                if (eventbriteUrls.length > 0) {
-                    console.log(`🐻 Bearracuda: Found ${eventbriteUrls.length} Eventbrite URLs for dynamic routing`);
-                    additionalLinks.push(...eventbriteUrls);
-                }
             } else {
-                console.log('🐻 Bearracuda: Detail pages not required, skipping URL extraction');
+                console.log('🐻 Bearracuda: Detail pages not required, skipping Bearracuda URL extraction');
+            }
+            
+            // Always extract Eventbrite URLs from parsed events for dynamic routing
+            const eventbriteUrls = this.extractEventbriteUrlsFromEvents(events);
+            if (eventbriteUrls.length > 0) {
+                console.log(`🐻 Bearracuda: Found ${eventbriteUrls.length} Eventbrite URLs for dynamic routing`);
+                additionalLinks.push(...eventbriteUrls);
             }
             
             console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
