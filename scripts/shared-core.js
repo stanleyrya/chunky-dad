@@ -198,7 +198,7 @@ class SharedCore {
                         httpAdapter, 
                         displayAdapter,
                         processedUrls,
-                        1,
+                        undefined,
                         mainConfig
                     );
                     await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
