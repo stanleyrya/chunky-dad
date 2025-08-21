@@ -49,7 +49,7 @@ class BearraccudaParser {
             }
             
             // Check if this is an individual event page
-            const isDetailPage = this.isEventDetailPage(html, htmlData.url);
+            const isDetailPage = this.isEventDetailPage(html, htmlData.url, cityConfig);
             console.log(`🐻 Bearracuda: Page type detection result: ${isDetailPage ? 'detail page' : 'listing page'}`);
             
             let additionalLinks = [];
@@ -102,7 +102,7 @@ class BearraccudaParser {
     }
 
     // Check if this is an individual event detail page
-    isEventDetailPage(html, url) {
+    isEventDetailPage(html, url, cityConfig = null) {
         // Check URL pattern: /events/{city-event}/
         if (!/\/events\/[^\/]+\/$/.test(url)) {
             console.log(`🐻 Bearracuda: URL pattern check failed for: ${url}`);

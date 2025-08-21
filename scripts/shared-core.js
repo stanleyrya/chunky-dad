@@ -204,7 +204,7 @@ class SharedCore {
                 await displayAdapter.logInfo(`SYSTEM: HTML data received: ${htmlData?.html?.length || 0} characters`);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = parserConfig.parser || this.detectParserFromUrl(url);
+                const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
                 const urlParser = parsers[urlParserName];
                 
                 if (urlParserName !== parserName) {
@@ -318,7 +318,7 @@ class SharedCore {
                 };
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = parserConfig.parser || this.detectParserFromUrl(url);
+                const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
                 const urlParser = parsers[urlParserName];
                 
                 // Pass detail page config and city config separately
