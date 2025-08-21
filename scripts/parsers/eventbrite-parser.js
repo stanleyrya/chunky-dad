@@ -137,22 +137,61 @@ class EventbriteParser {
             let jsonString = html.substring(start, i);
             
             // Clean up control characters that can break JSON parsing
-            // More aggressive cleaning of problematic characters
-            jsonString = jsonString
-                // Remove control characters except tab, newline, carriage return
-                .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-                // Fix common HTML entity issues that might have leaked through
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&quot;/g, '"')
-                // Remove any remaining non-printable characters
-                .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+            // Properly escape control characters that need to be escaped in JSON strings
+            jsonString = this.escapeJsonControlCharacters(jsonString);
             
             return jsonString;
         }
         
         return null;
+    }
+
+    // Properly escape control characters in JSON strings
+    escapeJsonControlCharacters(jsonString) {
+        let result = '';
+        let inString = false;
+        let i = 0;
+        
+        while (i < jsonString.length) {
+            const char = jsonString[i];
+            const code = char.charCodeAt(0);
+            
+            // Track string state
+            if (char === '"') {
+                // Count preceding backslashes to determine if this quote is escaped
+                let backslashCount = 0;
+                let j = i - 1;
+                while (j >= 0 && jsonString[j] === '\\') {
+                    backslashCount++;
+                    j--;
+                }
+                // If even number of backslashes (including 0), quote is not escaped
+                if (backslashCount % 2 === 0) {
+                    inString = !inString;
+                }
+            }
+            
+            // If we're inside a string, escape control characters
+            if (inString && code < 32) {
+                switch (code) {
+                    case 8: result += '\\b'; break;  // backspace
+                    case 9: result += '\\t'; break;  // tab
+                    case 10: result += '\\n'; break; // newline
+                    case 12: result += '\\f'; break; // form feed
+                    case 13: result += '\\r'; break; // carriage return
+                    default:
+                        // Other control characters - use unicode escape
+                        result += '\\u' + code.toString(16).padStart(4, '0');
+                        break;
+                }
+            } else {
+                result += char;
+            }
+            
+            i++;
+        }
+        
+        return result;
     }
 
     // Extract events from embedded JSON data (modern Eventbrite)
@@ -277,60 +316,6 @@ class EventbriteParser {
                     } catch (parseError) {
                         console.warn(`🎫 Eventbrite: Failed to parse window.__SERVER_DATA__: ${parseError.message}`);
                         console.warn(`🎫 Eventbrite: JSON parse error at position: ${parseError.message.includes('position') ? parseError.message : 'unknown'}`);
-                        
-                        // Fallback: try the original regex approach
-                        console.log('🎫 Eventbrite: Attempting fallback regex extraction...');
-                        try {
-                            const fallbackMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
-                            if (fallbackMatch && fallbackMatch[1]) {
-                                const serverData = JSON.parse(fallbackMatch[1]);
-                                console.log('🎫 Eventbrite: Fallback extraction successful');
-                                
-                                // Continue with the same logic as above...
-                                if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
-                                    const futureEvents = serverData.view_data.events.future_events;
-                                    console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in fallback JSON data`);
-                                    
-                                    futureEvents.forEach(eventData => {
-                                        if (eventData.url && eventData.name && (eventData.name.text || typeof eventData.name === 'string')) {
-                                            if (this.isFutureEvent(eventData)) {
-                                                const event = this.parseJsonEvent(eventData, null, parserConfig, serverData);
-                                                if (event) {
-                                                    events.push(event);
-                                                    console.log(`🎫 Eventbrite: Parsed future event (fallback): ${event.title} (${event.startDate || event.date})`);
-                                                }
-                                            }
-                                        }
-                                    });
-                                }
-                                
-                                // Check for individual event data
-                                if (serverData.event) {
-                                    console.log('🎫 Eventbrite: Found individual event data in fallback JSON');
-                                    const eventData = serverData.event;
-                                    const adaptedEventData = {
-                                        ...eventData,
-                                        url: eventData.url || htmlData.url,
-                                        name: eventData.name || eventData.title || '',
-                                        start: eventData.start || eventData.startDate,
-                                        end: eventData.end || eventData.endDate
-                                    };
-                                    
-                                    const hasRequiredFields = adaptedEventData.name && (adaptedEventData.url || htmlData.url);
-                                    const isFuture = this.isFutureEvent(adaptedEventData);
-                                    
-                                    if (hasRequiredFields && isFuture) {
-                                        const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData);
-                                        if (event) {
-                                            events.push(event);
-                                            console.log(`🎫 Eventbrite: Parsed individual event (fallback): ${event.title} (${event.startDate || event.date})`);
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (fallbackError) {
-                            console.warn(`🎫 Eventbrite: Fallback extraction also failed: ${fallbackError.message}`);
-                        }
                     }
                 } else {
                     console.warn('🎫 Eventbrite: Could not extract valid JSON from window.__SERVER_DATA__');
