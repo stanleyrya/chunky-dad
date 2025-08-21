@@ -116,9 +116,20 @@ class BearraccudaParser {
             { name: 'event meta', test: () => html.includes('events/') && html.includes('wp-json') }, // WordPress event post
             { name: 'event schema', test: () => html.includes('"@type":"Event"') }, // JSON-LD event schema
             { name: 'city name in content', test: () => {
-                const cityNames = ['Atlanta', 'Chicago', 'Denver', 'Seattle', 'Portland', 'New Orleans'];
-                return cityNames.some(city => html.includes(city));
-            }}
+                if (!cityConfig) return false;
+                return Object.values(cityConfig).some(city => 
+                    city.patterns && city.patterns.some(pattern => 
+                        html.toLowerCase().includes(pattern.toLowerCase())
+                    )
+                );
+            }},
+            // Additional indicators for current Bearracuda site structure
+            { name: 'wordpress post', test: () => html.includes('wp-json/wp/v2/events/') }, // WordPress event post type
+            { name: 'event content', test: () => html.includes('event') || html.includes('Event') },
+            { name: 'dance party content', test: () => html.includes('dance') || html.includes('party') || html.includes('Party') },
+            { name: 'venue content', test: () => html.includes('venue') || html.includes('Venue') || html.includes('location') },
+            { name: 'date content', test: () => /\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(html) },
+            { name: 'time content', test: () => /\d{1,2}:\d{2}\s*(am|pm|AM|PM)/.test(html) }
         ];
         
         const matchingIndicators = indicators.filter(indicator => {
@@ -141,8 +152,8 @@ class BearraccudaParser {
             console.log(`🐻 Bearracuda: ${html.substring(0, 500)}`);
         }
         
-        // Consider it an event page if we find at least 2 indicators (more flexible than before)
-        const isEventPage = matchingIndicators.length >= 2;
+        // Consider it an event page if we find at least 1 indicator (more flexible than before)
+        const isEventPage = matchingIndicators.length >= 1;
         console.log(`🐻 Bearracuda: Event page detection result: ${isEventPage}`);
         
         return isEventPage;
@@ -181,7 +192,7 @@ class BearraccudaParser {
             const fullDescription = this.extractFullDescription(html);
             
             // Extract city from URL and title
-            const city = this.extractCityFromUrl(sourceUrl) || this.extractCityFromText(title);
+            const city = this.extractCityFromUrl(sourceUrl, cityConfig) || this.extractCityFromText(title, cityConfig);
             
             // Build description
             let description = '';
@@ -283,21 +294,22 @@ class BearraccudaParser {
                 });
             }
             
-            // Even if some fields are missing, create the event if we have basic information
-            // This ensures we get some results even if the HTML structure has changed
-            const hasBasicInfo = title && (title !== 'Bearracuda Event' || dateInfo || venueInfo.name || city);
-            
-            if (hasBasicInfo) {
-                console.log(`🐻 Bearracuda: Created event "${title}" for ${city || 'unknown city'} on ${startDate || 'unknown date'}`);
-                return event;
-            } else {
-                console.warn(`🐻 Bearracuda: Insufficient information to create event - skipping`);
-                console.warn(`🐻 Bearracuda: - Title: "${title}"`);
-                console.warn(`🐻 Bearracuda: - Has date: ${!!dateInfo}`);
-                console.warn(`🐻 Bearracuda: - Has venue: ${!!venueInfo.name}`);
-                console.warn(`🐻 Bearracuda: - Has city: ${!!city}`);
+            // Validate that we have minimum required information
+            if (!title || title === 'Bearracuda Event') {
+                console.warn(`🐻 Bearracuda: No valid title found - cannot create event`);
                 return null;
             }
+            if (!dateInfo) {
+                console.warn(`🐻 Bearracuda: No date information found - cannot create event`);
+                return null;
+            }
+            if (!city) {
+                console.warn(`🐻 Bearracuda: No city information found - cannot create event`);
+                return null;
+            }
+            
+            console.log(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate || dateInfo}`);
+            return event;
             
         } catch (error) {
             console.warn(`🐻 Bearracuda: Failed to parse event detail page ${sourceUrl}: ${error}`);
@@ -765,27 +777,26 @@ class BearraccudaParser {
         return '';
     }
 
-    // Extract city from URL
-    extractCityFromUrl(url) {
-        const urlPatterns = {
-            'atlanta': /atlantabearpride|atlanta/i,
-            'new-orleans': /new-orleans/i,
-            'chicago': /chicagoaug|chicago/i,
-            'denver': /denverpride|denver/i,
-            'sf': /sanfrancisco|sf/i,
-            'la': /losangeles|la/i,
-            'nyc': /newyork|nyc/i,
-            'seattle': /treasureseattle|seattle/i,
-            'portland': /treasureportland|portland|pdx/i
-        };
+    // Extract city from URL using only city config patterns
+    extractCityFromUrl(url, cityConfig = null) {
+        if (!cityConfig) {
+            console.log(`🐻 Bearracuda: No city config provided - cannot extract city from URL`);
+            return null;
+        }
         
-        for (const [city, pattern] of Object.entries(urlPatterns)) {
-            if (pattern.test(url)) {
-                console.log(`🐻 Bearracuda: Extracted city "${city}" from URL: ${url}`);
-                return city;
+        // Use only city config patterns - no hardcoded assumptions
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns) {
+                for (const pattern of cityData.patterns) {
+                    if (url.toLowerCase().includes(pattern.toLowerCase())) {
+                        console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from URL using config pattern "${pattern}": ${url}`);
+                        return cityKey;
+                    }
+                }
             }
         }
         
+        console.log(`🐻 Bearracuda: No city patterns matched URL: ${url}`);
         return null;
     }
 
@@ -1155,37 +1166,22 @@ class BearraccudaParser {
         }
     }
 
-    // Extract city from text content
-    extractCityFromText(text) {
+    // Extract city from text content using only city config patterns
+    extractCityFromText(text, cityConfig = null) {
         if (!text) return null;
+        if (!cityConfig) {
+            console.log(`🐻 Bearracuda: No city config provided - cannot extract city from text`);
+            return null;
+        }
         
-        const cityPatterns = {
-            'atlanta': /(atlanta|atl)/i,
-            'denver': /(denver)/i,
-            'vegas': /(vegas|las vegas)/i,
-            'la': /(los angeles|\bla\b|long beach)/i,
-            'nyc': /(new york|nyc|manhattan)/i,
-            'chicago': /(chicago)/i,
-            'miami': /(miami)/i,
-            'sf': /(san francisco|sf)/i,
-            'seattle': /(seattle)/i,
-            'portland': /(portland)/i,
-            'austin': /(austin)/i,
-            'dallas': /(dallas)/i,
-            'houston': /(houston)/i,
-            'phoenix': /(phoenix)/i,
-            'boston': /(boston)/i,
-            'philadelphia': /(philadelphia|philly)/i,
-            'dc': /(washington|dc)/i,
-            'orlando': /(orlando)/i,
-            'tampa': /(tampa)/i,
-            'new-orleans': /(new orleans|nola)/i
-        };
-        
-        for (const [city, pattern] of Object.entries(cityPatterns)) {
-            if (pattern.test(text)) {
-                console.log(`🐻 Bearracuda: Extracted city "${city}" from text: "${text.substring(0, 100)}..."`);
-                return city;
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns) {
+                for (const pattern of cityData.patterns) {
+                    if (text.toLowerCase().includes(pattern.toLowerCase())) {
+                        console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from text using config pattern "${pattern}": "${text.substring(0, 100)}..."`);
+                        return cityKey;
+                    }
+                }
             }
         }
         
