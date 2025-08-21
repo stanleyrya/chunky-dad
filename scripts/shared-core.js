@@ -182,26 +182,46 @@ class SharedCore {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
-                // Process additional URLs if required (for enriching existing events, not creating new ones)
+                // Process additional URLs if required
                 if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
-                    await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs for detail pages...`);
+                    await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs...`);
                     
-                    // Deduplicate additional URLs before processing
-                    const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
-                    await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs to process`);
+                    // Separate regular URLs from cross-parser URLs
+                    const { regularUrls, crossParserUrls } = this.separateAdditionalUrls(parseResult.additionalLinks);
                     
-                    await this.enrichEventsWithDetailPages(
-                        allEvents,
-                        deduplicatedUrls, 
-                        parser, 
-                        parserConfig, 
-                        httpAdapter, 
-                        displayAdapter,
-                        processedUrls,
-                        undefined,
-                        mainConfig
-                    );
-                    await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
+                    if (regularUrls.length > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Processing ${regularUrls.length} regular detail page URLs...`);
+                        
+                        // Deduplicate regular URLs before processing
+                        const deduplicatedUrls = this.deduplicateUrls(regularUrls, processedUrls);
+                        await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique regular URLs to process`);
+                        
+                        await this.enrichEventsWithDetailPages(
+                            allEvents,
+                            deduplicatedUrls, 
+                            parser, 
+                            parserConfig, 
+                            httpAdapter, 
+                            displayAdapter,
+                            processedUrls,
+                            undefined,
+                            mainConfig
+                        );
+                        await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
+                    }
+                    
+                    if (crossParserUrls.length > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Processing ${crossParserUrls.length} cross-parser URLs...`);
+                        await this.processCrossParserUrls(
+                            crossParserUrls,
+                            allEvents,
+                            httpAdapter,
+                            displayAdapter,
+                            parsers,
+                            processedUrls,
+                            mainConfig
+                        );
+                    }
                 }
             } catch (error) {
                 await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${error.message || 'Unknown error'}`);
@@ -377,6 +397,83 @@ class SharedCore {
         return result;
     }
 
+    // Separate regular URLs from cross-parser URLs
+    separateAdditionalUrls(additionalLinks) {
+        const regularUrls = [];
+        const crossParserUrls = [];
+        
+        for (const link of additionalLinks) {
+            if (typeof link === 'string') {
+                // Regular URL string
+                regularUrls.push(link);
+            } else if (link && typeof link === 'object' && link.url && link.parser) {
+                // Cross-parser URL object
+                crossParserUrls.push(link);
+            } else if (link && typeof link === 'object' && link.url) {
+                // URL object without parser (treat as regular)
+                regularUrls.push(link.url);
+            }
+        }
+        
+        return { regularUrls, crossParserUrls };
+    }
+
+    // Process cross-parser URLs by routing them to the appropriate parser
+    async processCrossParserUrls(crossParserUrls, existingEvents, httpAdapter, displayAdapter, parsers, processedUrls, mainConfig) {
+        for (const linkObj of crossParserUrls) {
+            const { url, parser: targetParserName, source } = linkObj;
+            
+            if (processedUrls.has(url)) {
+                await displayAdapter.logInfo(`SYSTEM: Skipping already processed cross-parser URL: ${url}`);
+                continue;
+            }
+            
+            processedUrls.add(url);
+            
+            try {
+                await displayAdapter.logInfo(`SYSTEM: Processing cross-parser URL with ${targetParserName}: ${url}`);
+                
+                // Get the target parser
+                const targetParser = parsers[targetParserName];
+                if (!targetParser) {
+                    await displayAdapter.logWarn(`SYSTEM: Target parser '${targetParserName}' not found for cross-parser URL: ${url}`);
+                    continue;
+                }
+                
+                // Fetch the URL content
+                const htmlData = await httpAdapter.fetchData(url);
+                
+                // Create a basic parser config for the cross-parser call
+                const crossParserConfig = {
+                    name: `Cross-parser from ${source}`,
+                    parser: targetParserName,
+                    requireDetailPages: false, // Prevent infinite chaining
+                    alwaysBear: true, // URLs from bear event pages are likely bear events
+                    metadata: {}
+                };
+                
+                // Parse with the target parser
+                const parseResult = targetParser.parseEvents(htmlData, crossParserConfig, mainConfig?.cities || null);
+                
+                if (parseResult.events && parseResult.events.length > 0) {
+                    // Apply field merge strategies and enrich events
+                    const filteredEvents = parseResult.events.map(event => 
+                        this.applyFieldMergeStrategies(event, crossParserConfig)
+                    );
+                    const enrichedEvents = filteredEvents.map(event => this.enrichEventLocation(event));
+                    
+                    // Add cross-parser events to the existing events
+                    existingEvents.push(...enrichedEvents);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} events from cross-parser URL: ${url}`);
+                } else {
+                    await displayAdapter.logInfo(`SYSTEM: No events found from cross-parser URL: ${url}`);
+                }
+                
+            } catch (error) {
+                await displayAdapter.logError(`SYSTEM: Failed to process cross-parser URL ${url}: ${error.message || 'Unknown error'}`);
+            }
+        }
+    }
 
     // Pure utility functions
     filterFutureEvents(events, daysToLookAhead = null) {

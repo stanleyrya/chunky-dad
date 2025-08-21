@@ -36,6 +36,8 @@ class BearraccudaParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
+    // Now supports cross-parser chaining: Eventbrite URLs found in events are returned
+    // as special additional links that will be processed by the Eventbrite parser
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
             console.log(`🐻 Bearracuda: Parsing events from ${htmlData.url}`);
@@ -78,7 +80,19 @@ class BearraccudaParser {
                 console.log('🐻 Bearracuda: Detail pages not required, skipping URL extraction');
             }
             
-            console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
+            // Extract Eventbrite URLs from parsed events for cross-parser chaining
+            const eventbriteUrls = this.extractEventbriteUrlsFromEvents(events);
+            if (eventbriteUrls.length > 0) {
+                console.log(`🐻 Bearracuda: Found ${eventbriteUrls.length} Eventbrite URLs for cross-parser chaining`);
+                // Add Eventbrite URLs as special cross-parser additional links
+                additionalLinks.push(...eventbriteUrls.map(url => ({
+                    url: url,
+                    parser: 'eventbrite',
+                    source: 'bearracuda-chain'
+                })));
+            }
+            
+            console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links (including cross-parser)`);
             
             return {
                 events: events,
@@ -882,6 +896,23 @@ class BearraccudaParser {
         }
         
         return urls;
+    }
+
+    // Extract Eventbrite URLs from parsed events for cross-parser chaining
+    extractEventbriteUrlsFromEvents(events) {
+        const eventbriteUrls = [];
+        
+        for (const event of events) {
+            if (event.eventbriteUrl && event.eventbriteUrl.trim()) {
+                const url = event.eventbriteUrl.trim();
+                if (!eventbriteUrls.includes(url)) {
+                    eventbriteUrls.push(url);
+                    console.log(`🐻 Bearracuda: Found Eventbrite URL for chaining: ${url}`);
+                }
+            }
+        }
+        
+        return eventbriteUrls;
     }
 
     // Validate if URL is a valid event URL
