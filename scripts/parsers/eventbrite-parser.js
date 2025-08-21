@@ -49,7 +49,7 @@ class EventbriteParser {
             }
             
             // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
-            const jsonEvents = this.extractEventsFromJson(html, parserConfig);
+            const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData);
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
@@ -78,18 +78,140 @@ class EventbriteParser {
         }
     }
 
+    // Helper method to extract a complete JSON object by matching braces
+    extractJsonObject(html, startIndex) {
+        let braceCount = 0;
+        let inString = false;
+        let i = startIndex;
+        
+        // Find the opening brace
+        while (i < html.length && html[i] !== '{') {
+            i++;
+        }
+        
+        if (i >= html.length) {
+            return null;
+        }
+        
+        const start = i;
+        braceCount = 1;
+        i++;
+        
+        // Track through the JSON to find the matching closing brace
+        while (i < html.length && braceCount > 0) {
+            const char = html[i];
+            const prevChar = i > 0 ? html[i - 1] : '';
+            
+            // Handle string state more carefully
+            if (char === '"') {
+                // Count the number of preceding backslashes
+                let backslashCount = 0;
+                let j = i - 1;
+                while (j >= 0 && html[j] === '\\') {
+                    backslashCount++;
+                    j--;
+                }
+                
+                // If there's an even number of backslashes (including 0), the quote is not escaped
+                if (backslashCount % 2 === 0) {
+                    inString = !inString;
+                }
+            } else if (!inString) {
+                if (char === '{') {
+                    braceCount++;
+                } else if (char === '}') {
+                    braceCount--;
+                }
+            }
+            
+            i++;
+        }
+        
+        if (braceCount === 0) {
+            // Find the semicolon that ends the statement
+            let endIndex = i;
+            while (endIndex < html.length && html[endIndex] !== ';') {
+                endIndex++;
+            }
+            
+            let jsonString = html.substring(start, i);
+            
+            // Clean up control characters that can break JSON parsing
+            // Properly escape control characters that need to be escaped in JSON strings
+            jsonString = this.escapeJsonControlCharacters(jsonString);
+            
+            return jsonString;
+        }
+        
+        return null;
+    }
+
+    // Properly escape control characters in JSON strings
+    escapeJsonControlCharacters(jsonString) {
+        let result = '';
+        let inString = false;
+        let i = 0;
+        
+        while (i < jsonString.length) {
+            const char = jsonString[i];
+            const code = char.charCodeAt(0);
+            
+            // Track string state
+            if (char === '"') {
+                // Count preceding backslashes to determine if this quote is escaped
+                let backslashCount = 0;
+                let j = i - 1;
+                while (j >= 0 && jsonString[j] === '\\') {
+                    backslashCount++;
+                    j--;
+                }
+                // If even number of backslashes (including 0), quote is not escaped
+                if (backslashCount % 2 === 0) {
+                    inString = !inString;
+                }
+            }
+            
+            // If we're inside a string, escape control characters
+            if (inString && code < 32) {
+                switch (code) {
+                    case 8: result += '\\b'; break;  // backspace
+                    case 9: result += '\\t'; break;  // tab
+                    case 10: result += '\\n'; break; // newline
+                    case 12: result += '\\f'; break; // form feed
+                    case 13: result += '\\r'; break; // carriage return
+                    default:
+                        // Other control characters - use unicode escape
+                        result += '\\u' + code.toString(16).padStart(4, '0');
+                        break;
+                }
+            } else {
+                result += char;
+            }
+            
+            i++;
+        }
+        
+        return result;
+    }
+
     // Extract events from embedded JSON data (modern Eventbrite)
-    extractEventsFromJson(html, parserConfig = {}) {
+    extractEventsFromJson(html, parserConfig = {}, htmlData = null) {
         const events = [];
         
         try {
             // Look for window.__SERVER_DATA__ which contains the event information
-            const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
+            // Use a more robust approach to extract the JSON by finding the start and matching braces
+            const startPattern = /window\.__SERVER_DATA__\s*=\s*/;
+            const startMatch = html.match(startPattern);
             
-            if (serverDataMatch && serverDataMatch[1]) {
-                try {
-                    const serverData = JSON.parse(serverDataMatch[1]);
-                    console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
+            if (startMatch) {
+                const startIndex = startMatch.index + startMatch[0].length;
+                const jsonString = this.extractJsonObject(html, startIndex);
+                
+                if (jsonString) {
+                    try {
+                        const serverData = JSON.parse(jsonString);
+                        console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
                     
                     // Check for events in view_data.events.future_events (organizer pages)
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
@@ -191,9 +313,12 @@ class EventbriteParser {
                         console.log(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (not included)`);
                     }
                     
-                } catch (parseError) {
-                    console.warn(`🎫 Eventbrite: Failed to parse window.__SERVER_DATA__: ${parseError.message}`);
-                    console.warn(`🎫 Eventbrite: JSON parse error at position: ${parseError.message.includes('position') ? parseError.message : 'unknown'}`);
+                    } catch (parseError) {
+                        console.warn(`🎫 Eventbrite: Failed to parse window.__SERVER_DATA__: ${parseError.message}`);
+                        console.warn(`🎫 Eventbrite: JSON parse error at position: ${parseError.message.includes('position') ? parseError.message : 'unknown'}`);
+                    }
+                } else {
+                    console.warn('🎫 Eventbrite: Could not extract valid JSON from window.__SERVER_DATA__');
                 }
             }
             
@@ -439,11 +564,17 @@ class EventbriteParser {
             console.log(`🎫 Eventbrite: Extracting additional event URLs from JSON data`);
             
             // Look for window.__SERVER_DATA__ which contains the event information
-            const serverDataMatch = html.match(/window\.__SERVER_DATA__\s*=\s*({[\s\S]*?});/);
+            // Use the same robust JSON extraction approach
+            const startPattern = /window\.__SERVER_DATA__\s*=\s*/;
+            const startMatch = html.match(startPattern);
             
-            if (serverDataMatch && serverDataMatch[1]) {
-                try {
-                    const serverData = JSON.parse(serverDataMatch[1]);
+            if (startMatch) {
+                const startIndex = startMatch.index + startMatch[0].length;
+                const jsonString = this.extractJsonObject(html, startIndex);
+                
+                if (jsonString) {
+                    try {
+                        const serverData = JSON.parse(jsonString);
                     
                     // Extract URLs from future_events
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
@@ -471,8 +602,11 @@ class EventbriteParser {
                     // Note: We only extract URLs from future events that we actually found
                     // Past events are not relevant for detail page processing
                     
-                } catch (error) {
-                    console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction:', error);
+                    } catch (error) {
+                        console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction:', error);
+                    }
+                } else {
+                    console.warn('🎫 Eventbrite: Could not extract valid JSON from window.__SERVER_DATA__ for URL extraction');
                 }
             }
             
