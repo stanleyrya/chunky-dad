@@ -36,6 +36,7 @@ class BearraccudaParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
+    // Eventbrite URLs found in events are returned as additional links for dynamic routing
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
             console.log(`🐻 Bearracuda: Parsing events from ${htmlData.url}`);
@@ -75,7 +76,14 @@ class BearraccudaParser {
                 console.log('🐻 Bearracuda: Detail pages required, extracting additional URLs...');
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             } else {
-                console.log('🐻 Bearracuda: Detail pages not required, skipping URL extraction');
+                console.log('🐻 Bearracuda: Detail pages not required, skipping Bearracuda URL extraction');
+            }
+            
+            // Always extract Eventbrite URLs from parsed events for dynamic routing
+            const eventbriteUrls = this.extractEventbriteUrlsFromEvents(events);
+            if (eventbriteUrls.length > 0) {
+                console.log(`🐻 Bearracuda: Found ${eventbriteUrls.length} Eventbrite URLs for dynamic routing`);
+                additionalLinks.push(...eventbriteUrls);
             }
             
             console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
@@ -882,6 +890,23 @@ class BearraccudaParser {
         }
         
         return urls;
+    }
+
+    // Extract Eventbrite URLs from parsed events for cross-parser chaining
+    extractEventbriteUrlsFromEvents(events) {
+        const eventbriteUrls = [];
+        
+        for (const event of events) {
+            if (event.eventbriteUrl && event.eventbriteUrl.trim()) {
+                const url = event.eventbriteUrl.trim();
+                if (!eventbriteUrls.includes(url)) {
+                    eventbriteUrls.push(url);
+                    console.log(`🐻 Bearracuda: Found Eventbrite URL for chaining: ${url}`);
+                }
+            }
+        }
+        
+        return eventbriteUrls;
     }
 
     // Validate if URL is a valid event URL
