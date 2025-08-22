@@ -635,7 +635,7 @@ class SharedCore {
              _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
          };
          
-         // Apply merge strategy for each field
+         // Apply merge strategy for each field that has a final value
          Object.keys(finalValues).forEach(fieldName => {
              if (fieldName.startsWith('_')) return; // Skip metadata fields
              
@@ -646,27 +646,14 @@ class SharedCore {
              
              switch (mergeStrategy) {
                  case 'clobber':
-                     // New value always overwrites existing
-                     if (newValue !== undefined && newValue !== null && newValue !== '') {
-                         mergedEvent[fieldName] = newValue;
-                     }
+                     mergedEvent[fieldName] = newValue;
                      break;
                  case 'preserve':
-                     // Keep existing value, only use new if existing is empty
-                     if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                         mergedEvent[fieldName] = existingValue;
-                     } else if (newValue !== undefined && newValue !== null && newValue !== '') {
-                         mergedEvent[fieldName] = newValue;
-                     }
+                     mergedEvent[fieldName] = existingValue || newValue;
                      break;
                  case 'upsert':
                  default:
-                     // Use new value if available, otherwise keep existing
-                     if (newValue !== undefined && newValue !== null && newValue !== '') {
-                         mergedEvent[fieldName] = newValue;
-                     } else if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                         mergedEvent[fieldName] = existingValue;
-                     }
+                     mergedEvent[fieldName] = newValue || existingValue;
                      break;
              }
          });
@@ -725,11 +712,11 @@ class SharedCore {
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
             // Core calendar fields that actually get saved (from mergedData + strategy application)
-            title: mergedData.title || existingEvent.title || newEvent.title,
+            title: mergedData.title,
             startDate: resolvedStartDate,
             endDate: resolvedEndDate,
             location: resolvedLocation,
-            notes: mergedData.notes || '',
+            notes: mergedData.notes,
             url: mergedData.url
             
             // Preserve existing event reference for saving
