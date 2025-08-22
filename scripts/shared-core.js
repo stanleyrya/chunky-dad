@@ -567,105 +567,55 @@ class SharedCore {
         return key;
     }
 
-    // Merge function that respects field-level priority strategies
+        // Merge function: first merge parser data, then merge with calendar
     mergeEventData(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || {};
         
-        // Parse existing notes to get all the stored field data
+        // Parse existing notes to get all the stored field data  
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
-        // First, determine final values for all fields using priority logic
-        const finalValues = { ...newEvent }; // Start with new event data
+        // Step 1: Create final scraped values by merging parser data using priorities
+        // (This handles Bearracuda + Eventbrite data merging)
+        const finalScrapedValues = { ...newEvent };
         
-        // Get all possible field names from new event, existing fields, and static fields
-        const allFieldNames = new Set([
-            ...Object.keys(newEvent),
-            ...Object.keys(existingFields),
-            ...Object.keys(newEvent._staticFields || {})
-        ]);
+        // Step 2: Merge final scraped values with existing calendar using merge strategies
+        const mergedEvent = {
+            ...existingEvent, // Start with existing (has calendar ID and save properties)
+            _fieldPriorities: fieldPriorities,
+            _action: newEvent._action || 'merge',
+            key: newEvent.key || existingEvent.key,
+            _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
+        };
         
-                 // Step 1: Determine the final scraped value using priority logic
-         allFieldNames.forEach(fieldName => {
-             if (fieldName.startsWith('_')) return; // Skip metadata fields
-             
-             const priorityConfig = fieldPriorities[fieldName];
-             const newValue = newEvent[fieldName];
-             const staticValue = newEvent._staticFields?.[fieldName];
-             
-             if (priorityConfig && priorityConfig.priority) {
-                 // Field has priority rules - determine which parser source to use
-                 const existingValue = existingEvent[fieldName] || existingFields[fieldName];
-                 const existingParser = existingEvent._parserConfig?.parser;
-                 const newParser = newEvent._parserConfig?.parser;
-                 
-                 let selectedValue = newValue; // Default to new scraped value
-                 
-                 // Check each priority source in order
-                 for (let i = 0; i < priorityConfig.priority.length; i++) {
-                     const prioritySource = priorityConfig.priority[i];
-                     let sourceValue = null;
-                     
-                     if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
-                         sourceValue = staticValue;
-                     } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
-                         sourceValue = newValue;
-                     } else if (prioritySource === existingParser && existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                         sourceValue = existingValue;
-                     }
-                     
-                     // Use the first (highest priority) source that has data
-                     if (sourceValue !== null) {
-                         selectedValue = sourceValue;
-                         break;
-                     }
-                 }
-                 
-                 finalValues[fieldName] = selectedValue;
-             } else {
-                 // No priority rules - just use the new scraped value
-                 finalValues[fieldName] = newValue;
-             }
-         });
-         
-         // Step 2: Apply merge strategies to combine final scraped values with existing calendar
-         const mergedEvent = {
-             ...existingEvent, // Start with existing (has calendar ID and save properties)
-             // Preserve metadata
-             _fieldPriorities: fieldPriorities,
-             _action: newEvent._action || 'merge',
-             key: newEvent.key || existingEvent.key,
-             _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
-         };
-         
-         // Apply merge strategy for each field that has a final value
-         Object.keys(finalValues).forEach(fieldName => {
-             if (fieldName.startsWith('_')) return; // Skip metadata fields
-             
-             const priorityConfig = fieldPriorities[fieldName];
-             const mergeStrategy = priorityConfig?.merge || 'upsert';
-             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
-             const newValue = finalValues[fieldName];
-             
-             switch (mergeStrategy) {
-                 case 'clobber':
-                     mergedEvent[fieldName] = newValue;
-                     break;
-                 case 'preserve':
-                     mergedEvent[fieldName] = existingValue || newValue;
-                     break;
-                 case 'upsert':
-                 default:
-                     mergedEvent[fieldName] = newValue || existingValue;
-                     break;
-             }
-         });
-         
-         // Also add any existing fields that weren't in the scraped data
-         Object.keys(existingFields).forEach(fieldName => {
-             if (!mergedEvent[fieldName] && existingFields[fieldName]) {
-                 mergedEvent[fieldName] = existingFields[fieldName];
-             }
-         });
+        // Apply merge strategies (ignore priorities, just use merge strategy)
+        Object.keys(finalScrapedValues).forEach(fieldName => {
+            if (fieldName.startsWith('_')) return; // Skip metadata fields
+            
+            const priorityConfig = fieldPriorities[fieldName];
+            const mergeStrategy = priorityConfig?.merge || 'upsert';
+            const existingValue = existingEvent[fieldName] || existingFields[fieldName];
+            const scrapedValue = finalScrapedValues[fieldName];
+            
+            switch (mergeStrategy) {
+                case 'clobber':
+                    mergedEvent[fieldName] = scrapedValue;
+                    break;
+                case 'preserve':
+                    mergedEvent[fieldName] = existingValue || scrapedValue;
+                    break;
+                case 'upsert':
+                default:
+                    mergedEvent[fieldName] = scrapedValue || existingValue;
+                    break;
+            }
+        });
+        
+        // Add any existing fields that weren't in scraped data
+        Object.keys(existingFields).forEach(fieldName => {
+            if (!mergedEvent[fieldName] && existingFields[fieldName]) {
+                mergedEvent[fieldName] = existingFields[fieldName];
+            }
+        });
         
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
