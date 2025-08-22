@@ -725,12 +725,12 @@ class SharedCore {
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
             // Core calendar fields that actually get saved (from mergedData + strategy application)
-            title: mergedData.title,
+            title: mergedData.title || existingEvent.title || newEvent.title,
             startDate: resolvedStartDate,
             endDate: resolvedEndDate,
             location: resolvedLocation,
-            notes: mergedData.notes,
-            url: mergedData.url, // This comes from the mergeEventData result which handles website->url mapping
+            notes: mergedData.notes || '',
+            url: mergedData.url
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
