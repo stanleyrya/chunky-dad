@@ -574,76 +574,73 @@ class SharedCore {
         // Parse existing notes to get all the stored field data
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
-        // Start with the existing event (has calendar ID and save properties)
-        const mergedEvent = { 
-            ...existingEvent,
-            // Preserve existing metadata and priorities
-            _fieldPriorities: fieldPriorities,
-            _action: newEvent._action || 'merge'
-        };
+        // First, determine final values for all fields using priority logic
+        const finalValues = { ...newEvent }; // Start with new event data
         
-        // Merge in all new event fields (fresh scraped data)
-        Object.keys(newEvent).forEach(fieldName => {
-            if (!fieldName.startsWith('_') && newEvent[fieldName] !== undefined && newEvent[fieldName] !== null && newEvent[fieldName] !== '') {
-                mergedEvent[fieldName] = newEvent[fieldName];
-            }
-        });
+        // Get all possible field names from new event, existing fields, and static fields
+        const allFieldNames = new Set([
+            ...Object.keys(newEvent),
+            ...Object.keys(existingFields),
+            ...Object.keys(newEvent._staticFields || {})
+        ]);
         
-        // Also merge in existing fields from notes that aren't in new event
-        Object.keys(existingFields).forEach(fieldName => {
-            if (!mergedEvent[fieldName] && existingFields[fieldName]) {
-                mergedEvent[fieldName] = existingFields[fieldName];
-            }
-        });
-        
-        // Apply priority strategies for fields that have priority rules
-        Object.keys(fieldPriorities).forEach(fieldName => {
-            const priorityConfig = fieldPriorities[fieldName];
-            if (!priorityConfig || !priorityConfig.priority) return;
+        // Apply priority logic for each field
+        allFieldNames.forEach(fieldName => {
+            if (fieldName.startsWith('_')) return; // Skip metadata fields
             
+            const priorityConfig = fieldPriorities[fieldName];
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const newValue = newEvent[fieldName];
             const staticValue = newEvent._staticFields?.[fieldName];
             
-            // Determine which parser provided each value
-            const existingParser = existingEvent._parserConfig?.parser;
-            const newParser = newEvent._parserConfig?.parser;
-            
-            // Apply priority logic: find the highest priority source that has data
-            let selectedValue = existingValue; // Default to existing
-            
-            // Check each priority source in order
-            for (let i = 0; i < priorityConfig.priority.length; i++) {
-                const prioritySource = priorityConfig.priority[i];
-                let sourceValue = null;
+            if (priorityConfig && priorityConfig.priority) {
+                // Field has priority rules - apply them
+                const existingParser = existingEvent._parserConfig?.parser;
+                const newParser = newEvent._parserConfig?.parser;
                 
-                if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
-                    sourceValue = staticValue;
-                } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
-                    sourceValue = newValue;
-                } else if (prioritySource === existingParser && existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                    sourceValue = existingValue;
+                let selectedValue = existingValue; // Default to existing
+                
+                // Check each priority source in order
+                for (let i = 0; i < priorityConfig.priority.length; i++) {
+                    const prioritySource = priorityConfig.priority[i];
+                    let sourceValue = null;
+                    
+                    if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
+                        sourceValue = staticValue;
+                    } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
+                        sourceValue = newValue;
+                    } else if (prioritySource === existingParser && existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                        sourceValue = existingValue;
+                    }
+                    
+                    // Use the first (highest priority) source that has data
+                    if (sourceValue !== null) {
+                        selectedValue = sourceValue;
+                        break;
+                    }
                 }
                 
-                // Use the first (highest priority) source that has data
-                if (sourceValue !== null) {
-                    selectedValue = sourceValue;
-                    break;
+                finalValues[fieldName] = selectedValue;
+            } else {
+                // No priority rules - use simple upsert logic (new overwrites existing, existing fills gaps)
+                if (newValue !== undefined && newValue !== null && newValue !== '') {
+                    finalValues[fieldName] = newValue;
+                } else if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                    finalValues[fieldName] = existingValue;
                 }
             }
-            
-            mergedEvent[fieldName] = selectedValue;
         });
         
-        // Keep the existing calendar core fields (title, dates, location) unless priority rules override
-        if (!fieldPriorities.title) mergedEvent.title = existingEvent.title;
-        if (!fieldPriorities.startDate) mergedEvent.startDate = existingEvent.startDate;
-        if (!fieldPriorities.endDate) mergedEvent.endDate = existingEvent.endDate;
-        if (!fieldPriorities.location) mergedEvent.location = existingEvent.location;
-        
-        // Ensure we preserve the key and other essential metadata
-        mergedEvent.key = newEvent.key || existingEvent.key;
-        mergedEvent._parserConfig = newEvent._parserConfig || existingEvent._parserConfig;
+        // Now merge the final values with the existing calendar event
+        const mergedEvent = {
+            ...existingEvent, // Start with existing (has calendar ID and save properties)
+            ...finalValues,   // Apply all the final field values
+            // Preserve metadata
+            _fieldPriorities: fieldPriorities,
+            _action: newEvent._action || 'merge',
+            key: newEvent.key || existingEvent.key,
+            _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
+        };
         
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
