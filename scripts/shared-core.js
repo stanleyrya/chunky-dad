@@ -574,15 +574,22 @@ class SharedCore {
         // Parse existing notes to get all the stored field data
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
-        // Start with the new event (has all the fresh scraped data)
+        // Start with the existing event (has calendar ID and save properties)
         const mergedEvent = { 
-            ...newEvent,
+            ...existingEvent,
             // Preserve existing metadata and priorities
             _fieldPriorities: fieldPriorities,
             _action: newEvent._action || 'merge'
         };
         
-        // Merge in existing fields that aren't in the new event
+        // Merge in all new event fields (fresh scraped data)
+        Object.keys(newEvent).forEach(fieldName => {
+            if (!fieldName.startsWith('_') && newEvent[fieldName] !== undefined && newEvent[fieldName] !== null && newEvent[fieldName] !== '') {
+                mergedEvent[fieldName] = newEvent[fieldName];
+            }
+        });
+        
+        // Also merge in existing fields from notes that aren't in new event
         Object.keys(existingFields).forEach(fieldName => {
             if (!mergedEvent[fieldName] && existingFields[fieldName]) {
                 mergedEvent[fieldName] = existingFields[fieldName];
