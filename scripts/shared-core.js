@@ -221,9 +221,9 @@ class SharedCore {
                 }
                 
                 if (parseResult.events) {
-                    // Apply field merge strategies to filter out fields that should be preserved
+                    // Apply field priorities to determine which parser data to trust
                     const filteredEvents = parseResult.events.map(event => 
-                        this.applyFieldMergeStrategies(event, parserConfig)
+                        this.applyFieldPriorities(event, parserConfig, mainConfig)
                     );
                     
                     // Enrich events with location data (Google Maps links, city extraction)
@@ -567,74 +567,78 @@ class SharedCore {
         return key;
     }
 
-    // Enhanced merge function that respects field-level merge strategies
+    // Enhanced merge function that respects field-level priority strategies
     mergeEventData(existingEvent, newEvent) {
-        const fieldStrategies = newEvent._fieldMergeStrategies || {};
+        const fieldPriorities = newEvent._fieldPriorities || {};
         
         // Parse existing notes to extract current field values
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
         // Create a merged event object by starting with existing event
-        // IMPORTANT: seed with fields parsed from existing notes so 'preserve' fields remain in notes
         const mergedEvent = {
             ...existingEvent,
             ...existingFields,
-            // Preserve existing metadata and strategies
-            _fieldMergeStrategies: fieldStrategies,
+            // Preserve existing metadata and priorities
+            _fieldPriorities: fieldPriorities,
             _action: newEvent._action || 'merge'
         };
         
-        // Apply merge strategies for each field in the new event
-        Object.keys(newEvent).forEach(key => {
-            // Skip internal metadata fields
-            if (key.startsWith('_')) return;
+        // Apply priority strategies for each field that has priority rules
+        Object.keys(fieldPriorities).forEach(fieldName => {
+            const priorityConfig = fieldPriorities[fieldName];
+            if (!priorityConfig || !priorityConfig.priority) return;
             
-            // Get strategy for this field, with field name variations support
-            let strategy = (fieldStrategies[key] !== undefined) ? fieldStrategies[key] : 'upsert';
+            const existingValue = existingEvent[fieldName] || existingFields[fieldName];
+            const newValue = newEvent[fieldName];
+            
+            // Determine which parser provided each value
+            const existingParser = existingEvent._parserConfig?.parser;
+            const newParser = newEvent._parserConfig?.parser;
+            
+            // Apply priority logic: find the highest priority parser that has data
+            let selectedValue = existingValue; // Default to existing
+            let selectedSource = 'existing';
+            
+            // Check if new parser has higher priority than existing parser
+            if (newValue !== undefined && newValue !== null && newValue !== '') {
+                const newParserPriority = priorityConfig.priority.indexOf(newParser);
+                const existingParserPriority = existingParser ? priorityConfig.priority.indexOf(existingParser) : -1;
+                
+                // Use new value if:
+                // 1. New parser has higher priority (lower index), OR
+                // 2. Existing parser is not in priority list but new parser is, OR
+                // 3. No existing value
+                if ((newParserPriority >= 0 && (newParserPriority < existingParserPriority || existingParserPriority === -1)) ||
+                    (!existingValue || existingValue === '')) {
+                    selectedValue = newValue;
+                    selectedSource = 'new';
+                }
+            }
+            
+            mergedEvent[fieldName] = selectedValue;
+        });
+        
+        // For fields without priority rules, use simple merge logic
+        Object.keys(newEvent).forEach(key => {
+            // Skip internal metadata fields and fields already handled by priority logic
+            if (key.startsWith('_') || fieldPriorities[key]) return;
             
             const existingValue = existingEvent[key] || existingFields[key];
             const newValue = newEvent[key];
             
-            // Apply merge strategy
-            switch (strategy) {
-                case 'clobber':
-                    // Always use new value if it exists
-                    if (newValue !== undefined && newValue !== null && newValue !== '') {
-                        mergedEvent[key] = newValue;
-                    }
-                    break;
-                    
-                case 'upsert':
-                    // Use new value only if existing value is missing/empty
-                    if ((!existingValue || existingValue === '') && 
-                        newValue !== undefined && newValue !== null && newValue !== '') {
-                        mergedEvent[key] = newValue;
-                    }
-                    break;
-                    
-                case 'preserve':
-                default:
-                    // Keep existing value, don't change anything
-                    // mergedEvent already has existing values (including those parsed from notes)
-                    break;
+            // Default to upsert behavior for fields without priority rules
+            if (!existingValue || existingValue === '' || existingValue === null) {
+                if (newValue !== undefined && newValue !== null && newValue !== '') {
+                    mergedEvent[key] = newValue;
+                }
             }
         });
         
-        // Use the existing formatEventNotes function to generate notes
-        const notes = this.formatEventNotes(mergedEvent);
+        // Ensure we preserve the key and other essential metadata
+        mergedEvent.key = newEvent.key || existingEvent.key;
+        mergedEvent._parserConfig = newEvent._parserConfig || existingEvent._parserConfig;
         
-        return {
-            title: mergedEvent.title,
-            startDate: mergedEvent.startDate,
-            endDate: mergedEvent.endDate,
-            location: mergedEvent.location,
-            notes: notes,
-            url: mergedEvent.url, // Now consistent across all parsers
-            city: mergedEvent.city || newEvent.city || existingEvent.city, // Preserve city field
-            key: mergedEvent.key || newEvent.key,
-            _parserConfig: mergedEvent._parserConfig || newEvent._parserConfig,
-            _fieldMergeStrategies: mergedEvent._fieldMergeStrategies
-        };
+        return mergedEvent;
     }
 
     // Create complete merged event object that represents exactly what will be saved
@@ -644,11 +648,20 @@ class SharedCore {
         // Use the existing merge function to do all the heavy lifting
         const mergedData = this.mergeEventData(existingEvent, newEvent);
         
-        // Helper to apply merge strategy for core calendar fields
-        const fieldStrategies = newEvent._fieldMergeStrategies || {};
-        const applyStrategy = (fieldName, existingValue, newValue) => {
-            const strategy = (fieldStrategies[fieldName] !== undefined) ? fieldStrategies[fieldName] : 'upsert';
-            switch (strategy) {
+        // Helper to apply priority strategy for core calendar fields
+        const fieldPriorities = newEvent._fieldPriorities || {};
+        const applyPriority = (fieldName, existingValue, newValue) => {
+            const priorityConfig = fieldPriorities[fieldName];
+            if (!priorityConfig || !priorityConfig.priority) {
+                // Default to upsert behavior for fields without priority rules
+                return (existingValue !== undefined && existingValue !== null && existingValue !== '')
+                    ? existingValue
+                    : ((newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue);
+            }
+            
+            // Apply priority logic based on merge strategy from calendar conflict
+            const mergeStrategy = priorityConfig.merge || 'upsert';
+            switch (mergeStrategy) {
                 case 'clobber':
                     return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
                 case 'upsert':
@@ -661,10 +674,10 @@ class SharedCore {
             }
         };
         
-        // Resolve calendar core fields using strategies
-        const resolvedStartDate = applyStrategy('startDate', existingEvent.startDate, newEvent.startDate);
-        const resolvedEndDate = applyStrategy('endDate', existingEvent.endDate, newEvent.endDate || newEvent.startDate);
-        const resolvedLocation = applyStrategy('location', existingEvent.location, newEvent.location);
+        // Resolve calendar core fields using priority strategies
+        const resolvedStartDate = applyPriority('startDate', existingEvent.startDate, newEvent.startDate);
+        const resolvedEndDate = applyPriority('endDate', existingEvent.endDate, newEvent.endDate || newEvent.startDate);
+        const resolvedLocation = applyPriority('location', existingEvent.location, newEvent.location);
         
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
@@ -685,14 +698,14 @@ class SharedCore {
             key: newEvent.key,
             source: newEvent.source,
             _parserConfig: newEvent._parserConfig,
-            _fieldMergeStrategies: newEvent._fieldMergeStrategies
+            _fieldPriorities: newEvent._fieldPriorities
         };
         
         // Parse the final notes to get all the merged fields for display
         const finalFields = this.parseNotesIntoFields(finalEvent.notes);
         
-        // Prepare strategy and existing fields for comparison blocks below
-        const fieldStrategiesForCompare = newEvent._fieldMergeStrategies || {};
+        // Prepare priority config and existing fields for comparison blocks below
+        const fieldPrioritiesForCompare = newEvent._fieldPriorities || {};
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
 
         // Add all fields from notes to the final event for display purposes
@@ -744,7 +757,7 @@ class SharedCore {
         finalEvent._mergeInfo = {
             extractedFields: {},
             mergedFields: {},
-            strategy: fieldStrategiesForCompare
+            strategy: fieldPrioritiesForCompare
         };
         
         // Track which fields were merged and how
@@ -785,14 +798,16 @@ class SharedCore {
         
         finalEvent._changes = changes;
         
-        // Add extracted fields back to the event object for fields with 'preserve' strategy
+        // Add extracted fields back to the event object for priority-based merging
         // This ensures the object structure matches what gets saved and makes debugging easier
-        if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldMergeStrategies) {
+        if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldPriorities) {
             Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
-                const strategy = finalEvent._fieldMergeStrategies[fieldName];
-                // Only add fields that were preserved (not overridden by new values)
-                if (strategy === 'preserve' && !finalEvent[fieldName]) {
-                    finalEvent[fieldName] = fieldInfo.value;
+                const priorityConfig = finalEvent._fieldPriorities[fieldName];
+                // Add fields that don't have priority rules or have preserve merge strategy
+                if (!priorityConfig || priorityConfig.merge === 'preserve') {
+                    if (!finalEvent[fieldName]) {
+                        finalEvent[fieldName] = fieldInfo.value;
+                    }
                 }
             });
         }
@@ -1347,37 +1362,47 @@ class SharedCore {
         return normalized;
     }
     
-    // Apply field-level merge strategies to filter out fields that should be preserved
-    // This prevents parsers from including fields that should be kept from existing events
-    applyFieldMergeStrategies(event, parserConfig) {
+    // Apply field-level priority strategies from the global config
+    // This determines which parser's data to trust for each field
+    applyFieldPriorities(event, parserConfig, mainConfig) {
         // Always attach parser config
         event._parserConfig = parserConfig;
         
-        // Attach field merge strategies if metadata is configured
+        // Get the global field priorities configuration
+        const fieldPriorities = mainConfig?.config?.fieldPriorities || {};
+        
+        // Store field priorities for later use
+        if (!event._fieldPriorities) {
+            event._fieldPriorities = {};
+        }
+        
+        // Copy field priorities to event for later use
+        Object.keys(fieldPriorities).forEach(fieldName => {
+            event._fieldPriorities[fieldName] = fieldPriorities[fieldName];
+        });
+        
+        // Apply source-specific metadata values from parser config
         if (parserConfig?.metadata) {
             Object.keys(parserConfig.metadata).forEach(key => {
                 const metaValue = parserConfig.metadata[key];
-                if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
-                    if (!event._fieldMergeStrategies) {
-                        event._fieldMergeStrategies = {};
-                    }
-                    event._fieldMergeStrategies[key] = metaValue.merge || 'preserve';
+                if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
+                    event[key] = metaValue.value;
                 }
             });
         }
         
         // Return the event with all fields intact
-        // The actual merge logic will be handled later based on the strategies
+        // The actual priority logic will be handled later during event merging
         return event;
     }
     
     // Format event for calendar integration
     formatEventForCalendar(event) {
         // Build a view of the event that excludes fields explicitly marked as 'preserve'
-        const strategies = event._fieldMergeStrategies || {};
+        const priorities = event._fieldPriorities || {};
         const eventForNotes = { ...event };
         Object.keys(eventForNotes).forEach(key => {
-            if (!key.startsWith('_') && strategies[key] === 'preserve') {
+            if (!key.startsWith('_') && priorities[key]?.merge === 'preserve') {
                 delete eventForNotes[key];
             }
         });
@@ -1393,7 +1418,7 @@ class SharedCore {
             city: event.city || 'default', // Include city for calendar selection
             key: event.key, // Key should already be set during deduplication
             _parserConfig: event._parserConfig, // Preserve parser config
-            _fieldMergeStrategies: event._fieldMergeStrategies // Preserve field strategies
+            _fieldPriorities: event._fieldPriorities // Preserve field priorities
         };
         
         // Copy over all other fields except those explicitly marked as 'preserve'
@@ -1419,7 +1444,7 @@ class SharedCore {
         const excludeFields = new Set([
             'title', 'startDate', 'endDate', 'location', 'address', 'coordinates', 'notes',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldMergeStrategies',
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name' // These are usually duplicates of title
         ]);
