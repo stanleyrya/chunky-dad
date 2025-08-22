@@ -1666,7 +1666,9 @@ class SharedCore {
         }
         
         // Check for time conflicts that can be merged
+        // Ignore existing events with empty titles as they shouldn't block new events
         const timeConflicts = existingEventsData.filter(existing => 
+            existing.title && existing.title.trim() !== '' &&
             this.doDatesOverlap(existing.startDate, existing.endDate, 
                                event.startDate, event.endDate || event.startDate)
         );
@@ -1843,10 +1845,7 @@ class SharedCore {
             });
             
             // Process direct fields from conflict object
-            // Handle 'location' -> 'bar' mapping
-            if (conflict.location && !existingFieldsFromNotes.bar) {
-                applyMergeStrategy('bar', conflict.location, event.bar);
-            }
+            // Note: Do NOT map conflict.location to event.bar as location contains coordinates, not venue name
             
             // Process other direct fields that might exist on conflict
             const directFields = ['title', 'description', 'startDate', 'endDate', 'recurrence', 'eventType', 'recurring'];
