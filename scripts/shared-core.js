@@ -669,7 +669,7 @@ class SharedCore {
             endDate: resolvedEndDate,
             location: resolvedLocation,
             notes: mergedData.notes,
-            url: mergedData.url
+            url: mergedData.url,
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
