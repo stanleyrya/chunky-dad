@@ -1396,16 +1396,11 @@ class SharedCore {
                     
                     // Check if "static" has priority for this field
                     if (priorityConfig && priorityConfig.priority && priorityConfig.priority.includes('static')) {
-                        const staticPriority = priorityConfig.priority.indexOf('static');
-                        const currentParserPriority = priorityConfig.priority.indexOf(parserConfig.parser);
-                        
-                        // Use static value if it has higher priority than current parser
-                        if (staticPriority >= 0 && (staticPriority < currentParserPriority || currentParserPriority === -1)) {
-                            event[key] = metaValue.value;
-                            // Mark this field as coming from static source
-                            if (!event._staticFields) event._staticFields = {};
-                            event._staticFields[key] = metaValue.value;
-                        }
+                        // Apply static value since it's in the priority list
+                        event[key] = metaValue.value;
+                        // Mark this field as coming from static source
+                        if (!event._staticFields) event._staticFields = {};
+                        event._staticFields[key] = metaValue.value;
                     } else {
                         // Fallback: if no priority config, apply static value (backward compatibility)
                         event[key] = metaValue.value;
