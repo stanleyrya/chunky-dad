@@ -303,26 +303,41 @@ class SharedCore {
                 await displayAdapter.logInfo(`SYSTEM: Skipping already processed URL: ${url}`);
                 continue;
             }
+
             processedUrls.add(url);
 
             try {
                 const htmlData = await httpAdapter.fetchData(url);
                 
-                // Create a modified parser config that controls further URL discovery based on depth
-                // If we're at max depth, disable further URL discovery entirely
-                const shouldAllowMoreUrls = currentDepth < maxDepth;
-                const detailPageConfig = {
-                    ...parserConfig,
-                    requireDetailPages: shouldAllowMoreUrls,
-                    maxAdditionalUrls: shouldAllowMoreUrls ? parserConfig.maxAdditionalUrls : 0
-                };
-                
                 // Detect parser for this specific URL (allows mid-run switching)
                 const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
                 const urlParser = parsers[urlParserName];
                 
+                // CRITICAL FIX: Look up the correct parser configuration for the detected parser type
+                // This ensures secondary parsers (like eventbrite) get their proper merge strategies
+                // when called from primary parsers (like bearracuda)
+                let detailPageConfig = parserConfig; // Default fallback
+                
+                if (urlParserName !== parserConfig.parser && mainConfig?.parsers) {
+                    // Find the configuration for the detected parser type
+                    const matchingParserConfig = mainConfig.parsers.find(p => p.parser === urlParserName);
+                    if (matchingParserConfig) {
+                        await displayAdapter.logInfo(`SYSTEM: Using ${urlParserName} parser config for ${url} (switched from ${parserConfig.parser})`);
+                        detailPageConfig = matchingParserConfig;
+                    }
+                }
+                
+                // Create a modified parser config that controls further URL discovery based on depth
+                // If we're at max depth, disable further URL discovery entirely
+                const shouldAllowMoreUrls = currentDepth < maxDepth;
+                const finalDetailPageConfig = {
+                    ...detailPageConfig,
+                    requireDetailPages: shouldAllowMoreUrls,
+                    maxAdditionalUrls: shouldAllowMoreUrls ? detailPageConfig.maxAdditionalUrls : 0
+                };
+                
                 // Pass detail page config and city config separately
-                const parseResult = urlParser.parseEvents(htmlData, detailPageConfig, mainConfig?.cities || null);
+                const parseResult = urlParser.parseEvents(htmlData, finalDetailPageConfig, mainConfig?.cities || null);
                 
                 // Handle additional URLs if depth allows
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
@@ -339,7 +354,7 @@ class SharedCore {
                                 existingEvents,
                                 deduplicatedUrls,
                                 parsers,
-                                parserConfig,
+                                finalDetailPageConfig, // Use the correct config for recursive calls too
                                 httpAdapter,
                                 displayAdapter,
                                 processedUrls,
@@ -354,49 +369,16 @@ class SharedCore {
                 
                 // Process detail page events - either enrich existing or add new events
                 if (parseResult.events && parseResult.events.length > 0) {
-                    // Apply field merge strategies before using detail event
-                    const filteredEvents = parseResult.events.map(event => 
-                        this.applyFieldMergeStrategies(event, parserConfig)
-                    );
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
                     
-                    // Process each event from the detail page (usually just one)
-                    for (const detailEvent of filteredEvents) {
-                    
-                    // Find the matching existing event by URL
-                    const matchingEvent = existingEvents.find(event => 
-                        event.url === detailEvent.url ||
-                        event.url === url ||
-                        (event.title && detailEvent.title && event.title.trim() === detailEvent.title.trim())
-                    );
-                    
-                    if (matchingEvent) {
-                        // Enrich the existing event with additional details from the detail page
-                        Object.keys(detailEvent).forEach(key => {
-                            // Only update if the existing event doesn't have this property or it's empty/null
-                            if (!matchingEvent[key] || matchingEvent[key] === '' || matchingEvent[key] === null) {
-                                matchingEvent[key] = detailEvent[key];
-                            }
-                        });
-                        
-                        // Re-enrich location data since we may have new address/venue info
-                        this.enrichEventLocation(matchingEvent);
-                        
-                        await displayAdapter.logInfo(`SYSTEM: Enriched event "${matchingEvent.title}" with detail page data and location info`);
-                    } else {
-                        // No matching existing event found - add this as a new event
-                        // This handles parsers like Bearracuda that create events primarily from detail pages
-                        this.enrichEventLocation(detailEvent);
-                        existingEvents.push(detailEvent);
-                        await displayAdapter.logInfo(`SYSTEM: Added new event "${detailEvent.title}" from detail page ${url}`);
-                    }
-                    } // End for loop processing each detail event
+                    // Add these events to the existing events collection for potential merging
+                    existingEvents.push(...parseResult.events);
+                } else {
+                    await displayAdapter.logInfo(`SYSTEM: No new events found on detail page ${url}`);
                 }
+                
             } catch (error) {
-                await displayAdapter.logWarn(`SYSTEM: Failed to process detail page URL: ${url}`);
-                await displayAdapter.logError(`SYSTEM: Detail page error: ${error.message || error}`);
-                if (error.stack) {
-                    await displayAdapter.logError(`SYSTEM: Detail page stack trace: ${error.stack}`);
-                }
+                await displayAdapter.logError(`SYSTEM: Failed to process detail page ${url}: ${error.message}`);
             }
         }
     }
