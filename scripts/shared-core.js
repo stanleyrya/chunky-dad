@@ -584,63 +584,99 @@ class SharedCore {
             ...Object.keys(newEvent._staticFields || {})
         ]);
         
-        // Apply priority logic for each field
-        allFieldNames.forEach(fieldName => {
-            if (fieldName.startsWith('_')) return; // Skip metadata fields
-            
-            const priorityConfig = fieldPriorities[fieldName];
-            const existingValue = existingEvent[fieldName] || existingFields[fieldName];
-            const newValue = newEvent[fieldName];
-            const staticValue = newEvent._staticFields?.[fieldName];
-            
-            if (priorityConfig && priorityConfig.priority) {
-                // Field has priority rules - apply them
-                const existingParser = existingEvent._parserConfig?.parser;
-                const newParser = newEvent._parserConfig?.parser;
-                
-                let selectedValue = existingValue; // Default to existing
-                
-                // Check each priority source in order
-                for (let i = 0; i < priorityConfig.priority.length; i++) {
-                    const prioritySource = priorityConfig.priority[i];
-                    let sourceValue = null;
-                    
-                    if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
-                        sourceValue = staticValue;
-                    } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
-                        sourceValue = newValue;
-                    } else if (prioritySource === existingParser && existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                        sourceValue = existingValue;
-                    }
-                    
-                    // Use the first (highest priority) source that has data
-                    if (sourceValue !== null) {
-                        selectedValue = sourceValue;
-                        break;
-                    }
-                }
-                
-                finalValues[fieldName] = selectedValue;
-            } else {
-                // No priority rules - use simple upsert logic (new overwrites existing, existing fills gaps)
-                if (newValue !== undefined && newValue !== null && newValue !== '') {
-                    finalValues[fieldName] = newValue;
-                } else if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                    finalValues[fieldName] = existingValue;
-                }
-            }
-        });
-        
-        // Now merge the final values with the existing calendar event
-        const mergedEvent = {
-            ...existingEvent, // Start with existing (has calendar ID and save properties)
-            ...finalValues,   // Apply all the final field values
-            // Preserve metadata
-            _fieldPriorities: fieldPriorities,
-            _action: newEvent._action || 'merge',
-            key: newEvent.key || existingEvent.key,
-            _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
-        };
+                 // Step 1: Determine the final scraped value using priority logic
+         allFieldNames.forEach(fieldName => {
+             if (fieldName.startsWith('_')) return; // Skip metadata fields
+             
+             const priorityConfig = fieldPriorities[fieldName];
+             const newValue = newEvent[fieldName];
+             const staticValue = newEvent._staticFields?.[fieldName];
+             
+             if (priorityConfig && priorityConfig.priority) {
+                 // Field has priority rules - determine which scraped source to use
+                 const newParser = newEvent._parserConfig?.parser;
+                 
+                 let selectedValue = newValue; // Default to new scraped value
+                 
+                 // Check each priority source in order (only for scraped sources, not existing calendar)
+                 for (let i = 0; i < priorityConfig.priority.length; i++) {
+                     const prioritySource = priorityConfig.priority[i];
+                     let sourceValue = null;
+                     
+                     if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
+                         sourceValue = staticValue;
+                     } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
+                         sourceValue = newValue;
+                     }
+                     
+                     // Use the first (highest priority) scraped source that has data
+                     if (sourceValue !== null) {
+                         selectedValue = sourceValue;
+                         break;
+                     }
+                 }
+                 
+                 finalValues[fieldName] = selectedValue;
+             } else {
+                 // No priority rules - just use the new scraped value
+                 if (newValue !== undefined && newValue !== null && newValue !== '') {
+                     finalValues[fieldName] = newValue;
+                 }
+             }
+         });
+         
+         // Step 2: Apply merge strategies to combine final scraped values with existing calendar
+         const mergedEvent = {
+             ...existingEvent, // Start with existing (has calendar ID and save properties)
+             // Preserve metadata
+             _fieldPriorities: fieldPriorities,
+             _action: newEvent._action || 'merge',
+             key: newEvent.key || existingEvent.key,
+             _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
+         };
+         
+         // Apply merge strategy for each field
+         Object.keys(finalValues).forEach(fieldName => {
+             if (fieldName.startsWith('_')) return; // Skip metadata fields
+             
+             const priorityConfig = fieldPriorities[fieldName];
+             const mergeStrategy = priorityConfig?.merge || 'upsert';
+             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
+             const newValue = finalValues[fieldName];
+             
+             switch (mergeStrategy) {
+                 case 'clobber':
+                     // New value always overwrites existing
+                     if (newValue !== undefined && newValue !== null && newValue !== '') {
+                         mergedEvent[fieldName] = newValue;
+                     }
+                     break;
+                 case 'preserve':
+                     // Keep existing value, only use new if existing is empty
+                     if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                         mergedEvent[fieldName] = existingValue;
+                     } else if (newValue !== undefined && newValue !== null && newValue !== '') {
+                         mergedEvent[fieldName] = newValue;
+                     }
+                     break;
+                 case 'upsert':
+                 default:
+                     // Use new value if available, otherwise keep existing
+                     if (newValue !== undefined && newValue !== null && newValue !== '') {
+                         mergedEvent[fieldName] = newValue;
+                     } else if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                         mergedEvent[fieldName] = existingValue;
+                     }
+                     break;
+             }
+         });
+         
+         // Also add any existing fields that weren't in the scraped data
+         Object.keys(existingFields).forEach(fieldName => {
+             if (!mergedEvent[fieldName] && existingFields[fieldName]) {
+                 mergedEvent[fieldName] = existingFields[fieldName];
+             }
+         });
         
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
