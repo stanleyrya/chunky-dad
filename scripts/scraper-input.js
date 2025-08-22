@@ -29,9 +29,9 @@ const scraperConfig = {
         include: ["eventbrite\\.com\\/e\\/"]
       },
       fieldPriorities: {
-        title: { priority: ["eventbrite"], merge: "clobber" },
-        shortName: { priority: ["eventbrite"], merge: "upsert" },
-        instagram: { priority: ["eventbrite"], merge: "clobber" },
+        title: { priority: ["static"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["eventbrite"], merge: "upsert" },
         bar: { priority: ["eventbrite"], merge: "clobber" },
         address: { priority: ["eventbrite"], merge: "clobber" },
@@ -65,8 +65,8 @@ const scraperConfig = {
       },
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "upsert" },
-        shortName: { priority: ["eventbrite"], merge: "upsert" },
-        instagram: { priority: ["eventbrite"], merge: "upsert" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "upsert" },
         description: { priority: ["eventbrite"], merge: "upsert" },
         bar: { priority: ["eventbrite"], merge: "clobber" },
         address: { priority: ["eventbrite"], merge: "clobber" },

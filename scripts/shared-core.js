@@ -590,28 +590,34 @@ class SharedCore {
             
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const newValue = newEvent[fieldName];
+            const staticValue = newEvent._staticFields?.[fieldName];
             
             // Determine which parser provided each value
             const existingParser = existingEvent._parserConfig?.parser;
             const newParser = newEvent._parserConfig?.parser;
             
-            // Apply priority logic: find the highest priority parser that has data
+            // Apply priority logic: find the highest priority source that has data
             let selectedValue = existingValue; // Default to existing
             let selectedSource = 'existing';
             
-            // Check if new parser has higher priority than existing parser
-            if (newValue !== undefined && newValue !== null && newValue !== '') {
-                const newParserPriority = priorityConfig.priority.indexOf(newParser);
-                const existingParserPriority = existingParser ? priorityConfig.priority.indexOf(existingParser) : -1;
+            // Check each priority source in order
+            for (let i = 0; i < priorityConfig.priority.length; i++) {
+                const prioritySource = priorityConfig.priority[i];
+                let sourceValue = null;
                 
-                // Use new value if:
-                // 1. New parser has higher priority (lower index), OR
-                // 2. Existing parser is not in priority list but new parser is, OR
-                // 3. No existing value
-                if ((newParserPriority >= 0 && (newParserPriority < existingParserPriority || existingParserPriority === -1)) ||
-                    (!existingValue || existingValue === '')) {
-                    selectedValue = newValue;
-                    selectedSource = 'new';
+                if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
+                    sourceValue = staticValue;
+                } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
+                    sourceValue = newValue;
+                } else if (prioritySource === existingParser && existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                    sourceValue = existingValue;
+                }
+                
+                // Use the first (highest priority) source that has data
+                if (sourceValue !== null) {
+                    selectedValue = sourceValue;
+                    selectedSource = prioritySource;
+                    break;
                 }
             }
             
@@ -1381,12 +1387,31 @@ class SharedCore {
             event._fieldPriorities[fieldName] = fieldPriorities[fieldName];
         });
         
-        // Apply source-specific metadata values from parser config
+        // Apply static metadata values based on priority system
         if (parserConfig?.metadata) {
             Object.keys(parserConfig.metadata).forEach(key => {
                 const metaValue = parserConfig.metadata[key];
                 if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
-                    event[key] = metaValue.value;
+                    const priorityConfig = fieldPriorities[key];
+                    
+                    // Check if "static" has priority for this field
+                    if (priorityConfig && priorityConfig.priority && priorityConfig.priority.includes('static')) {
+                        const staticPriority = priorityConfig.priority.indexOf('static');
+                        const currentParserPriority = priorityConfig.priority.indexOf(parserConfig.parser);
+                        
+                        // Use static value if it has higher priority than current parser
+                        if (staticPriority >= 0 && (staticPriority < currentParserPriority || currentParserPriority === -1)) {
+                            event[key] = metaValue.value;
+                            // Mark this field as coming from static source
+                            if (!event._staticFields) event._staticFields = {};
+                            event._staticFields[key] = metaValue.value;
+                        }
+                    } else {
+                        // Fallback: if no priority config, apply static value (backward compatibility)
+                        event[key] = metaValue.value;
+                        if (!event._staticFields) event._staticFields = {};
+                        event._staticFields[key] = metaValue.value;
+                    }
                 }
             });
         }
