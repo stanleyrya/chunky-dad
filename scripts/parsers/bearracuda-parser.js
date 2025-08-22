@@ -280,23 +280,14 @@ class BearraccudaParser {
                 isBearEvent: true // Bearracuda events are always bear events
             };
             
-            // Apply all metadata fields from config
+            // Apply source-specific metadata values from config
             if (parserConfig.metadata) {
                 Object.keys(parserConfig.metadata).forEach(key => {
                     const metaValue = parserConfig.metadata[key];
                     
-                    // All fields must use {value, merge} format
-                    if (typeof metaValue === 'object' && metaValue !== null && 'merge' in metaValue) {
-                        // Only set value if it's defined (allows preserve without value)
-                        if ('value' in metaValue && metaValue.value !== undefined) {
-                            event[key] = metaValue.value;
-                        }
-                        
-                        // Store merge strategy for later use
-                        if (!event._fieldMergeStrategies) {
-                            event._fieldMergeStrategies = {};
-                        }
-                        event._fieldMergeStrategies[key] = metaValue.merge || 'preserve';
+                    // Apply value if it exists (source-specific overrides)
+                    if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
+                        event[key] = metaValue.value;
                     }
                 });
             }

@@ -28,46 +28,24 @@ const scraperConfig = {
       urlFilters: {
         include: ["eventbrite\\.com\\/e\\/"]
       },
+      fieldPriorities: {
+        title: { priority: ["static"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["eventbrite"], merge: "upsert" },
+        bar: { priority: ["eventbrite"], merge: "clobber" },
+        address: { priority: ["eventbrite"], merge: "clobber" },
+        startDate: { priority: ["eventbrite"], merge: "clobber" },
+        endDate: { priority: ["eventbrite"], merge: "clobber" },
+        website: { priority: ["eventbrite"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite"], merge: "clobber" },
+        image: { priority: ["eventbrite"], merge: "clobber" },
+        cover: { priority: ["eventbrite"], merge: "clobber" }
+      },
       metadata: {
-        title: {
-          value: "MEGAWOOF",
-          merge: "clobber"
-        },
-        shortName: {
-          value: "MEGA-WOOF",
-          merge: "upsert"
-        },
-        instagram: {
-          value: "https://www.instagram.com/megawoof_america",
-          merge: "clobber"
-        },
-        description: {
-          merge: "upsert"
-        },
-        bar: {
-          merge: "clobber"
-        },
-        address: {
-          merge: "clobber"
-        },
-        startDate: {
-          merge: "clobber"
-        },
-        endDate: {
-          merge: "clobber"
-        },
-        website: {
-          merge: "clobber"
-        },
-        gmaps: {
-          merge: "clobber"
-        },
-        image: {
-          merge: "clobber"
-        },
-        cover: {
-          merge: "clobber"
-        }
+        title: { value: "MEGAWOOF" },
+        shortName: { value: "MEGA-WOOF" },
+        instagram: { value: "https://www.instagram.com/megawoof_america" }
       }
     },
     {
@@ -85,45 +63,23 @@ const scraperConfig = {
       urlFilters: {
         include: ["eventbrite\\.com\\/e\\/"]
       },
+      fieldPriorities: {
+        title: { priority: ["eventbrite"], merge: "upsert" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "upsert" },
+        description: { priority: ["eventbrite"], merge: "upsert" },
+        bar: { priority: ["eventbrite"], merge: "clobber" },
+        address: { priority: ["eventbrite"], merge: "clobber" },
+        startDate: { priority: ["eventbrite"], merge: "clobber" },
+        endDate: { priority: ["eventbrite"], merge: "clobber" },
+        website: { priority: ["eventbrite"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite"], merge: "clobber" },
+        image: { priority: ["eventbrite"], merge: "clobber" },
+        cover: { priority: ["eventbrite"], merge: "clobber" }
+      },
       metadata: {
-        title: {
-          merge: "upsert"
-        },
-        shortName: {
-          value: "Coach After Dark",
-          merge: "upsert"
-        },
-        instagram: {
-          value: "https://www.instagram.com/coachafterdark",
-          merge: "upsert"
-        },
-        description: {
-          merge: "upsert"
-        },
-        bar: {
-          merge: "clobber"
-        },
-        address: {
-          merge: "clobber"
-        },
-        startDate: {
-          merge: "clobber"
-        },
-        endDate: {
-          merge: "clobber"
-        },
-        website: {
-          merge: "clobber"
-        },
-        gmaps: {
-          merge: "clobber"
-        },
-        image: {
-          merge: "clobber"
-        },
-        cover: {
-          merge: "clobber"
-        }
+        shortName: { value: "Coach After Dark" },
+        instagram: { value: "https://www.instagram.com/coachafterdark" }
       }
     },
     {
@@ -144,48 +100,24 @@ const scraperConfig = {
         include: ["bearracuda\\.com\\/events\\/"]
       },
       keyTemplate: "bearracuda-${date}-${city}",
+      fieldPriorities: {
+        title: { priority: ["eventbrite", "bearracuda"], merge: "upsert" },
+        shortName: { priority: ["bearracuda", "eventbrite"], merge: "upsert" },
+        instagram: { priority: ["bearracuda", "eventbrite"], merge: "upsert" },
+        description: { priority: ["eventbrite", "bearracuda"], merge: "upsert" },
+        bar: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        address: { priority: ["eventbrite"], merge: "clobber" },
+        startDate: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        endDate: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        website: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        image: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        cover: { priority: ["eventbrite"], merge: "clobber" },
+        key: { priority: ["bearracuda", "eventbrite"], merge: "clobber" }
+      },
       metadata: {
-        title: {
-          merge: "upsert"
-        },
-        shortName: {
-          value: "Bear-rac-uda",
-          merge: "upsert"
-        },
-        instagram: {
-          value: "https://www.instagram.com/bearracuda",
-          merge: "upsert"
-        },
-        description: {
-          merge: "upsert"
-        },
-        bar: {
-          merge: "clobber"
-        },
-        address: {
-          merge: "clobber"
-        },
-        startDate: {
-          merge: "clobber"
-        },
-        endDate: {
-          merge: "clobber"
-        },
-        website: {
-          merge: "clobber"
-        },
-        gmaps: {
-          merge: "clobber"
-        },
-        image: {
-          merge: "clobber"
-        },
-        cover: {
-          merge: "clobber"
-        },
-        key: {
-          merge: "clobber"
-        }
+        shortName: { value: "Bear-rac-uda" },
+        instagram: { value: "https://www.instagram.com/bearracuda" }
       }
     },
     {
@@ -204,48 +136,24 @@ const scraperConfig = {
         include: ["eventbrite\\.com\\/e\\/"]
       },
       keyTemplate: "bearracuda-${date}-${city}",
+      fieldPriorities: {
+        title: { priority: ["eventbrite", "bearracuda"], merge: "upsert" },
+        shortName: { priority: ["bearracuda", "eventbrite"], merge: "upsert" },
+        instagram: { priority: ["bearracuda", "eventbrite"], merge: "upsert" },
+        description: { priority: ["eventbrite", "bearracuda"], merge: "upsert" },
+        bar: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        address: { priority: ["eventbrite"], merge: "clobber" },
+        startDate: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        endDate: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        website: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        image: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        cover: { priority: ["eventbrite"], merge: "clobber" },
+        key: { priority: ["bearracuda", "eventbrite"], merge: "clobber" }
+      },
       metadata: {
-        title: {
-          merge: "upsert"
-        },
-        shortName: {
-          value: "Bear-rac-uda",
-          merge: "upsert"
-        },
-        instagram: {
-          value: "https://www.instagram.com/bearracuda",
-          merge: "upsert"
-        },
-        description: {
-          merge: "upsert"
-        },
-        bar: {
-          merge: "clobber"
-        },
-        address: {
-          merge: "clobber"
-        },
-        startDate: {
-          merge: "clobber"
-        },
-        endDate: {
-          merge: "clobber"
-        },
-        website: {
-          merge: "clobber"
-        },
-        gmaps: {
-          merge: "clobber"
-        },
-        image: {
-          merge: "clobber"
-        },
-        cover: {
-          merge: "clobber"
-        },
-        key: {
-          merge: "clobber"
-        }
+        shortName: { value: "Bear-rac-uda" },
+        instagram: { value: "https://www.instagram.com/bearracuda" }
       }
     }
   ],
