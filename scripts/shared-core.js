@@ -1468,7 +1468,7 @@ class SharedCore {
         
         // Fields to exclude from notes (core calendar fields and internal metadata)
         const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'address', 'coordinates', 'notes',
+            'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
