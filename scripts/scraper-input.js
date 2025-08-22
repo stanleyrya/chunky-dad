@@ -28,6 +28,20 @@ const scraperConfig = {
       urlFilters: {
         include: ["eventbrite\\.com\\/e\\/"]
       },
+      fieldPriorities: {
+        title: { priority: ["eventbrite"], merge: "clobber" },
+        shortName: { priority: ["eventbrite"], merge: "upsert" },
+        instagram: { priority: ["eventbrite"], merge: "clobber" },
+        description: { priority: ["eventbrite"], merge: "upsert" },
+        bar: { priority: ["eventbrite"], merge: "clobber" },
+        address: { priority: ["eventbrite"], merge: "clobber" },
+        startDate: { priority: ["eventbrite"], merge: "clobber" },
+        endDate: { priority: ["eventbrite"], merge: "clobber" },
+        website: { priority: ["eventbrite"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite"], merge: "clobber" },
+        image: { priority: ["eventbrite"], merge: "clobber" },
+        cover: { priority: ["eventbrite"], merge: "clobber" }
+      },
       metadata: {
         title: { value: "MEGAWOOF" },
         shortName: { value: "MEGA-WOOF" },
@@ -48,6 +62,20 @@ const scraperConfig = {
       mergeMode: "upsert",
       urlFilters: {
         include: ["eventbrite\\.com\\/e\\/"]
+      },
+      fieldPriorities: {
+        title: { priority: ["eventbrite"], merge: "upsert" },
+        shortName: { priority: ["eventbrite"], merge: "upsert" },
+        instagram: { priority: ["eventbrite"], merge: "upsert" },
+        description: { priority: ["eventbrite"], merge: "upsert" },
+        bar: { priority: ["eventbrite"], merge: "clobber" },
+        address: { priority: ["eventbrite"], merge: "clobber" },
+        startDate: { priority: ["eventbrite"], merge: "clobber" },
+        endDate: { priority: ["eventbrite"], merge: "clobber" },
+        website: { priority: ["eventbrite"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite"], merge: "clobber" },
+        image: { priority: ["eventbrite"], merge: "clobber" },
+        cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
         shortName: { value: "Coach After Dark" },
