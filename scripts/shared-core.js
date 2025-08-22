@@ -593,23 +593,21 @@ class SharedCore {
              const staticValue = newEvent._staticFields?.[fieldName];
              
              if (priorityConfig && priorityConfig.priority) {
-                 // Field has priority rules - determine which scraped source to use
-                 const newParser = newEvent._parserConfig?.parser;
-                 
+                 // Field has priority rules - determine which source to use
                  let selectedValue = newValue; // Default to new scraped value
                  
-                 // Check each priority source in order (only for scraped sources, not existing calendar)
+                 // Check each priority source in order
                  for (let i = 0; i < priorityConfig.priority.length; i++) {
                      const prioritySource = priorityConfig.priority[i];
                      let sourceValue = null;
                      
                      if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
                          sourceValue = staticValue;
-                     } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
+                     } else if (prioritySource === 'scraped' && newValue !== undefined && newValue !== null && newValue !== '') {
                          sourceValue = newValue;
                      }
                      
-                     // Use the first (highest priority) scraped source that has data
+                     // Use the first (highest priority) source that has data
                      if (sourceValue !== null) {
                          selectedValue = sourceValue;
                          break;
@@ -619,9 +617,7 @@ class SharedCore {
                  finalValues[fieldName] = selectedValue;
              } else {
                  // No priority rules - just use the new scraped value
-                 if (newValue !== undefined && newValue !== null && newValue !== '') {
-                     finalValues[fieldName] = newValue;
-                 }
+                 finalValues[fieldName] = newValue;
              }
          });
          
