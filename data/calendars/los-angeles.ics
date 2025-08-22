@@ -45,7 +45,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250720T150000
 DTEND;TZID=America/Los_Angeles:20250720T210000
 RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20250822T182004Z
+DTSTAMP:20250822T201550Z
 UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
 CREATED:20250719T050204Z
 DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
@@ -62,7 +62,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Vancouver:20250717T170000
 DTEND;TZID=America/Vancouver:20250717T210000
 RRULE:FREQ=WEEKLY
-DTSTAMP:20250822T182004Z
+DTSTAMP:20250822T201550Z
 UID:9vnvsm6kjpievu62279lco139k@google.com
 CREATED:20250715T045103Z
 DESCRIPTION:Tea: Popular happy hour that changes location every week.\nShor
@@ -76,7 +76,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250817T050000Z
 DTEND:20250817T100000Z
-DTSTAMP:20250822T182004Z
+DTSTAMP:20250822T201550Z
 UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
 CREATED:20250719T045039Z
 DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
@@ -97,31 +97,5 @@ SEQUENCE:1
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250831T040000Z
-DTEND:20250831T090000Z
-DTSTAMP:20250822T182004Z
-UID:E4EF602F-5052-4246-9754-412A698B335F
-CREATED:20250809T173609Z
-DESCRIPTION:bar: Falcon North\nurl: https://www.eventbrite.com/e/megawoof-a
- merica-bear-watchers-long-beach-tickets-1520432868639\nimage: https://img.e
- vbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2
- F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=for
- mat%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f5
- 4c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/mega
- woof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.874
- 45400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg\nkey:
-  megawoof|2025-08-30|falcon north|eventbrite\nwebsite: https://www.eventbri
- te.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\nc
- over: $11.58 - $21 (as of 8/19)\ndescription: LONG BEACH — WE’RE BACK!
-LAST-MODIFIED:20250820T033757Z
-LOCATION:33.87445400000001\, -118.1680614
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR
