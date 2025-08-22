@@ -593,7 +593,11 @@ class SharedCore {
              const staticValue = newEvent._staticFields?.[fieldName];
              
              if (priorityConfig && priorityConfig.priority) {
-                 // Field has priority rules - determine which source to use
+                 // Field has priority rules - determine which parser source to use
+                 const existingValue = existingEvent[fieldName] || existingFields[fieldName];
+                 const existingParser = existingEvent._parserConfig?.parser;
+                 const newParser = newEvent._parserConfig?.parser;
+                 
                  let selectedValue = newValue; // Default to new scraped value
                  
                  // Check each priority source in order
@@ -603,8 +607,10 @@ class SharedCore {
                      
                      if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
                          sourceValue = staticValue;
-                     } else if (prioritySource === 'scraped' && newValue !== undefined && newValue !== null && newValue !== '') {
+                     } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
                          sourceValue = newValue;
+                     } else if (prioritySource === existingParser && existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                         sourceValue = existingValue;
                      }
                      
                      // Use the first (highest priority) source that has data
