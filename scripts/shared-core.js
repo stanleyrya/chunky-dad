@@ -574,19 +574,19 @@ class SharedCore {
         // Parse existing notes to extract current field values
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
-        // Create a merged event object by starting with existing event
+        // Create a merged event object by starting with new event and merging existing fields
         const mergedEvent = {
-            ...existingEvent,
+            ...newEvent,
             ...existingFields,
+            // Override with existing core calendar fields
+            title: existingEvent.title,
+            startDate: existingEvent.startDate,
+            endDate: existingEvent.endDate,
+            location: existingEvent.location,
             // Preserve existing metadata and priorities
             _fieldPriorities: fieldPriorities,
             _action: newEvent._action || 'merge'
         };
-        
-        // Ensure core fields are not overwritten by empty values from existingFields
-        if (existingEvent.title && !mergedEvent.title) {
-            mergedEvent.title = existingEvent.title;
-        }
         
         // Apply priority strategies for each field that has priority rules
         Object.keys(fieldPriorities).forEach(fieldName => {
