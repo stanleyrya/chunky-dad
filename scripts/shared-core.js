@@ -1666,7 +1666,9 @@ class SharedCore {
         }
         
         // Check for time conflicts that can be merged
+        // Ignore existing events with empty titles as they shouldn't block new events
         const timeConflicts = existingEventsData.filter(existing => 
+            existing.title && existing.title.trim() !== '' &&
             this.doDatesOverlap(existing.startDate, existing.endDate, 
                                event.startDate, event.endDate || event.startDate)
         );
