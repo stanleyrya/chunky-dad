@@ -1673,30 +1673,11 @@ class SharedCore {
         
         if (timeConflicts.length > 0) {
             // Check if these are mergeable conflicts (adding info to existing events)
-            const mergeableConflict = timeConflicts.find(existing => {
-                // Check for title similarity (handles normal cases)
-                if (this.areTitlesSimilar(existing.title, event.title)) {
-                    return true;
-                }
-                
-                // Special handling for existing events with empty/missing titles
-                // These are likely corrupted events that need to be fixed
-                if (!existing.title || existing.title.trim() === '') {
-                    // Check if location and time match closely enough to be the same event
-                    const locationMatch = existing.location === event.location ||
-                                        existing.location === (event.bar || event.venue);
-                    const timeMatch = this.areDatesEqual(existing.startDate, event.startDate, 5); // 5 minute tolerance
-                    
-                    if (locationMatch && timeMatch) {
-                        console.log(`🔧 SharedCore: Found corrupted event with empty title - will merge to fix it`);
-                        return true;
-                    }
-                }
-                
-                // Standard location/time matching for different titles
-                return (existing.location === (event.bar || event.venue) && 
-                       this.areDatesEqual(existing.startDate, event.startDate, 60));
-            });
+            const mergeableConflict = timeConflicts.find(existing => 
+                this.areTitlesSimilar(existing.title, event.title) || 
+                (existing.location === (event.bar || event.venue) && 
+                 this.areDatesEqual(existing.startDate, event.startDate, 60))
+            );
             
             if (mergeableConflict) {
                 return {
