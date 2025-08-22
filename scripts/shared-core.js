@@ -583,6 +583,11 @@ class SharedCore {
             _action: newEvent._action || 'merge'
         };
         
+        // Ensure core fields are not overwritten by empty values from existingFields
+        if (existingEvent.title && !mergedEvent.title) {
+            mergedEvent.title = existingEvent.title;
+        }
+        
         // Apply priority strategies for each field that has priority rules
         Object.keys(fieldPriorities).forEach(fieldName => {
             const priorityConfig = fieldPriorities[fieldName];
@@ -643,6 +648,9 @@ class SharedCore {
         // Ensure we preserve the key and other essential metadata
         mergedEvent.key = newEvent.key || existingEvent.key;
         mergedEvent._parserConfig = newEvent._parserConfig || existingEvent._parserConfig;
+        
+        // Regenerate notes from all merged fields
+        mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
         return mergedEvent;
     }
