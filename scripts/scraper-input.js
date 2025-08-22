@@ -16,7 +16,7 @@ const scraperConfig = {
     {
       name: "Megawoof America",
       parser: "eventbrite",
-      enabled: true,
+      enabled: false,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
       requireDetailPages: true,
