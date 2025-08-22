@@ -5,4 +5,32 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-denver
 X-WR-TIMEZONE:America/Denver
+BEGIN:VEVENT
+DTSTART:20250824T030000Z
+DTEND:20250824T103000Z
+DTSTAMP:20250822T221319Z
+UID:FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF
+CREATED:20250822T215307Z
+DESCRIPTION:key: megawoof|2025-08-24|trade|eventbrite\ndescription: Get rea
+ dy for the ultimate party experience at MEGAWOOF AMERICA DENVER: MASSIVE 2 
+ Parties 1 Ticket - double the fun\, double the excitement!\nbar: Trade\nadd
+ ress: 475 Santa Fe Drive\, Denver\, CO 80204\nurl: https://www.eventbrite.c
+ om/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-13812195478
+ 49\ncover: $16.84 - $27.37 (as of 8/22)\nimage: https://img.evbuc.com/https
+ %3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.
+ 20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress
+ &q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928\ngm
+ aps: https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987
+ 819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY\nshortName: MEGA-WOOF\ninsta
+ gram: https://www.instagram.com/megawoof_america\n_staticFields: [object Ob
+ ject]
+LAST-MODIFIED:20250822T215356Z
+LOCATION:39.7239346\, -104.9987819
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR
