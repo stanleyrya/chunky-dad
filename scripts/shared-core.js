@@ -567,82 +567,58 @@ class SharedCore {
         return key;
     }
 
-    // Enhanced merge function that respects field-level priority strategies
+        // Merge function: first merge parser data, then merge with calendar
     mergeEventData(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || {};
         
-        // Parse existing notes to extract current field values
+        // Parse existing notes to get all the stored field data  
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
-        // Create a merged event object by starting with existing event
+        // Step 1: Create final scraped values by merging parser data using priorities
+        // (This handles Bearracuda + Eventbrite data merging)
+        const finalScrapedValues = { ...newEvent };
+        
+        // Step 2: Merge final scraped values with existing calendar using merge strategies
         const mergedEvent = {
-            ...existingEvent,
-            ...existingFields,
-            // Preserve existing metadata and priorities
+            ...existingEvent, // Start with existing (has calendar ID and save properties)
             _fieldPriorities: fieldPriorities,
-            _action: newEvent._action || 'merge'
+            _action: newEvent._action || 'merge',
+            key: newEvent.key || existingEvent.key,
+            _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
         };
         
-        // Apply priority strategies for each field that has priority rules
-        Object.keys(fieldPriorities).forEach(fieldName => {
+        // Apply merge strategies (ignore priorities, just use merge strategy)
+        Object.keys(finalScrapedValues).forEach(fieldName => {
+            if (fieldName.startsWith('_')) return; // Skip metadata fields
+            
             const priorityConfig = fieldPriorities[fieldName];
-            if (!priorityConfig || !priorityConfig.priority) return;
-            
+            const mergeStrategy = priorityConfig?.merge || 'upsert';
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
-            const newValue = newEvent[fieldName];
-            const staticValue = newEvent._staticFields?.[fieldName];
+            const scrapedValue = finalScrapedValues[fieldName];
             
-            // Determine which parser provided each value
-            const existingParser = existingEvent._parserConfig?.parser;
-            const newParser = newEvent._parserConfig?.parser;
-            
-            // Apply priority logic: find the highest priority source that has data
-            let selectedValue = existingValue; // Default to existing
-            let selectedSource = 'existing';
-            
-            // Check each priority source in order
-            for (let i = 0; i < priorityConfig.priority.length; i++) {
-                const prioritySource = priorityConfig.priority[i];
-                let sourceValue = null;
-                
-                if (prioritySource === 'static' && staticValue !== undefined && staticValue !== null && staticValue !== '') {
-                    sourceValue = staticValue;
-                } else if (prioritySource === newParser && newValue !== undefined && newValue !== null && newValue !== '') {
-                    sourceValue = newValue;
-                } else if (prioritySource === existingParser && existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                    sourceValue = existingValue;
-                }
-                
-                // Use the first (highest priority) source that has data
-                if (sourceValue !== null) {
-                    selectedValue = sourceValue;
-                    selectedSource = prioritySource;
+            switch (mergeStrategy) {
+                case 'clobber':
+                    mergedEvent[fieldName] = scrapedValue;
                     break;
-                }
-            }
-            
-            mergedEvent[fieldName] = selectedValue;
-        });
-        
-        // For fields without priority rules, use simple merge logic
-        Object.keys(newEvent).forEach(key => {
-            // Skip internal metadata fields and fields already handled by priority logic
-            if (key.startsWith('_') || fieldPriorities[key]) return;
-            
-            const existingValue = existingEvent[key] || existingFields[key];
-            const newValue = newEvent[key];
-            
-            // Default to upsert behavior for fields without priority rules
-            if (!existingValue || existingValue === '' || existingValue === null) {
-                if (newValue !== undefined && newValue !== null && newValue !== '') {
-                    mergedEvent[key] = newValue;
-                }
+                case 'preserve':
+                    mergedEvent[fieldName] = existingValue || scrapedValue;
+                    break;
+                case 'upsert':
+                default:
+                    mergedEvent[fieldName] = scrapedValue || existingValue;
+                    break;
             }
         });
         
-        // Ensure we preserve the key and other essential metadata
-        mergedEvent.key = newEvent.key || existingEvent.key;
-        mergedEvent._parserConfig = newEvent._parserConfig || existingEvent._parserConfig;
+        // Add any existing fields that weren't in scraped data
+        Object.keys(existingFields).forEach(fieldName => {
+            if (!mergedEvent[fieldName] && existingFields[fieldName]) {
+                mergedEvent[fieldName] = existingFields[fieldName];
+            }
+        });
+        
+        // Regenerate notes from all merged fields
+        mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
         return mergedEvent;
     }
@@ -693,7 +669,7 @@ class SharedCore {
             endDate: resolvedEndDate,
             location: resolvedLocation,
             notes: mergedData.notes,
-            url: mergedData.url, // This comes from the mergeEventData result which handles website->url mapping
+            url: mergedData.url
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
