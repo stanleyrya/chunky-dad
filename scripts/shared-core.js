@@ -1362,16 +1362,16 @@ class SharedCore {
         return normalized;
     }
     
-    // Apply field-level priority strategies from the global config
+    // Apply field-level priority strategies from the parser config
     // This determines which parser's data to trust for each field
     applyFieldPriorities(event, parserConfig, mainConfig) {
         // Always attach parser config
         event._parserConfig = parserConfig;
         
-        // Get the global field priorities configuration
-        const fieldPriorities = mainConfig?.config?.fieldPriorities || {};
+        // Get the field priorities configuration from this parser's config
+        const fieldPriorities = parserConfig?.fieldPriorities || {};
         
-        // Store field priorities for later use
+        // Store field priorities for later use during merging
         if (!event._fieldPriorities) {
             event._fieldPriorities = {};
         }
