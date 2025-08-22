@@ -708,7 +708,7 @@ class SharedCore {
         };
         
         // Parse the final notes to get all the merged fields for display
-        const finalFields = this.parseNotesIntoFields(finalEvent.notes);
+        const finalFields = this.parseNotesIntoFields(finalEvent.notes || '');
         
         // Prepare priority config and existing fields for comparison blocks below
         const fieldPrioritiesForCompare = newEvent._fieldPriorities || {};
@@ -824,6 +824,12 @@ class SharedCore {
     // Parse notes back into field/value pairs
     parseNotesIntoFields(notes) {
         const fields = {};
+        
+        // Handle undefined or null notes
+        if (!notes) {
+            return fields;
+        }
+        
         const lines = notes.split('\n');
         
         // Map of normalized aliases (lowercased, spaces removed) to canonical field names
@@ -1536,7 +1542,7 @@ class SharedCore {
                 
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
-                const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes);
+                const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes || '');
                 
                 console.log(`📊 SharedCore: Comparing fields for merge diff - Original: ${Object.keys(originalFields).length} fields, Merged: ${Object.keys(mergedFields).length} fields`);
                 
