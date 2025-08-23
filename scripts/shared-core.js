@@ -610,8 +610,8 @@ class SharedCore {
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
-            // Debug preserve logic
-            if (fieldName === 'description' || fieldName === 'cover') {
+            // Debug merge logic for key fields
+            if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
                 const existingFromEvent = existingEvent[fieldName];
                 const existingFromFields = existingFields[fieldName];
                 console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
@@ -626,16 +626,22 @@ class SharedCore {
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
+                    if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
+                        console.log(`🔧 DEBUG: CLOBBER result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    }
                     break;
                 case 'preserve':
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    if (fieldName === 'description' || fieldName === 'cover') {
+                    if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
                         console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
                     }
                     break;
                 case 'upsert':
                 default:
-                    mergedEvent[fieldName] = scrapedValue || existingValue;
+                    mergedEvent[fieldName] = existingValue || scrapedValue;
+                    if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
+                        console.log(`🔧 DEBUG: UPSERT result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    }
                     break;
             }
         });
