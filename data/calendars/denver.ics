@@ -8,20 +8,20 @@ X-WR-TIMEZONE:America/Denver
 BEGIN:VEVENT
 DTSTART:20250824T030000Z
 DTEND:20250824T103000Z
-DTSTAMP:20250823T201409Z
+DTSTAMP:20250823T221241Z
 UID:FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF
 CREATED:20250822T215307Z
-DESCRIPTION:key: megawoof|2025-08-24|trade|eventbrite\ndescription: 2\naddr
- ess: 475 Santa Fe Drive\, Denver\, CO 80204\nurl: https://www.eventbrite.co
- m/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-138121954784
- 9\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_amer
- ica\ncover: $16.84 - $27.37 (as of 8/21)\nimage: https://img.evbuc.com/http
- s%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal
- .20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompres
- s&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928\ng
- maps: https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.998
- 7819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY
-LAST-MODIFIED:20250823T181747Z
+DESCRIPTION:url: https://www.eventbrite.com/e/megawoof-america-denver-massi
+ ve-2-parties-1-ticket-tickets-1381219547849\nkey: megawoof|2025-08-24|trade
+ |eventbrite\ndescription: 2\nbar: Trade\naddress: 475 Santa Fe Drive\, Denv
+ er\, CO 80204\ncover: $16.84 - $27.37 (as of 8/23)\nimage: https://img.evbu
+ c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%
+ 2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format
+ %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaa
+ c345928\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoo
+ f_america\ngmaps: https://www.google.com/maps/search/?api=1&query=39.723934
+ 6%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY
+LAST-MODIFIED:20250823T210455Z
 LOCATION:39.7239346\, -104.9987819
 SEQUENCE:0
 STATUS:CONFIRMED
