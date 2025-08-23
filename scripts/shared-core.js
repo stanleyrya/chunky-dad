@@ -759,7 +759,22 @@ class SharedCore {
         // Add all fields from notes to the final event for display purposes
         Object.keys(finalFields).forEach(fieldName => {
             if (finalFields[fieldName] && !finalEvent[fieldName]) {
-                finalEvent[fieldName] = finalFields[fieldName];
+                // Check merge strategy before adding field
+                const priorityConfig = fieldPrioritiesForCompare[fieldName];
+                const mergeStrategy = priorityConfig?.merge || 'preserve';
+                
+                // For preserve strategy, only add if the field existed in the original event
+                if (mergeStrategy === 'preserve') {
+                    // Check if field existed in original event (either as direct field or in notes)
+                    const existedInOriginal = existingEvent[fieldName] !== undefined || existingFields[fieldName] !== undefined;
+                    if (existedInOriginal) {
+                        finalEvent[fieldName] = finalFields[fieldName];
+                    }
+                    // If it didn't exist in original, don't add it (preserve undefined)
+                } else {
+                    // For upsert and clobber strategies, add the field
+                    finalEvent[fieldName] = finalFields[fieldName];
+                }
             }
         });
         
@@ -1187,7 +1202,15 @@ class SharedCore {
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
         // Only generate if gmaps field is empty or undefined (respect merge strategies)
-        if (!event.gmaps) {
+        // Check if this event has merge strategies and respect them for gmaps field
+        const hasFieldPriorities = event._fieldPriorities && event._fieldPriorities.gmaps;
+        const gmapsStrategy = hasFieldPriorities ? event._fieldPriorities.gmaps.merge : null;
+        
+        // For clobber strategy, don't regenerate gmaps if it already exists (preserve the merged value)
+        // For other strategies or no strategy, only generate if gmaps is empty
+        const shouldRegenerateGmaps = gmapsStrategy === 'clobber' ? false : !event.gmaps;
+        
+        if (shouldRegenerateGmaps) {
             // Parse coordinates from location field if available
             let coordinates = null;
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
