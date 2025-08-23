@@ -32,7 +32,7 @@ const scraperConfig = {
         title: { priority: ["static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["eventbrite"], merge: "upsert" },
+        description: { priority: ["eventbrite"], merge: "preserve" },
         bar: { priority: ["eventbrite"], merge: "clobber" },
         address: { priority: ["eventbrite"], merge: "clobber" },
         startDate: { priority: ["eventbrite"], merge: "clobber" },
@@ -40,7 +40,7 @@ const scraperConfig = {
         url: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
-        cover: { priority: ["eventbrite"], merge: "clobber" }
+        cover: { priority: ["eventbrite"], merge: "preserve" }
       },
       metadata: {
         title: { value: "MEGAWOOF" },

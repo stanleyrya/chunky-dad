@@ -596,12 +596,26 @@ class SharedCore {
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
+            // Debug preserve logic
+            if (fieldName === 'description' || fieldName === 'cover') {
+                const existingFromEvent = existingEvent[fieldName];
+                const existingFromFields = existingFields[fieldName];
+                console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
+                console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
+                console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
+                console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
+                console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
+            }
+            
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
                     break;
                 case 'preserve':
                     mergedEvent[fieldName] = existingValue || scrapedValue;
+                    if (fieldName === 'description' || fieldName === 'cover') {
+                        console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    }
                     break;
                 case 'upsert':
                 default:
@@ -1358,6 +1372,18 @@ class SharedCore {
         
         // Get the field priorities configuration from this parser's config
         const fieldPriorities = parserConfig?.fieldPriorities || {};
+        
+        // Debug field priorities loading
+        if (parserConfig?.name === "Megawoof America") {
+            console.log(`🔧 DEBUG: Loading field priorities for ${parserConfig.name}`);
+            console.log(`🔧 DEBUG: fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
+            if (fieldPriorities.description) {
+                console.log(`🔧 DEBUG: description config: ${JSON.stringify(fieldPriorities.description)}`);
+            }
+            if (fieldPriorities.cover) {
+                console.log(`🔧 DEBUG: cover config: ${JSON.stringify(fieldPriorities.cover)}`);
+            }
+        }
         
         // Store field priorities for later use during merging
         if (!event._fieldPriorities) {
