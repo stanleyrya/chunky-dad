@@ -461,6 +461,14 @@ class EventbriteParser {
             }
             const image = eventData.logo?.url || eventData.image?.url;
             
+            // NEW: Try to get image from eventHero if not found in eventData
+            let finalImage = image;
+            if (!finalImage && serverData.event_listing_response?.eventHero?.items?.[0]) {
+                const heroItem = serverData.event_listing_response.eventHero.items[0];
+                finalImage = heroItem.croppedLogoUrl600 || heroItem.croppedLogoUrl480 || heroItem.croppedLogoUrl940;
+                console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${finalImage}`);
+            }
+            
             // Extract city from event title for better event organization
             let city = null;
             
@@ -500,26 +508,58 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Passing place_id "${eventData.venue.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`);
             }
             
+            // NEW: Try to get venue data from components if not found in eventData
+            let finalVenue = venue;
+            let finalAddress = address;
+            let finalCoordinates = coordinates;
+            let finalPlaceId = eventData.venue?.google_place_id || null;
+            
+            // Check components.eventMap for venue data
+            if (serverData.components?.eventMap) {
+                const mapData = serverData.components.eventMap;
+                if (!finalVenue && mapData.venueName) {
+                    finalVenue = mapData.venueName;
+                    console.log(`🎫 Eventbrite: Found venue name in components.eventMap: "${finalVenue}"`);
+                }
+                if (!finalAddress && mapData.venueAddress) {
+                    finalAddress = mapData.venueAddress;
+                    console.log(`🎫 Eventbrite: Found venue address in components.eventMap: "${finalAddress}"`);
+                }
+                if (!finalCoordinates && mapData.location) {
+                    finalCoordinates = mapData.location;
+                    console.log(`🎫 Eventbrite: Found coordinates in components.eventMap: ${finalCoordinates.latitude}, ${finalCoordinates.longitude}`);
+                }
+            }
+            
+            // Check components.eventDetails.location for additional venue data
+            if (serverData.components?.eventDetails?.location) {
+                const detailsLocation = serverData.components.eventDetails.location;
+                if (detailsLocation.localityPlaceId && !finalPlaceId) {
+                    finalPlaceId = detailsLocation.localityPlaceId;
+                    console.log(`🎫 Eventbrite: Found place_id in components.eventDetails.location: "${finalPlaceId}"`);
+                }
+            }
+            
             const event = {
                 title: title,
                 description: description,
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
-                bar: venue, // Use 'bar' field name that calendar-core.js expects
-                location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
-                address: address,
+                bar: finalVenue, // Use 'bar' field name that calendar-core.js expects
+                location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
+                address: finalAddress,
                 city: city,
                 url: url, // Use consistent 'url' field name across all parsers
                 cover: price, // Use 'cover' field name that calendar-core.js expects
-                ...(image && { image: image }), // Only include image if we found one
+                ...(finalImage && { image: finalImage }), // Only include image if we found one
                 // Don't include gmaps here - let SharedCore generate it from placeId
-                placeId: eventData.venue?.google_place_id || null, // Pass place_id to SharedCore for iOS-compatible URL generation
+                placeId: finalPlaceId || null, // Pass place_id to SharedCore for iOS-compatible URL generation
                 source: this.config.source,
                 // Properly handle bear event detection based on configuration
                 isBearEvent: this.config.alwaysBear || this.isBearEvent({
                     title: title,
                     description: '',
-                    venue: venue,
+                    venue: finalVenue,
                     url: url
                 })
             };
