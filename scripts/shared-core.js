@@ -571,6 +571,15 @@ class SharedCore {
     mergeEventData(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || {};
         
+        // Debug field priorities loading
+        if (newEvent.title && newEvent.title.includes('MEGAWOOF')) {
+            console.log(`🔧 DEBUG: mergeEventData - newEvent._fieldPriorities exists: ${!!newEvent._fieldPriorities}`);
+            console.log(`🔧 DEBUG: mergeEventData - fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
+            if (fieldPriorities.cover) {
+                console.log(`🔧 DEBUG: mergeEventData - cover config: ${JSON.stringify(fieldPriorities.cover)}`);
+            }
+        }
+        
         // Parse existing notes to get all the stored field data  
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
