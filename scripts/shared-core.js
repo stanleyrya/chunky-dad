@@ -630,7 +630,13 @@ class SharedCore {
             
             switch (mergeStrategy) {
                 case 'clobber':
-                    mergedEvent[fieldName] = scrapedValue;
+                    // Use scraped value, but preserve existing if scraped is empty and existing has value
+                    if ((scrapedValue === undefined || scrapedValue === null || scrapedValue === '') && 
+                        (existingValue !== undefined && existingValue !== null && existingValue !== '')) {
+                        mergedEvent[fieldName] = existingValue;
+                    } else {
+                        mergedEvent[fieldName] = scrapedValue;
+                    }
                     break;
                 case 'preserve':
                     // For preserve: only add field if it exists in existing event, otherwise leave undefined
@@ -716,7 +722,13 @@ class SharedCore {
             const mergeStrategy = priorityConfig.merge || 'preserve';
             switch (mergeStrategy) {
                 case 'clobber':
-                    return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
+                    // Use new value, but preserve existing if new is empty and existing has value
+                    if ((newValue === undefined || newValue === null || newValue === '') && 
+                        (existingValue !== undefined && existingValue !== null && existingValue !== '')) {
+                        return existingValue;
+                    } else {
+                        return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
+                    }
                 case 'upsert':
                     return (existingValue !== undefined && existingValue !== null && existingValue !== '')
                         ? existingValue
@@ -896,8 +908,13 @@ class SharedCore {
                     // For upsert: only add if field is missing from calendar
                     finalEvent[fieldName] = fieldInfo.value;
                 } else if (mergeStrategy === 'clobber') {
-                    // For clobber: always use scraped value (should already be set by main merge logic)
-                    finalEvent[fieldName] = fieldInfo.value;
+                    // For clobber: use scraped value, but preserve existing if scraped is empty and existing has value
+                    if ((fieldInfo.value === undefined || fieldInfo.value === null || fieldInfo.value === '') && 
+                        (finalEvent[fieldName] !== undefined && finalEvent[fieldName] !== null && finalEvent[fieldName] !== '')) {
+                        // Keep existing non-empty value
+                    } else {
+                        finalEvent[fieldName] = fieldInfo.value;
+                    }
                 }
                 // For preserve strategy: do nothing - keep existing value or undefined
             });
@@ -1215,8 +1232,10 @@ class SharedCore {
         }
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
-        // Always generate if gmaps field is empty or undefined - merge strategies are handled later
-        if (!event.gmaps) {
+        // Only generate if gmaps field is empty or we can create a better quality URL
+        const existingQuality = SharedCore.getGoogleMapsUrlQuality(event.gmaps);
+        
+        if (!event.gmaps || existingQuality === 0) {
             // Parse coordinates from location field if available
             let coordinates = null;
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
@@ -1233,13 +1252,49 @@ class SharedCore {
                 address: (event.address && this.isFullAddress(event.address)) ? event.address : null
             };
             
-            event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
+            const newUrl = SharedCore.generateGoogleMapsUrl(urlData);
+            const newQuality = SharedCore.getGoogleMapsUrlQuality(newUrl);
             
-            if (event.gmaps) {
-                const method = event.placeId ? 
-                    (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
-                    (coordinates ? 'coordinates only' : 'address only');
-                console.log(`🗺️ SharedCore: Generated iOS-compatible Google Maps URL using ${method} for "${event.title}"`);
+            // Only replace existing URL if new one is better quality
+            if (!event.gmaps || newQuality > existingQuality) {
+                event.gmaps = newUrl;
+                
+                if (event.gmaps) {
+                    const method = event.placeId ? 
+                        (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
+                        (coordinates ? 'coordinates only' : 'address only');
+                    const action = existingQuality > 0 ? 'Upgraded' : 'Generated';
+                    console.log(`🗺️ SharedCore: ${action} iOS-compatible Google Maps URL using ${method} for "${event.title}"`);
+                }
+            } else {
+                console.log(`🗺️ SharedCore: Keeping existing higher-quality Google Maps URL for "${event.title}" (quality ${existingQuality} vs ${newQuality})`);
+            }
+        } else {
+            // Check if we can upgrade existing URL with available placeId
+            if (event.gmaps && event.placeId && existingQuality < 3) {
+                // Parse coordinates from location field if available
+                let coordinates = null;
+                if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
+                    const [lat, lng] = event.location.split(',').map(coord => parseFloat(coord.trim()));
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        coordinates = { lat, lng };
+                    }
+                }
+                
+                // Try to upgrade with placeId
+                const urlData = {
+                    coordinates: coordinates,
+                    placeId: event.placeId,
+                    address: (event.address && this.isFullAddress(event.address)) ? event.address : null
+                };
+                
+                const upgradedUrl = SharedCore.generateGoogleMapsUrl(urlData);
+                const upgradedQuality = SharedCore.getGoogleMapsUrlQuality(upgradedUrl);
+                
+                if (upgradedQuality > existingQuality) {
+                    event.gmaps = upgradedUrl;
+                    console.log(`🗺️ SharedCore: Upgraded Google Maps URL with place_id for "${event.title}" (quality ${existingQuality} → ${upgradedQuality})`);
+                }
             }
         }
         
@@ -1907,10 +1962,20 @@ class SharedCore {
                     }
                     
                 case 'clobber':
-                    // Always use scraped value
-                    event[fieldName] = newValue;
-                    event._mergeInfo.mergedFields[fieldName] = 'new';
-                    return true;
+                    // Use scraped value, but preserve existing if scraped is empty and existing has value
+                    if ((newValue === undefined || newValue === null || newValue === '') && 
+                        (existingValue !== undefined && existingValue !== null && existingValue !== '')) {
+                        // Don't clobber good existing value with empty new value
+                        event[fieldName] = existingValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        console.log(`🔄 SharedCore: Clobber preserved existing non-empty value for "${fieldName}" (existing: "${existingValue}", new: "${newValue || 'empty'}")`);
+                        return true;
+                    } else {
+                        // Normal clobber: use scraped value
+                        event[fieldName] = newValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'new';
+                        return true;
+                    }
             }
             
             return false;
@@ -1951,6 +2016,27 @@ class SharedCore {
         return event;
     }
 
+    // Helper function to detect Google Maps URL quality
+    static getGoogleMapsUrlQuality(url) {
+        if (!url || typeof url !== 'string') return 0;
+        
+        // Best quality: has place_id parameter
+        if (url.includes('query_place_id=')) {
+            return url.includes('api=1') ? 4 : 3; // API version is slightly better
+        }
+        
+        // Medium quality: coordinates in maps.google.com format
+        if (url.includes('maps.google.com') && url.includes('q=')) {
+            return 2;
+        }
+        
+        // Basic quality: other Google Maps URLs
+        if (url.includes('google.com') && url.includes('maps')) {
+            return 1;
+        }
+        
+        return 0; // Not a Google Maps URL
+    }
 
 }
 
