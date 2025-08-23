@@ -759,7 +759,21 @@ class SharedCore {
         // Add all fields from notes to the final event for display purposes
         Object.keys(finalFields).forEach(fieldName => {
             if (finalFields[fieldName] && !finalEvent[fieldName]) {
-                finalEvent[fieldName] = finalFields[fieldName];
+                // Check merge strategy before adding field
+                const priorityConfig = fieldPrioritiesForCompare[fieldName];
+                const mergeStrategy = priorityConfig?.merge || 'preserve';
+                
+                // For preserve strategy, don't add fields that don't exist in calendar (preserve undefined)
+                if (mergeStrategy === 'preserve') {
+                    // Don't add - preserve the undefined calendar value
+                    return;
+                } else if (mergeStrategy === 'upsert') {
+                    // Only add if calendar doesn't have the field (which we already checked with !finalEvent[fieldName])
+                    finalEvent[fieldName] = finalFields[fieldName];
+                } else if (mergeStrategy === 'clobber') {
+                    // Always add the scraped value (this should have been handled by merge logic above, but ensure it's here)
+                    finalEvent[fieldName] = finalFields[fieldName];
+                }
             }
         });
         
@@ -868,10 +882,16 @@ class SharedCore {
         if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldPriorities) {
             Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
                 const priorityConfig = finalEvent._fieldPriorities[fieldName];
-                // Only add fields that have non-preserve merge strategy or have upsert and field is missing
-                if (priorityConfig && priorityConfig.merge === 'upsert' && !finalEvent[fieldName]) {
+                const mergeStrategy = priorityConfig?.merge || 'preserve';
+                
+                if (mergeStrategy === 'preserve') {
+                    // For preserve: don't add fields - use calendar value (even if undefined)
+                    // Do nothing - preserve strategy should have been handled by main merge logic
+                } else if (mergeStrategy === 'upsert' && !finalEvent[fieldName]) {
+                    // For upsert: only add if field is missing from calendar
                     finalEvent[fieldName] = fieldInfo.value;
-                } else if (priorityConfig && priorityConfig.merge === 'clobber') {
+                } else if (mergeStrategy === 'clobber') {
+                    // For clobber: always use scraped value (should already be set by main merge logic)
                     finalEvent[fieldName] = fieldInfo.value;
                 }
                 // For preserve strategy: do nothing - keep existing value or undefined
@@ -1187,7 +1207,15 @@ class SharedCore {
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
         // Only generate if gmaps field is empty or undefined (respect merge strategies)
-        if (!event.gmaps) {
+        // Check if this event has merge strategies and respect them for gmaps field
+        const hasFieldPriorities = event._fieldPriorities && event._fieldPriorities.gmaps;
+        const gmapsStrategy = hasFieldPriorities ? event._fieldPriorities.gmaps.merge : null;
+        
+        // For clobber strategy, don't regenerate gmaps if it already exists (preserve the merged value)
+        // For other strategies or no strategy, only generate if gmaps is empty
+        const shouldRegenerateGmaps = gmapsStrategy === 'clobber' ? false : !event.gmaps;
+        
+        if (shouldRegenerateGmaps) {
             // Parse coordinates from location field if available
             let coordinates = null;
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
@@ -1832,40 +1860,35 @@ class SharedCore {
             
             switch (strategy) {
                 case 'preserve':
-                    // Always use existing value if it exists
-                    if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
-                        event[fieldName] = existingValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
-                        return true;
-                    }
-                    break;
+                    // Always use calendar value, even if undefined
+                    event[fieldName] = existingValue;
+                    event._mergeInfo.mergedFields[fieldName] = 'existing';
+                    return true;
                     
                 case 'upsert':
-                    // Only add new value if existing doesn't have it
-                    if (!existingValue && newValue) {
-                        // Keep new value (do nothing as it's already in event)
+                    // Prefer calendar if exists, otherwise add scraped
+                    if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
+                        // Calendar has value, use it
+                        event[fieldName] = existingValue;
+                        event._mergeInfo.mergedFields[fieldName] = 'existing';
+                        return true;
+                    } else if (newValue !== undefined && newValue !== null && newValue !== '') {
+                        // Calendar doesn't have value, use scraped
+                        event[fieldName] = newValue;
                         event._mergeInfo.mergedFields[fieldName] = 'new';
                         return true;
-                    } else if (existingValue) {
-                        // Existing has value, keep it
+                    } else {
+                        // Neither has value, use calendar (undefined)
                         event[fieldName] = existingValue;
                         event._mergeInfo.mergedFields[fieldName] = 'existing';
                         return true;
                     }
-                    break;
                     
                 case 'clobber':
-                    // Use new value if it exists, otherwise keep existing
-                    if (newValue !== undefined && newValue !== null && newValue !== '') {
-                        // Keep new value (do nothing as it's already in event)
-                        event._mergeInfo.mergedFields[fieldName] = 'new';
-                        return true;
-                    } else if (existingValue) {
-                        event[fieldName] = existingValue;
-                        event._mergeInfo.mergedFields[fieldName] = 'existing';
-                        return true;
-                    }
-                    break;
+                    // Always use scraped value
+                    event[fieldName] = newValue;
+                    event._mergeInfo.mergedFields[fieldName] = 'new';
+                    return true;
             }
             
             return false;
