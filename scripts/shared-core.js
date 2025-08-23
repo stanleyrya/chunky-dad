@@ -620,7 +620,8 @@ class SharedCore {
             
             const priorityConfig = fieldPriorities[fieldName];
             const mergeStrategy = priorityConfig?.merge || 'preserve';
-            const existingValue = existingEvent[fieldName] || existingFields[fieldName];
+            // Check event field first, then notes fields, but be explicit about undefined vs empty string
+            const existingValue = existingEvent[fieldName] !== undefined ? existingEvent[fieldName] : existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
             // Debug merge logic - can be controlled via debug flags if needed
@@ -632,7 +633,11 @@ class SharedCore {
                     mergedEvent[fieldName] = scrapedValue;
                     break;
                 case 'preserve':
-                    mergedEvent[fieldName] = existingValue || scrapedValue;
+                    // For preserve: only add field if it exists in existing event, otherwise leave undefined
+                    if (existingValue !== undefined) {
+                        mergedEvent[fieldName] = existingValue;
+                    }
+                    // Don't set the field at all if existing is undefined - preserve the undefined state
                     break;
                 case 'upsert':
                 default:
@@ -1211,9 +1216,9 @@ class SharedCore {
         const hasFieldPriorities = event._fieldPriorities && event._fieldPriorities.gmaps;
         const gmapsStrategy = hasFieldPriorities ? event._fieldPriorities.gmaps.merge : null;
         
-        // For clobber strategy, don't regenerate gmaps if it already exists (preserve the merged value)
+        // For clobber strategy, always regenerate gmaps (don't preserve existing merged value)
         // For other strategies or no strategy, only generate if gmaps is empty
-        const shouldRegenerateGmaps = gmapsStrategy === 'clobber' ? false : !event.gmaps;
+        const shouldRegenerateGmaps = gmapsStrategy === 'clobber' ? true : !event.gmaps;
         
         if (shouldRegenerateGmaps) {
             // Parse coordinates from location field if available
@@ -1620,7 +1625,18 @@ class SharedCore {
                     if (mergedFields[key] === originalFields[key]) {
                         analyzedEvent._mergeDiff.preserved.push(key);
                     } else if (!mergedFields[key]) {
-                        analyzedEvent._mergeDiff.removed.push({ key, value: originalFields[key] });
+                        // Check if this is preserve strategy - if so, undefined should be preserved, not removed
+                        const fieldPriorities = analyzedEvent._fieldPriorities || {};
+                        const priorityConfig = fieldPriorities[key];
+                        const mergeStrategy = priorityConfig?.merge || 'preserve';
+                        
+                        if (mergeStrategy === 'preserve' && originalFields[key] === undefined) {
+                            // For preserve strategy, if original was undefined and merged is undefined, it's preserved
+                            analyzedEvent._mergeDiff.preserved.push(key);
+                        } else {
+                            // Otherwise it's truly removed
+                            analyzedEvent._mergeDiff.removed.push({ key, value: originalFields[key] });
+                        }
                     } else {
                         analyzedEvent._mergeDiff.updated.push({ 
                             key, 
