@@ -3078,12 +3078,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateComparisonRows(event) {
         if (!event._original) return '';
         
-        // Debug log merge information for display
-        console.log(`📱 DISPLAY DEBUG: Generating comparison for event "${event.title}"`);
-        console.log(`📱 DISPLAY DEBUG: _fieldPriorities keys: ${Object.keys(event._fieldPriorities || {})}`);
-        console.log(`📱 DISPLAY DEBUG: _fieldMergeStrategies keys: ${Object.keys(event._fieldMergeStrategies || {})}`);
-        console.log(`📱 DISPLAY DEBUG: _mergeInfo keys: ${Object.keys(event._mergeInfo || {})}`);
-        
         // Use the same field logic as what goes into calendar notes
         const fieldsToCompare = this.getFieldsForComparison(event);
         const rows = [];
@@ -3100,23 +3094,36 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
             
-            // Debug log for problematic fields
-            if (field === 'bar' || field === 'cover' || field === 'gmaps' || field === 'image' || field === 'description') {
-                console.log(`📱 DISPLAY DEBUG: Field "${field}"`);
-                console.log(`📱 DISPLAY DEBUG:   strategy: "${strategy}"`);
-                console.log(`📱 DISPLAY DEBUG:   existingValue: "${existingValue}"`);
-                console.log(`📱 DISPLAY DEBUG:   newValue: "${newValue}"`);
-                console.log(`📱 DISPLAY DEBUG:   finalValue: "${finalValue}"`);
-                console.log(`📱 DISPLAY DEBUG:   wasUsed: "${wasUsed}"`);
-            }
-            
             // Check if this field was extracted from existing event's notes
             if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
                 existingValue = event._mergeInfo.extractedFields[field].value;
             }
             
-            // Skip if both are empty and no final value
-            if (!newValue && !existingValue && !finalValue) return;
+            // For preserve fields, if newValue is empty but finalValue exists, 
+            // it means the value was scraped but preserve logic kept the existing value
+            // We should show the scraped value as newValue for proper display
+            if (strategy === 'preserve' && !newValue && finalValue && existingValue) {
+                // Check if finalValue came from existing (preserve behavior)
+                if (finalValue === existingValue) {
+                    // Look for the scraped value in the original new event object
+                    // This handles cases where preserve fields don't show scraped values
+                    const allNewFields = { ...event._original.new };
+                    if (allNewFields[field] && allNewFields[field] !== existingValue) {
+                        newValue = allNewFields[field];
+                    }
+                }
+            }
+            
+
+            
+            // Skip if both are empty and no final value, unless it's a field with explicit strategy
+            // This ensures preserve fields show up even if they appear empty
+            if (!newValue && !existingValue && !finalValue && !strategy) return;
+            
+            // For preserve fields, always show them if they have a strategy configured
+            if (strategy === 'preserve' && !newValue && !existingValue && !finalValue) {
+                return;
+            }
             
             // Format values for display - show exactly what the merge logic saw
             const formatValue = (val, maxLength = 30) => {
