@@ -495,8 +495,7 @@ class EventbriteParser {
             
             // Don't generate Google Maps URL here - let SharedCore handle it with iOS-compatible logic
             // Just pass the place_id data to SharedCore for processing
-            // Only set gmapsUrl if we have place_id data, otherwise leave undefined to preserve existing values
-            let gmapsUrl = eventData.venue?.google_place_id ? '' : undefined;
+            // Leave gmaps undefined so SharedCore will generate the URL
             if (eventData.venue?.google_place_id) {
                 console.log(`🎫 Eventbrite: Passing place_id "${eventData.venue.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`);
             }
@@ -513,7 +512,7 @@ class EventbriteParser {
                 url: url, // Use consistent 'url' field name across all parsers
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 ...(image && { image: image }), // Only include image if we found one
-                ...(gmapsUrl !== undefined && { gmaps: gmapsUrl }), // Only include gmaps if we have place_id data
+                // Don't include gmaps here - let SharedCore generate it from placeId
                 placeId: eventData.venue?.google_place_id || null, // Pass place_id to SharedCore for iOS-compatible URL generation
                 source: this.config.source,
                 // Properly handle bear event detection based on configuration

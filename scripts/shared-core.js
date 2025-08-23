@@ -651,8 +651,15 @@ class SharedCore {
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
+        // Re-enrich the merged event with location data
+        // This ensures that gmaps URLs are regenerated if they were removed during merge
+        const enrichedMergedEvent = this.enrichEventLocation(mergedEvent);
+        
+        // Regenerate notes after enrichment to include any newly generated fields
+        enrichedMergedEvent.notes = this.formatEventNotes(enrichedMergedEvent);
+        
         // Create _original object for display purposes (same as createFinalEventObject)
-        mergedEvent._original = {
+        enrichedMergedEvent._original = {
             existing: { 
                 // These are the CURRENT values that will be replaced during save
                 title: existingEvent.title || '',
@@ -669,17 +676,17 @@ class SharedCore {
                 // This ensures preserve fields show what was scraped vs what was kept
                 ...newEvent,
                 // Override with final calendar values for core fields
-                title: mergedEvent.title,
-                startDate: mergedEvent.startDate,
-                endDate: mergedEvent.endDate,
-                location: mergedEvent.location,
-                notes: mergedEvent.notes,
-                url: mergedEvent.url
+                title: enrichedMergedEvent.title,
+                startDate: enrichedMergedEvent.startDate,
+                endDate: enrichedMergedEvent.endDate,
+                location: enrichedMergedEvent.location,
+                notes: enrichedMergedEvent.notes,
+                url: enrichedMergedEvent.url
             }
         };
 
         
-        return mergedEvent;
+        return enrichedMergedEvent;
     }
 
     // Create complete merged event object that represents exactly what will be saved
@@ -871,7 +878,14 @@ class SharedCore {
             });
         }
         
-        return finalEvent;
+        // Re-enrich the final event with location data after merging
+        // This ensures that gmaps URLs are regenerated if they were removed during clobber merge
+        const enrichedFinalEvent = this.enrichEventLocation(finalEvent);
+        
+        // Regenerate notes after enrichment to include any newly generated fields
+        enrichedFinalEvent.notes = this.formatEventNotes(enrichedFinalEvent);
+        
+        return enrichedFinalEvent;
     }
     
     // Parse notes back into field/value pairs
@@ -1588,10 +1602,22 @@ class SharedCore {
                     }
                 });
                 
-                // Check for added fields
+                // Check for added fields - but handle preserve strategy correctly
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
-                        analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                        // Check if this field has preserve strategy and should be treated as preserved
+                        const fieldPriorities = analyzedEvent._fieldPriorities || {};
+                        const priorityConfig = fieldPriorities[key];
+                        const mergeStrategy = priorityConfig?.merge || 'preserve';
+                        
+                        if (mergeStrategy === 'preserve') {
+                            // For preserve strategy, if the field wasn't in original notes but is now present,
+                            // it should be marked as preserved (the undefined existing value was preserved)
+                            analyzedEvent._mergeDiff.preserved.push(key);
+                        } else {
+                            // For other strategies (clobber, upsert), it's truly added
+                            analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                        }
                     }
                 });
             } else if (analysis.existingEvent) {
