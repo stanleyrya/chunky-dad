@@ -8,21 +8,21 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20250824T020000Z
 DTEND:20250824T070000Z
-DTSTAMP:20250822T221319Z
+DTSTAMP:20250823T010548Z
 UID:6603D191-FFD6-4D13-89CE-03BD5C0A3D4F
 CREATED:20250817T231653Z
-DESCRIPTION:description: 16 YEAR ANNIVERSARY\nbar: Heretic\nwebsite: https:
- //www.eventbrite.com/e/bearracuda-atlanta-16-year-anniversary-tickets-13646
- 01091599\ncover: $20.73 - $26.82 (as of 8/21)\nimage: https://img.evbuc.com
- /https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1030030273%2F301420936599%2F1%2Fori
- ginal.20250513-190933?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Cco
- mpress&q=75&sharp=10&fp-x=0.0142045454545&fp-y=0.478571428571&s=3ecb099cc8f
- 9d16e98d8ea2b078ddca7\ngmaps: https://www.google.com/maps/search/?api=1&que
- ry=33.81158%2C-84.3554&query_place_id=ChIJHfQbk9cF9YgRffpBbinNqZk\nshortNam
- e: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nkey: bear
- racuda-2025-08-24-atlanta\nurl: https://www.eventbrite.com/e/bearracuda-atl
- anta-16-year-anniversary-tickets-1364601091599
-LAST-MODIFIED:20250821T213357Z
+DESCRIPTION:description: 16 YEAR ANNIVERSARY\nwebsite: https://www.eventbri
+ te.com/e/bearracuda-atlanta-16-year-anniversary-tickets-1364601091599\ncove
+ r: $20.73 - $26.82 (as of 8/20)\nimage: https://img.evbuc.com/https%3A%2F%2
+ Fcdn.evbuc.com%2Fimages%2F1030030273%2F301420936599%2F1%2Foriginal.20250513
+ -190933?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sh
+ arp=10&fp-x=0.0142045454545&fp-y=0.478571428571&s=3ecb099cc8f9d16e98d8ea2b0
+ 78ddca7\ngmaps: https://www.google.com/maps/search/?api=1&query=33.81158%2C
+ -84.3554&query_place_id=ChIJHfQbk9cF9YgRffpBbinNqZk\nshortName: Bear-rac-ud
+ a\ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-2025-08
+ -24-atlanta\nurl: https://www.eventbrite.com/e/bearracuda-atlanta-16-year-a
+ nniversary-tickets-1364601091599
+LAST-MODIFIED:20250822T233746Z
 LOCATION:33.81158\, -84.3554
 SEQUENCE:0
 STATUS:CONFIRMED
