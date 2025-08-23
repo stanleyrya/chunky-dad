@@ -655,6 +655,33 @@ class SharedCore {
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
+        // Create _original object for display purposes (same as createFinalEventObject)
+        mergedEvent._original = {
+            existing: { 
+                // These are the CURRENT values that will be replaced during save
+                title: existingEvent.title || '',
+                startDate: existingEvent.startDate || '',
+                endDate: existingEvent.endDate || '',
+                location: existingEvent.location || '',
+                notes: existingEvent.notes || '',
+                url: existingEvent.url || '',
+                // Add fields extracted from current notes for rich comparison
+                ...existingFields
+            },
+            new: { 
+                // Include ALL scraped values from newEvent for comparison
+                // This ensures preserve fields show what was scraped vs what was kept
+                ...newEvent,
+                // Override with final calendar values for core fields
+                title: mergedEvent.title,
+                startDate: mergedEvent.startDate,
+                endDate: mergedEvent.endDate,
+                location: mergedEvent.location,
+                notes: mergedEvent.notes,
+                url: mergedEvent.url
+            }
+        };
+        
         return mergedEvent;
     }
 
