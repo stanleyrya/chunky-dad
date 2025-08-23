@@ -3076,16 +3076,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     
     // Generate comparison rows for conflict display
     generateComparisonRows(event) {
-        if (!event._original) return '';
+        if (!event._original) {
+            console.log(`📱 DISPLAY DEBUG: No _original object found for event "${event.title}"`);
+            return '';
+        }
         
         // Debug log merge information for display
         console.log(`📱 DISPLAY DEBUG: Generating comparison for event "${event.title}"`);
         console.log(`📱 DISPLAY DEBUG: _fieldPriorities keys: ${Object.keys(event._fieldPriorities || {})}`);
         console.log(`📱 DISPLAY DEBUG: _fieldMergeStrategies keys: ${Object.keys(event._fieldMergeStrategies || {})}`);
         console.log(`📱 DISPLAY DEBUG: _mergeInfo keys: ${Object.keys(event._mergeInfo || {})}`);
+        console.log(`📱 DISPLAY DEBUG: _original.new keys: ${Object.keys(event._original.new || {})}`);
+        console.log(`📱 DISPLAY DEBUG: _original.existing keys: ${Object.keys(event._original.existing || {})}`);
         
         // Use the same field logic as what goes into calendar notes
         const fieldsToCompare = this.getFieldsForComparison(event);
+        console.log(`📱 DISPLAY DEBUG: fieldsToCompare: ${fieldsToCompare.join(', ')}`);
         const rows = [];
         
         fieldsToCompare.forEach(field => {
@@ -3128,6 +3134,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 console.log(`📱 DISPLAY DEBUG:   newValue: "${newValue}"`);
                 console.log(`📱 DISPLAY DEBUG:   finalValue: "${finalValue}"`);
                 console.log(`📱 DISPLAY DEBUG:   wasUsed: "${wasUsed}"`);
+                console.log(`📱 DISPLAY DEBUG:   _original.new[${field}]: "${event._original.new[field] || 'undefined'}"`);
+                console.log(`📱 DISPLAY DEBUG:   _original.existing[${field}]: "${event._original.existing?.[field] || 'undefined'}"`);
+                console.log(`📱 DISPLAY DEBUG:   _mergeInfo.extractedFields[${field}]: ${JSON.stringify(event._mergeInfo?.extractedFields?.[field] || 'undefined')}`);
             }
             
             // Skip if both are empty and no final value, unless it's a field with explicit strategy
