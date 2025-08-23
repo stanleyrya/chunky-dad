@@ -592,7 +592,7 @@ class SharedCore {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
-            const mergeStrategy = priorityConfig?.merge || 'upsert';
+            const mergeStrategy = priorityConfig?.merge || 'preserve';
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
@@ -656,7 +656,7 @@ class SharedCore {
             }
             
             // Apply priority logic based on merge strategy from calendar conflict
-            const mergeStrategy = priorityConfig.merge || 'upsert';
+            const mergeStrategy = priorityConfig.merge || 'preserve';
             switch (mergeStrategy) {
                 case 'clobber':
                     return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
