@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Denver
 BEGIN:VEVENT
 DTSTART:20250824T030000Z
 DTEND:20250824T103000Z
-DTSTAMP:20250823T161503Z
+DTSTAMP:20250823T181753Z
 UID:FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF
 CREATED:20250822T215307Z
 DESCRIPTION:key: megawoof|2025-08-24|trade|eventbrite\ndescription: 2\naddr
@@ -20,14 +20,8 @@ DESCRIPTION:key: megawoof|2025-08-24|trade|eventbrite\ndescription: 2\naddr
  .20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompres
  s&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928\ng
  maps: https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.998
- 7819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY\nidentifier: 2DDBF0E6-6877-
- 4FBF-BB94-EC2708DFD113:FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF\navailability: 
- busy\ntimeZone: America/New_York\ncalendar: [object Calendar]\naddRecurrenc
- eRule: function () {\n    [native code]\n}\nremoveAllRecurrenceRules: funct
- ion () {\n    [native code]\n}\nsave: function () {\n    [native code]\n}\n
- remove: function () {\n    [native code]\n}\npresentEdit: function () {\n  
-   [native code]\n}\n_staticFields: [object Object]
-LAST-MODIFIED:20250823T151223Z
+ 7819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY
+LAST-MODIFIED:20250823T181747Z
 LOCATION:39.7239346\, -104.9987819
 SEQUENCE:0
 STATUS:CONFIRMED
