@@ -616,31 +616,41 @@ class SharedCore {
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
-            // Debug merge logic for ALL fields
+            // Debug merge logic for ALL fields, with extra detail for gmaps/image
             const existingFromEvent = existingEvent[fieldName];
             const existingFromFields = existingFields[fieldName];
-            console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
-            console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
-            console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
-            console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
-            console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
-            console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
-            console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
-            console.log(`🔧 DEBUG:   has existing: ${!!existingValue}, has scraped: ${!!scrapedValue}`);
+            const isDebugField = fieldName === 'gmaps' || fieldName === 'image';
+            
+            if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
+                console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
+                console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
+                console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
+                console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
+                console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
+                console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
+                console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
+                console.log(`🔧 DEBUG:   has existing: ${!!existingValue}, has scraped: ${!!scrapedValue}`);
+            }
             
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
-                    console.log(`🔧 DEBUG: CLOBBER result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
+                        console.log(`🔧 DEBUG: CLOBBER result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    }
                     break;
                 case 'preserve':
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
+                        console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    }
                     break;
                 case 'upsert':
                 default:
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    console.log(`🔧 DEBUG: UPSERT result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
+                        console.log(`🔧 DEBUG: UPSERT result for "${fieldName}": "${mergedEvent[fieldName]}"`);
+                    }
                     break;
             }
         });
@@ -1173,6 +1183,7 @@ class SharedCore {
         }
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
+        // Only generate if gmaps field is empty or undefined (respect merge strategies)
         if (!event.gmaps) {
             // Parse coordinates from location field if available
             let coordinates = null;

@@ -3099,19 +3099,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 existingValue = event._mergeInfo.extractedFields[field].value;
             }
             
-            // For preserve fields, if newValue is empty but finalValue exists, 
-            // it means the value was scraped but preserve logic kept the existing value
-            // We should show the scraped value as newValue for proper display
-            if (strategy === 'preserve' && !newValue && finalValue && existingValue) {
-                // Check if finalValue came from existing (preserve behavior)
-                if (finalValue === existingValue) {
-                    // Look for the scraped value in the original new event object
-                    // This handles cases where preserve fields don't show scraped values
-                    const allNewFields = { ...event._original.new };
-                    if (allNewFields[field] && allNewFields[field] !== existingValue) {
-                        newValue = allNewFields[field];
-                    }
-                }
+            // FIXED: For all fields, always show the actual scraped value from _original.new
+            // The _original.new object contains ALL scraped values (line 674 in shared-core.js)
+            // This ensures preserve/clobber fields show what was actually scraped
+            if (!newValue && event._original?.new && event._original.new[field]) {
+                newValue = event._original.new[field];
             }
             
 
@@ -3155,10 +3147,34 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 // Both values are identical - no change needed
                 flowIcon = '—';
                 resultText = '<span style="color: #999;">SAME VALUE</span>';
-            } else if (strategy === 'clobber' && newValue && finalValue === newValue) {
-                // Clobber strategy applied - new value used (even if same as existing)
-                flowIcon = '→';
-                resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
+            } else if (strategy === 'clobber') {
+                // Clobber strategy - should always use new value (even if empty)
+                if (newValue && finalValue === newValue) {
+                    flowIcon = '→';
+                    resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
+                } else if (!newValue && !finalValue) {
+                    // Clobber with empty new value - clears the field
+                    flowIcon = '→';
+                    resultText = '<span style="color: #ff9500;">CLEARED</span>';
+                } else if (finalValue !== newValue) {
+                    // Clobber didn't work as expected - show warning
+                    flowIcon = '⚠️';
+                    resultText = '<span style="color: #ff3b30;">CLOBBER FAILED</span>';
+                }
+            } else if (strategy === 'preserve') {
+                // Preserve strategy - should keep existing value
+                if (existingValue && finalValue === existingValue) {
+                    flowIcon = '←';
+                    resultText = '<span style="color: #007aff;">PRESERVED</span>';
+                } else if (!existingValue && newValue && finalValue === newValue) {
+                    // Preserve but no existing value - uses new value
+                    flowIcon = '→';
+                    resultText = '<span style="color: #34c759;">ADDED (no existing)</span>';
+                } else if (finalValue !== existingValue && finalValue !== newValue) {
+                    // Preserve didn't work as expected
+                    flowIcon = '⚠️';
+                    resultText = '<span style="color: #ff3b30;">PRESERVE FAILED</span>';
+                }
             } else if (wasUsed === 'existing') {
                 // Merge strategy explicitly chose existing value
                 flowIcon = '←';
