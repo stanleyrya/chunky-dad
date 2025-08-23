@@ -571,6 +571,15 @@ class SharedCore {
     mergeEventData(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || {};
         
+        // Debug field priorities loading
+        if (newEvent.title && newEvent.title.includes('MEGAWOOF')) {
+            console.log(`🔧 DEBUG: mergeEventData - newEvent._fieldPriorities exists: ${!!newEvent._fieldPriorities}`);
+            console.log(`🔧 DEBUG: mergeEventData - fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
+            if (fieldPriorities.cover) {
+                console.log(`🔧 DEBUG: mergeEventData - cover config: ${JSON.stringify(fieldPriorities.cover)}`);
+            }
+        }
+        
         // Parse existing notes to get all the stored field data  
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
         
@@ -592,7 +601,7 @@ class SharedCore {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
-            const mergeStrategy = priorityConfig?.merge || 'upsert';
+            const mergeStrategy = priorityConfig?.merge || 'preserve';
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
@@ -601,6 +610,8 @@ class SharedCore {
                 const existingFromEvent = existingEvent[fieldName];
                 const existingFromFields = existingFields[fieldName];
                 console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
+                console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
+                console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
                 console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
                 console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
                 console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
@@ -656,7 +667,7 @@ class SharedCore {
             }
             
             // Apply priority logic based on merge strategy from calendar conflict
-            const mergeStrategy = priorityConfig.merge || 'upsert';
+            const mergeStrategy = priorityConfig.merge || 'preserve';
             switch (mergeStrategy) {
                 case 'clobber':
                     return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
