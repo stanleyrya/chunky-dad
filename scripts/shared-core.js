@@ -586,8 +586,16 @@ class SharedCore {
         const finalScrapedValues = { ...newEvent };
         
         // Step 2: Merge final scraped values with existing calendar using merge strategies
+        // Only copy essential calendar properties, not Scriptable-specific methods/properties
         const mergedEvent = {
-            ...existingEvent, // Start with existing (has calendar ID and save properties)
+            // Core calendar fields that need to be preserved
+            title: existingEvent.title,
+            startDate: existingEvent.startDate,
+            endDate: existingEvent.endDate,
+            location: existingEvent.location,
+            notes: existingEvent.notes,
+            url: existingEvent.url,
+            // Metadata fields
             _fieldPriorities: fieldPriorities,
             _action: newEvent._action || 'merge',
             key: newEvent.key || existingEvent.key,
@@ -595,10 +603,16 @@ class SharedCore {
         };
         
         // Apply merge strategies for ALL fields (both scraped and existing)
+        // Filter out Scriptable-specific methods and properties
+        const scriptableFields = new Set([
+            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields'
+        ]);
+        
         const allFieldNames = new Set([
             ...Object.keys(finalScrapedValues),
             ...Object.keys(existingFields),
-            ...Object.keys(existingEvent)
+            ...Object.keys(existingEvent).filter(key => !scriptableFields.has(key))
         ]);
         
         allFieldNames.forEach(fieldName => {
@@ -847,12 +861,13 @@ class SharedCore {
         if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldPriorities) {
             Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
                 const priorityConfig = finalEvent._fieldPriorities[fieldName];
-                // Add fields that don't have priority rules or have preserve merge strategy
-                if (!priorityConfig || priorityConfig.merge === 'preserve') {
-                    if (!finalEvent[fieldName]) {
-                        finalEvent[fieldName] = fieldInfo.value;
-                    }
+                // Only add fields that have non-preserve merge strategy or have upsert and field is missing
+                if (priorityConfig && priorityConfig.merge === 'upsert' && !finalEvent[fieldName]) {
+                    finalEvent[fieldName] = fieldInfo.value;
+                } else if (priorityConfig && priorityConfig.merge === 'clobber') {
+                    finalEvent[fieldName] = fieldInfo.value;
                 }
+                // For preserve strategy: do nothing - keep existing value or undefined
             });
         }
         
@@ -1467,13 +1482,16 @@ class SharedCore {
     formatEventNotes(event) {
         const notes = [];
         
-        // Fields to exclude from notes (core calendar fields and internal metadata)
+        // Fields to exclude from notes (core calendar fields, internal metadata, and Scriptable-specific properties)
         const excludeFields = new Set([
             'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
-            'originalTitle', 'name' // These are usually duplicates of title
+            'originalTitle', 'name', // These are usually duplicates of title
+            // Scriptable-specific properties that shouldn't be in notes
+            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields'
         ]);
         
         // Add all fields that have values (merge logic has already determined correct values)
@@ -1812,7 +1830,13 @@ class SharedCore {
                     
                 case 'clobber':
                     // Use new value if it exists, otherwise keep existing
-                    if (newValue !== undefined && newValue !== null && newValue !== '') {
+                    // Special handling for fields that should allow empty strings as valid values
+                    const fieldsAllowingEmptyStrings = new Set(['gmaps', 'image', 'cover', 'description']);
+                    const isValidNewValue = fieldsAllowingEmptyStrings.has(fieldName) 
+                        ? (newValue !== undefined && newValue !== null)
+                        : (newValue !== undefined && newValue !== null && newValue !== '');
+                    
+                    if (isValidNewValue) {
                         // Keep new value (do nothing as it's already in event)
                         event._mergeInfo.mergedFields[fieldName] = 'new';
                         return true;
