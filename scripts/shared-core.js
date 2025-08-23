@@ -576,14 +576,7 @@ class SharedCore {
     mergeEventData(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || {};
         
-        // Debug field priorities loading
-        if (newEvent.title && newEvent.title.includes('MEGAWOOF')) {
-            console.log(`🔧 DEBUG: mergeEventData - newEvent._fieldPriorities exists: ${!!newEvent._fieldPriorities}`);
-            console.log(`🔧 DEBUG: mergeEventData - fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
-            if (fieldPriorities.cover) {
-                console.log(`🔧 DEBUG: mergeEventData - cover config: ${JSON.stringify(fieldPriorities.cover)}`);
-            }
-        }
+        // Field priorities are used to determine merge strategies
         
         // Parse existing notes to get all the stored field data  
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
@@ -616,41 +609,20 @@ class SharedCore {
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
-            // Debug merge logic for ALL fields, with extra detail for gmaps/image
+            // Debug merge logic - can be controlled via debug flags if needed
             const existingFromEvent = existingEvent[fieldName];
             const existingFromFields = existingFields[fieldName];
-            const isDebugField = fieldName === 'gmaps' || fieldName === 'image';
-            
-            if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
-                console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
-                console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
-                console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
-                console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
-                console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
-                console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
-                console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
-                console.log(`🔧 DEBUG:   has existing: ${!!existingValue}, has scraped: ${!!scrapedValue}`);
-            }
             
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
-                    if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
-                        console.log(`🔧 DEBUG: CLOBBER result for "${fieldName}": "${mergedEvent[fieldName]}"`);
-                    }
                     break;
                 case 'preserve':
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
-                        console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
-                    }
                     break;
                 case 'upsert':
                 default:
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    if (isDebugField || (newEvent.title && newEvent.title.includes('MEGAWOOF'))) {
-                        console.log(`🔧 DEBUG: UPSERT result for "${fieldName}": "${mergedEvent[fieldName]}"`);
-                    }
                     break;
             }
         });
@@ -1448,17 +1420,7 @@ class SharedCore {
         // Get the field priorities configuration from this parser's config
         const fieldPriorities = parserConfig?.fieldPriorities || {};
         
-        // Debug field priorities loading
-        if (parserConfig?.name === "Megawoof America") {
-            console.log(`🔧 DEBUG: Loading field priorities for ${parserConfig.name}`);
-            console.log(`🔧 DEBUG: fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
-            if (fieldPriorities.description) {
-                console.log(`🔧 DEBUG: description config: ${JSON.stringify(fieldPriorities.description)}`);
-            }
-            if (fieldPriorities.cover) {
-                console.log(`🔧 DEBUG: cover config: ${JSON.stringify(fieldPriorities.cover)}`);
-            }
-        }
+        // Field priorities loaded from parser configuration
         
         // Store field priorities for later use during merging
         if (!event._fieldPriorities) {
