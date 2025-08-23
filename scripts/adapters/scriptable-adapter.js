@@ -156,9 +156,9 @@ class FileLogger {
         // Write the logs
         try {
             fm.writeString(fullPath, this.logs);
-            console.log(`📱 FileLogger: Successfully wrote logs to ${fullPath}`);
+            console.log(`📱 Scriptable: Successfully wrote logs to ${fullPath}`);
         } catch (writeErr) {
-            console.log(`📱 FileLogger: Failed to write logs: ${writeErr.message}`);
+            console.log(`📱 Scriptable: Failed to write logs: ${writeErr.message}`);
             throw writeErr;
         }
     }
@@ -911,7 +911,7 @@ class ScriptableAdapter {
             
             events.slice(0, 2).forEach(event => {
                 console.log(`• ${event.title || event.name}`);
-                console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 🌍 ${(event.city || 'unknown').toUpperCase()}`);
+                console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
                 console.log(`  📅 ${new Date(event.startDate).toLocaleDateString()} ${new Date(event.startDate).toLocaleTimeString()}`);
                 
                 if (action === 'merge' && event._mergeDiff) {
@@ -2281,12 +2281,6 @@ class ScriptableAdapter {
                     <span>📅</span>
                     <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}</span>
                 </div>
-                ${event.city ? `
-                    <div class="event-detail">
-                        <span>🌍</span>
-                        <span>${this.escapeHtml(event.city.toUpperCase())}</span>
-                    </div>
-                ` : ''}
                 <div class="event-detail">
                     <span>📱</span>
                     <span>${this.escapeHtml(calendarName)}</span>
@@ -2682,8 +2676,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     if (event.day || event.time) {
                         subtitle.push(`📅 ${event.day || ''} ${event.time || ''}`.trim());
                     }
-                    if (event.city) {
-                        subtitle.push(`🌍 ${event.city.toUpperCase()}`);
+                    const calendarName = this.getCalendarNameForDisplay(event);
+                    if (calendarName) {
+                        subtitle.push(`📱 ${calendarName}`);
                     }
                     
                     eventCell.subtitleText = subtitle.join(' • ') || 'Event details';
@@ -2783,10 +2778,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             allEvents.slice(0, 5).forEach((event, i) => {
                 const title = event.title || event.name || `Event ${i + 1}`;
                 const venue = event.venue || event.bar || '';
-                const city = event.city || '';
+                const calendarName = this.getCalendarNameForDisplay(event);
                 lines.push(`  • ${title}`);
                 if (venue) lines.push(`    📍 ${venue}`);
-                if (city) lines.push(`    🌍 ${city.toUpperCase()}`);
+                if (calendarName) lines.push(`    📱 ${calendarName}`);
             });
             
             if (allEvents.length > 5) {
@@ -2953,10 +2948,24 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Get all fields from both new and existing events
         const allFields = new Set();
         
+        // Use the same exclusion logic as formatEventNotes in shared-core.js
+        // These are fields that are NOT saved to calendar notes and should NOT be displayed
+        const excludeFields = new Set([
+            'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
+            'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
+            '_original', '_mergeInfo', '_changes', '_mergeDiff',
+            'originalTitle', 'name', // These are usually duplicates of title
+            // Scriptable-specific properties that shouldn't be in notes
+            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields'
+        ]);
+        
         // Helper function to check if a field should be included
         const shouldIncludeField = (obj, field) => {
             if (field.startsWith('_')) return false;
             if (typeof obj[field] === 'function') return false;
+            if (excludeFields.has(field)) return false;
             return true;
         };
         
@@ -2981,7 +2990,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Add fields from extracted fields
         if (event._mergeInfo?.extractedFields) {
             Object.keys(event._mergeInfo.extractedFields).forEach(field => {
-                if (!field.startsWith('_')) {
+                if (!field.startsWith('_') && !excludeFields.has(field)) {
                     allFields.add(field);
                 }
             });
@@ -3023,7 +3032,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'location': 20,     // alias for venue
             'host': 20,         // alias for venue
             'address': 21,
-            'city': 22,
+            // Note: city is now excluded as it shouldn't be saved to calendar
             
             // Contact/Social fields
             'website': 30,
@@ -3111,10 +3120,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!newValue && !existingValue && !finalValue && !strategy) return;
             
             // For preserve fields, always show them if they have a strategy configured
-            // This ensures we show "scraped X, existing Y, choosing Y because preserve"
+            // This ensures we show "scraped X, existing undefined, choosing undefined because preserve"
             // Don't skip preserve fields even if they appear empty - user needs to see what was preserved
-            if (strategy === 'preserve' && !newValue && !existingValue && !finalValue) {
-                // Still show it to demonstrate preserve behavior
+            if (strategy === 'preserve') {
+                // Always show preserve fields to demonstrate the strategy, even if all values are empty
+                // This is important for showing "scraped value X, existing undefined, preserved undefined"
             }
             
             // Format values for display - show exactly what the merge logic saw
@@ -3167,17 +3177,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 }
             } else if (strategy === 'preserve') {
                 // Preserve strategy - ALWAYS keep existing value (even if null/empty)
-                if (finalValue === existingValue) {
+                // For preserve, if existing is undefined, final should also be undefined
+                const preserveWorked = (existingValue === undefined && finalValue === undefined) || 
+                                     (existingValue !== undefined && finalValue === existingValue);
+                
+                if (preserveWorked) {
                     flowIcon = '←';
-                    if (existingValue) {
+                    if (existingValue !== undefined) {
                         resultText = '<span style="color: #007aff;">PRESERVED EXISTING</span>';
                     } else {
-                        resultText = '<span style="color: #007aff;">PRESERVED NULL (ignore scraped)</span>';
+                        resultText = '<span style="color: #007aff;">PRESERVED UNDEFINED (ignored scraped)</span>';
                     }
-                } else if (finalValue !== existingValue) {
+                } else {
                     // Preserve didn't work as expected - should always keep existing
                     flowIcon = '⚠️';
-                    resultText = '<span style="color: #ff3b30;">PRESERVE FAILED</span>';
+                    resultText = `<span style="color: #ff3b30;">PRESERVE FAILED (expected: ${existingValue === undefined ? 'undefined' : existingValue}, got: ${finalValue === undefined ? 'undefined' : finalValue})</span>`;
                 }
             } else if (wasUsed === 'existing') {
                 // Merge strategy explicitly chose existing value
