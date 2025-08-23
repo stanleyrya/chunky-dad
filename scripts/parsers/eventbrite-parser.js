@@ -531,11 +531,19 @@ class EventbriteParser {
                 }
             }
             
-            // Skip detail page place_id extraction - detail pages only have Eventbrite venue IDs
-            // Google place_ids are only available in organizer pages, not detail pages
-            // if (serverData.components?.eventDetails?.location) {
-            //     // localityPlaceId is an Eventbrite internal venue ID, not a Google place_id
-            // }
+            // Check components.eventDetails.location for additional venue data
+            if (serverData.components?.eventDetails?.location) {
+                const detailsLocation = serverData.components.eventDetails.location;
+                if (detailsLocation.localityPlaceId && !finalPlaceId) {
+                    // Only use if it's a real Google place_id (starts with "ChIJ")
+                    if (detailsLocation.localityPlaceId.startsWith('ChIJ')) {
+                        finalPlaceId = detailsLocation.localityPlaceId;
+                        console.log(`🎫 Eventbrite: Found Google place_id in components.eventDetails.location: "${finalPlaceId}"`);
+                    } else {
+                        console.log(`🎫 Eventbrite: Skipping Eventbrite venue ID (not Google place_id): "${detailsLocation.localityPlaceId}"`);
+                    }
+                }
+            }
             
             const event = {
                 title: title,
