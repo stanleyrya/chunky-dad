@@ -1190,6 +1190,10 @@ class SharedCore {
     enrichEventLocation(event) {
         if (!event) return event;
         
+        // DEBUG: Check URL field before enrichment
+        const hadUrlBefore = 'url' in event;
+        const urlValueBefore = event.url;
+        
         // Extract city if not already present (parser may have set it for venue-specific logic)
         if (!event.city) {
             event.city = this.extractCityFromEvent(event);
@@ -1258,6 +1262,16 @@ class SharedCore {
         
         // Clean up temporary placeId field (used only for URL generation)
         delete event.placeId;
+        
+        // DEBUG: Check URL field after enrichment
+        const hasUrlAfter = 'url' in event;
+        const urlValueAfter = event.url;
+        
+        if (hadUrlBefore !== hasUrlAfter || urlValueBefore !== urlValueAfter) {
+            console.error(`🗺️ SharedCore: URL FIELD LOST in enrichEventLocation for "${event.title}"!`);
+            console.error(`🗺️ SharedCore: Before: hadUrl=${hadUrlBefore}, value="${urlValueBefore}"`);
+            console.error(`🗺️ SharedCore: After: hasUrl=${hasUrlAfter}, value="${urlValueAfter}"`);
+        }
         
         return event;
     }
