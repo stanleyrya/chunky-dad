@@ -758,15 +758,16 @@ class SharedCore {
                 ...existingFields
             },
             new: { 
-                // These are the FINAL values that will be written during save
+                // Include ALL scraped values from newEvent for comparison
+                // This ensures preserve fields show what was scraped vs what was kept
+                ...newEvent,
+                // Override with final calendar values for core fields
                 title: finalEvent.title,
                 startDate: finalEvent.startDate,
                 endDate: finalEvent.endDate,
                 location: finalEvent.location,
                 notes: finalEvent.notes,
-                url: finalEvent.url, // This comes from mergeEventData which handles website->url mapping
-                // Include other new event fields for comparison
-                ...newEvent
+                url: finalEvent.url // This comes from mergeEventData which handles website->url mapping
             }
         };
         
@@ -777,9 +778,24 @@ class SharedCore {
             strategy: fieldPrioritiesForCompare
         };
         
-        // Track which fields were merged and how
-        ['title', 'startDate', 'endDate', 'location', 'url', 'notes'].forEach(field => {
-            const existingValue = existingEvent[field];
+        // Track which fields were merged and how - include all fields with priorities plus standard calendar fields
+        const fieldsToTrack = new Set(['title', 'startDate', 'endDate', 'location', 'url', 'notes']);
+        
+        // Add all fields that have priority configurations
+        if (fieldPriorities) {
+            Object.keys(fieldPriorities).forEach(field => fieldsToTrack.add(field));
+        }
+        
+        // Add all fields from existing and new events to ensure comprehensive tracking
+        Object.keys(existingFields || {}).forEach(field => fieldsToTrack.add(field));
+        Object.keys(newEvent || {}).forEach(field => {
+            if (!field.startsWith('_') && typeof newEvent[field] !== 'function') {
+                fieldsToTrack.add(field);
+            }
+        });
+        
+        fieldsToTrack.forEach(field => {
+            const existingValue = existingEvent[field] || existingFields[field];
             const newValue = newEvent[field];
             const finalValue = finalEvent[field];
             

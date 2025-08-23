@@ -3100,6 +3100,26 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
             
+            // Check if this field was extracted from existing event's notes
+            if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
+                existingValue = event._mergeInfo.extractedFields[field].value;
+            }
+            
+            // For preserve fields, if newValue is empty but finalValue exists, 
+            // it means the value was scraped but preserve logic kept the existing value
+            // We should show the scraped value as newValue for proper display
+            if (strategy === 'preserve' && !newValue && finalValue && existingValue) {
+                // Check if finalValue came from existing (preserve behavior)
+                if (finalValue === existingValue) {
+                    // Look for the scraped value in the original new event object
+                    // This handles cases where preserve fields don't show scraped values
+                    const allNewFields = { ...event._original.new };
+                    if (allNewFields[field] && allNewFields[field] !== existingValue) {
+                        newValue = allNewFields[field];
+                    }
+                }
+            }
+            
             // Debug log for problematic fields
             if (field === 'bar' || field === 'cover' || field === 'gmaps' || field === 'image' || field === 'description') {
                 console.log(`📱 DISPLAY DEBUG: Field "${field}"`);
@@ -3110,13 +3130,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 console.log(`📱 DISPLAY DEBUG:   wasUsed: "${wasUsed}"`);
             }
             
-            // Check if this field was extracted from existing event's notes
-            if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
-                existingValue = event._mergeInfo.extractedFields[field].value;
-            }
+            // Skip if both are empty and no final value, unless it's a field with explicit strategy
+            // This ensures preserve fields show up even if they appear empty
+            if (!newValue && !existingValue && !finalValue && !strategy) return;
             
-            // Skip if both are empty and no final value
-            if (!newValue && !existingValue && !finalValue) return;
+            // For preserve fields, always show them if they have a strategy configured
+            // This helps debug why preserve fields aren't working
+            if (strategy === 'preserve' && !newValue && !existingValue && !finalValue) {
+                // Still skip if truly no data, but log it for debugging
+                console.log(`📱 DISPLAY DEBUG: Skipping empty preserve field "${field}" - no values to compare`);
+                return;
+            }
             
             // Format values for display - show exactly what the merge logic saw
             const formatValue = (val, maxLength = 30) => {
