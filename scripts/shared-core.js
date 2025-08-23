@@ -660,6 +660,12 @@ class SharedCore {
         // This ensures that gmaps URLs are regenerated if they were removed during merge
         const enrichedMergedEvent = this.enrichEventLocation(mergedEvent);
         
+        // Safeguard: Ensure URL is never lost during merge
+        if (!enrichedMergedEvent.url && newEvent.url) {
+            console.log(`🔄 SharedCore: URL SAFEGUARD - Restoring lost URL for "${newEvent.title}": "${newEvent.url}"`);
+            enrichedMergedEvent.url = newEvent.url;
+        }
+        
         // Regenerate notes after enrichment to include any newly generated fields
         enrichedMergedEvent.notes = this.formatEventNotes(enrichedMergedEvent);
         
@@ -740,7 +746,7 @@ class SharedCore {
             endDate: resolvedEndDate,
             location: resolvedLocation,
             notes: mergedData.notes,
-            url: mergedData.url,
+            url: mergedData.url || newEvent.url || '', // Safeguard: ensure URL is never lost
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
