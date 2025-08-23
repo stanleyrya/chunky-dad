@@ -1213,6 +1213,7 @@ class SharedCore {
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
         // Always generate if gmaps field is empty or undefined - merge strategies are handled later
         if (!event.gmaps) {
+            console.log(`🗺️ SharedCore: Attempting gmaps generation for "${event.title}" - placeId: ${event.placeId}, coordinates: ${event.location}, address: ${event.address}`);
             // Parse coordinates from location field if available
             let coordinates = null;
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
@@ -1229,14 +1230,9 @@ class SharedCore {
                 address: (event.address && this.isFullAddress(event.address)) ? event.address : null
             };
             
+            console.log(`🗺️ SharedCore: URL generation data for "${event.title}":`, JSON.stringify(urlData));
             event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
-            
-            if (event.gmaps) {
-                const method = event.placeId ? 
-                    (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
-                    (coordinates ? 'coordinates only' : 'address only');
-                console.log(`🗺️ SharedCore: Generated iOS-compatible Google Maps URL using ${method} for "${event.title}"`);
-            }
+            console.log(`🗺️ SharedCore: Generated gmaps URL: ${event.gmaps}`);
         }
         
         // Clean up location data based on what we have

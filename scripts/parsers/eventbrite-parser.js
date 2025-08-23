@@ -461,6 +461,9 @@ class EventbriteParser {
             }
             const image = eventData.logo?.url || eventData.image?.url;
             
+            // Debug image extraction
+            console.log(`🎫 Eventbrite: Image extraction for "${title}": logo=${eventData.logo?.url}, image=${eventData.image?.url}, final=${image}`);
+            
             // Extract city from event title for better event organization
             let city = null;
             
