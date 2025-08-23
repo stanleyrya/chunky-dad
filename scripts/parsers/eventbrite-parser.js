@@ -388,6 +388,11 @@ class EventbriteParser {
             console.log(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
             const url = eventData.url || eventData.vanity_url || '';
             
+            // Debug URL extraction - this will help identify Scriptable vs web differences
+            if (!url || url === '') {
+                console.warn(`🎫 Eventbrite: WARNING - Empty URL for "${title}" - eventData.url: "${eventData.url}", eventData.vanity_url: "${eventData.vanity_url}"`);
+            }
+            
             // Enhanced venue processing - get both name and address from multiple sources
             let venue = null;
             let address = null;
