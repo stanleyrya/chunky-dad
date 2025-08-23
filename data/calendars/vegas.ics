@@ -8,22 +8,28 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20250823T141206Z
+DTSTAMP:20250823T161503Z
 UID:424AECDE-1406-4CF9-8E45-444AE117CE4C
 CREATED:20250822T215306Z
 DESCRIPTION:key: megawoof|2025-08-31|dust las vegas|eventbrite\ndescription
- : MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND : BEARS AT WORK\nbar: Du
- st Las Vegas\naddress: 855 East Twain Avenue #UNIT 114\, Las Vegas\, NV 891
- 69\nurl: https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-
- weekend-bears-at-work-tickets-1531257726079\ncover: $11.58 - $27.37 (as of 
- 8/22)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F
- 1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?crop=focalpoint&fi
- t=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s
- =73fd269e7d0c3aa5168b99f977aba5d7\ngmaps: https://www.google.com/maps/searc
- h/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYd
- OaAV7t8\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoo
- f_america\n_staticFields: [object Object]
-LAST-MODIFIED:20250822T215400Z
+ : MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND : BEARS AT WORK\naddress
+ : 855 East Twain Avenue #UNIT 114\, Las Vegas\, NV 89169\nurl: https://www.
+ eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work
+ -tickets-1531257726079\nshortName: MEGA-WOOF\ninstagram: https://www.instag
+ ram.com/megawoof_america\nbar: Dust Las Vegas\ncover: $11.58 - $27.37 (as o
+ f 8/22)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%
+ 2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?crop=focalpoint&
+ fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5
+ &s=73fd269e7d0c3aa5168b99f977aba5d7\ngmaps: https://www.google.com/maps/sea
+ rch/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvH
+ YdOaAV7t8\nidentifier: 2DDBF0E6-6877-4FBF-BB94-EC2708DFD113:424AECDE-1406-4
+ CF9-8E45-444AE117CE4C\navailability: busy\ntimeZone: America/New_York\ncale
+ ndar: [object Calendar]\naddRecurrenceRule: function () {\n    [native code
+ ]\n}\nremoveAllRecurrenceRules: function () {\n    [native code]\n}\nsave: 
+ function () {\n    [native code]\n}\nremove: function () {\n    [native cod
+ e]\n}\npresentEdit: function () {\n    [native code]\n}\n_staticFields: [ob
+ ject Object]
+LAST-MODIFIED:20250823T151228Z
 LOCATION:36.1214368\, -115.144945
 SEQUENCE:0
 STATUS:CONFIRMED
