@@ -601,8 +601,14 @@ class SharedCore {
             _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
         };
         
-        // Apply merge strategies (ignore priorities, just use merge strategy)
-        Object.keys(finalScrapedValues).forEach(fieldName => {
+        // Apply merge strategies for ALL fields (both scraped and existing)
+        const allFieldNames = new Set([
+            ...Object.keys(finalScrapedValues),
+            ...Object.keys(existingFields),
+            ...Object.keys(existingEvent)
+        ]);
+        
+        allFieldNames.forEach(fieldName => {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];

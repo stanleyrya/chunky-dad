@@ -3078,6 +3078,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateComparisonRows(event) {
         if (!event._original) return '';
         
+        // Debug log merge information for display
+        console.log(`📱 DISPLAY DEBUG: Generating comparison for event "${event.title}"`);
+        console.log(`📱 DISPLAY DEBUG: _fieldPriorities keys: ${Object.keys(event._fieldPriorities || {})}`);
+        console.log(`📱 DISPLAY DEBUG: _fieldMergeStrategies keys: ${Object.keys(event._fieldMergeStrategies || {})}`);
+        console.log(`📱 DISPLAY DEBUG: _mergeInfo keys: ${Object.keys(event._mergeInfo || {})}`);
+        
         // Use the same field logic as what goes into calendar notes
         const fieldsToCompare = this.getFieldsForComparison(event);
         const rows = [];
@@ -3090,8 +3096,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             let newValue = event._original.new[field] || '';
             let existingValue = event._original.existing?.[field] || '';
             let finalValue = event[field] || '';
-            const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
+            // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
+            const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
+            
+            // Debug log for problematic fields
+            if (field === 'bar' || field === 'cover' || field === 'gmaps' || field === 'image' || field === 'description') {
+                console.log(`📱 DISPLAY DEBUG: Field "${field}"`);
+                console.log(`📱 DISPLAY DEBUG:   strategy: "${strategy}"`);
+                console.log(`📱 DISPLAY DEBUG:   existingValue: "${existingValue}"`);
+                console.log(`📱 DISPLAY DEBUG:   newValue: "${newValue}"`);
+                console.log(`📱 DISPLAY DEBUG:   finalValue: "${finalValue}"`);
+                console.log(`📱 DISPLAY DEBUG:   wasUsed: "${wasUsed}"`);
+            }
             
             // Check if this field was extracted from existing event's notes
             if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
@@ -3197,7 +3214,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             let newValue = event._original.new[field] || '';
             let existingValue = event._original.existing?.[field] || '';
             let finalValue = event[field] || '';
-            const strategy = event._fieldMergeStrategies?.[field] || 'preserve';
+            // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
+            const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
             
             // Check if this field was extracted from existing event's notes
             if (!existingValue && event._mergeInfo?.extractedFields?.[field]) {
