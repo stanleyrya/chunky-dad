@@ -601,6 +601,8 @@ class SharedCore {
                 const existingFromEvent = existingEvent[fieldName];
                 const existingFromFields = existingFields[fieldName];
                 console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
+                console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
+                console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
                 console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
                 console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
                 console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
