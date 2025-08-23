@@ -1211,16 +1211,8 @@ class SharedCore {
         }
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
-        // Only generate if gmaps field is empty or undefined (respect merge strategies)
-        // Check if this event has merge strategies and respect them for gmaps field
-        const hasFieldPriorities = event._fieldPriorities && event._fieldPriorities.gmaps;
-        const gmapsStrategy = hasFieldPriorities ? event._fieldPriorities.gmaps.merge : null;
-        
-        // For clobber strategy, always regenerate gmaps (don't preserve existing merged value)
-        // For other strategies or no strategy, only generate if gmaps is empty
-        const shouldRegenerateGmaps = gmapsStrategy === 'clobber' ? true : !event.gmaps;
-        
-        if (shouldRegenerateGmaps) {
+        // Always generate if gmaps field is empty or undefined - merge strategies are handled later
+        if (!event.gmaps) {
             // Parse coordinates from location field if available
             let coordinates = null;
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
