@@ -371,8 +371,13 @@ class SharedCore {
                 if (parseResult.events && parseResult.events.length > 0) {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
                     
+                    // Apply field priorities to detail page events (same as main page events)
+                    const enrichedDetailEvents = parseResult.events.map(event => 
+                        this.applyFieldPriorities(event, parserConfig, mainConfig)
+                    );
+                    
                     // Add these events to the existing events collection for potential merging
-                    existingEvents.push(...parseResult.events);
+                    existingEvents.push(...enrichedDetailEvents);
                 } else {
                     await displayAdapter.logInfo(`SYSTEM: No new events found on detail page ${url}`);
                 }
