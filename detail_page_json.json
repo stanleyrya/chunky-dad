@@ -1,0 +1,1643 @@
+{
+    "app_name": "listings",
+    "urgencySignals": {
+        "messages": {
+            "goingFast": false,
+            "salesEndSoon": true,
+            "fewTickets": false
+        },
+        "categories": {
+            "popular": false,
+            "new": false,
+            "earlyBird": false
+        }
+    },
+    "event_listing_response": {
+        "tickets": {
+            "ticketClasses": [
+                {
+                    "onSaleStatusEnum": "SOLD_OUT",
+                    "maximumQuantityWithoutPending": 0,
+                    "salesEnd": "2025-08-24T03:00:00Z",
+                    "characteristics": {
+                        "isPaid": true,
+                        "isUnlimited": false,
+                        "defaultQuantity": 0,
+                        "isFree": false,
+                        "isDonation": false,
+                        "isHidden": false
+                    },
+                    "tax": {
+                        "currency": "USD",
+                        "majorValue": "0.00",
+                        "display": "0.00 USD",
+                        "value": 0
+                    },
+                    "currency": "USD",
+                    "cost": {
+                        "currency": "USD",
+                        "majorValue": "15.00",
+                        "display": "15.00 USD",
+                        "value": 1500
+                    },
+                    "id": "2464508843",
+                    "category": "admission",
+                    "fee": {
+                        "currency": "USD",
+                        "majorValue": "1.84",
+                        "display": "1.84 USD",
+                        "value": 184
+                    },
+                    "capacity": 50,
+                    "maximumQuantityPerOrder": 0,
+                    "quantityRemaining": 0,
+                    "totalCost": {
+                        "currency": "USD",
+                        "majorValue": "16.84",
+                        "display": "16.84 USD",
+                        "value": 1684
+                    },
+                    "description": null,
+                    "onSaleStatus": {
+                        "unavailable": false,
+                        "startSalesWithTz": {
+                            "timezone": "America/Denver",
+                            "local": "2025-05-26T20:20:00",
+                            "utc": "2025-05-27T02:20:00Z"
+                        },
+                        "nearSalesEnd": true,
+                        "startSales": "2025-05-26T20:20:00Z",
+                        "endSalesWithTz": {
+                            "timezone": "America/Denver",
+                            "local": "2025-08-23T21:00:00",
+                            "utc": "2025-08-24T03:00:00Z"
+                        },
+                        "ended": false,
+                        "notYetStarted": false,
+                        "notOnSale": true,
+                        "endSales": "2025-08-23T21:00:00Z",
+                        "nearSalesStart": false,
+                        "soldOutWithWaitlist": true,
+                        "isTicketTiered": false
+                    },
+                    "maximumQuantity": 10,
+                    "minimumQuantity": 1,
+                    "inventoryTierId": null,
+                    "variants": [
+                        {
+                            "code": null,
+                            "endSalesWithTz": null,
+                            "percentOff": null,
+                            "tax": {
+                                "currency": "USD",
+                                "majorValue": "0.00",
+                                "display": "0.00 USD",
+                                "value": 0
+                            },
+                            "primary": false,
+                            "imageId": null,
+                            "currency": "USD",
+                            "cost": {
+                                "currency": "USD",
+                                "majorValue": "15.00",
+                                "display": "15.00 USD",
+                                "value": 1500
+                            },
+                            "notYetStarted": false,
+                            "useAllInPrice": true,
+                            "taxAndFee": {
+                                "currency": "USD",
+                                "majorValue": "1.84",
+                                "display": "1.84 USD",
+                                "value": 184
+                            },
+                            "id": "T2464508843",
+                            "category": "admission",
+                            "fee": {
+                                "currency": "USD",
+                                "majorValue": "1.84",
+                                "display": "1.84 USD",
+                                "value": 184
+                            },
+                            "unavailable": false,
+                            "maximumQuantityPerOrder": 0,
+                            "color": null,
+                            "originalTax": null,
+                            "hideSalesDates": false,
+                            "originalCost": null,
+                            "totalCost": {
+                                "currency": "USD",
+                                "majorValue": "16.84",
+                                "display": "16.84 USD",
+                                "value": 1684
+                            },
+                            "description": null,
+                            "onSaleStatus": "SOLD_OUT",
+                            "startSalesWithTz": {
+                                "timezone": "America/Denver",
+                                "local": "2025-05-26T20:20:00",
+                                "utc": "2025-05-27T02:20:00Z"
+                            },
+                            "free": false,
+                            "minimumQuantity": 1,
+                            "originalFee": null,
+                            "soldOutWithWaitlist": true,
+                            "isTicketTiered": false,
+                            "displayName": "Early Bird",
+                            "name": "Early Bird",
+                            "ended": false,
+                            "amountOff": null,
+                            "originalTotalCost": null,
+                            "discountType": null
+                        }
+                    ],
+                    "displayName": "Early Bird",
+                    "name": "Early Bird",
+                    "discountId": null,
+                    "displayFlags": {
+                        "showDescription": false,
+                        "showTicketSelection": false,
+                        "showWaitlist": false,
+                        "showRemaining": false,
+                        "haveDescription": false,
+                        "showSalesEndDate": true
+                    }
+                },
+                {
+                    "onSaleStatusEnum": "SOLD_OUT",
+                    "maximumQuantityWithoutPending": 0,
+                    "salesEnd": "2025-08-24T03:00:00Z",
+                    "characteristics": {
+                        "isPaid": true,
+                        "isUnlimited": false,
+                        "defaultQuantity": 0,
+                        "isFree": false,
+                        "isDonation": false,
+                        "isHidden": false
+                    },
+                    "tax": {
+                        "currency": "USD",
+                        "majorValue": "0.00",
+                        "display": "0.00 USD",
+                        "value": 0
+                    },
+                    "currency": "USD",
+                    "cost": {
+                        "currency": "USD",
+                        "majorValue": "20.00",
+                        "display": "20.00 USD",
+                        "value": 2000
+                    },
+                    "id": "2464510513",
+                    "category": "admission",
+                    "fee": {
+                        "currency": "USD",
+                        "majorValue": "2.10",
+                        "display": "2.10 USD",
+                        "value": 210
+                    },
+                    "capacity": 65,
+                    "maximumQuantityPerOrder": 0,
+                    "quantityRemaining": 0,
+                    "totalCost": {
+                        "currency": "USD",
+                        "majorValue": "22.10",
+                        "display": "22.10 USD",
+                        "value": 2210
+                    },
+                    "description": null,
+                    "onSaleStatus": {
+                        "unavailable": false,
+                        "startSalesWithTz": {
+                            "timezone": "America/Denver",
+                            "local": "2025-05-26T00:00:00",
+                            "utc": "2025-05-26T06:00:00Z"
+                        },
+                        "nearSalesEnd": true,
+                        "startSales": "2025-05-26T00:00:00Z",
+                        "endSalesWithTz": {
+                            "timezone": "America/Denver",
+                            "local": "2025-08-23T21:00:00",
+                            "utc": "2025-08-24T03:00:00Z"
+                        },
+                        "ended": false,
+                        "notYetStarted": false,
+                        "notOnSale": true,
+                        "endSales": "2025-08-23T21:00:00Z",
+                        "nearSalesStart": false,
+                        "soldOutWithWaitlist": true,
+                        "isTicketTiered": false
+                    },
+                    "maximumQuantity": 10,
+                    "minimumQuantity": 1,
+                    "inventoryTierId": null,
+                    "variants": [
+                        {
+                            "code": null,
+                            "endSalesWithTz": null,
+                            "percentOff": null,
+                            "tax": {
+                                "currency": "USD",
+                                "majorValue": "0.00",
+                                "display": "0.00 USD",
+                                "value": 0
+                            },
+                            "primary": false,
+                            "imageId": null,
+                            "currency": "USD",
+                            "cost": {
+                                "currency": "USD",
+                                "majorValue": "20.00",
+                                "display": "20.00 USD",
+                                "value": 2000
+                            },
+                            "notYetStarted": false,
+                            "useAllInPrice": true,
+                            "taxAndFee": {
+                                "currency": "USD",
+                                "majorValue": "2.10",
+                                "display": "2.10 USD",
+                                "value": 210
+                            },
+                            "id": "T2464510513",
+                            "category": "admission",
+                            "fee": {
+                                "currency": "USD",
+                                "majorValue": "2.10",
+                                "display": "2.10 USD",
+                                "value": 210
+                            },
+                            "unavailable": false,
+                            "maximumQuantityPerOrder": 0,
+                            "color": null,
+                            "originalTax": null,
+                            "hideSalesDates": false,
+                            "originalCost": null,
+                            "totalCost": {
+                                "currency": "USD",
+                                "majorValue": "22.10",
+                                "display": "22.10 USD",
+                                "value": 2210
+                            },
+                            "description": null,
+                            "onSaleStatus": "SOLD_OUT",
+                            "startSalesWithTz": {
+                                "timezone": "America/Denver",
+                                "local": "2025-05-26T00:00:00",
+                                "utc": "2025-05-26T06:00:00Z"
+                            },
+                            "free": false,
+                            "minimumQuantity": 1,
+                            "originalFee": null,
+                            "soldOutWithWaitlist": true,
+                            "isTicketTiered": false,
+                            "displayName": "Early Bird  2",
+                            "name": "Early Bird  2",
+                            "ended": false,
+                            "amountOff": null,
+                            "originalTotalCost": null,
+                            "discountType": null
+                        }
+                    ],
+                    "displayName": "Early Bird  2",
+                    "name": "Early Bird  2",
+                    "discountId": null,
+                    "displayFlags": {
+                        "showDescription": false,
+                        "showTicketSelection": false,
+                        "showWaitlist": false,
+                        "showRemaining": false,
+                        "haveDescription": false,
+                        "showSalesEndDate": true
+                    }
+                },
+                {
+                    "onSaleStatusEnum": "AVAILABLE",
+                    "maximumQuantityWithoutPending": 10,
+                    "salesEnd": "2025-08-24T03:00:00Z",
+                    "characteristics": {
+                        "isPaid": true,
+                        "isUnlimited": false,
+                        "defaultQuantity": 0,
+                        "isFree": false,
+                        "isDonation": false,
+                        "isHidden": false
+                    },
+                    "tax": {
+                        "currency": "USD",
+                        "majorValue": "0.00",
+                        "display": "0.00 USD",
+                        "value": 0
+                    },
+                    "currency": "USD",
+                    "cost": {
+                        "currency": "USD",
+                        "majorValue": "25.00",
+                        "display": "25.00 USD",
+                        "value": 2500
+                    },
+                    "id": "2464510563",
+                    "category": "admission",
+                    "fee": {
+                        "currency": "USD",
+                        "majorValue": "2.37",
+                        "display": "2.37 USD",
+                        "value": 237
+                    },
+                    "capacity": 400,
+                    "maximumQuantityPerOrder": 10,
+                    "quantityRemaining": 223,
+                    "totalCost": {
+                        "currency": "USD",
+                        "majorValue": "27.37",
+                        "display": "27.37 USD",
+                        "value": 2737
+                    },
+                    "description": null,
+                    "onSaleStatus": {
+                        "unavailable": false,
+                        "startSalesWithTz": {
+                            "timezone": "America/Denver",
+                            "local": "2025-05-26T00:00:00",
+                            "utc": "2025-05-26T06:00:00Z"
+                        },
+                        "nearSalesEnd": true,
+                        "startSales": "2025-05-26T00:00:00Z",
+                        "endSalesWithTz": {
+                            "timezone": "America/Denver",
+                            "local": "2025-08-23T21:00:00",
+                            "utc": "2025-08-24T03:00:00Z"
+                        },
+                        "ended": false,
+                        "notYetStarted": false,
+                        "notOnSale": false,
+                        "endSales": "2025-08-23T21:00:00Z",
+                        "nearSalesStart": false,
+                        "soldOutWithWaitlist": false,
+                        "isTicketTiered": false
+                    },
+                    "maximumQuantity": 10,
+                    "minimumQuantity": 1,
+                    "inventoryTierId": null,
+                    "variants": [
+                        {
+                            "code": null,
+                            "endSalesWithTz": null,
+                            "percentOff": null,
+                            "tax": {
+                                "currency": "USD",
+                                "majorValue": "0.00",
+                                "display": "0.00 USD",
+                                "value": 0
+                            },
+                            "primary": false,
+                            "imageId": null,
+                            "currency": "USD",
+                            "cost": {
+                                "currency": "USD",
+                                "majorValue": "25.00",
+                                "display": "25.00 USD",
+                                "value": 2500
+                            },
+                            "notYetStarted": false,
+                            "useAllInPrice": true,
+                            "taxAndFee": {
+                                "currency": "USD",
+                                "majorValue": "2.37",
+                                "display": "2.37 USD",
+                                "value": 237
+                            },
+                            "id": "T2464510563",
+                            "category": "admission",
+                            "fee": {
+                                "currency": "USD",
+                                "majorValue": "2.37",
+                                "display": "2.37 USD",
+                                "value": 237
+                            },
+                            "unavailable": false,
+                            "maximumQuantityPerOrder": 10,
+                            "color": null,
+                            "originalTax": null,
+                            "hideSalesDates": false,
+                            "originalCost": null,
+                            "totalCost": {
+                                "currency": "USD",
+                                "majorValue": "27.37",
+                                "display": "27.37 USD",
+                                "value": 2737
+                            },
+                            "description": null,
+                            "onSaleStatus": "AVAILABLE",
+                            "startSalesWithTz": {
+                                "timezone": "America/Denver",
+                                "local": "2025-05-26T00:00:00",
+                                "utc": "2025-05-26T06:00:00Z"
+                            },
+                            "free": false,
+                            "minimumQuantity": 1,
+                            "originalFee": null,
+                            "soldOutWithWaitlist": false,
+                            "isTicketTiered": false,
+                            "displayName": "GA 1",
+                            "name": "GA 1",
+                            "ended": false,
+                            "amountOff": null,
+                            "originalTotalCost": null,
+                            "discountType": null
+                        }
+                    ],
+                    "displayName": "GA 1",
+                    "name": "GA 1",
+                    "discountId": null,
+                    "displayFlags": {
+                        "showDescription": false,
+                        "showTicketSelection": true,
+                        "showWaitlist": false,
+                        "showRemaining": false,
+                        "haveDescription": false,
+                        "showSalesEndDate": true
+                    }
+                }
+            ],
+            "availability": {
+                "hasAvailableHiddenTickets": false,
+                "isHoldUnavailable": false,
+                "quantitySoldPaid": 256,
+                "minimumTicketPrice": {
+                    "currency": "USD",
+                    "majorValue": "16.84",
+                    "display": "16.84 USD",
+                    "value": 1684
+                },
+                "minimumTicketPriceRounded": {
+                    "currency": "USD",
+                    "majorValue": null,
+                    "display": "17 USD",
+                    "value": 1700
+                },
+                "numTicketClasses": 3,
+                "quantitySold": 256,
+                "isSoldOut": false,
+                "waitlistEnabled": false,
+                "commonSalesEndDate": "2025-08-23T21:00:00Z",
+                "quantitySoldFree": 0,
+                "quantitySoldAddOn": 0,
+                "waitlistAvailable": false,
+                "maximumTicketPrice": {
+                    "currency": "USD",
+                    "majorValue": "27.37",
+                    "display": "27.37 USD",
+                    "value": 2737
+                },
+                "isFree": false,
+                "startSalesDate": {
+                    "timezone": "America/Denver",
+                    "local": "2025-05-26T00:00:00",
+                    "utc": "2025-05-26T06:00:00Z"
+                },
+                "remainingCapacity": 223,
+                "hasAvailableTickets": true,
+                "hasBogoTickets": false,
+                "endSalesDate": {
+                    "timezone": "America/Denver",
+                    "local": "2025-08-23T21:00:00",
+                    "utc": "2025-08-24T03:00:00Z"
+                },
+                "maximumTicketPriceRounded": {
+                    "currency": "USD",
+                    "majorValue": null,
+                    "display": "27 USD",
+                    "value": 2700
+                }
+            }
+        },
+        "lineup": [
+            {
+                "tagline": "",
+                "artistId": "7171653",
+                "role": "HEADLINER",
+                "name": "Get The Led Out"
+            }
+        ],
+        "refunds": {
+            "refundPolicyIsNoRefunds": false,
+            "refundPolicyCode": "custom",
+            "refundPolicyDescription": "Refunds up to <b>7 days</b> before event",
+            "isPaidEvent": true,
+            "validDays": 7,
+            "isRefundRequestAllowed": false,
+            "refundRequestOrganizer": false
+        },
+        "performers": {
+            "supporters": [],
+            "headliners": []
+        },
+        "highlights": {
+            "freeParking": false,
+            "notAvailableParking": false,
+            "paidParking": false,
+            "parking": false
+        },
+        "parentEventId": null,
+        "structuredContent": {
+            "heroCarouselWidget": {
+                "type": "herocarousel",
+                "data": {
+                    "slides": [
+                        {
+                            "image": {
+                                "url": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=740&w=1200&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=1406c1cd591222e7c5cf998952280785",
+                                "id": "1042921273"
+                            }
+                        }
+                    ]
+                }
+            },
+            "modules": [
+                {
+                    "text": "<p><strong><strong>MEGAWOOF AMERICA DENVER</strong></strong> is back with a bang! Get ready for a <strong><strong>MASSIVE</strong></strong> event featuring <strong><strong>2 Parties 1 Ticket</strong></strong>. Join us at <strong><strong>Trade</strong></strong> for an unforgettable experience. The energy will be off the charts as we bring together the best of music, dancing, and fun. Don't miss out on this epic celebration - mark your calendars now! FULL DETAILS COMING SOON </p>",
+                    "type": "text",
+                    "alignment": "left"
+                }
+            ],
+            "admat": null,
+            "hasAutogeneratedContent": true,
+            "widgets": [
+                {
+                    "type": "herocarousel",
+                    "data": {
+                        "slides": [
+                            {
+                                "image": {
+                                    "url": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=740&w=1200&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=1406c1cd591222e7c5cf998952280785",
+                                    "id": "1042921273"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ],
+            "featuredVideoWidget": null
+        },
+        "eventHero": {
+            "items": [
+                {
+                    "croppedLogoUrl480": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=480&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=9e207ff1868c4d07372bb76d22a2537d",
+                    "croppedLogoUrl940": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6c500a232786ecd2016628d0a64250b3",
+                    "croppedLogoUrl600": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c9f730cdbce9d0399b1e828b06a13c43"
+                }
+            ],
+            "featuredVideo": null,
+            "mainBodyBackground": {
+                "croppedLogoUrl50": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=50&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=b2c9f6cad9b716c2dd409c26a5fb46d1"
+            }
+        },
+        "video": null,
+        "eventSessions": [],
+        "featureFlags": {
+            "shouldShowOnlyDefaultCheckoutOnlineEvents": true,
+            "enableTimedEntry": true,
+            "enableArtistWidget": true
+        },
+        "schemaInfo": {
+            "schemaImageUrl": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=1000&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=fa4e531b1a5ee28364b03ea38b592e02"
+        }
+    },
+    "user": {
+        "intercomUserHash": null,
+        "orgHasEvents": false,
+        "publicId": null,
+        "hasEvents": false,
+        "hasOrganizers": false,
+        "usesNewPermissions": false,
+        "guestId": "eeaf7e27-4adc-4647-91aa-ad5fa45c46f9",
+        "isStaff": false,
+        "canInvite": false,
+        "fullName": null,
+        "thumbnailUrl": null,
+        "numOrders": 0,
+        "firstName": null,
+        "hasGlobalPermissions": false,
+        "isAttendee": false,
+        "lastName": null,
+        "activeOrganization": null,
+        "hasContactsPermission": false,
+        "isAuthenticated": false,
+        "email": null,
+        "canCreateEvents": false,
+        "canUseInterests": true
+    },
+    "organizer": {
+        "eventTitle": "MEGAWOOF AMERICA DENVER  : MASSIVE 2 Parties 1 Ticket",
+        "thumbnailLogo160": "",
+        "description": "",
+        "displayOrganizationName": "Megawoof America",
+        "thumbnailLogo80": "",
+        "nameTruncated": "Megawoof America",
+        "id": "18118978189",
+        "name": "Megawoof America",
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "orgWebsite": null,
+        "profilePicture": "",
+        "orgTwitter": null,
+        "orgFacebook": "megawoofla"
+    },
+    "event": {
+        "salesEndedMessage": "Ticket sales have ended",
+        "isSeriesParent": false,
+        "hasCroppedLogo": false,
+        "ageRestriction": null,
+        "hideStartDate": false,
+        "presenter": null,
+        "hideEndDate": false,
+        "isProtected": false,
+        "startDay": "23",
+        "shouldDisplayRsvp": false,
+        "shouldShowSalesEndedMessage": false,
+        "isExpiredEvent": false,
+        "isListed": true,
+        "hasDonationTicketsAvailable": null,
+        "hasPresenterOrAgeRestriction": false,
+        "compactCheckoutDisqualifications": {
+            "reserved_seating": false,
+            "has_donations": false,
+            "sold_out": false,
+            "has_waitlist": true,
+            "is_rsvp": false,
+            "has_addons": false,
+            "is_canceled": false,
+            "more_than_one_ticket": true,
+            "has_discounts": false,
+            "is_sales_ended": false,
+            "discount_code": false,
+            "is_postponed": false,
+            "has_inventory_tiers": false,
+            "has_waiting_room": false
+        },
+        "ticketsInfo": {
+            "totalTicketsCount": 3,
+            "hasBogoTickets": false
+        },
+        "id": "1381219547849",
+        "isOnlineEvent": false,
+        "startMonthAbbr": "Aug",
+        "category": "Community",
+        "organizerSalesEndedMessage": null,
+        "end": {
+            "timezone": "America/Denver",
+            "local": "2025-08-24T04:30:00",
+            "utc": "2025-08-24T10:30:00Z"
+        },
+        "name": "MEGAWOOF AMERICA DENVER  : MASSIVE 2 Parties 1 Ticket",
+        "start": {
+            "timezone": "America/Denver",
+            "local": "2025-08-23T21:00:00",
+            "utc": "2025-08-24T03:00:00Z"
+        },
+        "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849",
+        "format": "Party",
+        "venue": {
+            "country": "US",
+            "region": "CO"
+        },
+        "isPreview": false,
+        "source": "Eventbrite",
+        "childEvents": null,
+        "subcategory": "LGBT",
+        "salesStatus": {
+            "start_sales_date": {
+                "timezone": "America/Denver",
+                "local": "2025-05-26T00:00:00",
+                "utc": "2025-05-26T06:00:00Z"
+            },
+            "end_sales_date": {
+                "timezone": "America/Denver",
+                "local": "2025-08-23T21:00:00",
+                "utc": "2025-08-24T03:00:00Z"
+            },
+            "default_message": null,
+            "sales_status": "on_sale",
+            "currency": "USD",
+            "message_code": null,
+            "message": null,
+            "message_type": null
+        },
+        "startDateTime": "2025-08-23",
+        "isLive": true,
+        "ownerId": "183727629",
+        "isEnded": false,
+        "shouldShowCompactCheckout": false
+    },
+    "experimentation": {
+        "isSSRExperimentationEnabled": false,
+        "activeSSRExperiments": [
+            ""
+        ]
+    },
+    "gaSettings": {
+        "category": "listing",
+        "userPartnerId": null,
+        "appName": "listings",
+        "activeScopeUserId": null,
+        "appVersion": "8.24.0",
+        "guestPartnerId": null,
+        "correlationId": "b7f59014808911f0a854e24063eab0f9",
+        "isActive": true
+    },
+    "stableId": "97f2ad56-6ab5-471b-9b5a-b2fcf7dfc910",
+    "tracking": {
+        "environment": "prod",
+        "debugging": false,
+        "shouldFireTrackingBeacon": true,
+        "staticEventCache": false,
+        "trackingBeacons": [],
+        "shouldTrackEventView": true,
+        "launchSupportMultipleFacebookPixels": true,
+        "enabled": true,
+        "trackingBeaconsSerialized": {}
+    },
+    "env": {
+        "googleMapsQAKey": null,
+        "defaultCurrency": "USD",
+        "signupUrl": "https://www.eventbrite.com/signin/signup/?referrer=%2Fesi_cache%2Fe%2F1381219547849%2F%3Flang%3Den-us%26locale%3Den_US%26status%3D30%26view%3Dlisting",
+        "isEmbeddedView": false,
+        "serverUrl": "https://www.eventbrite.com",
+        "showCookieHeader": false,
+        "organizeUrls": {
+            "suggested": [
+                {
+                    "url": "/organizer/overview/",
+                    "gaLabel": "WhyEventbrite",
+                    "accentLink": false,
+                    "label": "Create Events"
+                },
+                {
+                    "url": "/organizer/pricing/",
+                    "gaLabel": "Pricing",
+                    "accentLink": false,
+                    "label": "Pricing"
+                },
+                {
+                    "url": "https://www.eventbrite.com/blog/",
+                    "gaLabel": "Resources",
+                    "accentLink": false,
+                    "label": "Resources"
+                },
+                {
+                    "url": "/l/contact-eventbrite-sales/",
+                    "gaLabel": "ContactSales",
+                    "accentLink": false,
+                    "label": "Contact Sales"
+                }
+            ],
+            "home": {
+                "url": "/how-it-works/",
+                "gaLabel": "HowItWorks",
+                "label": "How it works"
+            }
+        },
+        "signupNoReferrerUrl": "https://www.eventbrite.com/signin/signup/",
+        "ebDomain": "eventbrite.com",
+        "helpUrls": {
+            "impressum": "https://www.eventbrite.com/support/articleredirect?anum=10983",
+            "home": "https://www.eventbrite.com/support",
+            "suggested": [
+                {
+                    "url": "https://www.eventbrite.com/support/articleredirect?anum=3776",
+                    "gaLabel": "FindYourTickets",
+                    "label": "Find your tickets"
+                },
+                {
+                    "url": "https://www.eventbrite.com/support/articleredirect?anum=3275",
+                    "gaLabel": "ContactAnEventOrganizer",
+                    "label": "Contact an event organizer"
+                },
+                {
+                    "url": "https://www.eventbrite.com/support",
+                    "gaLabel": "VisitTheHelpCenter",
+                    "label": "Visit the help center"
+                }
+            ]
+        },
+        "locales": [
+            {
+                "locale": "es_AR",
+                "localized_language_name": "Espa\u00f1ol (AR)",
+                "locale_name": "Argentina"
+            },
+            {
+                "locale": "en_AU",
+                "localized_language_name": "English (AU)",
+                "locale_name": "Australia"
+            },
+            {
+                "locale": "nl_BE",
+                "localized_language_name": "Belge",
+                "locale_name": "Belgi\u00eb"
+            },
+            {
+                "locale": "fr_BE",
+                "localized_language_name": "Fran\u00e7ais (BE)",
+                "locale_name": "Belgique"
+            },
+            {
+                "locale": "pt_BR",
+                "localized_language_name": "Portugu\u00eas (BR)",
+                "locale_name": "Brasil"
+            },
+            {
+                "locale": "en_CA",
+                "localized_language_name": "English (CA)",
+                "locale_name": "Canada (EN)"
+            },
+            {
+                "locale": "fr_CA",
+                "localized_language_name": "Fran\u00e7ais (CA)",
+                "locale_name": "Canada (FR)"
+            },
+            {
+                "locale": "es_CL",
+                "localized_language_name": "Espa\u00f1ol",
+                "locale_name": "Chile"
+            },
+            {
+                "locale": "es_CO",
+                "localized_language_name": "Espa\u00f1ol (ES)",
+                "locale_name": "Colombia"
+            },
+            {
+                "locale": "en_DK",
+                "localized_language_name": "English (DK)",
+                "locale_name": "Denmark"
+            },
+            {
+                "locale": "de_DE",
+                "localized_language_name": "Deutsch",
+                "locale_name": "Deutschland"
+            },
+            {
+                "locale": "es_ES",
+                "localized_language_name": "Espa\u00f1ol (ES)",
+                "locale_name": "Espa\u00f1a"
+            },
+            {
+                "locale": "en_FI",
+                "localized_language_name": "English (FI)",
+                "locale_name": "Finland"
+            },
+            {
+                "locale": "fr_FR",
+                "localized_language_name": "Fran\u00e7ais",
+                "locale_name": "France"
+            },
+            {
+                "locale": "en_HK",
+                "localized_language_name": "English (HK)",
+                "locale_name": "Hong Kong"
+            },
+            {
+                "locale": "en_IE",
+                "localized_language_name": "English (UK)",
+                "locale_name": "Ireland"
+            },
+            {
+                "locale": "it_IT",
+                "localized_language_name": "Italiano",
+                "locale_name": "Italia"
+            },
+            {
+                "locale": "es_MX",
+                "localized_language_name": "Espa\u00f1ol (MX)",
+                "locale_name": "M\u00e9xico"
+            },
+            {
+                "locale": "nl_NL",
+                "localized_language_name": "Nederlands",
+                "locale_name": "Nederland"
+            },
+            {
+                "locale": "en_NZ",
+                "localized_language_name": "English (Australia/New Zealand)",
+                "locale_name": "New Zealand"
+            },
+            {
+                "locale": "de_AT",
+                "localized_language_name": "Deutsch",
+                "locale_name": "\u00d6sterreich"
+            },
+            {
+                "locale": "es_PE",
+                "localized_language_name": "Espa\u00f1ol (ES)",
+                "locale_name": "Per\u00fa"
+            },
+            {
+                "locale": "pt_PT",
+                "localized_language_name": "Portugu\u00eas",
+                "locale_name": "Portugal"
+            },
+            {
+                "locale": "de_CH",
+                "localized_language_name": "Deutsch (CH)",
+                "locale_name": "Schweiz"
+            },
+            {
+                "locale": "en_SG",
+                "localized_language_name": "English (SG)",
+                "locale_name": "Singapore"
+            },
+            {
+                "locale": "fr_CH",
+                "localized_language_name": "Fran\u00e7ais (CH)",
+                "locale_name": "Suisse"
+            },
+            {
+                "locale": "sv",
+                "localized_language_name": "Svenska",
+                "locale_name": "Sverige"
+            },
+            {
+                "locale": "en_GB",
+                "localized_language_name": "English (UK)",
+                "locale_name": "United Kingdom"
+            },
+            {
+                "locale": "en_US",
+                "localized_language_name": "English (US)",
+                "locale_name": "United States"
+            }
+        ],
+        "signinUrl": "https://www.eventbrite.com/signin/?referrer=%2Fesi_cache%2Fe%2F1381219547849%2F%3Flang%3Den-us%26locale%3Den_US%26status%3D30%26view%3Dlisting",
+        "searchQuery": null,
+        "searchLocation": {
+            "address": "New York, NY"
+        },
+        "launchNewSignInSignUpLinks": true,
+        "adminServerUrl": "https://admin.eventbrite.com",
+        "currencyFormat": "\u00a4#,##0.00",
+        "logoutUrl": "https://www.eventbrite.com/logout/?referrer=%2Fesi_cache%2Fe%2F1381219547849%2F%3Flang%3Den-us%26locale%3Den_US%26status%3D30%26view%3Dlisting",
+        "loginUrl": "https://www.eventbrite.com/login/?referrer=%2Fesi_cache%2Fe%2F1381219547849%2F%3Flang%3Den-us%26locale%3Den_US%26status%3D30%26view%3Dlisting",
+        "localeInfo": {
+            "flag_logo_url": "https://cdn.evbstatic.com/s3-s3/marketing/migration/US-flag.png",
+            "gold_support_phone_number": "1-877-297-6805",
+            "greetings": [
+                "Hello",
+                "Hi",
+                "Greetings",
+                "Dear"
+            ],
+            "country_code": "US",
+            "language_code": "en",
+            "silver_support_phone_number": "1-877-297-6805",
+            "has_phone_support": true,
+            "show_link_to_music_microsite": true,
+            "flag_logo_medium_url": "https://cdn.evbstatic.com/s3-s3/marketing/migration/US-flag-32x32.png",
+            "paypal_locale": "en_US",
+            "group": "AMERICA",
+            "sales_email": "sales@eventbrite.com",
+            "prefixes": [
+                "Mr.",
+                "Mrs.",
+                "Ms.",
+                "Miss",
+                "Mx.",
+                "Dr.",
+                "Prof.",
+                "Rev."
+            ],
+            "npo_service_fee_percent": "2.0%",
+            "uses_metric_system": false,
+            "has_localized_support_team": false,
+            "is_eventioz_locale": false,
+            "tiktok_handle": "@eventbrite",
+            "latitude": 37.775262,
+            "app_store_download_icon_url": "https://cdn.evbstatic.com/s3-s3/marketing/app_cta/en_us/Download_on_the_App_Store_Badge_US-UK_135x40.svg",
+            "youtube_channel": "www.youtube.com/user/EventbriteTV",
+            "android_entrymanager_url": "https://play.google.com/store/apps/details?id=com.eventbrite.organizer&hl=en_US",
+            "press_email": "press@eventbrite.com",
+            "tld_subdirectory": ".com",
+            "hiw_sales_phone_number": "1-855-292-7905",
+            "base_ios_app_url": "http://itunes.apple.com/%s/app/eventbrite/id487922291",
+            "is_locale_enabled": true,
+            "from_mail_charity": "charity@eventbrite.com",
+            "get_default_location_dict": {
+                "city": "New York",
+                "region_code": "NY",
+                "postal_code": "11101",
+                "country_code": "US",
+                "latitude": 40.73061,
+                "country": "United States",
+                "region": "New York",
+                "location_slug": "ny--new-york",
+                "longitude": -73.935242
+            },
+            "get_default_location_name": "New York, NY",
+            "terms_of_service_url": "https://www.eventbrite.com/l/legalterms/",
+            "server": "http://www.eventbrite.com",
+            "address_4": "United States",
+            "address_1": "Eventbrite, Inc.",
+            "address_2": "535 Mission Street, 8th Floor",
+            "address_3": "San Francisco, CA 94105",
+            "attendee_support_phone_number": "1-888-810-2063",
+            "default_location_for_tld": {
+                "city": "New York",
+                "region_code": "NY",
+                "postal_code": "11101",
+                "country_code": "US",
+                "latitude": 40.73061,
+                "country": "United States",
+                "region": "New York",
+                "location_slug": "ny--new-york",
+                "longitude": -73.935242
+            },
+            "twitter_handle": "eventbritehelp",
+            "play_store_badge_url": "https://cdn.evbstatic.com/s3-s3/marketing/app_cta/en_us/en_generic_rgb_wo_45.png",
+            "locale": "en_US",
+            "base_android_app_url": "https://play.google.com/store/apps/details?id=com.eventbrite.attendee&hl=%s",
+            "google_maps_language": "en",
+            "base_ios_app_badge_url": "%(server)s/eventbriteapp/?appstore&%(affiliate_params)s",
+            "paypal_support_number": "888-221-1161",
+            "localized_language_name": "English (US)",
+            "facebook_page": "www.facebook.com/Eventbrite",
+            "on_demand_payout_allowed": false,
+            "nonprofit_501c3_fax_number": "1-888-855-2521",
+            "app_store_available_icon_url": "https://cdn.evbstatic.com/s3-s3/marketing/app_cta/en_us/Available_on_the_App_Store_Badge_US-UK_135x40.svg",
+            "base_medium_logo_url": "https://cdn.evbstatic.com/s3-s3/marketing/migration/%s-flag-32x32.png",
+            "support_number_winter_hours": null,
+            "is_deferred_payment_options_allowed": false,
+            "music_microsite_url": "https://www.eventbrite.com/l/music/",
+            "first_week_day": 6,
+            "support_team_landing_page": "",
+            "sales_hours": "Mon-Fri 6am-6pm PT",
+            "from_mail_order": "orders@eventbrite.com",
+            "support_phone": "1-800-350-8850",
+            "sales_contact_landing_page": "/l/contact-sales/",
+            "support_number_summer_hours": null,
+            "help_center_language": "en-us",
+            "adobe_reader_url": "http://get.adobe.com/reader/",
+            "from_mail_installments": "installments@eventbrite.com",
+            "available_for_event_listing_override": null,
+            "tiktok_page": "www.tiktok.com/@eventbrite",
+            "contact_sales_phone_number": "+1-877-620-9578",
+            "tld": ".com",
+            "contact_us_path": "support/contact-us",
+            "show_cookie_policy_bar": false,
+            "base_app_store_available_icon_url": "https://cdn.evbstatic.com/s3-s3/marketing/app_cta/%s/Available_on_the_App_Store_Badge_%s_135x40.svg",
+            "default_adobe_download_url": "http://get.adobe.com/reader/",
+            "recaptcha_language": "en",
+            "base_ios_entrymanager_url": "http://itunes.apple.com/%s/app/entry-manager/id368260521",
+            "default_language": "en-us",
+            "domain": "eventbrite.com",
+            "base_android_entrymanager_url": "https://play.google.com/store/apps/details?id=com.eventbrite.organizer&hl=%s",
+            "get_country_place_id": "85633793",
+            "outside_us_organizer_phone_number": "1-804-201-9585",
+            "default_currency": "USD",
+            "base_play_store_badge_url": "https://cdn.evbstatic.com/s3-s3/marketing/app_cta/%s/%s_generic_rgb_wo_45.png",
+            "country_place_id": "85633793",
+            "old_event_locale": null,
+            "press_blog_url": "/blog/press/",
+            "sales_phone_and_hours": "1-888-541-9753 Mon-Fri 6am-6pm PT",
+            "from_mail_ebhelp": "ebhelp@eventbrite.com",
+            "base_adobe_download_url": "http://get.adobe.com/%(language_code)s/reader/",
+            "organizations_support_phone_number": "1-855-872-1525",
+            "support_number_hours": null,
+            "contact_us_sales_phone_number": "1-800-993-7308",
+            "facebook_org_page": "www.facebook.com/EventbriteforOrganizers",
+            "default_timezone": "America/Los_Angeles",
+            "show_support_special_hours_on_contact_us": false,
+            "live_ops_support_phone_number": null,
+            "contact_us_url": "https://www.eventbrite.com/support/contact-us",
+            "instagram_page": "www.instagram.com/eventbrite",
+            "default_language_name": "English (US)",
+            "longitude": -122.400197,
+            "twitter_page": "www.x.com/eventbritehelp",
+            "localized_country_name": "United States",
+            "feature_flag": null,
+            "android_attendee_app_url": "https://play.google.com/store/apps/details?id=com.eventbrite.attendee&hl=en_US",
+            "is_latam": false,
+            "ios_entrymanager_url": "http://itunes.apple.com/us/app/entry-manager/id368260521",
+            "base_app_store_download_icon_url": "https://cdn.evbstatic.com/s3-s3/marketing/app_cta/%s/Download_on_the_App_Store_Badge_%s_135x40.svg",
+            "npo_service_fee_charge": "$0.99 per ticket",
+            "facebook_locale": "en_US",
+            "paypal_locale_lc": "us",
+            "support_phone_number": "1-800-350-8850",
+            "npo_email": "nonprofit@eventbrite.com",
+            "first_week_day_from_sunday": 0,
+            "hreflang": "en-us",
+            "tos_path": "/l/legalterms/",
+            "default_paper_size": "letter",
+            "base_android_app_badge_url": "%(server)s/eventbriteapp/?playstore&%(affiliate_params)s",
+            "locale_name": "United States",
+            "default_professional_package": true,
+            "uses_language_subdirectory": false,
+            "sales_phone_number": "1-888-541-9753",
+            "google_analytics_url": "http://www.google.com/analytics",
+            "base_flag_logo_url": "https://cdn.evbstatic.com/s3-s3/marketing/migration/%s-flag.png",
+            "logo_url": "cdn.evbstatic.com/s3-build/perm_001/55d606/django/images/logos/eb_orange_on_white_1200x630.png",
+            "contact_sales_form_phone_number": "1-888-203-4469",
+            "alt_phone_number": "1-888-248-4220",
+            "sales_contact_link_text": "Contact Sales",
+            "ssl_server": "https://www.eventbrite.com",
+            "support_team_link_text": "",
+            "ios_attendee_app_url": "http://itunes.apple.com/us/app/eventbrite/id487922291",
+            "split_workspace": null,
+            "music_url": "/l/music/",
+            "default_package": "package2",
+            "skip_package_selection": false,
+            "split_feature_flag": null,
+            "blog_url": "www.eventbrite.com/blog/",
+            "outside_us_phone_number": "1-415-694-7900",
+            "linked_in_page": "www.linkedin.com/company/eventbrite",
+            "live_ops_outside_us_phone_number": "1-415-813-3236"
+        },
+        "isMobile": false
+    },
+    "highlights": {
+        "duration": {
+            "hours": 7,
+            "totalSeconds": 27000,
+            "minutes": 30,
+            "days": 0
+        },
+        "age_restriction": "",
+        "eticket": false,
+        "accepts_refunds": true
+    },
+    "settings": {
+        "sentryDNS": "https://578138ae4d7842fc9c31f2d3627e1cc2@o375540.ingest.sentry.io/6240753",
+        "baseUrl": "http://www.eventbrite.com",
+        "isMobile": false,
+        "featureFlags": {
+            "enableLighthouseCreatorsModule": true,
+            "seriesInfiniteCalendar": true,
+            "launch_highlights_in_listing_page": false,
+            "enableIaGlobalNav": true,
+            "enableCreatorBadge": true,
+            "isOnlineEventMvpEnabled": false,
+            "launch_ticket_access_mvp": false,
+            "enableSeasonalModule": true,
+            "enableReldExpressCheckoutChanges": true,
+            "enableSSRExperimentationOnListings": false,
+            "enableCreatorDefaultAvatar": true
+        }
+    },
+    "request": {
+        "query_params": {
+            "lang": "en-us",
+            "locale": "en_US",
+            "status": "30",
+            "view": "listing"
+        },
+        "path": "/e/1381219547849",
+        "session_id": "mqOIeLHZmHkDAOnlebKwEg",
+        "force_cacheable": false
+    },
+    "components": {
+        "conversionBar": {
+            "shouldShowStatus": false,
+            "statusIsUnavailable": false,
+            "panelDisplayPriceOriginal": "",
+            "externalTicketingProviderLabelText": "",
+            "getSeriesDefaultOptionTerminology": "Select a different date",
+            "externalTicketsButtonText": "Get tickets",
+            "statusToDisplay": "$16.84 \u2013 $27.37",
+            "shouldDisplayRsvp": false,
+            "shouldShowTurnOffReminderButton": false,
+            "statusIsSoldOutWithNoResellers": false,
+            "panelDisplayPrice": "From $16.84",
+            "shouldShowRemindMeButton": false,
+            "externalTicketsUrl": "",
+            "shouldShowCheckoutButton": true,
+            "isEnded": false,
+            "externalTicketsAreAvailable": false,
+            "ticketModalButton": {
+                "text": "Get tickets",
+                "tracking_label": "Tickets"
+            },
+            "isShareable": true,
+            "shouldShowExternalTicketingProvider": false
+        },
+        "eventDescription": {
+            "salesEndedMessage": null,
+            "hasStructuredContent": true,
+            "organizerSalesEndedMessage": "Ticket sales have ended",
+            "shouldShowSalesEndedMessage": null,
+            "structuredContent": {
+                "widgets": [
+                    {
+                        "type": "herocarousel",
+                        "data": {
+                            "slides": [
+                                {
+                                    "image": {
+                                        "url": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=740&w=1200&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=1406c1cd591222e7c5cf998952280785",
+                                        "id": "1042921273"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "hasAutogeneratedContent": true,
+                "admat": null,
+                "modules": [
+                    {
+                        "text": "<p><strong><strong>MEGAWOOF AMERICA DENVER</strong></strong> is back with a bang! Get ready for a <strong><strong>MASSIVE</strong></strong> event featuring <strong><strong>2 Parties 1 Ticket</strong></strong>. Join us at <strong><strong>Trade</strong></strong> for an unforgettable experience. The energy will be off the charts as we bring together the best of music, dancing, and fun. Don't miss out on this epic celebration - mark your calendars now! FULL DETAILS COMING SOON </p>",
+                        "type": "text",
+                        "alignment": "left"
+                    }
+                ]
+            },
+            "summary": "Get ready for the ultimate party experience at MEGAWOOF AMERICA DENVER: MASSIVE 2 Parties 1 Ticket - double the fun, double the excitement!",
+            "legacyDescription": ""
+        },
+        "tags": [
+            {
+                "text": "United States Events",
+                "tracking_category": "listing",
+                "link": "/d/united-states/events/",
+                "tracking_action": "BreadcrumbCountry"
+            },
+            {
+                "text": "Colorado Events",
+                "tracking_category": "listing",
+                "link": "/d/united-states--colorado/events/",
+                "tracking_action": "BreadcrumbRegion"
+            },
+            {
+                "text": "Things to do in Denver, CO",
+                "tracking_category": "listing",
+                "link": "/ttd/co--denver/",
+                "tracking_action": "BreadcrumbAddress"
+            },
+            {
+                "text": "Denver Parties",
+                "tracking_category": "listing",
+                "link": "/d/co--denver/parties/",
+                "tracking_action": "BreadcrumbFormat"
+            },
+            {
+                "text": "Denver Community Parties",
+                "tracking_category": "listing",
+                "link": "/d/co--denver/community--parties/",
+                "tracking_action": "BreadcrumbCategory"
+            },
+            {
+                "text": "#parties",
+                "tracking_category": "listing",
+                "link": "/d/co--denver/%23parties/",
+                "tracking_action": "BreadcrumbTag"
+            },
+            {
+                "text": "#denver",
+                "tracking_category": "listing",
+                "link": "/d/co--denver/%23denver/",
+                "tracking_action": "BreadcrumbTag"
+            },
+            {
+                "text": "#america",
+                "tracking_category": "listing",
+                "link": "/d/co--denver/%23america/",
+                "tracking_action": "BreadcrumbTag"
+            },
+            {
+                "text": "#massive",
+                "tracking_category": "listing",
+                "link": "/d/co--denver/%23massive/",
+                "tracking_action": "BreadcrumbTag"
+            },
+            {
+                "text": "#megawoof",
+                "tracking_category": "listing",
+                "link": "/d/co--denver/%23megawoof/",
+                "tracking_action": "BreadcrumbTag"
+            }
+        ],
+        "bookmark": {
+            "isBookmarkedEvent": false
+        },
+        "followOrganizer": {
+            "isGDPRCountry": false
+        },
+        "shareInline": {
+            "hasShareInline": true
+        },
+        "checkoutWidget": {
+            "rsvpToken": null,
+            "campaign_token": "",
+            "promoCode": null,
+            "waitlistToken": null,
+            "affiliateCode": "oddtdtdirect"
+        },
+        "organizerPanel": {
+            "shouldShowMoreEventsFromThisOrganizer": true
+        },
+        "eventHero": {
+            "items": [
+                {
+                    "croppedLogoUrl480": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=480&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=9e207ff1868c4d07372bb76d22a2537d",
+                    "croppedLogoUrl940": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6c500a232786ecd2016628d0a64250b3",
+                    "croppedLogoUrl600": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c9f730cdbce9d0399b1e828b06a13c43"
+                }
+            ],
+            "featuredVideo": null,
+            "mainBodyBackground": {
+                "croppedLogoUrl50": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&w=50&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=b2c9f6cad9b716c2dd409c26a5fb46d1"
+            },
+            "shouldShowExternalTicketingProvider": false,
+            "externalTicketingProviderLabelText": ""
+        },
+        "eventMap": {
+            "gMapsApiKey": "AIzaSyC9t74vd_yIpxzuJzpZVI9sJ4Fh52njEQw",
+            "shouldDisplayMap": true,
+            "venueAddress": "475 Santa Fe Drive, Denver, CO 80204",
+            "location": {
+                "latitude": 39.7239346,
+                "longitude": -104.9987819
+            },
+            "venueName": "Trade"
+        },
+        "relatedEventsExpiredPage": {
+            "relatedEvents": []
+        },
+        "remindMe": {
+            "isRemindedEvent": false
+        },
+        "eventDetails": {
+            "onlineEvent": {
+                "url": null
+            },
+            "refund": {
+                "refundPolicyDescription": "Refunds up to <b>7 days</b> before event",
+                "refundPolicyCode": "custom",
+                "refundPolicyIsNoRefunds": false,
+                "isPaidEvent": true,
+                "isRefundRequestAllowed": false
+            },
+            "dates": {
+                "shouldShowDoorTime": false,
+                "displayDate": "Saturday, August 23, 2025 at 9:00 PM <SPAN CLASS=\"pipe\">-</SPAN> Sunday, August 24, 2025 at 4:30 AM (MDT)",
+                "shouldDisplayCrawlableSeriesChildrenLinks": false,
+                "displayEndDateWithTz": "2025-08-24T04:30:00-06:00",
+                "displayStartDateWithTz": "2025-08-23T21:00:00-06:00",
+                "doorTime": null,
+                "doorTimeLineThree": "",
+                "isSameStartEndDate": false,
+                "dateLineTwo": "Sun, Aug 24, 2025, 4:30 AM MDT",
+                "dateLineOne": "Sat, Aug 23, 2025, 9:00 PM \u2013",
+                "doorTimeLineOne": "Sat, August 23, 2025, 9:00 PM -",
+                "doorTimeLineTwo": "Sun, August 24, 2025, 4:30 AM MDT"
+            },
+            "location": {
+                "venueMultilineAddress": [
+                    "475 Santa Fe Drive",
+                    "Denver, CO 80204"
+                ],
+                "hasMap": true,
+                "hasAddress": true,
+                "hasVenueName": "Trade",
+                "venueName": "Trade",
+                "localityPlaceId": "85928879"
+            },
+            "performers": {
+                "supporters": [],
+                "headliners": []
+            }
+        },
+        "shareEvent": {
+            "facebookOptions": {
+                "locale": "en_US",
+                "version": "v12.0",
+                "page": "www.facebook.com/Eventbrite",
+                "xfbml": true,
+                "appId": "28218816837"
+            },
+            "twitterHandle": "eventbritehelp"
+        },
+        "notificationBar": {
+            "message": null,
+            "type": null
+        },
+        "contactOrganizer": {
+            "captchaKey": "6LehRw8fAAAAAJ8S1_MRks59_3nK7buJgoXcp3QV"
+        }
+    },
+    "app_version": "8.24.0",
+    "footerLinks": {
+        "popularSearches": [
+            {
+                "locale": "en_US",
+                "pk": 891,
+                "title": "Create Events",
+                "link": "https://www.eventbrite.com/organizer/overview/",
+                "position": 1
+            },
+            {
+                "locale": "en_US",
+                "pk": 892,
+                "title": "Pricing",
+                "link": "https://www.eventbrite.com/organizer/pricing/",
+                "position": 2
+            },
+            {
+                "locale": "en_US",
+                "pk": 893,
+                "title": "Event Marketing Platform",
+                "link": "https://www.eventbrite.com/organizer/features/event-marketing-platform/",
+                "position": 3
+            },
+            {
+                "locale": "en_US",
+                "pk": 1479,
+                "title": "Eventbrite Mobile Ticket App",
+                "link": "https://www.eventbrite.com/l/eventbrite-app/",
+                "position": 4
+            },
+            {
+                "locale": "en_US",
+                "pk": 1489,
+                "title": "Eventbrite Check-In App",
+                "link": "https://www.eventbrite.com/organizer/features/organizer-check-in-app/",
+                "position": 5
+            },
+            {
+                "locale": "en_US",
+                "pk": 1499,
+                "title": "Eventbrite App Marketplace",
+                "link": "https://www.eventbrite.com/apps/",
+                "position": 6
+            },
+            {
+                "locale": "en_US",
+                "pk": 1509,
+                "title": "Event Registration Software",
+                "link": "https://www.eventbrite.com/organizer/features/registration-online/",
+                "position": 7
+            },
+            {
+                "locale": "en_US",
+                "pk": 1519,
+                "title": "Community Guidelines",
+                "link": "https://www.eventbrite.com/l/community-guidelines/",
+                "position": 8
+            },
+            {
+                "locale": "en_US",
+                "pk": 1529,
+                "title": "FAQs",
+                "link": "https://www.eventbrite.com/l/frequently-asked-questions/",
+                "position": 9
+            },
+            {
+                "locale": "en_US",
+                "pk": 1539,
+                "title": "Sitemap",
+                "link": "https://www.eventbrite.com/sitemap/",
+                "position": 10
+            }
+        ],
+        "countries": [],
+        "thirdFooterColumn": [
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 2,
+                "link": "https://www.eventbrite.com/l/eventbrite-app/",
+                "title": "Get the Eventbrite App"
+            },
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 1,
+                "link": "https://www.eventbrite.com/d/co--denver/events/",
+                "title": "Browse Denver Events"
+            }
+        ],
+        "thirdFooterColumnName": "Find Events",
+        "connectLinks": [
+            {
+                "title": "Report This Event",
+                "locale": "en_US",
+                "link": "",
+                "position": 1,
+                "pk": 1,
+                "id": "report_this_link--react"
+            },
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 2,
+                "link": "https://www.eventbrite.com/help/en-us/",
+                "title": "Help Center"
+            },
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 3,
+                "link": "https://www.eventbrite.com/help/en-us/articles/251210/eventbrite-terms-of-service/",
+                "title": "Terms"
+            },
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 4,
+                "link": "https://www.eventbrite.com/help/en-us/articles/460838/eventbrite-privacy-policy/",
+                "title": "Privacy"
+            },
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 6,
+                "link": "https://www.eventbrite.com/l/accessibility/",
+                "title": "Accessibility"
+            },
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 7,
+                "link": "https://www.eventbrite.com/l/community-guidelines/",
+                "title": "Community Guidelines"
+            },
+            {
+                "locale": "en_US",
+                "pk": 1,
+                "position": 5,
+                "link": "https://www.eventbrite.com/help/en-us/articles/212596/supplemental-privacy-notice-for-california-residents/",
+                "title": "CA Privacy Notice"
+            }
+        ],
+        "eventsToPlan": [
+            {
+                "locale": "en_US",
+                "pk": 575,
+                "title": "Sell Tickets Online",
+                "link": "https://www.eventbrite.com/organizer/features/sell-tickets/",
+                "position": 1
+            },
+            {
+                "locale": "en_US",
+                "pk": 817,
+                "title": "Performing Arts Ticketing Software",
+                "link": "https://www.eventbrite.com/organizer/event-industry/performing-arts/",
+                "position": 2
+            },
+            {
+                "locale": "en_US",
+                "pk": 693,
+                "title": "Sell Concert Tickets Online",
+                "link": "https://www.eventbrite.com/organizer/event-type/music-venues/",
+                "position": 3
+            },
+            {
+                "locale": "en_US",
+                "pk": 572,
+                "title": "Event Payment System",
+                "link": "https://www.eventbrite.com/organizer/features/event-payment/",
+                "position": 4
+            },
+            {
+                "locale": "en_US",
+                "pk": 1444,
+                "title": "Solutions for Professional Services",
+                "link": "https://www.eventbrite.com/organizer/event-industry/professional-services/",
+                "position": 5
+            },
+            {
+                "locale": "en_US",
+                "pk": 1449,
+                "title": "Event Management Software",
+                "link": "https://www.eventbrite.com/organizer/features/event-management-software/",
+                "position": 6
+            },
+            {
+                "locale": "en_US",
+                "pk": 573,
+                "title": "Halloween Party Planning",
+                "link": "https://www.eventbrite.com/organizer/event-type/halloween-event/",
+                "position": 7
+            },
+            {
+                "locale": "en_US",
+                "pk": 973,
+                "title": "Virtual Events Platform",
+                "link": "https://www.eventbrite.com/organizer/event-type/virtual-events-platform/",
+                "position": 8
+            },
+            {
+                "locale": "en_US",
+                "pk": 571,
+                "title": "QR Codes for Event Check-In",
+                "link": "https://www.eventbrite.com/organizer/features/how-to-use-qr-codes-for-events/",
+                "position": 9
+            },
+            {
+                "locale": "en_US",
+                "pk": 578,
+                "title": "Post your event online",
+                "link": "https://www.eventbrite.com/organizer/features/post-events/",
+                "position": 10
+            }
+        ],
+        "showMinimalLinks": false
+    }
+}
