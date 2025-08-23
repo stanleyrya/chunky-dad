@@ -3087,9 +3087,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // This makes the comparison confusing and it's often broken
             if (field === 'notes') return;
             
-            let newValue = event._original.new[field] || '';
-            let existingValue = event._original.existing?.[field] || '';
-            let finalValue = event[field] || '';
+            // Get the actual scraped value - don't default to empty string yet
+            let newValue = event._original?.new?.[field];
+            let existingValue = event._original?.existing?.[field];
+            let finalValue = event[field];
+            
             // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
             const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
             const wasUsed = event._mergeInfo?.mergedFields?.[field];
@@ -3099,27 +3101,29 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 existingValue = event._mergeInfo.extractedFields[field].value;
             }
             
-            // FIXED: For all fields, always show the actual scraped value from _original.new
-            // The _original.new object contains ALL scraped values (line 674 in shared-core.js)
-            // This ensures preserve/clobber fields show what was actually scraped
-            if (!newValue && event._original?.new && event._original.new[field]) {
-                newValue = event._original.new[field];
-            }
+            // For preserve fields, we want to show BOTH the scraped value AND the existing value
+            // This matches the old behavior: "show both and then say 'choosing original because preserve'"
             
 
             
             // Skip if both are empty and no final value, unless it's a field with explicit strategy
-            // This ensures preserve fields show up even if they appear empty
+            // For preserve/clobber fields, always show them to demonstrate the strategy in action
             if (!newValue && !existingValue && !finalValue && !strategy) return;
             
             // For preserve fields, always show them if they have a strategy configured
+            // This ensures we show "scraped X, existing Y, choosing Y because preserve"
+            // Don't skip preserve fields even if they appear empty - user needs to see what was preserved
             if (strategy === 'preserve' && !newValue && !existingValue && !finalValue) {
-                return;
+                // Still show it to demonstrate preserve behavior
             }
             
             // Format values for display - show exactly what the merge logic saw
             const formatValue = (val, maxLength = 30) => {
-                if (!val) return '<em style="color: #999;">empty</em>';
+                if (val === null) return '<em style="color: #999;">null</em>';
+                if (val === undefined) return '<em style="color: #999;">undefined</em>';
+                if (val === '') return '<em style="color: #999;">empty string</em>';
+                if (!val) return '<em style="color: #999;">falsy</em>';
+                
                 if (field.includes('Date') && val) {
                     return new Date(val).toLocaleString('en-US', { 
                         month: 'short', 
@@ -3162,18 +3166,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     resultText = '<span style="color: #ff3b30;">CLOBBER FAILED</span>';
                 }
             } else if (strategy === 'preserve') {
-                // Preserve strategy - should keep existing value
+                // Preserve strategy - show both values and explain the choice
                 if (existingValue && finalValue === existingValue) {
                     flowIcon = '←';
-                    resultText = '<span style="color: #007aff;">PRESERVED</span>';
+                    resultText = '<span style="color: #007aff;">CHOOSING EXISTING (preserve)</span>';
                 } else if (!existingValue && newValue && finalValue === newValue) {
                     // Preserve but no existing value - uses new value
                     flowIcon = '→';
-                    resultText = '<span style="color: #34c759;">ADDED (no existing)</span>';
+                    resultText = '<span style="color: #34c759;">ADDED (no existing to preserve)</span>';
                 } else if (finalValue !== existingValue && finalValue !== newValue) {
                     // Preserve didn't work as expected
                     flowIcon = '⚠️';
                     resultText = '<span style="color: #ff3b30;">PRESERVE FAILED</span>';
+                } else if (!existingValue && !newValue) {
+                    // Both are empty
+                    flowIcon = '—';
+                    resultText = '<span style="color: #999;">PRESERVE (both empty)</span>';
                 }
             } else if (wasUsed === 'existing') {
                 // Merge strategy explicitly chose existing value
