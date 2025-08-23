@@ -1463,16 +1463,6 @@ class SharedCore {
         return event;
     }
     
-    // Format event for calendar integration
-    formatEventForCalendar(event) {
-        // FIXED: Don't delete preserve fields from the event object itself
-        // This was causing preserve fields to disappear from _original.new display comparisons
-        // The preserve logic should be handled during merge, not by deleting fields
-        
-        // Just return the event as-is - preserve logic is handled in mergeEventData
-        return event;
-    }
-    
     // Format event notes with all metadata in key-value format
     formatEventNotes(event) {
         const notes = [];
@@ -1521,7 +1511,8 @@ class SharedCore {
 
     // Prepare events for calendar integration with conflict analysis
     async prepareEventsForCalendar(events, calendarAdapter, config = {}) {
-        const preparedEvents = events.map(event => this.formatEventForCalendar(event));
+        // Events are already properly formatted - no need for additional formatting
+        const preparedEvents = events;
         
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
