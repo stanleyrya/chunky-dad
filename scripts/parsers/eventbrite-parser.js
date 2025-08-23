@@ -532,11 +532,18 @@ class EventbriteParser {
             }
             
             // Check components.eventDetails.location for additional venue data
+            // NOTE: localityPlaceId is an Eventbrite venue ID, NOT a Google place_id
+            // Only use Google place_ids (start with "ChIJ") for maps URL generation
             if (serverData.components?.eventDetails?.location) {
                 const detailsLocation = serverData.components.eventDetails.location;
                 if (detailsLocation.localityPlaceId && !finalPlaceId) {
-                    finalPlaceId = detailsLocation.localityPlaceId;
-                    console.log(`🎫 Eventbrite: Found place_id in components.eventDetails.location: "${finalPlaceId}"`);
+                    // Only use if it looks like a Google place_id (starts with "ChIJ")
+                    if (detailsLocation.localityPlaceId.startsWith('ChIJ')) {
+                        finalPlaceId = detailsLocation.localityPlaceId;
+                        console.log(`🎫 Eventbrite: Found Google place_id in components.eventDetails.location: "${finalPlaceId}"`);
+                    } else {
+                        console.log(`🎫 Eventbrite: Skipping Eventbrite venue ID (not Google place_id): "${detailsLocation.localityPlaceId}"`);
+                    }
                 }
             }
             
