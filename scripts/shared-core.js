@@ -569,12 +569,17 @@ class SharedCore {
 
         // Merge function: first merge parser data, then merge with calendar
     mergeEventData(existingEvent, newEvent) {
-        const fieldPriorities = newEvent._fieldPriorities || {};
+        // Merge field priorities from both events, preferring newEvent but falling back to existingEvent
+        const fieldPriorities = {
+            ...(existingEvent._fieldPriorities || {}),
+            ...(newEvent._fieldPriorities || {})
+        };
         
         // Debug field priorities loading
         if (newEvent.title && newEvent.title.includes('MEGAWOOF')) {
             console.log(`🔧 DEBUG: mergeEventData - newEvent._fieldPriorities exists: ${!!newEvent._fieldPriorities}`);
-            console.log(`🔧 DEBUG: mergeEventData - fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
+            console.log(`🔧 DEBUG: mergeEventData - existingEvent._fieldPriorities exists: ${!!existingEvent._fieldPriorities}`);
+            console.log(`🔧 DEBUG: mergeEventData - merged fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
             if (fieldPriorities.cover) {
                 console.log(`🔧 DEBUG: mergeEventData - cover config: ${JSON.stringify(fieldPriorities.cover)}`);
             }
