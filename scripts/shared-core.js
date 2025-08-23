@@ -663,13 +663,7 @@ class SharedCore {
                 url: mergedEvent.url
             }
         };
-        
-        // Debug logging for preserve field issues
-        console.log(`🔍 SharedCore: Debug _original object for "${newEvent.title}":`);
-        console.log(`   - newEvent.bar: "${newEvent.bar}"`);
-        console.log(`   - _original.new.bar: "${mergedEvent._original.new.bar}"`);
-        console.log(`   - existingFields.bar: "${existingFields.bar}"`);
-        console.log(`   - _original.existing.bar: "${mergedEvent._original.existing.bar}"`);
+
         
         return mergedEvent;
     }
@@ -786,13 +780,7 @@ class SharedCore {
                 url: finalEvent.url // This comes from mergeEventData which handles website->url mapping
             }
         };
-        
-        // Debug logging for preserve field issues
-        console.log(`🔍 SharedCore: Debug _original object in createFinalEventObject for "${newEvent.title}":`);
-        console.log(`   - newEvent.bar: "${newEvent.bar}"`);
-        console.log(`   - _original.new.bar: "${finalEvent._original.new.bar}"`);
-        console.log(`   - existingFields.bar: "${existingFields.bar}"`);
-        console.log(`   - _original.existing.bar: "${finalEvent._original.existing.bar}"`);
+
         
         // Create merge info for comparison tables
         finalEvent._mergeInfo = {
@@ -1477,42 +1465,12 @@ class SharedCore {
     
     // Format event for calendar integration
     formatEventForCalendar(event) {
-        // Build a view of the event that excludes fields explicitly marked as 'preserve'
-        const priorities = event._fieldPriorities || {};
-        const eventForNotes = { ...event };
-        Object.keys(eventForNotes).forEach(key => {
-            if (!key.startsWith('_') && priorities[key]?.merge === 'preserve') {
-                delete eventForNotes[key];
-            }
-        });
+        // FIXED: Don't delete preserve fields from the event object itself
+        // This was causing preserve fields to disappear from _original.new display comparisons
+        // The preserve logic should be handled during merge, not by deleting fields
         
-        const calendarEvent = {
-            title: event.title || event.name || 'Untitled Event',
-            startDate: event.startDate,
-            endDate: event.endDate || event.startDate,
-            location: event.location,
-            // Notes should reflect exactly what will be saved for NEW events (no 'preserve' fields)
-            notes: this.formatEventNotes(eventForNotes),
-            // Don't use url field - it goes in notes instead
-            city: event.city || 'default', // Include city for calendar selection
-            key: event.key, // Key should already be set during deduplication
-            _parserConfig: event._parserConfig, // Preserve parser config
-            _fieldPriorities: event._fieldPriorities // Preserve field priorities
-        };
-        
-        // Copy over all other fields except those explicitly marked as 'preserve'
-        const fieldsToExclude = new Set(['isBearEvent', 'source']); // city is kept for calendar mapping
-        Object.keys(event).forEach(key => {
-            if (!key.startsWith('_') && !(key in calendarEvent) && !fieldsToExclude.has(key)) {
-                if (priorities[key]?.merge === 'preserve') return;
-                // Only copy fields that have values and should be included
-                if (event[key] !== undefined && event[key] !== null && event[key] !== '') {
-                    calendarEvent[key] = event[key];
-                }
-            }
-        });
-        
-        return calendarEvent;
+        // Just return the event as-is - preserve logic is handled in mergeEventData
+        return event;
     }
     
     // Format event notes with all metadata in key-value format
