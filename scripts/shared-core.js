@@ -601,8 +601,14 @@ class SharedCore {
             _parserConfig: newEvent._parserConfig || existingEvent._parserConfig
         };
         
-        // Apply merge strategies (ignore priorities, just use merge strategy)
-        Object.keys(finalScrapedValues).forEach(fieldName => {
+        // Apply merge strategies for ALL fields (both scraped and existing)
+        const allFieldNames = new Set([
+            ...Object.keys(finalScrapedValues),
+            ...Object.keys(existingFields),
+            ...Object.keys(existingEvent)
+        ]);
+        
+        allFieldNames.forEach(fieldName => {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
@@ -610,32 +616,31 @@ class SharedCore {
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
-            // Debug preserve logic
-            if (fieldName === 'description' || fieldName === 'cover') {
-                const existingFromEvent = existingEvent[fieldName];
-                const existingFromFields = existingFields[fieldName];
-                console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
-                console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
-                console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
-                console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
-                console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
-                console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
-                console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
-            }
+            // Debug merge logic for ALL fields
+            const existingFromEvent = existingEvent[fieldName];
+            const existingFromFields = existingFields[fieldName];
+            console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
+            console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
+            console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
+            console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
+            console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
+            console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
+            console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
+            console.log(`🔧 DEBUG:   has existing: ${!!existingValue}, has scraped: ${!!scrapedValue}`);
             
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
+                    console.log(`🔧 DEBUG: CLOBBER result for "${fieldName}": "${mergedEvent[fieldName]}"`);
                     break;
                 case 'preserve':
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    if (fieldName === 'description' || fieldName === 'cover') {
-                        console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
-                    }
+                    console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
                     break;
                 case 'upsert':
                 default:
-                    mergedEvent[fieldName] = scrapedValue || existingValue;
+                    mergedEvent[fieldName] = existingValue || scrapedValue;
+                    console.log(`🔧 DEBUG: UPSERT result for "${fieldName}": "${mergedEvent[fieldName]}"`);
                     break;
             }
         });
