@@ -1588,10 +1588,22 @@ class SharedCore {
                     }
                 });
                 
-                // Check for added fields
+                // Check for added fields - but handle preserve strategy correctly
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
-                        analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                        // Check if this field has preserve strategy and should be treated as preserved
+                        const fieldPriorities = analyzedEvent._fieldPriorities || {};
+                        const priorityConfig = fieldPriorities[key];
+                        const mergeStrategy = priorityConfig?.merge || 'preserve';
+                        
+                        if (mergeStrategy === 'preserve') {
+                            // For preserve strategy, if the field wasn't in original notes but is now present,
+                            // it should be marked as preserved (the undefined existing value was preserved)
+                            analyzedEvent._mergeDiff.preserved.push(key);
+                        } else {
+                            // For other strategies (clobber, upsert), it's truly added
+                            analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                        }
                     }
                 });
             } else if (analysis.existingEvent) {
