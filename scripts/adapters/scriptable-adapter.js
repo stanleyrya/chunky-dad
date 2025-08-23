@@ -3166,22 +3166,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     resultText = '<span style="color: #ff3b30;">CLOBBER FAILED</span>';
                 }
             } else if (strategy === 'preserve') {
-                // Preserve strategy - show both values and explain the choice
-                if (existingValue && finalValue === existingValue) {
+                // Preserve strategy - ALWAYS keep existing value (even if null/empty)
+                if (finalValue === existingValue) {
                     flowIcon = '←';
-                    resultText = '<span style="color: #007aff;">CHOOSING EXISTING (preserve)</span>';
-                } else if (!existingValue && newValue && finalValue === newValue) {
-                    // Preserve but no existing value - uses new value
-                    flowIcon = '→';
-                    resultText = '<span style="color: #34c759;">ADDED (no existing to preserve)</span>';
-                } else if (finalValue !== existingValue && finalValue !== newValue) {
-                    // Preserve didn't work as expected
+                    if (existingValue) {
+                        resultText = '<span style="color: #007aff;">PRESERVED EXISTING</span>';
+                    } else {
+                        resultText = '<span style="color: #007aff;">PRESERVED NULL (ignore scraped)</span>';
+                    }
+                } else if (finalValue !== existingValue) {
+                    // Preserve didn't work as expected - should always keep existing
                     flowIcon = '⚠️';
                     resultText = '<span style="color: #ff3b30;">PRESERVE FAILED</span>';
-                } else if (!existingValue && !newValue) {
-                    // Both are empty
-                    flowIcon = '—';
-                    resultText = '<span style="color: #999;">PRESERVE (both empty)</span>';
                 }
             } else if (wasUsed === 'existing') {
                 // Merge strategy explicitly chose existing value
