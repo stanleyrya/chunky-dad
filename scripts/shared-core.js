@@ -371,8 +371,13 @@ class SharedCore {
                 if (parseResult.events && parseResult.events.length > 0) {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
                     
+                    // Apply field priorities to detail page events (same as main page events)
+                    const enrichedDetailEvents = parseResult.events.map(event => 
+                        this.applyFieldPriorities(event, parserConfig, mainConfig)
+                    );
+                    
                     // Add these events to the existing events collection for potential merging
-                    existingEvents.push(...parseResult.events);
+                    existingEvents.push(...enrichedDetailEvents);
                 } else {
                     await displayAdapter.logInfo(`SYSTEM: No new events found on detail page ${url}`);
                 }
@@ -569,17 +574,12 @@ class SharedCore {
 
         // Merge function: first merge parser data, then merge with calendar
     mergeEventData(existingEvent, newEvent) {
-        // Merge field priorities from both events, preferring newEvent but falling back to existingEvent
-        const fieldPriorities = {
-            ...(existingEvent._fieldPriorities || {}),
-            ...(newEvent._fieldPriorities || {})
-        };
+        const fieldPriorities = newEvent._fieldPriorities || {};
         
         // Debug field priorities loading
         if (newEvent.title && newEvent.title.includes('MEGAWOOF')) {
             console.log(`🔧 DEBUG: mergeEventData - newEvent._fieldPriorities exists: ${!!newEvent._fieldPriorities}`);
-            console.log(`🔧 DEBUG: mergeEventData - existingEvent._fieldPriorities exists: ${!!existingEvent._fieldPriorities}`);
-            console.log(`🔧 DEBUG: mergeEventData - merged fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
+            console.log(`🔧 DEBUG: mergeEventData - fieldPriorities keys: ${Object.keys(fieldPriorities)}`);
             if (fieldPriorities.cover) {
                 console.log(`🔧 DEBUG: mergeEventData - cover config: ${JSON.stringify(fieldPriorities.cover)}`);
             }
