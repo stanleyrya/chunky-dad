@@ -664,6 +664,13 @@ class SharedCore {
             }
         };
         
+        // Debug logging for preserve field issues
+        console.log(`🔍 SharedCore: Debug _original object for "${newEvent.title}":`);
+        console.log(`   - newEvent.bar: "${newEvent.bar}"`);
+        console.log(`   - _original.new.bar: "${mergedEvent._original.new.bar}"`);
+        console.log(`   - existingFields.bar: "${existingFields.bar}"`);
+        console.log(`   - _original.existing.bar: "${mergedEvent._original.existing.bar}"`);
+        
         return mergedEvent;
     }
 
@@ -780,6 +787,13 @@ class SharedCore {
             }
         };
         
+        // Debug logging for preserve field issues
+        console.log(`🔍 SharedCore: Debug _original object in createFinalEventObject for "${newEvent.title}":`);
+        console.log(`   - newEvent.bar: "${newEvent.bar}"`);
+        console.log(`   - _original.new.bar: "${finalEvent._original.new.bar}"`);
+        console.log(`   - existingFields.bar: "${existingFields.bar}"`);
+        console.log(`   - _original.existing.bar: "${finalEvent._original.existing.bar}"`);
+        
         // Create merge info for comparison tables
         finalEvent._mergeInfo = {
             extractedFields: {},
@@ -817,7 +831,7 @@ class SharedCore {
         
         // Extract fields from existing notes for display
         if (existingEvent.notes) {
-            const existingFieldsForExtract = this.parseNotesIntoFields(existingEvent.notes);
+            const existingFieldsForExtract = this.parseNotesIntoFields(existingEvent.notes || '');
             Object.entries(existingFieldsForExtract).forEach(([fieldName, value]) => {
                 finalEvent._mergeInfo.extractedFields[fieldName] = {
                     value: value,

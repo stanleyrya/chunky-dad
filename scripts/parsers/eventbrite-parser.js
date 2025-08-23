@@ -503,7 +503,7 @@ class EventbriteParser {
                 description: description,
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
-                bar: venue, // Use 'bar' field name that calendar-core.js expects
+                bar: venue || null, // Explicitly set to null if venue is falsy - ensures field exists for preserve comparison
                 location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: address,
                 city: city,
