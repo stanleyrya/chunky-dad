@@ -610,38 +610,31 @@ class SharedCore {
             const existingValue = existingEvent[fieldName] || existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
             
-            // Debug merge logic for key fields
-            if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
-                const existingFromEvent = existingEvent[fieldName];
-                const existingFromFields = existingFields[fieldName];
-                console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
-                console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
-                console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
-                console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
-                console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
-                console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
-                console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
-            }
+            // Debug merge logic for ALL fields
+            const existingFromEvent = existingEvent[fieldName];
+            const existingFromFields = existingFields[fieldName];
+            console.log(`🔧 DEBUG: Field "${fieldName}", strategy: "${mergeStrategy}"`);
+            console.log(`🔧 DEBUG:   priorityConfig: ${JSON.stringify(priorityConfig)}`);
+            console.log(`🔧 DEBUG:   priorityConfig?.merge: "${priorityConfig?.merge}"`);
+            console.log(`🔧 DEBUG:   existingEvent.${fieldName}: "${existingFromEvent}"`);
+            console.log(`🔧 DEBUG:   existingFields.${fieldName}: "${existingFromFields}"`);
+            console.log(`🔧 DEBUG:   final existingValue: "${existingValue}"`);
+            console.log(`🔧 DEBUG:   scrapedValue: "${scrapedValue}"`);
+            console.log(`🔧 DEBUG:   has existing: ${!!existingValue}, has scraped: ${!!scrapedValue}`);
             
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
-                    if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
-                        console.log(`🔧 DEBUG: CLOBBER result for "${fieldName}": "${mergedEvent[fieldName]}"`);
-                    }
+                    console.log(`🔧 DEBUG: CLOBBER result for "${fieldName}": "${mergedEvent[fieldName]}"`);
                     break;
                 case 'preserve':
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
-                        console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
-                    }
+                    console.log(`🔧 DEBUG: PRESERVE result for "${fieldName}": "${mergedEvent[fieldName]}"`);
                     break;
                 case 'upsert':
                 default:
                     mergedEvent[fieldName] = existingValue || scrapedValue;
-                    if (fieldName === 'description' || fieldName === 'cover' || fieldName === 'bar' || fieldName === 'gmaps' || fieldName === 'image') {
-                        console.log(`🔧 DEBUG: UPSERT result for "${fieldName}": "${mergedEvent[fieldName]}"`);
-                    }
+                    console.log(`🔧 DEBUG: UPSERT result for "${fieldName}": "${mergedEvent[fieldName]}"`);
                     break;
             }
         });
