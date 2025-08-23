@@ -459,7 +459,7 @@ class EventbriteParser {
                     price += ` (as of ${month}/${day})`;
                 }
             }
-            const image = eventData.logo?.url || eventData.image?.url || '';
+            const image = eventData.logo?.url || eventData.image?.url;
             
             // Extract city from event title for better event organization
             let city = null;
@@ -495,8 +495,11 @@ class EventbriteParser {
             
             // Don't generate Google Maps URL here - let SharedCore handle it with iOS-compatible logic
             // Just pass the place_id data to SharedCore for processing
-            let gmapsUrl = '';
-            console.log(`🎫 Eventbrite: Passing place_id "${eventData.venue?.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`)
+            // Only set gmapsUrl if we have place_id data, otherwise leave undefined to preserve existing values
+            let gmapsUrl = eventData.venue?.google_place_id ? '' : undefined;
+            if (eventData.venue?.google_place_id) {
+                console.log(`🎫 Eventbrite: Passing place_id "${eventData.venue.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`);
+            }
             
             const event = {
                 title: title,
@@ -509,8 +512,8 @@ class EventbriteParser {
                 city: city,
                 url: url, // Use consistent 'url' field name across all parsers
                 cover: price, // Use 'cover' field name that calendar-core.js expects
-                image: image,
-                gmaps: gmapsUrl, // Google Maps URL for enhanced location access
+                ...(image && { image: image }), // Only include image if we found one
+                ...(gmapsUrl !== undefined && { gmaps: gmapsUrl }), // Only include gmaps if we have place_id data
                 placeId: eventData.venue?.google_place_id || null, // Pass place_id to SharedCore for iOS-compatible URL generation
                 source: this.config.source,
                 // Properly handle bear event detection based on configuration

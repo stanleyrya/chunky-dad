@@ -1830,13 +1830,7 @@ class SharedCore {
                     
                 case 'clobber':
                     // Use new value if it exists, otherwise keep existing
-                    // Special handling for fields that should allow empty strings as valid values
-                    const fieldsAllowingEmptyStrings = new Set(['gmaps', 'image', 'cover', 'description']);
-                    const isValidNewValue = fieldsAllowingEmptyStrings.has(fieldName) 
-                        ? (newValue !== undefined && newValue !== null)
-                        : (newValue !== undefined && newValue !== null && newValue !== '');
-                    
-                    if (isValidNewValue) {
+                    if (newValue !== undefined && newValue !== null && newValue !== '') {
                         // Keep new value (do nothing as it's already in event)
                         event._mergeInfo.mergedFields[fieldName] = 'new';
                         return true;
