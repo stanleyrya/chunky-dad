@@ -631,6 +631,11 @@ class SharedCore {
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
+                    // CRITICAL FIX: Ensure URL field always gets scraped value when clobbering
+                    if (fieldName === 'url' && (!scrapedValue || scrapedValue === '') && newEvent.url) {
+                        mergedEvent[fieldName] = newEvent.url;
+                        console.log(`🔄 SharedCore: CLOBBER FIX - URL was empty, using newEvent.url: "${newEvent.url}"`);
+                    }
                     break;
                 case 'preserve':
                     // For preserve: only add field if it exists in existing event, otherwise leave undefined
@@ -740,7 +745,7 @@ class SharedCore {
             endDate: resolvedEndDate,
             location: resolvedLocation,
             notes: mergedData.notes,
-            url: mergedData.url,
+            url: mergedData.url || newEvent.url || '',
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
