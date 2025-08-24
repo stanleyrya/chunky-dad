@@ -764,11 +764,8 @@ class SharedCore {
             }
         });
         
-        // STEP 4: Build gmaps (if needed)
-        if (mergedObject.location || (mergedObject.coordinates && mergedObject.placeId)) {
-            const enrichedMerged = this.enrichEventLocation(mergedObject);
-            Object.assign(mergedObject, enrichedMerged);
-        }
+        // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
+        // The merge strategy above has already chosen the correct gmaps URL
         
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
