@@ -535,13 +535,8 @@ class EventbriteParser {
             if (serverData.components?.eventDetails?.location) {
                 const detailsLocation = serverData.components.eventDetails.location;
                 if (detailsLocation.localityPlaceId && !finalPlaceId) {
-                    // Only use if it's a real Google place_id (starts with "ChIJ")
-                    if (detailsLocation.localityPlaceId.startsWith('ChIJ')) {
-                        finalPlaceId = detailsLocation.localityPlaceId;
-                        console.log(`🎫 Eventbrite: Found Google place_id in components.eventDetails.location: "${finalPlaceId}"`);
-                    } else {
-                        console.log(`🎫 Eventbrite: Skipping Eventbrite venue ID (not Google place_id): "${detailsLocation.localityPlaceId}"`);
-                    }
+                    finalPlaceId = detailsLocation.localityPlaceId;
+                    console.log(`🎫 Eventbrite: Found place_id in components.eventDetails.location: "${finalPlaceId}"`);
                 }
             }
             
