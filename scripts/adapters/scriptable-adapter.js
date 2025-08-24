@@ -3091,7 +3091,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
             const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
-            const wasUsed = event._mergeInfo?.mergedFields?.[field];
+            
+            // Determine what was used by comparing final value with source values
+            let wasUsed = 'unknown';
+            if (finalValue === newValue && finalValue !== existingValue) {
+                wasUsed = 'new';
+            } else if (finalValue === existingValue && finalValue !== newValue) {
+                wasUsed = 'existing';
+            } else if (finalValue === existingValue && finalValue === newValue) {
+                wasUsed = 'same';
+            }
             
 
             
@@ -3262,8 +3271,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 return val.toString();
             };
             
-            // Determine what happened with this field
-            const wasUsed = event._mergeInfo?.mergedFields?.[field];
+            // Determine what happened with this field by comparing values
+            let wasUsed = 'unknown';
+            if (finalValue === newValue && finalValue !== existingValue) {
+                wasUsed = 'new';
+            } else if (finalValue === existingValue && finalValue !== newValue) {
+                wasUsed = 'existing';
+            } else if (finalValue === existingValue && finalValue === newValue) {
+                wasUsed = 'same';
+            }
             const isNew = !existingValue && newValue;
             const isUnchanged = existingValue && !newValue;
             
