@@ -372,6 +372,16 @@ class EventbriteParser {
                 description = serverData.components.eventDescription.summary;
             }
             
+            // Normalize description text to prevent whitespace differences from causing merge issues
+            if (description) {
+                description = description
+                    .trim()                           // Remove leading/trailing whitespace
+                    .replace(/\s+\n/g, '\n')         // Remove trailing spaces before newlines
+                    .replace(/\n\s+/g, '\n')         // Remove leading spaces after newlines
+                    .replace(/\s{2,}/g, ' ')         // Collapse multiple spaces into single spaces
+                    .replace(/\n{3,}/g, '\n\n');     // Collapse multiple newlines into double newlines
+            }
+            
             // Handle both organizer page format (start.utc) and detail page format (start as string)
             // Detail pages may have start/end as timezone objects with utc field
             let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
