@@ -631,6 +631,12 @@ class SharedCore {
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
+                    // Debug: log when clobber is applied to any field
+                    if (scrapedValue !== existingValue) {
+                        console.log(`🔄 CLOBBER: ${fieldName} changed from ${JSON.stringify(existingValue)} to ${JSON.stringify(scrapedValue)}`);
+                    } else {
+                        console.log(`🔄 CLOBBER: ${fieldName} same value ${JSON.stringify(scrapedValue)} (was ${JSON.stringify(existingValue)})`);
+                    }
                     break;
                 case 'preserve':
                     // For preserve: only add field if it exists in existing event, otherwise leave undefined
@@ -1638,8 +1644,23 @@ class SharedCore {
                 
                 // Analyze what changed
                 Object.keys(originalFields).forEach(key => {
+                    // Check the merge strategy for this field
+                    const fieldPriorities = analyzedEvent._fieldPriorities || {};
+                    const priorityConfig = fieldPriorities[key];
+                    const mergeStrategy = priorityConfig?.merge || 'preserve';
+                    
                     if (mergedFields[key] === originalFields[key]) {
-                        analyzedEvent._mergeDiff.preserved.push(key);
+                        // For clobber strategy, even if values are the same, it should be marked as updated
+                        // because the intent was to replace the value
+                        if (mergeStrategy === 'clobber') {
+                            analyzedEvent._mergeDiff.updated.push({ 
+                                key, 
+                                from: originalFields[key], 
+                                to: mergedFields[key] 
+                            });
+                        } else {
+                            analyzedEvent._mergeDiff.preserved.push(key);
+                        }
                     } else if (!mergedFields[key]) {
                         // Check if this is preserve strategy - if so, undefined should be preserved, not removed
                         const fieldPriorities = analyzedEvent._fieldPriorities || {};
