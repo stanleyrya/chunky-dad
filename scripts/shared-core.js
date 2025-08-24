@@ -675,6 +675,13 @@ class SharedCore {
             }
         });
         
+        // Debug: Check what's in mergedEvent before regenerating notes
+        if (mergedEvent.description !== undefined) {
+            console.log(`🔍 DEBUG: mergedEvent.description before formatEventNotes: ${JSON.stringify(mergedEvent.description)}`);
+        } else {
+            console.log(`🔍 DEBUG: mergedEvent.description is undefined before formatEventNotes`);
+        }
+        
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
@@ -790,17 +797,36 @@ class SharedCore {
                 const priorityConfig = fieldPrioritiesForCompare[fieldName];
                 const mergeStrategy = priorityConfig?.merge || 'preserve';
                 
+                // Debug logging for description field
+                if (fieldName === 'description') {
+                    console.log(`🔍 DEBUG: Adding description from finalFields to finalEvent`);
+                    console.log(`🔍 DEBUG: - finalFields.description: ${JSON.stringify(finalFields[fieldName])}`);
+                    console.log(`🔍 DEBUG: - mergeStrategy: ${mergeStrategy}`);
+                    console.log(`🔍 DEBUG: - !finalEvent[fieldName]: ${!finalEvent[fieldName]}`);
+                }
+                
                 // For preserve strategy, don't add fields that don't exist in calendar (preserve undefined)
                 if (mergeStrategy === 'preserve') {
                     // Don't add - preserve the undefined calendar value
+                    if (fieldName === 'description') {
+                        console.log(`🔍 DEBUG: Description PRESERVE - not adding to finalEvent`);
+                    }
                     return;
                 } else if (mergeStrategy === 'upsert') {
                     // Only add if calendar doesn't have the field (which we already checked with !finalEvent[fieldName])
                     finalEvent[fieldName] = finalFields[fieldName];
+                    if (fieldName === 'description') {
+                        console.log(`🔍 DEBUG: Description UPSERT - added to finalEvent: ${JSON.stringify(finalEvent[fieldName])}`);
+                    }
                 } else if (mergeStrategy === 'clobber') {
                     // Always add the scraped value (this should have been handled by merge logic above, but ensure it's here)
                     finalEvent[fieldName] = finalFields[fieldName];
+                    if (fieldName === 'description') {
+                        console.log(`🔍 DEBUG: Description CLOBBER - added to finalEvent: ${JSON.stringify(finalEvent[fieldName])}`);
+                    }
                 }
+            } else if (fieldName === 'description') {
+                console.log(`🔍 DEBUG: Description NOT added - finalFields[description]: ${JSON.stringify(finalFields[fieldName])}, !finalEvent[description]: ${!finalEvent[fieldName]}`);
             }
         });
         
@@ -1590,6 +1616,13 @@ class SharedCore {
                 event[fieldName] !== '') {
                 notes.push(`${fieldName}: ${event[fieldName]}`);
                 savedFieldCount++;
+                
+                // Debug logging for description field
+                if (fieldName === 'description') {
+                    console.log(`🔍 DEBUG: formatEventNotes - adding description: ${JSON.stringify(event[fieldName])}`);
+                }
+            } else if (fieldName === 'description') {
+                console.log(`🔍 DEBUG: formatEventNotes - NOT adding description: value=${JSON.stringify(event[fieldName])}, excluded=${excludeFields.has(fieldName)}`);
             }
         });
         
