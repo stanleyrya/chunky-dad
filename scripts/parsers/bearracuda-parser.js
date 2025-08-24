@@ -212,15 +212,7 @@ class BearraccudaParser {
                 if (performers) description += 'Entertainment: ' + performers + '\n';
                 if (timeInfo.details) description += timeInfo.details + '\n';
             }
-            // Normalize description text to prevent whitespace differences from causing merge issues
-            if (description) {
-                description = description
-                    .trim()                           // Remove leading/trailing whitespace
-                    .replace(/\s+\n/g, '\n')         // Remove trailing spaces before newlines
-                    .replace(/\n\s+/g, '\n')         // Remove leading spaces after newlines
-                    .replace(/\s{2,}/g, ' ')         // Collapse multiple spaces into single spaces
-                    .replace(/\n{3,}/g, '\n\n');     // Collapse multiple newlines into double newlines
-            }
+            description = description.trim();
             
             // Create start date
             let startDate = null;
