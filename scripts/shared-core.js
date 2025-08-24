@@ -647,9 +647,18 @@ class SharedCore {
         });
         
         // Add any existing fields that weren't in scraped data
+        // BUT respect merge strategies - don't override clobber results
         Object.keys(existingFields).forEach(fieldName => {
             if (!mergedEvent[fieldName] && existingFields[fieldName]) {
-                mergedEvent[fieldName] = existingFields[fieldName];
+                // Check if this field has a merge strategy that should be respected
+                const priorityConfig = fieldPriorities[fieldName];
+                const mergeStrategy = priorityConfig?.merge || 'preserve';
+                
+                // Only add existing fields if NOT clobber strategy
+                // Clobber should be allowed to clear fields (set to undefined)
+                if (mergeStrategy !== 'clobber') {
+                    mergedEvent[fieldName] = existingFields[fieldName];
+                }
             }
         });
         
@@ -716,7 +725,7 @@ class SharedCore {
             const mergeStrategy = priorityConfig.merge || 'preserve';
             switch (mergeStrategy) {
                 case 'clobber':
-                    return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
+                    return newValue; // Always use new value for clobber, even if empty/null/undefined
                 case 'upsert':
                     return (existingValue !== undefined && existingValue !== null && existingValue !== '')
                         ? existingValue
