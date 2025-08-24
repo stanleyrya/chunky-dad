@@ -716,7 +716,7 @@ class SharedCore {
             const mergeStrategy = priorityConfig.merge || 'preserve';
             switch (mergeStrategy) {
                 case 'clobber':
-                    return (newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue;
+                    return newValue; // Always use new value for clobber, even if empty/null/undefined
                 case 'upsert':
                     return (existingValue !== undefined && existingValue !== null && existingValue !== '')
                         ? existingValue
