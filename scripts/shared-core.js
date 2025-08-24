@@ -882,21 +882,48 @@ class SharedCore {
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
         
-        lines.forEach(line => {
+        let currentKey = null;
+        let currentValue = '';
+        
+        lines.forEach((line, index) => {
             const colonIndex = line.indexOf(':');
+            
             // A valid metadata line has a colon that's not at the start
             if (colonIndex > 0) {
+                // Save previous field if we have one
+                if (currentKey && currentValue) {
+                    const normalizedKey = normalize(currentKey);
+                    const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
+                        ? aliasToCanonical[normalizedKey]
+                        : currentKey;
+                    fields[canonicalKey] = currentValue;
+                }
+                
+                // Start new field
                 const rawKey = line.substring(0, colonIndex).trim();
                 const value = line.substring(colonIndex + 1).trim();
                 
-                if (rawKey && value) {
-                    const normalizedKey = normalize(rawKey);
-                    // Prefer canonical mapping when recognized; otherwise, keep original key casing
-                    const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
-                        ? aliasToCanonical[normalizedKey]
-                        : rawKey;
-                    fields[canonicalKey] = value;
+                if (rawKey) {
+                    currentKey = rawKey;
+                    currentValue = value;
                 }
+            } else if (currentKey && line.trim()) {
+                // This is a continuation line for the current field
+                // Add it to the current value with a newline
+                if (currentValue) {
+                    currentValue += '\n' + line;
+                } else {
+                    currentValue = line;
+                }
+            }
+            
+            // Handle the last field
+            if (index === lines.length - 1 && currentKey && currentValue) {
+                const normalizedKey = normalize(currentKey);
+                const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
+                    ? aliasToCanonical[normalizedKey]
+                    : currentKey;
+                fields[canonicalKey] = currentValue;
             }
         });
         
