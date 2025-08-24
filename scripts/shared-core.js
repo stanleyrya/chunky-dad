@@ -628,21 +628,14 @@ class SharedCore {
             const existingFromEvent = existingEvent[fieldName];
             const existingFromFields = existingFields[fieldName];
             
-            // Debug logging for description field specifically
-            if (fieldName === 'description') {
-                console.log(`🔍 DEBUG: Merging description field`);
-                console.log(`🔍 DEBUG: - mergeStrategy: ${mergeStrategy}`);
-                console.log(`🔍 DEBUG: - existingFromEvent: ${JSON.stringify(existingFromEvent)}`);
-                console.log(`🔍 DEBUG: - existingFromFields: ${JSON.stringify(existingFromFields)}`);
-                console.log(`🔍 DEBUG: - existingValue: ${JSON.stringify(existingValue)}`);
-                console.log(`🔍 DEBUG: - scrapedValue: ${JSON.stringify(scrapedValue)}`);
-            }
-            
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
-                    if (fieldName === 'description') {
-                        console.log(`🔍 DEBUG: - CLOBBER applied, result: ${JSON.stringify(mergedEvent[fieldName])}`);
+                    // Debug: log when clobber is applied to any field
+                    if (scrapedValue !== existingValue) {
+                        console.log(`🔄 CLOBBER: ${fieldName} changed from ${JSON.stringify(existingValue)} to ${JSON.stringify(scrapedValue)}`);
+                    } else {
+                        console.log(`🔄 CLOBBER: ${fieldName} same value ${JSON.stringify(scrapedValue)} (was ${JSON.stringify(existingValue)})`);
                     }
                     break;
                 case 'preserve':
@@ -674,13 +667,6 @@ class SharedCore {
                 }
             }
         });
-        
-        // Debug: Check what's in mergedEvent before regenerating notes
-        if (mergedEvent.description !== undefined) {
-            console.log(`🔍 DEBUG: mergedEvent.description before formatEventNotes: ${JSON.stringify(mergedEvent.description)}`);
-        } else {
-            console.log(`🔍 DEBUG: mergedEvent.description is undefined before formatEventNotes`);
-        }
         
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
@@ -797,36 +783,17 @@ class SharedCore {
                 const priorityConfig = fieldPrioritiesForCompare[fieldName];
                 const mergeStrategy = priorityConfig?.merge || 'preserve';
                 
-                // Debug logging for description field
-                if (fieldName === 'description') {
-                    console.log(`🔍 DEBUG: Adding description from finalFields to finalEvent`);
-                    console.log(`🔍 DEBUG: - finalFields.description: ${JSON.stringify(finalFields[fieldName])}`);
-                    console.log(`🔍 DEBUG: - mergeStrategy: ${mergeStrategy}`);
-                    console.log(`🔍 DEBUG: - !finalEvent[fieldName]: ${!finalEvent[fieldName]}`);
-                }
-                
                 // For preserve strategy, don't add fields that don't exist in calendar (preserve undefined)
                 if (mergeStrategy === 'preserve') {
                     // Don't add - preserve the undefined calendar value
-                    if (fieldName === 'description') {
-                        console.log(`🔍 DEBUG: Description PRESERVE - not adding to finalEvent`);
-                    }
                     return;
                 } else if (mergeStrategy === 'upsert') {
                     // Only add if calendar doesn't have the field (which we already checked with !finalEvent[fieldName])
                     finalEvent[fieldName] = finalFields[fieldName];
-                    if (fieldName === 'description') {
-                        console.log(`🔍 DEBUG: Description UPSERT - added to finalEvent: ${JSON.stringify(finalEvent[fieldName])}`);
-                    }
                 } else if (mergeStrategy === 'clobber') {
                     // Always add the scraped value (this should have been handled by merge logic above, but ensure it's here)
                     finalEvent[fieldName] = finalFields[fieldName];
-                    if (fieldName === 'description') {
-                        console.log(`🔍 DEBUG: Description CLOBBER - added to finalEvent: ${JSON.stringify(finalEvent[fieldName])}`);
-                    }
                 }
-            } else if (fieldName === 'description') {
-                console.log(`🔍 DEBUG: Description NOT added - finalFields[description]: ${JSON.stringify(finalFields[fieldName])}, !finalEvent[description]: ${!finalEvent[fieldName]}`);
             }
         });
         
@@ -955,19 +922,8 @@ class SharedCore {
         // This ensures that gmaps URLs are regenerated if they were removed during clobber merge
         const enrichedFinalEvent = this.enrichEventLocation(finalEvent);
         
-        // Debug logging for description field
-        if (enrichedFinalEvent.description !== undefined) {
-            console.log(`🔍 DEBUG: Final event description after enrichment: ${JSON.stringify(enrichedFinalEvent.description)}`);
-        }
-        
         // Regenerate notes after enrichment to include any newly generated fields
         enrichedFinalEvent.notes = this.formatEventNotes(enrichedFinalEvent);
-        
-        // Debug logging for description in notes
-        const finalFields = this.parseNotesIntoFields(enrichedFinalEvent.notes || '');
-        if (finalFields.description !== undefined) {
-            console.log(`🔍 DEBUG: Final notes description: ${JSON.stringify(finalFields.description)}`);
-        }
         
         return enrichedFinalEvent;
     }
@@ -1616,13 +1572,6 @@ class SharedCore {
                 event[fieldName] !== '') {
                 notes.push(`${fieldName}: ${event[fieldName]}`);
                 savedFieldCount++;
-                
-                // Debug logging for description field
-                if (fieldName === 'description') {
-                    console.log(`🔍 DEBUG: formatEventNotes - adding description: ${JSON.stringify(event[fieldName])}`);
-                }
-            } else if (fieldName === 'description') {
-                console.log(`🔍 DEBUG: formatEventNotes - NOT adding description: value=${JSON.stringify(event[fieldName])}, excluded=${excludeFields.has(fieldName)}`);
             }
         });
         
@@ -1695,11 +1644,22 @@ class SharedCore {
                 
                 // Analyze what changed
                 Object.keys(originalFields).forEach(key => {
+                    // Check the merge strategy for this field
+                    const fieldPriorities = analyzedEvent._fieldPriorities || {};
+                    const priorityConfig = fieldPriorities[key];
+                    const mergeStrategy = priorityConfig?.merge || 'preserve';
+                    
                     if (mergedFields[key] === originalFields[key]) {
-                        analyzedEvent._mergeDiff.preserved.push(key);
-                        // Debug logging for description field
-                        if (key === 'description') {
-                            console.log(`🔍 DEBUG: Description marked as PRESERVED - original: ${JSON.stringify(originalFields[key])}, merged: ${JSON.stringify(mergedFields[key])}`);
+                        // For clobber strategy, even if values are the same, it should be marked as updated
+                        // because the intent was to replace the value
+                        if (mergeStrategy === 'clobber') {
+                            analyzedEvent._mergeDiff.updated.push({ 
+                                key, 
+                                from: originalFields[key], 
+                                to: mergedFields[key] 
+                            });
+                        } else {
+                            analyzedEvent._mergeDiff.preserved.push(key);
                         }
                     } else if (!mergedFields[key]) {
                         // Check if this is preserve strategy - if so, undefined should be preserved, not removed
@@ -1720,10 +1680,6 @@ class SharedCore {
                             from: originalFields[key], 
                             to: mergedFields[key] 
                         });
-                        // Debug logging for description field
-                        if (key === 'description') {
-                            console.log(`🔍 DEBUG: Description marked as UPDATED - from: ${JSON.stringify(originalFields[key])}, to: ${JSON.stringify(mergedFields[key])}`);
-                        }
                     }
                 });
                 
