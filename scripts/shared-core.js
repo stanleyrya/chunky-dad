@@ -1210,7 +1210,8 @@ class SharedCore {
             event.location = null;
             event.address = null;
             event.gmaps = '';
-            delete event.placeId; // Also remove place_id for TBA venues
+            // Keep placeId even for TBA venues - don't delete it
+            // delete event.placeId;
             return event;
         }
         
@@ -1249,15 +1250,15 @@ class SharedCore {
         } else if (!event.address && event.location && event.gmaps) {
             // Keep coordinates and gmaps URL
         } else if (!event.address && event.location && !event.gmaps) {
-            // No valid address or gmaps URL - remove location data
-            delete event.gmaps;
-            event.location = null;
+            // No valid address or gmaps URL - keep location data anyway
+            // delete event.gmaps;
+            // event.location = null;
         } else {
-            // Address present but not full (isFullAddress caught placeholder): disable maps and coordinates
-            console.log(`🗺️ SharedCore: Placeholder address "${event.address}" detected for "${event.title}" - removing fake location data`);
-            delete event.gmaps;
-            event.location = null;
-            delete event.address;
+            // Address present but not full (isFullAddress caught placeholder): keep data anyway
+            console.log(`🗺️ SharedCore: Placeholder address "${event.address}" detected for "${event.title}" - keeping location data`);
+            // delete event.gmaps;
+            // event.location = null;
+            // delete event.address;
         }
         
         // Keep placeId for future URL generation - don't delete it
