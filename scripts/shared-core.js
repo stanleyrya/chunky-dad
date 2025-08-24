@@ -896,7 +896,11 @@ class SharedCore {
                     const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
                         ? aliasToCanonical[normalizedKey]
                         : currentKey;
-                    fields[canonicalKey] = currentValue;
+                    // Normalize multi-line text fields to ensure consistency
+                    const finalValue = (canonicalKey === 'description' && currentValue) 
+                        ? this.normalizeMultilineText(currentValue)
+                        : currentValue;
+                    fields[canonicalKey] = finalValue;
                 }
                 
                 // Start new field
@@ -923,7 +927,11 @@ class SharedCore {
                 const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
                     ? aliasToCanonical[normalizedKey]
                     : currentKey;
-                fields[canonicalKey] = currentValue;
+                // Normalize multi-line text fields to ensure consistency
+                const finalValue = (canonicalKey === 'description' && currentValue) 
+                    ? this.normalizeMultilineText(currentValue)
+                    : currentValue;
+                fields[canonicalKey] = finalValue;
             }
         });
         
@@ -945,6 +953,21 @@ class SharedCore {
         return lines.join('\n');
     }
 
+    // Normalize multi-line text to ensure consistent formatting
+    // This helps prevent subtle whitespace differences between scraper runs
+    normalizeMultilineText(text) {
+        if (!text || typeof text !== 'string') {
+            return text;
+        }
+        
+        // Split into lines, trim trailing whitespace from each line, then rejoin
+        // This ensures consistent spacing while preserving intentional line breaks
+        return text
+            .split('\n')
+            .map(line => line.trimEnd())
+            .join('\n')
+            .trim(); // Also trim the overall text
+    }
 
     // Helper method to normalize event dates for consistent comparison across timezones
     normalizeEventDate(dateInput) {
@@ -1482,7 +1505,9 @@ class SharedCore {
             'originalTitle', 'name', // These are usually duplicates of title
             // Scriptable-specific properties that shouldn't be in notes
             'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
-            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields'
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+            // Location-specific fields that shouldn't be in notes (used internally)
+            'placeId'
         ]);
         
         // Add all fields that have values (merge logic has already determined correct values)
@@ -1492,7 +1517,11 @@ class SharedCore {
                 event[fieldName] !== undefined && 
                 event[fieldName] !== null && 
                 event[fieldName] !== '') {
-                notes.push(`${fieldName}: ${event[fieldName]}`);
+                // Normalize multi-line text fields for consistency
+                const value = (fieldName === 'description' && typeof event[fieldName] === 'string') 
+                    ? this.normalizeMultilineText(event[fieldName])
+                    : event[fieldName];
+                notes.push(`${fieldName}: ${value}`);
                 savedFieldCount++;
             }
         });

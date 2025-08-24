@@ -2958,7 +2958,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'originalTitle', 'name', // These are usually duplicates of title
             // Scriptable-specific properties that shouldn't be in notes
             'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
-            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields'
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+            // Location-specific fields that shouldn't be in notes (used internally)
+            'placeId'
         ]);
         
         // Helper function to check if a field should be included
