@@ -9,7 +9,7 @@
 
 const scraperConfig = {
   config: {
-    dryRun: true,
+    dryRun: false,
     daysToLookAhead: null
   },
   parsers: [
@@ -22,7 +22,7 @@ const scraperConfig = {
       requireDetailPages: true,
       maxAdditionalUrls: 20,
       urlDiscoveryDepth: 1,
-      dryRun: true,
+      dryRun: false,
       daysToLookAhead: null,
       mergeMode: "upsert",
       urlFilters: {
@@ -57,7 +57,7 @@ const scraperConfig = {
       requireDetailPages: true,
       maxAdditionalUrls: 20,
       urlDiscoveryDepth: 1,
-      dryRun: true,
+      dryRun: false,
       daysToLookAhead: null,
       mergeMode: "upsert",
       urlFilters: {
@@ -93,7 +93,7 @@ const scraperConfig = {
       requireDetailPages: true,
       maxAdditionalUrls: 20,
       urlDiscoveryDepth: 1,
-      dryRun: true,
+      dryRun: false,
       daysToLookAhead: null,
       mergeMode: "upsert",
       urlFilters: {
@@ -129,7 +129,7 @@ const scraperConfig = {
       requireDetailPages: true,
       maxAdditionalUrls: 20,
       urlDiscoveryDepth: 1,
-      dryRun: true,
+      dryRun: false,
       daysToLookAhead: null,
       mergeMode: "upsert",
       urlFilters: {
