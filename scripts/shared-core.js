@@ -710,52 +710,84 @@ class SharedCore {
     }
 
     // Create complete merged event object that represents exactly what will be saved
+    // Following the 6-step process: 1) scraper object, 2) calendar object, 3) simple merge, 4) gmaps, 5) notes, 6) display
     createFinalEventObject(existingEvent, newEvent) {
         console.log(`🔄 SharedCore: Creating merged event for "${newEvent.title}" with existing event "${existingEvent.title}"`);
         
-        // Use the existing merge function to do all the heavy lifting
-        const mergedData = this.mergeEventData(existingEvent, newEvent);
+        // STEP 1: Build scraper object using priority list (already done - newEvent)
+        const scraperObject = { ...newEvent };
         
-        // Helper to apply priority strategy for core calendar fields
-        const fieldPriorities = newEvent._fieldPriorities || {};
-        const applyPriority = (fieldName, existingValue, newValue) => {
-            const priorityConfig = fieldPriorities[fieldName];
-            if (!priorityConfig || !priorityConfig.priority) {
-                // Default to upsert behavior for fields without priority rules
-                return (existingValue !== undefined && existingValue !== null && existingValue !== '')
-                    ? existingValue
-                    : ((newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue);
-            }
-            
-            // Apply priority logic based on merge strategy from calendar conflict
-            const mergeStrategy = priorityConfig.merge || 'preserve';
-            switch (mergeStrategy) {
-                case 'clobber':
-                    return newValue; // Always use new value for clobber, even if empty/null/undefined
-                case 'upsert':
-                    return (existingValue !== undefined && existingValue !== null && existingValue !== '')
-                        ? existingValue
-                        : ((newValue !== undefined && newValue !== null && newValue !== '') ? newValue : existingValue);
-                case 'preserve':
-                default:
-                    return existingValue;
-            }
+        // STEP 2: Build calendar object using calendar data
+        const calendarObject = {
+            title: existingEvent.title,
+            startDate: existingEvent.startDate,
+            endDate: existingEvent.endDate,
+            location: existingEvent.location,
+            notes: existingEvent.notes,
+            url: existingEvent.url,
+            // Parse existing notes to get all stored field data
+            ...this.parseNotesIntoFields(existingEvent.notes || '')
         };
         
-        // Resolve calendar core fields using priority strategies
-        const resolvedStartDate = applyPriority('startDate', existingEvent.startDate, newEvent.startDate);
-        const resolvedEndDate = applyPriority('endDate', existingEvent.endDate, newEvent.endDate || newEvent.startDate);
-        const resolvedLocation = applyPriority('location', existingEvent.location, newEvent.location);
+        // STEP 3: Simple merge - respect merge logic, grab from correct object
+        const fieldPriorities = newEvent._fieldPriorities || {};
+        const mergedObject = {};
+        
+        // Get all possible field names from both objects
+        const allFields = new Set([
+            ...Object.keys(scraperObject),
+            ...Object.keys(calendarObject)
+        ]);
+        
+        // Apply merge logic for each field
+        allFields.forEach(fieldName => {
+            // Skip internal fields
+            if (fieldName.startsWith('_') || fieldName === 'notes') return;
+            
+            const priorityConfig = fieldPriorities[fieldName];
+            const mergeStrategy = priorityConfig?.merge || 'preserve';
+            const scraperValue = scraperObject[fieldName];
+            const calendarValue = calendarObject[fieldName];
+            
+            switch (mergeStrategy) {
+                case 'clobber':
+                    mergedObject[fieldName] = scraperValue;
+                    console.log(`🔄 CLOBBER: ${fieldName} = ${JSON.stringify(scraperValue)} (was ${JSON.stringify(calendarValue)})`);
+                    break;
+                case 'upsert':
+                    mergedObject[fieldName] = calendarValue || scraperValue;
+                    break;
+                case 'preserve':
+                default:
+                    mergedObject[fieldName] = calendarValue;
+                    break;
+            }
+        });
+        
+        // STEP 4: Build gmaps (if needed)
+        if (mergedObject.location || (mergedObject.coordinates && mergedObject.placeId)) {
+            const enrichedMerged = this.enrichEventLocation(mergedObject);
+            Object.assign(mergedObject, enrichedMerged);
+        }
+        
+        // STEP 5: Build new notes from merged object
+        const newNotes = this.formatEventNotes(mergedObject);
         
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
-            // Core calendar fields that actually get saved (from mergedData + strategy application)
-            title: mergedData.title,
-            startDate: resolvedStartDate,
-            endDate: resolvedEndDate,
-            location: resolvedLocation,
-            notes: mergedData.notes,
-            url: mergedData.url,
+            // Core calendar fields
+            title: mergedObject.title || calendarObject.title,
+            startDate: mergedObject.startDate || calendarObject.startDate,
+            endDate: mergedObject.endDate || calendarObject.endDate,
+            location: mergedObject.location || calendarObject.location,
+            notes: newNotes,
+            url: mergedObject.url || calendarObject.url,
+            
+            // Copy all merged fields to final event
+            ...mergedObject,
+            
+            // Override notes with the newly built ones
+            notes: newNotes,
             
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
@@ -763,174 +795,35 @@ class SharedCore {
             
             // Keep metadata for display and comparison tables
             city: newEvent.city,
-            key: newEvent.key,
+            key: newEvent.key || mergedObject.key,
             source: newEvent.source,
             _parserConfig: newEvent._parserConfig,
             _fieldPriorities: newEvent._fieldPriorities
         };
         
-        // Parse the final notes to get all the merged fields for display
-        const finalFields = this.parseNotesIntoFields(finalEvent.notes || '');
+        // STEP 6: Pass all three objects to rich display for comparison
+        console.log(`🔄 SharedCore: Final merged event created with ${Object.keys(mergedObject).length} fields`);
         
-        // Prepare priority config and existing fields for comparison blocks below
-        const fieldPrioritiesForCompare = newEvent._fieldPriorities || {};
-        const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
-
-        // Add all fields from notes to the final event for display purposes
-        // IMPORTANT: Don't override fields that were already set by merge logic
-        Object.keys(finalFields).forEach(fieldName => {
-            if (finalFields[fieldName] && !(fieldName in finalEvent)) {
-                // Check merge strategy before adding field
-                const priorityConfig = fieldPrioritiesForCompare[fieldName];
-                const mergeStrategy = priorityConfig?.merge || 'preserve';
-                
-                // For preserve strategy, don't add fields that don't exist in calendar (preserve undefined)
-                if (mergeStrategy === 'preserve') {
-                    // Don't add - preserve the undefined calendar value
-                    return;
-                } else if (mergeStrategy === 'upsert') {
-                    // Only add if calendar doesn't have the field (which we already checked with !finalEvent[fieldName])
-                    finalEvent[fieldName] = finalFields[fieldName];
-                } else if (mergeStrategy === 'clobber') {
-                    // For clobber, the merge logic should have already set the correct value
-                    // Don't override it with potentially stale data from notes
-                    // Only add if the field is truly missing (not just falsy)
-                    if (!(fieldName in finalEvent)) {
-                        finalEvent[fieldName] = finalFields[fieldName];
-                    }
-                }
-            }
-        });
-        
-        console.log(`🔄 SharedCore: Final merged event has ${Object.keys(finalFields).length} fields in notes`);
-        
-        // Store comparison data for display - use the EXACT same structure as the save operation
-        // The save operation uses: targetEvent.field = event.field for these fields:
-        // targetEvent.title = event.title;
-        // targetEvent.startDate = event.startDate;
-        // targetEvent.endDate = event.endDate;
-        // targetEvent.location = event.location;
-        // targetEvent.notes = event.notes;
-        // targetEvent.url = event.url;
-        
-        // Use existing fields already parsed above
-        
+        // Store the three objects for display comparison
         finalEvent._original = {
-            existing: { 
-                // These are the CURRENT values that will be replaced during save
-                title: existingEvent.title || '',
-                startDate: existingEvent.startDate || '',
-                endDate: existingEvent.endDate || '',
-                location: existingEvent.location || '',
-                notes: existingEvent.notes || '',
-                url: existingEvent.url || '', // Legacy field for comparison
-                // Add fields extracted from current notes for rich comparison
-                ...existingFields
-            },
-            new: { 
-                // Include ALL scraped values from newEvent for comparison
-                // This ensures preserve fields show what was scraped vs what was kept
-                ...newEvent,
-                // Override with final calendar values for core fields
-                title: finalEvent.title,
-                startDate: finalEvent.startDate,
-                endDate: finalEvent.endDate,
-                location: finalEvent.location,
-                notes: finalEvent.notes,
-                url: finalEvent.url // This comes from mergeEventData which handles website->url mapping
-            }
+            scraper: scraperObject,    // What the scraper found
+            calendar: calendarObject,  // What was in the calendar
+            merged: mergedObject       // What the merge logic produced
         };
 
         
-        // Create merge info for comparison tables
-        finalEvent._mergeInfo = {
-            extractedFields: {},
-            mergedFields: {},
-            strategy: fieldPrioritiesForCompare
-        };
-        
-        // Track which fields were merged and how - include all fields with priorities plus standard calendar fields
-        const fieldsToTrack = new Set(['title', 'startDate', 'endDate', 'location', 'url', 'notes']);
-        
-        // Add all fields that have priority configurations
-        if (fieldPriorities) {
-            Object.keys(fieldPriorities).forEach(field => fieldsToTrack.add(field));
-        }
-        
-        // Add all fields from existing and new events to ensure comprehensive tracking
-        Object.keys(existingFields || {}).forEach(field => fieldsToTrack.add(field));
-        Object.keys(newEvent || {}).forEach(field => {
-            if (!field.startsWith('_') && typeof newEvent[field] !== 'function') {
-                fieldsToTrack.add(field);
-            }
-        });
-        
-        fieldsToTrack.forEach(field => {
-            const existingValue = existingEvent[field] || existingFields[field];
-            const newValue = newEvent[field];
-            const finalValue = finalEvent[field];
-            
-            if (finalValue === existingValue && existingValue !== newValue) {
-                finalEvent._mergeInfo.mergedFields[field] = 'existing';
-            } else if (newValue !== undefined && finalValue === newValue && newValue !== existingValue) {
-                finalEvent._mergeInfo.mergedFields[field] = 'new';
-            }
-        });
-        
-        // Extract fields from existing notes for display
-        if (existingEvent.notes) {
-            const existingFieldsForExtract = this.parseNotesIntoFields(existingEvent.notes || '');
-            Object.entries(existingFieldsForExtract).forEach(([fieldName, value]) => {
-                finalEvent._mergeInfo.extractedFields[fieldName] = {
-                    value: value,
-                    source: 'existing.notes'
-                };
-            });
-        }
-        
-        // Calculate what actually changed
+        // Simple change detection for display
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
-        
-        // Inline date equality checks using display-aware comparison
         if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
         if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
-        
         if (finalEvent.location !== existingEvent.location) changes.push('location');
-        if (finalEvent.url !== existingEvent.url) changes.push('url'); // URL comparison for change detection
+        if (finalEvent.url !== existingEvent.url) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
         
         finalEvent._changes = changes;
         
-        // Add extracted fields back to the event object for priority-based merging
-        // This ensures the object structure matches what gets saved and makes debugging easier
-        if (finalEvent._mergeInfo?.extractedFields && finalEvent._fieldPriorities) {
-            Object.entries(finalEvent._mergeInfo.extractedFields).forEach(([fieldName, fieldInfo]) => {
-                const priorityConfig = finalEvent._fieldPriorities[fieldName];
-                const mergeStrategy = priorityConfig?.merge || 'preserve';
-                
-                if (mergeStrategy === 'preserve') {
-                    // For preserve: don't add fields - use calendar value (even if undefined)
-                    // Do nothing - preserve strategy should have been handled by main merge logic
-                } else if (mergeStrategy === 'upsert' && !finalEvent[fieldName]) {
-                    // For upsert: only add if field is missing from calendar
-                    finalEvent[fieldName] = fieldInfo.value;
-                } else if (mergeStrategy === 'clobber') {
-                    // For clobber: always use scraped value (should already be set by main merge logic)
-                    finalEvent[fieldName] = fieldInfo.value;
-                }
-                // For preserve strategy: do nothing - keep existing value or undefined
-            });
-        }
-        
-        // Re-enrich the final event with location data after merging
-        // This ensures that gmaps URLs are regenerated if they were removed during clobber merge
-        const enrichedFinalEvent = this.enrichEventLocation(finalEvent);
-        
-        // Regenerate notes after enrichment to include any newly generated fields
-        enrichedFinalEvent.notes = this.formatEventNotes(enrichedFinalEvent);
-        
-        return enrichedFinalEvent;
+        return finalEvent;
     }
     
     // Parse notes back into field/value pairs
