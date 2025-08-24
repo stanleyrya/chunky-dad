@@ -226,8 +226,10 @@ class SharedCore {
                         this.applyFieldPriorities(event, parserConfig, mainConfig)
                     );
                     
-                    // Enrich events with location data (Google Maps links, city extraction)
-                    const enrichedEvents = filteredEvents.map(event => this.enrichEventLocation(event));
+                    // Normalize text fields and enrich events with location data (Google Maps links, city extraction)
+                    const enrichedEvents = filteredEvents.map(event => 
+                        this.enrichEventLocation(this.normalizeEventTextFields(event))
+                    );
                     
                     allEvents.push(...enrichedEvents);
                     await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
@@ -960,13 +962,32 @@ class SharedCore {
             return text;
         }
         
-        // Split into lines, trim trailing whitespace from each line, then rejoin
-        // This ensures consistent spacing while preserving intentional line breaks
+        // Comprehensive text normalization to prevent whitespace differences from causing merge issues
         return text
-            .split('\n')
-            .map(line => line.trimEnd())
-            .join('\n')
-            .trim(); // Also trim the overall text
+            .trim()                           // Remove leading/trailing whitespace
+            .replace(/\s+\n/g, '\n')         // Remove trailing spaces before newlines
+            .replace(/\n\s+/g, '\n')         // Remove leading spaces after newlines
+            .replace(/\s{2,}/g, ' ')         // Collapse multiple spaces into single spaces
+            .replace(/\n{3,}/g, '\n\n');     // Collapse multiple newlines into double newlines
+    }
+
+    // Normalize text fields in an event object to ensure consistent comparison
+    // This centralizes all text normalization logic in shared-core
+    normalizeEventTextFields(event) {
+        if (!event) return event;
+        
+        // Create a copy to avoid modifying the original
+        const normalizedEvent = { ...event };
+        
+        // Normalize description field if present
+        if (normalizedEvent.description && typeof normalizedEvent.description === 'string') {
+            normalizedEvent.description = this.normalizeMultilineText(normalizedEvent.description);
+        }
+        
+        // We could normalize other text fields here if needed in the future
+        // For example: title, bar, address, etc.
+        
+        return normalizedEvent;
     }
 
     // Helper method to normalize event dates for consistent comparison across timezones
