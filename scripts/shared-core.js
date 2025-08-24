@@ -655,7 +655,7 @@ class SharedCore {
         // Add any existing fields that weren't in scraped data
         // BUT respect merge strategies - don't override clobber results
         Object.keys(existingFields).forEach(fieldName => {
-            if (!mergedEvent[fieldName] && existingFields[fieldName]) {
+            if (!(fieldName in mergedEvent) && existingFields[fieldName]) {
                 // Check if this field has a merge strategy that should be respected
                 const priorityConfig = fieldPriorities[fieldName];
                 const mergeStrategy = priorityConfig?.merge || 'preserve';
@@ -777,8 +777,9 @@ class SharedCore {
         const existingFields = this.parseNotesIntoFields(existingEvent.notes || '');
 
         // Add all fields from notes to the final event for display purposes
+        // IMPORTANT: Don't override fields that were already set by merge logic
         Object.keys(finalFields).forEach(fieldName => {
-            if (finalFields[fieldName] && !finalEvent[fieldName]) {
+            if (finalFields[fieldName] && !(fieldName in finalEvent)) {
                 // Check merge strategy before adding field
                 const priorityConfig = fieldPrioritiesForCompare[fieldName];
                 const mergeStrategy = priorityConfig?.merge || 'preserve';
@@ -791,8 +792,12 @@ class SharedCore {
                     // Only add if calendar doesn't have the field (which we already checked with !finalEvent[fieldName])
                     finalEvent[fieldName] = finalFields[fieldName];
                 } else if (mergeStrategy === 'clobber') {
-                    // Always add the scraped value (this should have been handled by merge logic above, but ensure it's here)
-                    finalEvent[fieldName] = finalFields[fieldName];
+                    // For clobber, the merge logic should have already set the correct value
+                    // Don't override it with potentially stale data from notes
+                    // Only add if the field is truly missing (not just falsy)
+                    if (!(fieldName in finalEvent)) {
+                        finalEvent[fieldName] = finalFields[fieldName];
+                    }
                 }
             }
         });
