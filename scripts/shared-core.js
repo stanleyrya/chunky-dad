@@ -628,9 +628,22 @@ class SharedCore {
             const existingFromEvent = existingEvent[fieldName];
             const existingFromFields = existingFields[fieldName];
             
+            // Debug logging for description field specifically
+            if (fieldName === 'description') {
+                console.log(`🔍 DEBUG: Merging description field`);
+                console.log(`🔍 DEBUG: - mergeStrategy: ${mergeStrategy}`);
+                console.log(`🔍 DEBUG: - existingFromEvent: ${JSON.stringify(existingFromEvent)}`);
+                console.log(`🔍 DEBUG: - existingFromFields: ${JSON.stringify(existingFromFields)}`);
+                console.log(`🔍 DEBUG: - existingValue: ${JSON.stringify(existingValue)}`);
+                console.log(`🔍 DEBUG: - scrapedValue: ${JSON.stringify(scrapedValue)}`);
+            }
+            
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
+                    if (fieldName === 'description') {
+                        console.log(`🔍 DEBUG: - CLOBBER applied, result: ${JSON.stringify(mergedEvent[fieldName])}`);
+                    }
                     break;
                 case 'preserve':
                     // For preserve: only add field if it exists in existing event, otherwise leave undefined
@@ -916,8 +929,19 @@ class SharedCore {
         // This ensures that gmaps URLs are regenerated if they were removed during clobber merge
         const enrichedFinalEvent = this.enrichEventLocation(finalEvent);
         
+        // Debug logging for description field
+        if (enrichedFinalEvent.description !== undefined) {
+            console.log(`🔍 DEBUG: Final event description after enrichment: ${JSON.stringify(enrichedFinalEvent.description)}`);
+        }
+        
         // Regenerate notes after enrichment to include any newly generated fields
         enrichedFinalEvent.notes = this.formatEventNotes(enrichedFinalEvent);
+        
+        // Debug logging for description in notes
+        const finalFields = this.parseNotesIntoFields(enrichedFinalEvent.notes || '');
+        if (finalFields.description !== undefined) {
+            console.log(`🔍 DEBUG: Final notes description: ${JSON.stringify(finalFields.description)}`);
+        }
         
         return enrichedFinalEvent;
     }
@@ -1640,6 +1664,10 @@ class SharedCore {
                 Object.keys(originalFields).forEach(key => {
                     if (mergedFields[key] === originalFields[key]) {
                         analyzedEvent._mergeDiff.preserved.push(key);
+                        // Debug logging for description field
+                        if (key === 'description') {
+                            console.log(`🔍 DEBUG: Description marked as PRESERVED - original: ${JSON.stringify(originalFields[key])}, merged: ${JSON.stringify(mergedFields[key])}`);
+                        }
                     } else if (!mergedFields[key]) {
                         // Check if this is preserve strategy - if so, undefined should be preserved, not removed
                         const fieldPriorities = analyzedEvent._fieldPriorities || {};
@@ -1659,6 +1687,10 @@ class SharedCore {
                             from: originalFields[key], 
                             to: mergedFields[key] 
                         });
+                        // Debug logging for description field
+                        if (key === 'description') {
+                            console.log(`🔍 DEBUG: Description marked as UPDATED - from: ${JSON.stringify(originalFields[key])}, to: ${JSON.stringify(mergedFields[key])}`);
+                        }
                     }
                 });
                 
