@@ -1074,6 +1074,9 @@ class ScriptableAdapter {
                             identifier: c.identifier
                         }));
                     }
+                    if (key === 'placeId') {
+                        return undefined; // Hide placeId from debug display
+                    }
                     if (typeof value === 'function') {
                         return '[Function]';
                     }
@@ -2445,6 +2448,9 @@ class ScriptableAdapter {
                                                 identifier: c.identifier
                                             }));
                                         }
+                                        if (key === 'placeId') {
+                                            return undefined; // Hide placeId from debug display
+                                        }
                                         if (typeof value === 'function') {
                                             return '[Function]';
                                         }
@@ -2536,6 +2542,9 @@ class ScriptableAdapter {
                             identifier: c.identifier
                         }));
                     }
+                    if (key === 'placeId') {
+                        return undefined; // Hide placeId from debug display
+                    }
                     if (typeof value === 'function') {
                         return '[Function]'; // Show functions exist but don't break JSON
                     }
@@ -2557,6 +2566,9 @@ class ScriptableAdapter {
                                         startDate: c.startDate,
                                         identifier: c.identifier
                                     }));
+                                }
+                                if (key === 'placeId') {
+                                    return undefined; // Hide placeId from debug display
                                 }
                                 if (typeof value === 'function') {
                                     return '[Function]';
