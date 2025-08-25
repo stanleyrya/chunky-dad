@@ -6,25 +6,20 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-sf
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
-DTSTART:20250927T040000Z
-DTEND:20250927T100000Z
-DTSTAMP:20250825T031138Z
+DTSTART:20250927T080000Z
+DTEND:20250927T140000Z
+DTSTAMP:20250825T042152Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
-DESCRIPTION:description: Friday\, September 26th\, 2025\nbar: The Public Wo
- rks SF\nwebsite: https://www.eventbrite.com/e/bearracuda-sf-presents-horse-
- meat-disco-tickets-1370410668199\ncover: $57.79 - $99.99 (as of 8/21)\nimag
- e: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1049150793%
- 2F301420936599%2F1%2Foriginal.20250609-182908?crop=focalpoint&fit=crop&h=23
- 0&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.95928030303&fp-y=0.5464
- 28571429&s=d35c06cc2c1af43a15659d8eb0ad5e93\ngmaps: https://www.google.com/
- maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=ChIJa4c8O
- yF-j4AR4kopWZOJZPM\nshortName: Bear-rac-uda\ninstagram: https://www.instagr
- am.com/bearracuda\nkey: bearracuda-2025-09-27-sf\nurl: https://www.eventbri
- te.com/e/bearracuda-sf-presents-horse-meat-disco-tickets-1370410668199
-LAST-MODIFIED:20250821T213356Z
+DESCRIPTION:description: Main Floor: Horse Meat Disco\nDecor and photos by 
+ Dusti Cunningham\nbar: Public Works\nurl: https://bearracuda.com/events/fls
+ m-friday/\nimage: https://bearracuda.com/wp-content/uploads/2025/05/hmd2025
+ .jpg\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearrac
+ uda\nkey: bearracuda-2025-09-27-sf\nwebsite: https://www.eventbrite.com/e/b
+ earracuda-sf-presents-horse-meat-disco-tickets-1370410668199
+LAST-MODIFIED:20250825T034004Z
 LOCATION:37.7689137\, -122.4192514
-SEQUENCE:0
+SEQUENCE:1
 STATUS:CONFIRMED
 SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
 TRANSP:OPAQUE

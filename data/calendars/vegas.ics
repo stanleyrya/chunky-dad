@@ -8,21 +8,22 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20250825T031138Z
+DTSTAMP:20250825T042152Z
 UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
 CREATED:20250823T205551Z
 DESCRIPTION:url: https://www.eventbrite.com/e/megawoof-america-las-vegas-la
  bor-day-weekend-bears-at-work-tickets-1531257726079\nkey: megawoof|2025-08-
  31|dust las vegas|eventbrite\ndescription: MEGAWOOF AMERICA - LAS VEGAS - L
  ABOR DAY WEEKEND : BEARS AT WORK\nbar: Dust Las Vegas\naddress: 855 East Tw
- ain Avenue #UNIT 114\, Las Vegas\, NV 89169\nimage: https://img.evbuc.com/h
- ttps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1081598603%2F185013722403%2F1%2Forigi
- nal.20250725-224704?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q
- =75&sharp=10&fp-x=0.5&fp-y=0.5&s=451167fe2a25263fe5514b97adc02814\nshortNam
- e: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps:
-  https://www.google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&q
- uery_place_id=ChIJxfTt6N_FyIARvHYdOaAV7t8
-LAST-MODIFIED:20250825T012310Z
+ ain Avenue #UNIT 114\, Las Vegas\, NV 89169\ncover: $11.58 - $27.37 (as of 
+ 8/24)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F
+ 1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?crop=focalpoint&fi
+ t=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=45116
+ 7fe2a25263fe5514b97adc02814\nshortName: MEGA-WOOF\ninstagram: https://www.i
+ nstagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYdOaAV
+ 7t8
+LAST-MODIFIED:20250825T031348Z
 LOCATION:36.1214368\, -115.144945
 SEQUENCE:0
 STATUS:CONFIRMED

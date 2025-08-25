@@ -45,7 +45,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250720T150000
 DTEND;TZID=America/Los_Angeles:20250720T210000
 RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20250825T031138Z
+DTSTAMP:20250825T042152Z
 UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
 CREATED:20250719T050204Z
 DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
@@ -62,7 +62,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Vancouver:20250717T170000
 DTEND;TZID=America/Vancouver:20250717T210000
 RRULE:FREQ=WEEKLY
-DTSTAMP:20250825T031138Z
+DTSTAMP:20250825T042152Z
 UID:9vnvsm6kjpievu62279lco139k@google.com
 CREATED:20250715T045103Z
 DESCRIPTION:Tea: Popular happy hour that changes location every week.\nShor
@@ -76,7 +76,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250817T050000Z
 DTEND:20250817T100000Z
-DTSTAMP:20250825T031138Z
+DTSTAMP:20250825T042152Z
 UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
 CREATED:20250719T045039Z
 DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
@@ -101,7 +101,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20250825T031138Z
+DTSTAMP:20250825T042152Z
 UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
 CREATED:20250823T205552Z
 DESCRIPTION:url: https://www.eventbrite.com/e/megawoof-america-bear-watcher
@@ -109,14 +109,14 @@ DESCRIPTION:url: https://www.eventbrite.com/e/megawoof-america-bear-watcher
  ventbrite\ndescription: LONG BEACH — WE’RE BACK!\nThe bears of MEGAWOOF\nre
  turn to close out the Summer Tour in you —\nSATURDAY\, AUGUST 30th and it’s
   all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard\, Long B
- each\, CA 90805\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2
- Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=foc
- alpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y
- =0.005&s=9c1b1310872a455574e6c65122bb505c\nshortName: MEGA-WOOF\ninstagram:
-  https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/
- maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=Ch
- IJ91NzVy4z3YARBNuS8BZHBGg
-LAST-MODIFIED:20250825T012308Z
+ each\, CA 90805\ncover: $11.58 - $20.00 (as of 8/24)\nimage: https://img.ev
+ buc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F
+ 1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&w=600&auto=format%2Cc
+ ompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=9c1b1310872a455574e6c65122bb5
+ 05c\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_am
+ erica\ngmaps: https://www.google.com/maps/search/?api=1&query=33.8744540000
+ 0001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg
+LAST-MODIFIED:20250825T031349Z
 LOCATION:33.87445400000001\, -118.1680614
 SEQUENCE:0
 STATUS:CONFIRMED
