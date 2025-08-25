@@ -634,7 +634,15 @@ class SharedCore {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
                     // Debug: log when clobber is applied to any field
-                    if (scrapedValue !== existingValue) {
+                    // For text fields like description, normalize both values before comparison to avoid false differences
+                    const normalizedExisting = (fieldName === 'description' && existingValue && typeof existingValue === 'string') 
+                        ? this.normalizeMultilineText(existingValue) 
+                        : existingValue;
+                    const normalizedScraped = (fieldName === 'description' && scrapedValue && typeof scrapedValue === 'string') 
+                        ? this.normalizeMultilineText(scrapedValue) 
+                        : scrapedValue;
+                    
+                    if (normalizedScraped !== normalizedExisting) {
                         console.log(`🔄 CLOBBER: ${fieldName} changed from ${JSON.stringify(existingValue)} to ${JSON.stringify(scrapedValue)}`);
                     } else {
                         console.log(`🔄 CLOBBER: ${fieldName} same value ${JSON.stringify(scrapedValue)} (was ${JSON.stringify(existingValue)})`);
