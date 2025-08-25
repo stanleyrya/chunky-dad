@@ -458,6 +458,34 @@ class EventbriteParser {
                     const day = now.getDate();
                     price += ` (as of ${month}/${day})`;
                 }
+            } else if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+                // Detail pages have pricing in tickets.ticketClasses - extract price range
+                const ticketClasses = serverData.event_listing_response.tickets.ticketClasses;
+                const prices = ticketClasses
+                    .filter(tc => tc.totalCost && tc.totalCost.display)
+                    .map(tc => parseFloat(tc.totalCost.majorValue))
+                    .filter(p => !isNaN(p))
+                    .sort((a, b) => a - b);
+                
+                if (prices.length > 0) {
+                    const minPrice = prices[0];
+                    const maxPrice = prices[prices.length - 1];
+                    const currency = ticketClasses[0]?.totalCost?.currency || 'USD';
+                    
+                    if (minPrice === maxPrice) {
+                        price = `$${minPrice.toFixed(2)}`;
+                    } else {
+                        price = `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+                    }
+                    
+                    // Add availability hint for detail pages
+                    const now = new Date();
+                    const month = now.getMonth() + 1;
+                    const day = now.getDate();
+                    price += ` (as of ${month}/${day})`;
+                    
+                    console.log(`🎫 Eventbrite: Extracted price range from detail page for "${title}": ${price}`);
+                }
             }
             const image = eventData.logo?.url || eventData.image?.url;
             
