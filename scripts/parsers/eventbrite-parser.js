@@ -446,10 +446,25 @@ class EventbriteParser {
             
             // Enhanced price extraction with availability info
             let price = '';
+            
+            // DEBUG: Log the pricing condition checks
+            console.log(`🎫 Eventbrite: Price extraction debug for "${title}":`);
+            console.log(`🎫 Eventbrite:   - eventData.is_free: ${eventData.is_free}`);
+            console.log(`🎫 Eventbrite:   - eventData.price_range: ${eventData.price_range}`);
+            console.log(`🎫 Eventbrite:   - serverData exists: ${!!serverData}`);
+            console.log(`🎫 Eventbrite:   - event_listing_response exists: ${!!serverData?.event_listing_response}`);
+            console.log(`🎫 Eventbrite:   - tickets exists: ${!!serverData?.event_listing_response?.tickets}`);
+            console.log(`🎫 Eventbrite:   - ticketClasses exists: ${!!serverData?.event_listing_response?.tickets?.ticketClasses}`);
+            if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+                console.log(`🎫 Eventbrite:   - ticketClasses length: ${serverData.event_listing_response.tickets.ticketClasses.length}`);
+            }
+            
             if (eventData.is_free) {
                 price = 'Free';
+                console.log(`🎫 Eventbrite: Taking is_free path for "${title}"`);
             } else if (eventData.price_range) {
                 price = eventData.price_range;
+                console.log(`🎫 Eventbrite: Taking price_range path for "${title}": ${price}`);
                 
                 // Add availability hint based on inventory type (applies to all ticket tiers)
                 if (eventData.inventory_type === 'limited') {
@@ -458,7 +473,55 @@ class EventbriteParser {
                     const day = now.getDate();
                     price += ` (as of ${month}/${day})`;
                 }
+            } else if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+                console.log(`🎫 Eventbrite: Taking ticketClasses path for "${title}"`);
+                // Detail pages have pricing in tickets.ticketClasses - extract price range
+                const ticketClasses = serverData.event_listing_response.tickets.ticketClasses;
+                const prices = ticketClasses
+                    .filter(tc => tc.totalCost && tc.totalCost.display)
+                    .map(tc => parseFloat(tc.totalCost.majorValue))
+                    .filter(p => !isNaN(p))
+                    .sort((a, b) => a - b);
+                
+                if (prices.length > 0) {
+                    const minPrice = prices[0];
+                    const maxPrice = prices[prices.length - 1];
+                    const currency = ticketClasses[0]?.totalCost?.currency || 'USD';
+                    
+                    if (minPrice === maxPrice) {
+                        price = `$${minPrice.toFixed(2)}`;
+                    } else {
+                        price = `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+                    }
+                    
+                    // Add availability hint for detail pages
+                    const now = new Date();
+                    const month = now.getMonth() + 1;
+                    const day = now.getDate();
+                    price += ` (as of ${month}/${day})`;
+                    
+                    console.log(`🎫 Eventbrite: Extracted price range from detail page for "${title}": ${price}`);
+                } else {
+                    console.log(`🎫 Eventbrite: Detail page ticketClasses found but no valid prices extracted for "${title}"`);
+                }
+            } else {
+                console.log(`🎫 Eventbrite: Taking else path (no pricing conditions met) for "${title}"`);
+                
+                // Try alternative pricing sources in detail pages
+                let foundAlternativePrice = false;
+                
+                // Check if pricing info is in components.eventDetails or other locations
+                if (serverData?.components?.eventDetails) {
+                    console.log(`🎫 Eventbrite: Checking components.eventDetails for pricing info for "${title}"`);
+                    // This is where we might find alternative pricing data in the future
+                }
+                
+                if (!foundAlternativePrice) {
+                    console.log(`🎫 Eventbrite: No pricing information found in detail page for "${title}" - returning empty price`);
+                }
             }
+            
+            console.log(`🎫 Eventbrite: Final price result for "${title}": "${price}"`);
             const image = eventData.logo?.url || eventData.image?.url;
             
             // NEW: Try to get image from eventHero if not found in eventData
