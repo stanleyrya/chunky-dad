@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Eventbrite Cover Parsing</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+        .code-block { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; font-family: monospace; }
+        .result { background: #e8f5e8; padding: 10px; margin: 10px 0; }
+        .error { background: #ffe8e8; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Eventbrite Cover Parsing Test</h1>
+    
+    <div class="test-section">
+        <h2>Test URL</h2>
+        <p>Testing: https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079</p>
+        <button onclick="testCoverParsing()">Test Cover Parsing</button>
+        <button onclick="testWithFakeData()">Test with Fake Data Structure</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Simulate the parser logic for testing
+        function extractPriceFromEventData(eventData, serverData) {
+            let price = '';
+            
+            console.log('Testing price extraction with:', {
+                is_free: eventData.is_free,
+                price_range: eventData.price_range,
+                inventory_type: eventData.inventory_type,
+                hasTicketClasses: !!(serverData?.event_listing_response?.tickets?.ticketClasses)
+            });
+            
+            if (eventData.is_free) {
+                price = 'Free';
+            } else if (eventData.price_range) {
+                price = eventData.price_range;
+                
+                // Add availability hint based on inventory type
+                if (eventData.inventory_type === 'limited') {
+                    const now = new Date();
+                    const month = now.getMonth() + 1;
+                    const day = now.getDate();
+                    price += ` (as of ${month}/${day})`;
+                }
+            } else if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+                // Detail pages have pricing in tickets.ticketClasses
+                const ticketClasses = serverData.event_listing_response.tickets.ticketClasses;
+                console.log('Found ticketClasses:', ticketClasses);
+                
+                const prices = ticketClasses
+                    .filter(tc => tc.totalCost && tc.totalCost.display)
+                    .map(tc => parseFloat(tc.totalCost.majorValue))
+                    .filter(p => !isNaN(p))
+                    .sort((a, b) => a - b);
+                
+                console.log('Extracted prices:', prices);
+                
+                if (prices.length > 0) {
+                    const minPrice = prices[0];
+                    const maxPrice = prices[prices.length - 1];
+                    const currency = ticketClasses[0]?.totalCost?.currency || 'USD';
+                    
+                    if (minPrice === maxPrice) {
+                        price = `$${minPrice.toFixed(2)}`;
+                    } else {
+                        price = `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+                    }
+                    
+                    // Add availability hint for detail pages
+                    const now = new Date();
+                    const month = now.getMonth() + 1;
+                    const day = now.getDate();
+                    price += ` (as of ${month}/${day})`;
+                    
+                    console.log(`Extracted price range from detail page: ${price}`);
+                }
+            }
+            
+            return price;
+        }
+
+        async function testCoverParsing() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Fetching Eventbrite page...</p>';
+            
+            try {
+                // Since we can't make cross-origin requests from the browser, 
+                // we'll simulate the issue based on the log data
+                const simulatedOrganizerData = {
+                    is_free: false,
+                    price_range: '$11.58 - $27.37',
+                    inventory_type: 'limited'
+                };
+                
+                const simulatedDetailData = {
+                    is_free: false,
+                    price_range: null,
+                    inventory_type: null
+                };
+                
+                // Simulate missing ticketClasses in detail page
+                const simulatedDetailServerData = {
+                    event_listing_response: {
+                        tickets: {
+                            // ticketClasses might be missing or empty
+                            ticketClasses: []
+                        }
+                    }
+                };
+                
+                const organizerPrice = extractPriceFromEventData(simulatedOrganizerData, null);
+                const detailPrice = extractPriceFromEventData(simulatedDetailData, simulatedDetailServerData);
+                
+                resultsDiv.innerHTML = `
+                    <div class="result">
+                        <h3>Organizer Page Price</h3>
+                        <p>Price: "${organizerPrice}"</p>
+                        <p>Logic: Uses price_range + inventory_type</p>
+                    </div>
+                    <div class="error">
+                        <h3>Detail Page Price</h3>
+                        <p>Price: "${detailPrice}"</p>
+                        <p>Logic: Looks for ticketClasses but finds none, returns empty string</p>
+                        <p><strong>ISSUE FOUND:</strong> Detail pages don't have ticketClasses or the structure is different!</p>
+                    </div>
+                    <div class="code-block">
+                        Console output shows the price extraction logic paths.
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function testWithFakeData() {
+            const resultsDiv = document.getElementById('results');
+            
+            // Test what happens when detail page has different ticket structure
+            const fakeDetailServerData = {
+                event_listing_response: {
+                    tickets: {
+                        ticketClasses: [
+                            {
+                                totalCost: {
+                                    display: "$11.58",
+                                    majorValue: 11.58,
+                                    currency: "USD"
+                                }
+                            },
+                            {
+                                totalCost: {
+                                    display: "$27.37",
+                                    majorValue: 27.37,
+                                    currency: "USD"
+                                }
+                            }
+                        ]
+                    }
+                }
+            };
+            
+            const eventData = { is_free: false, price_range: null };
+            const price = extractPriceFromEventData(eventData, fakeDetailServerData);
+            
+            resultsDiv.innerHTML = `
+                <div class="result">
+                    <h3>Test with Proper ticketClasses Structure</h3>
+                    <p>Price: "${price}"</p>
+                    <p>This shows the logic works when ticketClasses is properly structured</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

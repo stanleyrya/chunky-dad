@@ -632,12 +632,19 @@ class SharedCore {
             
             switch (mergeStrategy) {
                 case 'clobber':
-                    mergedEvent[fieldName] = scrapedValue;
-                    // Debug: log when clobber is applied to any field
-                    if (scrapedValue !== existingValue) {
-                        console.log(`🔄 CLOBBER: ${fieldName} changed from ${JSON.stringify(existingValue)} to ${JSON.stringify(scrapedValue)}`);
+                    // Smart clobber: preserve existing value if new value is empty/null/undefined
+                    // This prevents detail pages from overwriting good data with empty values
+                    if (fieldName === 'cover' && (!scrapedValue || scrapedValue === '') && existingValue && existingValue !== '') {
+                        mergedEvent[fieldName] = existingValue;
+                        console.log(`🔄 SMART CLOBBER: ${fieldName} preserved existing value "${existingValue}" (new value was empty: "${scrapedValue}")`);
                     } else {
-                        console.log(`🔄 CLOBBER: ${fieldName} same value ${JSON.stringify(scrapedValue)} (was ${JSON.stringify(existingValue)})`);
+                        mergedEvent[fieldName] = scrapedValue;
+                        // Debug: log when clobber is applied to any field
+                        if (scrapedValue !== existingValue) {
+                            console.log(`🔄 CLOBBER: ${fieldName} changed from ${JSON.stringify(existingValue)} to ${JSON.stringify(scrapedValue)}`);
+                        } else {
+                            console.log(`🔄 CLOBBER: ${fieldName} same value ${JSON.stringify(scrapedValue)} (was ${JSON.stringify(existingValue)})`);
+                        }
                     }
                     break;
                 case 'preserve':
@@ -753,8 +760,15 @@ class SharedCore {
             
             switch (mergeStrategy) {
                 case 'clobber':
-                    mergedObject[fieldName] = scraperValue;
-                    console.log(`🔄 CLOBBER: ${fieldName} = ${JSON.stringify(scraperValue)} (was ${JSON.stringify(calendarValue)})`);
+                    // Smart clobber: preserve existing value if new value is empty/null/undefined
+                    // This prevents detail pages from overwriting good data with empty values
+                    if (fieldName === 'cover' && (!scraperValue || scraperValue === '') && calendarValue && calendarValue !== '') {
+                        mergedObject[fieldName] = calendarValue;
+                        console.log(`🔄 SMART CLOBBER: ${fieldName} preserved existing value "${calendarValue}" (new value was empty: "${scraperValue}")`);
+                    } else {
+                        mergedObject[fieldName] = scraperValue;
+                        console.log(`🔄 CLOBBER: ${fieldName} = ${JSON.stringify(scraperValue)} (was ${JSON.stringify(calendarValue)})`);
+                    }
                     break;
                 case 'upsert':
                     mergedObject[fieldName] = calendarValue || scraperValue;

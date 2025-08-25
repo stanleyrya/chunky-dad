@@ -485,6 +485,21 @@ class EventbriteParser {
                     price += ` (as of ${month}/${day})`;
                     
                     console.log(`🎫 Eventbrite: Extracted price range from detail page for "${title}": ${price}`);
+                } else {
+                    console.log(`🎫 Eventbrite: Detail page ticketClasses found but no valid prices extracted for "${title}"`);
+                }
+            } else {
+                // Try alternative pricing sources in detail pages
+                let foundAlternativePrice = false;
+                
+                // Check if pricing info is in components.eventDetails or other locations
+                if (serverData?.components?.eventDetails) {
+                    console.log(`🎫 Eventbrite: Checking components.eventDetails for pricing info for "${title}"`);
+                    // This is where we might find alternative pricing data in the future
+                }
+                
+                if (!foundAlternativePrice) {
+                    console.log(`🎫 Eventbrite: No pricing information found in detail page for "${title}" - will preserve existing price if available`);
                 }
             }
             const image = eventData.logo?.url || eventData.image?.url;
