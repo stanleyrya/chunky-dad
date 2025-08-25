@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Single Eventbrite Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+        .result { background: #e8f5e8; padding: 10px; margin: 10px 0; white-space: pre-wrap; font-family: monospace; }
+        .error { background: #ffe8e8; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test Single Eventbrite URL with Debug</h1>
+    
+    <div class="test-section">
+        <h2>Debug Test</h2>
+        <p>This will help us see exactly what's happening in the parser</p>
+        <button onclick="runDebugTest()">Run Debug Test</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Output</h2>
+        <div id="console-output" class="result">Check browser console (F12) for debug output...</div>
+    </div>
+
+    <script>
+        // Simulate the parser debug logic
+        function runDebugTest() {
+            console.log('=== SIMULATED EVENTBRITE PARSER DEBUG ===');
+            
+            // This simulates what should happen in the actual parser
+            const title = "MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND : BEARS AT WORK";
+            
+            const eventData = {
+                is_free: false,
+                price_range: null, // This is what detail pages have
+                inventory_type: null
+            };
+            
+            const serverData = {
+                event_listing_response: {
+                    tickets: {
+                        ticketClasses: [
+                            {
+                                totalCost: {
+                                    currency: "USD",
+                                    majorValue: "11.58",
+                                    display: "11.58 USD"
+                                },
+                                name: "SPECIAL 10$"
+                            },
+                            {
+                                totalCost: {
+                                    currency: "USD",
+                                    majorValue: "27.37", 
+                                    display: "27.37 USD"
+                                },
+                                name: "GENERAL ADMISSION"
+                            }
+                        ]
+                    }
+                }
+            };
+            
+            let price = '';
+            
+            // DEBUG: Log the pricing condition checks (exactly like the parser)
+            console.log(`🎫 Eventbrite: Price extraction debug for "${title}":`);
+            console.log(`🎫 Eventbrite:   - eventData.is_free: ${eventData.is_free}`);
+            console.log(`🎫 Eventbrite:   - eventData.price_range: ${eventData.price_range}`);
+            console.log(`🎫 Eventbrite:   - serverData exists: ${!!serverData}`);
+            console.log(`🎫 Eventbrite:   - event_listing_response exists: ${!!serverData?.event_listing_response}`);
+            console.log(`🎫 Eventbrite:   - tickets exists: ${!!serverData?.event_listing_response?.tickets}`);
+            console.log(`🎫 Eventbrite:   - ticketClasses exists: ${!!serverData?.event_listing_response?.tickets?.ticketClasses}`);
+            if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+                console.log(`🎫 Eventbrite:   - ticketClasses length: ${serverData.event_listing_response.tickets.ticketClasses.length}`);
+            }
+            
+            if (eventData.is_free) {
+                price = 'Free';
+                console.log(`🎫 Eventbrite: Taking is_free path for "${title}"`);
+            } else if (eventData.price_range) {
+                price = eventData.price_range;
+                console.log(`🎫 Eventbrite: Taking price_range path for "${title}": ${price}`);
+            } else if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+                console.log(`🎫 Eventbrite: Taking ticketClasses path for "${title}"`);
+                
+                const ticketClasses = serverData.event_listing_response.tickets.ticketClasses;
+                const prices = ticketClasses
+                    .filter(tc => tc.totalCost && tc.totalCost.display)
+                    .map(tc => parseFloat(tc.totalCost.majorValue))
+                    .filter(p => !isNaN(p))
+                    .sort((a, b) => a - b);
+                
+                if (prices.length > 0) {
+                    const minPrice = prices[0];
+                    const maxPrice = prices[prices.length - 1];
+                    
+                    if (minPrice === maxPrice) {
+                        price = `$${minPrice.toFixed(2)}`;
+                    } else {
+                        price = `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+                    }
+                    
+                    const now = new Date();
+                    const month = now.getMonth() + 1;
+                    const day = now.getDate();
+                    price += ` (as of ${month}/${day})`;
+                    
+                    console.log(`🎫 Eventbrite: Extracted price range from detail page for "${title}": ${price}`);
+                } else {
+                    console.log(`🎫 Eventbrite: Detail page ticketClasses found but no valid prices extracted for "${title}"`);
+                }
+            } else {
+                console.log(`🎫 Eventbrite: Taking else path (no pricing conditions met) for "${title}"`);
+                console.log(`🎫 Eventbrite: No pricing information found in detail page for "${title}" - returning empty price`);
+            }
+            
+            console.log(`🎫 Eventbrite: Final price result for "${title}": "${price}"`);
+            
+            // Update the page
+            document.getElementById('console-output').textContent = 
+                `Expected result: "${price}"\n\nCheck browser console for full debug output.\n\nIf this shows a price but the actual scraper doesn't, then the issue is in the runtime data structure.`;
+                
+            return price;
+        }
+    </script>
+</body>
+</html>
