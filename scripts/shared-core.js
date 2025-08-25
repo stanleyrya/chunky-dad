@@ -898,11 +898,8 @@ class SharedCore {
                     const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
                         ? aliasToCanonical[normalizedKey]
                         : currentKey;
-                    // Normalize multi-line text fields to ensure consistency
-                    const finalValue = (canonicalKey === 'description' && currentValue) 
-                        ? this.normalizeMultilineText(currentValue)
-                        : currentValue;
-                    fields[canonicalKey] = finalValue;
+                    // Description field is now saved and read literally - no normalization
+                    fields[canonicalKey] = currentValue;
                 }
                 
                 // Start new field
@@ -929,11 +926,8 @@ class SharedCore {
                 const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
                     ? aliasToCanonical[normalizedKey]
                     : currentKey;
-                // Normalize multi-line text fields to ensure consistency
-                const finalValue = (canonicalKey === 'description' && currentValue) 
-                    ? this.normalizeMultilineText(currentValue)
-                    : currentValue;
-                fields[canonicalKey] = finalValue;
+                // Description field is now saved and read literally - no normalization
+                fields[canonicalKey] = currentValue;
             }
         });
         
@@ -979,11 +973,7 @@ class SharedCore {
         // Create a copy to avoid modifying the original
         const normalizedEvent = { ...event };
         
-        // Normalize description field if present
-        if (normalizedEvent.description && typeof normalizedEvent.description === 'string') {
-            normalizedEvent.description = this.normalizeMultilineText(normalizedEvent.description);
-        }
-        
+        // Description field is now saved and read literally - no normalization
         // We could normalize other text fields here if needed in the future
         // For example: title, bar, address, etc.
         
@@ -1538,10 +1528,8 @@ class SharedCore {
                 event[fieldName] !== undefined && 
                 event[fieldName] !== null && 
                 event[fieldName] !== '') {
-                // Normalize multi-line text fields for consistency
-                const value = (fieldName === 'description' && typeof event[fieldName] === 'string') 
-                    ? this.normalizeMultilineText(event[fieldName])
-                    : event[fieldName];
+                // Description field is now saved and read literally - no normalization
+                const value = event[fieldName];
                 notes.push(`${fieldName}: ${value}`);
                 savedFieldCount++;
             }
