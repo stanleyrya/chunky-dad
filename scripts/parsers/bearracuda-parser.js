@@ -178,55 +178,95 @@ class BearraccudaParser {
             // Extract date
             const dateInfo = this.extractDate(html);
             
-            // Extract time information
-            const timeInfo = this.extractTime(html);
+            // Extract structured description content first (contains venue, address, links, timing)
+            const structuredSections = this.extractStructuredDescription(html);
+            const structuredDescription = this.buildFormattedDescription(structuredSections);
             
-            // Extract venue information
-            const venueInfo = this.extractVenue(html);
+            // Extract venue information - prefer structured data
+            let venueInfo = { name: '', address: '' };
+            if (structuredSections.location.venue) {
+                venueInfo.name = structuredSections.location.venue;
+                console.log(`🐻 Bearracuda: Using structured venue: "${venueInfo.name}"`);
+            } else {
+                venueInfo = this.extractVenue(html);
+                console.log(`🐻 Bearracuda: Using fallback venue extraction`);
+            }
             
-            // Extract address
-            const address = this.extractAddress(html);
+            // Extract address - prefer structured data
+            let address = '';
+            if (structuredSections.location.address) {
+                address = structuredSections.location.address;
+                console.log(`🐻 Bearracuda: Using structured address: "${address}"`);
+            } else {
+                address = this.extractAddress(html);
+                console.log(`🐻 Bearracuda: Using fallback address extraction`);
+            }
             
             // Extract entertainment/performers
             const performers = this.extractPerformers(html);
             
-            // Extract ticket/external links
-            const links = this.extractExternalLinks(html);
+            // Extract ticket/external links - prefer structured data
+            let links = { facebook: '', eventbrite: '' };
+            if (structuredSections.links.facebook || structuredSections.links.eventbrite || structuredSections.links.tickets) {
+                links.facebook = structuredSections.links.facebook;
+                links.eventbrite = structuredSections.links.eventbrite;
+                links.tickets = structuredSections.links.tickets;
+                console.log(`🐻 Bearracuda: Using structured links - FB: ${!!links.facebook}, EB: ${!!links.eventbrite}, Tickets: ${!!links.tickets}`);
+            } else {
+                links = this.extractExternalLinks(html);
+                console.log(`🐻 Bearracuda: Using fallback link extraction`);
+            }
             
             // Extract special info (like anniversary details)
             const specialInfo = this.extractSpecialInfo(html);
             
-            // Extract full description content
+            // Extract full description content (fallback)
             const fullDescription = this.extractFullDescription(html);
             
             // Extract city from URL and title
             const city = this.extractCityFromUrl(sourceUrl, cityConfig) || this.extractCityFromText(title, cityConfig);
             
-            // Build description
+            // Build description - prefer structured approach
             let description = '';
-            if (fullDescription) {
+            if (structuredDescription && structuredDescription.length > 50) {
+                // Use structured description if it contains substantial content
+                description = structuredDescription;
+                console.log(`🐻 Bearracuda: Using structured description (${description.length} chars)`);
+            } else if (fullDescription) {
+                // Fallback to full description extraction
                 description += fullDescription + '\n';
+                console.log(`🐻 Bearracuda: Using fallback description (${description.length} chars)`);
             } else {
-                // Fallback to old logic if full description not found
+                // Final fallback to old logic
                 if (specialInfo) description += specialInfo + '\n';
                 if (performers) description += 'Entertainment: ' + performers + '\n';
-                if (timeInfo.details) description += timeInfo.details + '\n';
+                // Add timing details from structured data
+                if (structuredSections.timing.startText || structuredSections.timing.endText) {
+                    let timingText = '';
+                    if (structuredSections.timing.startText) timingText += structuredSections.timing.startText;
+                    if (structuredSections.timing.endText) {
+                        if (timingText) timingText += ' - ';
+                        timingText += structuredSections.timing.endText;
+                    }
+                    description += timingText + '\n';
+                }
+                console.log(`🐻 Bearracuda: Using legacy description logic`);
             }
             description = description.trim();
             
-            // Create start date
+            // Create start date using structured timing data
             let startDate = null;
-            if (dateInfo && timeInfo.startTime) {
+            if (dateInfo && structuredSections.timing.start) {
                 // Combine date and start time with city timezone
-                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city, cityConfig);
+                startDate = this.combineDateTime(dateInfo, structuredSections.timing.start, city, cityConfig);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
             
-            // Create end date
+            // Create end date using structured timing data
             let endDate = null;
-            if (dateInfo && timeInfo.endTime) {
-                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city, cityConfig);
+            if (dateInfo && structuredSections.timing.end) {
+                endDate = this.combineDateTime(dateInfo, structuredSections.timing.end, city, cityConfig);
                 // If end time is earlier than start time, assume it's next day
                 if (endDate && startDate && endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -237,8 +277,8 @@ class BearraccudaParser {
             console.log(`🐻 Bearracuda: Parsing results for ${sourceUrl}:`);
             console.log(`🐻 Bearracuda: - Title: "${title}"`);
             console.log(`🐻 Bearracuda: - Date: ${dateInfo ? dateInfo.toISOString() : 'null'}`);
-            console.log(`🐻 Bearracuda: - Start time: ${timeInfo.startTime ? `${timeInfo.startTime.hours}:${timeInfo.startTime.minutes}` : 'null'}`);
-            console.log(`🐻 Bearracuda: - End time: ${timeInfo.endTime ? `${timeInfo.endTime.hours}:${timeInfo.endTime.minutes}` : 'null'}`);
+            console.log(`🐻 Bearracuda: - Start time: ${structuredSections.timing.start ? `${structuredSections.timing.start.hours}:${structuredSections.timing.start.minutes}` : 'null'}`);
+            console.log(`🐻 Bearracuda: - End time: ${structuredSections.timing.end ? `${structuredSections.timing.end.hours}:${structuredSections.timing.end.minutes}` : 'null'}`);
             console.log(`🐻 Bearracuda: - Venue: "${venueInfo.name}"`);
             console.log(`🐻 Bearracuda: - Address: "${address}"`);
             console.log(`🐻 Bearracuda: - City: "${city}"`);
@@ -271,12 +311,13 @@ class BearraccudaParser {
                 url: sourceUrl, // Use consistent 'url' field name across all parsers
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
-                gmaps: this.generateGoogleMapsUrl(address),
+                gmaps: '', // Will be generated by shared-core enrichEventLocation()
                 source: this.config.source,
                 // Additional bearracuda-specific fields
                 facebookEvent: links.facebook,
-                ticketUrl: links.eventbrite,
+                ticketUrl: links.tickets || links.eventbrite, // Prefer general tickets over eventbrite-specific
                 eventbriteUrl: links.eventbrite, // Store eventbrite URL separately
+                placeId: structuredSections.location.placeId || '', // Pass place ID to shared-core for gmaps generation
                 isBearEvent: true // Bearracuda events are always bear events
             };
             
@@ -718,6 +759,179 @@ class BearraccudaParser {
         return descriptions.length > 0 ? descriptions.join('\n\n') : '';
     }
 
+    // Extract structured content using consistent Bearracuda page structure
+    extractStructuredDescription(html) {
+        const sections = {
+            timing: { start: null, end: null, startText: '', endText: '' },
+            location: { venue: '', address: '', placeId: '' },
+            description: '',
+            entertainment: { music: [], host: [] },
+            links: { facebook: '', tickets: '', eventbrite: '' }
+        };
+
+        try {
+            // STRUCTURE-BASED EXTRACTION leveraging consistent elementor patterns
+            
+            // 1. TIMING: Use existing time extraction method for proper parsing
+            const timeInfo = this.extractTime(html);
+            if (timeInfo.startTime) {
+                sections.timing.start = timeInfo.startTime; // Structured time object with hours/minutes
+                sections.timing.startText = timeInfo.details ? timeInfo.details.split(' - ')[0] : '';
+            }
+            if (timeInfo.endTime) {
+                sections.timing.end = timeInfo.endTime; // Structured time object with hours/minutes  
+                sections.timing.endText = timeInfo.details ? timeInfo.details.split(' - ')[1] || timeInfo.details : '';
+            }
+
+            // 2. VENUE: Always h2 heading with 🪩 emoji - the bar is ALWAYS in this container
+            const venueMatch = html.match(/<h2[^>]*elementor-heading-title[^>]*>🪩&nbsp;&nbsp;([^<]+)<\/h2>/i);
+            if (venueMatch) {
+                sections.location.venue = venueMatch[1].replace(/&nbsp;/g, ' ').trim();
+            }
+
+            // 3. ADDRESS: ALWAYS immediately follows venue in the very next text-editor widget
+            if (sections.location.venue) {
+                // Use the venue as anchor to find address in next widget
+                const addressMatch = html.match(new RegExp(`<h2[^>]*>🪩&nbsp;&nbsp;${sections.location.venue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<\\/h2>[\\s\\S]*?<div[^>]*text-editor[^>]*>[\\s\\S]*?<div[^>]*elementor-widget-container[^>]*>\\s*([^<]*\\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*)<\\/div>`, 'i'));
+                if (addressMatch) {
+                    sections.location.address = addressMatch[1].replace(/&nbsp;/g, ' ').trim();
+                }
+            }
+
+            // 4. DESCRIPTION: Look for x14z9mp class content (Facebook-style description container)
+            const descriptionMatch = html.match(/<div[^>]*x14z9mp[^>]*>([\s\S]*?)<\/div>/i);
+            if (descriptionMatch) {
+                sections.description = descriptionMatch[1]
+                    .replace(/<br[^>]*>/gi, '\n')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .trim();
+            }
+
+            // 5. ENTERTAINMENT: Look for 🎧 and 🎤 sections (emojis are consistent markers)
+            const musicMatch = html.match(/🎧[^<]*<strong>Music[^<]*Entertainment<\/strong><br>([\s\S]*?)(?=<\/div>)/i);
+            if (musicMatch) {
+                const performers = musicMatch[1].match(/<p>([^<]+)<\/p>/g);
+                if (performers) {
+                    sections.entertainment.music = performers
+                        .map(p => p.replace(/<\/?p>/g, '').trim())
+                        .filter(p => p && p !== '&nbsp;');
+                }
+            }
+
+            const hostMatch = html.match(/🎤[^<]*<strong>Hosted by<\/strong><br>([\s\S]*?)(?=<\/div>)/i);
+            if (hostMatch) {
+                const hosts = hostMatch[1].match(/<p>([^<]+)<\/p>/g);
+                if (hosts) {
+                    sections.entertainment.host = hosts
+                        .map(h => h.replace(/<\/?p>/g, '').trim())
+                        .filter(h => h && h !== '&nbsp;');
+                }
+            }
+
+            // 6. ROBUST BUTTON EXTRACTION: Use elementor-button structure (works for ANY ticket provider)
+            this.extractAllButtons(html, sections);
+
+            // 7. PLACE ID: Extract from any Google Maps embed
+            const placeIdPatterns = [
+                /place_id=([A-Za-z0-9_-]+)/i,
+                /cid=(\d+)/i
+            ];
+            
+            for (const pattern of placeIdPatterns) {
+                const placeIdMatch = html.match(pattern);
+                if (placeIdMatch) {
+                    sections.location.placeId = placeIdMatch[1];
+                    break;
+                }
+            }
+
+        } catch (error) {
+            console.log(`🐻 Bearracuda: Error extracting structured description: ${error.message}`);
+        }
+
+        return sections;
+    }
+
+    // Extract ALL buttons using consistent elementor structure - future-proof for any ticket provider
+    extractAllButtons(html, sections) {
+        // Find all elementor buttons and categorize by text content
+        const buttonPattern = /<a[^>]*class="[^"]*elementor-button[^"]*"[^>]*href="([^"]+)"[^>]*>[\s\S]*?<span[^>]*elementor-button-text[^>]*>([^<]+)<\/span>[\s\S]*?<\/a>/gi;
+        let match;
+        
+        while ((match = buttonPattern.exec(html)) !== null) {
+            const url = match[1];
+            const text = match[2].trim().toLowerCase();
+            
+            // Categorize based on button text (flexible for future providers)
+            if (text.includes('rsvp')) {
+                sections.links.facebook = url;
+            } else if (text.includes('ticket') || text.includes('buy') || text.includes('purchase')) {
+                sections.links.tickets = url;
+                
+                // Also categorize by URL domain for specific tracking
+                if (url.includes('eventbrite.com')) {
+                    sections.links.eventbrite = url;
+                }
+                // Future: could add ticketmaster.com, stubhub.com, etc.
+            }
+        }
+        
+        // Log what buttons we found for debugging
+        const buttonTexts = [];
+        const debugButtonPattern = /<span[^>]*elementor-button-text[^>]*>([^<]+)<\/span>/gi;
+        let debugMatch;
+        while ((debugMatch = debugButtonPattern.exec(html)) !== null) {
+            buttonTexts.push(debugMatch[1].trim());
+        }
+        if (buttonTexts.length > 0) {
+            console.log(`🐻 Bearracuda: Found buttons: ${buttonTexts.join(', ')}`);
+        }
+    }
+
+    // Build formatted description from structured sections
+    buildFormattedDescription(sections) {
+        let description = '';
+
+        // Add timing information using text versions for display
+        if (sections.timing.startText || sections.timing.endText) {
+            if (sections.timing.startText) description += sections.timing.startText;
+            if (sections.timing.endText) {
+                if (description) description += ' - ';
+                description += sections.timing.endText;
+            }
+            description += '\n\n';
+        }
+
+        // Add main description/theme
+        if (sections.description) {
+            description += sections.description + '\n\n';
+        }
+
+        // Add entertainment information
+        if (sections.entertainment.music.length > 0) {
+            description += 'Music & Entertainment:\n';
+            sections.entertainment.music.forEach(performer => {
+                description += `• ${performer}\n`;
+            });
+            description += '\n';
+        }
+
+        // Add host information
+        if (sections.entertainment.host.length > 0) {
+            description += 'Hosted by:\n';
+            sections.entertainment.host.forEach(host => {
+                description += `• ${host}\n`;
+            });
+            description += '\n';
+        }
+
+        return description.trim();
+    }
+
     // Check if text is cookie consent related
     isCookieConsentText(text) {
         const cookieIndicators = [
@@ -1138,31 +1352,7 @@ class BearraccudaParser {
         }
     }
 
-    // Generate Google Maps URL from address
-    generateGoogleMapsUrl(address) {
-        if (!address) return '';
-        
-        // Additional validation to prevent corrupted URLs
-        if (address.includes('function') || 
-            address.includes('window.') || 
-            address.includes('document.') ||
-            address.includes('javascript') ||
-            address.includes('%') ||
-            address.length > 100) {
-            console.log(`🐻 Bearracuda: Skipping Google Maps URL generation for suspicious address: ${address.substring(0, 50)}...`);
-            return '';
-        }
-        
-        try {
-            const encoded = encodeURIComponent(address);
-            const url = `https://maps.google.com/maps?q=${encoded}`;
-            console.log(`🐻 Bearracuda: Generated Google Maps URL: ${url}`);
-            return url;
-        } catch (error) {
-            console.log(`🐻 Bearracuda: Error generating Google Maps URL: ${error}`);
-            return '';
-        }
-    }
+
 
     // Extract city from text content using only city config patterns
     extractCityFromText(text, cityConfig = null) {
