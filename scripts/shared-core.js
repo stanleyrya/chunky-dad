@@ -1180,6 +1180,15 @@ class SharedCore {
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
         // Always generate if gmaps field is empty or undefined - merge strategies are handled later
         if (!event.gmaps) {
+            // Try to enhance incomplete addresses with city information before gmaps generation
+            if (event.address && event.city && !this.isFullAddress(event.address)) {
+                const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);
+                if (enhancedAddress !== event.address) {
+                    event.address = enhancedAddress;
+                    console.log(`🗺️ SharedCore: Enhanced incomplete address for "${event.title}": "${event.address}"`);
+                }
+            }
+            
             // Parse coordinates from location field if available
             let coordinates = null;
             if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
@@ -1303,6 +1312,68 @@ class SharedCore {
                           !/street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i.test(cleanAddress);
         
         return !isCityOnly;
+    }
+    
+    // Enhance address with city information if it's incomplete
+    enhanceAddressWithCity(address, city) {
+        if (!address || !city || !this.cityMappings) {
+            return address;
+        }
+
+        // Find city data from cityMappings (which uses "patterns|patterns" format)
+        let cityName = '';
+        for (const [patterns, mappedCity] of Object.entries(this.cityMappings)) {
+            if (mappedCity === city) {
+                // Use the longest pattern as it's likely the most complete city name
+                const patternList = patterns.split('|');
+                cityName = patternList.reduce((longest, current) => 
+                    current.length > longest.length ? current : longest
+                );
+                break;
+            }
+        }
+
+        if (!cityName) {
+            return address; // No city patterns found
+        }
+
+        // Check if address already contains city information (city name or state)
+        const lowerAddress = address.toLowerCase();
+        const lowerCityName = cityName.toLowerCase();
+        
+        // Check for city name or any US state abbreviation
+        const stateAbbreviations = [
+            'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'dc', 'fl',
+            'ga', 'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me',
+            'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh',
+            'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri',
+            'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy'
+        ];
+        
+        if (lowerAddress.includes(lowerCityName) || 
+            stateAbbreviations.some(state => lowerAddress.includes(`, ${state}`))) {
+            return address; // Already contains city/state info
+        }
+
+        // Check if address needs enhancement (incomplete street address)
+        const needsEnhancement = 
+            // Very short addresses
+            address.length < 15 ||
+            // No comma (likely missing city/state)
+            !address.includes(',') ||
+            // Just street number and name pattern
+            /^\d+\s+[NSEW]?\.?\s*[A-Za-z\s]+$/i.test(address.trim());
+
+        if (needsEnhancement) {
+            // Add proper capitalization to city name
+            const properCityName = cityName.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            
+            return `${address.trim()}, ${properCityName}`;
+        }
+
+        return address;
     }
     
     // Extract city from address string

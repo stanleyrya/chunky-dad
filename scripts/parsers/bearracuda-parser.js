@@ -896,16 +896,6 @@ class BearraccudaParser {
     buildFormattedDescription(sections) {
         let description = '';
 
-        // Add timing information using text versions for display
-        if (sections.timing.startText || sections.timing.endText) {
-            if (sections.timing.startText) description += sections.timing.startText;
-            if (sections.timing.endText) {
-                if (description) description += ' - ';
-                description += sections.timing.endText;
-            }
-            description += '\n\n';
-        }
-
         // Add main description/theme
         if (sections.description) {
             description += sections.description + '\n\n';
@@ -913,18 +903,9 @@ class BearraccudaParser {
 
         // Add entertainment information
         if (sections.entertainment.music.length > 0) {
-            description += 'Music & Entertainment:\n';
+            description += 'Music & Entertainment\n';
             sections.entertainment.music.forEach(performer => {
                 description += `• ${performer}\n`;
-            });
-            description += '\n';
-        }
-
-        // Add host information
-        if (sections.entertainment.host.length > 0) {
-            description += 'Hosted by:\n';
-            sections.entertainment.host.forEach(host => {
-                description += `• ${host}\n`;
             });
             description += '\n';
         }
