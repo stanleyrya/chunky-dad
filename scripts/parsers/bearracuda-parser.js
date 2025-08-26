@@ -905,7 +905,9 @@ class BearraccudaParser {
         if (sections.entertainment.music.length > 0) {
             description += 'Music & Entertainment\n';
             sections.entertainment.music.forEach(performer => {
-                description += `• ${performer}\n`;
+                // Replace colons with dashes to avoid key-value parsing issues in calendar-core
+                const safePerformer = performer.replace(/:/g, ' -');
+                description += `• ${safePerformer}\n`;
             });
             description += '\n';
         }

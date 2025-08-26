@@ -757,24 +757,25 @@ class SharedCore {
             }
         });
         
-        // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
-        // The merge strategy above has already chosen the correct gmaps URL
+        // STEP 4: Enrich merged object with location data (gmaps URLs)
+        // This ensures gmaps URLs are generated after merge logic is applied
+        const enrichedMergedObject = this.enrichEventLocation(mergedObject);
         
-        // STEP 5: Build new notes from merged object
-        const newNotes = this.formatEventNotes(mergedObject);
+        // STEP 5: Build new notes from enriched merged object
+        const newNotes = this.formatEventNotes(enrichedMergedObject);
         
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
             // Core calendar fields
-            title: mergedObject.title || calendarObject.title,
-            startDate: mergedObject.startDate || calendarObject.startDate,
-            endDate: mergedObject.endDate || calendarObject.endDate,
-            location: mergedObject.location || calendarObject.location,
+            title: enrichedMergedObject.title || calendarObject.title,
+            startDate: enrichedMergedObject.startDate || calendarObject.startDate,
+            endDate: enrichedMergedObject.endDate || calendarObject.endDate,
+            location: enrichedMergedObject.location || calendarObject.location,
             notes: newNotes,
-            url: mergedObject.url || calendarObject.url,
+            url: enrichedMergedObject.url || calendarObject.url,
             
-            // Copy all merged fields to final event
-            ...mergedObject,
+            // Copy all enriched merged fields to final event
+            ...enrichedMergedObject,
             
             // Override notes with the newly built ones
             notes: newNotes,
@@ -792,13 +793,13 @@ class SharedCore {
         };
         
         // STEP 6: Pass all three objects to rich display for comparison
-        console.log(`🔄 SharedCore: Final merged event created with ${Object.keys(mergedObject).length} fields`);
+        console.log(`🔄 SharedCore: Final merged event created with ${Object.keys(enrichedMergedObject).length} fields`);
         
         // Store the three objects for display comparison
         finalEvent._original = {
             scraper: scraperObject,    // What the scraper found
             calendar: calendarObject,  // What was in the calendar
-            merged: mergedObject       // What the merge logic produced
+            merged: enrichedMergedObject       // What the merge logic and enrichment produced
         };
 
         
