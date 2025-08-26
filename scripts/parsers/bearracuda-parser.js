@@ -61,10 +61,10 @@ class BearraccudaParser {
                     console.log(`🐻 Bearracuda: Successfully parsed event: ${event.title}`);
                     events.push(event);
                     
-                    // If eventbrite URL is found, add it as an additional link for depth=2 processing
-                    if (event.eventbriteUrl && parserConfig.requireDetailPages) {
-                        additionalLinks.push(event.eventbriteUrl);
-                        console.log(`🐻 Bearracuda: Added eventbrite URL as additional link: ${event.eventbriteUrl}`);
+                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link for depth=2 processing
+                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.requireDetailPages) {
+                        additionalLinks.push(event.ticketUrl);
+                        console.log(`🐻 Bearracuda: Added eventbrite ticket URL as additional link: ${event.ticketUrl}`);
                     }
                 } else {
                     console.log('🐻 Bearracuda: Failed to parse event from detail page - parseEventDetailPage returned null');
@@ -314,9 +314,8 @@ class BearraccudaParser {
                 // Don't include gmaps here - let SharedCore generate it from address/placeId
                 source: this.config.source,
                 // Additional bearracuda-specific fields
-                facebookEvent: links.facebook,
-                ticketUrl: links.tickets || links.eventbrite, // Prefer general tickets over eventbrite-specific
-                eventbriteUrl: links.eventbrite, // Store eventbrite URL separately
+                facebook: links.facebook,
+                ticketUrl: links.tickets || links.eventbrite, // Use ticketUrl as the primary ticket field
                 placeId: structuredSections.location.placeId || null, // Pass place ID to shared-core for gmaps generation
                 isBearEvent: true // Bearracuda events are always bear events
             };
