@@ -196,21 +196,32 @@ class BearraccudaParser {
             // Extract special info (like anniversary details)
             const specialInfo = this.extractSpecialInfo(html);
             
-            // Extract full description content
+            // Extract structured description content
+            const structuredSections = this.extractStructuredDescription(html);
+            const structuredDescription = this.buildFormattedDescription(structuredSections);
+            
+            // Extract full description content (fallback)
             const fullDescription = this.extractFullDescription(html);
             
             // Extract city from URL and title
             const city = this.extractCityFromUrl(sourceUrl, cityConfig) || this.extractCityFromText(title, cityConfig);
             
-            // Build description
+            // Build description - prefer structured approach
             let description = '';
-            if (fullDescription) {
+            if (structuredDescription && structuredDescription.length > 50) {
+                // Use structured description if it contains substantial content
+                description = structuredDescription;
+                console.log(`🐻 Bearracuda: Using structured description (${description.length} chars)`);
+            } else if (fullDescription) {
+                // Fallback to full description extraction
                 description += fullDescription + '\n';
+                console.log(`🐻 Bearracuda: Using fallback description (${description.length} chars)`);
             } else {
-                // Fallback to old logic if full description not found
+                // Final fallback to old logic
                 if (specialInfo) description += specialInfo + '\n';
                 if (performers) description += 'Entertainment: ' + performers + '\n';
                 if (timeInfo.details) description += timeInfo.details + '\n';
+                console.log(`🐻 Bearracuda: Using legacy description logic`);
             }
             description = description.trim();
             
@@ -716,6 +727,139 @@ class BearraccudaParser {
         
         // Join descriptions with double newlines for readability
         return descriptions.length > 0 ? descriptions.join('\n\n') : '';
+    }
+
+    // Extract structured description content with separate sections
+    extractStructuredDescription(html) {
+        const sections = {
+            timing: { start: '', end: '' },
+            location: { venue: '', address: '' },
+            description: '',
+            entertainment: { music: [], host: [] }
+        };
+
+        try {
+            // Extract timing information (start/end time in two columns)
+            const startTimeMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*Doors Open at ([^<]+)/i);
+            if (startTimeMatch) {
+                sections.timing.start = startTimeMatch[1].trim();
+            }
+
+            const endTimeMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*Party Goes Until ([^<]+)/i);
+            if (endTimeMatch) {
+                sections.timing.end = endTimeMatch[1].trim();
+            }
+
+            // Extract venue information
+            const venueMatch = html.match(/<h2[^>]*class="[^"]*elementor-heading-title[^"]*"[^>]*>🪩&nbsp;&nbsp;([^<]+)<\/h2>/i);
+            if (venueMatch) {
+                sections.location.venue = venueMatch[1].replace(/&nbsp;/g, ' ').trim();
+            }
+
+            // Extract address
+            const addressMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*([^<]*(?:\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*(?:WA|CA|OR|NY|TX|FL|IL|CO|NV)[^<]*)?)<\/div>/i);
+            if (addressMatch) {
+                const address = addressMatch[1].trim();
+                // Only capture if it looks like a real address
+                if (address && address.length > 10 && /\d/.test(address) && /(St|Ave|Rd|Blvd|Way|Drive|Lane)/.test(address)) {
+                    sections.location.address = address;
+                }
+            }
+
+            // Extract event description/theme
+            const descriptionPatterns = [
+                // Look for event theme and attire descriptions
+                /<div[^>]*class="[^"]*x14z9mp[^"]*"[^>]*>([^<]*(?:SERIOUS WOOD|boots|plaid|jeans|flannel|suspenders|overalls|nut huggers)[^<]*(?:<br[^>]*>[^<]*)*)<\/div>/gi,
+                // Look for other descriptive content
+                /<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>([^<]*(?:cruise|meet|consent|clothing|phone|photos|floor|wristband|adventure|choose|theme|attire)[^<]*)<\/div>/gi
+            ];
+
+            let descriptions = [];
+            for (const pattern of descriptionPatterns) {
+                let match;
+                while ((match = pattern.exec(html)) !== null) {
+                    let desc = match[1]
+                        .replace(/<br[^>]*>/gi, '\n')
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/&amp;/g, '&')
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    
+                    if (desc && desc.length > 10 && !this.isCookieConsentText(desc) && !this.isUnwantedContent(desc)) {
+                        descriptions.push(desc);
+                    }
+                }
+            }
+            sections.description = descriptions.join('\n\n');
+
+            // Extract music & entertainment
+            const musicMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*🎧[^<]*<strong>Music[^<]*Entertainment<\/strong><br>(<p>[^<]+<\/p>\s*)*(<p>[^<]+<\/p>)*/i);
+            if (musicMatch) {
+                const musicContent = musicMatch[0];
+                const performers = musicContent.match(/<p>([^<]+)<\/p>/g);
+                if (performers) {
+                    sections.entertainment.music = performers.map(p => p.replace(/<\/?p>/g, '').trim()).filter(p => p);
+                }
+            }
+
+            // Extract host information
+            const hostMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*🎤[^<]*<strong>Hosted by<\/strong><br>(<p>[^<]+<\/p>\s*)*(<p>[^<]+<\/p>)*/i);
+            if (hostMatch) {
+                const hostContent = hostMatch[0];
+                const hosts = hostContent.match(/<p>([^<]+)<\/p>/g);
+                if (hosts) {
+                    sections.entertainment.host = hosts.map(h => h.replace(/<\/?p>/g, '').trim()).filter(h => h && h !== '&nbsp;');
+                }
+            }
+
+        } catch (error) {
+            console.log(`🐻 Bearracuda: Error extracting structured description: ${error}`);
+        }
+
+        return sections;
+    }
+
+    // Build formatted description from structured sections
+    buildFormattedDescription(sections) {
+        let description = '';
+
+        // Add timing information
+        if (sections.timing.start || sections.timing.end) {
+            if (sections.timing.start) description += `Doors Open at ${sections.timing.start}`;
+            if (sections.timing.end) {
+                if (description) description += ' - ';
+                description += `Party Goes Until ${sections.timing.end}`;
+            }
+            description += '\n\n';
+        }
+
+        // Add main description/theme
+        if (sections.description) {
+            description += sections.description + '\n\n';
+        }
+
+        // Add entertainment information
+        if (sections.entertainment.music.length > 0) {
+            description += 'Music & Entertainment:\n';
+            sections.entertainment.music.forEach(performer => {
+                description += `• ${performer}\n`;
+            });
+            description += '\n';
+        }
+
+        // Add host information
+        if (sections.entertainment.host.length > 0) {
+            description += 'Hosted by:\n';
+            sections.entertainment.host.forEach(host => {
+                description += `• ${host}\n`;
+            });
+            description += '\n';
+        }
+
+        return description.trim();
     }
 
     // Check if text is cookie consent related
