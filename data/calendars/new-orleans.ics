@@ -8,10 +8,16 @@ X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
 DTSTART:20250830T060000Z
 DTEND:20250830T110000Z
-DTSTAMP:20250825T221401Z
+DTSTAMP:20250826T010933Z
 UID:52052D2B-7191-47D1-AB78-D14C65C37F55
 CREATED:20250825T034003Z
-LAST-MODIFIED:20250825T034003Z
+DESCRIPTION:description: Decor & Photos by Dusti Cunningham\n\nThe VIP area
+  is the GA Lower Balcony\, which includes VIP bar\, seating and viewing are
+ a for guests.\nbar: Joy Theatre\nurl: https://bearracuda.com/events/new-orl
+ eans/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-nola-a
+ ugust-2025-web.jpg\nshortName: Bear-rac-uda\ninstagram: https://www.instagr
+ am.com/bearracuda\nkey: bearracuda-2025-08-30-new-orleans
+LAST-MODIFIED:20250826T004609Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
