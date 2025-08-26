@@ -50,8 +50,9 @@ scripts/
 ### `shared-core.js` (Pure Business Logic)
 - **Purpose**: Core event processing, filtering, deduplication, utilities
 - **Environment**: Pure JavaScript - works everywhere
-- **Contains**: Event filtering, bear detection, date utilities, URL processing, city mapping and location detection
+- **Contains**: Event filtering, bear detection, date utilities, URL processing, city location detection using centralized cities config
 - **Cannot contain**: HTTP requests, calendar operations, DOM manipulation, environment detection
+- **Cities Config**: Requires cities configuration from scraper-input.js for location detection
 
 ### `adapters/scriptable-adapter.js` (iOS Only)
 - **Purpose**: Scriptable-specific implementations
@@ -161,17 +162,23 @@ const scraperConfig = {
       mergeMode: "upsert"   // Per-parser merge mode: "upsert" or "clobber"
     }
   ],
-  calendarMappings: {
-    "nyc": "chunky-dad-nyc",
-    "la": "chunky-dad-la",
-    "palm-springs": "chunky-dad-palm-springs",
-    "sitges": "chunky-dad-sitges",
-    "seattle": "chunky-dad-seattle",
-    "chicago": "chunky-dad-chicago",
-    "toronto": "chunky-dad-toronto",
-    "london": "chunky-dad-london",
-    "berlin": "chunky-dad-berlin",
-    "default": "chunky-dad-events"
+  cities: {
+    "nyc": {
+      calendar: "chunky-dad-nyc",
+      timezone: "America/New_York",
+      patterns: ["new york", "nyc", "manhattan", "brooklyn", "queens", "bronx"]
+    },
+    "la": {
+      calendar: "chunky-dad-la", 
+      timezone: "America/Los_Angeles",
+      patterns: ["los angeles", "hollywood", "west hollywood", "weho", "dtla", "downtown los angeles", "long beach", "santa monica"]
+    },
+    "chicago": {
+      calendar: "chunky-dad-chicago",
+      timezone: "America/Chicago",
+      patterns: ["chicago", "chi"]
+    }
+    // ... additional cities
   }
 };
 

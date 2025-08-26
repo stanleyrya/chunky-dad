@@ -22,7 +22,11 @@
 
 
 class SharedCore {
-    constructor() {
+    constructor(cities) {
+        if (!cities || typeof cities !== 'object') {
+            throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-input.js');
+        }
+
         this.visitedUrls = new Set();
         this.bearKeywords = [
             'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
@@ -30,38 +34,9 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
-        // City mapping for consistent location detection across all parsers
-        this.cityMappings = {
-            'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-            'los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles': 'la',
-            'san francisco|sf|castro': 'sf',
-            'chicago|chi': 'chicago',
-            'atlanta|atl': 'atlanta',
-            'miami|south beach|miami beach': 'miami',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'denver': 'denver',
-            'las vegas|vegas': 'vegas',
-            'boston': 'boston',
-            'philadelphia|philly': 'philadelphia',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix',
-            'long beach': 'la',  // Long Beach is part of LA metro area
-            'santa monica': 'la',
-            'palm springs': 'palm-springs',  // Palm Springs gets its own area
-            'sitges': 'sitges',  // Sitges gets its own area
-            'san diego': 'san diego',
-            'sacramento': 'sacramento',
-            'san jose': 'sf',  // Bay Area
-            'oakland': 'sf',   // Bay Area
-            'fort lauderdale': 'miami',
-            'key west': 'miami',
-            'toronto': 'toronto',
-            'london': 'london',
-            'berlin': 'berlin'
-        };
+        // Initialize city mappings from centralized cities config
+        this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
+        console.log(`🌍 SharedCore: Using centralized cities configuration with ${Object.keys(cities).length} cities`);
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -75,6 +50,22 @@ class SharedCore {
             }
             // Generic parser will be used as fallback if no pattern matches
         ];
+    }
+
+    // Convert cities config format to internal cityMappings format
+    convertCitiesConfigToCityMappings(cities) {
+        const cityMappings = {};
+        
+        for (const [cityKey, cityConfig] of Object.entries(cities)) {
+            if (cityConfig.patterns && Array.isArray(cityConfig.patterns)) {
+                // Convert array of patterns to pipe-separated string format
+                const pipePatterns = cityConfig.patterns.join('|');
+                cityMappings[pipePatterns] = cityKey;
+            }
+        }
+        
+        console.log(`🌍 SharedCore: Converted ${Object.keys(cities).length} cities from config to ${Object.keys(cityMappings).length} mapping patterns`);
+        return cityMappings;
     }
 
     // Detect parser type from URL - allows automatic parser selection based on URL patterns
