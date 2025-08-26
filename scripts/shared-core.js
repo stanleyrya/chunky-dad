@@ -22,7 +22,11 @@
 
 
 class SharedCore {
-    constructor(cities = null) {
+    constructor(cities) {
+        if (!cities || typeof cities !== 'object') {
+            throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-input.js');
+        }
+
         this.visitedUrls = new Set();
         this.bearKeywords = [
             'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
@@ -30,8 +34,9 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
-        // Initialize city mappings - use provided cities config or fallback to hardcoded
-        this.cityMappings = this.initializeCityMappings(cities);
+        // Initialize city mappings from centralized cities config
+        this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
+        console.log(`🌍 SharedCore: Using centralized cities configuration with ${Object.keys(cities).length} cities`);
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -45,48 +50,6 @@ class SharedCore {
             }
             // Generic parser will be used as fallback if no pattern matches
         ];
-    }
-
-    // Initialize city mappings from cities config or use hardcoded fallback
-    initializeCityMappings(cities) {
-        if (cities && typeof cities === 'object') {
-            console.log('🌍 SharedCore: Using centralized cities configuration from input file');
-            return this.convertCitiesConfigToCityMappings(cities);
-        } else {
-            console.log('🌍 SharedCore: Using hardcoded cityMappings (fallback mode)');
-            // Hardcoded fallback city mapping for consistent location detection across all parsers
-            return {
-                'new york|nyc|manhattan|brooklyn|queens|bronx': 'nyc',
-                'los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles': 'la',
-                'san francisco|sf|castro': 'sf',
-                'chicago|chi': 'chicago',
-                'atlanta|atl': 'atlanta',
-                'miami|south beach|miami beach': 'miami',
-                'seattle': 'seattle',
-                'portland': 'portland',
-                'denver': 'denver',
-                'las vegas|vegas': 'vegas',
-                'boston': 'boston',
-                'philadelphia|philly': 'philadelphia',
-                'austin': 'austin',
-                'dallas': 'dallas',
-                'houston': 'houston',
-                'phoenix': 'phoenix',
-                'long beach': 'la',  // Long Beach is part of LA metro area
-                'santa monica': 'la',
-                'palm springs': 'palm-springs',  // Palm Springs gets its own area
-                'sitges': 'sitges',  // Sitges gets its own area
-                'san diego': 'san diego',
-                'sacramento': 'sacramento',
-                'san jose': 'sf',  // Bay Area
-                'oakland': 'sf',   // Bay Area
-                'fort lauderdale': 'miami',
-                'key west': 'miami',
-                'toronto': 'toronto',
-                'london': 'london',
-                'berlin': 'berlin'
-            };
-        }
     }
 
     // Convert cities config format to internal cityMappings format
