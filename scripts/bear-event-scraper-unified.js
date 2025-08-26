@@ -174,20 +174,20 @@ class BearEventScraperOrchestrator {
 
             console.log('🐻 Orchestrator: Starting event scraping process...');
 
-            // Create shared core instance first
-            console.log('🐻 Orchestrator: Creating shared core instance...');
-            const sharedCore = new this.modules.SharedCore();
-            console.log('🐻 Orchestrator: ✓ Shared core instance created');
-
-            // Create adapter instance
+            // Create adapter instance first
             console.log('🐻 Orchestrator: Creating adapter instance...');
             const adapter = new this.modules.adapter();
             console.log('🐻 Orchestrator: ✓ Adapter instance created');
             
-            // Load configuration
+            // Load configuration early so we can pass cities config to SharedCore
             console.log('🐻 Orchestrator: Loading configuration...');
             const config = await adapter.loadConfiguration();
             console.log(`🐻 Orchestrator: ✓ Configuration loaded with ${config.parsers?.length || 0} parsers`);
+            
+            // Create shared core instance with cities configuration
+            console.log('🐻 Orchestrator: Creating shared core instance...');
+            const sharedCore = new this.modules.SharedCore(config.cities);
+            console.log('🐻 Orchestrator: ✓ Shared core instance created');
             
             // Create adapter with calendar mappings if available
             let finalAdapter = adapter;
