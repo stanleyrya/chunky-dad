@@ -1341,13 +1341,17 @@ class SharedCore {
         const lowerAddress = address.toLowerCase();
         const lowerCityName = cityName.toLowerCase();
         
+        // Check for city name or any US state abbreviation
+        const stateAbbreviations = [
+            'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'dc', 'fl',
+            'ga', 'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me',
+            'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh',
+            'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri',
+            'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy'
+        ];
+        
         if (lowerAddress.includes(lowerCityName) || 
-            lowerAddress.includes(', il') || lowerAddress.includes(', ca') || 
-            lowerAddress.includes(', ny') || lowerAddress.includes(', wa') ||
-            lowerAddress.includes(', or') || lowerAddress.includes(', co') ||
-            lowerAddress.includes(', la') || lowerAddress.includes(', tx') ||
-            lowerAddress.includes(', fl') || lowerAddress.includes(', ga') ||
-            lowerAddress.includes(', nv') || lowerAddress.includes(', az')) {
+            stateAbbreviations.some(state => lowerAddress.includes(`, ${state}`))) {
             return address; // Already contains city/state info
         }
 
