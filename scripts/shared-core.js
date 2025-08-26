@@ -1202,7 +1202,8 @@ class SharedCore {
             const urlData = {
                 coordinates: coordinates,
                 placeId: event.placeId || null,
-                address: (event.address && this.isFullAddress(event.address)) ? event.address : null
+                // Use any available address - let Google Maps handle incomplete addresses
+                address: event.address || null
             };
             
             event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
