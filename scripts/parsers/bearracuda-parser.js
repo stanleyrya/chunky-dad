@@ -181,24 +181,47 @@ class BearraccudaParser {
             // Extract time information
             const timeInfo = this.extractTime(html);
             
-            // Extract venue information
-            const venueInfo = this.extractVenue(html);
+            // Extract structured description content first (contains venue, address, links)
+            const structuredSections = this.extractStructuredDescription(html);
+            const structuredDescription = this.buildFormattedDescription(structuredSections);
             
-            // Extract address
-            const address = this.extractAddress(html);
+            // Extract venue information - prefer structured data
+            let venueInfo = { name: '', address: '' };
+            if (structuredSections.location.venue) {
+                venueInfo.name = structuredSections.location.venue;
+                console.log(`🐻 Bearracuda: Using structured venue: "${venueInfo.name}"`);
+            } else {
+                venueInfo = this.extractVenue(html);
+                console.log(`🐻 Bearracuda: Using fallback venue extraction`);
+            }
+            
+            // Extract address - prefer structured data
+            let address = '';
+            if (structuredSections.location.address) {
+                address = structuredSections.location.address;
+                console.log(`🐻 Bearracuda: Using structured address: "${address}"`);
+            } else {
+                address = this.extractAddress(html);
+                console.log(`🐻 Bearracuda: Using fallback address extraction`);
+            }
             
             // Extract entertainment/performers
             const performers = this.extractPerformers(html);
             
-            // Extract ticket/external links
-            const links = this.extractExternalLinks(html);
+            // Extract ticket/external links - prefer structured data
+            let links = { facebook: '', eventbrite: '' };
+            if (structuredSections.links.facebook || structuredSections.links.eventbrite || structuredSections.links.tickets) {
+                links.facebook = structuredSections.links.facebook;
+                links.eventbrite = structuredSections.links.eventbrite;
+                links.tickets = structuredSections.links.tickets;
+                console.log(`🐻 Bearracuda: Using structured links - FB: ${!!links.facebook}, EB: ${!!links.eventbrite}, Tickets: ${!!links.tickets}`);
+            } else {
+                links = this.extractExternalLinks(html);
+                console.log(`🐻 Bearracuda: Using fallback link extraction`);
+            }
             
             // Extract special info (like anniversary details)
             const specialInfo = this.extractSpecialInfo(html);
-            
-            // Extract structured description content
-            const structuredSections = this.extractStructuredDescription(html);
-            const structuredDescription = this.buildFormattedDescription(structuredSections);
             
             // Extract full description content (fallback)
             const fullDescription = this.extractFullDescription(html);
@@ -282,11 +305,11 @@ class BearraccudaParser {
                 url: sourceUrl, // Use consistent 'url' field name across all parsers
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
-                gmaps: this.generateGoogleMapsUrl(address),
+                gmaps: this.generateGoogleMapsUrl(address, structuredSections.location.placeId),
                 source: this.config.source,
                 // Additional bearracuda-specific fields
                 facebookEvent: links.facebook,
-                ticketUrl: links.eventbrite,
+                ticketUrl: links.tickets || links.eventbrite, // Prefer general tickets over eventbrite-specific
                 eventbriteUrl: links.eventbrite, // Store eventbrite URL separately
                 isBearEvent: true // Bearracuda events are always bear events
             };
@@ -733,9 +756,10 @@ class BearraccudaParser {
     extractStructuredDescription(html) {
         const sections = {
             timing: { start: '', end: '' },
-            location: { venue: '', address: '' },
+            location: { venue: '', address: '', placeId: '' },
             description: '',
-            entertainment: { music: [], host: [] }
+            entertainment: { music: [], host: [] },
+            links: { facebook: '', tickets: '', eventbrite: '' }
         };
 
         try {
@@ -756,13 +780,23 @@ class BearraccudaParser {
                 sections.location.venue = venueMatch[1].replace(/&nbsp;/g, ' ').trim();
             }
 
-            // Extract address
-            const addressMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*([^<]*(?:\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*(?:WA|CA|OR|NY|TX|FL|IL|CO|NV)[^<]*)?)<\/div>/i);
-            if (addressMatch) {
-                const address = addressMatch[1].trim();
-                // Only capture if it looks like a real address
-                if (address && address.length > 10 && /\d/.test(address) && /(St|Ave|Rd|Blvd|Way|Drive|Lane)/.test(address)) {
-                    sections.location.address = address;
+            // Extract address - look for address right after venue
+            const addressPatterns = [
+                // Look for address in elementor widget container after venue
+                /<h2[^>]*>🪩&nbsp;&nbsp;[^<]+<\/h2>[^<]*<\/div>[^<]*<\/div>[^<]*<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*([^<]*\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*(?:WA|CA|OR|NY|TX|FL|IL|CO|NV)[^<]*)<\/div>/i,
+                // Fallback pattern for address in any elementor container
+                /<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*([^<]*\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*(?:WA|CA|OR|NY|TX|FL|IL|CO|NV)[^<]*)<\/div>/i
+            ];
+            
+            for (const pattern of addressPatterns) {
+                const addressMatch = html.match(pattern);
+                if (addressMatch) {
+                    const address = addressMatch[1].trim();
+                    // Only capture if it looks like a real address
+                    if (address && address.length > 10 && /\d/.test(address) && /(St|Ave|Rd|Blvd|Way|Drive|Lane)/.test(address)) {
+                        sections.location.address = address;
+                        break;
+                    }
                 }
             }
 
@@ -812,6 +846,64 @@ class BearraccudaParser {
                 const hosts = hostContent.match(/<p>([^<]+)<\/p>/g);
                 if (hosts) {
                     sections.entertainment.host = hosts.map(h => h.replace(/<\/?p>/g, '').trim()).filter(h => h && h !== '&nbsp;');
+                }
+            }
+
+            // Extract Facebook event link - account for multiline HTML structure
+            const facebookPatterns = [
+                /<a[^>]*href="(https:\/\/www\.facebook\.com\/events\/[^"]+)"[^>]*>[\s\S]*?RSVP[\s\S]*?<\/a>/i,
+                /<a[^>]*href="(https:\/\/www\.facebook\.com\/events\/[^"]+)"/i
+            ];
+            for (const pattern of facebookPatterns) {
+                const facebookMatch = html.match(pattern);
+                if (facebookMatch) {
+                    sections.links.facebook = facebookMatch[1];
+                    break;
+                }
+            }
+
+            // Extract ticket links (Eventbrite and others) - account for multiline HTML structure
+            const eventbritePatterns = [
+                /<a[^>]*href="(https:\/\/www\.eventbrite\.com\/[^"]+)"[^>]*>[\s\S]*?(?:Get Tickets|Tickets)[\s\S]*?<\/a>/i,
+                /<a[^>]*href="(https:\/\/www\.eventbrite\.com\/[^"]+)"/i
+            ];
+            for (const pattern of eventbritePatterns) {
+                const eventbriteMatch = html.match(pattern);
+                if (eventbriteMatch) {
+                    sections.links.eventbrite = eventbriteMatch[1];
+                    sections.links.tickets = eventbriteMatch[1]; // Use eventbrite as primary ticket link
+                    break;
+                }
+            }
+            
+            // If no eventbrite link found, look for other ticket links
+            if (!sections.links.tickets) {
+                const ticketPatterns = [
+                    /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?(?:Get Tickets|Tickets|Buy Tickets)[\s\S]*?<\/a>/i,
+                    /<a[^>]*href="([^"]+)"[^>]*>[^<]*(?:Get Tickets|Tickets|Buy Tickets)[^<]*<\/a>/i
+                ];
+                for (const pattern of ticketPatterns) {
+                    const ticketMatch = html.match(pattern);
+                    if (ticketMatch) {
+                        sections.links.tickets = ticketMatch[1];
+                        break;
+                    }
+                }
+            }
+
+            // Extract Google Maps place ID from embedded map
+            const placeIdPatterns = [
+                // Look for place_id in Google Maps iframe or links
+                /place_id=([A-Za-z0-9_-]+)/i,
+                // Look for cid parameter (another form of place ID)
+                /cid=(\d+)/i
+            ];
+            
+            for (const pattern of placeIdPatterns) {
+                const placeIdMatch = html.match(pattern);
+                if (placeIdMatch) {
+                    sections.location.placeId = placeIdMatch[1];
+                    break;
                 }
             }
 
@@ -1282,25 +1374,40 @@ class BearraccudaParser {
         }
     }
 
-    // Generate Google Maps URL from address
-    generateGoogleMapsUrl(address) {
-        if (!address) return '';
+    // Generate Google Maps URL from address and optional place ID
+    generateGoogleMapsUrl(address, placeId = '') {
+        if (!address && !placeId) return '';
         
         // Additional validation to prevent corrupted URLs
-        if (address.includes('function') || 
+        if (address && (address.includes('function') || 
             address.includes('window.') || 
             address.includes('document.') ||
             address.includes('javascript') ||
             address.includes('%') ||
-            address.length > 100) {
+            address.length > 100)) {
             console.log(`🐻 Bearracuda: Skipping Google Maps URL generation for suspicious address: ${address.substring(0, 50)}...`);
             return '';
         }
         
         try {
-            const encoded = encodeURIComponent(address);
-            const url = `https://maps.google.com/maps?q=${encoded}`;
-            console.log(`🐻 Bearracuda: Generated Google Maps URL: ${url}`);
+            let url = '';
+            
+            if (placeId) {
+                // Use place ID for more accurate location
+                url = `https://maps.google.com/maps?place_id=${placeId}`;
+                if (address) {
+                    // Add address as query for better context
+                    const encoded = encodeURIComponent(address);
+                    url += `&q=${encoded}`;
+                }
+                console.log(`🐻 Bearracuda: Generated Google Maps URL with place ID: ${url}`);
+            } else if (address) {
+                // Fallback to address-based URL
+                const encoded = encodeURIComponent(address);
+                url = `https://maps.google.com/maps?q=${encoded}`;
+                console.log(`🐻 Bearracuda: Generated Google Maps URL: ${url}`);
+            }
+            
             return url;
         } catch (error) {
             console.log(`🐻 Bearracuda: Error generating Google Maps URL: ${error}`);
