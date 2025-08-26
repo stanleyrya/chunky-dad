@@ -8,19 +8,18 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250927T080000Z
 DTEND:20250927T140000Z
-DTSTAMP:20250826T201557Z
+DTSTAMP:20250826T221322Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
-DESCRIPTION:description: Doors Open at 9:00 pm - Party Goes Until 3:00 am\n
- \nMusic & Entertainment:\n• Main Floor: Horse Meat Disco\n• Upstairs: Mateo
-  Segade (LA)\n• Decor and photos by Dusti Cunningham\n\nHosted by:\n• Matt 
- Bearracuda\nbar: Public Works\naddress: 161 Erie St\, San Francisco\, CA 94
- 103\nurl: https://bearracuda.com/events/flsm-friday/\nimage: https://bearra
- cuda.com/wp-content/uploads/2025/05/hmd2025.jpg\nshortName: Bear-rac-uda\ni
- nstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-2025-09-27-
- sf\nwebsite: https://www.eventbrite.com/e/bearracuda-sf-presents-horse-meat
- -disco-tickets-1370410668199
-LAST-MODIFIED:20250826T040106Z
+DESCRIPTION:description: Music & Entertainment\n• Main Floor: Horse Meat Di
+ sco\n• Upstairs: Mateo Segade (LA)\n• Decor and photos by Dusti Cunningham\
+ nbar: Public Works\naddress: 161 Erie St\, San Francisco\, CA 94103\nurl: h
+ ttps://bearracuda.com/events/flsm-friday/\nimage: https://bearracuda.com/wp
+ -content/uploads/2025/05/hmd2025.jpg\nshortName: Bear-rac-uda\ninstagram: h
+ ttps://www.instagram.com/bearracuda\nkey: bearracuda-2025-09-27-sf\nwebsite
+ : https://www.eventbrite.com/e/bearracuda-sf-presents-horse-meat-disco-tick
+ ets-1370410668199
+LAST-MODIFIED:20250826T212300Z
 LOCATION:37.7689137\, -122.4192514
 SEQUENCE:1
 STATUS:CONFIRMED

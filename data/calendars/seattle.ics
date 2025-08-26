@@ -45,7 +45,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250717T190000
 DTEND;TZID=America/Los_Angeles:20250718T020000
 RRULE:FREQ=MONTHLY;BYDAY=3TH
-DTSTAMP:20250826T201557Z
+DTSTAMP:20250826T221321Z
 UID:1dl55f6fm4qqv42go7r3nj5st9@google.com
 CREATED:20250712T180301Z
 DESCRIPTION:Bar: Diesel<br>Google Maps: <a href="https://maps.app.goo.gl/yD
@@ -66,7 +66,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20250706T140000
 DTEND;TZID=America/New_York:20250706T190000
 RRULE:FREQ=WEEKLY;BYDAY=SU
-DTSTAMP:20250826T201557Z
+DTSTAMP:20250826T221321Z
 UID:6irujvg3effpkdu42krgr91osj@google.com
 CREATED:20250712T180301Z
 DESCRIPTION:Instagram: <a href="https://www.instagram.com/southseattlebears
@@ -83,19 +83,19 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250927T080000Z
 DTEND:20250927T140000Z
-DTSTAMP:20250826T201557Z
+DTSTAMP:20250826T221321Z
 UID:19A871C3-E891-4C93-BF2E-A0234C04BF1E
 CREATED:20250825T034004Z
-DESCRIPTION:description: Doors Open at 9:00 pm - Party Goes Until 3:00 am\n
- \nTreasure Trail returns to Seattle and we invite you to choose your own AD
- VENTURE!  Now our guys can grab a wristband when you walk in:\n\nMusic & En
- tertainment:\n• Hard Tunes by BIG SIR &amp\; TIGERBEATZ\n\nHosted by:\n• Ma
- tt Bearracuda\nbar: MASSIVE\naddress: 619 E. Pine St\, Seattle\, WA\nurl: h
- ttps://bearracuda.com/events/treasureseattle/\nimage: https://bearracuda.co
- m/wp-content/uploads/2025/04/treasuretrailweb.jpg\nshortName: Bear-rac-uda\
- ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-2025-09-2
- 7-seattle
-LAST-MODIFIED:20250826T040102Z
+DESCRIPTION:description: Treasure Trail returns to Seattle and we invite yo
+ u to choose your own ADVENTURE!  Now our guys can grab a wristband when you
+  walk in:\n\nMusic & Entertainment\n• Hard Tunes by BIG SIR &amp\; TIGERBEA
+ TZ\nbar: MASSIVE\naddress: 619 E. Pine St\, Seattle\, WA\nurl: https://bear
+ racuda.com/events/treasureseattle/\nimage: https://bearracuda.com/wp-conten
+ t/uploads/2025/04/treasuretrailweb.jpg\nshortName: Bear-rac-uda\ninstagram:
+  https://www.instagram.com/bearracuda\nkey: bearracuda-2025-09-27-seattle\n
+ Music & Entertainment: • Hard Tunes by BIG SIR &amp\; TIGERBEATZ\nHosted by
+ : • Matt Bearracuda
+LAST-MODIFIED:20250826T211717Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Treasure Trail➲➲SEATTLE
@@ -106,20 +106,20 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251011T080000Z
 DTEND:20251011T140000Z
-DTSTAMP:20250826T201557Z
+DTSTAMP:20250826T221321Z
 UID:9DF93D82-1411-44C0-BE63-00037416BB38
 CREATED:20250817T231654Z
-DESCRIPTION:description: Doors Open at 9:00 pm - Party Goes Until 3:00 am\n
- \nSERIOUS WOOD\n\nShow off your boots\, plaid\, jeans\, nut huggers\, flann
- el\, suspenders\, beanies & overalls!\n\nHot Go-Go’s\, Chunky Visuals!\n\nM
- usic & Entertainment:\n• Matt Consola\n• Freddy KOP\n\nHosted by:\n• Matt B
- earracuda\nbar: MASSIVE\naddress: 619 E. Pine St\, Seattle\, WA\nurl: https
- ://bearracuda.com/events/seattlewood/\nimage: https://bearracuda.com/wp-con
- tent/uploads/2025/08/serioiusweb.jpg\nshortName: Bear-rac-uda\ninstagram: h
- ttps://www.instagram.com/bearracuda\nkey: bearracuda-2025-10-11-seattle\nwe
- bsite: https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets
- -1565073299369
-LAST-MODIFIED:20250826T040103Z
+DESCRIPTION:description: SERIOUS WOOD\n\nShow off your boots\, plaid\, jean
+ s\, nut huggers\, flannel\, suspenders\, beanies & overalls!\n\nHot Go-Go’s
+ \, Chunky Visuals!\n\nMusic & Entertainment\n• Matt Consola\n• Freddy KOP\n
+ bar: MASSIVE\naddress: 619 E. Pine St\, Seattle\, WA\nurl: https://bearracu
+ da.com/events/seattlewood/\nimage: https://bearracuda.com/wp-content/upload
+ s/2025/08/serioiusweb.jpg\nshortName: Bear-rac-uda\ninstagram: https://www.
+ instagram.com/bearracuda\nkey: bearracuda-2025-10-11-seattle\nMusic & Enter
+ tainment: • Matt Consola\n• Freddy KOP\nHosted by: • Matt Bearracuda\nwebsi
+ te: https://www.eventbrite.com/e/bearracuda-seattle-serious-wood-tickets-15
+ 65073299369
+LAST-MODIFIED:20250826T211719Z
 LOCATION:47.6150572\, -122.3236574
 SEQUENCE:1
 STATUS:CONFIRMED
