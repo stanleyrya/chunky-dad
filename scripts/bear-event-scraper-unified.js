@@ -189,15 +189,15 @@ class BearEventScraperOrchestrator {
             const sharedCore = new this.modules.SharedCore(config.cities);
             console.log('🐻 Orchestrator: ✓ Shared core instance created');
             
-            // Create adapter with calendar mappings if available
+            // Create adapter with cities configuration
             let finalAdapter = adapter;
-            if (config.calendarMappings) {
-                console.log('🐻 Orchestrator: Creating adapter with calendar mappings...');
+            if (config.cities) {
+                console.log('🐻 Orchestrator: Creating adapter with cities configuration...');
                 finalAdapter = new this.modules.adapter({
-                    calendarMappings: config.calendarMappings,
+                    cities: config.cities,
                     ...this.config
                 });
-                console.log('🐻 Orchestrator: ✓ Adapter with calendar mappings created');
+                console.log('🐻 Orchestrator: ✓ Adapter with cities configuration created');
             }
 
             // Log configuration details

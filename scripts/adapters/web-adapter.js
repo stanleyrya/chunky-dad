@@ -24,7 +24,17 @@ class WebAdapter {
             ...config
         };
         
-        this.calendarMappings = config.calendarMappings || {};
+        // Store cities configuration for calendar mapping
+        this.cities = config.cities || {};
+    }
+
+    // Get calendar name for a city (matching scriptable-adapter pattern)
+    getCalendarName(city) {
+        if (city && this.cities[city] && this.cities[city].calendar) {
+            return this.cities[city].calendar;
+        }
+        // Return fallback name - system will handle missing calendar appropriately
+        return `chunky-dad-${city}`;
     }
 
     // HTTP Adapter Implementation
