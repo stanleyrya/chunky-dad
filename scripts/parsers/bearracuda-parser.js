@@ -178,10 +178,7 @@ class BearraccudaParser {
             // Extract date
             const dateInfo = this.extractDate(html);
             
-            // Extract time information
-            const timeInfo = this.extractTime(html);
-            
-            // Extract structured description content first (contains venue, address, links)
+            // Extract structured description content first (contains venue, address, links, timing)
             const structuredSections = this.extractStructuredDescription(html);
             const structuredDescription = this.buildFormattedDescription(structuredSections);
             
@@ -243,24 +240,33 @@ class BearraccudaParser {
                 // Final fallback to old logic
                 if (specialInfo) description += specialInfo + '\n';
                 if (performers) description += 'Entertainment: ' + performers + '\n';
-                if (timeInfo.details) description += timeInfo.details + '\n';
+                // Add timing details from structured data
+                if (structuredSections.timing.startText || structuredSections.timing.endText) {
+                    let timingText = '';
+                    if (structuredSections.timing.startText) timingText += structuredSections.timing.startText;
+                    if (structuredSections.timing.endText) {
+                        if (timingText) timingText += ' - ';
+                        timingText += structuredSections.timing.endText;
+                    }
+                    description += timingText + '\n';
+                }
                 console.log(`🐻 Bearracuda: Using legacy description logic`);
             }
             description = description.trim();
             
-            // Create start date
+            // Create start date using structured timing data
             let startDate = null;
-            if (dateInfo && timeInfo.startTime) {
+            if (dateInfo && structuredSections.timing.start) {
                 // Combine date and start time with city timezone
-                startDate = this.combineDateTime(dateInfo, timeInfo.startTime, city, cityConfig);
+                startDate = this.combineDateTime(dateInfo, structuredSections.timing.start, city, cityConfig);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
             
-            // Create end date
+            // Create end date using structured timing data
             let endDate = null;
-            if (dateInfo && timeInfo.endTime) {
-                endDate = this.combineDateTime(dateInfo, timeInfo.endTime, city, cityConfig);
+            if (dateInfo && structuredSections.timing.end) {
+                endDate = this.combineDateTime(dateInfo, structuredSections.timing.end, city, cityConfig);
                 // If end time is earlier than start time, assume it's next day
                 if (endDate && startDate && endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -271,8 +277,8 @@ class BearraccudaParser {
             console.log(`🐻 Bearracuda: Parsing results for ${sourceUrl}:`);
             console.log(`🐻 Bearracuda: - Title: "${title}"`);
             console.log(`🐻 Bearracuda: - Date: ${dateInfo ? dateInfo.toISOString() : 'null'}`);
-            console.log(`🐻 Bearracuda: - Start time: ${timeInfo.startTime ? `${timeInfo.startTime.hours}:${timeInfo.startTime.minutes}` : 'null'}`);
-            console.log(`🐻 Bearracuda: - End time: ${timeInfo.endTime ? `${timeInfo.endTime.hours}:${timeInfo.endTime.minutes}` : 'null'}`);
+            console.log(`🐻 Bearracuda: - Start time: ${structuredSections.timing.start ? `${structuredSections.timing.start.hours}:${structuredSections.timing.start.minutes}` : 'null'}`);
+            console.log(`🐻 Bearracuda: - End time: ${structuredSections.timing.end ? `${structuredSections.timing.end.hours}:${structuredSections.timing.end.minutes}` : 'null'}`);
             console.log(`🐻 Bearracuda: - Venue: "${venueInfo.name}"`);
             console.log(`🐻 Bearracuda: - Address: "${address}"`);
             console.log(`🐻 Bearracuda: - City: "${city}"`);
@@ -755,7 +761,7 @@ class BearraccudaParser {
     // Extract structured content using consistent Bearracuda page structure
     extractStructuredDescription(html) {
         const sections = {
-            timing: { start: '', end: '' },
+            timing: { start: null, end: null, startText: '', endText: '' },
             location: { venue: '', address: '', placeId: '' },
             description: '',
             entertainment: { music: [], host: [] },
@@ -765,11 +771,15 @@ class BearraccudaParser {
         try {
             // STRUCTURE-BASED EXTRACTION leveraging consistent elementor patterns
             
-            // 1. TIMING: Always two 50% columns with text-editor widgets containing "Doors Open" and "Party Goes"
-            const timingSection = html.match(/<section[^>]*elementor-section[^>]*>[\s\S]*?<div[^>]*elementor-col-50[^>]*>[\s\S]*?<div[^>]*text-editor[^>]*>[\s\S]*?<div[^>]*elementor-widget-container[^>]*>\s*(Doors Open at [^<]+)\s*<\/div>[\s\S]*?<\/div>[\s\S]*?<div[^>]*elementor-col-50[^>]*>[\s\S]*?<div[^>]*text-editor[^>]*>[\s\S]*?<div[^>]*elementor-widget-container[^>]*>\s*(Party Goes Until [^<]+)\s*<\/div>/i);
-            if (timingSection) {
-                sections.timing.start = timingSection[1].trim();
-                sections.timing.end = timingSection[2].trim();
+            // 1. TIMING: Use existing time extraction method for proper parsing
+            const timeInfo = this.extractTime(html);
+            if (timeInfo.startTime) {
+                sections.timing.start = timeInfo.startTime; // Structured time object with hours/minutes
+                sections.timing.startText = timeInfo.details ? timeInfo.details.split(' - ')[0] : '';
+            }
+            if (timeInfo.endTime) {
+                sections.timing.end = timeInfo.endTime; // Structured time object with hours/minutes  
+                sections.timing.endText = timeInfo.details ? timeInfo.details.split(' - ')[1] || timeInfo.details : '';
             }
 
             // 2. VENUE: Always h2 heading with 🪩 emoji - the bar is ALWAYS in this container
@@ -885,12 +895,12 @@ class BearraccudaParser {
     buildFormattedDescription(sections) {
         let description = '';
 
-        // Add timing information (already includes "Doors Open at" and "Party Goes Until")
-        if (sections.timing.start || sections.timing.end) {
-            if (sections.timing.start) description += sections.timing.start;
-            if (sections.timing.end) {
+        // Add timing information using text versions for display
+        if (sections.timing.startText || sections.timing.endText) {
+            if (sections.timing.startText) description += sections.timing.startText;
+            if (sections.timing.endText) {
                 if (description) description += ' - ';
-                description += sections.timing.end;
+                description += sections.timing.endText;
             }
             description += '\n\n';
         }
