@@ -226,6 +226,11 @@ class BearraccudaParser {
             // Extract city from URL and title
             const city = this.extractCityFromUrl(sourceUrl, cityConfig) || this.extractCityFromText(title, cityConfig);
             
+            // Enhance address with city information if it's incomplete
+            if (address && city && cityConfig && cityConfig[city]) {
+                address = this.enhanceAddressWithCity(address, city, cityConfig);
+            }
+            
             // Build description - prefer structured approach
             let description = '';
             if (structuredDescription && structuredDescription.length > 50) {
@@ -311,8 +316,7 @@ class BearraccudaParser {
                 url: sourceUrl, // Use consistent 'url' field name across all parsers
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
-                // Generate gmaps URL if we have address or venue info
-                gmaps: this.generateGmapsUrl(address, venueInfo.name, city, cityConfig),
+                // Don't include gmaps here - let SharedCore generate it from address/placeId
                 source: this.config.source,
                 // Additional bearracuda-specific fields
                 facebookEvent: links.facebook,
@@ -1364,37 +1368,59 @@ class BearraccudaParser {
         return null;
     }
 
-    // Generate a Google Maps URL from address and venue name
-    generateGmapsUrl(address, venueName, city, cityConfig = null) {
-        if (!address && !venueName) {
-            console.log(`🐻 Bearracuda: No address or venue name to generate gmaps URL`);
-            return '';
+    // Enhance address with city information if it's incomplete
+    enhanceAddressWithCity(address, city, cityConfig) {
+        if (!address || !city || !cityConfig || !cityConfig[city]) {
+            return address;
         }
 
-        // Create search query - prefer address, fallback to venue name
-        let searchQuery = '';
-        if (address && address.trim()) {
-            searchQuery = address.trim();
-        } else if (venueName && venueName.trim()) {
-            searchQuery = venueName.trim();
-            // Add city to venue search for better results
-            if (city && cityConfig && cityConfig[city]) {
-                const cityData = cityConfig[city];
-                if (cityData.patterns && cityData.patterns.length > 0) {
-                    // Use the first pattern as the city name for search
-                    const cityName = cityData.patterns[0];
-                    searchQuery += ` ${cityName}`;
-                }
-            }
+        const cityData = cityConfig[city];
+        
+        // Use the first pattern as the preferred city name, or find the longest one
+        let cityName = '';
+        if (cityData.patterns && cityData.patterns.length > 0) {
+            // Use the longest pattern as it's likely the most complete city name
+            cityName = cityData.patterns.reduce((longest, current) => 
+                current.length > longest.length ? current : longest
+            );
+        } else {
+            return address; // No patterns available
         }
 
-        if (searchQuery) {
-            const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
-            console.log(`🐻 Bearracuda: Generated gmaps URL: ${gmapsUrl}`);
-            return gmapsUrl;
+        // Check if address already contains city information (city name or state)
+        const lowerAddress = address.toLowerCase();
+        const lowerCityName = cityName.toLowerCase();
+        
+        if (lowerAddress.includes(lowerCityName) || 
+            lowerAddress.includes(', il') || lowerAddress.includes(', ca') || 
+            lowerAddress.includes(', ny') || lowerAddress.includes(', wa') ||
+            lowerAddress.includes(', or') || lowerAddress.includes(', co') ||
+            lowerAddress.includes(', la') || lowerAddress.includes(', tx')) {
+            console.log(`🐻 Bearracuda: Address "${address}" already contains city/state info`);
+            return address;
         }
 
-        return '';
+        // Check if address needs enhancement (incomplete street address)
+        const needsEnhancement = 
+            // Very short addresses
+            address.length < 15 ||
+            // No comma (likely missing city/state)
+            !address.includes(',') ||
+            // Just street number and name pattern
+            /^\d+\s+[NSEW]?\.?\s*[A-Za-z\s]+$/.test(address.trim());
+
+        if (needsEnhancement) {
+            // Add proper capitalization to city name
+            const properCityName = cityName.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            
+            const enhancedAddress = `${address.trim()}, ${properCityName}`;
+            console.log(`🐻 Bearracuda: Enhanced address "${address}" -> "${enhancedAddress}"`);
+            return enhancedAddress;
+        }
+
+        return address;
     }
 }
 
