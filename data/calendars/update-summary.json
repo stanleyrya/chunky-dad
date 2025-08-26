@@ -1,110 +1,110 @@
 {
-  "lastUpdated": "2025-08-26T16:17:41.613Z",
+  "lastUpdated": "2025-08-26T18:19:50.372Z",
   "cities": {
     "new-york": {
       "name": "New York",
       "status": "success",
       "dataLength": 4653,
       "eventCount": 7,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "seattle": {
       "name": "Seattle",
       "status": "success",
       "dataLength": 4652,
       "eventCount": 4,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "los-angeles": {
       "name": "Los Angeles",
       "status": "success",
       "dataLength": 4541,
       "eventCount": 4,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "toronto": {
       "name": "Toronto",
       "status": "success",
       "dataLength": 197,
       "eventCount": 0,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "london": {
       "name": "London",
       "status": "success",
       "dataLength": 193,
       "eventCount": 0,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "chicago": {
       "name": "Chicago",
       "status": "success",
       "dataLength": 6811,
       "eventCount": 7,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "berlin": {
       "name": "Berlin",
       "status": "success",
       "dataLength": 193,
       "eventCount": 0,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
       "dataLength": 205,
       "eventCount": 0,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "denver": {
       "name": "Denver",
       "status": "success",
       "dataLength": 2354,
       "eventCount": 2,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "vegas": {
       "name": "Las Vegas",
       "status": "success",
       "dataLength": 1451,
       "eventCount": 1,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "atlanta": {
       "name": "Atlanta",
       "status": "success",
       "dataLength": 1427,
       "eventCount": 1,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "new-orleans": {
       "name": "New Orleans",
       "status": "success",
       "dataLength": 1127,
       "eventCount": 1,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "sf": {
       "name": "San Francisco",
       "status": "success",
       "dataLength": 1272,
       "eventCount": 1,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "portland": {
       "name": "Portland",
       "status": "success",
       "dataLength": 2561,
       "eventCount": 2,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     },
     "sitges": {
       "name": "Sitges",
       "status": "success",
       "dataLength": 193,
       "eventCount": 0,
-      "lastUpdated": "2025-08-26T16:17:41.613Z"
+      "lastUpdated": "2025-08-26T18:19:50.372Z"
     }
   }
 }
