@@ -311,7 +311,8 @@ class BearraccudaParser {
                 url: sourceUrl, // Use consistent 'url' field name across all parsers
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
-                // Don't include gmaps here - let SharedCore generate it from address/placeId
+                // Generate gmaps URL if we have address or venue info
+                gmaps: this.generateGmapsUrl(address, venueInfo.name, city, cityConfig),
                 source: this.config.source,
                 // Additional bearracuda-specific fields
                 facebookEvent: links.facebook,
@@ -896,38 +897,25 @@ class BearraccudaParser {
     buildFormattedDescription(sections) {
         let description = '';
 
-        // Add timing information using text versions for display
-        if (sections.timing.startText || sections.timing.endText) {
-            if (sections.timing.startText) description += sections.timing.startText;
-            if (sections.timing.endText) {
-                if (description) description += ' - ';
-                description += sections.timing.endText;
-            }
-            description += '\n\n';
-        }
+        // Skip timing information - it's redundant since we have startDate/endDate
+        // This fixes issues #1 and #2: removing time info that's already captured in dates
 
         // Add main description/theme
         if (sections.description) {
             description += sections.description + '\n\n';
         }
 
-        // Add entertainment information
+        // Add entertainment information without colon format to avoid notes parsing issues
         if (sections.entertainment.music.length > 0) {
-            description += 'Music & Entertainment:\n';
+            description += 'Music & Entertainment\n';
             sections.entertainment.music.forEach(performer => {
                 description += `• ${performer}\n`;
             });
             description += '\n';
         }
 
-        // Add host information
-        if (sections.entertainment.host.length > 0) {
-            description += 'Hosted by:\n';
-            sections.entertainment.host.forEach(host => {
-                description += `• ${host}\n`;
-            });
-            description += '\n';
-        }
+        // Skip host information - it's redundant and not useful in the description
+        // This fixes issue #1: removing host info that's not needed
 
         return description.trim();
     }
@@ -1374,6 +1362,39 @@ class BearraccudaParser {
         }
         
         return null;
+    }
+
+    // Generate a Google Maps URL from address and venue name
+    generateGmapsUrl(address, venueName, city, cityConfig = null) {
+        if (!address && !venueName) {
+            console.log(`🐻 Bearracuda: No address or venue name to generate gmaps URL`);
+            return '';
+        }
+
+        // Create search query - prefer address, fallback to venue name
+        let searchQuery = '';
+        if (address && address.trim()) {
+            searchQuery = address.trim();
+        } else if (venueName && venueName.trim()) {
+            searchQuery = venueName.trim();
+            // Add city to venue search for better results
+            if (city && cityConfig && cityConfig[city]) {
+                const cityData = cityConfig[city];
+                if (cityData.patterns && cityData.patterns.length > 0) {
+                    // Use the first pattern as the city name for search
+                    const cityName = cityData.patterns[0];
+                    searchQuery += ` ${cityName}`;
+                }
+            }
+        }
+
+        if (searchQuery) {
+            const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
+            console.log(`🐻 Bearracuda: Generated gmaps URL: ${gmapsUrl}`);
+            return gmapsUrl;
+        }
+
+        return '';
     }
 }
 
