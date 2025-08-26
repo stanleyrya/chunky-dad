@@ -226,11 +226,6 @@ class BearraccudaParser {
             // Extract city from URL and title
             const city = this.extractCityFromUrl(sourceUrl, cityConfig) || this.extractCityFromText(title, cityConfig);
             
-            // Enhance address with city information if it's incomplete
-            if (address && city && cityConfig && cityConfig[city]) {
-                address = this.enhanceAddressWithCity(address, city, cityConfig);
-            }
-            
             // Build description - prefer structured approach
             let description = '';
             if (structuredDescription && structuredDescription.length > 50) {
@@ -1366,61 +1361,6 @@ class BearraccudaParser {
         }
         
         return null;
-    }
-
-    // Enhance address with city information if it's incomplete
-    enhanceAddressWithCity(address, city, cityConfig) {
-        if (!address || !city || !cityConfig || !cityConfig[city]) {
-            return address;
-        }
-
-        const cityData = cityConfig[city];
-        
-        // Use the first pattern as the preferred city name, or find the longest one
-        let cityName = '';
-        if (cityData.patterns && cityData.patterns.length > 0) {
-            // Use the longest pattern as it's likely the most complete city name
-            cityName = cityData.patterns.reduce((longest, current) => 
-                current.length > longest.length ? current : longest
-            );
-        } else {
-            return address; // No patterns available
-        }
-
-        // Check if address already contains city information (city name or state)
-        const lowerAddress = address.toLowerCase();
-        const lowerCityName = cityName.toLowerCase();
-        
-        if (lowerAddress.includes(lowerCityName) || 
-            lowerAddress.includes(', il') || lowerAddress.includes(', ca') || 
-            lowerAddress.includes(', ny') || lowerAddress.includes(', wa') ||
-            lowerAddress.includes(', or') || lowerAddress.includes(', co') ||
-            lowerAddress.includes(', la') || lowerAddress.includes(', tx')) {
-            console.log(`🐻 Bearracuda: Address "${address}" already contains city/state info`);
-            return address;
-        }
-
-        // Check if address needs enhancement (incomplete street address)
-        const needsEnhancement = 
-            // Very short addresses
-            address.length < 15 ||
-            // No comma (likely missing city/state)
-            !address.includes(',') ||
-            // Just street number and name pattern
-            /^\d+\s+[NSEW]?\.?\s*[A-Za-z\s]+$/.test(address.trim());
-
-        if (needsEnhancement) {
-            // Add proper capitalization to city name
-            const properCityName = cityName.split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-            
-            const enhancedAddress = `${address.trim()}, ${properCityName}`;
-            console.log(`🐻 Bearracuda: Enhanced address "${address}" -> "${enhancedAddress}"`);
-            return enhancedAddress;
-        }
-
-        return address;
     }
 }
 
