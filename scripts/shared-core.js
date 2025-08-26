@@ -870,7 +870,13 @@ class SharedCore {
             'googleMapsLink': 'gmaps',
             'googlemaps': 'gmaps',
             'googlemapslink': 'gmaps',
-            'google maps': 'gmaps'
+            'google maps': 'gmaps',
+            
+            // Ticket/purchase aliases
+            'ticketurl': 'ticketUrl',
+            'ticket url': 'ticketUrl',
+            'tickets': 'ticketUrl',
+            'ticket': 'ticketUrl'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
