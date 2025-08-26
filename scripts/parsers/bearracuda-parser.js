@@ -896,15 +896,12 @@ class BearraccudaParser {
     buildFormattedDescription(sections) {
         let description = '';
 
-        // Skip timing information - it's redundant since we have startDate/endDate
-        // This fixes issues #1 and #2: removing time info that's already captured in dates
-
         // Add main description/theme
         if (sections.description) {
             description += sections.description + '\n\n';
         }
 
-        // Add entertainment information without colon format to avoid notes parsing issues
+        // Add entertainment information
         if (sections.entertainment.music.length > 0) {
             description += 'Music & Entertainment\n';
             sections.entertainment.music.forEach(performer => {
@@ -912,9 +909,6 @@ class BearraccudaParser {
             });
             description += '\n';
         }
-
-        // Skip host information - it's redundant and not useful in the description
-        // This fixes issue #1: removing host info that's not needed
 
         return description.trim();
     }
