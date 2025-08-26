@@ -752,7 +752,7 @@ class BearraccudaParser {
         return descriptions.length > 0 ? descriptions.join('\n\n') : '';
     }
 
-    // Extract structured description content with separate sections
+    // Extract structured content using consistent Bearracuda page structure
     extractStructuredDescription(html) {
         const sections = {
             timing: { start: '', end: '' },
@@ -763,139 +763,70 @@ class BearraccudaParser {
         };
 
         try {
-            // Extract timing information (start/end time in two columns)
-            const startTimeMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*Doors Open at ([^<]+)/i);
-            if (startTimeMatch) {
-                sections.timing.start = startTimeMatch[1].trim();
+            // STRUCTURE-BASED EXTRACTION leveraging consistent elementor patterns
+            
+            // 1. TIMING: Always two 50% columns with text-editor widgets containing "Doors Open" and "Party Goes"
+            const timingSection = html.match(/<section[^>]*elementor-section[^>]*>[\s\S]*?<div[^>]*elementor-col-50[^>]*>[\s\S]*?<div[^>]*text-editor[^>]*>[\s\S]*?<div[^>]*elementor-widget-container[^>]*>\s*(Doors Open at [^<]+)\s*<\/div>[\s\S]*?<\/div>[\s\S]*?<div[^>]*elementor-col-50[^>]*>[\s\S]*?<div[^>]*text-editor[^>]*>[\s\S]*?<div[^>]*elementor-widget-container[^>]*>\s*(Party Goes Until [^<]+)\s*<\/div>/i);
+            if (timingSection) {
+                sections.timing.start = timingSection[1].trim();
+                sections.timing.end = timingSection[2].trim();
             }
 
-            const endTimeMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*Party Goes Until ([^<]+)/i);
-            if (endTimeMatch) {
-                sections.timing.end = endTimeMatch[1].trim();
-            }
-
-            // Extract venue information
-            const venueMatch = html.match(/<h2[^>]*class="[^"]*elementor-heading-title[^"]*"[^>]*>🪩&nbsp;&nbsp;([^<]+)<\/h2>/i);
+            // 2. VENUE: Always h2 heading with 🪩 emoji - the bar is ALWAYS in this container
+            const venueMatch = html.match(/<h2[^>]*elementor-heading-title[^>]*>🪩&nbsp;&nbsp;([^<]+)<\/h2>/i);
             if (venueMatch) {
                 sections.location.venue = venueMatch[1].replace(/&nbsp;/g, ' ').trim();
             }
 
-            // Extract address - look for address right after venue
-            const addressPatterns = [
-                // Look for address in elementor widget container after venue
-                /<h2[^>]*>🪩&nbsp;&nbsp;[^<]+<\/h2>[^<]*<\/div>[^<]*<\/div>[^<]*<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*([^<]*\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*(?:WA|CA|OR|NY|TX|FL|IL|CO|NV)[^<]*)<\/div>/i,
-                // Fallback pattern for address in any elementor container
-                /<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*([^<]*\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*(?:WA|CA|OR|NY|TX|FL|IL|CO|NV)[^<]*)<\/div>/i
-            ];
-            
-            for (const pattern of addressPatterns) {
-                const addressMatch = html.match(pattern);
+            // 3. ADDRESS: ALWAYS immediately follows venue in the very next text-editor widget
+            if (sections.location.venue) {
+                // Use the venue as anchor to find address in next widget
+                const addressMatch = html.match(new RegExp(`<h2[^>]*>🪩&nbsp;&nbsp;${sections.location.venue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<\\/h2>[\\s\\S]*?<div[^>]*text-editor[^>]*>[\\s\\S]*?<div[^>]*elementor-widget-container[^>]*>\\s*([^<]*\\d+[^<]*(?:St|Ave|Rd|Blvd|Way|Drive|Lane)[^<]*)<\\/div>`, 'i'));
                 if (addressMatch) {
-                    const address = addressMatch[1].trim();
-                    // Only capture if it looks like a real address
-                    if (address && address.length > 10 && /\d/.test(address) && /(St|Ave|Rd|Blvd|Way|Drive|Lane)/.test(address)) {
-                        sections.location.address = address;
-                        break;
-                    }
+                    sections.location.address = addressMatch[1].replace(/&nbsp;/g, ' ').trim();
                 }
             }
 
-            // Extract event description/theme
-            const descriptionPatterns = [
-                // Look for event theme and attire descriptions
-                /<div[^>]*class="[^"]*x14z9mp[^"]*"[^>]*>([^<]*(?:SERIOUS WOOD|boots|plaid|jeans|flannel|suspenders|overalls|nut huggers)[^<]*(?:<br[^>]*>[^<]*)*)<\/div>/gi,
-                // Look for other descriptive content
-                /<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>([^<]*(?:cruise|meet|consent|clothing|phone|photos|floor|wristband|adventure|choose|theme|attire)[^<]*)<\/div>/gi
-            ];
-
-            let descriptions = [];
-            for (const pattern of descriptionPatterns) {
-                let match;
-                while ((match = pattern.exec(html)) !== null) {
-                    let desc = match[1]
-                        .replace(/<br[^>]*>/gi, '\n')
-                        .replace(/&nbsp;/g, ' ')
-                        .replace(/&amp;/g, '&')
-                        .replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>')
-                        .replace(/&quot;/g, '"')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-                    
-                    if (desc && desc.length > 10 && !this.isCookieConsentText(desc) && !this.isUnwantedContent(desc)) {
-                        descriptions.push(desc);
-                    }
-                }
+            // 4. DESCRIPTION: Look for x14z9mp class content (Facebook-style description container)
+            const descriptionMatch = html.match(/<div[^>]*x14z9mp[^>]*>([\s\S]*?)<\/div>/i);
+            if (descriptionMatch) {
+                sections.description = descriptionMatch[1]
+                    .replace(/<br[^>]*>/gi, '\n')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .trim();
             }
-            sections.description = descriptions.join('\n\n');
 
-            // Extract music & entertainment
-            const musicMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*🎧[^<]*<strong>Music[^<]*Entertainment<\/strong><br>(<p>[^<]+<\/p>\s*)*(<p>[^<]+<\/p>)*/i);
+            // 5. ENTERTAINMENT: Look for 🎧 and 🎤 sections (emojis are consistent markers)
+            const musicMatch = html.match(/🎧[^<]*<strong>Music[^<]*Entertainment<\/strong><br>([\s\S]*?)(?=<\/div>)/i);
             if (musicMatch) {
-                const musicContent = musicMatch[0];
-                const performers = musicContent.match(/<p>([^<]+)<\/p>/g);
+                const performers = musicMatch[1].match(/<p>([^<]+)<\/p>/g);
                 if (performers) {
-                    sections.entertainment.music = performers.map(p => p.replace(/<\/?p>/g, '').trim()).filter(p => p);
+                    sections.entertainment.music = performers
+                        .map(p => p.replace(/<\/?p>/g, '').trim())
+                        .filter(p => p && p !== '&nbsp;');
                 }
             }
 
-            // Extract host information
-            const hostMatch = html.match(/<div[^>]*class="[^"]*elementor-widget-container[^"]*"[^>]*>\s*🎤[^<]*<strong>Hosted by<\/strong><br>(<p>[^<]+<\/p>\s*)*(<p>[^<]+<\/p>)*/i);
+            const hostMatch = html.match(/🎤[^<]*<strong>Hosted by<\/strong><br>([\s\S]*?)(?=<\/div>)/i);
             if (hostMatch) {
-                const hostContent = hostMatch[0];
-                const hosts = hostContent.match(/<p>([^<]+)<\/p>/g);
+                const hosts = hostMatch[1].match(/<p>([^<]+)<\/p>/g);
                 if (hosts) {
-                    sections.entertainment.host = hosts.map(h => h.replace(/<\/?p>/g, '').trim()).filter(h => h && h !== '&nbsp;');
+                    sections.entertainment.host = hosts
+                        .map(h => h.replace(/<\/?p>/g, '').trim())
+                        .filter(h => h && h !== '&nbsp;');
                 }
             }
 
-            // Extract Facebook event link - account for multiline HTML structure
-            const facebookPatterns = [
-                /<a[^>]*href="(https:\/\/www\.facebook\.com\/events\/[^"]+)"[^>]*>[\s\S]*?RSVP[\s\S]*?<\/a>/i,
-                /<a[^>]*href="(https:\/\/www\.facebook\.com\/events\/[^"]+)"/i
-            ];
-            for (const pattern of facebookPatterns) {
-                const facebookMatch = html.match(pattern);
-                if (facebookMatch) {
-                    sections.links.facebook = facebookMatch[1];
-                    break;
-                }
-            }
+            // 6. ROBUST BUTTON EXTRACTION: Use elementor-button structure (works for ANY ticket provider)
+            this.extractAllButtons(html, sections);
 
-            // Extract ticket links (Eventbrite and others) - account for multiline HTML structure
-            const eventbritePatterns = [
-                /<a[^>]*href="(https:\/\/www\.eventbrite\.com\/[^"]+)"[^>]*>[\s\S]*?(?:Get Tickets|Tickets)[\s\S]*?<\/a>/i,
-                /<a[^>]*href="(https:\/\/www\.eventbrite\.com\/[^"]+)"/i
-            ];
-            for (const pattern of eventbritePatterns) {
-                const eventbriteMatch = html.match(pattern);
-                if (eventbriteMatch) {
-                    sections.links.eventbrite = eventbriteMatch[1];
-                    sections.links.tickets = eventbriteMatch[1]; // Use eventbrite as primary ticket link
-                    break;
-                }
-            }
-            
-            // If no eventbrite link found, look for other ticket links
-            if (!sections.links.tickets) {
-                const ticketPatterns = [
-                    /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?(?:Get Tickets|Tickets|Buy Tickets)[\s\S]*?<\/a>/i,
-                    /<a[^>]*href="([^"]+)"[^>]*>[^<]*(?:Get Tickets|Tickets|Buy Tickets)[^<]*<\/a>/i
-                ];
-                for (const pattern of ticketPatterns) {
-                    const ticketMatch = html.match(pattern);
-                    if (ticketMatch) {
-                        sections.links.tickets = ticketMatch[1];
-                        break;
-                    }
-                }
-            }
-
-            // Extract Google Maps place ID from embedded map
+            // 7. PLACE ID: Extract from any Google Maps embed
             const placeIdPatterns = [
-                // Look for place_id in Google Maps iframe or links
                 /place_id=([A-Za-z0-9_-]+)/i,
-                // Look for cid parameter (another form of place ID)
                 /cid=(\d+)/i
             ];
             
@@ -908,22 +839,58 @@ class BearraccudaParser {
             }
 
         } catch (error) {
-            console.log(`🐻 Bearracuda: Error extracting structured description: ${error}`);
+            console.log(`🐻 Bearracuda: Error extracting structured description: ${error.message}`);
         }
 
         return sections;
+    }
+
+    // Extract ALL buttons using consistent elementor structure - future-proof for any ticket provider
+    extractAllButtons(html, sections) {
+        // Find all elementor buttons and categorize by text content
+        const buttonPattern = /<a[^>]*class="[^"]*elementor-button[^"]*"[^>]*href="([^"]+)"[^>]*>[\s\S]*?<span[^>]*elementor-button-text[^>]*>([^<]+)<\/span>[\s\S]*?<\/a>/gi;
+        let match;
+        
+        while ((match = buttonPattern.exec(html)) !== null) {
+            const url = match[1];
+            const text = match[2].trim().toLowerCase();
+            
+            // Categorize based on button text (flexible for future providers)
+            if (text.includes('rsvp')) {
+                sections.links.facebook = url;
+            } else if (text.includes('ticket') || text.includes('buy') || text.includes('purchase')) {
+                sections.links.tickets = url;
+                
+                // Also categorize by URL domain for specific tracking
+                if (url.includes('eventbrite.com')) {
+                    sections.links.eventbrite = url;
+                }
+                // Future: could add ticketmaster.com, stubhub.com, etc.
+            }
+        }
+        
+        // Log what buttons we found for debugging
+        const buttonTexts = [];
+        const debugButtonPattern = /<span[^>]*elementor-button-text[^>]*>([^<]+)<\/span>/gi;
+        let debugMatch;
+        while ((debugMatch = debugButtonPattern.exec(html)) !== null) {
+            buttonTexts.push(debugMatch[1].trim());
+        }
+        if (buttonTexts.length > 0) {
+            console.log(`🐻 Bearracuda: Found buttons: ${buttonTexts.join(', ')}`);
+        }
     }
 
     // Build formatted description from structured sections
     buildFormattedDescription(sections) {
         let description = '';
 
-        // Add timing information
+        // Add timing information (already includes "Doors Open at" and "Party Goes Until")
         if (sections.timing.start || sections.timing.end) {
-            if (sections.timing.start) description += `Doors Open at ${sections.timing.start}`;
+            if (sections.timing.start) description += sections.timing.start;
             if (sections.timing.end) {
                 if (description) description += ' - ';
-                description += `Party Goes Until ${sections.timing.end}`;
+                description += sections.timing.end;
             }
             description += '\n\n';
         }
