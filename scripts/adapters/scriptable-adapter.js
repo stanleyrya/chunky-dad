@@ -213,8 +213,7 @@ class ScriptableAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
-            console.log(`📱 Scriptable: Starting HTTP request to ${url}`);
-            console.log(`📱 Scriptable: Request options: ${JSON.stringify(options)}`);
+
             
             const request = new Request(url);
             request.method = options.method || 'GET';
@@ -224,41 +223,25 @@ class ScriptableAdapter {
                 ...options.headers
             };
             
-            console.log(`📱 Scriptable: Request method: ${request.method}`);
-            console.log(`📱 Scriptable: Request headers: ${JSON.stringify(request.headers)}`);
-            
             if (options.body) {
                 request.body = options.body;
-                console.log(`📱 Scriptable: Request body length: ${options.body.length}`);
             }
             
-            console.log(`📱 Scriptable: Executing HTTP request...`);
             const response = await request.loadString();
             
-            // Enhanced debugging - log response details
+            // Check response status
             const statusCode = request.response ? request.response.statusCode : 200;
-            const headers = request.response ? request.response.headers : {};
-            
-            console.log(`📱 Scriptable: Response received`);
-            console.log(`📱 Scriptable: Response status: ${statusCode}`);
-            console.log(`📱 Scriptable: Response headers: ${JSON.stringify(headers)}`);
-            console.log(`📱 Scriptable: Response length: ${response ? response.length : 0} characters`);
             
             if (statusCode >= 400) {
                 throw new Error(`HTTP ${statusCode} error from ${url}`);
             }
             
             if (response && response.length > 0) {
-                console.log(`📱 Scriptable: ✓ Successfully fetched ${response.length} characters of HTML from ${url}`);
-                // Log first 200 characters for debugging (truncated)
-                const preview = response.substring(0, 200).replace(/\s+/g, ' ');
-                console.log(`📱 Scriptable: Response preview: ${preview}...`);
-                
                 return {
                     html: response,
                     url: url,
                     statusCode: statusCode,
-                    headers: headers
+                    headers: request.response ? request.response.headers : {}
                 };
             } else {
                 console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
@@ -275,17 +258,11 @@ class ScriptableAdapter {
     // Configuration Loading
     async loadConfiguration() {
         try {
-            console.log('📱 Scriptable: Starting configuration loading process...');
-            console.log('📱 Scriptable: Loading configuration from iCloud Drive/Scriptable/scraper-input.js');
+
             
             const fm = FileManager.iCloud();
-            console.log('📱 Scriptable: ✓ FileManager.iCloud() created');
-            
             const scriptableDir = fm.documentsDirectory();
-            console.log(`📱 Scriptable: Documents directory: ${scriptableDir}`);
-            
             const configPath = fm.joinPath(scriptableDir, 'scraper-input.js');
-            console.log(`📱 Scriptable: Configuration path: ${configPath}`);
             
             if (!fm.fileExists(configPath)) {
                 console.error(`📱 Scriptable: ✗ Configuration file not found at: ${configPath}`);
@@ -299,32 +276,22 @@ class ScriptableAdapter {
                 throw new Error('Configuration file not found at iCloud Drive/Scriptable/scraper-input.js');
             }
             
-            console.log('📱 Scriptable: ✓ Configuration file exists, reading...');
             const configText = fm.readString(configPath);
-            console.log(`📱 Scriptable: Configuration text length: ${configText?.length || 0} characters`);
             
             if (!configText || configText.trim().length === 0) {
                 throw new Error('Configuration file is empty');
             }
             
-            console.log('📱 Scriptable: Loading JavaScript configuration...');
             // Use importModule to load the JS configuration file
             const configModule = importModule('scraper-input');
             const config = configModule || eval(configText);
-            console.log('📱 Scriptable: ✓ JavaScript configuration loaded successfully');
             
             // Validate configuration structure
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');
             }
             
-            console.log('📱 Scriptable: ✓ Configuration loaded successfully');
-            console.log(`📱 Scriptable: Found ${config.parsers?.length || 0} parser configurations`);
-            
-            // Log parser details
-            config.parsers.forEach((parser, i) => {
-                console.log(`📱 Scriptable: Parser ${i + 1}: ${parser.name} (${parser.parser}) - ${parser.urls?.length || 0} URLs`);
-            });
+
             
             return config;
             
@@ -372,6 +339,9 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
             
             let processedCount = 0;
+            const failedEvents = [];
+            const actionCounts = { merge: [], update: [], skip: [], create: [] };
+            
             for (const event of analyzedEvents) {
                 try {
                     const city = event.city || 'default';
@@ -380,27 +350,10 @@ class ScriptableAdapter {
                     
                     switch (event._action) {
                         case 'merge':
-                            console.log(`📱 Scriptable: Merging event: ${event.title}`);
+                            actionCounts.merge.push(event.title);
                             const targetEvent = event._existingEvent;
                             
-                            // Show what changes will be applied
-                            console.log('\n📊 MERGE CHANGES:');
-                            console.log('─'.repeat(60));
-                            
-                            if (event._changes && event._changes.length > 0) {
-                                console.log(`✅ APPLYING CHANGES: ${event._changes.join(', ')}`);
-                                event._changes.forEach(field => {
-                                    const oldValue = targetEvent[field] || '';
-                                    const newValue = event[field] || '';
-                                    const oldDisplay = oldValue.length > 30 ? oldValue.substring(0, 27) + '...' : oldValue;
-                                    const newDisplay = newValue.length > 30 ? newValue.substring(0, 27) + '...' : newValue;
-                                    console.log(`   ${field}: "${oldDisplay}" → "${newDisplay}"`);
-                                });
-                            } else {
-                                console.log('ℹ️  NO CHANGES NEEDED - event already up to date');
-                            }
-                            
-                            console.log('─'.repeat(60));
+                            // Track merge details for later summary (verbose details removed for cleaner logs)
                             
                             // Apply the final merged values (event object already contains final values)
                             targetEvent.title = event.title;
@@ -415,7 +368,7 @@ class ScriptableAdapter {
                             break;
                             
                         case 'update':
-                            console.log(`📱 Scriptable: Updating event: ${event.title}`);
+                            actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
                             // For updates (exact duplicates), replace everything
@@ -437,18 +390,18 @@ class ScriptableAdapter {
                                 updateTarget.url = event.url;
                             }
                             
-                            console.log(`📱 Scriptable: Changes to apply: ${updateChanges.length > 0 ? updateChanges.join(', ') : 'none'}`);
+                            // Changes tracked in summary (removed verbose per-event logging)
                             
                             await updateTarget.save();
                             processedCount++;
                             break;
                             
                         case 'conflict':
-                            console.log(`📱 Scriptable: Skipping conflicted event: ${event.title} (${event._analysis?.reason || 'conflict detected'})`);
+                            actionCounts.skip.push(event.title);
                             break;
                             
                         case 'new':
-                            console.log(`📱 Scriptable: Creating new event: ${event.title}`);
+                            actionCounts.create.push(event.title);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
                             calendarEvent.startDate = event.startDate;
@@ -467,11 +420,28 @@ class ScriptableAdapter {
                     }
                     
                 } catch (error) {
-                    console.log(`📱 Scriptable: ✗ Failed to process event "${event.title}": ${error.message}`);
+                    failedEvents.push({ title: event.title, error: error.message });
                 }
             }
             
-            console.log(`📱 Scriptable: ✓ Successfully processed ${processedCount} events to calendar`);
+            // Log smart summary of actions and results
+            const totalActions = Object.values(actionCounts).reduce((sum, arr) => sum + arr.length, 0);
+            if (totalActions > 0) {
+                const actionSummary = [];
+                if (actionCounts.create.length > 0) actionSummary.push(`${actionCounts.create.length} created`);
+                if (actionCounts.merge.length > 0) actionSummary.push(`${actionCounts.merge.length} merged`);
+                if (actionCounts.update.length > 0) actionSummary.push(`${actionCounts.update.length} updated`);
+                if (actionCounts.skip.length > 0) actionSummary.push(`${actionCounts.skip.length} skipped`);
+                
+                console.log(`📱 Scriptable: ✓ Processed ${totalActions} events: ${actionSummary.join(', ')}`);
+            }
+            
+            if (failedEvents.length > 0) {
+                console.log(`📱 Scriptable: ✗ Failed to process ${failedEvents.length} events: ${failedEvents.map(f => f.title).join(', ')}`);
+                // Log first error for debugging
+                console.log(`📱 Scriptable: First error: ${failedEvents[0].error}`);
+            }
+
             return processedCount;
             
         } catch (error) {
@@ -1101,14 +1071,11 @@ class ScriptableAdapter {
             // Present using WebView
             await WebView.loadHTML(html, null, null, true);
             
-            console.log('📱 Scriptable: ✓ Rich HTML display completed');
+
             
             // After displaying results, prompt for calendar execution if we have analyzed events
             // Don't prompt when displaying saved runs (they should use isDryRun override instead)
-            console.log('📱 Scriptable: Debug - Checking execution prompt conditions:');
-            console.log(`📱 Scriptable: - analyzedEvents: ${results.analyzedEvents?.length || 0}`);
-            console.log(`📱 Scriptable: - calendarEvents: ${results.calendarEvents || 0}`);
-            console.log(`📱 Scriptable: - _isDisplayingSavedRun: ${results._isDisplayingSavedRun || false}`);
+
             
             if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
                 // Check if we have any events from non-dry-run parsers
@@ -1144,16 +1111,16 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
             // Fallback to UITable
             try {
-                console.log('📱 Scriptable: Attempting UITable fallback...');
+
                 await this.presentUITableFallback(results);
             } catch (tableError) {
                 console.log(`📱 Scriptable: ✗ UITable fallback also failed: ${tableError.message}`);
                 // Final fallback to QuickLook
                 try {
-                    console.log('📱 Scriptable: Attempting QuickLook fallback...');
+
                     const summary = this.createResultsSummary(results);
                     await QuickLook.present(summary, false);
-                    console.log('📱 Scriptable: ✓ QuickLook display completed');
+
                 } catch (quickLookError) {
                     console.log(`📱 Scriptable: ✗ All display methods failed: ${quickLookError.message}`);
                 }
@@ -2749,10 +2716,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             table.addRow(actionsRow);
             
-            console.log('📱 Scriptable: Presenting rich UI table...');
+
             await table.present(false); // Present in normal mode (not fullscreen)
             
-            console.log('📱 Scriptable: ✓ UITable display completed');
+
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to present UITable: ${error.message}`);
