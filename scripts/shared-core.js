@@ -1195,9 +1195,10 @@ class SharedCore {
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
         // Always generate if gmaps field is empty or undefined - merge strategies are handled later
-        console.log(`🗺️ SharedCore: Checking if gmaps generation needed - current gmaps: "${event.gmaps}"`);
+        console.log(`🗺️ SharedCore: Checking if gmaps generation needed - current gmaps: "${event.gmaps}" (type: ${typeof event.gmaps})`);
+        console.log(`🗺️ SharedCore: Available data for URL generation - address: "${event.address}", placeId: "${event.placeId}", location: "${event.location}"`);
         if (!event.gmaps) {
-            console.log(`🗺️ SharedCore: gmaps field is empty, proceeding with URL generation`);
+            console.log(`🗺️ SharedCore: gmaps field is empty/falsy, proceeding with URL generation`);
             // Try to enhance incomplete addresses with city information before gmaps generation
             if (event.address && event.city && !this.isFullAddress(event.address)) {
                 const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);

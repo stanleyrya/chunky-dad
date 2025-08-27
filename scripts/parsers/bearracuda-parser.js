@@ -199,7 +199,13 @@ class BearraccudaParser {
                 console.log(`🐻 Bearracuda: Using structured address: "${address}"`);
             } else {
                 address = this.extractAddress(html);
-                console.log(`🐻 Bearracuda: Using fallback address extraction`);
+                console.log(`🐻 Bearracuda: Using fallback address extraction: "${address}"`);
+            }
+            
+            // DEBUG: Log address extraction results
+            console.log(`🐻 Bearracuda: Final address for "${title}": "${address}" (length: ${address.length})`);
+            if (!address) {
+                console.log(`🐻 Bearracuda: WARNING - No address found for "${title}", gmaps URL generation may fail`);
             }
             
             // Extract entertainment/performers
