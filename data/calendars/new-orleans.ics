@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
 DTSTART:20250830T060000Z
 DTEND:20250830T110000Z
-DTSTAMP:20250827T041731Z
+DTSTAMP:20250827T062053Z
 UID:52052D2B-7191-47D1-AB78-D14C65C37F55
 CREATED:20250825T034003Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -18,9 +18,10 @@ DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
  /uploads/2025/04/cuda-nola-august-2025-web.jpg\nfacebook: https://www.faceb
  ook.com/share/1EZ2P4X4Ek/\nticketUrl: https://www.ticketmaster.com/bearracu
  da-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4\nshortName: Bear
- -rac-uda\ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-
- 2025-08-30-new-orleans
-LAST-MODIFIED:20250827T031816Z
+ -rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://m
+ aps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112\nkey
+ : bearracuda-2025-08-30-new-orleans
+LAST-MODIFIED:20250827T041736Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
