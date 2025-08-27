@@ -1069,18 +1069,13 @@ class BearraccudaParser {
             
             console.log(`🐻 Bearracuda: Extracted ${urls.length} additional event links`);
             
-            // Log found URLs for debugging - show unique URLs only
+            // Log all unique URLs found for complete visibility
             if (urls.length > 0) {
                 const uniqueUrls = [...new Set(urls)];
-                console.log(`🐻 Bearracuda: Found ${uniqueUrls.length} unique event URLs`);
-                // Only log individual URLs if there are 5 or fewer, otherwise just show count
-                if (uniqueUrls.length <= 5) {
-                    uniqueUrls.forEach((url, index) => {
-                        console.log(`🐻 Bearracuda: ${index + 1}. ${url}`);
-                    });
-                } else {
-                    console.log(`🐻 Bearracuda: URLs include: ${uniqueUrls.slice(0, 3).join(', ')} ... and ${uniqueUrls.length - 3} more`);
-                }
+                console.log(`🐻 Bearracuda: Found ${uniqueUrls.length} unique event URLs:`);
+                uniqueUrls.forEach((url, index) => {
+                    console.log(`🐻 Bearracuda: ${index + 1}. ${url}`);
+                });
             } else {
                 console.log(`🐻 Bearracuda: No valid URLs found. Debugging info:`);
                 console.log(`🐻 Bearracuda: - HTML contains 'bearracuda.com': ${html.includes('bearracuda.com')}`);
