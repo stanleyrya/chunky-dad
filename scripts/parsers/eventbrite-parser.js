@@ -48,19 +48,30 @@ class EventbriteParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
             
-            // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
-            const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData);
-            if (jsonEvents.length > 0) {
-                console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
-                events.push(...jsonEvents);
-            } else {
-                console.log('🎫 Eventbrite: No events found in JSON data - this may be an individual event page or empty organizer page');
-            }
-            
-            // Extract additional URLs if required (regardless of JSON vs HTML parsing)
+            // Check if this is an individual event detail page based on URL pattern
+            const isDetailPage = /\/e\//.test(htmlData.url);
             let additionalLinks = [];
-            if (parserConfig.requireDetailPages) {
-                additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
+            
+            if (isDetailPage) {
+                // Process individual event detail page
+                console.log('🎫 Eventbrite: Processing individual event detail page');
+                const detailEvents = this.extractEventsFromJson(html, parserConfig, htmlData);
+                events.push(...detailEvents);
+            } else {
+                // Process organizer/main page with multiple events
+                console.log('🎫 Eventbrite: Processing organizer/main page');
+                const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData);
+                if (jsonEvents.length > 0) {
+                    console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
+                    events.push(...jsonEvents);
+                } else {
+                    console.log('🎫 Eventbrite: No events found in JSON data - may be empty organizer page');
+                }
+                
+                // Extract additional URLs if required (for main pages only)
+                if (parserConfig.requireDetailPages) {
+                    additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
+                }
             }
             
             console.log(`🎫 Eventbrite: Found ${events.length} events, ${additionalLinks.length} additional links`);
