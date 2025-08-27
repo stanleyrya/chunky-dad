@@ -48,8 +48,8 @@ class BearraccudaParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
             
-            // Check if this is an individual event page
-            const isDetailPage = this.isEventDetailPage(html, htmlData.url, cityConfig);
+            // Check if this is an individual event page based on URL pattern
+            const isDetailPage = /\/events\/[^\/]+\/$/.test(htmlData.url);
 
             
             let additionalLinks = [];
@@ -101,71 +101,7 @@ class BearraccudaParser {
         }
     }
 
-    // Check if this is an individual event detail page
-    isEventDetailPage(html, url, cityConfig = null) {
-        // Check URL pattern: /events/{city-event}/
-        if (!/\/events\/[^\/]+\/$/.test(url)) {
-            console.log(`🐻 Bearracuda: URL pattern check failed for: ${url}`);
-            return false;
-        }
-        
-        // Enhanced detection with more indicators and better logging
-        const indicators = [
-            { name: 'calendar emoji', test: () => html.includes('📅') },
-            { name: 'disco ball emoji', test: () => html.includes('🪩') },
-            { name: 'doors open text', test: () => html.includes('Doors Open') },
-            { name: 'party goes until text', test: () => html.includes('Party Goes Until') },
-            { name: 'elementor heading', test: () => html.includes('elementor-heading-title') },
-            { name: 'heretic venue', test: () => html.includes('Heretic') },
-            { name: 'bearracuda brand', test: () => html.includes('bearracuda') || html.includes('Bearracuda') },
-            { name: 'event page title', test: () => html.includes('<title>') && !html.includes('Page not found') },
-            { name: 'wp-content', test: () => html.includes('wp-content') }, // WordPress content indicator
-            { name: 'elementor widget', test: () => html.includes('elementor-widget') }, // Elementor page builder
-            { name: 'event meta', test: () => html.includes('events/') && html.includes('wp-json') }, // WordPress event post
-            { name: 'event schema', test: () => html.includes('"@type":"Event"') }, // JSON-LD event schema
-            { name: 'city name in content', test: () => {
-                if (!cityConfig) return false;
-                return Object.values(cityConfig).some(city => 
-                    city.patterns && city.patterns.some(pattern => 
-                        html.toLowerCase().includes(pattern.toLowerCase())
-                    )
-                );
-            }},
-            // Additional indicators for current Bearracuda site structure
-            { name: 'wordpress post', test: () => html.includes('wp-json/wp/v2/events/') }, // WordPress event post type
-            { name: 'event content', test: () => html.includes('event') || html.includes('Event') },
-            { name: 'dance party content', test: () => html.includes('dance') || html.includes('party') || html.includes('Party') },
-            { name: 'venue content', test: () => html.includes('venue') || html.includes('Venue') || html.includes('location') },
-            { name: 'date content', test: () => /\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(html) },
-            { name: 'time content', test: () => /\d{1,2}:\d{2}\s*(am|pm|AM|PM)/.test(html) }
-        ];
-        
-        const matchingIndicators = indicators.filter(indicator => {
-            try {
-                return indicator.test();
-            } catch (error) {
-                console.log(`🐻 Bearracuda: Error testing indicator ${indicator.name}: ${error}`);
-                return false;
-            }
-        });
-        
-        console.log(`🐻 Bearracuda: Event page detection for ${url}:`);
-        console.log(`🐻 Bearracuda: Found ${matchingIndicators.length}/${indicators.length} indicators:`);
-        matchingIndicators.forEach(indicator => {
-            console.log(`🐻 Bearracuda: ✓ ${indicator.name}`);
-        });
-        
-        if (matchingIndicators.length === 0) {
-            console.log(`🐻 Bearracuda: No indicators found. HTML sample (first 500 chars):`);
-            console.log(`🐻 Bearracuda: ${html.substring(0, 500)}`);
-        }
-        
-        // Consider it an event page if we find at least 1 indicator (more flexible than before)
-        const isEventPage = matchingIndicators.length >= 1;
-        console.log(`🐻 Bearracuda: Event page detection result: ${isEventPage}`);
-        
-        return isEventPage;
-    }
+
 
     // Parse an individual event detail page
     parseEventDetailPage(html, sourceUrl, parserConfig = {}, cityConfig = null) {
