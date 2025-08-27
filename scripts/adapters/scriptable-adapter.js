@@ -2328,6 +2328,12 @@ class ScriptableAdapter {
                         <span><a href="${this.escapeHtml(event.facebook)}" target="_blank" rel="noopener" style="color: #007aff;">Facebook</a></span>
                     </div>
                 ` : ''}
+                ${event.ticketUrl ? `
+                    <div class="event-detail">
+                        <span>🎫</span>
+                        <span><a href="${this.escapeHtml(event.ticketUrl)}" target="_blank" rel="noopener" style="color: #007aff;">Tickets</a></span>
+                    </div>
+                ` : ''}
                 ${event.website ? `
                     <div class="event-detail">
                         <span>🌐</span>
@@ -3045,6 +3051,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'email': 35,
             'googleMapsLink': 36,  // canonical Google Maps
             'gmaps': 36,           // alias fallback
+            'ticketUrl': 37,       // ticket purchase links
             
             // Event details
             'price': 40,
