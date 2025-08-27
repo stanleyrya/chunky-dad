@@ -15,19 +15,12 @@ const scraperConfig = {
   parsers: [
     {
       name: "Megawoof America",
-      parser: "eventbrite",
       enabled: true,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
-      requireDetailPages: true,
-      maxAdditionalUrls: 20,
       urlDiscoveryDepth: 1,
       dryRun: false,
       daysToLookAhead: null,
-      mergeMode: "upsert",
-      urlFilters: {
-        include: ["eventbrite\\.com\\/e\\/"]
-      },
       fieldPriorities: {
         title: { priority: ["static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
@@ -50,19 +43,13 @@ const scraperConfig = {
     },
     {
       name: "Bear Happy Hour",
-      parser: "eventbrite",
       enabled: false,
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
-      requireDetailPages: true,
-      maxAdditionalUrls: 20,
+      maxAdditionalUrls: 15,
       urlDiscoveryDepth: 1,
       dryRun: false,
       daysToLookAhead: null,
-      mergeMode: "upsert",
-      urlFilters: {
-        include: ["eventbrite\\.com\\/e\\/"]
-      },
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "upsert" },
         shortName: { priority: ["static"], merge: "upsert" },
@@ -84,21 +71,15 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Events",
-      parser: "bearracuda",
       enabled: true,
       urls: [
         "https://bearracuda.com/"
       ],
       alwaysBear: true,
-      requireDetailPages: true,
-      maxAdditionalUrls: 20,
+      maxAdditionalUrls: undefined,
       urlDiscoveryDepth: 1,
       dryRun: false,
       daysToLookAhead: null,
-      mergeMode: "upsert",
-      urlFilters: {
-        include: ["bearracuda\\.com\\/events\\/"]
-      },
       keyTemplate: "bearracuda-${date}-${city}",
       fieldPriorities: {
         title: { priority: ["eventbrite", "bearracuda"], merge: "upsert" },
@@ -124,19 +105,12 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Eventbrite",
-      parser: "eventbrite",
       enabled: true,
       urls: ["https://www.eventbrite.com/o/bearracuda-21867032189"],
       alwaysBear: true,
-      requireDetailPages: true,
-      maxAdditionalUrls: 20,
       urlDiscoveryDepth: 1,
       dryRun: false,
       daysToLookAhead: null,
-      mergeMode: "upsert",
-      urlFilters: {
-        include: ["eventbrite\\.com\\/e\\/"]
-      },
       keyTemplate: "bearracuda-${date}-${city}",
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "upsert" },
