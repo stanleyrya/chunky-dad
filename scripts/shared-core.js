@@ -170,10 +170,13 @@ class SharedCore {
 
         await displayAdapter.logInfo(`SYSTEM: Processing: ${parserConfig.name} using ${parserName} parser`);
         await displayAdapter.logInfo(`SYSTEM: URLs to process: ${parserConfig.urls?.length || 0}`);
-        if (parserConfig.urls) {
+        if (parserConfig.urls && parserConfig.urls.length <= 3) {
+            // Only log individual URLs if there are 3 or fewer
             parserConfig.urls.forEach((url, i) => {
                 displayAdapter.logInfo(`SYSTEM:   URL ${i + 1}: ${url}`);
             });
+        } else if (parserConfig.urls && parserConfig.urls.length > 3) {
+            await displayAdapter.logInfo(`SYSTEM:   First URL: ${parserConfig.urls[0]} (and ${parserConfig.urls.length - 1} more)`);
         }
         
         const allEvents = [];
@@ -192,8 +195,6 @@ class SharedCore {
                 await displayAdapter.logInfo(`SYSTEM: Fetching URL ${i + 1}/${parserConfig.urls.length}: ${url}`);
                 const htmlData = await httpAdapter.fetchData(url);
                 
-                await displayAdapter.logInfo(`SYSTEM: HTML data received: ${htmlData?.html?.length || 0} characters`);
-                
                 // Detect parser for this specific URL (allows mid-run switching)
                 const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
                 const urlParser = parsers[urlParserName];
@@ -202,14 +203,12 @@ class SharedCore {
                     await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
                 }
                 
-                await displayAdapter.logInfo(`SYSTEM: Parsing events with ${urlParserName} parser...`);
-                // Pass parser config and city config separately
+                // Parse events (consolidated logging)
                 const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
                 
-                await displayAdapter.logInfo(`SYSTEM: Parse result: ${parseResult?.events?.length || 0} events found`);
-                if (parseResult?.additionalLinks) {
-                    await displayAdapter.logInfo(`SYSTEM: Additional links found: ${parseResult.additionalLinks.length}`);
-                }
+                const eventCount = parseResult?.events?.length || 0;
+                const linkCount = parseResult?.additionalLinks?.length || 0;
+                await displayAdapter.logInfo(`SYSTEM: Parsed ${htmlData?.html?.length || 0} chars → ${eventCount} events, ${linkCount} additional links`);
                 
                 if (parseResult.events) {
                     // Apply field priorities to determine which parser data to trust
@@ -228,11 +227,9 @@ class SharedCore {
 
                 // Process additional URLs if required (for enriching existing events, not creating new ones)
                 if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
-                    await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs for detail pages...`);
-                    
                     // Deduplicate additional URLs before processing
                     const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
-                    await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs to process`);
+                    await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
                     
                     await this.enrichEventsWithDetailPages(
                         allEvents,
@@ -261,17 +258,11 @@ class SharedCore {
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events
-        await displayAdapter.logInfo('SYSTEM: Filtering future events...');
+        await displayAdapter.logInfo(`SYSTEM: Filtering events: ${allEvents.length} total → processing...`);
         const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead);
-        await displayAdapter.logInfo(`SYSTEM: Future events: ${futureEvents.length}/${allEvents.length}`);
-        
-        await displayAdapter.logInfo('SYSTEM: Filtering bear events...');
         const bearEvents = this.filterBearEvents(futureEvents, parserConfig);
-        await displayAdapter.logInfo(`SYSTEM: Bear events: ${bearEvents.length}/${futureEvents.length}`);
-        
-        await displayAdapter.logInfo('SYSTEM: Deduplicating events...');
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
-        await displayAdapter.logInfo(`SYSTEM: Deduplicated events: ${deduplicatedEvents.length}/${bearEvents.length}`);
+        await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${deduplicatedEvents.length} final`);
 
         await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${deduplicatedEvents.length} bear events found`);
 
@@ -293,8 +284,7 @@ class SharedCore {
 
         for (const url of urlsToProcess) {
             if (processedUrls.has(url)) {
-                await displayAdapter.logInfo(`SYSTEM: Skipping already processed URL: ${url}`);
-                continue;
+                continue; // Skip already processed URLs without logging each one
             }
 
             processedUrls.add(url);
@@ -335,11 +325,9 @@ class SharedCore {
                 // Handle additional URLs if depth allows
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
                     if (shouldAllowMoreUrls) {
-                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs (depth ${currentDepth + 1} allowed)`);
-                        
                         // Deduplicate URLs before recursive processing
                         const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
-                        await displayAdapter.logInfo(`SYSTEM: After deduplication: ${deduplicatedUrls.length} unique URLs for depth ${currentDepth + 1}`);
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
                         
                         // Recursively process additional URLs if we haven't reached max depth
                         if (deduplicatedUrls.length > 0) {
@@ -362,8 +350,6 @@ class SharedCore {
                 
                 // Process detail page events - either enrich existing or add new events
                 if (parseResult.events && parseResult.events.length > 0) {
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
-                    
                     // Apply field priorities to detail page events (same as main page events)
                     // CRITICAL FIX: Detail page events need the same enrichment as main page events
                     const enrichedDetailEvents = parseResult.events.map(event => 
@@ -372,8 +358,7 @@ class SharedCore {
                     
                     // Add these events to the existing events collection for potential merging
                     existingEvents.push(...enrichedDetailEvents);
-                } else {
-                    await displayAdapter.logInfo(`SYSTEM: No new events found on detail page ${url}`);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
                 }
                 
             } catch (error) {
