@@ -1134,19 +1134,26 @@ class SharedCore {
     // Static method to generate iOS-compatible Google Maps URLs
     // Works on Android, iOS (including iOS 11+), and web without API tokens
     static generateGoogleMapsUrl({ coordinates, placeId, address }) {
+        console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}"`);
+        
         if (placeId && coordinates) {
             // Best case: use coordinates with place_id for maximum compatibility
+            console.log(`🗺️ SharedCore: Using place_id + coordinates method`);
             return `https://www.google.com/maps/search/?api=1&query=${coordinates.lat}%2C${coordinates.lng}&query_place_id=${placeId}`;
         } else if (placeId && address) {
             // Fallback: use address with place_id (graceful degradation if place_id doesn't exist)
+            console.log(`🗺️ SharedCore: Using place_id + address method`);
             return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}&query_place_id=${placeId}`;
         } else if (coordinates) {
             // Fallback: coordinates only
+            console.log(`🗺️ SharedCore: Using coordinates only method`);
             return `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
         } else if (address) {
             // Final fallback: address only
+            console.log(`🗺️ SharedCore: Using address only method`);
             return `https://maps.google.com/?q=${encodeURIComponent(address)}`;
         }
+        console.log(`🗺️ SharedCore: No valid data for URL generation, returning null`);
         return null;
     }
     
@@ -1157,6 +1164,9 @@ class SharedCore {
     // Enrich event with Google Maps links and city information
     enrichEventLocation(event) {
         if (!event) return event;
+        
+        console.log(`🗺️ SharedCore: Starting enrichEventLocation for "${event.title}"`);
+        console.log(`🗺️ SharedCore: Initial state - address: "${event.address}", location: "${event.location}", gmaps: "${event.gmaps}", placeId: "${event.placeId}"`);
         
         // DEBUG: Check URL field before enrichment
         const hadUrlBefore = 'url' in event;
@@ -1185,7 +1195,9 @@ class SharedCore {
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
         // Always generate if gmaps field is empty or undefined - merge strategies are handled later
+        console.log(`🗺️ SharedCore: Checking if gmaps generation needed - current gmaps: "${event.gmaps}"`);
         if (!event.gmaps) {
+            console.log(`🗺️ SharedCore: gmaps field is empty, proceeding with URL generation`);
             // Try to enhance incomplete addresses with city information before gmaps generation
             if (event.address && event.city && !this.isFullAddress(event.address)) {
                 const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);
@@ -1212,7 +1224,9 @@ class SharedCore {
                 address: event.address || null
             };
             
+            console.log(`🗺️ SharedCore: Calling generateGoogleMapsUrl with data:`, urlData);
             event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
+            console.log(`🗺️ SharedCore: generateGoogleMapsUrl returned: "${event.gmaps}"`);
             
             if (event.gmaps) {
                 const method = event.placeId ? 
@@ -1220,6 +1234,8 @@ class SharedCore {
                     (coordinates ? 'coordinates only' : 'address only');
                 console.log(`🗺️ SharedCore: Generated iOS-compatible Google Maps URL using ${method} for "${event.title}"`);
             }
+        } else {
+            console.log(`🗺️ SharedCore: Skipping gmaps generation - field already has value: "${event.gmaps}"`);
         }
         
         // Clean up location data based on what we have
@@ -1241,6 +1257,9 @@ class SharedCore {
         
         // Keep placeId for future URL generation - don't delete it
         // delete event.placeId;
+        
+        console.log(`🗺️ SharedCore: Completed enrichEventLocation for "${event.title}"`);
+        console.log(`🗺️ SharedCore: Final state - address: "${event.address}", location: "${event.location}", gmaps: "${event.gmaps}", placeId: "${event.placeId}"`);
         
         // DEBUG: Check URL field after enrichment
         const hasUrlAfter = 'url' in event;
