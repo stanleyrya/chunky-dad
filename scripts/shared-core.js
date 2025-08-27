@@ -34,9 +34,12 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
+        // Initialize logging level (can be overridden)
+        this.logLevel = 'INFO'; // DEBUG, INFO, WARN, ERROR
+        
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
-        console.log(`🌍 SharedCore: Using centralized cities configuration with ${Object.keys(cities).length} cities`);
+        this.log(`🌍 SharedCore: Using centralized cities configuration with ${Object.keys(cities).length} cities`);
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -64,8 +67,40 @@ class SharedCore {
             }
         }
         
-        console.log(`🌍 SharedCore: Converted ${Object.keys(cities).length} cities from config to ${Object.keys(cityMappings).length} mapping patterns`);
+        this.log(`🌍 SharedCore: Converted ${Object.keys(cities).length} cities from config to ${Object.keys(cityMappings).length} mapping patterns`);
         return cityMappings;
+    }
+
+    // ============================================================================
+    // LOGGING UTILITIES - Control verbosity while maintaining insights
+    // ============================================================================
+    
+    // Set logging level: DEBUG, INFO, WARN, ERROR
+    setLogLevel(level) {
+        this.logLevel = level;
+    }
+    
+    // Log with level control - only logs if level is appropriate
+    log(message, level = 'INFO') {
+        const levels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+        if (levels[level] >= levels[this.logLevel]) {
+            console.log(message);
+        }
+    }
+    
+    // Debug logging - only shows in DEBUG mode
+    debug(message) {
+        this.log(message, 'DEBUG');
+    }
+    
+    // Warning logging - shows in WARN and ERROR modes
+    warn(message) {
+        this.log(message, 'WARN');
+    }
+    
+    // Error logging - always shows
+    error(message) {
+        console.error(message);
     }
 
     // Detect parser type from URL - allows automatic parser selection based on URL patterns
