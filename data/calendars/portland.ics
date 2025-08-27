@@ -8,21 +8,20 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20251116T050000Z
 DTEND:20251116T100000Z
-DTSTAMP:20250827T025850Z
+DTSTAMP:20250827T041732Z
 UID:CA92B055-AF3F-4794-BF90-54987559FE94
 CREATED:20250817T231652Z
-DESCRIPTION:description: EPIC show at 11pm\nbar: Bossanova Ballroom\nwebsit
- e: https://www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-
- tickets-1557485975479\ncover: $24.89 - $30.54 (as of 8/21)\nimage: https://
- img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1087944093%2F301420936
- 599%2F1%2Foriginal.20250804-182354?crop=focalpoint&fit=crop&h=230&w=460&aut
- o=format%2Ccompress&q=75&sharp=10&fp-x=0.930871212121&fp-y=1.0&s=65164c3c70
- 7d77e7f7f438dcf3b0195d\ngmaps: https://www.google.com/maps/search/?api=1&qu
- ery=45.5227415%2C-122.6580938&query_place_id=59325025\nshortName: Bear-rac-
- uda\ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-2025-
- 11-16-portland\nurl: https://www.eventbrite.com/e/bearracuda-portland-satur
- day-november-15th-tickets-1557485975479
-LAST-MODIFIED:20250821T213404Z
+DESCRIPTION:url: https://www.eventbrite.com/e/bearracuda-portland-saturday-
+ november-15th-tickets-1557485975479\nkey: bearracuda-2025-11-16-portland\nd
+ escription: EPIC show at 11pm\nbar: Bossanova Ballroom\naddress: 722 E Burn
+ side\, Portland\, OR 97213\ncover: $24.89 - $30.54 (as of 8/26)\nimage: htt
+ ps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1087944093%2F3014
+ 20936599%2F1%2Foriginal.20250804-182354?crop=focalpoint&fit=crop&w=600&auto
+ =format%2Ccompress&q=75&sharp=10&fp-x=0.930871212121&fp-y=1.0&s=08bbf504c1b
+ 587e7252e5e9616adbd26\nshortName: Bear-rac-uda\ninstagram: https://www.inst
+ agram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&quer
+ y=45.5227415%2C-122.6580938&query_place_id=59325025
+LAST-MODIFIED:20250827T031819Z
 LOCATION:45.5227415\, -122.6580938
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -32,24 +31,27 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250914T080000Z
-DTEND:20250914T130000Z
-DTSTAMP:20250827T025850Z
+DTSTART:20250914T040000Z
+DTEND:20250914T090000Z
+DTSTAMP:20250827T041732Z
 UID:E0BA6861-892D-456D-9D6E-B53C61A7BF4C
 CREATED:20250817T231651Z
-DESCRIPTION:description: 16 YEAR ANNIVERSARY\n\nMusic & Entertainment\n• DJ
-  CACTUSHEAD (BEEFMINCE UK)\n• DJ Matt Stands\nbar: NOVA PDX\naddress: 722 E
-  Burnside\, Portland\, OR\nurl: https://bearracuda.com/events/pdx16/\nimage
- : https://bearracuda.com/wp-content/uploads/2025/04/cuda-portland-september
- _2025-web.jpg\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.co
- m/bearracuda\nkey: bearracuda-2025-09-14-portland\nMusic & Entertainment: •
-  DJ CACTUSHEAD (BEEFMINCE UK)\n• DJ Matt Stands\nHosted by: • Matt Bearracu
- da\nDoors Open at 9: 00 pm - Party Goes Until 2:00 am\nwebsite: https://www
- .eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-154622106
- 1819
-LAST-MODIFIED:20250826T211658Z
+DESCRIPTION:url: https://bearracuda.com/events/pdx16/\nkey: bearracuda-2025
+ -09-14-portland\ndescription: 16 YEAR ANNIVERSARY\nMusic & Entertainment\n•
+  DJ CACTUSHEAD (BEEFMINCE UK)\n• DJ Matt Stands\nbar: Bossanova Ballroom\na
+ ddress: 722 E Burnside\, Portland\, OR\ncover: $20.27 - $29.99 (as of 8/26)
+ \nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F10851
+ 23873%2F301420936599%2F1%2Foriginal.20250731-051036?crop=focalpoint&fit=cro
+ p&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.142992424242&fp-y=0.432
+ 142857143&s=83e9306ce45e7746aedfc9c1dd2b4639\nshortName: Bear-rac-uda\ninst
+ agram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/
+ maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=59325025\
+ nfacebook: https://www.facebook.com/events/751830650923430/\nticketUrl: htt
+ ps://www.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1
+ 546221061819
+LAST-MODIFIED:20250827T032642Z
 LOCATION:45.5227415\, -122.6580938
-SEQUENCE:1
+SEQUENCE:2
 STATUS:CONFIRMED
 SUMMARY:Bearracuda Portland 16 YEAR Anniversary
 TRANSP:OPAQUE
