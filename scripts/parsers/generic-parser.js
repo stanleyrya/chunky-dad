@@ -24,7 +24,6 @@ class GenericParser {
         this.config = {
             source: 'generic',
             urlDiscoveryDepth: 2,
-            maxAdditionalUrls: 15,
             ...config
         };
         

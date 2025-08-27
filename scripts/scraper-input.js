@@ -12,7 +12,7 @@
 // - requireDetailPages removed: Use urlDiscoveryDepth (1=no details, 2+=follow links)
 // - urlFilters removed: Parser auto-selection handles filtering
 // - mergeMode removed: Use field-level merge strategies
-// - maxAdditionalUrls optional: Can be undefined, number, or omitted
+// - maxAdditionalUrls removed: No artificial limits on URL processing
 
 const scraperConfig = {
   config: {
@@ -53,7 +53,6 @@ const scraperConfig = {
       enabled: false,
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
-      maxAdditionalUrls: 15,
       urlDiscoveryDepth: 1,
       dryRun: false,
       daysToLookAhead: null,
@@ -83,7 +82,6 @@ const scraperConfig = {
         "https://bearracuda.com/"
       ],
       alwaysBear: true,
-      maxAdditionalUrls: undefined,
       urlDiscoveryDepth: 1,
       dryRun: false,
       daysToLookAhead: null,

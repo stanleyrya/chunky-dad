@@ -277,8 +277,7 @@ class SharedCore {
     }
 
     async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null) {
-        const maxUrls = parserConfig.maxAdditionalUrls || 12;
-        const urlsToProcess = additionalLinks.slice(0, maxUrls);
+        const urlsToProcess = additionalLinks;
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
 
         await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
@@ -319,8 +318,7 @@ class SharedCore {
                 const shouldAllowMoreUrls = currentDepth < maxDepth;
                 const finalDetailPageConfig = {
                     ...detailPageConfig,
-                    urlDiscoveryDepth: shouldAllowMoreUrls ? detailPageConfig.urlDiscoveryDepth : 1,
-                    maxAdditionalUrls: shouldAllowMoreUrls ? detailPageConfig.maxAdditionalUrls : 0
+                    urlDiscoveryDepth: shouldAllowMoreUrls ? detailPageConfig.urlDiscoveryDepth : 1
                 };
                 
                 // Pass detail page config and city config separately

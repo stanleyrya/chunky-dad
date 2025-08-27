@@ -24,7 +24,6 @@ class BearraccudaParser {
         this.config = {
             source: 'bearracuda',
             urlDiscoveryDepth: 2, // Bearracuda uses individual event pages
-            maxAdditionalUrls: 20,
             ...config
         };
         
@@ -993,9 +992,9 @@ class BearraccudaParser {
                         patternCount++;
                     }
                     
-                    // Limit to prevent infinite loops (shared-core will also limit)
-                    if (urls.length >= (this.config.maxAdditionalUrls || 20)) {
-                        console.log(`🐻 Bearracuda: Reached maximum URL limit (${this.config.maxAdditionalUrls || 20})`);
+                    // Limit to prevent infinite loops
+                    if (urls.length >= 20) {
+                        console.log(`🐻 Bearracuda: Reached maximum URL limit (20)`);
                         break;
                     }
                 }
