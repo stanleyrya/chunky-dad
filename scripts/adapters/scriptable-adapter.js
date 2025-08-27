@@ -213,8 +213,7 @@ class ScriptableAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
-            console.log(`📱 Scriptable: Starting HTTP request to ${url}`);
-            console.log(`📱 Scriptable: Request options: ${JSON.stringify(options)}`);
+            console.log(`📱 Scriptable: Fetching ${url}`);
             
             const request = new Request(url);
             request.method = options.method || 'GET';
@@ -224,41 +223,27 @@ class ScriptableAdapter {
                 ...options.headers
             };
             
-            console.log(`📱 Scriptable: Request method: ${request.method}`);
-            console.log(`📱 Scriptable: Request headers: ${JSON.stringify(request.headers)}`);
-            
             if (options.body) {
                 request.body = options.body;
-                console.log(`📱 Scriptable: Request body length: ${options.body.length}`);
             }
             
-            console.log(`📱 Scriptable: Executing HTTP request...`);
             const response = await request.loadString();
             
-            // Enhanced debugging - log response details
+            // Check response status
             const statusCode = request.response ? request.response.statusCode : 200;
-            const headers = request.response ? request.response.headers : {};
-            
-            console.log(`📱 Scriptable: Response received`);
-            console.log(`📱 Scriptable: Response status: ${statusCode}`);
-            console.log(`📱 Scriptable: Response headers: ${JSON.stringify(headers)}`);
-            console.log(`📱 Scriptable: Response length: ${response ? response.length : 0} characters`);
             
             if (statusCode >= 400) {
                 throw new Error(`HTTP ${statusCode} error from ${url}`);
             }
             
             if (response && response.length > 0) {
-                console.log(`📱 Scriptable: ✓ Successfully fetched ${response.length} characters of HTML from ${url}`);
-                // Log first 200 characters for debugging (truncated)
-                const preview = response.substring(0, 200).replace(/\s+/g, ' ');
-                console.log(`📱 Scriptable: Response preview: ${preview}...`);
+                console.log(`📱 Scriptable: ✓ Fetched ${response.length} characters from ${url}`);
                 
                 return {
                     html: response,
                     url: url,
                     statusCode: statusCode,
-                    headers: headers
+                    headers: request.response ? request.response.headers : {}
                 };
             } else {
                 console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
@@ -275,17 +260,11 @@ class ScriptableAdapter {
     // Configuration Loading
     async loadConfiguration() {
         try {
-            console.log('📱 Scriptable: Starting configuration loading process...');
             console.log('📱 Scriptable: Loading configuration from iCloud Drive/Scriptable/scraper-input.js');
             
             const fm = FileManager.iCloud();
-            console.log('📱 Scriptable: ✓ FileManager.iCloud() created');
-            
             const scriptableDir = fm.documentsDirectory();
-            console.log(`📱 Scriptable: Documents directory: ${scriptableDir}`);
-            
             const configPath = fm.joinPath(scriptableDir, 'scraper-input.js');
-            console.log(`📱 Scriptable: Configuration path: ${configPath}`);
             
             if (!fm.fileExists(configPath)) {
                 console.error(`📱 Scriptable: ✗ Configuration file not found at: ${configPath}`);

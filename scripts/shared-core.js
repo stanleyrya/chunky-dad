@@ -34,12 +34,9 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
-        // Initialize logging level (can be overridden)
-        this.logLevel = 'INFO'; // DEBUG, INFO, WARN, ERROR
-        
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
-        this.log(`🌍 SharedCore: Using centralized cities configuration with ${Object.keys(cities).length} cities`);
+        console.log(`🌍 SharedCore: Using centralized cities configuration with ${Object.keys(cities).length} cities`);
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -67,40 +64,8 @@ class SharedCore {
             }
         }
         
-        this.log(`🌍 SharedCore: Converted ${Object.keys(cities).length} cities from config to ${Object.keys(cityMappings).length} mapping patterns`);
+        console.log(`🌍 SharedCore: Converted ${Object.keys(cities).length} cities from config to ${Object.keys(cityMappings).length} mapping patterns`);
         return cityMappings;
-    }
-
-    // ============================================================================
-    // LOGGING UTILITIES - Control verbosity while maintaining insights
-    // ============================================================================
-    
-    // Set logging level: DEBUG, INFO, WARN, ERROR
-    setLogLevel(level) {
-        this.logLevel = level;
-    }
-    
-    // Log with level control - only logs if level is appropriate
-    log(message, level = 'INFO') {
-        const levels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-        if (levels[level] >= levels[this.logLevel]) {
-            console.log(message);
-        }
-    }
-    
-    // Debug logging - only shows in DEBUG mode
-    debug(message) {
-        this.log(message, 'DEBUG');
-    }
-    
-    // Warning logging - shows in WARN and ERROR modes
-    warn(message) {
-        this.log(message, 'WARN');
-    }
-    
-    // Error logging - always shows
-    error(message) {
-        console.error(message);
     }
 
     // Detect parser type from URL - allows automatic parser selection based on URL patterns
@@ -529,10 +494,9 @@ class SharedCore {
     }
 
     createEventKey(event, format = null) {
-        // Debug the event structure
+        // Validate event structure
         if (typeof event.title !== 'string') {
-            console.log(`🔍 DEBUG: event.title type: ${typeof event.title}, value: ${JSON.stringify(event.title)}`);
-            console.log(`🔍 DEBUG: Full event object:`, JSON.stringify(event, null, 2));
+            console.error(`⚠️ SharedCore: Invalid event.title type: ${typeof event.title} for event: ${event.title}`);
         }
         
         // Determine the format to use
@@ -547,7 +511,7 @@ class SharedCore {
         }
         
         const key = this.generateKeyFromFormat(event, keyFormat);
-        console.log(`🔄 SharedCore: Generated key from format "${keyFormat}": "${key}" for event "${event.title}"`);
+
         
         return key;
     }
@@ -582,7 +546,7 @@ class SharedCore {
                 .replace(/^-+|-+$/g, '');
             
             if (normalizedTitle !== originalTitle) {
-                console.log(`🔄 SharedCore: Normalized title for deduplication: "${originalTitle}" → "${normalizedTitle}"`);
+
             }
         }
         
@@ -660,11 +624,9 @@ class SharedCore {
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
-                    // Debug: log when clobber is applied to any field
+                    // Only log when clobber actually changes a value
                     if (scrapedValue !== existingValue) {
-                        console.log(`🔄 CLOBBER: ${fieldName} changed from ${JSON.stringify(existingValue)} to ${JSON.stringify(scrapedValue)}`);
-                    } else {
-                        console.log(`🔄 CLOBBER: ${fieldName} same value ${JSON.stringify(scrapedValue)} (was ${JSON.stringify(existingValue)})`);
+                        console.log(`🔄 CLOBBER: ${fieldName} changed for "${mergedEvent.title || 'event'}"`);
                     }
                     break;
                 case 'preserve':
@@ -741,8 +703,6 @@ class SharedCore {
     // Create complete merged event object that represents exactly what will be saved
     // Following the 6-step process: 1) scraper object, 2) calendar object, 3) simple merge, 4) gmaps, 5) notes, 6) display
     createFinalEventObject(existingEvent, newEvent) {
-        console.log(`🔄 SharedCore: Creating merged event for "${newEvent.title}" with existing event "${existingEvent.title}"`);
-        
         // STEP 1: Build scraper object using priority list (already done - newEvent)
         const scraperObject = { ...newEvent };
         
@@ -781,7 +741,10 @@ class SharedCore {
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedObject[fieldName] = scraperValue;
-                    console.log(`🔄 CLOBBER: ${fieldName} = ${JSON.stringify(scraperValue)} (was ${JSON.stringify(calendarValue)})`);
+                    // Only log when clobber actually changes a value
+                    if (scraperValue !== calendarValue) {
+                        console.log(`🔄 CLOBBER: ${fieldName} changed for "${mergedObject.title || 'event'}"`);
+                    }
                     break;
                 case 'upsert':
                     mergedObject[fieldName] = calendarValue || scraperValue;
@@ -828,7 +791,7 @@ class SharedCore {
         };
         
         // STEP 6: Pass all three objects to rich display for comparison
-        console.log(`🔄 SharedCore: Final merged event created with ${Object.keys(mergedObject).length} fields`);
+
         
         // Store the three objects for display comparison
         finalEvent._original = {
@@ -1029,7 +992,7 @@ class SharedCore {
             
             return `${year}-${month}-${day}`;
         } catch (error) {
-            console.log(`🔄 SharedCore: Warning - Failed to normalize date: ${dateInput}, error: ${error.message}`);
+            console.warn(`⚠️ SharedCore: Failed to normalize date: ${dateInput}`);
             return '';
         }
     }
@@ -1201,9 +1164,6 @@ class SharedCore {
     enrichEventLocation(event) {
         if (!event) return event;
         
-        console.log(`🗺️ SharedCore: Starting enrichEventLocation for "${event.title}"`);
-        console.log(`🗺️ SharedCore: Initial state - address: "${event.address}", location: "${event.location}", gmaps: "${event.gmaps}", placeId: "${event.placeId}"`);
-        
         // DEBUG: Check URL field before enrichment
         const hadUrlBefore = 'url' in event;
         const urlValueBefore = event.url;
@@ -1219,28 +1179,22 @@ class SharedCore {
                           event.bar.toLowerCase().includes('to be announced'));
         
         if (isTBAVenue) {
-            console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected for "${event.title}" - removing fake location data`);
+            console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected - removing fake location data`);
             // Remove all location data for TBA venues (coordinates are usually fake city center)
             event.location = null;
             event.address = null;
             event.gmaps = '';
-            // Keep placeId even for TBA venues - don't delete it
-            // delete event.placeId;
             return event;
         }
         
         // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
         // Always generate if gmaps field is empty or undefined - merge strategies are handled later
-        console.log(`🗺️ SharedCore: Checking if gmaps generation needed - current gmaps: "${event.gmaps}" (type: ${typeof event.gmaps})`);
-        console.log(`🗺️ SharedCore: Available data for URL generation - address: "${event.address}", placeId: "${event.placeId}", location: "${event.location}"`);
         if (!event.gmaps) {
-            console.log(`🗺️ SharedCore: gmaps field is empty/falsy, proceeding with URL generation`);
             // Try to enhance incomplete addresses with city information before gmaps generation
             if (event.address && event.city && !this.isFullAddress(event.address)) {
                 const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);
                 if (enhancedAddress !== event.address) {
                     event.address = enhancedAddress;
-                    console.log(`🗺️ SharedCore: Enhanced incomplete address for "${event.title}": "${event.address}"`);
                 }
             }
             
@@ -1257,22 +1211,17 @@ class SharedCore {
             const urlData = {
                 coordinates: coordinates,
                 placeId: event.placeId || null,
-                // Use any available address - let Google Maps handle incomplete addresses
                 address: event.address || null
             };
             
-            console.log(`🗺️ SharedCore: Calling generateGoogleMapsUrl with data:`, urlData);
             event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
-            console.log(`🗺️ SharedCore: generateGoogleMapsUrl returned: "${event.gmaps}"`);
             
             if (event.gmaps) {
                 const method = event.placeId ? 
                     (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
                     (coordinates ? 'coordinates only' : 'address only');
-                console.log(`🗺️ SharedCore: Generated iOS-compatible Google Maps URL using ${method} for "${event.title}"`);
+                console.log(`🗺️ SharedCore: Generated Google Maps URL using ${method} for "${event.title}"`);
             }
-        } else {
-            console.log(`🗺️ SharedCore: Skipping gmaps generation - field already has value: "${event.gmaps}"`);
         }
         
         // Clean up location data based on what we have
@@ -1282,21 +1231,7 @@ class SharedCore {
             // Keep coordinates and gmaps URL
         } else if (!event.address && event.location && !event.gmaps) {
             // No valid address or gmaps URL - keep location data anyway
-            // delete event.gmaps;
-            // event.location = null;
-        } else {
-            // Address present but not full (isFullAddress caught placeholder): keep data anyway
-            console.log(`🗺️ SharedCore: Placeholder address "${event.address}" detected for "${event.title}" - keeping location data`);
-            // delete event.gmaps;
-            // event.location = null;
-            // delete event.address;
         }
-        
-        // Keep placeId for future URL generation - don't delete it
-        // delete event.placeId;
-        
-        console.log(`🗺️ SharedCore: Completed enrichEventLocation for "${event.title}"`);
-        console.log(`🗺️ SharedCore: Final state - address: "${event.address}", location: "${event.location}", gmaps: "${event.gmaps}", placeId: "${event.placeId}"`);
         
         // DEBUG: Check URL field after enrichment
         const hasUrlAfter = 'url' in event;
@@ -1660,7 +1595,7 @@ class SharedCore {
             }
         });
         
-        console.log(`📝 SharedCore: Formatted notes for "${event.title}" with ${savedFieldCount} fields (excluding ${excludeFields.size} system fields)`);
+
         
         return notes.join('\n');
     }
@@ -1718,7 +1653,7 @@ class SharedCore {
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes || '');
                 
-                console.log(`📊 SharedCore: Comparing fields for merge diff - Original: ${Object.keys(originalFields).length} fields, Merged: ${Object.keys(mergedFields).length} fields`);
+
                 
                 analyzedEvent._mergeDiff = {
                     preserved: [],
