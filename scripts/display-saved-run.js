@@ -104,62 +104,44 @@ class SavedRunDisplay {
             const rootDir = fm.joinPath(documentsDir, 'chunky-dad-scraper');
             const runsDir = fm.joinPath(rootDir, 'runs');
             
-            console.log(`📱 Display: Documents directory: ${documentsDir}`);
-            console.log(`📱 Display: Root directory: ${rootDir}`);
-            console.log(`📱 Display: Runs directory path: ${runsDir}`);
-            console.log(`📱 Display: About to list contents of: ${runsDir}`);
-            
-            // Debug: Check what's in the root directory
-            if (fm.fileExists(rootDir)) {
-                const rootFiles = fm.listContents(rootDir) || [];
-                console.log(`📱 Display: Root directory contents: ${JSON.stringify(rootFiles)}`);
-            }
+            console.log(`📱 Display: Checking for saved runs in ${runsDir}`);
             
             // Check if root directory exists first
             if (!fm.fileExists(rootDir)) {
-                console.log(`📱 Display: Root directory does not exist: ${rootDir}`);
                 fm.createDirectory(rootDir, true);
             }
             
             if (!fm.fileExists(runsDir)) {
-                console.log(`📱 Display: Runs directory does not exist: ${runsDir}`);
                 fm.createDirectory(runsDir, true);
-                console.log(`📱 Display: Created runs directory - no saved runs found yet`);
+                console.log(`📱 Display: No saved runs found - created runs directory`);
                 return [];
             }
             
             // Ensure iCloud files are downloaded before listing
             try {
-                console.log(`📱 Display: Downloading directory from iCloud...`);
                 await fm.downloadFileFromiCloud(runsDir);
-                console.log(`📱 Display: Directory download completed`);
             } catch (downloadError) {
-                console.log(`📱 Display: Directory download failed: ${downloadError.message}`);
+                console.log(`📱 Display: iCloud sync failed: ${downloadError.message}`);
             }
             
-            // Double-check the directory we're about to list
-            console.log(`📱 Display: VERIFICATION - About to call fm.listContents(${runsDir})`);
             const files = fm.listContents(runsDir) || [];
-            console.log(`📱 Display: Found ${files.length} files in runs directory: ${JSON.stringify(files)}`);
             
             // Filter out directories and only keep JSON files
             const jsonFiles = [];
+            const fileErrors = [];
             for (const name of files) {
                 const filePath = fm.joinPath(runsDir, name);
                 try {
-                    // Ensure each file is downloaded from iCloud
-                    console.log(`📱 Display: Downloading file: ${name}`);
                     await fm.downloadFileFromiCloud(filePath);
                     if (name.endsWith('.json') && !fm.isDirectory(filePath)) {
                         jsonFiles.push(name);
-                        console.log(`📱 Display: Added JSON file: ${name}`);
                     }
                 } catch (error) {
-                    console.log(`📱 Display: Error checking file ${name}: ${error.message}`);
+                    fileErrors.push({ file: name, error: error.message });
                 }
             }
             
-            console.log(`📱 Display: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`);
+            console.log(`📱 Display: Found ${jsonFiles.length} saved runs${fileErrors.length > 0 ? ` (${fileErrors.length} files had errors)` : ''}`);
             
             if (jsonFiles.length === 0) {
                 console.log(`📱 Display: No .json run files found in directory`);

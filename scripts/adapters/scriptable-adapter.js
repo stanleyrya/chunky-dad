@@ -340,6 +340,8 @@ class ScriptableAdapter {
             
             let processedCount = 0;
             const failedEvents = [];
+            const actionCounts = { merge: [], update: [], skip: [], create: [] };
+            
             for (const event of analyzedEvents) {
                 try {
                     const city = event.city || 'default';
@@ -348,27 +350,10 @@ class ScriptableAdapter {
                     
                     switch (event._action) {
                         case 'merge':
-                            console.log(`📱 Scriptable: Merging event: ${event.title}`);
+                            actionCounts.merge.push(event.title);
                             const targetEvent = event._existingEvent;
                             
-                            // Show what changes will be applied
-                            console.log('\n📊 MERGE CHANGES:');
-                            console.log('─'.repeat(60));
-                            
-                            if (event._changes && event._changes.length > 0) {
-                                console.log(`✅ APPLYING CHANGES: ${event._changes.join(', ')}`);
-                                event._changes.forEach(field => {
-                                    const oldValue = targetEvent[field] || '';
-                                    const newValue = event[field] || '';
-                                    const oldDisplay = oldValue.length > 30 ? oldValue.substring(0, 27) + '...' : oldValue;
-                                    const newDisplay = newValue.length > 30 ? newValue.substring(0, 27) + '...' : newValue;
-                                    console.log(`   ${field}: "${oldDisplay}" → "${newDisplay}"`);
-                                });
-                            } else {
-                                console.log('ℹ️  NO CHANGES NEEDED - event already up to date');
-                            }
-                            
-                            console.log('─'.repeat(60));
+                            // Track merge details for later summary (verbose details removed for cleaner logs)
                             
                             // Apply the final merged values (event object already contains final values)
                             targetEvent.title = event.title;
@@ -383,7 +368,7 @@ class ScriptableAdapter {
                             break;
                             
                         case 'update':
-                            console.log(`📱 Scriptable: Updating event: ${event.title}`);
+                            actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
                             // For updates (exact duplicates), replace everything
@@ -405,18 +390,18 @@ class ScriptableAdapter {
                                 updateTarget.url = event.url;
                             }
                             
-                            console.log(`📱 Scriptable: Changes to apply: ${updateChanges.length > 0 ? updateChanges.join(', ') : 'none'}`);
+                            // Changes tracked in summary (removed verbose per-event logging)
                             
                             await updateTarget.save();
                             processedCount++;
                             break;
                             
                         case 'conflict':
-                            console.log(`📱 Scriptable: Skipping conflicted event: ${event.title} (${event._analysis?.reason || 'conflict detected'})`);
+                            actionCounts.skip.push(event.title);
                             break;
                             
                         case 'new':
-                            console.log(`📱 Scriptable: Creating new event: ${event.title}`);
+                            actionCounts.create.push(event.title);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
                             calendarEvent.startDate = event.startDate;
@@ -439,14 +424,22 @@ class ScriptableAdapter {
                 }
             }
             
-            // Log summary of results
+            // Log smart summary of actions and results
+            const totalActions = Object.values(actionCounts).reduce((sum, arr) => sum + arr.length, 0);
+            if (totalActions > 0) {
+                const actionSummary = [];
+                if (actionCounts.create.length > 0) actionSummary.push(`${actionCounts.create.length} created`);
+                if (actionCounts.merge.length > 0) actionSummary.push(`${actionCounts.merge.length} merged`);
+                if (actionCounts.update.length > 0) actionSummary.push(`${actionCounts.update.length} updated`);
+                if (actionCounts.skip.length > 0) actionSummary.push(`${actionCounts.skip.length} skipped`);
+                
+                console.log(`📱 Scriptable: ✓ Processed ${totalActions} events: ${actionSummary.join(', ')}`);
+            }
+            
             if (failedEvents.length > 0) {
                 console.log(`📱 Scriptable: ✗ Failed to process ${failedEvents.length} events: ${failedEvents.map(f => f.title).join(', ')}`);
                 // Log first error for debugging
                 console.log(`📱 Scriptable: First error: ${failedEvents[0].error}`);
-            }
-            if (processedCount > 0) {
-                console.log(`📱 Scriptable: ✓ Successfully processed ${processedCount} events to calendar`);
             }
 
             return processedCount;
