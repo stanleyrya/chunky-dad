@@ -365,8 +365,9 @@ class SharedCore {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
                     
                     // Apply field priorities to detail page events (same as main page events)
+                    // CRITICAL FIX: Detail page events need the same enrichment as main page events
                     const enrichedDetailEvents = parseResult.events.map(event => 
-                        this.applyFieldPriorities(event, parserConfig, mainConfig)
+                        this.enrichEventLocation(this.normalizeEventTextFields(this.applyFieldPriorities(event, parserConfig, mainConfig)))
                     );
                     
                     // Add these events to the existing events collection for potential merging
