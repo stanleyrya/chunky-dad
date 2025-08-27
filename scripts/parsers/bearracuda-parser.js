@@ -38,7 +38,7 @@ class BearraccudaParser {
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
-            console.log(`🐻 Bearracuda: Parsing events from ${htmlData.url}`);
+
             
             const events = [];
             const html = htmlData.html;
@@ -50,40 +50,40 @@ class BearraccudaParser {
             
             // Check if this is an individual event page
             const isDetailPage = this.isEventDetailPage(html, htmlData.url, cityConfig);
-            console.log(`🐻 Bearracuda: Page type detection result: ${isDetailPage ? 'detail page' : 'listing page'}`);
+
             
             let additionalLinks = [];
             
             if (isDetailPage) {
-                console.log('🐻 Bearracuda: Detected individual event page, parsing event details...');
+
                 const event = this.parseEventDetailPage(html, htmlData.url, parserConfig, cityConfig);
                 if (event) {
-                    console.log(`🐻 Bearracuda: Successfully parsed event: ${event.title}`);
+
                     events.push(event);
                     
                     // If ticket URL is found and it's an eventbrite URL, add it as an additional link for depth=2 processing
                     if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.requireDetailPages) {
                         additionalLinks.push(event.ticketUrl);
-                        console.log(`🐻 Bearracuda: Added eventbrite ticket URL as additional link: ${event.ticketUrl}`);
+
                     }
                 } else {
-                    console.log('🐻 Bearracuda: Failed to parse event from detail page - parseEventDetailPage returned null');
+
                 }
             } else {
                 // Try to parse as a listing page (though main /events/ returns 404)
-                console.log('🐻 Bearracuda: Trying to parse as event listing page');
+
                 const listingEvents = this.parseEventListingPage(html, htmlData.url, parserConfig, cityConfig);
-                console.log(`🐻 Bearracuda: Parsed ${listingEvents.length} events from listing page`);
+
                 events.push(...listingEvents);
             }
             
             // Extract additional URLs if required (for listing pages)
             if (parserConfig.requireDetailPages && !isDetailPage) {
-                console.log('🐻 Bearracuda: Detail pages required, extracting additional URLs...');
+
                 const extractedLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
                 additionalLinks.push(...extractedLinks);
             } else if (!isDetailPage) {
-                console.log('🐻 Bearracuda: Detail pages not required, skipping URL extraction');
+
             }
             
             console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);

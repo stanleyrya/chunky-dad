@@ -47,7 +47,7 @@ class BearEventScraperOrchestrator {
             await this.loadModules();
             
             this.isInitialized = true;
-            console.log('🐻 Orchestrator: ✓ Initialization complete');
+
             
         } catch (error) {
             console.error(`🐻 Orchestrator: ✗ Initialization failed: ${error}`);
@@ -89,7 +89,7 @@ class BearEventScraperOrchestrator {
                 }
             };
             
-            console.log('📱 ✓ Scriptable modules loaded successfully');
+
             
         } catch (error) {
             console.error(`📱 ✗ Failed to load Scriptable modules: ${error}`);
@@ -121,7 +121,7 @@ class BearEventScraperOrchestrator {
                 }
             };
             
-            console.log('🟢 ✓ Node.js modules loaded successfully');
+
             
         } catch (error) {
             console.error(`🟢 ✗ Failed to load Node.js modules: ${error}`);
@@ -156,7 +156,7 @@ class BearEventScraperOrchestrator {
                 }
             };
             
-            console.log('🌐 ✓ Web modules loaded successfully');
+
             
         } catch (error) {
             console.error(`🌐 ✗ Failed to load web modules: ${error}`);
@@ -172,61 +172,53 @@ class BearEventScraperOrchestrator {
                 await this.initialize();
             }
 
-            console.log('🐻 Orchestrator: Starting event scraping process...');
+
 
             // Create adapter instance first
-            console.log('🐻 Orchestrator: Creating adapter instance...');
+
             const adapter = new this.modules.adapter();
-            console.log('🐻 Orchestrator: ✓ Adapter instance created');
+
             
             // Load configuration early so we can pass cities config to SharedCore
-            console.log('🐻 Orchestrator: Loading configuration...');
+
             const config = await adapter.loadConfiguration();
-            console.log(`🐻 Orchestrator: ✓ Configuration loaded with ${config.parsers?.length || 0} parsers`);
+
             
             // Create shared core instance with cities configuration
-            console.log('🐻 Orchestrator: Creating shared core instance...');
+
             const sharedCore = new this.modules.SharedCore(config.cities);
-            console.log('🐻 Orchestrator: ✓ Shared core instance created');
+
             
             // Create adapter with cities configuration
             let finalAdapter = adapter;
             if (config.cities) {
-                console.log('🐻 Orchestrator: Creating adapter with cities configuration...');
+
                 finalAdapter = new this.modules.adapter({
                     cities: config.cities,
                     ...this.config
                 });
-                console.log('🐻 Orchestrator: ✓ Adapter with cities configuration created');
+
             }
 
-            // Log configuration details
-            if (config.parsers) {
-                config.parsers.forEach((parser, i) => {
-                    console.log(`🐻 Orchestrator: Parser ${i + 1}: ${parser.name} (${parser.parser})`);
-                });
-            }
+
 
             // Create parser instances
-            console.log('🐻 Orchestrator: Creating parser instances...');
+
             const parsers = {};
             for (const [name, ParserClass] of Object.entries(this.modules.parsers)) {
                 try {
                     parsers[name] = new ParserClass();
-                    console.log(`🐻 Orchestrator: ✓ Created ${name} parser`);
+
                 } catch (error) {
                     console.error(`🐻 Orchestrator: ✗ Failed to create ${name} parser: ${error}`);
                     throw new Error(`Failed to create ${name} parser: ${error.message}`);
                 }
             }
 
-            console.log(`🐻 Orchestrator: ✓ Created ${Object.keys(parsers).length} parser instances: ${Object.keys(parsers).join(', ')}`);
-            
-            // Parsers are now pure and don't need shared-core initialization
-            console.log('🐻 Orchestrator: Parsers are pure - no initialization needed');
+
 
             // Process events using shared core
-            console.log('🐻 Orchestrator: Calling sharedCore.processEvents...');
+
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
             console.log('🐻 Orchestrator: ✓ Event processing completed');
             

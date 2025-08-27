@@ -36,7 +36,7 @@ class SharedCore {
         
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
-        console.log(`🌍 SharedCore: Using centralized cities configuration with ${Object.keys(cities).length} cities`);
+
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -64,7 +64,7 @@ class SharedCore {
             }
         }
         
-        console.log(`🌍 SharedCore: Converted ${Object.keys(cities).length} cities from config to ${Object.keys(cityMappings).length} mapping patterns`);
+
         return cityMappings;
     }
 
@@ -1220,7 +1220,7 @@ class SharedCore {
                 const method = event.placeId ? 
                     (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
                     (coordinates ? 'coordinates only' : 'address only');
-                console.log(`🗺️ SharedCore: Generated Google Maps URL using ${method} for "${event.title}"`);
+
             }
         }
         

@@ -40,7 +40,7 @@ class WebAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
-            console.log(`🌐 Web: Fetching data from ${url}`);
+
             
             const fetchOptions = {
                 method: options.method || 'GET',
@@ -64,11 +64,7 @@ class WebAdapter {
             
             const html = await response.text();
             
-            console.log(`🌐 Web: Response status: ${response.status}`);
-            console.log(`🌐 Web: Response length: ${html.length} characters`);
-            
             if (html && html.length > 0) {
-                console.log(`🌐 Web: ✓ Fetched ${html.length} characters of HTML`);
                 return {
                     html: html,
                     url: url,
@@ -87,7 +83,7 @@ class WebAdapter {
     // Configuration Loading
     async loadConfiguration() {
         try {
-            console.log('🌐 Web: Loading configuration from scraper-input.js');
+
             
             let config;
             
@@ -111,8 +107,8 @@ class WebAdapter {
                 config = window.scraperConfig;
             }
             
-            console.log('🌐 Web: ✓ Configuration loaded successfully');
-            console.log(`🌐 Web: Found ${config.parsers?.length || 0} parser configurations`);
+
+
             
             return config;
             
@@ -125,12 +121,12 @@ class WebAdapter {
     // Calendar Integration (Web version - display only, no actual calendar writes)
     async addToCalendar(events, parserConfig) {
         if (!events || events.length === 0) {
-            console.log('🌐 Web: No events to add to calendar');
+
             return 0;
         }
 
         try {
-            console.log(`🌐 Web: Would add ${events.length} events to calendar (web environment - display only)`);
+
             
             // In web environment, we can't actually write to calendar
             // Instead, we could generate .ics files or display the events
@@ -172,7 +168,7 @@ class WebAdapter {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        console.log(`🌐 Web: Generated ${filename} for download`);
+
     }
 
     eventsToICS(events) {
@@ -208,7 +204,7 @@ class WebAdapter {
     // Get existing events for a specific event (called by shared-core for analysis)
     // In web environment, we can't access real calendar data, so return empty array
     async getExistingEvents(event) {
-        console.log(`🌐 Web: getExistingEvents called for "${event.title}" (returning empty - no calendar access in web)`);
+
         return [];
     }
 

@@ -213,7 +213,7 @@ class ScriptableAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
-            console.log(`📱 Scriptable: Fetching ${url}`);
+
             
             const request = new Request(url);
             request.method = options.method || 'GET';
@@ -237,8 +237,6 @@ class ScriptableAdapter {
             }
             
             if (response && response.length > 0) {
-                console.log(`📱 Scriptable: ✓ Fetched ${response.length} characters from ${url}`);
-                
                 return {
                     html: response,
                     url: url,
@@ -260,7 +258,7 @@ class ScriptableAdapter {
     // Configuration Loading
     async loadConfiguration() {
         try {
-            console.log('📱 Scriptable: Loading configuration from iCloud Drive/Scriptable/scraper-input.js');
+
             
             const fm = FileManager.iCloud();
             const scriptableDir = fm.documentsDirectory();
@@ -278,32 +276,22 @@ class ScriptableAdapter {
                 throw new Error('Configuration file not found at iCloud Drive/Scriptable/scraper-input.js');
             }
             
-            console.log('📱 Scriptable: ✓ Configuration file exists, reading...');
             const configText = fm.readString(configPath);
-            console.log(`📱 Scriptable: Configuration text length: ${configText?.length || 0} characters`);
             
             if (!configText || configText.trim().length === 0) {
                 throw new Error('Configuration file is empty');
             }
             
-            console.log('📱 Scriptable: Loading JavaScript configuration...');
             // Use importModule to load the JS configuration file
             const configModule = importModule('scraper-input');
             const config = configModule || eval(configText);
-            console.log('📱 Scriptable: ✓ JavaScript configuration loaded successfully');
             
             // Validate configuration structure
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');
             }
             
-            console.log('📱 Scriptable: ✓ Configuration loaded successfully');
-            console.log(`📱 Scriptable: Found ${config.parsers?.length || 0} parser configurations`);
-            
-            // Log parser details
-            config.parsers.forEach((parser, i) => {
-                console.log(`📱 Scriptable: Parser ${i + 1}: ${parser.name} (${parser.parser}) - ${parser.urls?.length || 0} URLs`);
-            });
+
             
             return config;
             
@@ -450,7 +438,7 @@ class ScriptableAdapter {
                 }
             }
             
-            console.log(`📱 Scriptable: ✓ Successfully processed ${processedCount} events to calendar`);
+
             return processedCount;
             
         } catch (error) {
@@ -1080,14 +1068,11 @@ class ScriptableAdapter {
             // Present using WebView
             await WebView.loadHTML(html, null, null, true);
             
-            console.log('📱 Scriptable: ✓ Rich HTML display completed');
+
             
             // After displaying results, prompt for calendar execution if we have analyzed events
             // Don't prompt when displaying saved runs (they should use isDryRun override instead)
-            console.log('📱 Scriptable: Debug - Checking execution prompt conditions:');
-            console.log(`📱 Scriptable: - analyzedEvents: ${results.analyzedEvents?.length || 0}`);
-            console.log(`📱 Scriptable: - calendarEvents: ${results.calendarEvents || 0}`);
-            console.log(`📱 Scriptable: - _isDisplayingSavedRun: ${results._isDisplayingSavedRun || false}`);
+
             
             if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
                 // Check if we have any events from non-dry-run parsers
@@ -1123,16 +1108,16 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
             // Fallback to UITable
             try {
-                console.log('📱 Scriptable: Attempting UITable fallback...');
+
                 await this.presentUITableFallback(results);
             } catch (tableError) {
                 console.log(`📱 Scriptable: ✗ UITable fallback also failed: ${tableError.message}`);
                 // Final fallback to QuickLook
                 try {
-                    console.log('📱 Scriptable: Attempting QuickLook fallback...');
+
                     const summary = this.createResultsSummary(results);
                     await QuickLook.present(summary, false);
-                    console.log('📱 Scriptable: ✓ QuickLook display completed');
+
                 } catch (quickLookError) {
                     console.log(`📱 Scriptable: ✗ All display methods failed: ${quickLookError.message}`);
                 }
@@ -2728,10 +2713,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             table.addRow(actionsRow);
             
-            console.log('📱 Scriptable: Presenting rich UI table...');
+
             await table.present(false); // Present in normal mode (not fullscreen)
             
-            console.log('📱 Scriptable: ✓ UITable display completed');
+
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to present UITable: ${error.message}`);
