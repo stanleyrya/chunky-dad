@@ -339,6 +339,7 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
             
             let processedCount = 0;
+            const failedEvents = [];
             for (const event of analyzedEvents) {
                 try {
                     const city = event.city || 'default';
@@ -434,10 +435,19 @@ class ScriptableAdapter {
                     }
                     
                 } catch (error) {
-                    console.log(`📱 Scriptable: ✗ Failed to process event "${event.title}": ${error.message}`);
+                    failedEvents.push({ title: event.title, error: error.message });
                 }
             }
             
+            // Log summary of results
+            if (failedEvents.length > 0) {
+                console.log(`📱 Scriptable: ✗ Failed to process ${failedEvents.length} events: ${failedEvents.map(f => f.title).join(', ')}`);
+                // Log first error for debugging
+                console.log(`📱 Scriptable: First error: ${failedEvents[0].error}`);
+            }
+            if (processedCount > 0) {
+                console.log(`📱 Scriptable: ✓ Successfully processed ${processedCount} events to calendar`);
+            }
 
             return processedCount;
             

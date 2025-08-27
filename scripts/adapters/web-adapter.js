@@ -144,14 +144,28 @@ class WebAdapter {
     displayCalendarEvents(events, parserConfig) {
         console.log(`🌐 Web: Calendar Events for ${parserConfig.name}:`);
         
-        events.forEach((event, index) => {
-            console.log(`📅 Event ${index + 1}:`);
-            console.log(`   Title: ${event.title}`);
-            console.log(`   Date: ${event.startDate}`);
-            console.log(`   Venue: ${event.venue || 'N/A'}`);
-            console.log(`   URL: ${event.url || 'N/A'}`);
+        // Show summary for large batches, details for small batches
+        if (events.length > 5) {
+            console.log(`📅 Summary: ${events.length} events found`);
+            const venues = [...new Set(events.map(e => e.venue).filter(Boolean))];
+            if (venues.length > 0) {
+                console.log(`📍 Venues: ${venues.slice(0, 3).join(', ')}${venues.length > 3 ? ` + ${venues.length - 3} more` : ''}`);
+            }
+            const dateRange = events.length > 1 ? 
+                `${events[0].startDate} to ${events[events.length - 1].startDate}` : 
+                events[0].startDate;
+            console.log(`📅 Date range: ${dateRange}`);
             console.log('   ---');
-        });
+        } else {
+            events.forEach((event, index) => {
+                console.log(`📅 Event ${index + 1}:`);
+                console.log(`   Title: ${event.title}`);
+                console.log(`   Date: ${event.startDate}`);
+                console.log(`   Venue: ${event.venue || 'N/A'}`);
+                console.log(`   URL: ${event.url || 'N/A'}`);
+                console.log('   ---');
+            });
+        }
     }
 
     // Generate downloadable .ics file for calendar import

@@ -465,6 +465,12 @@ class SharedCore {
     deduplicateEvents(events) {
         const seen = new Map();
         const deduplicated = [];
+        
+        // Log progress for large batches
+        const logProgress = events.length > 10;
+        if (logProgress) {
+            console.log(`🔄 SharedCore: Deduplicating ${events.length} events...`);
+        }
 
         for (const event of events) {
             const key = this.createEventKey(event);
@@ -487,6 +493,16 @@ class SharedCore {
                 if (index !== -1) {
                     deduplicated[index] = merged;
                 }
+            }
+        }
+        
+        // Log results for large batches
+        if (logProgress) {
+            const duplicatesFound = events.length - deduplicated.length;
+            if (duplicatesFound > 0) {
+                console.log(`🔄 SharedCore: Removed ${duplicatesFound} duplicates, ${deduplicated.length} unique events remaining`);
+            } else {
+                console.log(`🔄 SharedCore: No duplicates found, all ${deduplicated.length} events are unique`);
             }
         }
 
@@ -608,6 +624,9 @@ class SharedCore {
             ...Object.keys(existingEvent).filter(key => !scriptableFields.has(key))
         ]);
         
+        // Track clobbered fields for summary logging
+        const clobberedFields = [];
+        
         allFieldNames.forEach(fieldName => {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
@@ -624,9 +643,9 @@ class SharedCore {
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedEvent[fieldName] = scrapedValue;
-                    // Only log when clobber actually changes a value
+                    // Track when clobber actually changes a value
                     if (scrapedValue !== existingValue) {
-                        console.log(`🔄 CLOBBER: ${fieldName} changed for "${mergedEvent.title || 'event'}"`);
+                        clobberedFields.push(fieldName);
                     }
                     break;
                 case 'preserve':
@@ -642,6 +661,11 @@ class SharedCore {
                     break;
             }
         });
+        
+        // Log summary of clobbered fields
+        if (clobberedFields.length > 0) {
+            console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedEvent.title || 'event'}": ${clobberedFields.join(', ')}`);
+        }
         
         // Add any existing fields that weren't in scraped data
         // BUT respect merge strategies - don't override clobber results
@@ -728,6 +752,9 @@ class SharedCore {
             ...Object.keys(calendarObject)
         ]);
         
+        // Track clobbered fields for summary logging
+        const clobberedFields = [];
+        
         // Apply merge logic for each field
         allFields.forEach(fieldName => {
             // Skip internal fields
@@ -741,9 +768,9 @@ class SharedCore {
             switch (mergeStrategy) {
                 case 'clobber':
                     mergedObject[fieldName] = scraperValue;
-                    // Only log when clobber actually changes a value
+                    // Track when clobber actually changes a value
                     if (scraperValue !== calendarValue) {
-                        console.log(`🔄 CLOBBER: ${fieldName} changed for "${mergedObject.title || 'event'}"`);
+                        clobberedFields.push(fieldName);
                     }
                     break;
                 case 'upsert':
@@ -755,6 +782,11 @@ class SharedCore {
                     break;
             }
         });
+        
+        // Log summary of clobbered fields
+        if (clobberedFields.length > 0) {
+            console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedObject.title || 'event'}": ${clobberedFields.join(', ')}`);
+        }
         
         // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
         // The merge strategy above has already chosen the correct gmaps URL
