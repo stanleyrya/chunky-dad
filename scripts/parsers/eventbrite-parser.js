@@ -23,7 +23,7 @@ class EventbriteParser {
     constructor(config = {}) {
         this.config = {
             source: 'eventbrite',
-            requireDetailPages: false,
+            urlDiscoveryDepth: 1,
             maxAdditionalUrls: 20,
             ...config
         };
@@ -57,9 +57,10 @@ class EventbriteParser {
                 console.log('🎫 Eventbrite: No events found in JSON data - this may be an individual event page or empty organizer page');
             }
             
-            // Extract additional URLs if required (regardless of JSON vs HTML parsing)
+            // Extract additional URLs if depth allows (regardless of JSON vs HTML parsing)
             let additionalLinks = [];
-            if (parserConfig.requireDetailPages) {
+            const shouldExtractUrls = (parserConfig.urlDiscoveryDepth || 1) > 1;
+            if (shouldExtractUrls) {
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             }
             
@@ -734,31 +735,7 @@ class EventbriteParser {
             
             // Must be event page
             if (!pathname.includes('/e/')) return false;
-             
-             // Apply URL filters if configured
-             if (parserConfig.urlFilters) {
-                 if (parserConfig.urlFilters.include) {
-                     const includePatterns = Array.isArray(parserConfig.urlFilters.include) ? 
-                         parserConfig.urlFilters.include : [parserConfig.urlFilters.include];
-                     
-                     const matchesInclude = includePatterns.some(pattern => 
-                         new RegExp(pattern, 'i').test(url)
-                     );
-                     
-                     if (!matchesInclude) return false;
-                 }
-                 
-                 if (parserConfig.urlFilters.exclude) {
-                     const excludePatterns = Array.isArray(parserConfig.urlFilters.exclude) ? 
-                         parserConfig.urlFilters.exclude : [parserConfig.urlFilters.exclude];
-                     
-                     const matchesExclude = excludePatterns.some(pattern => 
-                         new RegExp(pattern, 'i').test(url)
-                     );
-                     
-                     if (matchesExclude) return false;
-                 }
-             }
+
              
              return true;
              

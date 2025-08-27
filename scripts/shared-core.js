@@ -196,7 +196,7 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
+                const urlParserName = this.detectParserFromUrl(url) || parserName;
                 const urlParser = parsers[urlParserName];
                 
                 if (urlParserName !== parserName) {
@@ -225,8 +225,9 @@ class SharedCore {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
-                // Process additional URLs if required (for enriching existing events, not creating new ones)
-                if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
+                // Process additional URLs if depth allows (for enriching existing events, not creating new ones)
+                const shouldProcessDetailPages = (parserConfig.urlDiscoveryDepth || 1) > 1;
+                if (shouldProcessDetailPages && parseResult.additionalLinks) {
                     // Deduplicate additional URLs before processing
                     const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
@@ -293,19 +294,22 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
+                const urlParserName = this.detectParserFromUrl(url);
                 const urlParser = parsers[urlParserName];
                 
-                // CRITICAL FIX: Look up the correct parser configuration for the detected parser type
+                // Look up parser configuration for the detected parser type
                 // This ensures secondary parsers (like eventbrite) get their proper merge strategies
                 // when called from primary parsers (like bearracuda)
                 let detailPageConfig = parserConfig; // Default fallback
                 
-                if (urlParserName !== parserConfig.parser && mainConfig?.parsers) {
+                if (urlParserName && mainConfig?.parsers) {
                     // Find the configuration for the detected parser type
-                    const matchingParserConfig = mainConfig.parsers.find(p => p.parser === urlParserName);
+                    const matchingParserConfig = mainConfig.parsers.find(p => 
+                        p.name.toLowerCase().includes(urlParserName) || 
+                        (p.urls && p.urls.some(u => this.detectParserFromUrl(u) === urlParserName))
+                    );
                     if (matchingParserConfig) {
-                        await displayAdapter.logInfo(`SYSTEM: Using ${urlParserName} parser config for ${url} (switched from ${parserConfig.parser})`);
+                        await displayAdapter.logInfo(`SYSTEM: Using ${urlParserName} parser config for ${url}`);
                         detailPageConfig = matchingParserConfig;
                     }
                 }
@@ -315,7 +319,7 @@ class SharedCore {
                 const shouldAllowMoreUrls = currentDepth < maxDepth;
                 const finalDetailPageConfig = {
                     ...detailPageConfig,
-                    requireDetailPages: shouldAllowMoreUrls,
+                    urlDiscoveryDepth: shouldAllowMoreUrls ? detailPageConfig.urlDiscoveryDepth : 1,
                     maxAdditionalUrls: shouldAllowMoreUrls ? detailPageConfig.maxAdditionalUrls : 0
                 };
                 

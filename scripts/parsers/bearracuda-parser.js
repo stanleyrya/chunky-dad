@@ -23,7 +23,7 @@ class BearraccudaParser {
     constructor(config = {}) {
         this.config = {
             source: 'bearracuda',
-            requireDetailPages: true, // Bearracuda uses individual event pages
+            urlDiscoveryDepth: 2, // Bearracuda uses individual event pages
             maxAdditionalUrls: 20,
             ...config
         };
@@ -62,7 +62,8 @@ class BearraccudaParser {
                     events.push(event);
                     
                     // If ticket URL is found and it's an eventbrite URL, add it as an additional link for depth=2 processing
-                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.requireDetailPages) {
+                    const shouldAddTicketUrls = (parserConfig.urlDiscoveryDepth || 1) > 1;
+                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && shouldAddTicketUrls) {
                         additionalLinks.push(event.ticketUrl);
 
                     }
@@ -77,8 +78,9 @@ class BearraccudaParser {
                 events.push(...listingEvents);
             }
             
-            // Extract additional URLs if required (for listing pages)
-            if (parserConfig.requireDetailPages && !isDetailPage) {
+            // Extract additional URLs if depth allows (for listing pages)
+            const shouldExtractUrls = (parserConfig.urlDiscoveryDepth || 1) > 1;
+            if (shouldExtractUrls && !isDetailPage) {
 
                 const extractedLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
                 additionalLinks.push(...extractedLinks);
@@ -1066,41 +1068,7 @@ class BearraccudaParser {
                 return false;
             }
             
-            // Apply URL filters if configured
-            if (parserConfig.urlFilters) {
-                if (parserConfig.urlFilters.include) {
-                    const includePatterns = Array.isArray(parserConfig.urlFilters.include) ? 
-                        parserConfig.urlFilters.include : [parserConfig.urlFilters.include];
-                    
-                    const matchesInclude = includePatterns.some(pattern => {
-                        const regex = new RegExp(pattern, 'i');
-                        const matches = regex.test(url);
-                        // Only log the successful match, not every test
-                        if (matches) {
-                            console.log(`🐻 Bearracuda: Pattern "${pattern}" MATCHES URL: ${url}`);
-                        }
-                        return matches;
-                    });
-                    
-                    if (!matchesInclude) {
-                        return false;
-                    }
-                }
-                
-                if (parserConfig.urlFilters.exclude) {
-                    const excludePatterns = Array.isArray(parserConfig.urlFilters.exclude) ? 
-                        parserConfig.urlFilters.exclude : [parserConfig.urlFilters.exclude];
-                    
-                    const matchesExclude = excludePatterns.some(pattern => {
-                        const regex = new RegExp(pattern, 'i');
-                        return regex.test(url);
-                    });
-                    
-                    if (matchesExclude) {
-                        return false;
-                    }
-                }
-            }
+            // URL filters removed - parser auto-selection handles filtering
             return true;
             
         } catch (error) {

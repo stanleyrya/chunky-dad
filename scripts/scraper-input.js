@@ -6,6 +6,13 @@
 // - Must export a default configuration object
 // - Can be imported in both Scriptable and web environments
 // - Keep this file environment-agnostic (no Scriptable or DOM APIs)
+//
+// CONFIGURATION NOTES:
+// - parser field removed: Auto-detected from URLs
+// - requireDetailPages removed: Use urlDiscoveryDepth (1=no details, 2+=follow links)
+// - urlFilters removed: Parser auto-selection handles filtering
+// - mergeMode removed: Use field-level merge strategies
+// - maxAdditionalUrls optional: Can be undefined, number, or omitted
 
 const scraperConfig = {
   config: {
