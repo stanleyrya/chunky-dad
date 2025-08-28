@@ -379,6 +379,74 @@ class CalendarCore {
         }
     }
 
+    // ============================================================================
+    // ESCAPE CHARACTER UTILITIES - Handle escaped colons in text
+    // ============================================================================
+    // 
+    // Problem: Time formats like "Doors open at 9:00" were being parsed as metadata
+    // Solution: Use backslash (\) to escape colons that should not be treated as separators
+    // 
+    // Examples:
+    //   "Doors open at 9\:00 PM"     -> Not parsed as metadata (colon is escaped)
+    //   "venue: The Bear Den"         -> Parsed as metadata (single-word key)
+    //   "doors open at 9: 00"         -> Not parsed as metadata (multi-word key rejected)
+    //   "description: Show at 8\:30"  -> Parsed as metadata, value = "Show at 8:30"
+    // 
+    // Escape Rules:
+    //   \: -> :     (escaped colon becomes literal colon)
+    //   \\ -> \     (escaped backslash becomes literal backslash)
+    //   
+    // Key Validation:
+    //   - Must be single word (no spaces)
+    //   - Must start with letter
+    //   - Must be 2-20 characters long
+    //   - Must be alphanumeric only
+    // ============================================================================
+    
+    // Find first unescaped occurrence of a character in text
+    findUnescaped(text, char, startIndex = 0) {
+        for (let i = startIndex; i < text.length; i++) {
+            if (text[i] === char) {
+                // Count preceding backslashes to determine if this character is escaped
+                let backslashCount = 0;
+                for (let j = i - 1; j >= 0 && text[j] === '\\'; j--) {
+                    backslashCount++;
+                }
+                
+                // If even number of backslashes (including 0), the character is not escaped
+                if (backslashCount % 2 === 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+    
+    // Remove escape characters from text
+    unescapeText(text) {
+        if (!text || typeof text !== 'string') {
+            return text;
+        }
+        
+        return text
+            .replace(/\\:/g, ':')      // Unescape colons (\: -> :)
+            .replace(/\\\\/g, '\\');   // Unescape backslashes (\\ -> \)
+    }
+    
+    // Check if a key is valid for metadata (single word, reasonable length)
+    isValidMetadataKey(key) {
+        if (!key || typeof key !== 'string') {
+            return false;
+        }
+        
+        const trimmedKey = key.trim();
+        
+        // Must be a single word (no spaces) and reasonable length
+        return /^[a-zA-Z][a-zA-Z0-9]*$/.test(trimmedKey) && 
+               trimmedKey.length >= 2 && 
+               trimmedKey.length <= 20;
+    }
+
     // Parse description for key-value pairs
     parseKeyValueDescription(description) {
         const data = {};
@@ -444,25 +512,43 @@ class CalendarCore {
             line = line.trim();
             if (!line) continue;
             
-            // Match key-value pairs with various separators
-            const keyValueMatch = line.match(/([^:=\-]+)[:=\-]\s*(.+)/);
-            if (keyValueMatch) {
-                const key = keyValueMatch[1].trim().toLowerCase();
-                const value = keyValueMatch[2].trim();
-                const mappedKey = keyMap[key] || key;
+            // Use escape-aware parsing to find the first unescaped colon
+            const colonIndex = this.findUnescaped(line, ':');
+            
+            if (colonIndex > 0) {
+                // Extract key and value, then unescape them
+                const rawKey = line.substring(0, colonIndex).trim();
+                const rawValue = line.substring(colonIndex + 1).trim();
                 
-                // Additional validation for URLs
-                if (['website', 'instagram', 'facebook', 'gmaps'].includes(mappedKey)) {
-                    // Ensure we have a valid URL
-                    if (value.startsWith('http://') || value.startsWith('https://')) {
-                        data[mappedKey] = value;
-                        logger.debug('CALENDAR', `Extracted ${mappedKey} URL: ${value}`);
+                const unescapedKey = this.unescapeText(rawKey);
+                const unescapedValue = this.unescapeText(rawValue);
+                
+                // Only process if it's a valid metadata key
+                if (this.isValidMetadataKey(unescapedKey)) {
+                    const key = unescapedKey.toLowerCase();
+                    const value = unescapedValue;
+                    const mappedKey = keyMap[key] || key;
+                    
+                    // Additional validation for URLs
+                    if (['website', 'instagram', 'facebook', 'gmaps'].includes(mappedKey)) {
+                        // Ensure we have a valid URL
+                        if (value.startsWith('http://') || value.startsWith('https://')) {
+                            data[mappedKey] = value;
+                            logger.debug('CALENDAR', `Extracted ${mappedKey} URL: ${value}`);
+                        } else {
+                            logger.warn('CALENDAR', `Invalid URL format for ${mappedKey}: ${value}`);
+                        }
                     } else {
-                        logger.warn('CALENDAR', `Invalid URL format for ${mappedKey}: ${value}`);
+                        data[mappedKey] = value;
+                        logger.debug('CALENDAR', `Extracted metadata: ${mappedKey} = ${value}`);
                     }
                 } else {
-                    data[mappedKey] = value;
+                    // Invalid key - this line is not treated as metadata
+                    logger.debug('CALENDAR', `Ignored invalid metadata key: "${unescapedKey}" in line: "${line}"`);
                 }
+            } else {
+                // No unescaped colon found - this is not a metadata line
+                logger.debug('CALENDAR', `No unescaped colon found in line: "${line}"`);
             }
         }
         
