@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Denver
 BEGIN:VEVENT
 DTSTART:20250824T030000Z
 DTEND:20250824T103000Z
-DTSTAMP:20250828T141426Z
+DTSTAMP:20250828T161805Z
 UID:FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF
 CREATED:20250822T215307Z
 DESCRIPTION:url: https://www.eventbrite.com/e/megawoof-america-denver-massi
@@ -35,17 +35,18 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250907T070000Z
 DTEND:20250907T120000Z
-DTSTAMP:20250828T141426Z
+DTSTAMP:20250828T161805Z
 UID:2EADF29C-DD45-4A7C-938D-D57E62DB56F7
 CREATED:20250825T034002Z
-DESCRIPTION:description: 16 YEAR ANNIVERSARY\nbar: Summit\naddress: 1902 Bl
- ake St\, Denver\, CO 80202\nurl: https://bearracuda.com/events/denverpride/
- \nimage: https://bearracuda.com/wp-content/uploads/2025/01/den16web.jpg\nfa
- cebook: https://www.facebook.com/events/747044714674555\nticketUrl: https:/
- /www.ticketmaster.com/event/1E0062E79CD214B2\nshortName: Bear-rac-uda\ninst
- agram: https://www.instagram.com/bearracuda\nkey: bearracuda-2025-09-07-den
- ver
-LAST-MODIFIED:20250828T040843Z
+DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 9:00 pm - Party
+  Goes Until 2:00 am\nbar: Summit\naddress: 1902 Blake St\, Denver\, CO 8020
+ 2\nurl: https://bearracuda.com/events/denverpride/\nimage: https://bearracu
+ da.com/wp-content/uploads/2025/01/den16web.jpg\nfacebook: https://www.faceb
+ ook.com/events/747044714674555\nticketUrl: https://www.ticketmaster.com/eve
+ nt/1E0062E79CD214B2\nshortName: Bear-rac-uda\ninstagram: https://www.instag
+ ram.com/bearracuda\ngmaps: https://maps.google.com/?q=1902%20Blake%20St%2C%
+ 20Denver%2C%20CO%2080202\nkey: bearracuda-2025-09-07-denver
+LAST-MODIFIED:20250828T155354Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:DENVER

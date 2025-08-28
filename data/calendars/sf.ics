@@ -8,27 +8,24 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250927T040000Z
 DTEND:20250927T100000Z
-DTSTAMP:20250828T141426Z
+DTSTAMP:20250828T161805Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
-DESCRIPTION:url: https://bearracuda.com/events/flsm-friday/\nkey: bearracud
- a-2025-09-27-sf\ndescription: Music & Entertainment\n• Main Floor - Horse M
- eat Disco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunn
- ingham\nbar: The Public Works SF\naddress: 161 Erie St\, San Francisco\, CA
-  94103\ncover: $57.79 - $99.99 (as of 8/26)\nimage: https://img.evbuc.com/h
- ttps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1049150793%2F301420936599%2F1%2Forigi
- nal.20250609-182908?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q
- =75&sharp=10&fp-x=0.95928030303&fp-y=0.546428571429&s=ad4475017643f5b11fdfd
- 7e4ee355fe1\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/
- bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=37.76891
- 37%2C-122.4192514&query_place_id=ChIJa4c8OyF-j4AR4kopWZOJZPM\nfacebook: htt
- ps://www.facebook.com/events/564754916670823/\nticketUrl: https://www.event
- brite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668199
-LAST-MODIFIED:20250827T032716Z
+DESCRIPTION:description: Friday\, September 26th\, 2025\nPUBLIC WORKS - 161
+  Erie\, San Francisco\nbar: The Public Works SF\naddress: 161 Erie Street\,
+  San Francisco\, CA 94103\nurl: https://www.eventbrite.com/e/bearracuda-sf-
+ presents-horse-meat-disco-tickets-1370410668199\ncover: $57.79 - $99.99 (as
+  of 8/28)\nimage: https://bearracuda.com/wp-content/uploads/2025/05/hmd2025
+ .jpg\nfacebook: https://www.facebook.com/events/564754916670823/\nticketUrl
+ : https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668
+ 199\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracu
+ da\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7689137%2C-12
+ 2.4192514&query_place_id=85922583\nkey: bearracuda-2025-09-27-sf
+LAST-MODIFIED:20250828T155355Z
 LOCATION:37.7689137\, -122.4192514
 SEQUENCE:2
 STATUS:CONFIRMED
-SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
+SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
