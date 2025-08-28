@@ -469,7 +469,7 @@ class SharedCore {
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
-                const merged = this.mergeEventData(existing, event);
+                const merged = this.mergeParsedEvents(existing, event);
                 merged.key = key; // Ensure merged event has the key
                 seen.set(key, merged);
                 
@@ -566,8 +566,10 @@ class SharedCore {
         return key;
     }
 
-    // Merge two events based on field priorities (for multi-source deduplication)
-    mergeByFieldPriorities(existingEvent, newEvent, fieldPriorities) {
+    // Merge two parsed events based on field priorities (for deduplication)
+    mergeParsedEvents(existingEvent, newEvent) {
+        const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
+        
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
         
@@ -626,7 +628,7 @@ class SharedCore {
         
         // Step 1: Create final scraped values by merging parser data using priorities
         // (This handles Bearracuda + Eventbrite data merging)
-        const finalScrapedValues = this.mergeByFieldPriorities(existingEvent, newEvent, fieldPriorities);
+        const finalScrapedValues = { ...newEvent };
         
         // Step 2: Merge final scraped values with existing calendar using merge strategies
         // Only copy essential calendar properties, not Scriptable-specific methods/properties
