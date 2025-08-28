@@ -23,7 +23,7 @@ class BearraccudaParser {
     constructor(config = {}) {
         this.config = {
             source: 'bearracuda',
-            requireDetailPages: true, // Bearracuda uses individual event pages
+            urlDiscoveryDepth: 1, // Bearracuda uses individual event pages
             maxAdditionalUrls: 20,
             ...config
         };
@@ -61,8 +61,8 @@ class BearraccudaParser {
 
                     events.push(event);
                     
-                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link for depth=2 processing
-                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.requireDetailPages) {
+                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link for depth processing
+                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.urlDiscoveryDepth > 0) {
                         additionalLinks.push(event.ticketUrl);
 
                     }
@@ -77,8 +77,8 @@ class BearraccudaParser {
                 events.push(...listingEvents);
             }
             
-            // Extract additional URLs if required (for listing pages)
-            if (parserConfig.requireDetailPages && !isDetailPage) {
+            // Extract additional URLs if urlDiscoveryDepth > 0 (for listing pages)
+            if (parserConfig.urlDiscoveryDepth > 0 && !isDetailPage) {
 
                 const extractedLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
                 additionalLinks.push(...extractedLinks);
@@ -992,8 +992,9 @@ class BearraccudaParser {
                     }
                     
                     // Limit to prevent infinite loops (shared-core will also limit)
-                    if (urls.length >= (this.config.maxAdditionalUrls || 20)) {
-                        console.log(`🐻 Bearracuda: Reached maximum URL limit (${this.config.maxAdditionalUrls || 20})`);
+                    const maxUrls = parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls || 20;
+                    if (urls.length >= maxUrls) {
+                        console.log(`🐻 Bearracuda: Reached maximum URL limit (${maxUrls})`);
                         break;
                     }
                 }
@@ -1066,41 +1067,7 @@ class BearraccudaParser {
                 return false;
             }
             
-            // Apply URL filters if configured
-            if (parserConfig.urlFilters) {
-                if (parserConfig.urlFilters.include) {
-                    const includePatterns = Array.isArray(parserConfig.urlFilters.include) ? 
-                        parserConfig.urlFilters.include : [parserConfig.urlFilters.include];
-                    
-                    const matchesInclude = includePatterns.some(pattern => {
-                        const regex = new RegExp(pattern, 'i');
-                        const matches = regex.test(url);
-                        // Only log the successful match, not every test
-                        if (matches) {
-                            console.log(`🐻 Bearracuda: Pattern "${pattern}" MATCHES URL: ${url}`);
-                        }
-                        return matches;
-                    });
-                    
-                    if (!matchesInclude) {
-                        return false;
-                    }
-                }
-                
-                if (parserConfig.urlFilters.exclude) {
-                    const excludePatterns = Array.isArray(parserConfig.urlFilters.exclude) ? 
-                        parserConfig.urlFilters.exclude : [parserConfig.urlFilters.exclude];
-                    
-                    const matchesExclude = excludePatterns.some(pattern => {
-                        const regex = new RegExp(pattern, 'i');
-                        return regex.test(url);
-                    });
-                    
-                    if (matchesExclude) {
-                        return false;
-                    }
-                }
-            }
+            // URL filtering is now handled automatically by parser selection
             return true;
             
         } catch (error) {

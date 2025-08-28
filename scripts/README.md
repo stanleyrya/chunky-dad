@@ -129,15 +129,14 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 Merge strategies can be configured at multiple levels:
 
 1. **Per-field** (most specific): Each metadata field can have its own merge strategy
-2. **Per-parser**: Set `mergeMode` in parser config for all fields in that parser
-3. **Global**: Default fallback if not specified elsewhere
+2. **Global**: Default fallback if not specified elsewhere
 
 #### Available Merge Strategies:
 - **`preserve`** (default): Keep existing value, only add if field doesn't exist
 - **`upsert`**: Add if missing, keep existing if present
 - **`clobber`**: Always replace with new value
 
-The most specific merge strategy wins. For example, if a parser has `mergeMode: "clobber"` but a field has `merge: "preserve"`, that field will be preserved while others are clobbered.
+The most specific merge strategy wins. Field-level merge strategies take precedence over global defaults.
 
 ### Main Configuration (`scraper-input.js`)
 
@@ -151,15 +150,13 @@ const scraperConfig = {
   parsers: [
     {
       name: "Venue Name",
-      parser: "eventbrite",  // Must match parser filename
       enabled: true,         // Set to false to temporarily disable parser
       urls: ["https://venue.com/events"],
       alwaysBear: true,      // Skip bear keyword filtering
-      requireDetailPages: true,
-      maxAdditionalUrls: 20,
+      urlDiscoveryDepth: 1,  // Depth for following additional URLs (0 = no discovery)
+      maxAdditionalUrls: 20, // Optional: limit additional URLs (uses parser default if omitted)
       allowlist: ["keyword1", "keyword2"],
-      city: "nyc",
-      mergeMode: "upsert"   // Per-parser merge mode: "upsert" or "clobber"
+      city: "nyc"
     }
   ],
   cities: {
