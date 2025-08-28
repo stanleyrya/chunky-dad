@@ -1712,11 +1712,6 @@ class SharedCore {
             };
             analyzedEvent._action = analysis.action;
             
-            // Generate notes for new events so they show preview
-            if (analysis.action === 'new') {
-                analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
-            }
-            
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Create final merged event that represents exactly what will be saved
@@ -1805,6 +1800,12 @@ class SharedCore {
                 analyzedEvent._conflicts = analysis.conflicts;
                 // Process conflicts to extract important information
                 analyzedEvent = this.processEventWithConflicts(analyzedEvent);
+            }
+            
+            // Generate notes for ALL events to ensure consistent preview display
+            // This ensures new, merge, and conflict events all have notes for the preview
+            if (!analyzedEvent.notes) {
+                analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
             }
             
             analyzedEvents.push(analyzedEvent);
