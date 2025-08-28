@@ -2812,6 +2812,78 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     // Helper method to determine if time conflicts should be merged
     shouldMergeTimeConflict(existingEvent, newEvent) {
+        // Use the enhanced matching logic from shared-core
+        // Note: We need to create a temporary SharedCore instance to access the method
+        // In a real implementation, this would be passed as a dependency
+        const tempSharedCore = new (class {
+            areDatesEqual(date1, date2, toleranceMinutes = 5) {
+                if (!date1 || !date2) return false;
+                const diff = Math.abs(date1.getTime() - date2.getTime());
+                return diff <= (toleranceMinutes * 60 * 1000);
+            }
+            
+            normalizeVenueName(venue) {
+                return venue
+                    .toLowerCase()
+                    .replace(/\b(the|club|bar|lounge|nightclub)\b/g, '')
+                    .replace(/[^a-z0-9]/g, '')
+                    .trim();
+            }
+            
+            areEventsTheSame(event1, event2) {
+                if (!event1 || !event2) return false;
+                
+                // Check if events are on the same date (within 24 hours)
+                if (!this.areDatesEqual(event1.startDate, event2.startDate, 1440)) {
+                    return false;
+                }
+                
+                // Check for venue similarity
+                const venue1 = (event1.bar || event1.venue || '').toLowerCase().trim();
+                const venue2 = (event2.bar || event2.venue || '').toLowerCase().trim();
+                const venuesAreSimilar = venue1 && venue2 && (
+                    venue1.includes(venue2) || venue2.includes(venue1) ||
+                    this.normalizeVenueName(venue1) === this.normalizeVenueName(venue2)
+                );
+                
+                // Check for event type keywords in titles and descriptions
+                const eventTypeKeywords = [
+                    'treasure trail', 'treasuretrail',
+                    'play party', 'playparty',
+                    'bear party', 'bearparty',
+                    'leather night', 'leathernight',
+                    'underwear party', 'underwearparty',
+                    'jockstrap party', 'jockstrapparty'
+                ];
+                
+                const getText1 = ((event1.title || '') + ' ' + (event1.description || '')).toLowerCase();
+                const getText2 = ((event2.title || '') + ' ' + (event2.description || '')).toLowerCase();
+                
+                const hasCommonEventType = eventTypeKeywords.some(keyword => 
+                    getText1.includes(keyword) && getText2.includes(keyword)
+                );
+                
+                // If venues are similar and there's a common event type, they're likely the same event
+                if (venuesAreSimilar && hasCommonEventType) {
+                    return true;
+                }
+                
+                // Special case: Generic titles (like "MEGAWOOF") with specific content
+                const isGenericTitle = (title) => {
+                    const generic = title.toLowerCase().trim();
+                    return generic === 'megawoof' || generic === 'woof' || generic === 'bear night' || 
+                           generic === 'bear party' || generic === 'leather night';
+                };
+                
+                if ((isGenericTitle(event1.title) || isGenericTitle(event2.title)) && 
+                    venuesAreSimilar && hasCommonEventType) {
+                    return true;
+                }
+                
+                return false;
+            }
+        })();
+        
         // Check if both events are similar enough to be the same event
         const existingTitle = existingEvent.title.toLowerCase().trim();
         
@@ -2824,6 +2896,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         console.log(`   New: "${newTitle}"`);
         if (newOriginalTitle) {
             console.log(`   New (original): "${newOriginalTitle}"`);
+        }
+        
+        // First try the enhanced matching logic
+        if (tempSharedCore.areEventsTheSame(existingEvent, newEvent)) {
+            console.log(`📱 Scriptable: Enhanced matching detected - should merge based on venue and event type`);
+            return true;
         }
         
         // Generic pattern detection for events with complex text formatting

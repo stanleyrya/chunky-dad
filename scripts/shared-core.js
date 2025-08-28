@@ -1962,10 +1962,9 @@ class SharedCore {
             }
         }
         
-        // Check for exact or similar duplicates
+        // Check for exact or similar duplicates using enhanced matching
         const exactMatch = existingEventsData.find(existing => 
-            this.areTitlesSimilar(existing.title, event.title) &&
-            this.areDatesEqual(existing.startDate, event.startDate, 1)
+            this.areEventsTheSame(existing, event)
         );
         
         if (exactMatch) {
@@ -1983,9 +1982,9 @@ class SharedCore {
         );
         
         if (timeConflicts.length > 0) {
-            // Check if these are mergeable conflicts (adding info to existing events)
+            // Check if these are mergeable conflicts using enhanced matching
             const mergeableConflict = timeConflicts.find(existing => 
-                this.areTitlesSimilar(existing.title, event.title) || 
+                this.areEventsTheSame(existing, event) ||
                 (existing.location === (event.bar || event.venue) && 
                  this.areDatesEqual(existing.startDate, event.startDate, 60))
             );
@@ -2066,6 +2065,74 @@ class SharedCore {
         const eventName2 = extractEventName(title2);
         
         return eventName1 === eventName2;
+    }
+
+    // Enhanced event matching that considers content, venue, and event type
+    areEventsTheSame(event1, event2) {
+        if (!event1 || !event2) return false;
+        
+        // First try title similarity
+        if (this.areTitlesSimilar(event1.title, event2.title)) {
+            return true;
+        }
+        
+        // Check if events are on the same date (within 24 hours)
+        if (!this.areDatesEqual(event1.startDate, event2.startDate, 1440)) { // 24 hours in minutes
+            return false;
+        }
+        
+        // Check for venue similarity
+        const venue1 = (event1.bar || event1.venue || '').toLowerCase().trim();
+        const venue2 = (event2.bar || event2.venue || '').toLowerCase().trim();
+        const venuesAreSimilar = venue1 && venue2 && (
+            venue1.includes(venue2) || venue2.includes(venue1) ||
+            this.normalizeVenueName(venue1) === this.normalizeVenueName(venue2)
+        );
+        
+        // Check for event type keywords in titles and descriptions
+        const eventTypeKeywords = [
+            'treasure trail', 'treasuretrail',
+            'play party', 'playparty',
+            'bear party', 'bearparty',
+            'leather night', 'leathernight',
+            'underwear party', 'underwearparty',
+            'jockstrap party', 'jockstrapparty'
+        ];
+        
+        const getText1 = ((event1.title || '') + ' ' + (event1.description || '')).toLowerCase();
+        const getText2 = ((event2.title || '') + ' ' + (event2.description || '')).toLowerCase();
+        
+        const hasCommonEventType = eventTypeKeywords.some(keyword => 
+            getText1.includes(keyword) && getText2.includes(keyword)
+        );
+        
+        // If venues are similar and there's a common event type, they're likely the same event
+        if (venuesAreSimilar && hasCommonEventType) {
+            return true;
+        }
+        
+        // Special case: Generic titles (like "MEGAWOOF") with specific content
+        const isGenericTitle = (title) => {
+            const generic = title.toLowerCase().trim();
+            return generic === 'megawoof' || generic === 'woof' || generic === 'bear night' || 
+                   generic === 'bear party' || generic === 'leather night';
+        };
+        
+        if ((isGenericTitle(event1.title) || isGenericTitle(event2.title)) && 
+            venuesAreSimilar && hasCommonEventType) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // Normalize venue names for comparison
+    normalizeVenueName(venue) {
+        return venue
+            .toLowerCase()
+            .replace(/\b(the|club|bar|lounge|nightclub)\b/g, '') // Remove common venue words
+            .replace(/[^a-z0-9]/g, '') // Remove special chars
+            .trim();
     }
     
 
