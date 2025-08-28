@@ -239,7 +239,8 @@ class SharedCore {
                         displayAdapter,
                         processedUrls,
                         undefined,
-                        mainConfig
+                        mainConfig,
+                        parserName
                     );
                     await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
                 }
@@ -274,7 +275,7 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null) {
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null) {
         const maxUrls = parserConfig.maxAdditionalUrls || 12;
         const urlsToProcess = additionalLinks.slice(0, maxUrls);
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
@@ -292,7 +293,7 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = this.detectParserFromUrl(url) || parserName;
+                const urlParserName = this.detectParserFromUrl(url) || parserName || 'generic';
                 const urlParser = parsers[urlParserName];
                 
                 // CRITICAL FIX: Look up the correct parser configuration for the detected parser type
@@ -339,7 +340,8 @@ class SharedCore {
                                 displayAdapter,
                                 processedUrls,
                                 currentDepth + 1,
-                                mainConfig
+                                mainConfig,
+                                urlParserName
                             );
                         }
                 } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
