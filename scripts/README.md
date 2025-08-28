@@ -156,6 +156,7 @@ const scraperConfig = {
       urls: ["https://venue.com/events"],
       alwaysBear: true,      // Skip bear keyword filtering
       urlDiscoveryDepth: 2,  // How deep to follow links (1 = no detail pages, 2+ = follow links)
+      maxAdditionalUrls: 20, // Optional: limit URLs to process (omit for no limit)
       allowlist: ["keyword1", "keyword2"],
       city: "nyc"
     }

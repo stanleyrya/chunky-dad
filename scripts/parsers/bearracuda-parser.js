@@ -992,9 +992,10 @@ class BearraccudaParser {
                         patternCount++;
                     }
                     
-                    // Limit to prevent infinite loops
-                    if (urls.length >= 20) {
-                        console.log(`🐻 Bearracuda: Reached maximum URL limit (20)`);
+                    // Limit to prevent infinite loops - use maxAdditionalUrls if set, otherwise default to 20
+                    const maxUrls = this.config.maxAdditionalUrls || 20;
+                    if (urls.length >= maxUrls) {
+                        console.log(`🐻 Bearracuda: Reached maximum URL limit (${maxUrls})`);
                         break;
                     }
                 }
