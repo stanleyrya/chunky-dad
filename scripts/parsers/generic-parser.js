@@ -23,7 +23,6 @@ class GenericParser {
     constructor(config = {}) {
         this.config = {
             source: 'generic',
-            urlDiscoveryDepth: 1,
             maxAdditionalUrls: 15,
             ...config
         };

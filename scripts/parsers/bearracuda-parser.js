@@ -23,7 +23,6 @@ class BearraccudaParser {
     constructor(config = {}) {
         this.config = {
             source: 'bearracuda',
-            urlDiscoveryDepth: 1, // Bearracuda uses individual event pages
             maxAdditionalUrls: 20,
             ...config
         };

@@ -23,7 +23,6 @@ class EventbriteParser {
     constructor(config = {}) {
         this.config = {
             source: 'eventbrite',
-            urlDiscoveryDepth: 0,
             maxAdditionalUrls: 20,
             ...config
         };
