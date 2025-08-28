@@ -6,57 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-portland
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
-DTSTART:20251026T220000Z
-DTEND:20251027T030000Z
-DTSTAMP:20250828T201543Z
-UID:8C29AA18-47A3-453D-A49E-7F56EFA7C1B6
-CREATED:20250828T155352Z
-DESCRIPTION:description: TREASURE TRAIL\nChoose Your own Adventure!\nA Port
- land Play Party\nSaturday afternoon/evening\, 3pm-8pm\n33 NW 9th Ave\nbar: 
- Sanctuary Club\naddress: 33 Northwest 9th Avenue\, Portland\, OR 97209\nurl
- : https://www.eventbrite.com/e/treasure-trail-portland-tickets-155997528105
- 9\ncover: $19.24 - $30.54 (as of 8/28)\nimage: https://img.evbuc.com/https%
- 3A%2F%2Fcdn.evbuc.com%2Fimages%2F1088903273%2F301420936599%2F1%2Foriginal.2
- 0250805-185651?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&s
- harp=10&fp-x=0.5&fp-y=0.5&s=4897fdfb1e1bdba3a3b103cea3e0c55c\nshortName: Be
- ar-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https:/
- /www.google.com/maps/search/?api=1&query=45.5235017%2C-122.6802365&query_pl
- ace_id=101715829\nkey: bearracuda-2025-10-26-portland
-LAST-MODIFIED:20250828T155352Z
-LOCATION:45.5235017\, -122.6802365
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20251027T020000Z
-DTEND:20251027T070000Z
-DTSTAMP:20250828T201543Z
-UID:94447E6B-CB80-4CC8-A6CD-D1F9A826C3C5
-CREATED:20250828T155352Z
-DESCRIPTION:description: JP Hardy & Matt Bearracuda present TREASURE TRAIL 
- An Portland Play Party\nbar: SANCTUARY\naddress: 33 NW 9th Ave\nurl: https:
- //bearracuda.com/events/treasure-trailpdx/\nimage: https://bearracuda.com/w
- p-content/uploads/2025/08/newtreasureweb.jpg\nfacebook: https://www.faceboo
- k.com/events/1054827773490040/\nticketUrl: https://www.eventbrite.com/e/tre
- asure-trail-portland-tickets-1559975281059\nshortName: Bear-rac-uda\ninstag
- ram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?
- q=33%20NW%209th%20Ave\nkey: bearracuda-2025-10-27-portland
-LAST-MODIFIED:20250828T155352Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail➲➲PORTLAND
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250914T040000Z
 DTEND:20250914T090000Z
-DTSTAMP:20250828T201543Z
+DTSTAMP:20250828T221321Z
 UID:E0BA6861-892D-456D-9D6E-B53C61A7BF4C
 CREATED:20250817T231651Z
 DESCRIPTION:description: 16 Years in Portland!\nbar: Bossanova Ballroom\nad
@@ -81,7 +33,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251116T050000Z
 DTEND:20251116T100000Z
-DTSTAMP:20250828T201543Z
+DTSTAMP:20250828T221321Z
 UID:CA92B055-AF3F-4794-BF90-54987559FE94
 CREATED:20250817T231652Z
 DESCRIPTION:description: EPIC show at 11pm\nbar: Bossanova Ballroom\naddres
