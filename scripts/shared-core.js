@@ -887,6 +887,74 @@ class SharedCore {
         return finalEvent;
     }
     
+    // ============================================================================
+    // ESCAPE CHARACTER UTILITIES - Handle escaped colons in text
+    // ============================================================================
+    // 
+    // Problem: Time formats like "Doors open at 9:00" were being parsed as metadata
+    // Solution: Use backslash (\) to escape colons that should not be treated as separators
+    // 
+    // Examples:
+    //   "Doors open at 9\:00 PM"     -> Not parsed as metadata (colon is escaped)
+    //   "venue: The Bear Den"         -> Parsed as metadata (single-word key)
+    //   "doors open at 9: 00"         -> Not parsed as metadata (multi-word key rejected)
+    //   "description: Show at 8\:30"  -> Parsed as metadata, value = "Show at 8:30"
+    // 
+    // Escape Rules:
+    //   \: -> :     (escaped colon becomes literal colon)
+    //   \\ -> \     (escaped backslash becomes literal backslash)
+    //   
+    // Key Validation:
+    //   - Must be single word (no spaces)
+    //   - Must start with letter
+    //   - Must be 2-20 characters long
+    //   - Must be alphanumeric only
+    // ============================================================================
+    
+    // Find first unescaped occurrence of a character in text
+    findUnescaped(text, char, startIndex = 0) {
+        for (let i = startIndex; i < text.length; i++) {
+            if (text[i] === char) {
+                // Count preceding backslashes to determine if this character is escaped
+                let backslashCount = 0;
+                for (let j = i - 1; j >= 0 && text[j] === '\\'; j--) {
+                    backslashCount++;
+                }
+                
+                // If even number of backslashes (including 0), the character is not escaped
+                if (backslashCount % 2 === 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+    
+    // Remove escape characters from text
+    unescapeText(text) {
+        if (!text || typeof text !== 'string') {
+            return text;
+        }
+        
+        return text
+            .replace(/\\:/g, ':')      // Unescape colons (\: -> :)
+            .replace(/\\\\/g, '\\');   // Unescape backslashes (\\ -> \)
+    }
+    
+    // Check if a key is valid for metadata (single word, reasonable length)
+    isValidMetadataKey(key) {
+        if (!key || typeof key !== 'string') {
+            return false;
+        }
+        
+        const trimmedKey = key.trim();
+        
+        // Must be a single word (no spaces) and reasonable length
+        return /^[a-zA-Z][a-zA-Z0-9]*$/.test(trimmedKey) && 
+               trimmedKey.length >= 2 && 
+               trimmedKey.length <= 20;
+    }
+    
     // Parse notes back into field/value pairs
     parseNotesIntoFields(notes) {
         const fields = {};
@@ -956,9 +1024,10 @@ class SharedCore {
         let currentValue = '';
         
         lines.forEach((line, index) => {
-            const colonIndex = line.indexOf(':');
+            // Use escape-aware parsing to find the first unescaped colon
+            const colonIndex = this.findUnescaped(line, ':');
             
-            // A valid metadata line has a colon that's not at the start
+            // A valid metadata line has an unescaped colon that's not at the start
             if (colonIndex > 0) {
                 // Save previous field if we have one
                 if (currentKey && currentValue) {
@@ -967,24 +1036,40 @@ class SharedCore {
                         ? aliasToCanonical[normalizedKey]
                         : currentKey;
                     // Description field is now saved and read literally - no normalization
-                    fields[canonicalKey] = currentValue;
+                    fields[canonicalKey] = this.unescapeText(currentValue);
                 }
                 
-                // Start new field
+                // Extract key and value, then unescape them
                 const rawKey = line.substring(0, colonIndex).trim();
-                const value = line.substring(colonIndex + 1).trim();
+                const rawValue = line.substring(colonIndex + 1).trim();
                 
-                if (rawKey) {
-                    currentKey = rawKey;
-                    currentValue = value;
+                const unescapedKey = this.unescapeText(rawKey);
+                const unescapedValue = this.unescapeText(rawValue);
+                
+                // Only accept valid metadata keys (single word, reasonable length)
+                if (unescapedKey && this.isValidMetadataKey(unescapedKey)) {
+                    currentKey = unescapedKey;
+                    currentValue = unescapedValue;
+                } else {
+                    // Invalid key - treat this line as continuation of previous field or ignore
+                    if (currentKey && line.trim()) {
+                        // Add as continuation line for current field
+                        if (currentValue) {
+                            currentValue += '\n' + this.unescapeText(line);
+                        } else {
+                            currentValue = this.unescapeText(line);
+                        }
+                    }
+                    // If no current key, ignore this line (it's not valid metadata)
                 }
             } else if (currentKey && line.trim()) {
                 // This is a continuation line for the current field
-                // Add it to the current value with a newline
+                // Add it to the current value with a newline, unescaping the text
+                const unescapedLine = this.unescapeText(line);
                 if (currentValue) {
-                    currentValue += '\n' + line;
+                    currentValue += '\n' + unescapedLine;
                 } else {
-                    currentValue = line;
+                    currentValue = unescapedLine;
                 }
             }
             
@@ -995,6 +1080,7 @@ class SharedCore {
                     ? aliasToCanonical[normalizedKey]
                     : currentKey;
                 // Description field is now saved and read literally - no normalization
+                // Value is already unescaped from the parsing logic above
                 fields[canonicalKey] = currentValue;
             }
         });
