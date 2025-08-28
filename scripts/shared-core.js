@@ -469,7 +469,7 @@ class SharedCore {
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
-                const merged = this.mergeEventData(existing, event);
+                const merged = this.mergeParsedEvents(existing, event);
                 merged.key = key; // Ensure merged event has the key
                 seen.set(key, merged);
                 
@@ -564,6 +564,57 @@ class SharedCore {
         key = key.toLowerCase().trim();
         
         return key;
+    }
+
+    // Merge two parsed events based on field priorities (for deduplication)
+    mergeParsedEvents(existingEvent, newEvent) {
+        const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
+        
+        // Start with newEvent as base to preserve metadata
+        const mergedEvent = { ...newEvent };
+        
+        // Get all field names from both events
+        const allFields = new Set([
+            ...Object.keys(existingEvent),
+            ...Object.keys(newEvent)
+        ]);
+        
+        // Apply field priorities for each field
+        allFields.forEach(fieldName => {
+            if (fieldName.startsWith('_')) return; // Skip metadata fields
+            
+            const priorityConfig = fieldPriorities[fieldName];
+            if (!priorityConfig || !priorityConfig.priority) return; // No priority config, keep newEvent value
+            
+            const existingValue = existingEvent[fieldName];
+            const newValue = newEvent[fieldName];
+            const existingSource = existingEvent.source;
+            const newSource = newEvent.source;
+            
+            // Find which source has higher priority
+            const existingIndex = priorityConfig.priority.indexOf(existingSource);
+            const newIndex = priorityConfig.priority.indexOf(newSource);
+            
+            // If both sources are in the priority list, use the one with lower index (higher priority)
+            if (existingIndex !== -1 && newIndex !== -1) {
+                if (existingIndex < newIndex) {
+                    // Existing source has higher priority
+                    mergedEvent[fieldName] = existingValue;
+                } else {
+                    // New source has higher priority (or same priority, keep new)
+                    mergedEvent[fieldName] = newValue;
+                }
+            } else if (existingIndex !== -1) {
+                // Only existing source is in priority list
+                mergedEvent[fieldName] = existingValue;
+            } else if (newIndex !== -1) {
+                // Only new source is in priority list
+                mergedEvent[fieldName] = newValue;
+            }
+            // If neither source is in priority list, keep newEvent value (already set)
+        });
+        
+        return mergedEvent;
     }
 
         // Merge function: first merge parser data, then merge with calendar
