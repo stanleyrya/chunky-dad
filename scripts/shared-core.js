@@ -1802,6 +1802,12 @@ class SharedCore {
                 analyzedEvent = this.processEventWithConflicts(analyzedEvent);
             }
             
+            // Generate notes for ALL events to ensure consistent preview display
+            // This ensures new, merge, and conflict events all have notes for the preview
+            if (!analyzedEvent.notes) {
+                analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+            }
+            
             analyzedEvents.push(analyzedEvent);
         }
         

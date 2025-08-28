@@ -82,7 +82,7 @@ const scraperConfig = {
         title: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
+        description: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
         bar: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         address: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         startDate: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
