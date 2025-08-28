@@ -1712,6 +1712,11 @@ class SharedCore {
             };
             analyzedEvent._action = analysis.action;
             
+            // Generate notes for new events so they show preview
+            if (analysis.action === 'new') {
+                analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+            }
+            
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Create final merged event that represents exactly what will be saved
