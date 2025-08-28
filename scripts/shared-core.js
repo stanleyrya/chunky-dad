@@ -311,20 +311,19 @@ class SharedCore {
                     }
                 }
                 
-                // Pass the original config and let the parser handle depth checking
-                // The parser should check: currentDepth < maxDepth && urlDiscoveryDepth > 0
-                const finalDetailPageConfig = {
-                    ...detailPageConfig,
-                    _currentDepth: currentDepth,
-                    _maxDepth: maxDepth
-                };
+                // Pass the original config unchanged - parsers don't need to know about depth
+                const finalDetailPageConfig = detailPageConfig;
                 
                 // Pass detail page config and city config separately
                 const parseResult = urlParser.parseEvents(htmlData, finalDetailPageConfig, mainConfig?.cities || null);
                 
-                // Handle additional URLs if depth allows
-                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
-                    if (shouldAllowMoreUrls) {
+                // Handle additional URLs if depth allows and parser wants URL discovery
+                const shouldProcessUrls = parseResult.additionalLinks && 
+                                        parseResult.additionalLinks.length > 0 &&
+                                        currentDepth < maxDepth &&
+                                        detailPageConfig.urlDiscoveryDepth > 0;
+                
+                if (shouldProcessUrls) {
                         // Deduplicate URLs before recursive processing
                         const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
                         await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
@@ -335,7 +334,7 @@ class SharedCore {
                                 existingEvents,
                                 deduplicatedUrls,
                                 parsers,
-                                finalDetailPageConfig, // Use the correct config for recursive calls too
+                                detailPageConfig, // Use the original config for recursive calls
                                 httpAdapter,
                                 displayAdapter,
                                 processedUrls,
@@ -343,9 +342,8 @@ class SharedCore {
                                 mainConfig
                             );
                         }
-                    } else {
-                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached - ignoring to prevent recursion`);
-                    }
+                } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
                 }
                 
                 // Process detail page events - either enrich existing or add new events

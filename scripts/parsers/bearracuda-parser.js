@@ -61,12 +61,8 @@ class BearraccudaParser {
 
                     events.push(event);
                     
-                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link for depth processing
-                    const currentDepth = parserConfig._currentDepth || 0;
-                    const maxDepth = parserConfig._maxDepth || parserConfig.urlDiscoveryDepth || 1;
-                    const shouldDiscoverUrls = parserConfig.urlDiscoveryDepth > 0 && currentDepth < maxDepth;
-                    
-                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && shouldDiscoverUrls) {
+                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link
+                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.urlDiscoveryDepth > 0) {
                         additionalLinks.push(event.ticketUrl);
 
                     }
@@ -81,12 +77,8 @@ class BearraccudaParser {
                 events.push(...listingEvents);
             }
             
-            // Extract additional URLs if we haven't reached max depth (for listing pages)
-            const currentDepth = parserConfig._currentDepth || 0;
-            const maxDepth = parserConfig._maxDepth || parserConfig.urlDiscoveryDepth || 1;
-            const shouldDiscoverUrls = parserConfig.urlDiscoveryDepth > 0 && currentDepth < maxDepth;
-            
-            if (shouldDiscoverUrls && !isDetailPage) {
+            // Extract additional URLs if urlDiscoveryDepth > 0 (for listing pages)
+            if (parserConfig.urlDiscoveryDepth > 0 && !isDetailPage) {
 
                 const extractedLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
                 additionalLinks.push(...extractedLinks);
