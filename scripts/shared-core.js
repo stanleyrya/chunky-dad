@@ -103,6 +103,9 @@ class SharedCore {
             return results;
         }
 
+        // Global URL tracking across all parsers to prevent duplicate processing
+        const globalProcessedUrls = new Set();
+
         for (let i = 0; i < config.parsers.length; i++) {
             const parserConfig = config.parsers[i];
             
@@ -115,7 +118,7 @@ class SharedCore {
             try {
                 await displayAdapter.logInfo(`SYSTEM: Processing parser ${i + 1}/${config.parsers.length}: ${parserConfig.name}`);
                 
-                const parserResult = await this.processParser(parserConfig, config, httpAdapter, displayAdapter, parsers);
+                const parserResult = await this.processParser(parserConfig, config, httpAdapter, displayAdapter, parsers, globalProcessedUrls);
                 results.parserResults.push(parserResult);
                 results.totalEvents += parserResult.totalEvents;
                 results.bearEvents += parserResult.bearEvents;
@@ -146,7 +149,7 @@ class SharedCore {
         return results;
     }
 
-    async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers) {
+    async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
         // Automatically detect parser from the first URL
         let parserName = null;
         if (parserConfig.urls && parserConfig.urls.length > 0) {
@@ -179,13 +182,14 @@ class SharedCore {
         }
         
         const allEvents = [];
-        const processedUrls = new Set();
+        // Use global processedUrls to prevent duplicate processing across all parsers
+        const processedUrls = globalProcessedUrls;
 
         // Process main URLs
         for (let i = 0; i < (parserConfig.urls || []).length; i++) {
             const url = parserConfig.urls[i];
             if (processedUrls.has(url)) {
-                await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL: ${url}`);
+                await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
                 continue;
             }
             processedUrls.add(url);

@@ -321,7 +321,6 @@ class BearraccudaParser {
             
             while ((match = eventLinkPattern.exec(html)) !== null) {
                 eventUrls.add(match[1]);
-                console.log(`🐻 Bearracuda: Found event link in listing: ${match[1]}`);
             }
             
             console.log(`🐻 Bearracuda: Found ${eventUrls.size} event links on listing page`);
@@ -990,6 +989,7 @@ class BearraccudaParser {
                     if (this.isValidEventUrl(url, parserConfig)) {
                         urls.push(url);
                         patternCount++;
+                        console.log(`🐻 Bearracuda: Found event link in listing: ${url}`);
                     }
                     
                     // Limit to prevent infinite loops (shared-core will also limit)
