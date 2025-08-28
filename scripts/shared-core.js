@@ -147,12 +147,11 @@ class SharedCore {
     }
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers) {
-        let parserName = parserConfig.parser;
-        
-        // If no parser is explicitly configured, try to detect from the first URL
-        if (!parserName && parserConfig.urls && parserConfig.urls.length > 0) {
+        // Automatically detect parser from the first URL
+        let parserName = null;
+        if (parserConfig.urls && parserConfig.urls.length > 0) {
             parserName = this.detectParserFromUrl(parserConfig.urls[0]);
-            await displayAdapter.logInfo(`SYSTEM: No parser specified, detected '${parserName}' from URL: ${parserConfig.urls[0]}`);
+            await displayAdapter.logInfo(`SYSTEM: Detected '${parserName}' parser from URL: ${parserConfig.urls[0]}`);
         }
         
         // Fallback to generic parser if still no parser found
@@ -196,7 +195,7 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
+                const urlParserName = this.detectParserFromUrl(url) || parserName;
                 const urlParser = parsers[urlParserName];
                 
                 if (urlParserName !== parserName) {
@@ -225,8 +224,8 @@ class SharedCore {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
-                // Process additional URLs if required (for enriching existing events, not creating new ones)
-                if (parserConfig.requireDetailPages && parseResult.additionalLinks) {
+                // Process additional URLs if we have them (for enriching existing events, not creating new ones)
+                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
                     // Deduplicate additional URLs before processing
                     const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
@@ -293,7 +292,7 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = this.detectParserFromUrl(url) || parserConfig.parser;
+                const urlParserName = this.detectParserFromUrl(url) || parserName;
                 const urlParser = parsers[urlParserName];
                 
                 // CRITICAL FIX: Look up the correct parser configuration for the detected parser type
@@ -301,30 +300,30 @@ class SharedCore {
                 // when called from primary parsers (like bearracuda)
                 let detailPageConfig = parserConfig; // Default fallback
                 
-                if (urlParserName !== parserConfig.parser && mainConfig?.parsers) {
-                    // Find the configuration for the detected parser type
-                    const matchingParserConfig = mainConfig.parsers.find(p => p.parser === urlParserName);
+                if (urlParserName !== parserName && mainConfig?.parsers) {
+                    // Find a configuration that would use this parser type based on URL patterns
+                    const matchingParserConfig = mainConfig.parsers.find(p => 
+                        p.urls && p.urls.some(configUrl => this.detectParserFromUrl(configUrl) === urlParserName)
+                    );
                     if (matchingParserConfig) {
-                        await displayAdapter.logInfo(`SYSTEM: Using ${urlParserName} parser config for ${url} (switched from ${parserConfig.parser})`);
+                        await displayAdapter.logInfo(`SYSTEM: Using ${urlParserName} parser config for ${url} (switched from ${parserName})`);
                         detailPageConfig = matchingParserConfig;
                     }
                 }
                 
-                // Create a modified parser config that controls further URL discovery based on depth
-                // If we're at max depth, disable further URL discovery entirely
-                const shouldAllowMoreUrls = currentDepth < maxDepth;
-                const finalDetailPageConfig = {
-                    ...detailPageConfig,
-                    requireDetailPages: shouldAllowMoreUrls,
-                    maxAdditionalUrls: shouldAllowMoreUrls ? detailPageConfig.maxAdditionalUrls : 0
-                };
+                // Pass the original config unchanged - parsers don't need to know about depth
+                const finalDetailPageConfig = detailPageConfig;
                 
                 // Pass detail page config and city config separately
                 const parseResult = urlParser.parseEvents(htmlData, finalDetailPageConfig, mainConfig?.cities || null);
                 
-                // Handle additional URLs if depth allows
-                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
-                    if (shouldAllowMoreUrls) {
+                // Handle additional URLs if depth allows and parser wants URL discovery
+                const shouldProcessUrls = parseResult.additionalLinks && 
+                                        parseResult.additionalLinks.length > 0 &&
+                                        currentDepth < maxDepth &&
+                                        detailPageConfig.urlDiscoveryDepth > 0;
+                
+                if (shouldProcessUrls) {
                         // Deduplicate URLs before recursive processing
                         const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
                         await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
@@ -335,7 +334,7 @@ class SharedCore {
                                 existingEvents,
                                 deduplicatedUrls,
                                 parsers,
-                                finalDetailPageConfig, // Use the correct config for recursive calls too
+                                detailPageConfig, // Use the original config for recursive calls
                                 httpAdapter,
                                 displayAdapter,
                                 processedUrls,
@@ -343,9 +342,8 @@ class SharedCore {
                                 mainConfig
                             );
                         }
-                    } else {
-                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached - ignoring to prevent recursion`);
-                    }
+                } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
                 }
                 
                 // Process detail page events - either enrich existing or add new events
@@ -1642,8 +1640,8 @@ class SharedCore {
         const analyzedEvents = [];
         
         for (const event of preparedEvents) {
-            // Get merge mode from parser config if available, otherwise use global default
-            const mergeMode = event._parserConfig?.mergeMode || config.mergeMode || 'upsert';
+            // Use default merge mode since parser-level mergeMode is handled by field priorities
+            const mergeMode = config.mergeMode || 'upsert';
             
             // Get existing events from the adapter
             const existingEvents = await calendarAdapter.getExistingEvents(event);

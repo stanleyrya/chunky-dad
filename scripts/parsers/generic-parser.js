@@ -23,7 +23,6 @@ class GenericParser {
     constructor(config = {}) {
         this.config = {
             source: 'generic',
-            requireDetailPages: true,
             maxAdditionalUrls: 15,
             ...config
         };
@@ -52,9 +51,9 @@ class GenericParser {
             const htmlEvents = this.parseHTMLEvents(html, htmlData.url);
             events.push(...htmlEvents);
             
-            // Extract additional URLs if required
+            // Extract additional URLs if urlDiscoveryDepth > 0 (depth checking is handled by shared-core)
             let additionalLinks = [];
-            if (parserConfig.requireDetailPages) {
+            if (parserConfig.urlDiscoveryDepth > 0) {
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             }
             
