@@ -566,6 +566,55 @@ class SharedCore {
         return key;
     }
 
+    // Merge two events based on field priorities (for multi-source deduplication)
+    mergeByFieldPriorities(existingEvent, newEvent, fieldPriorities) {
+        // Start with newEvent as base to preserve metadata
+        const mergedEvent = { ...newEvent };
+        
+        // Get all field names from both events
+        const allFields = new Set([
+            ...Object.keys(existingEvent),
+            ...Object.keys(newEvent)
+        ]);
+        
+        // Apply field priorities for each field
+        allFields.forEach(fieldName => {
+            if (fieldName.startsWith('_')) return; // Skip metadata fields
+            
+            const priorityConfig = fieldPriorities[fieldName];
+            if (!priorityConfig || !priorityConfig.priority) return; // No priority config, keep newEvent value
+            
+            const existingValue = existingEvent[fieldName];
+            const newValue = newEvent[fieldName];
+            const existingSource = existingEvent.source;
+            const newSource = newEvent.source;
+            
+            // Find which source has higher priority
+            const existingIndex = priorityConfig.priority.indexOf(existingSource);
+            const newIndex = priorityConfig.priority.indexOf(newSource);
+            
+            // If both sources are in the priority list, use the one with lower index (higher priority)
+            if (existingIndex !== -1 && newIndex !== -1) {
+                if (existingIndex < newIndex) {
+                    // Existing source has higher priority
+                    mergedEvent[fieldName] = existingValue;
+                } else {
+                    // New source has higher priority (or same priority, keep new)
+                    mergedEvent[fieldName] = newValue;
+                }
+            } else if (existingIndex !== -1) {
+                // Only existing source is in priority list
+                mergedEvent[fieldName] = existingValue;
+            } else if (newIndex !== -1) {
+                // Only new source is in priority list
+                mergedEvent[fieldName] = newValue;
+            }
+            // If neither source is in priority list, keep newEvent value (already set)
+        });
+        
+        return mergedEvent;
+    }
+
         // Merge function: first merge parser data, then merge with calendar
     mergeEventData(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || {};
@@ -577,7 +626,7 @@ class SharedCore {
         
         // Step 1: Create final scraped values by merging parser data using priorities
         // (This handles Bearracuda + Eventbrite data merging)
-        const finalScrapedValues = { ...newEvent };
+        const finalScrapedValues = this.mergeByFieldPriorities(existingEvent, newEvent, fieldPriorities);
         
         // Step 2: Merge final scraped values with existing calendar using merge strategies
         // Only copy essential calendar properties, not Scriptable-specific methods/properties
