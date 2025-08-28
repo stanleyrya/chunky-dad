@@ -743,11 +743,13 @@ class BearraccudaParser {
             if (descriptionMatch) {
                 sections.description = descriptionMatch[1]
                     .replace(/<br[^>]*>/gi, '\n')
+                    .replace(/<[^>]*>/g, '') // Strip all HTML tags
                     .replace(/&nbsp;/g, ' ')
                     .replace(/&amp;/g, '&')
                     .replace(/&lt;/g, '<')
                     .replace(/&gt;/g, '>')
                     .replace(/&quot;/g, '"')
+                    .replace(/\s+/g, ' ') // Normalize whitespace
                     .trim();
             }
 
