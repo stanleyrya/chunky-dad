@@ -20,6 +20,7 @@ const scraperConfig = {
       alwaysBear: true,
       urlDiscoveryDepth: 1,
       maxAdditionalUrls: 20,
+      dryRun: false,
       fieldPriorities: {
         title: { priority: ["static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
@@ -46,6 +47,7 @@ const scraperConfig = {
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
       urlDiscoveryDepth: 1,
+      dryRun: false,
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "upsert" },
         shortName: { priority: ["static"], merge: "upsert" },
@@ -73,6 +75,7 @@ const scraperConfig = {
       ],
       alwaysBear: true,
       urlDiscoveryDepth: 1,
+      dryRun: false,
       keyTemplate: "bearracuda-${date}-${city}",
       fieldPriorities: {
         title: { priority: ["eventbrite", "bearracuda"], merge: "upsert" },
@@ -102,6 +105,7 @@ const scraperConfig = {
       urls: ["https://www.eventbrite.com/o/bearracuda-21867032189"],
       alwaysBear: true,
       urlDiscoveryDepth: 1,
+      dryRun: false,
       keyTemplate: "bearracuda-${date}-${city}",
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "upsert" },

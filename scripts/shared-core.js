@@ -224,8 +224,8 @@ class SharedCore {
                     await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
-                // Process additional URLs if urlDiscoveryDepth > 0 (for enriching existing events, not creating new ones)
-                if (parserConfig.urlDiscoveryDepth > 0 && parseResult.additionalLinks) {
+                // Process additional URLs if we have them (for enriching existing events, not creating new ones)
+                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
                     // Deduplicate additional URLs before processing
                     const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
@@ -311,13 +311,12 @@ class SharedCore {
                     }
                 }
                 
-                // Create a modified parser config that controls further URL discovery based on depth
-                // If we're at max depth, disable further URL discovery entirely
-                const shouldAllowMoreUrls = currentDepth < maxDepth;
+                // Pass the original config and let the parser handle depth checking
+                // The parser should check: currentDepth < maxDepth && urlDiscoveryDepth > 0
                 const finalDetailPageConfig = {
                     ...detailPageConfig,
-                    urlDiscoveryDepth: shouldAllowMoreUrls ? detailPageConfig.urlDiscoveryDepth : 0,
-                    maxAdditionalUrls: shouldAllowMoreUrls ? (detailPageConfig.maxAdditionalUrls || 12) : 0
+                    _currentDepth: currentDepth,
+                    _maxDepth: maxDepth
                 };
                 
                 // Pass detail page config and city config separately

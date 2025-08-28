@@ -52,9 +52,13 @@ class GenericParser {
             const htmlEvents = this.parseHTMLEvents(html, htmlData.url);
             events.push(...htmlEvents);
             
-            // Extract additional URLs if urlDiscoveryDepth > 0
+            // Extract additional URLs if we haven't reached max depth and urlDiscoveryDepth > 0
             let additionalLinks = [];
-            if (parserConfig.urlDiscoveryDepth > 0) {
+            const currentDepth = parserConfig._currentDepth || 0;
+            const maxDepth = parserConfig._maxDepth || parserConfig.urlDiscoveryDepth || 1;
+            const shouldDiscoverUrls = parserConfig.urlDiscoveryDepth > 0 && currentDepth < maxDepth;
+            
+            if (shouldDiscoverUrls) {
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             }
             
