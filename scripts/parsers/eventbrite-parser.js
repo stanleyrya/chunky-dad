@@ -48,7 +48,7 @@ class EventbriteParser {
             }
             
             // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
-            const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData);
+            const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData, cityConfig);
             if (jsonEvents.length > 0) {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
@@ -194,7 +194,7 @@ class EventbriteParser {
     }
 
     // Extract events from embedded JSON data (modern Eventbrite)
-    extractEventsFromJson(html, parserConfig = {}, htmlData = null) {
+    extractEventsFromJson(html, parserConfig = {}, htmlData = null, cityConfig = null) {
         const events = [];
         
         try {
