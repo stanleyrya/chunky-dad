@@ -629,8 +629,8 @@ class SharedCore {
             
             mergedEvent[fieldName] = chosenValue;
             
-            // Log decisions for important fields or when values differ
-            if (['facebook', 'ticketUrl', 'title', 'url'].includes(fieldName) || existingValue !== newValue) {
+            // Log decisions when values differ
+            if (existingValue !== newValue) {
                 mergeDecisions.push({
                     field: fieldName,
                     existingValue: existingValue,
