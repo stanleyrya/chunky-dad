@@ -35,7 +35,7 @@ class BearraccudaParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
-    parseEvents(htmlData, parserConfig = {}, cityConfig = null, sharedCore = null) {
+    parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
 
             
@@ -111,7 +111,7 @@ class BearraccudaParser {
             let title = this.extractTitle(html);
             
             // Extract date
-            const dateInfo = this.extractDate(html, sharedCore);
+            const dateInfo = this.extractDate(html);
             
             // Extract structured description content first (contains venue, address, links, timing)
             const structuredSections = this.extractStructuredDescription(html);
@@ -195,30 +195,18 @@ class BearraccudaParser {
             }
             description = description.trim();
             
-            // Create start date using centralized SharedCore timezone conversion
+            // Create start date using structured timing data
             let startDate = null;
             if (dateInfo && structuredSections.timing.start) {
-                if (sharedCore) {
-                    startDate = sharedCore.convertLocalTimeToUTC(dateInfo, structuredSections.timing.start, city);
-                } else {
-                    // Fallback to old method if SharedCore not available
-                    console.warn('🐻 Bearracuda: SharedCore not available, using fallback timezone conversion');
-                    startDate = this.combineDateTime(dateInfo, structuredSections.timing.start, city, cityConfig);
-                }
+                startDate = this.combineDateTime(dateInfo, structuredSections.timing.start, city, cityConfig);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
             
-            // Create end date using centralized SharedCore timezone conversion
+            // Create end date using structured timing data
             let endDate = null;
             if (dateInfo && structuredSections.timing.end) {
-                if (sharedCore) {
-                    endDate = sharedCore.convertLocalTimeToUTC(dateInfo, structuredSections.timing.end, city);
-                } else {
-                    // Fallback to old method if SharedCore not available
-                    endDate = this.combineDateTime(dateInfo, structuredSections.timing.end, city, cityConfig);
-                }
-                
+                endDate = this.combineDateTime(dateInfo, structuredSections.timing.end, city, cityConfig);
                 // If end time is earlier than start time, assume it's next day
                 if (endDate && startDate && endDate <= startDate) {
                     endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -389,7 +377,7 @@ class BearraccudaParser {
     }
 
     // Extract date from page
-    extractDate(html, sharedCore = null) {
+    extractDate(html) {
         console.log(`🐻 Bearracuda: Extracting date from HTML`);
         
         // Look for date with emoji pattern: 📅  August 23, 2025
@@ -401,8 +389,7 @@ class BearraccudaParser {
             console.log(`🐻 Bearracuda: Found emoji date string: "${dateString}"`);
             
             // Parse various date formats
-            // Parse various date formats using SharedCore if available
-            const parsedDate = sharedCore ? sharedCore.parseNeutralDate(dateString) : this.parseDate(dateString);
+            const parsedDate = this.parseDate(dateString);
             if (parsedDate) {
                 console.log(`🐻 Bearracuda: Successfully parsed emoji date: ${parsedDate}`);
                 return parsedDate;
@@ -420,7 +407,7 @@ class BearraccudaParser {
             const match = html.match(pattern);
             if (match && match[1]) {
                 console.log(`🐻 Bearracuda: Found structured date: "${match[1]}"`);
-                const parsedDate = sharedCore ? sharedCore.parseNeutralDate(match[1]) : this.parseDate(match[1]);
+                const parsedDate = this.parseDate(match[1]);
                 if (parsedDate) {
                     console.log(`🐻 Bearracuda: Successfully parsed structured date: ${parsedDate}`);
                     return parsedDate;
@@ -440,7 +427,7 @@ class BearraccudaParser {
             const match = html.match(pattern);
             if (match && match[1]) {
                 console.log(`🐻 Bearracuda: Found ${name} date pattern: "${match[1]}"`);
-                const parsedDate = sharedCore ? sharedCore.parseNeutralDate(match[1]) : this.parseDate(match[1]);
+                const parsedDate = this.parseDate(match[1]);
                 if (parsedDate) {
                     console.log(`🐻 Bearracuda: Successfully parsed ${name} date: ${parsedDate}`);
                     return parsedDate;
@@ -1187,8 +1174,6 @@ class BearraccudaParser {
 
     // Combine date and time into a single Date object with timezone handling
     combineDateTime(date, time, city = null, cityConfig = null) {
-        console.warn('🐻 Bearracuda: DEPRECATED - Use SharedCore.convertLocalTimeToUTC() instead');
-        
         if (!date || !time) return date;
         
         // Get timezone identifier for the city
@@ -1201,27 +1186,59 @@ class BearraccudaParser {
         }
         
         try {
-            // Simplified fallback version - use the corrected logic
+            // Use Intl API for proper timezone conversion
             const year = date.getUTCFullYear();
             const month = date.getUTCMonth();
             const day = date.getUTCDate();
             
+            // Create a date in the target timezone at the specified time
+            const dateTimeString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(time.hours).padStart(2, '0')}:${String(time.minutes).padStart(2, '0')}:00`;
+            
+            // Create a temporary date to get the timezone offset for this specific date/time
+            const tempDate = new Date(dateTimeString);
+            
+            // Get the timezone offset using Intl.DateTimeFormat
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+            
+            const parts = formatter.formatToParts(tempDate);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            
+            if (offsetPart && offsetPart.value) {
+                // Parse GMT offset (e.g., "GMT-07:00")
+                const offsetMatch = offsetPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+                if (offsetMatch) {
+                    const sign = offsetMatch[1] === '+' ? 1 : -1;
+                    const offsetHours = parseInt(offsetMatch[2]);
+                    const offsetMinutes = parseInt(offsetMatch[3]);
+                    const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
+                    
+                    // Create the local time as UTC, then apply the timezone offset
+                    const localTimeAsUTC = new Date(Date.UTC(year, month, day, time.hours, time.minutes, 0, 0));
+                    const utcTime = new Date(localTimeAsUTC.getTime() - (totalOffsetMinutes * 60 * 1000));
+                    
+                    console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
+                    
+                    return utcTime;
+                }
+            }
+            
+            // Fallback if Intl API fails
+            console.log(`🐻 Bearracuda: Intl API failed, using fallback conversion`);
+            const fallbackOffset = timezone === 'America/Los_Angeles' ? -7 : 
+                                   timezone === 'America/Chicago' ? -5 :
+                                   timezone === 'America/New_York' ? -4 : -7;
             const localTimeAsUTC = new Date(Date.UTC(year, month, day, time.hours, time.minutes, 0, 0));
-            
-            // Simple offset calculation for fallback (PDT = -7 hours)
-            const offsetHours = timezone === 'America/Los_Angeles' ? -7 : 
-                               timezone === 'America/Chicago' ? -5 :
-                               timezone === 'America/New_York' ? -4 : -7;
-            const totalOffsetMinutes = offsetHours * 60;
-            
-            const utcTime = new Date(localTimeAsUTC.getTime() - (totalOffsetMinutes * 60 * 1000));
+            const utcTime = new Date(localTimeAsUTC.getTime() - (fallbackOffset * 60 * 60 * 1000));
             
             console.log(`🐻 Bearracuda: FALLBACK Converting ${city} time ${time.hours}:${time.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
             
             return utcTime;
             
         } catch (error) {
-            console.log(`🐻 Bearracuda: Error in fallback timezone conversion: ${error.message}, returning null`);
+            console.log(`🐻 Bearracuda: Error in timezone conversion: ${error.message}, returning null`);
             return null;
         }
     }

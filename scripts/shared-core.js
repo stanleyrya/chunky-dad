@@ -209,8 +209,8 @@ class SharedCore {
                     await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
                 }
                 
-                // Parse events (consolidated logging) - pass SharedCore instance for timezone conversion
-                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, this);
+                // Parse events (consolidated logging)
+                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
                 
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
@@ -303,7 +303,7 @@ class SharedCore {
                 const urlParserName = this.detectParserFromUrl(url) || parserName || 'generic';
                 const urlParser = parsers[urlParserName];
                 
-                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, this);
+                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
                 const shouldProcessUrls = parseResult.additionalLinks && 
