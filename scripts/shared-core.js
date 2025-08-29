@@ -554,6 +554,9 @@ class SharedCore {
     mergeParsedEvents(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
         
+        // Log the merge operation
+        console.log(`🔄 PARSER MERGE: Merging "${existingEvent.title}" (${existingEvent.source}) with "${newEvent.title}" (${newEvent.source})`);
+        
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
         
@@ -568,6 +571,9 @@ class SharedCore {
             ...Object.keys(existingEvent),
             ...Object.keys(newEvent)
         ]);
+        
+        // Track merge decisions for important fields
+        const mergeDecisions = [];
         
         // Apply field priorities for each field
         allFields.forEach(fieldName => {
@@ -585,34 +591,75 @@ class SharedCore {
             const existingIndex = priorityConfig.priority.indexOf(existingSource);
             const newIndex = priorityConfig.priority.indexOf(newSource);
             
+            let chosenValue = newValue; // Default
+            let reason = 'default';
+            
             // If both sources are in the priority list, use the one with lower index (higher priority)
             if (existingIndex !== -1 && newIndex !== -1) {
                 if (existingIndex < newIndex) {
                     // Existing source has higher priority
                     // But if existing value is empty and new value is not empty, use new value
                     if (isEmpty(existingValue) && !isEmpty(newValue)) {
-                        mergedEvent[fieldName] = newValue;
+                        chosenValue = newValue;
+                        reason = `${newSource} value used because ${existingSource} value is empty`;
                     } else {
-                        mergedEvent[fieldName] = existingValue;
+                        chosenValue = existingValue;
+                        reason = `${existingSource} has higher priority (index ${existingIndex} vs ${newIndex})`;
                     }
                 } else {
                     // New source has higher priority (or same priority)
                     // But if new value is empty and existing value is not empty, use existing value
                     if (isEmpty(newValue) && !isEmpty(existingValue)) {
-                        mergedEvent[fieldName] = existingValue;
+                        chosenValue = existingValue;
+                        reason = `${existingSource} value used because ${newSource} value is empty`;
                     } else {
-                        mergedEvent[fieldName] = newValue;
+                        chosenValue = newValue;
+                        reason = `${newSource} has higher priority (index ${newIndex} vs ${existingIndex})`;
                     }
                 }
             } else if (existingIndex !== -1) {
                 // Only existing source is in priority list
-                mergedEvent[fieldName] = existingValue;
+                chosenValue = existingValue;
+                reason = `only ${existingSource} in priority list`;
             } else if (newIndex !== -1) {
                 // Only new source is in priority list
-                mergedEvent[fieldName] = newValue;
+                chosenValue = newValue;
+                reason = `only ${newSource} in priority list`;
             }
-            // If neither source is in priority list, keep newEvent value (already set)
+            
+            mergedEvent[fieldName] = chosenValue;
+            
+            // Log decisions for important fields or when values differ
+            if (['facebook', 'ticketUrl', 'title', 'url'].includes(fieldName) || existingValue !== newValue) {
+                mergeDecisions.push({
+                    field: fieldName,
+                    existingValue: existingValue,
+                    newValue: newValue,
+                    chosenValue: chosenValue,
+                    reason: reason
+                });
+            }
         });
+        
+        // Log merge decisions
+        if (mergeDecisions.length > 0) {
+            console.log(`🔄 PARSER MERGE DECISIONS for "${mergedEvent.title}":`);
+            mergeDecisions.forEach(decision => {
+                const existingStr = decision.existingValue === undefined ? 'undefined' : 
+                                   decision.existingValue === null ? 'null' :
+                                   decision.existingValue === '' ? 'empty' : 
+                                   `"${decision.existingValue}"`;
+                const newStr = decision.newValue === undefined ? 'undefined' : 
+                               decision.newValue === null ? 'null' :
+                               decision.newValue === '' ? 'empty' : 
+                               `"${decision.newValue}"`;
+                const chosenStr = decision.chosenValue === undefined ? 'undefined' : 
+                                  decision.chosenValue === null ? 'null' :
+                                  decision.chosenValue === '' ? 'empty' : 
+                                  `"${decision.chosenValue}"`;
+                console.log(`🔄   ${decision.field}: ${existingStr} vs ${newStr} → ${chosenStr} (${decision.reason})`);
+            });
+        }
         
         return mergedEvent;
     }
