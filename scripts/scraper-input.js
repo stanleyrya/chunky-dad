@@ -33,8 +33,7 @@ const scraperConfig = {
         url: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
-        cover: { priority: ["eventbrite"], merge: "clobber" },
-        timezone: { priority: ["eventbrite"], merge: "clobber" }
+        cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
         title: { value: "MEGAWOOF" },
@@ -61,8 +60,7 @@ const scraperConfig = {
         url: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
-        cover: { priority: ["eventbrite"], merge: "clobber" },
-        timezone: { priority: ["eventbrite"], merge: "clobber" }
+        cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
         shortName: { value: "Coach After Dark" },
@@ -95,8 +93,7 @@ const scraperConfig = {
         cover: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         facebook: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
         ticketUrl: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
-        key: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
-        timezone: { priority: ["bearracuda", "eventbrite"], merge: "clobber" }
+        key: { priority: ["bearracuda", "eventbrite"], merge: "clobber" }
       },
       metadata: {
         shortName: { value: "Bear-rac-uda" },
