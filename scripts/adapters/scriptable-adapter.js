@@ -320,7 +320,18 @@ class ScriptableAdapter {
             searchEnd.setHours(23, 59, 59, 999);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-            return existingEvents;
+            
+            // Enrich existing events with fields from notes to avoid timezone errors
+            const enrichedExistingEvents = existingEvents.map(existingEvent => {
+                const fieldsFromNotes = this.sharedCore.parseNotesIntoFields(existingEvent.notes || '');
+                // Add parsed fields to the existing event object
+                return {
+                    ...existingEvent,
+                    ...fieldsFromNotes
+                };
+            });
+            
+            return enrichedExistingEvents;
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
@@ -730,7 +741,17 @@ class ScriptableAdapter {
                 const searchEnd = new Date(endDate);
                 searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
                 
-                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                const rawExistingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                
+                // Enrich existing events with fields from notes to avoid timezone errors
+                const existingEvents = rawExistingEvents.map(existingEvent => {
+                    const fieldsFromNotes = this.sharedCore.parseNotesIntoFields(existingEvent.notes || '');
+                    // Add parsed fields to the existing event object
+                    return {
+                        ...existingEvent,
+                        ...fieldsFromNotes
+                    };
+                });
                 
                 console.log(`📊 Found ${existingEvents.length} existing events in calendar`);
                 

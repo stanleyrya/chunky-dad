@@ -91,8 +91,8 @@ const scraperConfig = {
         gmaps: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         image: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
         cover: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
-        facebook: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
-        ticketUrl: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
+        facebook: { priority: ["bearracuda", "eventbrite"], merge: "upsert" },
+        ticketUrl: { priority: ["bearracuda", "eventbrite"], merge: "upsert" },
         key: { priority: ["bearracuda", "eventbrite"], merge: "clobber" }
       },
       metadata: {
