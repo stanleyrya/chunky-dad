@@ -300,33 +300,13 @@ class SharedCore {
                 const urlParserName = this.detectParserFromUrl(url) || parserName || 'generic';
                 const urlParser = parsers[urlParserName];
                 
-                // CRITICAL FIX: Look up the correct parser configuration for the detected parser type
-                // This ensures secondary parsers (like eventbrite) get their proper merge strategies
-                // when called from primary parsers (like bearracuda)
-                let detailPageConfig = parserConfig; // Default fallback
-                
-                if (urlParserName !== parserName && mainConfig?.parsers) {
-                    // Find a configuration that would use this parser type based on URL patterns
-                    const matchingParserConfig = mainConfig.parsers.find(p => 
-                        p.urls && p.urls.some(configUrl => this.detectParserFromUrl(configUrl) === urlParserName)
-                    );
-                    if (matchingParserConfig) {
-                        await displayAdapter.logInfo(`SYSTEM: Using ${urlParserName} parser config for ${url} (switched from ${parserName})`);
-                        detailPageConfig = matchingParserConfig;
-                    }
-                }
-                
-                // Pass the original config unchanged - parsers don't need to know about depth
-                const finalDetailPageConfig = detailPageConfig;
-                
-                // Pass detail page config and city config separately
-                const parseResult = urlParser.parseEvents(htmlData, finalDetailPageConfig, mainConfig?.cities || null);
+                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
                 const shouldProcessUrls = parseResult.additionalLinks && 
                                         parseResult.additionalLinks.length > 0 &&
                                         currentDepth < maxDepth &&
-                                        detailPageConfig.urlDiscoveryDepth > 0;
+                                        parserConfig.urlDiscoveryDepth > 0;
                 
                 if (shouldProcessUrls) {
                         // Deduplicate URLs before recursive processing
@@ -339,7 +319,7 @@ class SharedCore {
                                 existingEvents,
                                 deduplicatedUrls,
                                 parsers,
-                                detailPageConfig, // Use the original config for recursive calls
+                                parserConfig,
                                 httpAdapter,
                                 displayAdapter,
                                 processedUrls,
