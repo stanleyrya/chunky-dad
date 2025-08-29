@@ -215,8 +215,9 @@ class SharedCore {
                 
                 if (parseResult.events) {
                     // Apply field priorities to determine which parser data to trust
+                    // CRITICAL FIX: Only apply metadata if the parser type matches the config
                     const filteredEvents = parseResult.events.map(event => 
-                        this.applyFieldPriorities(event, parserConfig, mainConfig)
+                        this.applyFieldPriorities(event, parserConfig, mainConfig, urlParserName)
                     );
                     
                     // Normalize text fields and enrich events with location data (Google Maps links, city extraction)
@@ -356,8 +357,9 @@ class SharedCore {
                 if (parseResult.events && parseResult.events.length > 0) {
                     // Apply field priorities to detail page events (same as main page events)
                     // CRITICAL FIX: Detail page events need the same enrichment as main page events
+                    // CRITICAL FIX: Only apply metadata if the parser type matches the config
                     const enrichedDetailEvents = parseResult.events.map(event => 
-                        this.enrichEventLocation(this.normalizeEventTextFields(this.applyFieldPriorities(event, parserConfig, mainConfig)))
+                        this.enrichEventLocation(this.normalizeEventTextFields(this.applyFieldPriorities(event, parserConfig, mainConfig, detailParserName)))
                     );
                     
                     // Add these events to the existing events collection for potential merging
@@ -1673,7 +1675,7 @@ class SharedCore {
     
     // Apply field-level priority strategies from the parser config
     // This determines which parser's data to trust for each field
-    applyFieldPriorities(event, parserConfig, mainConfig) {
+    applyFieldPriorities(event, parserConfig, mainConfig, actualParserType = null) {
         // Always attach parser config
         event._parserConfig = parserConfig;
         
@@ -1693,7 +1695,11 @@ class SharedCore {
         });
         
         // Apply static metadata values based on priority system
-        if (parserConfig?.metadata) {
+        // CRITICAL FIX: Only apply metadata if we're using the original parser type for this config,
+        // or if no parser type is specified (backward compatibility)
+        const shouldApplyMetadata = !actualParserType || this.isParserConfigCompatible(parserConfig, actualParserType);
+        
+        if (shouldApplyMetadata && parserConfig?.metadata) {
             Object.keys(parserConfig.metadata).forEach(key => {
                 const metaValue = parserConfig.metadata[key];
                 if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
