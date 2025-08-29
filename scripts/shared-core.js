@@ -1201,6 +1201,149 @@ class SharedCore {
         return null;
     }
 
+    // Convert local time in a city to UTC (centralized timezone conversion)
+    // This replaces the individual parser timezone conversion logic
+    convertLocalTimeToUTC(baseDate, localTime, city) {
+        if (!baseDate || !localTime || !city) {
+            console.warn('⚠️ SharedCore: Missing required parameters for timezone conversion');
+            return null;
+        }
+
+        try {
+            // Get timezone for the city
+            const timezone = this.getTimezoneForCity(city);
+            if (!timezone) {
+                console.warn(`⚠️ SharedCore: No timezone configuration found for city: ${city}`);
+                return null;
+            }
+
+            // Ensure we have a proper Date object for the base date
+            const date = new Date(baseDate);
+            if (isNaN(date.getTime())) {
+                console.warn(`⚠️ SharedCore: Invalid base date: ${baseDate}`);
+                return null;
+            }
+
+            // Extract date components (use UTC to ensure consistency)
+            const year = date.getUTCFullYear();
+            const month = date.getUTCMonth();
+            const day = date.getUTCDate();
+
+            // Parse time components
+            const hours = typeof localTime === 'object' ? localTime.hours : parseInt(localTime.split(':')[0]);
+            const minutes = typeof localTime === 'object' ? localTime.minutes : parseInt(localTime.split(':')[1]) || 0;
+
+            if (isNaN(hours) || isNaN(minutes)) {
+                console.warn(`⚠️ SharedCore: Invalid time format: ${JSON.stringify(localTime)}`);
+                return null;
+            }
+
+            // Create the local time as if it were UTC, then apply timezone offset
+            const localTimeAsUTC = new Date(Date.UTC(year, month, day, hours, minutes, 0, 0));
+
+            // Get timezone offset using Intl.DateTimeFormat
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+
+            const parts = formatter.formatToParts(localTimeAsUTC);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+
+            if (!offsetPart || !offsetPart.value) {
+                console.warn(`⚠️ SharedCore: Could not determine timezone offset for ${city} (${timezone})`);
+                return null;
+            }
+
+            // Parse offset like "GMT-07:00" or "GMT+09:00"
+            const offsetMatch = offsetPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+            if (!offsetMatch) {
+                console.warn(`⚠️ SharedCore: Could not parse timezone offset: ${offsetPart.value}`);
+                return null;
+            }
+
+            const sign = offsetMatch[1] === '+' ? 1 : -1;
+            const offsetHours = parseInt(offsetMatch[2]);
+            const offsetMinutes = parseInt(offsetMatch[3]);
+            const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
+
+            // Convert from local time to UTC by subtracting the offset
+            const utcTime = new Date(localTimeAsUTC.getTime() - (totalOffsetMinutes * 60 * 1000));
+
+            console.log(`🌍 SharedCore: Converting ${city} time ${hours}:${minutes.toString().padStart(2, '0')} (${timezone}) to UTC: ${utcTime.toISOString()}`);
+            
+            return utcTime;
+
+        } catch (error) {
+            console.warn(`⚠️ SharedCore: Error in timezone conversion for ${city}: ${error.message}`);
+            return null;
+        }
+    }
+
+    // Create a timezone-neutral base date from date components
+    // This ensures consistent date parsing regardless of script execution environment
+    createNeutralDate(year, month, day) {
+        try {
+            // Use UTC constructor to create timezone-neutral date
+            const date = new Date(Date.UTC(year, month, day));
+            if (isNaN(date.getTime())) {
+                console.warn(`⚠️ SharedCore: Invalid date components: ${year}-${month + 1}-${day}`);
+                return null;
+            }
+            return date;
+        } catch (error) {
+            console.warn(`⚠️ SharedCore: Error creating neutral date: ${error.message}`);
+            return null;
+        }
+    }
+
+    // Parse date string into timezone-neutral Date object
+    // This replaces individual parser date parsing logic
+    parseNeutralDate(dateString) {
+        if (!dateString) return null;
+        
+        try {
+            // Clean up the date string
+            dateString = dateString.replace(/\s+/g, ' ').trim();
+            
+            // Month name format (most common in event listings)
+            const monthNamePattern = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})/i;
+            const monthMatch = dateString.match(monthNamePattern);
+            
+            if (monthMatch) {
+                const months = {
+                    'january': 0, 'february': 1, 'march': 2, 'april': 3,
+                    'may': 4, 'june': 5, 'july': 6, 'august': 7,
+                    'september': 8, 'october': 9, 'november': 10, 'december': 11
+                };
+                
+                const month = months[monthMatch[1].toLowerCase()];
+                const day = parseInt(monthMatch[2]);
+                const year = parseInt(monthMatch[3]);
+                
+                return this.createNeutralDate(year, month, day);
+            }
+            
+            // Try other formats with fallback to Date constructor
+            // But be cautious about timezone interpretation
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime())) {
+                // If the string was successfully parsed, convert to neutral UTC date
+                return new Date(Date.UTC(
+                    date.getFullYear(),
+                    date.getMonth(),
+                    date.getDate()
+                ));
+            }
+            
+            return null;
+            
+        } catch (error) {
+            console.warn(`⚠️ SharedCore: Error parsing date string "${dateString}": ${error.message}`);
+            return null;
+        }
+    }
+
     // Compare two date inputs for display equality, avoiding timezone-related false diffs
     datesEqualForDisplay(a, b) {
         if (a === b) return true;

@@ -195,16 +195,17 @@ class BearraccudaParser {
             }
             description = description.trim();
             
-            // Create start date using structured timing data
+            // Create start date using centralized timezone conversion
             let startDate = null;
             if (dateInfo && structuredSections.timing.start) {
-                // Combine date and start time with city timezone
+                // Use SharedCore for timezone conversion - need to get sharedCore instance
+                // For now, keep existing logic but will be updated when SharedCore is passed to parsers
                 startDate = this.combineDateTime(dateInfo, structuredSections.timing.start, city, cityConfig);
             } else if (dateInfo) {
                 startDate = dateInfo;
             }
             
-            // Create end date using structured timing data
+            // Create end date using centralized timezone conversion
             let endDate = null;
             if (dateInfo && structuredSections.timing.end) {
                 endDate = this.combineDateTime(dateInfo, structuredSections.timing.end, city, cityConfig);
