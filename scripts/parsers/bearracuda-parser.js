@@ -1111,7 +1111,7 @@ class BearraccudaParser {
                         const month = months[match[1].toLowerCase()];
                         const day = parseInt(match[2]);
                         const year = parseInt(match[3]);
-                        date = new Date(year, month, day);
+                        date = new Date(Date.UTC(year, month, day));
                     } else {
                         // Numeric formats
                         date = new Date(dateString);
@@ -1215,10 +1215,12 @@ class BearraccudaParser {
                     const offsetMinutes = parseInt(offsetMatch[3]);
                     const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
                     
-                    // Create local time and convert to UTC
-                    const localTime = new Date(date);
-                    localTime.setHours(time.hours, time.minutes, 0, 0);
-                    const utcTime = new Date(localTime.getTime() - (totalOffsetMinutes * 60 * 1000));
+                    // Create local time as UTC first, then apply timezone offset
+                    const year = date.getUTCFullYear();
+                    const month = date.getUTCMonth();
+                    const day = date.getUTCDate();
+                    const localTimeAsUTC = new Date(Date.UTC(year, month, day, time.hours, time.minutes, 0, 0));
+                    const utcTime = new Date(localTimeAsUTC.getTime() - (totalOffsetMinutes * 60 * 1000));
                     
                     console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
                     
