@@ -308,7 +308,9 @@ class SharedCore {
                 
                 if (urlParserName !== parserName && mainConfig?.parsers) {
                     // Find a configuration that would use this parser type based on URL patterns
+                    // CRITICAL FIX: Only consider enabled parser configs
                     const matchingParserConfig = mainConfig.parsers.find(p => 
+                        p.enabled !== false && // Only consider enabled parsers
                         p.urls && p.urls.some(configUrl => this.detectParserFromUrl(configUrl) === urlParserName)
                     );
                     if (matchingParserConfig) {
