@@ -215,8 +215,8 @@ class ScriptableAdapter {
         if (city && this.cities[city] && this.cities[city].timezone) {
             return this.cities[city].timezone;
         }
-        // Return fallback timezone
-        return 'America/New_York';
+        // NO FALLBACKS - throw error if timezone not found
+        throw new Error(`No timezone configuration found for city: ${city}`);
     }
 
     // HTTP Adapter Implementation
