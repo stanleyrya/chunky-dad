@@ -665,8 +665,11 @@ class ScriptableAdapter {
             console.log(`\n📋 Sample Event Structure:`);
             console.log(`   Title: "${sampleEvent.title || sampleEvent.name}"`);
             const sampleEventDate = new Date(sampleEvent.startDate);
-            const sampleTimeZone = sampleEvent.timezone ? { timeZone: sampleEvent.timezone } : {};
-            console.log(`   Date: ${sampleEventDate.toLocaleString('en-US', sampleTimeZone)}`);
+            if (!sampleEvent.timezone) {
+                console.error(`🚨 Sample event "${sampleEvent.title}" missing timezone`);
+                throw new Error(`Sample event missing timezone: ${sampleEvent.title}`);
+            }
+            console.log(`   Date: ${sampleEventDate.toLocaleString('en-US', { timeZone: sampleEvent.timezone })}`);
             console.log(`   Location: "${sampleEvent.venue || sampleEvent.bar || 'TBD'}"`);
             console.log(`   City: ${sampleEvent.city || 'unknown'}`);
             console.log(`   Notes: ${(sampleEvent.notes || '').length} characters`);
@@ -739,8 +742,11 @@ class ScriptableAdapter {
                 if (duplicates.length > 0) {
                     console.log(`⚠️  Found ${duplicates.length} potential duplicate(s):`);
                     duplicates.forEach(dup => {
-                        const dupTimeZone = dup.timezone ? { timeZone: dup.timezone } : {};
-                        console.log(`   - "${dup.title}" at ${dup.startDate.toLocaleString('en-US', dupTimeZone)}`);
+                        if (!dup.timezone) {
+                            console.error(`🚨 Duplicate event "${dup.title}" missing timezone`);
+                            throw new Error(`Duplicate event missing timezone: ${dup.title}`);
+                        }
+                        console.log(`   - "${dup.title}" at ${dup.startDate.toLocaleString('en-US', { timeZone: dup.timezone })}`);
                     });
                 } else {
                     console.log(`✅ No duplicates found - safe to add`);
@@ -760,7 +766,11 @@ class ScriptableAdapter {
                 if (conflicts.length > 0) {
                     console.log(`⏰ Found ${conflicts.length} time conflict(s):`);
                     conflicts.forEach(conflict => {
-                        const conflictTimeZone = conflict.timezone ? { timeZone: conflict.timezone } : {};
+                        if (!conflict.timezone) {
+                            console.error(`🚨 Conflict event "${conflict.title}" missing timezone`);
+                            throw new Error(`Conflict event missing timezone: ${conflict.title}`);
+                        }
+                        const conflictTimeZone = { timeZone: conflict.timezone };
                         console.log(`   - "${conflict.title}": ${conflict.startDate.toLocaleString('en-US', conflictTimeZone)} - ${conflict.endDate.toLocaleString('en-US', conflictTimeZone)}`);
                         
                         // Check if this conflict should be merged
@@ -887,7 +897,11 @@ class ScriptableAdapter {
                 console.log(`• ${event.title || event.name}`);
                 console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
                 const eventDateForDisplay = new Date(event.startDate);
-                const eventTimeZoneForDisplay = event.timezone ? { timeZone: event.timezone } : {};
+                if (!event.timezone) {
+                    console.error(`🚨 Display event "${event.title}" missing timezone`);
+                    throw new Error(`Display event missing timezone: ${event.title}`);
+                }
+                const eventTimeZoneForDisplay = { timeZone: event.timezone };
                 console.log(`  📅 ${eventDateForDisplay.toLocaleDateString('en-US', eventTimeZoneForDisplay)} ${eventDateForDisplay.toLocaleTimeString('en-US', eventTimeZoneForDisplay)}`);
                 
                 if (action === 'merge' && event._mergeDiff) {
@@ -2222,9 +2236,12 @@ class ScriptableAdapter {
         const eventDate = new Date(event.startDate);
         const endDate = event.endDate ? new Date(event.endDate) : null;
         
-        // Use event's timezone if available, otherwise fall back to user's timezone
-        const timezone = event.timezone || undefined;
-        const timeZoneOptions = timezone ? { timeZone: timezone } : {};
+        // Use event's timezone - fail if not available
+        if (!event.timezone) {
+            console.error(`🚨 Event "${event.title}" missing timezone - cannot display time correctly`);
+            throw new Error(`Event missing timezone: ${event.title}`);
+        }
+        const timeZoneOptions = { timeZone: event.timezone };
         
         const dateStr = eventDate.toLocaleDateString('en-US', { 
             weekday: 'short', 
@@ -2486,7 +2503,13 @@ class ScriptableAdapter {
                                 <div>
                                     <strong>"${this.escapeHtml(conflict.title)}"</strong>
                                     <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                                        ${new Date(conflict.startDate).toLocaleString('en-US', conflict.timezone ? { timeZone: conflict.timezone } : {})}
+                                        ${(() => {
+                                            if (!conflict.timezone) {
+                                                console.error(`🚨 HTML conflict "${conflict.title}" missing timezone`);
+                                                throw new Error(`HTML conflict missing timezone: ${conflict.title}`);
+                                            }
+                                            return new Date(conflict.startDate).toLocaleString('en-US', { timeZone: conflict.timezone });
+                                        })()}
                                     </div>
                                 </div>
                                 <div style="font-size: 12px; font-weight: 600; color: ${shouldMerge ? '#155724' : '#721c24'};">
@@ -3131,9 +3154,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 if (!val) return '<em style="color: #999;">falsy</em>';
                 
                 if (field.includes('Date') && val) {
-                    // For date fields in event debugging, try to use event timezone if available
-                    const eventForField = field === 'startDate' || field === 'endDate' ? 
-                        (event && event.timezone ? { timeZone: event.timezone } : {}) : {};
+                    // For date fields in event debugging, require event timezone
+                    if (field === 'startDate' || field === 'endDate') {
+                        if (!event || !event.timezone) {
+                            console.error(`🚨 Debug event "${event?.title || 'unknown'}" missing timezone for field ${field}`);
+                            throw new Error(`Debug event missing timezone for ${field}: ${event?.title || 'unknown'}`);
+                        }
+                        var eventForField = { timeZone: event.timezone };
+                    } else {
+                        var eventForField = {};
+                    }
                     return new Date(val).toLocaleString('en-US', { 
                         month: 'short', 
                         day: 'numeric',
@@ -3272,8 +3302,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const formatValue = (val) => {
                 if (!val) return '';
                 if (field.includes('Date') && val) {
-                    const eventTimeZone = event.timezone ? { timeZone: event.timezone } : {};
-                    return new Date(val).toLocaleString('en-US', eventTimeZone);
+                    if (!event.timezone) {
+                        console.error(`🚨 Line diff event "${event.title}" missing timezone for field ${field}`);
+                        throw new Error(`Line diff event missing timezone for ${field}: ${event.title}`);
+                    }
+                    return new Date(val).toLocaleString('en-US', { timeZone: event.timezone });
                 }
                 return val.toString();
             };
