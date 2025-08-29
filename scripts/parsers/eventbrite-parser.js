@@ -221,7 +221,7 @@ class EventbriteParser {
                             if (eventData.url && eventData.name && (eventData.name.text || typeof eventData.name === 'string')) {
                                 // Double-check that it's actually a future event
                                 if (this.isFutureEvent(eventData)) {
-                                    const event = this.parseJsonEvent(eventData, null, parserConfig, serverData);
+                                    const event = this.parseJsonEvent(eventData, null, parserConfig, serverData, cityConfig);
                                     if (event) {
                                         events.push(event);
                                         console.log(`🎫 Eventbrite: Parsed future event: ${event.title} (${event.startDate || event.date})`);
@@ -265,7 +265,7 @@ class EventbriteParser {
                         console.log(`🎫 Eventbrite: Detail page validation - hasFields: ${hasRequiredFields}, isFuture: ${isFuture}, name: "${adaptedEventData.name}"`);
                         
                         if (hasRequiredFields && isFuture) {
-                            const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData);
+                            const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData, cityConfig);
                             if (event) {
                                 events.push(event);
                                 console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
@@ -360,7 +360,7 @@ class EventbriteParser {
     }
 
     // Parse a JSON event object into our standard format
-    parseJsonEvent(eventData, htmlContext = null, parserConfig = {}, serverData = null) {
+    parseJsonEvent(eventData, htmlContext = null, parserConfig = {}, serverData = null, cityConfig = null) {
         try {
             // Handle both organizer page format (name.text) and detail page format (name as string)
             const title = eventData.name?.text || eventData.name || eventData.title || '';
