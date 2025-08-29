@@ -669,7 +669,9 @@ class ScriptableAdapter {
                 console.error(`🚨 Sample event "${sampleEvent.title}" missing timezone`);
                 throw new Error(`Sample event missing timezone: ${sampleEvent.title}`);
             }
-            console.log(`   Date: ${sampleEventDate.toLocaleString('en-US', { timeZone: sampleEvent.timezone })}`);
+            const localTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: sampleEvent.timezone });
+            const utcTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: 'UTC' });
+            console.log(`   Date: ${localTimeStr} (UTC: ${utcTimeStr})`);
             console.log(`   Location: "${sampleEvent.venue || sampleEvent.bar || 'TBD'}"`);
             console.log(`   City: ${sampleEvent.city || 'unknown'}`);
             console.log(`   Notes: ${(sampleEvent.notes || '').length} characters`);
@@ -746,7 +748,9 @@ class ScriptableAdapter {
                             console.error(`🚨 Duplicate event "${dup.title}" missing timezone`);
                             throw new Error(`Duplicate event missing timezone: ${dup.title}`);
                         }
-                        console.log(`   - "${dup.title}" at ${dup.startDate.toLocaleString('en-US', { timeZone: dup.timezone })}`);
+                        const dupLocalTime = dup.startDate.toLocaleString('en-US', { timeZone: dup.timezone });
+                        const dupUtcTime = dup.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
+                        console.log(`   - "${dup.title}" at ${dupLocalTime} (UTC: ${dupUtcTime})`);
                     });
                 } else {
                     console.log(`✅ No duplicates found - safe to add`);
@@ -770,8 +774,11 @@ class ScriptableAdapter {
                             console.error(`🚨 Conflict event "${conflict.title}" missing timezone`);
                             throw new Error(`Conflict event missing timezone: ${conflict.title}`);
                         }
-                        const conflictTimeZone = { timeZone: conflict.timezone };
-                        console.log(`   - "${conflict.title}": ${conflict.startDate.toLocaleString('en-US', conflictTimeZone)} - ${conflict.endDate.toLocaleString('en-US', conflictTimeZone)}`);
+                        const conflictLocalStart = conflict.startDate.toLocaleString('en-US', { timeZone: conflict.timezone });
+                        const conflictLocalEnd = conflict.endDate.toLocaleString('en-US', { timeZone: conflict.timezone });
+                        const conflictUtcStart = conflict.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
+                        const conflictUtcEnd = conflict.endDate.toLocaleString('en-US', { timeZone: 'UTC' });
+                        console.log(`   - "${conflict.title}": ${conflictLocalStart} - ${conflictLocalEnd} (UTC: ${conflictUtcStart} - ${conflictUtcEnd})`);
                         
                         // Check if this conflict should be merged
                         const shouldMerge = this.shouldMergeTimeConflict(conflict, event);
@@ -901,8 +908,9 @@ class ScriptableAdapter {
                     console.error(`🚨 Display event "${event.title}" missing timezone`);
                     throw new Error(`Display event missing timezone: ${event.title}`);
                 }
-                const eventTimeZoneForDisplay = { timeZone: event.timezone };
-                console.log(`  📅 ${eventDateForDisplay.toLocaleDateString('en-US', eventTimeZoneForDisplay)} ${eventDateForDisplay.toLocaleTimeString('en-US', eventTimeZoneForDisplay)}`);
+                const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: event.timezone });
+                const utcDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: 'UTC' });
+                console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
                 
                 if (action === 'merge' && event._mergeDiff) {
                     console.log(`  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
@@ -2261,6 +2269,18 @@ class ScriptableAdapter {
             ...timeZoneOptions
         }) : '';
         
+        // Also show UTC time for verification
+        const utcTimeStr = eventDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            timeZone: 'UTC'
+        });
+        const endUtcTimeStr = endDate ? endDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            timeZone: 'UTC'
+        }) : '';
+        
         // Use the final notes that will actually be saved
         const notes = event.notes || '';
         const calendarName = this.getCalendarNameForDisplay(event);
@@ -2281,6 +2301,10 @@ class ScriptableAdapter {
                 <div class="event-detail">
                     <span>📅</span>
                     <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}</span>
+                </div>
+                <div class="event-detail" style="font-size: 12px; color: #666; margin-left: 20px;">
+                    <span>🌍</span>
+                    <span>UTC: ${utcTimeStr}${endUtcTimeStr ? ` - ${endUtcTimeStr}` : ''}</span>
                 </div>
                 <div class="event-detail">
                     <span>📱</span>
