@@ -651,7 +651,7 @@ class SharedCore {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
-            const mergeStrategy = priorityConfig?.merge || 'preserve';
+            const mergeStrategy = priorityConfig?.merge || 'upsert';
             // Check event field first, then notes fields, but be explicit about undefined vs empty string
             const existingValue = existingEvent[fieldName] !== undefined ? existingEvent[fieldName] : existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
@@ -693,7 +693,7 @@ class SharedCore {
             if (!(fieldName in mergedEvent) && existingFields[fieldName]) {
                 // Check if this field has a merge strategy that should be respected
                 const priorityConfig = fieldPriorities[fieldName];
-                const mergeStrategy = priorityConfig?.merge || 'preserve';
+                const mergeStrategy = priorityConfig?.merge || 'upsert';
                 
                 // Only add existing fields if NOT clobber strategy
                 // Clobber should be allowed to clear fields (set to undefined)
@@ -781,7 +781,7 @@ class SharedCore {
             if (fieldName.startsWith('_') || fieldName === 'notes') return;
             
             const priorityConfig = fieldPriorities[fieldName];
-            const mergeStrategy = priorityConfig?.merge || 'preserve';
+            const mergeStrategy = priorityConfig?.merge || 'upsert';
             const scraperValue = scraperObject[fieldName];
             const calendarValue = calendarObject[fieldName];
             
