@@ -210,6 +210,15 @@ class ScriptableAdapter {
         return `chunky-dad-${city}`;
     }
 
+    // Get timezone for a city
+    getTimezoneForCity(city) {
+        if (city && this.cities[city] && this.cities[city].timezone) {
+            return this.cities[city].timezone;
+        }
+        // Return fallback timezone
+        return 'America/New_York';
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
@@ -320,18 +329,7 @@ class ScriptableAdapter {
             searchEnd.setHours(23, 59, 59, 999);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-            
-            // Enrich existing events with fields from notes to avoid timezone errors
-            const enrichedExistingEvents = existingEvents.map(existingEvent => {
-                const fieldsFromNotes = this.sharedCore.parseNotesIntoFields(existingEvent.notes || '');
-                // Add parsed fields to the existing event object
-                return {
-                    ...existingEvent,
-                    ...fieldsFromNotes
-                };
-            });
-            
-            return enrichedExistingEvents;
+            return existingEvents;
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
@@ -676,11 +674,9 @@ class ScriptableAdapter {
             console.log(`\n📋 Sample Event Structure:`);
             console.log(`   Title: "${sampleEvent.title || sampleEvent.name}"`);
             const sampleEventDate = new Date(sampleEvent.startDate);
-            if (!sampleEvent.timezone) {
-                console.error(`🚨 Sample event "${sampleEvent.title}" missing timezone`);
-                throw new Error(`Sample event missing timezone: ${sampleEvent.title}`);
-            }
-            const localTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: sampleEvent.timezone });
+            // Get timezone from city configuration instead of expecting it on the event
+            const timezone = this.getTimezoneForCity(sampleEvent.city);
+            const localTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: timezone });
             const utcTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: 'UTC' });
             console.log(`   Date: ${localTimeStr} (UTC: ${utcTimeStr})`);
             console.log(`   Location: "${sampleEvent.venue || sampleEvent.bar || 'TBD'}"`);
@@ -741,17 +737,7 @@ class ScriptableAdapter {
                 const searchEnd = new Date(endDate);
                 searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
                 
-                const rawExistingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-                
-                // Enrich existing events with fields from notes to avoid timezone errors
-                const existingEvents = rawExistingEvents.map(existingEvent => {
-                    const fieldsFromNotes = this.sharedCore.parseNotesIntoFields(existingEvent.notes || '');
-                    // Add parsed fields to the existing event object
-                    return {
-                        ...existingEvent,
-                        ...fieldsFromNotes
-                    };
-                });
+                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
                 console.log(`📊 Found ${existingEvents.length} existing events in calendar`);
                 
@@ -765,11 +751,9 @@ class ScriptableAdapter {
                 if (duplicates.length > 0) {
                     console.log(`⚠️  Found ${duplicates.length} potential duplicate(s):`);
                     duplicates.forEach(dup => {
-                        if (!dup.timezone) {
-                            console.error(`🚨 Duplicate event "${dup.title}" missing timezone`);
-                            throw new Error(`Duplicate event missing timezone: ${dup.title}`);
-                        }
-                        const dupLocalTime = dup.startDate.toLocaleString('en-US', { timeZone: dup.timezone });
+                        // Get timezone from city configuration instead of expecting it on the event
+                        const timezone = this.getTimezoneForCity(event.city);
+                        const dupLocalTime = dup.startDate.toLocaleString('en-US', { timeZone: timezone });
                         const dupUtcTime = dup.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
                         console.log(`   - "${dup.title}" at ${dupLocalTime} (UTC: ${dupUtcTime})`);
                     });
@@ -791,12 +775,10 @@ class ScriptableAdapter {
                 if (conflicts.length > 0) {
                     console.log(`⏰ Found ${conflicts.length} time conflict(s):`);
                     conflicts.forEach(conflict => {
-                        if (!conflict.timezone) {
-                            console.error(`🚨 Conflict event "${conflict.title}" missing timezone`);
-                            throw new Error(`Conflict event missing timezone: ${conflict.title}`);
-                        }
-                        const conflictLocalStart = conflict.startDate.toLocaleString('en-US', { timeZone: conflict.timezone });
-                        const conflictLocalEnd = conflict.endDate.toLocaleString('en-US', { timeZone: conflict.timezone });
+                        // Get timezone from city configuration instead of expecting it on the event
+                        const timezone = this.getTimezoneForCity(event.city);
+                        const conflictLocalStart = conflict.startDate.toLocaleString('en-US', { timeZone: timezone });
+                        const conflictLocalEnd = conflict.endDate.toLocaleString('en-US', { timeZone: timezone });
                         const conflictUtcStart = conflict.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
                         const conflictUtcEnd = conflict.endDate.toLocaleString('en-US', { timeZone: 'UTC' });
                         console.log(`   - "${conflict.title}": ${conflictLocalStart} - ${conflictLocalEnd} (UTC: ${conflictUtcStart} - ${conflictUtcEnd})`);
@@ -925,11 +907,9 @@ class ScriptableAdapter {
                 console.log(`• ${event.title || event.name}`);
                 console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
                 const eventDateForDisplay = new Date(event.startDate);
-                if (!event.timezone) {
-                    console.error(`🚨 Display event "${event.title}" missing timezone`);
-                    throw new Error(`Display event missing timezone: ${event.title}`);
-                }
-                const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: event.timezone });
+                // Get timezone from city configuration instead of expecting it on the event
+                const timezone = this.getTimezoneForCity(event.city);
+                const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: timezone });
                 const utcDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: 'UTC' });
                 console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
                 
@@ -2265,12 +2245,9 @@ class ScriptableAdapter {
         const eventDate = new Date(event.startDate);
         const endDate = event.endDate ? new Date(event.endDate) : null;
         
-        // Use event's timezone - fail if not available
-        if (!event.timezone) {
-            console.error(`🚨 Event "${event.title}" missing timezone - cannot display time correctly`);
-            throw new Error(`Event missing timezone: ${event.title}`);
-        }
-        const timeZoneOptions = { timeZone: event.timezone };
+        // Get timezone from city configuration instead of expecting it on the event
+        const timezone = this.getTimezoneForCity(event.city);
+        const timeZoneOptions = { timeZone: timezone };
         
         const dateStr = eventDate.toLocaleDateString('en-US', { 
             weekday: 'short', 
@@ -2549,11 +2526,9 @@ class ScriptableAdapter {
                                     <strong>"${this.escapeHtml(conflict.title)}"</strong>
                                     <div style="font-size: 12px; color: #666; margin-top: 2px;">
                                         ${(() => {
-                                            if (!conflict.timezone) {
-                                                console.error(`🚨 HTML conflict "${conflict.title}" missing timezone`);
-                                                throw new Error(`HTML conflict missing timezone: ${conflict.title}`);
-                                            }
-                                            return new Date(conflict.startDate).toLocaleString('en-US', { timeZone: conflict.timezone });
+                                            // Get timezone from city configuration instead of expecting it on the conflict
+                                            const timezone = this.getTimezoneForCity(event.city);
+                                            return new Date(conflict.startDate).toLocaleString('en-US', { timeZone: timezone });
                                         })()}
                                     </div>
                                 </div>
@@ -3199,13 +3174,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 if (!val) return '<em style="color: #999;">falsy</em>';
                 
                 if (field.includes('Date') && val) {
-                    // For date fields in event debugging, require event timezone
+                    // For date fields in event debugging, get timezone from city configuration
                     if (field === 'startDate' || field === 'endDate') {
-                        if (!event || !event.timezone) {
-                            console.error(`🚨 Debug event "${event?.title || 'unknown'}" missing timezone for field ${field}`);
-                            throw new Error(`Debug event missing timezone for ${field}: ${event?.title || 'unknown'}`);
-                        }
-                        var eventForField = { timeZone: event.timezone };
+                        const timezone = this.getTimezoneForCity(event?.city);
+                        var eventForField = { timeZone: timezone };
                     } else {
                         var eventForField = {};
                     }
@@ -3347,11 +3319,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const formatValue = (val) => {
                 if (!val) return '';
                 if (field.includes('Date') && val) {
-                    if (!event.timezone) {
-                        console.error(`🚨 Line diff event "${event.title}" missing timezone for field ${field}`);
-                        throw new Error(`Line diff event missing timezone for ${field}: ${event.title}`);
-                    }
-                    return new Date(val).toLocaleString('en-US', { timeZone: event.timezone });
+                    // Get timezone from city configuration instead of expecting it on the event
+                    const timezone = this.getTimezoneForCity(event.city);
+                    return new Date(val).toLocaleString('en-US', { timeZone: timezone });
                 }
                 return val.toString();
             };
