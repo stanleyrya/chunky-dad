@@ -34,6 +34,9 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
+        // Store the cities configuration for timezone lookups
+        this.cities = cities;
+        
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
 
@@ -538,8 +541,8 @@ class SharedCore {
         // Replace template variables
         key = key.replace(/\$\{title\}/g, String(event.title || '').toLowerCase().trim());
         key = key.replace(/\$\{normalizedTitle\}/g, normalizedTitle);
-        key = key.replace(/\$\{startDate\}/g, this.normalizeEventDate(event.startDate));
-        key = key.replace(/\$\{date\}/g, this.normalizeEventDate(event.startDate));
+        key = key.replace(/\$\{startDate\}/g, this.normalizeEventDateForCity(event.startDate, city));
+        key = key.replace(/\$\{date\}/g, this.normalizeEventDateForCity(event.startDate, city));
         key = key.replace(/\$\{venue\}/g, String(event.bar || '').toLowerCase().trim());
         key = key.replace(/\$\{source\}/g, String(event.source || '').toLowerCase().trim());
         key = key.replace(/\$\{city\}/g, city.toLowerCase().trim());
@@ -1133,6 +1136,69 @@ class SharedCore {
             console.warn(`⚠️ SharedCore: Failed to normalize date: ${dateInput}`);
             return '';
         }
+    }
+
+    // Helper method to normalize event dates for key generation using city timezone
+    // This ensures events that happen on the same local day get the same key, even if they cross UTC midnight
+    normalizeEventDateForCity(dateInput, city) {
+        if (!dateInput) return '';
+        
+        try {
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+            
+            // Try to get timezone for the city
+            const cityTimezone = this.getTimezoneForCity(city);
+            
+            if (cityTimezone) {
+                // Use city timezone to get local date components
+                const formatter = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: cityTimezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+                
+                const localDateString = formatter.format(date);
+                return localDateString; // Already in YYYY-MM-DD format
+            } else {
+                // Fallback to UTC normalization if no timezone info
+                return this.normalizeEventDate(dateInput);
+            }
+        } catch (error) {
+            console.warn(`⚠️ SharedCore: Failed to normalize date for city ${city}: ${dateInput}`);
+            // Fallback to UTC normalization
+            return this.normalizeEventDate(dateInput);
+        }
+    }
+
+    // Get timezone identifier for a city using centralized configuration
+    getTimezoneForCity(city) {
+        if (!city || !this.cities) return null;
+        
+        // Look up the city in our city mappings to get the actual city config key
+        let cityKey = null;
+        
+        // First try direct lookup in cities config
+        if (this.cities[city]) {
+            cityKey = city;
+        } else {
+            // Try pattern matching through city mappings
+            for (const [patterns, configKey] of Object.entries(this.cityMappings)) {
+                const patternArray = patterns.split('|');
+                if (patternArray.includes(city.toLowerCase())) {
+                    cityKey = configKey;
+                    break;
+                }
+            }
+        }
+        
+        // If we found a city key, get the timezone from the cities config
+        if (cityKey && this.cities[cityKey] && this.cities[cityKey].timezone) {
+            return this.cities[cityKey].timezone;
+        }
+        
+        return null;
     }
 
     // Compare two date inputs for display equality, avoiding timezone-related false diffs
