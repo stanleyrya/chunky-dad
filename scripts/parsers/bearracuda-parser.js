@@ -153,9 +153,11 @@ class BearraccudaParser {
                 links.eventbrite = structuredSections.links.eventbrite;
                 links.tickets = structuredSections.links.tickets;
                 console.log(`🐻 Bearracuda: Using structured links - FB: ${!!links.facebook}, EB: ${!!links.eventbrite}, Tickets: ${!!links.tickets}`);
+                console.log(`🐻 Bearracuda: Structured link values - FB: "${links.facebook}", EB: "${links.eventbrite}", Tickets: "${links.tickets}"`);
             } else {
                 links = this.extractExternalLinks(html);
                 console.log(`🐻 Bearracuda: Using fallback link extraction`);
+                console.log(`🐻 Bearracuda: Fallback link values - FB: "${links.facebook}", EB: "${links.eventbrite}"`);
             }
             
             // Extract special info (like anniversary details)
@@ -261,6 +263,9 @@ class BearraccudaParser {
                 placeId: structuredSections.location.placeId || null, // Pass place ID to shared-core for gmaps generation
                 isBearEvent: true // Bearracuda events are always bear events
             };
+            
+            // Debug: Log final social media links in event object
+            console.log(`🐻 Bearracuda: Final event object links - facebook: "${event.facebook}", ticketUrl: "${event.ticketUrl}"`);
             
             // Apply source-specific metadata values from config
             if (parserConfig.metadata) {
@@ -809,16 +814,22 @@ class BearraccudaParser {
             const text = match[2].trim().toLowerCase();
             
             // Categorize based on button text (flexible for future providers)
+            console.log(`🐻 Bearracuda: Processing button - Text: "${text}", URL: "${url}"`);
             if (text.includes('rsvp')) {
                 sections.links.facebook = url;
+                console.log(`🐻 Bearracuda: Set Facebook URL: ${url}`);
             } else if (text.includes('ticket') || text.includes('buy') || text.includes('purchase')) {
                 sections.links.tickets = url;
+                console.log(`🐻 Bearracuda: Set ticket URL: ${url}`);
                 
                 // Also categorize by URL domain for specific tracking
                 if (url.includes('eventbrite.com')) {
                     sections.links.eventbrite = url;
+                    console.log(`🐻 Bearracuda: Set Eventbrite URL: ${url}`);
                 }
                 // Future: could add ticketmaster.com, stubhub.com, etc.
+            } else {
+                console.log(`🐻 Bearracuda: Button text "${text}" didn't match any category`);
             }
         }
         
