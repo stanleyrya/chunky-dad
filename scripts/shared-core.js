@@ -838,12 +838,6 @@ class SharedCore {
         // Track clobbered fields for summary logging
         const clobberedFields = [];
         
-        // Helper function to check if a value is empty/null/undefined
-        const isEmpty = (value) => {
-            return value === null || value === undefined || value === '' || 
-                   (typeof value === 'string' && value.trim() === '');
-        };
-        
         // Apply merge logic for each field
         allFields.forEach(fieldName => {
             // Skip internal fields
@@ -856,15 +850,10 @@ class SharedCore {
             
             switch (mergeStrategy) {
                 case 'clobber':
-                    // For clobber strategy, don't override valid calendar values with empty scraper values
-                    if (isEmpty(scraperValue) && !isEmpty(calendarValue)) {
-                        mergedObject[fieldName] = calendarValue;
-                    } else {
-                        mergedObject[fieldName] = scraperValue;
-                        // Track when clobber actually changes a value
-                        if (scraperValue !== calendarValue) {
-                            clobberedFields.push(fieldName);
-                        }
+                    mergedObject[fieldName] = scraperValue;
+                    // Track when clobber actually changes a value
+                    if (scraperValue !== calendarValue) {
+                        clobberedFields.push(fieldName);
                     }
                     break;
                 case 'upsert':
