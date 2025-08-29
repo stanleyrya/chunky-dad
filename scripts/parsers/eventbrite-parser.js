@@ -611,6 +611,7 @@ class EventbriteParser {
                 location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: finalAddress,
                 city: city,
+                timezone: this.getTimezoneForCity(city, cityConfig),
                 url: url, // Use consistent 'url' field name across all parsers
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 ...(finalImage && { image: finalImage }), // Only include image if we found one
@@ -827,6 +828,17 @@ class EventbriteParser {
          }
 
                  return false;
+    }
+    
+    // Get timezone identifier for a city using centralized configuration
+    getTimezoneForCity(city, cityConfig = null) {
+        // City config must be provided - no fallbacks
+        if (!cityConfig || !cityConfig[city]) {
+            console.log(`🎫 Eventbrite: No timezone configuration found for city: ${city}`);
+            return null;
+        }
+        
+        return cityConfig[city].timezone;
     }
 }
 

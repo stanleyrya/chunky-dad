@@ -664,7 +664,9 @@ class ScriptableAdapter {
             const sampleEvent = allEvents[0];
             console.log(`\n📋 Sample Event Structure:`);
             console.log(`   Title: "${sampleEvent.title || sampleEvent.name}"`);
-            console.log(`   Date: ${new Date(sampleEvent.startDate).toLocaleString()}`);
+            const sampleEventDate = new Date(sampleEvent.startDate);
+            const sampleTimeZone = sampleEvent.timezone ? { timeZone: sampleEvent.timezone } : {};
+            console.log(`   Date: ${sampleEventDate.toLocaleString('en-US', sampleTimeZone)}`);
             console.log(`   Location: "${sampleEvent.venue || sampleEvent.bar || 'TBD'}"`);
             console.log(`   City: ${sampleEvent.city || 'unknown'}`);
             console.log(`   Notes: ${(sampleEvent.notes || '').length} characters`);
@@ -737,7 +739,8 @@ class ScriptableAdapter {
                 if (duplicates.length > 0) {
                     console.log(`⚠️  Found ${duplicates.length} potential duplicate(s):`);
                     duplicates.forEach(dup => {
-                        console.log(`   - "${dup.title}" at ${dup.startDate.toLocaleString()}`);
+                        const dupTimeZone = dup.timezone ? { timeZone: dup.timezone } : {};
+                        console.log(`   - "${dup.title}" at ${dup.startDate.toLocaleString('en-US', dupTimeZone)}`);
                     });
                 } else {
                     console.log(`✅ No duplicates found - safe to add`);
@@ -757,7 +760,8 @@ class ScriptableAdapter {
                 if (conflicts.length > 0) {
                     console.log(`⏰ Found ${conflicts.length} time conflict(s):`);
                     conflicts.forEach(conflict => {
-                        console.log(`   - "${conflict.title}": ${conflict.startDate.toLocaleString()} - ${conflict.endDate.toLocaleString()}`);
+                        const conflictTimeZone = conflict.timezone ? { timeZone: conflict.timezone } : {};
+                        console.log(`   - "${conflict.title}": ${conflict.startDate.toLocaleString('en-US', conflictTimeZone)} - ${conflict.endDate.toLocaleString('en-US', conflictTimeZone)}`);
                         
                         // Check if this conflict should be merged
                         const shouldMerge = this.shouldMergeTimeConflict(conflict, event);
@@ -882,7 +886,9 @@ class ScriptableAdapter {
             events.slice(0, 2).forEach(event => {
                 console.log(`• ${event.title || event.name}`);
                 console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
-                console.log(`  📅 ${new Date(event.startDate).toLocaleDateString()} ${new Date(event.startDate).toLocaleTimeString()}`);
+                const eventDateForDisplay = new Date(event.startDate);
+                const eventTimeZoneForDisplay = event.timezone ? { timeZone: event.timezone } : {};
+                console.log(`  📅 ${eventDateForDisplay.toLocaleDateString('en-US', eventTimeZoneForDisplay)} ${eventDateForDisplay.toLocaleTimeString('en-US', eventTimeZoneForDisplay)}`);
                 
                 if (action === 'merge' && event._mergeDiff) {
                     console.log(`  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
@@ -2215,19 +2221,27 @@ class ScriptableAdapter {
         
         const eventDate = new Date(event.startDate);
         const endDate = event.endDate ? new Date(event.endDate) : null;
+        
+        // Use event's timezone if available, otherwise fall back to user's timezone
+        const timezone = event.timezone || undefined;
+        const timeZoneOptions = timezone ? { timeZone: timezone } : {};
+        
         const dateStr = eventDate.toLocaleDateString('en-US', { 
             weekday: 'short', 
             year: 'numeric', 
             month: 'short', 
-            day: 'numeric' 
+            day: 'numeric',
+            ...timeZoneOptions
         });
         const timeStr = eventDate.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
-            minute: '2-digit' 
+            minute: '2-digit',
+            ...timeZoneOptions
         });
         const endTimeStr = endDate ? endDate.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
-            minute: '2-digit' 
+            minute: '2-digit',
+            ...timeZoneOptions
         }) : '';
         
         // Use the final notes that will actually be saved
@@ -2472,7 +2486,7 @@ class ScriptableAdapter {
                                 <div>
                                     <strong>"${this.escapeHtml(conflict.title)}"</strong>
                                     <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                                        ${new Date(conflict.startDate).toLocaleString()}
+                                        ${new Date(conflict.startDate).toLocaleString('en-US', conflict.timezone ? { timeZone: conflict.timezone } : {})}
                                     </div>
                                 </div>
                                 <div style="font-size: 12px; font-weight: 600; color: ${shouldMerge ? '#155724' : '#721c24'};">
@@ -3117,11 +3131,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 if (!val) return '<em style="color: #999;">falsy</em>';
                 
                 if (field.includes('Date') && val) {
+                    // For date fields in event debugging, try to use event timezone if available
+                    const eventForField = field === 'startDate' || field === 'endDate' ? 
+                        (event && event.timezone ? { timeZone: event.timezone } : {}) : {};
                     return new Date(val).toLocaleString('en-US', { 
                         month: 'short', 
                         day: 'numeric',
                         hour: 'numeric',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        ...eventForField
                     });
                 }
                 const str = val.toString();
@@ -3254,7 +3272,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const formatValue = (val) => {
                 if (!val) return '';
                 if (field.includes('Date') && val) {
-                    return new Date(val).toLocaleString();
+                    const eventTimeZone = event.timezone ? { timeZone: event.timezone } : {};
+                    return new Date(val).toLocaleString('en-US', eventTimeZone);
                 }
                 return val.toString();
             };
