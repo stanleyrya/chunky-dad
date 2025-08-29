@@ -664,7 +664,14 @@ class ScriptableAdapter {
             const sampleEvent = allEvents[0];
             console.log(`\n📋 Sample Event Structure:`);
             console.log(`   Title: "${sampleEvent.title || sampleEvent.name}"`);
-            console.log(`   Date: ${new Date(sampleEvent.startDate).toLocaleString()}`);
+            const sampleEventDate = new Date(sampleEvent.startDate);
+            if (!sampleEvent.timezone) {
+                console.error(`🚨 Sample event "${sampleEvent.title}" missing timezone`);
+                throw new Error(`Sample event missing timezone: ${sampleEvent.title}`);
+            }
+            const localTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: sampleEvent.timezone });
+            const utcTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: 'UTC' });
+            console.log(`   Date: ${localTimeStr} (UTC: ${utcTimeStr})`);
             console.log(`   Location: "${sampleEvent.venue || sampleEvent.bar || 'TBD'}"`);
             console.log(`   City: ${sampleEvent.city || 'unknown'}`);
             console.log(`   Notes: ${(sampleEvent.notes || '').length} characters`);
@@ -737,7 +744,13 @@ class ScriptableAdapter {
                 if (duplicates.length > 0) {
                     console.log(`⚠️  Found ${duplicates.length} potential duplicate(s):`);
                     duplicates.forEach(dup => {
-                        console.log(`   - "${dup.title}" at ${dup.startDate.toLocaleString()}`);
+                        if (!dup.timezone) {
+                            console.error(`🚨 Duplicate event "${dup.title}" missing timezone`);
+                            throw new Error(`Duplicate event missing timezone: ${dup.title}`);
+                        }
+                        const dupLocalTime = dup.startDate.toLocaleString('en-US', { timeZone: dup.timezone });
+                        const dupUtcTime = dup.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
+                        console.log(`   - "${dup.title}" at ${dupLocalTime} (UTC: ${dupUtcTime})`);
                     });
                 } else {
                     console.log(`✅ No duplicates found - safe to add`);
@@ -757,7 +770,15 @@ class ScriptableAdapter {
                 if (conflicts.length > 0) {
                     console.log(`⏰ Found ${conflicts.length} time conflict(s):`);
                     conflicts.forEach(conflict => {
-                        console.log(`   - "${conflict.title}": ${conflict.startDate.toLocaleString()} - ${conflict.endDate.toLocaleString()}`);
+                        if (!conflict.timezone) {
+                            console.error(`🚨 Conflict event "${conflict.title}" missing timezone`);
+                            throw new Error(`Conflict event missing timezone: ${conflict.title}`);
+                        }
+                        const conflictLocalStart = conflict.startDate.toLocaleString('en-US', { timeZone: conflict.timezone });
+                        const conflictLocalEnd = conflict.endDate.toLocaleString('en-US', { timeZone: conflict.timezone });
+                        const conflictUtcStart = conflict.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
+                        const conflictUtcEnd = conflict.endDate.toLocaleString('en-US', { timeZone: 'UTC' });
+                        console.log(`   - "${conflict.title}": ${conflictLocalStart} - ${conflictLocalEnd} (UTC: ${conflictUtcStart} - ${conflictUtcEnd})`);
                         
                         // Check if this conflict should be merged
                         const shouldMerge = this.shouldMergeTimeConflict(conflict, event);
@@ -882,7 +903,14 @@ class ScriptableAdapter {
             events.slice(0, 2).forEach(event => {
                 console.log(`• ${event.title || event.name}`);
                 console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
-                console.log(`  📅 ${new Date(event.startDate).toLocaleDateString()} ${new Date(event.startDate).toLocaleTimeString()}`);
+                const eventDateForDisplay = new Date(event.startDate);
+                if (!event.timezone) {
+                    console.error(`🚨 Display event "${event.title}" missing timezone`);
+                    throw new Error(`Display event missing timezone: ${event.title}`);
+                }
+                const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: event.timezone });
+                const utcDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: 'UTC' });
+                console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
                 
                 if (action === 'merge' && event._mergeDiff) {
                     console.log(`  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
@@ -2215,19 +2243,42 @@ class ScriptableAdapter {
         
         const eventDate = new Date(event.startDate);
         const endDate = event.endDate ? new Date(event.endDate) : null;
+        
+        // Use event's timezone - fail if not available
+        if (!event.timezone) {
+            console.error(`🚨 Event "${event.title}" missing timezone - cannot display time correctly`);
+            throw new Error(`Event missing timezone: ${event.title}`);
+        }
+        const timeZoneOptions = { timeZone: event.timezone };
+        
         const dateStr = eventDate.toLocaleDateString('en-US', { 
             weekday: 'short', 
             year: 'numeric', 
             month: 'short', 
-            day: 'numeric' 
+            day: 'numeric',
+            ...timeZoneOptions
         });
         const timeStr = eventDate.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
-            minute: '2-digit' 
+            minute: '2-digit',
+            ...timeZoneOptions
         });
         const endTimeStr = endDate ? endDate.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
-            minute: '2-digit' 
+            minute: '2-digit',
+            ...timeZoneOptions
+        }) : '';
+        
+        // Also show UTC time for verification
+        const utcTimeStr = eventDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            timeZone: 'UTC'
+        });
+        const endUtcTimeStr = endDate ? endDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            timeZone: 'UTC'
         }) : '';
         
         // Use the final notes that will actually be saved
@@ -2250,6 +2301,10 @@ class ScriptableAdapter {
                 <div class="event-detail">
                     <span>📅</span>
                     <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}</span>
+                </div>
+                <div class="event-detail" style="font-size: 12px; color: #666; margin-left: 20px;">
+                    <span>🌍</span>
+                    <span>UTC: ${utcTimeStr}${endUtcTimeStr ? ` - ${endUtcTimeStr}` : ''}</span>
                 </div>
                 <div class="event-detail">
                     <span>📱</span>
@@ -2472,7 +2527,13 @@ class ScriptableAdapter {
                                 <div>
                                     <strong>"${this.escapeHtml(conflict.title)}"</strong>
                                     <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                                        ${new Date(conflict.startDate).toLocaleString()}
+                                        ${(() => {
+                                            if (!conflict.timezone) {
+                                                console.error(`🚨 HTML conflict "${conflict.title}" missing timezone`);
+                                                throw new Error(`HTML conflict missing timezone: ${conflict.title}`);
+                                            }
+                                            return new Date(conflict.startDate).toLocaleString('en-US', { timeZone: conflict.timezone });
+                                        })()}
                                     </div>
                                 </div>
                                 <div style="font-size: 12px; font-weight: 600; color: ${shouldMerge ? '#155724' : '#721c24'};">
@@ -3117,11 +3178,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 if (!val) return '<em style="color: #999;">falsy</em>';
                 
                 if (field.includes('Date') && val) {
+                    // For date fields in event debugging, require event timezone
+                    if (field === 'startDate' || field === 'endDate') {
+                        if (!event || !event.timezone) {
+                            console.error(`🚨 Debug event "${event?.title || 'unknown'}" missing timezone for field ${field}`);
+                            throw new Error(`Debug event missing timezone for ${field}: ${event?.title || 'unknown'}`);
+                        }
+                        var eventForField = { timeZone: event.timezone };
+                    } else {
+                        var eventForField = {};
+                    }
                     return new Date(val).toLocaleString('en-US', { 
                         month: 'short', 
                         day: 'numeric',
                         hour: 'numeric',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        ...eventForField
                     });
                 }
                 const str = val.toString();
@@ -3254,7 +3326,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const formatValue = (val) => {
                 if (!val) return '';
                 if (field.includes('Date') && val) {
-                    return new Date(val).toLocaleString();
+                    if (!event.timezone) {
+                        console.error(`🚨 Line diff event "${event.title}" missing timezone for field ${field}`);
+                        throw new Error(`Line diff event missing timezone for ${field}: ${event.title}`);
+                    }
+                    return new Date(val).toLocaleString('en-US', { timeZone: event.timezone });
                 }
                 return val.toString();
             };
