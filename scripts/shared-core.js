@@ -557,6 +557,12 @@ class SharedCore {
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
         
+        // Helper function to check if a value is empty/null/undefined
+        const isEmpty = (value) => {
+            return value === null || value === undefined || value === '' || 
+                   (typeof value === 'string' && value.trim() === '');
+        };
+        
         // Get all field names from both events
         const allFields = new Set([
             ...Object.keys(existingEvent),
@@ -583,10 +589,20 @@ class SharedCore {
             if (existingIndex !== -1 && newIndex !== -1) {
                 if (existingIndex < newIndex) {
                     // Existing source has higher priority
-                    mergedEvent[fieldName] = existingValue;
+                    // But if existing value is empty and new value is not empty, use new value
+                    if (isEmpty(existingValue) && !isEmpty(newValue)) {
+                        mergedEvent[fieldName] = newValue;
+                    } else {
+                        mergedEvent[fieldName] = existingValue;
+                    }
                 } else {
-                    // New source has higher priority (or same priority, keep new)
-                    mergedEvent[fieldName] = newValue;
+                    // New source has higher priority (or same priority)
+                    // But if new value is empty and existing value is not empty, use existing value
+                    if (isEmpty(newValue) && !isEmpty(existingValue)) {
+                        mergedEvent[fieldName] = existingValue;
+                    } else {
+                        mergedEvent[fieldName] = newValue;
+                    }
                 }
             } else if (existingIndex !== -1) {
                 // Only existing source is in priority list
@@ -775,6 +791,12 @@ class SharedCore {
         // Track clobbered fields for summary logging
         const clobberedFields = [];
         
+        // Helper function to check if a value is empty/null/undefined
+        const isEmpty = (value) => {
+            return value === null || value === undefined || value === '' || 
+                   (typeof value === 'string' && value.trim() === '');
+        };
+        
         // Apply merge logic for each field
         allFields.forEach(fieldName => {
             // Skip internal fields
@@ -787,10 +809,15 @@ class SharedCore {
             
             switch (mergeStrategy) {
                 case 'clobber':
-                    mergedObject[fieldName] = scraperValue;
-                    // Track when clobber actually changes a value
-                    if (scraperValue !== calendarValue) {
-                        clobberedFields.push(fieldName);
+                    // For clobber strategy, don't override valid calendar values with empty scraper values
+                    if (isEmpty(scraperValue) && !isEmpty(calendarValue)) {
+                        mergedObject[fieldName] = calendarValue;
+                    } else {
+                        mergedObject[fieldName] = scraperValue;
+                        // Track when clobber actually changes a value
+                        if (scraperValue !== calendarValue) {
+                            clobberedFields.push(fieldName);
+                        }
                     }
                     break;
                 case 'upsert':
