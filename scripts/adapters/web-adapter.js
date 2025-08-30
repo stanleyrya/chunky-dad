@@ -249,7 +249,11 @@ class WebAdapter {
             console.log('='.repeat(50));
             
             console.log(`📊 Total Events Found: ${results.totalEvents}`);
-            console.log(`🐻 Bear Events: ${results.bearEvents}`);
+            if (results.duplicatesRemoved > 0) {
+                console.log(`   - Raw bear events: ${results.rawBearEvents}`);
+                console.log(`   - Duplicates removed: ${results.duplicatesRemoved}`);
+            }
+            console.log(`🐻 Bear Events: ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}`);
             console.log(`📅 Calendar Events: ${results.calendarEvents}`);
             
             // Show event actions summary if available
@@ -343,10 +347,13 @@ class WebAdapter {
                 document.body.appendChild(resultsDiv);
             }
             
+            const deduplicationInfo = results.duplicatesRemoved > 0 ? 
+                `<div style="font-size: 12px; color: #666;"><strong>Duplicates removed:</strong> ${results.duplicatesRemoved}</div>` : '';
             resultsDiv.innerHTML = `
                 <h3 style="margin: 0 0 12px 0; color: #FF6B35;">🐻 Bear Events Found</h3>
                 <div><strong>Total Events:</strong> ${results.totalEvents}</div>
-                <div><strong>Bear Events:</strong> ${results.bearEvents}</div>
+                ${deduplicationInfo}
+                <div><strong>Bear Events:</strong> ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}</div>
                 <div><strong>Calendar Events:</strong> ${results.calendarEvents}</div>
                 ${results.errors.length > 0 ? `<div style="color: #F44336;"><strong>Errors:</strong> ${results.errors.length}</div>` : ''}
                 <div style="margin-top: 12px; font-size: 10px;">

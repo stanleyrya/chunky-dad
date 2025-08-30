@@ -92,7 +92,9 @@ class SharedCore {
         
         const results = {
             totalEvents: 0,
+            rawBearEvents: 0,
             bearEvents: 0,
+            duplicatesRemoved: 0,
             errors: [],
             parserResults: [],
             allProcessedEvents: [] // All events ready for calendar
@@ -121,7 +123,9 @@ class SharedCore {
                 const parserResult = await this.processParser(parserConfig, config, httpAdapter, displayAdapter, parsers, globalProcessedUrls);
                 results.parserResults.push(parserResult);
                 results.totalEvents += parserResult.totalEvents;
+                results.rawBearEvents += parserResult.rawBearEvents;
                 results.bearEvents += parserResult.bearEvents;
+                results.duplicatesRemoved += parserResult.duplicatesRemoved;
                 
                 // Collect all processed events
                 if (parserResult.events && parserResult.events.length > 0) {
@@ -145,7 +149,11 @@ class SharedCore {
             }
         }
 
-        await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}`);
+        if (results.duplicatesRemoved > 0) {
+            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Raw bear: ${results.rawBearEvents}, Duplicates removed: ${results.duplicatesRemoved}, Final bear: ${results.bearEvents}`);
+        } else {
+            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}`);
+        }
         return results;
     }
 
@@ -266,6 +274,10 @@ class SharedCore {
         const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead);
         const bearEvents = this.filterBearEvents(futureEvents, parserConfig);
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
+        
+        // Calculate deduplication stats
+        const duplicatesRemoved = bearEvents.length - deduplicatedEvents.length;
+        
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${deduplicatedEvents.length} final`);
 
         await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${deduplicatedEvents.length} bear events found`);
@@ -273,7 +285,9 @@ class SharedCore {
         return {
             name: parserConfig.name,
             totalEvents: allEvents.length,
+            rawBearEvents: bearEvents.length,
             bearEvents: deduplicatedEvents.length,
+            duplicatesRemoved: duplicatesRemoved,
             events: deduplicatedEvents,
             config: parserConfig // Include config for orchestrator to use
         };
