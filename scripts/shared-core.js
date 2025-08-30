@@ -992,6 +992,17 @@ class SharedCore {
             .replace(/\\\\/g, '\\');   // Unescape backslashes (\\ -> \)
     }
     
+    // Add escape characters to text to prevent parsing issues
+    escapeText(text) {
+        if (!text || typeof text !== 'string') {
+            return text;
+        }
+        
+        return text
+            .replace(/\\/g, '\\\\')    // Escape backslashes (\ -> \\)
+            .replace(/:/g, '\\:');     // Escape colons (: -> \:)
+    }
+    
     // Check if a key is valid for metadata (single word, reasonable length)
     isValidMetadataKey(key) {
         if (!key || typeof key !== 'string') {
@@ -1147,7 +1158,9 @@ class SharedCore {
         Object.keys(fields).forEach(key => {
             const value = fields[key];
             if (value !== undefined && value !== null && value !== '') {
-                lines.push(`${key}: ${value}`);
+                // Escape colons in values to prevent parsing issues
+                const escapedValue = this.escapeText(value);
+                lines.push(`${key}: ${escapedValue}`);
             }
         });
         
@@ -1797,7 +1810,9 @@ class SharedCore {
                 event[fieldName] !== '') {
                 // Description field is now saved and read literally - no normalization
                 const value = event[fieldName];
-                notes.push(`${fieldName}: ${value}`);
+                // Escape colons in values to prevent parsing issues
+                const escapedValue = this.escapeText(value);
+                notes.push(`${fieldName}: ${escapedValue}`);
                 savedFieldCount++;
             }
         });
