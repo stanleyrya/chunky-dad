@@ -234,7 +234,7 @@ class SharedCore {
                 // Process additional URLs if we have them (for enriching existing events, not creating new ones)
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
                     // Deduplicate additional URLs before processing
-                    const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
+                    const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, globalProcessedUrls);
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
                     
                     await this.enrichEventsWithDetailPages(
@@ -244,7 +244,7 @@ class SharedCore {
                         parserConfig, 
                         httpAdapter, 
                         displayAdapter,
-                        processedUrls,
+                        globalProcessedUrls,
                         undefined,
                         mainConfig,
                         parserName

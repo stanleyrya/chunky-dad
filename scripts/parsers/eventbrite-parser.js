@@ -129,7 +129,7 @@ class EventbriteParser {
                 endIndex++;
             }
             
-            let jsonString = html.substring(start, i);
+            let jsonString = html.substring(startIndex, i);
             
             // Clean up control characters that can break JSON parsing
             // Properly escape control characters that need to be escaped in JSON strings
@@ -605,7 +605,7 @@ class EventbriteParser {
                 url: url, // Use consistent 'url' field name across all parsers
                 ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
                 cover: price, // Use 'cover' field name that calendar-core.js expects
-                ...(finalImage && { image: finalImage }), // Only include image if we found one
+                ...(image && { image: image }), // Only include image if we found one
                 // Don't include gmaps here - let SharedCore generate it from placeId
                 placeId: finalPlaceId || null, // Pass place_id to SharedCore for iOS-compatible URL generation
                 source: this.config.source,
