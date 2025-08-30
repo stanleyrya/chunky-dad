@@ -8,24 +8,25 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250927T040000Z
 DTEND:20250927T100000Z
-DTSTAMP:20250829T221309Z
+DTSTAMP:20250830T010307Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
-DESCRIPTION:description: Friday\, September 26th\, 2025\nPUBLIC WORKS - 161
-  Erie\, San Francisco\nbar: The Public Works SF\naddress: 161 Erie Street\,
-  San Francisco\, CA 94103\nurl: https://www.eventbrite.com/e/bearracuda-sf-
- presents-horse-meat-disco-tickets-1370410668199\ncover: $57.79 - $99.99 (as
-  of 8/28)\nimage: https://bearracuda.com/wp-content/uploads/2025/05/hmd2025
- .jpg\nfacebook: https://www.facebook.com/events/564754916670823/\nticketUrl
- : https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668
- 199\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracu
- da\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7689137%2C-12
- 2.4192514&query_place_id=85922583\nkey: bearracuda-2025-09-27-sf
-LAST-MODIFIED:20250828T155355Z
+DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
+ isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
+ m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
+ 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
+ sm-friday/\ncover: $57.79 - $99.99 (as of 8/29)\nimage: https://bearracuda.
+ com/wp-content/uploads/2025/05/hmd2025.jpg\nshortName: Bear-rac-uda\ninstag
+ ram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=ChIJa4c8OyF
+ -j4AR4kopWZOJZPM\nkey: bearracuda-2025-09-27-sf\nfacebook: https://www.face
+ book.com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/b
+ earracuda-sf-flsm-friday-tickets-1370410668199
+LAST-MODIFIED:20250830T003601Z
 LOCATION:37.7689137\, -122.4192514
 SEQUENCE:2
 STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
+SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

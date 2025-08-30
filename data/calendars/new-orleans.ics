@@ -6,22 +6,22 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
-DTSTART:20250830T060000Z
-DTEND:20250830T110000Z
-DTSTAMP:20250829T221309Z
-UID:52052D2B-7191-47D1-AB78-D14C65C37F55
-CREATED:20250825T034003Z
+DTSTART:20250830T020000Z
+DTEND:20250830T070000Z
+DTSTAMP:20250830T010307Z
+UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
+CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
   King of Pants (Seattle)\n• Decor &amp\; Photos by Dusti Cunningham\nbar: J
- oy Theatre\naddress: 1200 Canal St\, New Orleans\, LA 70112\nurl: https://b
- earracuda.com/events/new-orleans/\nimage: https://bearracuda.com/wp-content
- /uploads/2025/04/cuda-nola-august-2025-web.jpg\nfacebook: https://www.faceb
- ook.com/share/1EZ2P4X4Ek/\nticketUrl: https://www.ticketmaster.com/bearracu
- da-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4\nshortName: Bear
- -rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://m
- aps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112\nkey
- : bearracuda-2025-08-30-new-orleans
-LAST-MODIFIED:20250827T041736Z
+ oy Theatre\naddress: 1200 Canal St\, New Orleans\, LA 70112\ntimezone: Amer
+ ica/Chicago\nurl: https://bearracuda.com/events/new-orleans/\nimage: https:
+ //bearracuda.com/wp-content/uploads/2025/04/cuda-nola-august-2025-web.jpg\n
+ facebook: https://www.facebook.com/share/1EZ2P4X4Ek/\nticketUrl: https://ww
+ w.ticketmaster.com/bearracuda-new-orleans-louisiana-08-29-2025/event/1B0062
+ 75D3607BD4\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/b
+ earracuda\ngmaps: https://maps.google.com/?q=1200%20Canal%20St%2C%20New%20O
+ rleans%2C%20LA%2070112\nkey: bearracuda-2025-08-30-new-orleans
+LAST-MODIFIED:20250830T003601Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
