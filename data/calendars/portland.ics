@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20251026T220000Z
 DTEND:20251027T030000Z
-DTSTAMP:20250830T010307Z
+DTSTAMP:20250830T025242Z
 UID:6C4ECC86-011F-4128-8CF0-9841CB2D8EED
 CREATED:20250829T235147Z
 DESCRIPTION:description: JP Hardy & Matt Bearracuda present TREASURE TRAIL 
@@ -32,7 +32,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250914T040000Z
 DTEND:20250914T090000Z
-DTSTAMP:20250830T010307Z
+DTSTAMP:20250830T025242Z
 UID:E0BA6861-892D-456D-9D6E-B53C61A7BF4C
 CREATED:20250817T231651Z
 DESCRIPTION:description: 16 YEAR ANNIVERSARY\n\nMusic & Entertainment\n• DJ
@@ -40,13 +40,13 @@ DESCRIPTION:description: 16 YEAR ANNIVERSARY\n\nMusic & Entertainment\n• DJ
  ess: 722 E Burnside\, Portland\, OR 97213\ntimezone: America/Los_Angeles\nu
  rl: https://bearracuda.com/events/pdx16/\ncover: $20.27 - $29.99 (as of 8/2
  9)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-portland-
- september_2025-web.jpg\nshortName: Bear-rac-uda\ninstagram: https://www.ins
- tagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&que
- ry=45.5227415%2C-122.6580938&query_place_id=59325025\nkey: bearracuda-2025-
- 09-14-portland\nfacebook: https://www.facebook.com/events/751830650923430/\
- nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-16-year-annive
- rsary-tickets-1546221061819
-LAST-MODIFIED:20250829T235148Z
+ september_2025-web.jpg\nfacebook: https://www.facebook.com/events/751830650
+ 923430/\nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-16-yea
+ r-anniversary-tickets-1546221061819\nshortName: Bear-rac-uda\ninstagram: ht
+ tps://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829\nkey: be
+ arracuda-2025-09-14-portland
+LAST-MODIFIED:20250830T015908Z
 LOCATION:45.5227415\, -122.6580938
 SEQUENCE:2
 STATUS:CONFIRMED
@@ -58,7 +58,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251116T050000Z
 DTEND:20251116T100000Z
-DTSTAMP:20250830T010307Z
+DTSTAMP:20250830T025242Z
 UID:CA92B055-AF3F-4794-BF90-54987559FE94
 CREATED:20250817T231652Z
 DESCRIPTION:description: Music & Entertainment\n• DJ Freddy King of Pants &
@@ -66,14 +66,14 @@ DESCRIPTION:description: Music & Entertainment\n• DJ Freddy King of Pants &
  lan Alexander &amp\; Special Guests\nbar: Bossanova Ballroom\naddress: 722 
  E Burnside\, Portland\, OR 97213\ntimezone: America/Los_Angeles\nurl: https
  ://bearracuda.com/events/portland-50/\ncover: $24.89 - $30.54 (as of 8/29)\
- nimage: https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg\nsho
- rtName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmap
- s: https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.658093
- 8&query_place_id=59325025\nkey: bearracuda-2025-11-16-portland\nfacebook: h
- ttps://www.facebook.com/events/706971042315329\nticketUrl: https://www.even
- tbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-15574859754
- 79
-LAST-MODIFIED:20250829T235149Z
+ nimage: https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg\nfac
+ ebook: https://www.facebook.com/events/706971042315329\nticketUrl: https://
+ www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-155
+ 7485975479\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/b
+ earracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=45.522741
+ 5%2C-122.6580938&query_place_id=101715829\nkey: bearracuda-2025-11-16-portl
+ and
+LAST-MODIFIED:20250830T015908Z
 LOCATION:45.5227415\, -122.6580938
 SEQUENCE:0
 STATUS:CONFIRMED
