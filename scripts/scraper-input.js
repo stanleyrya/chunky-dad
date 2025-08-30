@@ -15,11 +15,11 @@ const scraperConfig = {
   parsers: [
     {
       name: "Megawoof America",
-      enabled: false,
+      enabled: true,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
-      urlDiscoveryDepth: 1,
-      maxAdditionalUrls: 20,
+      urlDiscoveryDepth: 0,
+      maxAdditionalUrls: null,
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["static"], merge: "clobber" },
@@ -43,10 +43,10 @@ const scraperConfig = {
     },
     {
       name: "Bear Happy Hour",
-      enabled: false,
+      enabled: true,
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
-      urlDiscoveryDepth: 1,
+      urlDiscoveryDepth: 0,
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "clobber" },
@@ -72,7 +72,7 @@ const scraperConfig = {
       enabled: true,
       urls: [
         "https://bearracuda.com/",
-        "https://www.eventbrite.com/o/bearracuda-21867032189"
+        //"https://www.eventbrite.com/o/bearracuda-21867032189"
       ],
       alwaysBear: true,
       urlDiscoveryDepth: 2,
