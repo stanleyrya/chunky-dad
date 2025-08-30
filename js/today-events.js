@@ -15,6 +15,9 @@ class TodayEventsAggregator {
         return;
       }
 
+      // Show loading state
+      this.showLoadingState();
+
       const cities = (window.getAvailableCities ? getAvailableCities() : []).filter(c => hasCityCalendar(c.key));
       const selectedCities = cities.slice(0, this.maxCities);
 
@@ -26,9 +29,13 @@ class TodayEventsAggregator {
       const sorted = deduped.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
       this.renderTodayEvents(sorted);
-      logger.componentLoad('CALENDAR', 'TodayEventsAggregator completed', { total: sorted.length });
+      logger.componentLoad('CALENDAR', 'TodayEventsAggregator completed', { 
+        total: sorted.length,
+        events: sorted.map(ev => ({ name: ev.shortName || ev.name, city: ev.cityName, time: this.formatTimeRange(ev.startDate, ev.endDate) }))
+      });
     } catch (error) {
       logger.componentError('CALENDAR', 'TodayEventsAggregator failed', error);
+      this.showErrorState();
     }
   }
 
@@ -113,22 +120,22 @@ class TodayEventsAggregator {
 
     if (!events.length) {
       const empty = document.createElement('div');
-      empty.className = 'event-compact-card coming-soon';
+      empty.className = 'today-event-card coming-soon';
       const emojiBox = document.createElement('div');
-      emojiBox.className = 'event-emoji-box';
+      emojiBox.className = 'today-event-emoji-box';
       const emoji = document.createElement('span');
-      emoji.className = 'event-emoji';
+      emoji.className = 'today-event-emoji';
       emoji.textContent = '😴';
       emojiBox.appendChild(emoji);
       empty.appendChild(emojiBox);
 
       const content = document.createElement('div');
-      content.className = 'event-content';
+      content.className = 'today-event-content';
       const name = document.createElement('span');
-      name.className = 'event-name';
+      name.className = 'today-event-name';
       name.textContent = 'No events today';
       const subtitle = document.createElement('span');
-      subtitle.className = 'event-dates';
+      subtitle.className = 'today-event-time';
       subtitle.textContent = 'Check back soon!';
       content.appendChild(name);
       content.appendChild(subtitle);
@@ -140,10 +147,12 @@ class TodayEventsAggregator {
       return;
     }
 
-    for (const ev of events) {
+    events.forEach((ev, index) => {
       const card = this.createEventCard(ev);
+      // Add staggered animation delay for carousel effect
+      card.style.animationDelay = `${index * 0.1}s`;
       this.container.appendChild(card);
-    }
+    });
 
     // Right spacer
     this.container.appendChild(this.createSpacerCard());
@@ -152,49 +161,74 @@ class TodayEventsAggregator {
   createEventCard(ev) {
     const link = document.createElement('a');
     link.href = `city.html?city=${ev.cityKey}`;
-    link.className = 'event-compact-card';
+    link.className = 'today-event-card';
 
     const emojiBox = document.createElement('div');
-    emojiBox.className = 'event-emoji-box';
+    emojiBox.className = 'today-event-emoji-box';
     const emoji = document.createElement('span');
-    emoji.className = 'event-emoji';
-    emoji.textContent = '🎉';
+    emoji.className = 'today-event-emoji';
+    
+    // Use more specific emojis based on event type or time
+    const eventEmoji = this.getEventEmoji(ev);
+    emoji.textContent = eventEmoji;
+    
     emojiBox.appendChild(emoji);
     link.appendChild(emojiBox);
 
     const content = document.createElement('div');
-    content.className = 'event-content';
+    content.className = 'today-event-content';
 
     const name = document.createElement('span');
-    name.className = 'event-name';
+    name.className = 'today-event-name';
     name.textContent = ev.shortName || ev.shorterName || ev.name || 'Event';
 
     const time = document.createElement('span');
-    time.className = 'event-dates';
+    time.className = 'today-event-time';
     time.textContent = this.formatTimeRange(ev.startDate, ev.endDate);
 
-    const bar = document.createElement('span');
-    bar.className = 'event-bar';
-    bar.textContent = ev.bar || '';
-
     const city = document.createElement('span');
-    city.className = 'event-location';
+    city.className = 'today-event-city';
     city.textContent = ev.cityName || '';
 
     content.appendChild(name);
     content.appendChild(time);
-    if (ev.bar) {
-      content.appendChild(bar);
-    }
     content.appendChild(city);
     link.appendChild(content);
 
     return link;
   }
 
+  getEventEmoji(ev) {
+    const eventName = (ev.name || '').toLowerCase();
+    const eventLocation = (ev.location || '').toLowerCase();
+    
+    // More specific emojis based on event type
+    if (eventName.includes('happy hour') || eventName.includes('cocktail')) return '🍻';
+    if (eventName.includes('dance') || eventName.includes('party')) return '💃';
+    if (eventName.includes('drag') || eventName.includes('show')) return '👑';
+    if (eventName.includes('karaoke')) return '🎤';
+    if (eventName.includes('trivia')) return '🧠';
+    if (eventName.includes('bingo')) return '🎱';
+    if (eventName.includes('leather') || eventName.includes('kink')) return '🖤';
+    if (eventName.includes('brunch') || eventName.includes('breakfast')) return '🥞';
+    if (eventName.includes('dinner') || eventName.includes('food')) return '🍽️';
+    if (eventName.includes('bear') && eventName.includes('night')) return '🐻';
+    if (eventName.includes('pool') || eventName.includes('swim')) return '🏊';
+    if (eventName.includes('game') || eventName.includes('sport')) return '🎮';
+    
+    // Time-based emojis
+    const hour = new Date(ev.startDate).getHours();
+    if (hour >= 6 && hour < 12) return '🌅'; // Morning
+    if (hour >= 12 && hour < 17) return '☀️'; // Afternoon
+    if (hour >= 17 && hour < 22) return '🌆'; // Evening
+    if (hour >= 22 || hour < 6) return '🌙'; // Night
+    
+    return '🎉'; // Default
+  }
+
   createSpacerCard() {
     const spacer = document.createElement('div');
-    spacer.className = 'event-compact-card spacer-card';
+    spacer.className = 'today-event-card spacer-card';
     spacer.style.opacity = '0';
     spacer.style.pointerEvents = 'none';
     spacer.style.minWidth = '1rem';
@@ -230,6 +264,72 @@ class TodayEventsAggregator {
     const timeStr = start.toLocaleTimeString([], opts);
     
     return `${dayLabel} ${timeStr}`;
+  }
+
+  showLoadingState() {
+    this.container.innerHTML = '';
+    
+    // Left spacer
+    this.container.appendChild(this.createSpacerCard());
+    
+    const loading = document.createElement('div');
+    loading.className = 'today-event-card loading';
+    
+    const emojiBox = document.createElement('div');
+    emojiBox.className = 'today-event-emoji-box';
+    const emoji = document.createElement('span');
+    emoji.className = 'today-event-emoji';
+    emoji.textContent = '⏳';
+    emojiBox.appendChild(emoji);
+    loading.appendChild(emojiBox);
+
+    const content = document.createElement('div');
+    content.className = 'today-event-content';
+    const name = document.createElement('span');
+    name.className = 'today-event-name';
+    name.textContent = 'Loading...';
+    content.appendChild(name);
+    loading.appendChild(content);
+    
+    this.container.appendChild(loading);
+    
+    // Right spacer
+    this.container.appendChild(this.createSpacerCard());
+  }
+
+  showErrorState() {
+    this.container.innerHTML = '';
+    
+    // Left spacer
+    this.container.appendChild(this.createSpacerCard());
+    
+    const error = document.createElement('div');
+    error.className = 'today-event-card error';
+    
+    const emojiBox = document.createElement('div');
+    emojiBox.className = 'today-event-emoji-box';
+    const emoji = document.createElement('span');
+    emoji.className = 'today-event-emoji';
+    emoji.textContent = '❌';
+    emojiBox.appendChild(emoji);
+    error.appendChild(emojiBox);
+
+    const content = document.createElement('div');
+    content.className = 'today-event-content';
+    const name = document.createElement('span');
+    name.className = 'today-event-name';
+    name.textContent = 'Error loading';
+    const subtitle = document.createElement('span');
+    subtitle.className = 'today-event-time';
+    subtitle.textContent = 'Try again later';
+    content.appendChild(name);
+    content.appendChild(subtitle);
+    error.appendChild(content);
+    
+    this.container.appendChild(error);
+    
+    // Right spacer
+    this.container.appendChild(this.createSpacerCard());
   }
 }
 
