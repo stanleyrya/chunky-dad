@@ -1169,6 +1169,10 @@ class ScriptableAdapter {
         const allEvents = this.getAllEventsFromResults(results);
         const availableCalendars = await Calendar.forEvents();
         
+        // Detect dark mode for better bar/low-light readability
+        const isDarkMode = Device.isUsingDarkAppearance();
+        console.log(`📱 Scriptable: Dark mode detected: ${isDarkMode}`);
+        
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
         const updatedEvents = [];
@@ -1210,7 +1214,7 @@ class ScriptableAdapter {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* chunky.dad brand colors */
+            /* chunky.dad brand colors - light mode */
             --primary-color: #667eea;
             --secondary-color: #ff6b6b;
             --accent-color: #764ba2;
@@ -1220,7 +1224,28 @@ class ScriptableAdapter {
             --background-primary: #ffffff;
             --background-light: #f8f9ff;
             --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            --border-color: rgba(102, 126, 234, 0.1);
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            --card-hover-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
         }
+
+        ${isDarkMode ? `
+        :root {
+            /* Dark mode overrides for better bar/low-light readability */
+            --primary-color: #8b9cf7;
+            --secondary-color: #ff8a8a;
+            --accent-color: #9575cd;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-inverse: #1a1a1a;
+            --background-primary: #2d2d2d;
+            --background-light: #1a1a1a;
+            --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            --border-color: rgba(139, 156, 247, 0.2);
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            --card-hover-shadow: 0 8px 25px rgba(139, 156, 247, 0.25);
+        }
+        ` : ''}
         
         body {
             font-family: 'Poppins', sans-serif;
@@ -1254,27 +1279,44 @@ class ScriptableAdapter {
             pointer-events: none;
         }
         
-        .header h1 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
-            display: flex;
-            align-items: center;
+        .header-content {
             position: relative;
             z-index: 1;
-            font-weight: 700;
         }
         
         .header-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            margin-right: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 80px;
+            height: 80px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
             transition: transform 0.3s ease;
+            display: block;
         }
         
         .header-logo:hover {
             transform: scale(1.05);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        
+        .header-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .header-subtitle {
+            font-size: 18px;
+            font-weight: 400;
+            opacity: 0.9;
         }
         
         .header .stats {
@@ -1308,8 +1350,8 @@ class ScriptableAdapter {
             border-radius: 15px;
             padding: 25px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border: 1px solid rgba(102, 126, 234, 0.1);
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
         }
         
         .section-header {
@@ -1343,18 +1385,18 @@ class ScriptableAdapter {
         
         .event-card {
             background: var(--background-primary);
-            border: 1px solid rgba(102, 126, 234, 0.1);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 16px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-shadow: var(--card-shadow);
         }
         
         .event-card:hover {
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            box-shadow: var(--card-hover-shadow);
             transform: translateY(-3px);
-            border-color: rgba(102, 126, 234, 0.2);
+            border-color: var(--border-color);
         }
         
         .event-title {
@@ -1615,8 +1657,8 @@ class ScriptableAdapter {
             }
             
             .header-logo {
-                width: 40px;
-                height: 40px;
+                width: 60px;
+                height: 60px;
             }
             
             .header .stats {
@@ -1819,11 +1861,14 @@ class ScriptableAdapter {
 </head>
 <body>
     <div class="header">
-        <h1>
+        <div class="header-content">
             <img src="https://raw.githubusercontent.com/stanleyrya/chunky-dad/main/Rising_Star_Ryan_Head_Compressed.png" 
                  alt="chunky.dad logo" class="header-logo">
-            🐻 chunky.dad Event Results
-        </h1>
+            <h1>
+                <div class="header-title">chunky.dad</div>
+                <div class="header-subtitle">Bear Event Scraper Results</div>
+            </h1>
+        </div>
         <div class="stats">
             <div class="stat">
                 <div class="stat-value">${results.totalEvents}</div>
