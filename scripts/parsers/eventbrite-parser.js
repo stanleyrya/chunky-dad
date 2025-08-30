@@ -613,6 +613,7 @@ class EventbriteParser {
                 city: city,
                 timezone: this.getTimezoneForCity(city, cityConfig),
                 url: url, // Use consistent 'url' field name across all parsers
+                ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 ...(finalImage && { image: finalImage }), // Only include image if we found one
                 // Don't include gmaps here - let SharedCore generate it from placeId
