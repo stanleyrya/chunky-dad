@@ -150,9 +150,9 @@ class SharedCore {
         }
 
         if (results.duplicatesRemoved > 0) {
-            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Raw bear: ${results.rawBearEvents}, Duplicates removed: ${results.duplicatesRemoved}, Final bear: ${results.bearEvents}`);
+            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents} (all sources), Raw bear: ${results.rawBearEvents} (after bear filtering), Duplicates removed: ${results.duplicatesRemoved}, Final bear: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved})`);
         } else {
-            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents}, Bear: ${results.bearEvents}`);
+            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents} (all sources), Final bear: ${results.bearEvents} (no duplicates)`);
         }
         return results;
     }
