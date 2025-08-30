@@ -1588,16 +1588,17 @@ class ScriptableAdapter {
         }
         
         .notes-preview {
-            background: ${isDarkMode ? '#2a2a2a' : '#f8f8f8'};
+            background: ${isDarkMode ? '#242424' : '#f8f8f8'};
             border-left: 3px solid var(--primary-color);
-            padding: 10px;
+            padding: 12px;
             margin-top: 10px;
-            font-size: 12px;
+            font-size: 13px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.5;
-            max-height: 250px;
+            line-height: 1.6;
+            max-height: 280px;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            color: var(--text-primary);
         }
         
         .diff-view {
@@ -1655,6 +1656,70 @@ class ScriptableAdapter {
         details[open] summary {
             border-bottom: 1px solid var(--border-color);
             margin-bottom: 10px;
+        }
+
+        /* Event description styling for readability */
+        .event-description {
+            background: ${isDarkMode ? 'rgba(102, 126, 234, 0.12)' : '#f0f8ff'};
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            margin-top: 8px;
+            color: var(--text-primary);
+        }
+
+        /* Cleaner, larger image presentation */
+        .event-image {
+            margin: 10px 0 12px 0;
+            text-align: center;
+        }
+        .event-image img {
+            width: 100%;
+            max-width: 560px;
+            max-height: 340px;
+            height: auto;
+            border-radius: 12px;
+            object-fit: cover;
+            box-shadow: 0 4px 12px ${isDarkMode ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.15)'};
+            border: 2px solid var(--border-color);
+            transition: transform 0.2s ease;
+        }
+        .event-image img:hover { transform: scale(1.01); }
+
+        /* Line-by-line diff styling - dark-mode friendly */
+        .diff-line { padding: 6px 8px; margin: 3px 0; border-left: 3px solid; border-radius: 4px; font-family: 'SF Mono', Monaco, 'Courier New', monospace; }
+        .diff-meta { color: var(--text-secondary); font-size: 10px; }
+        .diff-header { color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; font-weight: bold; }
+        .diff-sep { border-top: 1px solid var(--border-color); margin: 8px 0 4px 0; }
+        .diff-added {
+            background: ${isDarkMode ? 'rgba(52, 208, 88, 0.12)' : '#e6ffec'};
+            border-left-color: #34d058;
+            color: ${isDarkMode ? '#c8facc' : '#166534'};
+        }
+        .diff-removed {
+            background: ${isDarkMode ? 'rgba(215, 58, 73, 0.14)' : '#ffeef0'};
+            border-left-color: #d73a49;
+            color: ${isDarkMode ? '#ffb3ba' : '#7f1d1d'};
+        }
+        .diff-context {
+            background: ${isDarkMode ? 'rgba(255, 193, 7, 0.12)' : '#fff3cd'};
+            border-left-color: #ffc107;
+            color: ${isDarkMode ? '#ffe08a' : '#7a5e00'};
+        }
+        .diff-same {
+            background: ${isDarkMode ? 'rgba(3, 102, 214, 0.14)' : '#f1f8ff'};
+            border-left-color: #0366d6;
+            color: ${isDarkMode ? '#9ecbff' : '#0b3e86'};
+        }
+        .diff-ignored {
+            background: ${isDarkMode ? 'rgba(219, 171, 9, 0.16)' : '#fff5b4'};
+            border-left-color: #dbab09;
+            color: ${isDarkMode ? '#ffe79a' : '#7a5e00'};
+        }
+        .diff-merged {
+            background: ${isDarkMode ? 'rgba(52, 208, 88, 0.14)' : '#e6ffec'};
+            border-left-color: #34d058;
+            color: ${isDarkMode ? '#bbf7d0' : '#166534'};
         }
         
         /* Responsive Design */
@@ -2462,9 +2527,9 @@ class ScriptableAdapter {
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
                 ${event.description ? `
-                    <div class=\"event-detail\" style=\"background: #f0f8ff; padding: 8px; border-radius: 5px; margin-top: 8px;\">
+                    <div class=\"event-detail event-description\">
                         <span>📝</span>
-                        <span style=\"font-style: italic;\">${this.escapeHtml(event.description)}</span>
+                        <span>${this.escapeHtml(event.description)}</span>
                     </div>
                 ` : ''}
                 ${event.tea ? `
@@ -2474,18 +2539,10 @@ class ScriptableAdapter {
                     </div>
                 ` : ''}
                 ${event.image ? `
-                    <div class="event-detail" style="margin-top: 12px;">
-                        <span>🖼️</span>
-                        <span><a href="${this.escapeHtml(event.image)}" target="_blank" rel="noopener" style="color: var(--primary-color); font-weight: 500;">View Full Image</a></span>
-                        <div style="margin-top: 8px; text-align: center;">
-                            <img src="${this.escapeHtml(event.image)}" alt="Event Image" 
-                                 style="max-width: 100%; width: 280px; max-height: 200px; border-radius: 12px; 
-                                        object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-                                        border: 2px solid var(--border-color); transition: transform 0.2s ease;" 
-                                 onload="this.style.opacity='1'" 
-                                 onerror="this.style.display='none'"
-                                 onmouseover="this.style.transform='scale(1.02)'" 
-                                 onmouseout="this.style.transform='scale(1)'">
+                    <div class=\"event-image\">
+                        <a href=\"${this.escapeHtml(event.image)}\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--primary-color); font-weight: 500;\">View Full Image</a>
+                        <div style=\"margin-top: 8px;\">
+                            <img src=\"${this.escapeHtml(event.image)}\" alt=\"Event Image\" onerror=\"this.style.display='none'\">
                         </div>
                     </div>
                 ` : ''}
@@ -2503,7 +2560,7 @@ class ScriptableAdapter {
                 ` : ''}
                 ${event.ticketUrl ? `
                     <div class="event-detail">
-                        <span>🎫</span>
+                        <span>🎟️</span>
                         <span><a href="${this.escapeHtml(event.ticketUrl)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Tickets</a></span>
                     </div>
                 ` : ''}
@@ -2515,7 +2572,7 @@ class ScriptableAdapter {
                 ` : ''}
                 ${event.url && event.url !== event.website ? `
                     <div class="event-detail">
-                        <span>🎫</span>
+                        <span>🔗</span>
                         <span><a href="${this.escapeHtml(event.url)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Event Link</a></span>
                     </div>
                 ` : ''}
@@ -3444,7 +3501,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         // Use the same field logic as what goes into calendar notes
         const fieldsToCompare = this.getFieldsForComparison(event);
-        let html = '<div style="font-family: monospace; font-size: 12px; background: #f8f8f8; padding: 12px; border-radius: 8px; line-height: 1.6;">';
+        let html = '<div style="font-family: \'SF Mono\', Monaco, \'Courier New\', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);">';
         
         fieldsToCompare.forEach((field, index) => {
             // Skip notes field as it's a computed field that combines other fields
@@ -3493,56 +3550,56 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             // Add field separator for readability (except for first field)
             if (index > 0) {
-                html += `<div style="border-top: 1px solid #ddd; margin: 8px 0 4px 0;"></div>`;
+                html += `<div class=\"diff-sep\"></div>`;
             }
             
             // Add field header
-            html += `<div style="color: #666; font-size: 11px; margin-bottom: 4px; font-weight: bold;">
+            html += `<div class=\"diff-header\">
                         ${field}
                      </div>`;
             
             // Show git-style diff
             if (isNew) {
                 // Only new value exists - show as addition
-                html += `<div style="background: #e6ffec; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #34d058; border-radius: 4px;">`;
-                html += `<span style=\"color: #28a745; font-weight: bold;\">+</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(new field)</em>`;
+                html += `<div class=\"diff-line diff-added\">`;
+                html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(new field)</em>`;
                 html += `</div>`;
             } else if (isUnchanged) {
                 // Only existing value exists - show as context (orange)
-                html += `<div style=\"background: #fff3cd; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #ffc107; border-radius: 4px;\">`;
-                html += `<span style=\"color: #ff9500; font-weight: bold;\">═</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(existing, unchanged)</em>`;
+                html += `<div class=\"diff-line diff-context\">`;
+                html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(existing, unchanged)</em>`;
                 html += `</div>`;
             } else if (isSame) {
                 // Existing and new are the same for display - avoid +/- noise
-                html += `<div style=\"background: #f1f8ff; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #0366d6; border-radius: 4px;\">`;
-                html += `<span style=\"color: #0366d6; font-weight: bold;\">═</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(same in both)</em>`;
+                html += `<div class=\"diff-line diff-same\">`;
+                html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(same in both)</em>`;
                 html += `</div>`;
             } else if (isReplaced) {
                 // Value was replaced - show old as deletion, new as addition
-                html += `<div style=\"background: #ffeef0; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #d73a49; border-radius: 4px;\">`;
-                html += `<span style=\"color: #d73a49; font-weight: bold;\">-</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(removed)</em>`;
+                html += `<div class=\"diff-line diff-removed\">`;
+                html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(removed)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #e6ffec; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #34d058; border-radius: 4px;\">`;
-                html += `<span style=\"color: #28a745; font-weight: bold;\">+</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(added)</em>`;
+                html += `<div class=\"diff-line diff-added\">`;
+                html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(added)</em>`;
                 html += `</div>`;
             } else if (isKept) {
                 // New value exists but existing was kept - show both with context
-                html += `<div style=\"background: #f1f8ff; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #0366d6; border-radius: 4px;\">`;
-                html += `<span style=\"color: #0366d6; font-weight: bold;\">═</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(kept existing)</em>`;
+                html += `<div class=\"diff-line diff-same\">`;
+                html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(kept existing)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #fff5b4; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #dbab09; opacity: 0.7; border-radius: 4px;\">`;
-                html += `<span style=\"color: #b08800; font-weight: bold;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(ignored new value)</em>`;
+                html += `<div class=\"diff-line diff-ignored\" style=\"opacity:0.85;\">`;
+                html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(ignored new value)</em>`;
                 html += `</div>`;
             } else if (isMerged) {
                 // Values were merged - show all three
-                html += `<div style=\"background: #ffeef0; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #d73a49; border-radius: 4px;\">`;
-                html += `<span style=\"color: #d73a49; font-weight: bold;\">-</span> ${this.escapeHtml(formatValue(existingValue))} <em style=\"color: #666; font-size: 10px;\">(original)</em>`;
+                html += `<div class=\"diff-line diff-removed\">`;
+                html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(original)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #fff5b4; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #dbab09; border-radius: 4px;\">`;
-                html += `<span style=\"color: #b08800; font-weight: bold;\">~</span> ${this.escapeHtml(formatValue(newValue))} <em style=\"color: #666; font-size: 10px;\">(proposed)</em>`;
+                html += `<div class=\"diff-line diff-ignored\">`;
+                html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(proposed)</em>`;
                 html += `</div>`;
-                html += `<div style=\"background: #e6ffec; padding: 6px 8px; margin: 3px 0; border-left: 3px solid #34d058; border-radius: 4px;\">`;
-                html += `<span style=\"color: #28a745; font-weight: bold;\">+</span> ${this.escapeHtml(formatValue(finalValue))} <em style=\"color: #666; font-size: 10px;\">(merged result)</em>`;
+                html += `<div class=\"diff-line diff-merged\">`;
+                html += `<span>+</span> ${this.escapeHtml(formatValue(finalValue))} <em class=\"diff-meta\">(merged result)</em>`;
                 html += `</div>`;
             }
             
