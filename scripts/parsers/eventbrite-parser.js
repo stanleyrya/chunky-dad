@@ -512,7 +512,7 @@ class EventbriteParser {
             }
             
             console.log(`🎫 Eventbrite: Final price result for "${title}": "${price}"`);
-            const image = eventData.logo?.url || eventData.image?.url;
+            let image = eventData.logo?.url || eventData.image?.url;
             
             // NEW: Try to get image from eventHero if not found in eventData
             if (!image && serverData.event_listing_response?.eventHero?.items?.[0]) {
@@ -592,39 +592,31 @@ class EventbriteParser {
                 }
             }
             
-            // Create event object with safer property assignment
-            const event = {};
-            
-            // Assign properties one by one to avoid readonly issues
-            event.title = title;
-            event.description = description;
-            event.startDate = startDate ? new Date(startDate) : null;
-            event.endDate = endDate ? new Date(endDate) : null;
-            event.bar = finalVenue; // Use 'bar' field name that calendar-core.js expects
-            event.location = finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null; // Store coordinates as "lat,lng" string in location field
-            event.address = finalAddress;
-            event.city = city;
-            event.timezone = this.getTimezoneForCity(city, cityConfig);
-            event.url = url; // Use consistent 'url' field name across all parsers
-            event.ticketUrl = url; // For Eventbrite events, the event URL IS the ticket URL
-            event.cover = price; // Use 'cover' field name that calendar-core.js expects
-            
-            // Add image if we found one
-            if (image) {
-                event.image = image;
-            }
-            
-            // Don't include gmaps here - let SharedCore generate it from placeId
-            event.placeId = finalPlaceId || null; // Pass place_id to SharedCore for iOS-compatible URL generation
-            event.source = this.config.source;
-            
-            // Properly handle bear event detection based on configuration
-            event.isBearEvent = this.config.alwaysBear || this.isBearEvent({
+            const event = {
                 title: title,
-                description: '',
-                venue: finalVenue,
-                url: url
-            });
+                description: description,
+                startDate: startDate ? new Date(startDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
+                bar: finalVenue, // Use 'bar' field name that calendar-core.js expects
+                location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
+                address: finalAddress,
+                city: city,
+                timezone: this.getTimezoneForCity(city, cityConfig),
+                url: url, // Use consistent 'url' field name across all parsers
+                ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
+                cover: price, // Use 'cover' field name that calendar-core.js expects
+                ...(image && { image: image }), // Only include image if we found one
+                // Don't include gmaps here - let SharedCore generate it from placeId
+                placeId: finalPlaceId || null, // Pass place_id to SharedCore for iOS-compatible URL generation
+                source: this.config.source,
+                // Properly handle bear event detection based on configuration
+                isBearEvent: this.config.alwaysBear || this.isBearEvent({
+                    title: title,
+                    description: '',
+                    venue: finalVenue,
+                    url: url
+                })
+            };
             
             // Apply source-specific metadata values from config
             if (parserConfig.metadata) {
@@ -633,11 +625,7 @@ class EventbriteParser {
                     
                     // Apply value if it exists (source-specific overrides)
                     if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
-                        try {
-                            event[key] = metaValue.value;
-                        } catch (assignError) {
-                            console.warn(`🎫 Eventbrite: Could not assign metadata ${key}: ${assignError.message}`);
-                        }
+                        event[key] = metaValue.value;
                     }
                 });
             }
