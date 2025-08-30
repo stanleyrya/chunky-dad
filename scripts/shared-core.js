@@ -606,8 +606,8 @@ class SharedCore {
                         chosenValue = existingValue;
                         reason = `${existingSource} has higher priority (index ${existingIndex} vs ${newIndex})`;
                     }
-                } else {
-                    // New source has higher priority (or same priority)
+                } else if (newIndex < existingIndex) {
+                    // New source has higher priority
                     // But if new value is empty and existing value is not empty, use existing value
                     if (isEmpty(newValue) && !isEmpty(existingValue)) {
                         chosenValue = existingValue;
@@ -616,6 +616,10 @@ class SharedCore {
                         chosenValue = newValue;
                         reason = `${newSource} has higher priority (index ${newIndex} vs ${existingIndex})`;
                     }
+                } else {
+                    // Same priority - preserve existing value to avoid overriding previous merges
+                    chosenValue = existingValue;
+                    reason = `same priority (index ${existingIndex} vs ${newIndex}) - preserving existing`;
                 }
             } else if (existingIndex !== -1) {
                 // Only existing source is in priority list
