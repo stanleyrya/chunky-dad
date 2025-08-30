@@ -72,10 +72,12 @@ class TodayEventsAggregator {
   }
 
   filterEventsForToday(events) {
-    const startOfToday = new Date();
+    const now = new Date();
+    const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date(startOfToday);
-    endOfToday.setHours(23, 59, 59, 999);
+    const endOfTomorrow = new Date(startOfToday);
+    endOfTomorrow.setDate(endOfTomorrow.getDate() + 2); // Include tomorrow
+    endOfTomorrow.setHours(0, 0, 0, 0);
 
     return events.filter(ev => {
       const start = new Date(ev.startDate);
@@ -85,8 +87,8 @@ class TodayEventsAggregator {
       // Treat no end as same-day event lasting an hour for filtering purposes
       const effectiveEnd = end && !Number.isNaN(end.getTime()) ? end : new Date(start.getTime() + 60 * 60 * 1000);
 
-      // Show if event overlaps today (handles multi-day naturally)
-      return start <= endOfToday && effectiveEnd >= startOfToday;
+      // Show if event starts today or tomorrow
+      return start >= startOfToday && start < endOfTomorrow;
     });
   }
 
@@ -171,13 +173,20 @@ class TodayEventsAggregator {
     time.className = 'event-dates';
     time.textContent = this.formatTimeRange(ev.startDate, ev.endDate);
 
-    const location = document.createElement('span');
-    location.className = 'event-location';
-    location.textContent = `${ev.cityName}${ev.bar ? ' • ' + ev.bar : ''}`;
+    const bar = document.createElement('span');
+    bar.className = 'event-bar';
+    bar.textContent = ev.bar || '';
+
+    const city = document.createElement('span');
+    city.className = 'event-location';
+    city.textContent = ev.cityName || '';
 
     content.appendChild(name);
     content.appendChild(time);
-    content.appendChild(location);
+    if (ev.bar) {
+      content.appendChild(bar);
+    }
+    content.appendChild(city);
     link.appendChild(content);
 
     return link;
@@ -199,16 +208,28 @@ class TodayEventsAggregator {
     const end = endDate ? new Date(endDate) : null;
     if (Number.isNaN(start.getTime())) return '';
 
-    const sameDay = end && start.toDateString() === end.toDateString();
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const eventDate = new Date(start);
+    eventDate.setHours(0, 0, 0, 0);
+
+    let dayLabel;
+    if (eventDate.getTime() === today.getTime()) {
+      dayLabel = 'today';
+    } else if (eventDate.getTime() === tomorrow.getTime()) {
+      dayLabel = 'tomorrow';
+    } else {
+      dayLabel = start.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+
     const opts = { hour: 'numeric', minute: '2-digit' };
-    if (!end) {
-      return start.toLocaleTimeString([], opts);
-    }
-    if (sameDay) {
-      return `${start.toLocaleTimeString([], opts)} – ${end.toLocaleTimeString([], opts)}`;
-    }
-    // Multi-day spanning today: show start or "All day" if midnight
-    return `${start.toLocaleDateString()} ${start.toLocaleTimeString([], opts)} – ${end.toLocaleDateString()} ${end.toLocaleTimeString([], opts)}`;
+    const timeStr = start.toLocaleTimeString([], opts);
+    
+    return `${dayLabel} ${timeStr}`;
   }
 }
 
