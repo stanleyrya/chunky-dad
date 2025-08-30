@@ -519,6 +519,7 @@ class SharedCore {
         
         // Handle normalized title (with the original title normalization logic)
         let normalizedTitle = String(event.originalTitle || event.title || '').toLowerCase().trim();
+        const originalTitle = normalizedTitle; // Store original value before normalization
         
         // Apply the original title normalization for ${normalizedTitle}
         if (format.includes('${normalizedTitle}')) {
@@ -534,9 +535,12 @@ class SharedCore {
                 .replace(/^-+|-+$/g, '');
             
             if (normalizedTitle !== originalTitle) {
-
+                // Title was normalized for deduplication
             }
         }
+        
+        // Initialize key from format template
+        let key = format;
         
         // Replace template variables
         key = key.replace(/\$\{title\}/g, String(event.title || '').toLowerCase().trim());
