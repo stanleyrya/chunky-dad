@@ -1223,22 +1223,51 @@ class ScriptableAdapter {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bear Event Scraper Results</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* chunky.dad brand colors */
+            --primary-color: #667eea;
+            --secondary-color: #ff6b6b;
+            --accent-color: #764ba2;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-inverse: #ffffff;
+            --background-primary: #ffffff;
+            --background-light: #f8f9ff;
+            --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+        }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f7;
-            color: #1d1d1f;
+            background-color: var(--background-light);
+            color: var(--text-primary);
+            line-height: 1.6;
         }
         
         .header {
-            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
-            color: white;
+            background: var(--gradient-primary);
+            color: var(--text-inverse);
             padding: 30px;
             border-radius: 15px;
             margin-bottom: 30px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            pointer-events: none;
         }
         
         .header h1 {
@@ -1246,35 +1275,57 @@ class ScriptableAdapter {
             font-size: 28px;
             display: flex;
             align-items: center;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+        }
+        
+        .header-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .header-logo:hover {
+            transform: scale(1.05);
         }
         
         .header .stats {
             display: flex;
             gap: 30px;
             margin-top: 20px;
+            position: relative;
+            z-index: 1;
         }
         
         .stat {
             display: flex;
             flex-direction: column;
+            text-align: center;
         }
         
         .stat-value {
             font-size: 32px;
-            font-weight: 600;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
         
         .stat-label {
             font-size: 14px;
             opacity: 0.9;
+            font-weight: 400;
         }
         
         .section {
-            background: white;
+            background: var(--background-primary);
             border-radius: 15px;
             padding: 25px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid rgba(102, 126, 234, 0.1);
         }
         
         .section-header {
@@ -1297,35 +1348,38 @@ class ScriptableAdapter {
         }
         
         .section-count {
-            background: #e0e0e0;
+            background: var(--gradient-primary);
+            color: var(--text-inverse);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         
         .event-card {
-            background: white;
-            border: 1px solid rgba(0,0,0,0.08);
+            background: var(--background-primary);
+            border: 1px solid rgba(102, 126, 234, 0.1);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 16px;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
         
         .event-card:hover {
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-            transform: translateY(-2px);
-            border-color: rgba(0,0,0,0.12);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            transform: translateY(-3px);
+            border-color: rgba(102, 126, 234, 0.2);
         }
         
         .event-title {
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 12px;
-            color: #1d1d1f;
+            color: var(--text-primary);
             line-height: 1.3;
+            font-family: 'Poppins', sans-serif;
         }
         
         .event-details {
@@ -1333,7 +1387,8 @@ class ScriptableAdapter {
             flex-direction: column;
             gap: 8px;
             font-size: 14px;
-            color: #333;
+            color: var(--text-secondary);
+            font-family: 'Poppins', sans-serif;
         }
         
         .event-detail {
@@ -1379,8 +1434,9 @@ class ScriptableAdapter {
         }
         
         .badge-new {
-            background: #34c759;
-            color: white;
+            background: var(--gradient-primary);
+            color: var(--text-inverse);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         
         .badge-new::before {
@@ -1388,8 +1444,9 @@ class ScriptableAdapter {
         }
         
         .badge-update {
-            background: #007aff;
-            color: white;
+            background: var(--primary-color);
+            color: var(--text-inverse);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         
         .badge-update::before {
@@ -1397,8 +1454,9 @@ class ScriptableAdapter {
         }
         
         .badge-merge {
-            background: #32d74b;
-            color: white;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-inverse);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         
         .badge-merge::before {
@@ -1406,8 +1464,9 @@ class ScriptableAdapter {
         }
         
         .badge-conflict {
-            background: #ff9500;
-            color: white;
+            background: var(--secondary-color);
+            color: var(--text-inverse);
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
         }
         
         .badge-conflict::before {
@@ -1415,8 +1474,9 @@ class ScriptableAdapter {
         }
         
         .badge-warning {
-            background: #ff9500;
-            color: white;
+            background: var(--secondary-color);
+            color: var(--text-inverse);
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
         }
         
         .badge-warning::before {
@@ -1424,8 +1484,9 @@ class ScriptableAdapter {
         }
         
         .badge-error {
-            background: #ff3b30;
-            color: white;
+            background: var(--secondary-color);
+            color: var(--text-inverse);
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
         }
         
         .badge-error::before {
@@ -1453,17 +1514,20 @@ class ScriptableAdapter {
         .empty-state {
             text-align: center;
             padding: 40px;
-            color: #999;
+            color: var(--text-secondary);
+            font-family: 'Poppins', sans-serif;
         }
         
         .error-item {
-            background: #ffebee;
-            border: 1px solid #ffcdd2;
-            border-radius: 8px;
-            padding: 10px;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 12px;
+            padding: 15px;
             margin-bottom: 10px;
             font-size: 14px;
-            color: #c62828;
+            color: var(--secondary-color);
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
         }
         
         .calendar-status {
@@ -1567,6 +1631,12 @@ class ScriptableAdapter {
             
             .header h1 {
                 font-size: 24px;
+                font-weight: 700;
+            }
+            
+            .header-logo {
+                width: 40px;
+                height: 40px;
             }
             
             .header .stats {
@@ -1723,7 +1793,7 @@ class ScriptableAdapter {
         }
         
         input:checked + .slider {
-            background-color: #007aff;
+            background-color: var(--primary-color);
         }
         
         input:checked + .slider:before {
@@ -1777,7 +1847,11 @@ class ScriptableAdapter {
 </head>
 <body>
     <div class="header">
-        <h1>🐻 Bear Event Scraper Results</h1>
+        <h1>
+            <img src="https://raw.githubusercontent.com/stanleyrya/chunky-dad/main/Rising_Star_Ryan_Head_Compressed.png" 
+                 alt="chunky.dad logo" class="header-logo">
+            🐻 chunky.dad Event Results
+        </h1>
         <div class="stats">
             <div class="stat">
                 <div class="stat-value">${results.totalEvents}</div>
@@ -1799,11 +1873,12 @@ class ScriptableAdapter {
     </div>
     
     <div class="controls-section" style="
-        background: white;
+        background: var(--background-primary);
         border-radius: 15px;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        border: 1px solid rgba(102, 126, 234, 0.1);
         display: flex;
         flex-wrap: wrap;
         gap: 20px;
@@ -1831,21 +1906,27 @@ class ScriptableAdapter {
             <input type="text" id="searchInput" placeholder="Search events..." onkeyup="filterEvents()" style="
                 flex-grow: 1;
                 padding: 8px 12px;
-                border: 2px solid #e0e0e0;
+                border: 2px solid rgba(102, 126, 234, 0.2);
                 border-radius: 8px;
                 font-size: 14px;
                 outline: none;
-                transition: border-color 0.2s ease;
-            " onfocus="this.style.borderColor='#007aff'" onblur="this.style.borderColor='#e0e0e0'">
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-family: 'Poppins', sans-serif;
+                background: var(--background-primary);
+            " onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" 
+               onblur="this.style.borderColor='rgba(102, 126, 234, 0.2)'; this.style.boxShadow='none'">
             <button onclick="clearSearch()" style="
                 padding: 6px 10px;
-                background: #f0f0f0;
-                border: none;
+                background: var(--background-light);
+                border: 1px solid rgba(102, 126, 234, 0.2);
                 border-radius: 6px;
                 font-size: 12px;
                 cursor: pointer;
-                transition: background 0.2s ease;
-            " onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background='#f0f0f0'">
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-family: 'Poppins', sans-serif;
+                color: var(--text-primary);
+            " onmouseover="this.style.background='var(--primary-color)'; this.style.color='var(--text-inverse)'; this.style.transform='translateY(-1px)'" 
+               onmouseout="this.style.background='var(--background-light)'; this.style.color='var(--text-primary)'; this.style.transform='translateY(0)'">
                 Clear
             </button>
         </div>
@@ -1853,29 +1934,35 @@ class ScriptableAdapter {
         <div class="action-buttons" style="display: flex; gap: 10px;">
             <button onclick="copyRawOutput()" style="
                 padding: 8px 16px;
-                background: #007aff;
-                color: white;
+                background: var(--primary-color);
+                color: var(--text-inverse);
                 border: none;
                 border-radius: 8px;
                 font-size: 14px;
-                font-weight: 500;
+                font-weight: 600;
                 cursor: pointer;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#0056b3'" onmouseout="this.style.background='#007aff'">
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+                font-family: 'Poppins', sans-serif;
+            " onmouseover="this.style.background='var(--accent-color)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)'" 
+               onmouseout="this.style.background='var(--primary-color)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)'">
                 📋 Copy Raw Output
             </button>
             
             <button onclick="exportAsJSON()" style="
                 padding: 8px 16px;
-                background: #34c759;
-                color: white;
+                background: var(--secondary-color);
+                color: var(--text-inverse);
                 border: none;
                 border-radius: 8px;
                 font-size: 14px;
-                font-weight: 500;
+                font-weight: 600;
                 cursor: pointer;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#28a745'" onmouseout="this.style.background='#34c759'">
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+                font-family: 'Poppins', sans-serif;
+            " onmouseover="this.style.background='#ff5252'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 107, 0.4)'" 
+               onmouseout="this.style.background='var(--secondary-color)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(255, 107, 107, 0.3)'">
                 📄 Export JSON
             </button>
         </div>
@@ -2164,12 +2251,12 @@ class ScriptableAdapter {
         
         function showCopySuccess(button) {
             const originalText = button.innerHTML;
-            button.innerHTML = '✅ Copied!';
-            button.style.background = '#28a745';
+                                    button.innerHTML = '✅ Copied!';
+                        button.style.background = 'var(--secondary-color)';
             
             setTimeout(() => {
                 button.innerHTML = originalText;
-                button.style.background = '#007aff';
+                button.style.background = 'var(--primary-color)';
             }, 2000);
         }
         
@@ -2233,11 +2320,11 @@ class ScriptableAdapter {
                     if (button) {
                         const originalText = button.innerHTML;
                         button.innerHTML = '✅ JSON Copied!';
-                        button.style.background = '#28a745';
+                        button.style.background = 'var(--primary-color)';
                         
                         setTimeout(() => {
                             button.innerHTML = originalText;
-                            button.style.background = '#34c759';
+                            button.style.background = 'var(--secondary-color)';
                         }, 2000);
                     }
                 }).catch(err => {
@@ -2460,7 +2547,7 @@ class ScriptableAdapter {
                             ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
                         </h4>
                         <button onclick="event.stopPropagation(); toggleDiffView(this, '${eventId}');" 
-                                style="padding: 4px 10px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; ${!isExpanded ? 'display: none;' : ''}"
+                                style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? 'display: none;' : ''}"
                                 id="diff-toggle-${eventId}">
                             Switch to Line View
                         </button>
@@ -2486,7 +2573,7 @@ class ScriptableAdapter {
                                 </div>
                             </div>
                             <button onclick="copyEventJSON(this)" 
-                                    style="padding: 4px 8px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                                    style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
                                     data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
                                         if (key === '_parserConfig' && value) {
                                             return { name: value.name, parser: value.parser };
@@ -2609,7 +2696,7 @@ class ScriptableAdapter {
                 }, 2))}</pre>
                 <div style="margin-top: 8px; text-align: right;">
                     <button onclick="copyEventJSON(this)" 
-                            style="padding: 4px 8px; font-size: 11px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                            style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
                             data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
                                 if (key === '_parserConfig' && value) {
                                     return { name: value.name, parser: value.parser };
