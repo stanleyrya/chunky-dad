@@ -1687,7 +1687,18 @@ class ScriptableAdapter {
         .event-image img:hover { transform: scale(1.01); }
 
         /* Line-by-line diff styling - dark-mode friendly */
-        .diff-line { padding: 6px 8px; margin: 3px 0; border-left: 3px solid; border-radius: 4px; font-family: 'SF Mono', Monaco, 'Courier New', monospace; }
+        .diff-line { 
+            padding: 6px 8px; 
+            margin: 3px 0; 
+            border-left: 3px solid; 
+            border-radius: 4px; 
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-all;
+            max-width: 100%;
+            overflow-x: auto;
+        }
         .diff-meta { color: var(--text-secondary); font-size: 10px; }
         .diff-header { color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; font-weight: bold; }
         .diff-sep { border-top: 1px solid var(--border-color); margin: 8px 0 4px 0; }
@@ -2593,7 +2604,7 @@ class ScriptableAdapter {
                 ${notes ? `
                     <details style="margin-top: 10px;">
                         <summary style="cursor: pointer; font-size: 13px; color: #007aff; padding: 5px;">📝 Calendar Notes Preview</summary>
-                        <div class="notes-preview" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 5px;">
+                        <div class="notes-preview">
                             ${(() => {
                                 // Parse and format notes for better readability
                                 const lines = notes.split('\n');
