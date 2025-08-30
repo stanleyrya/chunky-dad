@@ -222,8 +222,6 @@ class ScriptableAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
-
-            
             const request = new Request(url);
             request.method = options.method || 'GET';
             request.headers = {
@@ -267,8 +265,6 @@ class ScriptableAdapter {
     // Configuration Loading
     async loadConfiguration() {
         try {
-
-            
             const fm = FileManager.iCloud();
             const scriptableDir = fm.documentsDirectory();
             const configPath = fm.joinPath(scriptableDir, 'scraper-input.js');
@@ -299,8 +295,6 @@ class ScriptableAdapter {
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');
             }
-            
-
             
             return config;
             
@@ -346,8 +340,6 @@ class ScriptableAdapter {
 
         try {
             console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
-            
-            let processedCount = 0;
             const failedEvents = [];
             const actionCounts = { merge: [], update: [], skip: [], create: [] };
             
@@ -479,10 +471,6 @@ class ScriptableAdapter {
             throw error;
         }
     }
-
-
-
-
 
     // Display/Logging Adapter Implementation
     async logInfo(message) {
@@ -1123,12 +1111,8 @@ class ScriptableAdapter {
             // Present using WebView
             await WebView.loadHTML(html, null, null, true);
             
-
-            
             // After displaying results, prompt for calendar execution if we have analyzed events
             // Don't prompt when displaying saved runs (they should use isDryRun override instead)
-
-            
             if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
                 // Check if we have any events from non-dry-run parsers
                 const eventsFromActiveParsers = results.analyzedEvents.filter(event => {
@@ -1564,10 +1548,6 @@ class ScriptableAdapter {
             position: relative;
         }
         
-
-        
-
-        
         .notes-preview strong {
             font-weight: 600;
             color: #333;
@@ -1699,10 +1679,6 @@ class ScriptableAdapter {
             .diff-view {
                 padding: 8px !important;
             }
-            
-
-            
-
         }
         
         @media (max-width: 480px) {
@@ -1727,10 +1703,6 @@ class ScriptableAdapter {
             .diff-view {
                 padding: 6px !important;
             }
-            
-
-            
-
         }
         
         details pre {
@@ -2128,8 +2100,6 @@ class ScriptableAdapter {
             }
         }
         
-
-        
         function filterEvents() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const eventCards = document.querySelectorAll('.event-card');
@@ -2334,9 +2304,7 @@ class ScriptableAdapter {
             } else {
                 copyToClipboardFallback(jsonString, button);
             }
-        }
-        
-
+                }
     </script>
 </body>
 </html>
@@ -2347,8 +2315,6 @@ class ScriptableAdapter {
     
     // Generate HTML for individual event card
     generateEventCard(event) {
-
-        
         const actionBadge = {
             'new': '<span class="action-badge badge-new">NEW</span>',
             'merge': '<span class="action-badge badge-merge">MERGE</span>',
@@ -2657,18 +2623,12 @@ class ScriptableAdapter {
                 </div>
             ` : ''}
             
-
-            
             ${event._action === 'missing_calendar' ? `
                 <div class="conflict-info">
                     <strong>Calendar "${this.escapeHtml(calendarName)}" not found!</strong>
                     <br>Please create this calendar manually before running the scraper.
                 </div>
-            ` : ''}
-            
-
-            
-
+                        ` : ''}
             
             <div class="raw-display">
                 <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(JSON.stringify(event, (key, value) => {
@@ -2889,10 +2849,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             table.addRow(actionsRow);
             
-
             await table.present(false); // Present in normal mode (not fullscreen)
-            
-
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to present UITable: ${error.message}`);
@@ -3059,9 +3016,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         return intersection.size / union.size;
     }
-
-
-
 
     // Helper to get calendar name for display purposes only
     getCalendarNameForDisplay(event) {
@@ -3269,12 +3223,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 wasUsed = 'same';
             }
             
-
-            
             // For preserve fields, we want to show BOTH the scraped value AND the existing value
             // This matches the old behavior: "show both and then say 'choosing original because preserve'"
-            
-
             
             // Skip if both are empty and no final value, unless it's a field with explicit strategy
             // For preserve/clobber fields, always show them to demonstrate the strategy in action
@@ -3549,8 +3499,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             return da.toString() === db.toString();
         }
     }
-
-
 
     // Prompt user for calendar execution after displaying results
     async promptForCalendarExecution(analyzedEvents, config) {

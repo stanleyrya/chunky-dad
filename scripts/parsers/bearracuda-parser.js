@@ -37,8 +37,6 @@ class BearraccudaParser {
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
-
-            
             const events = [];
             const html = htmlData.html;
             
@@ -49,7 +47,6 @@ class BearraccudaParser {
             
             // Check if this is an individual event page based on URL pattern
             const isDetailPage = /\/events\/[^\/]+\/$/.test(htmlData.url);
-
             
             let additionalLinks = [];
             
@@ -99,8 +96,6 @@ class BearraccudaParser {
             return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
         }
     }
-
-
 
     // Parse an individual event detail page
     parseEventDetailPage(html, sourceUrl, parserConfig = {}, cityConfig = null) {
@@ -1249,8 +1244,6 @@ class BearraccudaParser {
             return null;
         }
     }
-
-
 
     // Extract city from text content using only city config patterns
     extractCityFromText(text, cityConfig = null) {

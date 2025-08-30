@@ -37,8 +37,6 @@ class GenericParser {
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
-
-            
             const events = [];
             const html = htmlData.html;
             
@@ -267,7 +265,6 @@ class GenericParser {
             }
             
             // City extraction will be handled by shared core during enrichment
-            const city = null;
             
             const event = {
                 title: title,
@@ -380,8 +377,6 @@ class GenericParser {
             return false;
         }
     }
-
-
 
     // Parse date string into ISO format
     parseDate(dateString) {
