@@ -248,13 +248,23 @@ class WebAdapter {
             console.log('%c🐻 BEAR EVENT SCRAPER RESULTS', 'font-size: 16px; font-weight: bold; color: #FF6B35');
             console.log('='.repeat(50));
             
-            console.log(`📊 Total Events Found: ${results.totalEvents}`);
+            console.log(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
+            console.log(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
             if (results.duplicatesRemoved > 0) {
-                console.log(`   - Raw bear events: ${results.rawBearEvents}`);
-                console.log(`   - Duplicates removed: ${results.duplicatesRemoved}`);
+                console.log(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
+                console.log(`🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`);
+            } else {
+                console.log(`🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`);
             }
-            console.log(`🐻 Bear Events: ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}`);
-            console.log(`📅 Calendar Events: ${results.calendarEvents}`);
+            console.log(`📅 Calendar Events: ${results.calendarEvents}${results.calendarEvents === 0 ? ' (dry run/preview mode - no events written)' : ''}`);
+            
+            // Explain the math breakdown
+            if (results.totalEvents > results.bearEvents) {
+                const pastEvents = results.totalEvents - (results.rawBearEvents || results.bearEvents);
+                if (pastEvents > 0) {
+                    console.log(`💡 Math Breakdown: ${results.totalEvents} total → ${pastEvents} past events filtered out → ${results.rawBearEvents || results.bearEvents} future bear events${results.duplicatesRemoved > 0 ? ` → ${results.duplicatesRemoved} duplicates removed → ${results.bearEvents} final` : ''}`);
+                }
+            }
             
             // Show event actions summary if available
             const allEvents = this.getAllEventsFromResults(results);
@@ -348,12 +358,13 @@ class WebAdapter {
             }
             
             const deduplicationInfo = results.duplicatesRemoved > 0 ? 
-                `<div style="font-size: 12px; color: #666;"><strong>Duplicates removed:</strong> ${results.duplicatesRemoved}</div>` : '';
+                `<div style="font-size: 12px; color: #666;"><strong>Raw Bear Events:</strong> ${results.rawBearEvents} | <strong>Duplicates removed:</strong> ${results.duplicatesRemoved}</div>` : 
+                `<div style="font-size: 12px; color: #666;"><strong>Raw Bear Events:</strong> ${results.rawBearEvents || 'N/A'}</div>`;
             resultsDiv.innerHTML = `
                 <h3 style="margin: 0 0 12px 0; color: #FF6B35;">🐻 Bear Events Found</h3>
-                <div><strong>Total Events:</strong> ${results.totalEvents}</div>
+                <div><strong>Total Events Found:</strong> ${results.totalEvents} (all sources)</div>
                 ${deduplicationInfo}
-                <div><strong>Bear Events:</strong> ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}</div>
+                <div><strong>Final Bear Events:</strong> ${results.bearEvents}${results.duplicatesRemoved > 0 ? ` (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)` : ''}</div>
                 <div><strong>Calendar Events:</strong> ${results.calendarEvents}</div>
                 ${results.errors.length > 0 ? `<div style="color: #F44336;"><strong>Errors:</strong> ${results.errors.length}</div>` : ''}
                 <div style="margin-top: 12px; font-size: 10px;">

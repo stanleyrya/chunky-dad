@@ -518,13 +518,23 @@ class ScriptableAdapter {
             console.log('🐻 BEAR EVENT SCRAPER RESULTS');
             console.log('='.repeat(60));
             
-            console.log(`📊 Total Events Found: ${results.totalEvents}`);
+            console.log(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
+            console.log(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
             if (results.duplicatesRemoved > 0) {
-                console.log(`   - Raw bear events: ${results.rawBearEvents}`);
-                console.log(`   - Duplicates removed: ${results.duplicatesRemoved}`);
+                console.log(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
+                console.log(`🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`);
+            } else {
+                console.log(`🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`);
             }
-            console.log(`🐻 Bear Events: ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}`);
-            console.log(`📅 Added to Calendar: ${results.calendarEvents}`);
+            console.log(`📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? ' (dry run/preview mode - no events written)' : ''}`);
+            
+            // Explain the math breakdown
+            if (results.totalEvents > results.bearEvents) {
+                const pastEvents = results.totalEvents - (results.rawBearEvents || results.bearEvents);
+                if (pastEvents > 0) {
+                    console.log(`💡 Math Breakdown: ${results.totalEvents} total → ${pastEvents} past events filtered out → ${results.rawBearEvents || results.bearEvents} future bear events${results.duplicatesRemoved > 0 ? ` → ${results.duplicatesRemoved} duplicates removed → ${results.bearEvents} final` : ''}`);
+                }
+            }
             
             // Show event actions summary if available
             const allEvents = this.getAllEventsFromResults(results);
@@ -1771,15 +1781,19 @@ class ScriptableAdapter {
         <div class="stats">
             <div class="stat">
                 <div class="stat-value">${results.totalEvents}</div>
-                <div class="stat-label">Total Events</div>
+                <div class="stat-label">Total Events Found</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">${results.rawBearEvents || 'N/A'}</div>
+                <div class="stat-label">Raw Bear Events</div>
             </div>
             <div class="stat">
                 <div class="stat-value">${results.bearEvents}</div>
-                <div class="stat-label">Bear Events${results.duplicatesRemoved > 0 ? ` (-${results.duplicatesRemoved} dupes)` : ''}</div>
+                <div class="stat-label">Final Bear Events${results.duplicatesRemoved > 0 ? ` (-${results.duplicatesRemoved} dupes)` : ''}</div>
             </div>
             <div class="stat">
                 <div class="stat-value">${results.calendarEvents}</div>
-                <div class="stat-label">Calendar Actions</div>
+                <div class="stat-label">Calendar Actions${results.calendarEvents === 0 ? ' (dry run/preview mode)' : ''}</div>
             </div>
         </div>
     </div>
@@ -2805,13 +2819,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         lines.push('🐻 BEAR EVENT SCRAPER RESULTS');
         lines.push('='.repeat(40));
         lines.push('');
-        lines.push(`📊 Total Events Found: ${results.totalEvents}`);
+        lines.push(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
+        lines.push(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
         if (results.duplicatesRemoved > 0) {
-            lines.push(`   - Raw bear events: ${results.rawBearEvents}`);
-            lines.push(`   - Duplicates removed: ${results.duplicatesRemoved}`);
+            lines.push(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
+            lines.push(`🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`);
+        } else {
+            lines.push(`🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`);
         }
-        lines.push(`🐻 Bear Events: ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}`);
-        lines.push(`📅 Added to Calendar: ${results.calendarEvents}`);
+        lines.push(`📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? ' (dry run/preview mode - no events written)' : ''}`);
         
         if (results.errors && results.errors.length > 0) {
             lines.push(`❌ Errors: ${results.errors.length}`);
