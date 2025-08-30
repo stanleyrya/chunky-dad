@@ -47,8 +47,6 @@ class BearEventScraperOrchestrator {
             await this.loadModules();
             
             this.isInitialized = true;
-
-            
         } catch (error) {
             console.error(`🐻 Orchestrator: ✗ Initialization failed: ${error}`);
             throw new Error(`Initialization failed: ${error.message}`);
@@ -88,9 +86,6 @@ class BearEventScraperOrchestrator {
                     generic: genericParserModule.GenericParser
                 }
             };
-            
-
-            
         } catch (error) {
             console.error(`📱 ✗ Failed to load Scriptable modules: ${error}`);
             throw new Error(`Scriptable module loading failed: ${error.message}`);
@@ -120,9 +115,6 @@ class BearEventScraperOrchestrator {
                     generic: genericParserModule.GenericParser
                 }
             };
-            
-
-            
         } catch (error) {
             console.error(`🟢 ✗ Failed to load Node.js modules: ${error}`);
             throw new Error(`Node.js module loading failed: ${error.message}`);
@@ -155,9 +147,6 @@ class BearEventScraperOrchestrator {
                     generic: window.GenericParser
                 }
             };
-            
-
-            
         } catch (error) {
             console.error(`🌐 ✗ Failed to load web modules: ${error}`);
             throw new Error(`Web module loading failed: ${error.message}`);
@@ -172,53 +161,36 @@ class BearEventScraperOrchestrator {
                 await this.initialize();
             }
 
-
-
             // Create adapter instance first
-
             const adapter = new this.modules.adapter();
-
             
             // Load configuration early so we can pass cities config to SharedCore
-
             const config = await adapter.loadConfiguration();
-
             
             // Create shared core instance with cities configuration
-
             const sharedCore = new this.modules.SharedCore(config.cities);
-
             
             // Create adapter with cities configuration
             let finalAdapter = adapter;
             if (config.cities) {
-
                 finalAdapter = new this.modules.adapter({
                     cities: config.cities,
                     ...this.config
                 });
-
             }
 
-
-
             // Create parser instances
-
             const parsers = {};
             for (const [name, ParserClass] of Object.entries(this.modules.parsers)) {
                 try {
                     parsers[name] = new ParserClass();
-
                 } catch (error) {
                     console.error(`🐻 Orchestrator: ✗ Failed to create ${name} parser: ${error}`);
                     throw new Error(`Failed to create ${name} parser: ${error.message}`);
                 }
             }
 
-
-
             // Process events using shared core
-
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
             console.log('🐻 Orchestrator: ✓ Event processing completed');
             
@@ -272,7 +244,7 @@ class BearEventScraperOrchestrator {
                     console.log('🐻 Orchestrator: Dry run mode or calendar not supported - skipping calendar integration');
                 }
                 
-                            // Add calendar count and config to results
+            // Add calendar count and config to results
             results.calendarEvents = calendarEvents;
             results.config = config;
             }
@@ -341,4 +313,3 @@ if (typeof module !== 'undefined' && module.exports) {
     // Scriptable environment
     this.BearEventScraperOrchestrator = BearEventScraperOrchestrator;
 }
-

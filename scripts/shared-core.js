@@ -19,8 +19,6 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
-
-
 class SharedCore {
     constructor(cities) {
         if (!cities || typeof cities !== 'object') {
@@ -36,7 +34,6 @@ class SharedCore {
         
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
-
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -64,7 +61,6 @@ class SharedCore {
             }
         }
         
-
         return cityMappings;
     }
 
@@ -191,16 +187,15 @@ class SharedCore {
         
         const allEvents = [];
         // Use global processedUrls to prevent duplicate processing across all parsers
-        const processedUrls = globalProcessedUrls;
 
         // Process main URLs
         for (let i = 0; i < (parserConfig.urls || []).length; i++) {
             const url = parserConfig.urls[i];
-            if (processedUrls.has(url)) {
+            if (globalProcessedUrls.has(url)) {
                 await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
                 continue;
             }
-            processedUrls.add(url);
+            globalProcessedUrls.add(url);
 
             try {
                 await displayAdapter.logInfo(`SYSTEM: Fetching URL ${i + 1}/${parserConfig.urls.length}: ${url}`);
@@ -396,7 +391,6 @@ class SharedCore {
         return result;
     }
 
-
     // Pure utility functions
     filterFutureEvents(events, daysToLookAhead = null) {
         const now = new Date();
@@ -510,7 +504,6 @@ class SharedCore {
         }
         
         const key = this.generateKeyFromFormat(event, keyFormat);
-
         
         return key;
     }
@@ -521,8 +514,6 @@ class SharedCore {
             throw new Error('Format is required for generateKeyFromFormat');
         }
         
-        let key = format;
-        
         // Extract city from event data
         const city = this.extractCityFromEvent(event);
         
@@ -531,8 +522,6 @@ class SharedCore {
         
         // Apply the original title normalization for ${normalizedTitle}
         if (format.includes('${normalizedTitle}')) {
-            const originalTitle = normalizedTitle;
-            
             // Generic text normalization for better deduplication
             normalizedTitle = normalizedTitle
                 // Replace sequences of special chars between letters with a single hyphen
@@ -820,7 +809,6 @@ class SharedCore {
                 url: enrichedMergedEvent.url
             }
         };
-
         
         return enrichedMergedEvent;
     }
@@ -924,7 +912,6 @@ class SharedCore {
         };
         
         // STEP 6: Pass all three objects to rich display for comparison
-
         
         // Store the three objects for display comparison
         finalEvent._original = {
@@ -932,7 +919,6 @@ class SharedCore {
             calendar: calendarObject,  // What was in the calendar
             merged: mergedObject       // What the merge logic produced
         };
-
         
         // Simple change detection for display
         const changes = [];
@@ -1465,8 +1451,6 @@ class SharedCore {
         return event;
     }
     
-    
-    
     // =========================================================================
     // CITY UTILITIES - Shared location detection and mapping
     // =========================================================================
@@ -1814,8 +1798,6 @@ class SharedCore {
             }
         });
         
-
-        
         return notes.join('\n');
     }
     
@@ -1838,12 +1820,11 @@ class SharedCore {
     // Prepare events for calendar integration with conflict analysis
     async prepareEventsForCalendar(events, calendarAdapter, config = {}) {
         // Events are already properly formatted - no need for additional formatting
-        const preparedEvents = events;
         
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
         
-        for (const event of preparedEvents) {
+        for (const event of events) {
             // Use default merge mode since parser-level mergeMode is handled by field priorities
             const mergeMode = config.mergeMode || 'upsert';
             
@@ -1871,8 +1852,6 @@ class SharedCore {
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes || '');
-                
-
                 
                 analyzedEvent._mergeDiff = {
                     preserved: [],
@@ -2083,7 +2062,6 @@ class SharedCore {
         return null;
     }
     
-
     // Check if two dates are equal within a tolerance (pure logic)
     areDatesEqual(date1, date2, toleranceMinutes) {
         const diff = Math.abs(date1.getTime() - date2.getTime());
@@ -2129,7 +2107,6 @@ class SharedCore {
         return eventName1 === eventName2;
     }
     
-
     // Process event with conflicts - extract and merge based on strategies
     processEventWithConflicts(event) {
         if (!event._conflicts || event._conflicts.length === 0) {
@@ -2226,9 +2203,6 @@ class SharedCore {
         
         return event;
     }
-
-
-
 }
 
 // Export for both environments

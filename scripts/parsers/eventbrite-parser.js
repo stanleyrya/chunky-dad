@@ -37,8 +37,6 @@ class EventbriteParser {
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
-
-            
             const events = [];
             const html = htmlData.html;
             
@@ -91,8 +89,6 @@ class EventbriteParser {
         if (i >= html.length) {
             return null;
         }
-        
-        const start = i;
         braceCount = 1;
         i++;
         
@@ -318,19 +314,14 @@ class EventbriteParser {
                     }
                 } else {
                     console.warn('🎫 Eventbrite: Could not extract valid JSON from window.__SERVER_DATA__');
-                }
+                                }
             }
-            
-
-            
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting JSON events: ${error}`);
         }
         
         return events;
     }
-
-
 
     // Check if an event is in the future (not past)
     isFutureEvent(eventData) {
@@ -524,11 +515,10 @@ class EventbriteParser {
             const image = eventData.logo?.url || eventData.image?.url;
             
             // NEW: Try to get image from eventHero if not found in eventData
-            let finalImage = image;
-            if (!finalImage && serverData.event_listing_response?.eventHero?.items?.[0]) {
+            if (!image && serverData.event_listing_response?.eventHero?.items?.[0]) {
                 const heroItem = serverData.event_listing_response.eventHero.items[0];
-                finalImage = heroItem.croppedLogoUrl600 || heroItem.croppedLogoUrl480 || heroItem.croppedLogoUrl940;
-                console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${finalImage}`);
+                image = heroItem.croppedLogoUrl600 || heroItem.croppedLogoUrl480 || heroItem.croppedLogoUrl940;
+                console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
             }
             
             // Extract city from event title for better event organization
@@ -705,8 +695,6 @@ class EventbriteParser {
                 }
             }
             
-
-            
             console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
             
         } catch (error) {
@@ -760,8 +748,6 @@ class EventbriteParser {
          const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
          return this.extractCityFromText(searchText);
      }
-
-
 
      // Normalize city names
      normalizeCityName(cityName) {

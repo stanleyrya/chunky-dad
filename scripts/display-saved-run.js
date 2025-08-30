@@ -227,8 +227,6 @@ class SavedRunDisplay {
         }
     }
 
-
-
     async displaySavedRun(options = {}) {
         try {
             let runToShow = null;

@@ -40,8 +40,6 @@ class WebAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
-
-            
             const fetchOptions = {
                 method: options.method || 'GET',
                 headers: {
@@ -83,8 +81,6 @@ class WebAdapter {
     // Configuration Loading
     async loadConfiguration() {
         try {
-
-            
             let config;
             
             // Check if we're in Node.js environment
@@ -106,10 +102,6 @@ class WebAdapter {
                 eval(configText);
                 config = window.scraperConfig;
             }
-            
-
-
-            
             return config;
             
         } catch (error) {
@@ -126,8 +118,6 @@ class WebAdapter {
         }
 
         try {
-
-            
             // In web environment, we can't actually write to calendar
             // Instead, we could generate .ics files or display the events
             this.displayCalendarEvents(events, parserConfig);
@@ -181,8 +171,6 @@ class WebAdapter {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-
     }
 
     eventsToICS(events) {
@@ -234,8 +222,6 @@ class WebAdapter {
     async logWarn(message) {
         console.warn(`%c⚠️ ${message}`, 'color: #FF9800');
     }
-
-
 
     async logError(message) {
         console.error(`%c❌ ${message}`, 'color: #F44336');
