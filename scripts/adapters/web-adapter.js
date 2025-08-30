@@ -260,9 +260,9 @@ class WebAdapter {
             
             // Explain the math breakdown
             if (results.totalEvents > results.bearEvents) {
-                const nonBearEvents = results.totalEvents - (results.rawBearEvents || results.bearEvents);
-                if (nonBearEvents > 0) {
-                    console.log(`💡 Math Breakdown: ${results.totalEvents} total → ${nonBearEvents} non-bear filtered out → ${results.rawBearEvents || results.bearEvents} bear events${results.duplicatesRemoved > 0 ? ` → ${results.duplicatesRemoved} duplicates removed → ${results.bearEvents} final` : ''}`);
+                const pastEvents = results.totalEvents - (results.rawBearEvents || results.bearEvents);
+                if (pastEvents > 0) {
+                    console.log(`💡 Math Breakdown: ${results.totalEvents} total → ${pastEvents} past events filtered out → ${results.rawBearEvents || results.bearEvents} future bear events${results.duplicatesRemoved > 0 ? ` → ${results.duplicatesRemoved} duplicates removed → ${results.bearEvents} final` : ''}`);
                 }
             }
             
