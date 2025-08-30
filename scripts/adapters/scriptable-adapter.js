@@ -519,7 +519,11 @@ class ScriptableAdapter {
             console.log('='.repeat(60));
             
             console.log(`📊 Total Events Found: ${results.totalEvents}`);
-            console.log(`🐻 Bear Events: ${results.bearEvents}`);
+            if (results.duplicatesRemoved > 0) {
+                console.log(`   - Raw bear events: ${results.rawBearEvents}`);
+                console.log(`   - Duplicates removed: ${results.duplicatesRemoved}`);
+            }
+            console.log(`🐻 Bear Events: ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}`);
             console.log(`📅 Added to Calendar: ${results.calendarEvents}`);
             
             // Show event actions summary if available
@@ -1011,6 +1015,15 @@ class ScriptableAdapter {
                     console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count} events`);
                 }
             });
+        }
+
+        // Add explanation about deduplication if relevant
+        if (results.duplicatesRemoved > 0) {
+            console.log(`\n💡 About Deduplication:`);
+            console.log(`   Some venues (like Bearracuda) have events listed on multiple platforms`);
+            console.log(`   (e.g., both Bearracuda.com and Eventbrite). The scraper finds both`);
+            console.log(`   versions but removes duplicates to avoid calendar clutter.`);
+            console.log(`   This is working correctly - ${results.duplicatesRemoved} duplicates were removed.`);
         }
 
         console.log(`\n🎯 Recommended Actions:`);
@@ -1762,7 +1775,7 @@ class ScriptableAdapter {
             </div>
             <div class="stat">
                 <div class="stat-value">${results.bearEvents}</div>
-                <div class="stat-label">Bear Events</div>
+                <div class="stat-label">Bear Events${results.duplicatesRemoved > 0 ? ` (-${results.duplicatesRemoved} dupes)` : ''}</div>
             </div>
             <div class="stat">
                 <div class="stat-value">${results.calendarEvents}</div>
@@ -2650,7 +2663,9 @@ class ScriptableAdapter {
             const summaryRow = new UITableRow();
             summaryRow.height = 80;
             
-            const summaryText = `📊 Total Events: ${results.totalEvents}
+            const deduplicationInfo = results.duplicatesRemoved > 0 ? 
+                `\n🔄 Duplicates removed: ${results.duplicatesRemoved}` : '';
+            const summaryText = `📊 Total Events: ${results.totalEvents}${deduplicationInfo}
 🐻 Bear Events: ${results.bearEvents}
 📅 Added to Calendar: ${results.calendarEvents}
 ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No errors'}`;
@@ -2791,7 +2806,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         lines.push('='.repeat(40));
         lines.push('');
         lines.push(`📊 Total Events Found: ${results.totalEvents}`);
-        lines.push(`🐻 Bear Events: ${results.bearEvents}`);
+        if (results.duplicatesRemoved > 0) {
+            lines.push(`   - Raw bear events: ${results.rawBearEvents}`);
+            lines.push(`   - Duplicates removed: ${results.duplicatesRemoved}`);
+        }
+        lines.push(`🐻 Bear Events: ${results.bearEvents}${results.duplicatesRemoved > 0 ? ' (after deduplication)' : ''}`);
         lines.push(`📅 Added to Calendar: ${results.calendarEvents}`);
         
         if (results.errors && results.errors.length > 0) {
