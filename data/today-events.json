@@ -1,0 +1,77 @@
+{
+  "lastUpdated": "2025-01-15T16:00:00Z",
+  "todayEvents": [
+    {
+      "cityKey": "new-york",
+      "cityName": "New York",
+      "event": {
+        "name": "Bear Happy Hour",
+        "time": "5:00PM-8:00PM",
+        "day": "Wednesday",
+        "bar": "Nowhere Bar",
+        "cover": "$10",
+        "startDate": "2025-01-15T17:00:00",
+        "recurring": true,
+        "coordinates": {
+          "lat": 40.7317472,
+          "lng": -73.9841307
+        }
+      }
+    },
+    {
+      "cityKey": "chicago",
+      "cityName": "Chicago",
+      "event": {
+        "name": "Leather Night",
+        "time": "9:00PM-2:00AM",
+        "day": "Wednesday",
+        "bar": "The Eagle",
+        "cover": "Free",
+        "startDate": "2025-01-15T21:00:00",
+        "recurring": false,
+        "tea": "Weekly leather and kink night for the bear community"
+      }
+    },
+    {
+      "cityKey": "seattle",
+      "cityName": "Seattle",
+      "event": {
+        "name": "Woof Wednesday",
+        "time": "7:00PM-11:00PM",
+        "day": "Wednesday",
+        "bar": "R Place",
+        "startDate": "2025-01-15T19:00:00",
+        "recurring": true
+      }
+    }
+  ],
+  "tomorrowEvents": [
+    {
+      "cityKey": "new-york",
+      "cityName": "New York",
+      "event": {
+        "name": "Thursday Night Dance",
+        "time": "10:00PM-3:00AM",
+        "day": "Thursday",
+        "bar": "Stonewall Inn",
+        "cover": "$15",
+        "startDate": "2025-01-16T22:00:00",
+        "recurring": false,
+        "tea": "Special DJ night with bear-friendly crowd"
+      }
+    },
+    {
+      "cityKey": "los-angeles",
+      "cityName": "Los Angeles",
+      "event": {
+        "name": "Bear Pool Party",
+        "time": "2:00PM-8:00PM",
+        "day": "Thursday",
+        "bar": "The Abbey",
+        "cover": "$20",
+        "startDate": "2025-01-16T14:00:00",
+        "recurring": false
+      }
+    }
+  ]
+}

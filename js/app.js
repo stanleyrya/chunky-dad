@@ -89,6 +89,7 @@ class ChunkyDadApp {
         this.cityRenderer = null;
         this.bearEventRenderer = null;
         this.dadJokesManager = null;
+        this.todaysEvents = null;
         
         logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
@@ -171,6 +172,7 @@ class ChunkyDadApp {
             this.initializeCityRenderer();
             this.initializeBearEventRenderer();
             this.initializeDadJokes();
+            this.initializeTodaysEvents();
         }
         
         logger.componentLoad('SYSTEM', 'Core modules initialized');
@@ -230,6 +232,22 @@ class ChunkyDadApp {
             logger.componentInit('SYSTEM', 'Dad jokes manager initialized in app');
         } else {
             logger.warn('SYSTEM', 'DadJokesManager not available');
+        }
+    }
+
+    initializeTodaysEvents() {
+        if (window.TodayEvents) {
+            this.todaysEvents = new TodayEvents();
+            window.todayEvents = this.todaysEvents; // Make globally accessible
+            
+            // Initialize today's events (async, but don't block app initialization)
+            this.todaysEvents.init().catch(error => {
+                logger.componentError('SYSTEM', 'Today\'s events initialization failed', error);
+            });
+            
+            logger.componentInit('SYSTEM', 'Today\'s events manager initialized in app');
+        } else {
+            logger.warn('SYSTEM', 'TodayEvents not available');
         }
     }
 
@@ -305,6 +323,10 @@ class ChunkyDadApp {
 
     getBearEventRenderer() {
         return this.bearEventRenderer;
+    }
+
+    getTodaysEvents() {
+        return this.todaysEvents;
     }
 
     // Global function for scrolling (backward compatibility)

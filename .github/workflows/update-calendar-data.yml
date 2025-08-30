@@ -195,11 +195,299 @@ jobs:
               if (errorCount > 0) {
                 console.log(`\n⚠️  Some calendar updates failed. Check the logs above for details.`);
               }
+              
+              // Generate today's events data for main page
+              console.log(`\n🎯 Generating today's events data...`);
+              generateTodaysEvents(results, cityConfig);
             })
             .catch(error => {
               console.error('Fatal error during calendar updates:', error);
               process.exit(1);
             });
+          
+          // Function to generate today's events JSON
+          function generateTodaysEvents(results, cityConfig) {
+            const todaysEvents = {
+              lastUpdated: new Date().toISOString(),
+              todayEvents: [],
+              tomorrowEvents: []
+            };
+            
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Set time boundaries for today and tomorrow (local time)
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+            const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+            const tomorrowStart = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 0, 0, 0);
+            const tomorrowEnd = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 23, 59, 59);
+            
+            console.log(`📅 Processing events for today: ${todayStart.toISOString().split('T')[0]}`);
+            console.log(`📅 Processing events for tomorrow: ${tomorrowStart.toISOString().split('T')[0]}`);
+            
+            let totalTodayEvents = 0;
+            let totalTomorrowEvents = 0;
+            
+            // Process each city's calendar data
+            results.forEach(result => {
+              if (result.error || !result.icalData) return;
+              
+              try {
+                // Parse the iCal data using simplified parser
+                const events = parseICalEventsSimple(result.icalData, result.cityKey, cityConfig[result.cityKey]);
+                
+                // Filter events for today and tomorrow
+                const cityTodayEvents = filterEventsForDate(events, todayStart, todayEnd);
+                const cityTomorrowEvents = filterEventsForDate(events, tomorrowStart, tomorrowEnd);
+                
+                // Add city context to events
+                cityTodayEvents.forEach(event => {
+                  todaysEvents.todayEvents.push({
+                    cityKey: result.cityKey,
+                    cityName: result.config.name,
+                    event: event
+                  });
+                  totalTodayEvents++;
+                });
+                
+                cityTomorrowEvents.forEach(event => {
+                  todaysEvents.tomorrowEvents.push({
+                    cityKey: result.cityKey,
+                    cityName: result.config.name,
+                    event: event
+                  });
+                  totalTomorrowEvents++;
+                });
+                
+                if (cityTodayEvents.length > 0 || cityTomorrowEvents.length > 0) {
+                  console.log(`  ${result.config.name}: ${cityTodayEvents.length} today, ${cityTomorrowEvents.length} tomorrow`);
+                }
+              } catch (error) {
+                console.error(`Error processing events for ${result.config.name}:`, error.message);
+              }
+            });
+            
+            // Sort events by time within each day
+            todaysEvents.todayEvents.sort((a, b) => {
+              const timeA = a.event.startDate ? new Date(a.event.startDate) : new Date();
+              const timeB = b.event.startDate ? new Date(b.event.startDate) : new Date();
+              return timeA - timeB;
+            });
+            
+            todaysEvents.tomorrowEvents.sort((a, b) => {
+              const timeA = a.event.startDate ? new Date(a.event.startDate) : new Date();
+              const timeB = b.event.startDate ? new Date(b.event.startDate) : new Date();
+              return timeA - timeB;
+            });
+            
+            // Save today's events data
+            fs.writeFileSync('data/today-events.json', JSON.stringify(todaysEvents, null, 2));
+            
+            console.log(`✓ Generated today's events data:`);
+            console.log(`  📅 Today: ${totalTodayEvents} events across ${new Set(todaysEvents.todayEvents.map(e => e.cityKey)).size} cities`);
+            console.log(`  📅 Tomorrow: ${totalTomorrowEvents} events across ${new Set(todaysEvents.tomorrowEvents.map(e => e.cityKey)).size} cities`);
+          }
+          
+          // Simplified iCal parser for GitHub Actions (reuses core logic)
+          function parseICalEventsSimple(icalText, cityKey, cityConfig) {
+            const events = [];
+            const lines = icalText.split('\n');
+            let currentEvent = null;
+            let inEvent = false;
+            
+            // Extract calendar timezone
+            const calendarTimezoneMatch = icalText.match(/X-WR-TIMEZONE:(.+)/);
+            const calendarTimezone = calendarTimezoneMatch ? calendarTimezoneMatch[1].trim() : null;
+            
+            for (let i = 0; i < lines.length; i++) {
+              let line = lines[i];
+              
+              // Handle line continuation
+              while (i + 1 < lines.length && (lines[i + 1].startsWith(' ') || lines[i + 1].startsWith('\t'))) {
+                i++;
+                line += lines[i].substring(1).replace(/\r$/, '');
+              }
+              
+              line = line.replace(/\r$/, '');
+              
+              if (line === 'BEGIN:VEVENT') {
+                inEvent = true;
+                currentEvent = {};
+              } else if (line === 'END:VEVENT' && currentEvent) {
+                if (currentEvent.title && currentEvent.start) {
+                  const eventData = parseEventDataSimple(currentEvent, cityKey, cityConfig, calendarTimezone);
+                  if (eventData) {
+                    events.push(eventData);
+                  }
+                }
+                currentEvent = null;
+                inEvent = false;
+              } else if (inEvent && currentEvent) {
+                parseEventLineSimple(line, currentEvent);
+              }
+            }
+            
+            return events;
+          }
+          
+          // Parse individual event line (simplified)
+          function parseEventLineSimple(line, currentEvent) {
+            if (line.startsWith('SUMMARY:')) {
+              currentEvent.title = line.substring(8).replace(/\\,/g, ',').replace(/\\;/g, ';');
+            } else if (line.startsWith('DESCRIPTION:')) {
+              currentEvent.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';');
+            } else if (line.startsWith('LOCATION:')) {
+              currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';');
+            } else if (line.startsWith('DTSTART')) {
+              if (line.includes(';TZID=')) {
+                const match = line.match(/DTSTART;TZID=([^:]+):(.+)/);
+                if (match) {
+                  currentEvent.startTimezone = match[1];
+                  currentEvent.start = parseICalDateSimple(match[2], match[1]);
+                }
+              } else {
+                const dateMatch = line.match(/DTSTART:(.+)/);
+                if (dateMatch) {
+                  currentEvent.start = parseICalDateSimple(dateMatch[1]);
+                }
+              }
+            } else if (line.startsWith('DTEND')) {
+              if (line.includes(';TZID=')) {
+                const match = line.match(/DTEND;TZID=([^:]+):(.+)/);
+                if (match) {
+                  currentEvent.end = parseICalDateSimple(match[2], match[1]);
+                }
+              } else {
+                const dateMatch = line.match(/DTEND:(.+)/);
+                if (dateMatch) {
+                  currentEvent.end = parseICalDateSimple(dateMatch[1]);
+                }
+              }
+            } else if (line.startsWith('RRULE:')) {
+              currentEvent.recurrence = line.substring(6);
+            }
+          }
+          
+          // Parse iCal date (simplified version)
+          function parseICalDateSimple(icalDate, timezone = null) {
+            if (!icalDate) return null;
+            
+            let dateStr = icalDate;
+            const isUTC = dateStr.endsWith('Z');
+            const cleanDate = dateStr.replace(/[TZ]/g, '');
+            
+            if (cleanDate.length >= 8) {
+              const year = parseInt(cleanDate.substring(0, 4));
+              const month = parseInt(cleanDate.substring(4, 6));
+              const day = parseInt(cleanDate.substring(6, 8));
+              const hour = parseInt(cleanDate.substring(8, 10) || '00');
+              const minute = parseInt(cleanDate.substring(10, 12) || '00');
+              const second = parseInt(cleanDate.substring(12, 14) || '00');
+              
+              if (isUTC) {
+                // UTC time - convert to local time for comparison
+                return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+              } else {
+                // Local time in calendar timezone
+                return new Date(year, month - 1, day, hour, minute, second);
+              }
+            }
+            
+            return null;
+          }
+          
+          // Parse event data (simplified)
+          function parseEventDataSimple(calendarEvent, cityKey, cityConfig, calendarTimezone) {
+            const eventData = {
+              name: calendarEvent.title,
+              startDate: calendarEvent.start,
+              endDate: calendarEvent.end,
+              recurring: !!calendarEvent.recurrence,
+              cityKey: cityKey,
+              cityName: cityConfig.name
+            };
+            
+            // Parse description for venue info
+            if (calendarEvent.description) {
+              const lines = calendarEvent.description.split('\n');
+              for (const line of lines) {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > 0) {
+                  const key = line.substring(0, colonIndex).trim().toLowerCase();
+                  const value = line.substring(colonIndex + 1).trim();
+                  
+                  if (['bar', 'location', 'host'].includes(key)) {
+                    eventData.bar = value;
+                  } else if (['cover', 'cost', 'price'].includes(key)) {
+                    eventData.cover = value;
+                  } else if (['tea', 'info', 'description'].includes(key)) {
+                    eventData.tea = value;
+                  }
+                }
+              }
+            }
+            
+            // Parse coordinates
+            if (calendarEvent.location) {
+              const latlong = calendarEvent.location.split(",");
+              if (latlong.length >= 2) {
+                eventData.coordinates = { 
+                  lat: parseFloat(latlong[0]?.trim()), 
+                  lng: parseFloat(latlong[1]?.trim()) 
+                };
+              }
+            }
+            
+            // Format time display
+            if (eventData.startDate) {
+              const start = new Date(eventData.startDate);
+              const end = eventData.endDate ? new Date(eventData.endDate) : null;
+              
+              const formatTime = (date) => {
+                const hours = date.getHours();
+                const minutes = date.getMinutes();
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                const displayHours = hours % 12 || 12;
+                const displayMinutes = minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : '';
+                return `${displayHours}${displayMinutes}${ampm}`;
+              };
+              
+              if (end) {
+                eventData.time = `${formatTime(start)}-${formatTime(end)}`;
+              } else {
+                eventData.time = formatTime(start);
+              }
+              
+              const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+              eventData.day = days[start.getDay()];
+            }
+            
+            return eventData;
+          }
+          
+          // Filter events for a specific date
+          function filterEventsForDate(events, dateStart, dateEnd) {
+            return events.filter(event => {
+              if (!event.startDate) return false;
+              
+              const eventDate = new Date(event.startDate);
+              
+              // For recurring events, check if they occur on this date
+              if (event.recurring && event.recurrence) {
+                // Simple weekly recurring check
+                if (event.recurrence.includes('FREQ=WEEKLY')) {
+                  const eventDay = eventDate.getDay();
+                  const targetDay = dateStart.getDay();
+                  return eventDay === targetDay && eventDate <= dateEnd;
+                }
+                // Add more recurring logic as needed
+              }
+              
+              // For one-time events, check if they fall within the date range
+              return eventDate >= dateStart && eventDate <= dateEnd;
+            });
+          }
           EOF
       
       - name: Commit updated calendar data
@@ -207,8 +495,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "Calendar Update Bot"
           
-          # Add all calendar data files
+          # Add all calendar data files and today's events
           git add data/calendars/
+          git add data/today-events.json
           
           # Check if there are changes to commit
           if git diff --staged --quiet; then

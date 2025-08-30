@@ -1372,6 +1372,270 @@ body.index-page main {
     display: none;
 }
 
+/* Today's Events Section */
+.todays-events-section {
+    padding: 60px 0;
+    background: linear-gradient(135deg, var(--background-light) 0%, var(--background-primary) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.todays-events-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 70% 30%, rgba(102, 126, 234, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 30% 70%, rgba(255, 107, 107, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.todays-events-section .container {
+    position: relative;
+    z-index: 1;
+}
+
+.todays-events-section h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.todays-events-content {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.today-events, .tomorrow-events {
+    margin-bottom: 2rem;
+}
+
+.today-events h3, .tomorrow-events h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: center;
+}
+
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.today-event-item {
+    background: var(--card-background);
+    border-radius: 12px;
+    padding: 1.2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-light);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.today-event-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-color);
+}
+
+.today-event-item .event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.8rem;
+}
+
+.today-event-item .event-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.3;
+    flex: 1;
+    margin-right: 0.5rem;
+}
+
+.today-event-item .event-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+}
+
+.today-event-item .event-time {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.today-event-item .recurring-badge {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.today-event-item .event-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.today-event-item .event-location {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.today-event-item .city-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.today-event-item .city-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.today-event-item .venue-name {
+    color: var(--text-secondary);
+}
+
+.today-event-item .event-cover {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: var(--background-light);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+}
+
+.no-events {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 2rem;
+    background: var(--background-light);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+
+.more-events {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-style: italic;
+    padding: 1rem;
+    background: var(--background-light);
+    border-radius: 8px;
+    border: 1px dashed var(--border-light);
+}
+
+.view-all-events {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.view-all-events .cta-button {
+    display: inline-block;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.view-all-events .cta-button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+}
+
+.last-updated {
+    text-align: center;
+    margin-top: 1.5rem;
+    opacity: 0.7;
+}
+
+.last-updated small {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+/* Today's Events Loading and Error States */
+.todays-events-loading, .todays-events-error {
+    text-align: center;
+    padding: 2rem;
+}
+
+.todays-events-loading .loading-message {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    background: var(--background-light);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+
+.todays-events-error .error-message {
+    background: var(--background-light);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.todays-events-error .error-message h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.todays-events-error .error-message p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+
+.retry-button {
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+    background: var(--secondary-dark);
+    transform: translateY(-1px);
+}
+
 /* Bear Art Section */
 .bear-art-section {
     padding: 80px 0;
@@ -1568,6 +1832,47 @@ body.index-page main {
         text-align: center;
     }
     
+    /* Today's Events Section Mobile */
+    .todays-events-section {
+        padding: 40px 0;
+    }
+    
+    .todays-events-section h2 {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .events-grid {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+    
+    .today-event-item {
+        padding: 1rem;
+    }
+    
+    .today-event-item .event-name {
+        font-size: 1rem;
+    }
+    
+    .today-event-item .event-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .today-event-item .event-meta {
+        align-items: flex-start;
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+    
+    .today-event-item .event-location {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+
     /* Bear Art Section Mobile */
     .bear-art-section {
         padding: 60px 0;
