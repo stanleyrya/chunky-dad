@@ -33,6 +33,28 @@ jobs:
           # Read city config and extract calendar IDs
           node << 'EOF'
           const fs = require('fs');
+          const crypto = require('crypto');
+          
+          // Function to normalize iCal data by removing timestamps that change on every fetch
+          function normalizeICalData(icalData) {
+            return icalData
+              // Remove DTSTAMP lines (these change on every fetch)
+              .replace(/^DTSTAMP:.*$/gm, '')
+              // Remove X-WR-CALNAME if it contains timestamps
+              .replace(/^X-WR-CALNAME:.*$/gm, '')
+              // Remove any other timestamp-like fields that might change
+              .replace(/^LAST-MODIFIED:.*$/gm, '')
+              // Normalize line endings
+              .replace(/\r\n/g, '\n')
+              .replace(/\r/g, '\n')
+              // Remove empty lines created by removing timestamps
+              .replace(/\n\n+/g, '\n');
+          }
+          
+          // Function to generate content hash for comparison
+          function getContentHash(data) {
+            return crypto.createHash('sha256').update(data).digest('hex');
+          }
           
           // Read the city config file
           const cityConfigContent = fs.readFileSync('js/city-config.js', 'utf8');
@@ -58,6 +80,7 @@ jobs:
           
           // Create fetch script for each city
           const fetchPromises = [];
+          let hasActualChanges = false;
           
           for (const [cityKey, config] of Object.entries(cityConfig)) {
             if (config.calendarId && config.visible) {
@@ -78,15 +101,43 @@ jobs:
                       throw new Error('Invalid iCal data received');
                     }
                     
-                    // Save the raw iCal data
-                    fs.writeFileSync(`data/calendars/${cityKey}.ics`, icalData);
-                    console.log(`✓ Saved calendar data for ${config.name}: ${icalData.length} characters`);
+                    // Normalize the new data for comparison
+                    const normalizedNewData = normalizeICalData(icalData);
+                    const newContentHash = getContentHash(normalizedNewData);
                     
-                    return { cityKey, config, icalData };
+                    // Check if file exists and compare content
+                    const existingFilePath = `data/calendars/${cityKey}.ics`;
+                    let hasChanged = true;
+                    
+                    if (fs.existsSync(existingFilePath)) {
+                      const existingData = fs.readFileSync(existingFilePath, 'utf8');
+                      const normalizedExistingData = normalizeICalData(existingData);
+                      const existingContentHash = getContentHash(normalizedExistingData);
+                      
+                      hasChanged = newContentHash !== existingContentHash;
+                      
+                      if (hasChanged) {
+                        console.log(`📝 Content changed for ${config.name}`);
+                        hasActualChanges = true;
+                      } else {
+                        console.log(`⏭️  No content changes for ${config.name}`);
+                      }
+                    } else {
+                      console.log(`🆕 New calendar file for ${config.name}`);
+                      hasActualChanges = true;
+                    }
+                    
+                    // Only save if content has actually changed or file is new
+                    if (hasChanged) {
+                      fs.writeFileSync(existingFilePath, icalData);
+                      console.log(`✓ Saved calendar data for ${config.name}: ${icalData.length} characters`);
+                    }
+                    
+                    return { cityKey, config, icalData, hasChanged };
                   })
                   .catch(error => {
                     console.error(`✗ Failed to fetch calendar for ${config.name}:`, error.message);
-                    return { cityKey, config, error: error.message };
+                    return { cityKey, config, error: error.message, hasChanged: false };
                   })
               );
             }
@@ -95,6 +146,14 @@ jobs:
           // Wait for all fetches to complete
           Promise.all(fetchPromises)
             .then(results => {
+              // Only update summary if there were actual changes
+              const changedResults = results.filter(r => r.hasChanged);
+              
+              if (changedResults.length === 0 && !results.some(r => r.error)) {
+                console.log(`\n🎯 No content changes detected across all calendars - skipping update`);
+                process.exit(0);
+              }
+              
               const summary = {
                 lastUpdated: new Date().toISOString(),
                 cities: {}
@@ -131,6 +190,7 @@ jobs:
               console.log(`✓ Successful: ${successCount}`);
               console.log(`✗ Failed: ${errorCount}`);
               console.log(`📅 Total cities processed: ${results.length}`);
+              console.log(`🔄 Cities with actual changes: ${changedResults.length}`);
               
               if (errorCount > 0) {
                 console.log(`\n⚠️  Some calendar updates failed. Check the logs above for details.`);
@@ -155,9 +215,13 @@ jobs:
             echo "No calendar data changes to commit"
             echo "CALENDAR_CHANGED=false" >> $GITHUB_ENV
           else
-            git commit -m "🗓️ Update calendar data - $(date -u '+%Y-%m-%d %H:%M UTC')"
+            # Count the number of changed files (excluding update-summary.json)
+            CHANGED_FILES=$(git diff --staged --name-only | grep -v update-summary.json | wc -l)
+            CHANGED_CALENDAR_FILES=$(git diff --staged --name-only | grep '\.ics$' | wc -l)
+            
+            git commit -m "🗓️ Update calendar data - $(date -u '+%Y-%m-%d %H:%M UTC') (${CHANGED_CALENDAR_FILES} calendars changed)"
             git push
-            echo "✓ Calendar data updated and committed"
+            echo "✓ Calendar data updated and committed (${CHANGED_FILES} files changed)"
             echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
       
