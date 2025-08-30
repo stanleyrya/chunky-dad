@@ -512,7 +512,7 @@ class EventbriteParser {
             }
             
             console.log(`🎫 Eventbrite: Final price result for "${title}": "${price}"`);
-            const image = eventData.logo?.url || eventData.image?.url;
+            let image = eventData.logo?.url || eventData.image?.url;
             
             // NEW: Try to get image from eventHero if not found in eventData
             if (!image && serverData.event_listing_response?.eventHero?.items?.[0]) {
