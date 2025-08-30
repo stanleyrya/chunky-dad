@@ -1,76 +1,81 @@
 {
-  "lastUpdated": "2025-01-15T16:00:00Z",
+  "lastUpdated": "2025-08-30T21:30:07.173Z",
   "todayEvents": [
-    {
-      "cityKey": "new-york",
-      "cityName": "New York",
-      "event": {
-        "name": "Bear Happy Hour",
-        "time": "5:00PM-8:00PM",
-        "day": "Wednesday",
-        "bar": "Nowhere Bar",
-        "cover": "$10",
-        "startDate": "2025-01-15T17:00:00",
-        "recurring": true,
-        "coordinates": {
-          "lat": 40.7317472,
-          "lng": -73.9841307
-        }
-      }
-    },
     {
       "cityKey": "chicago",
       "cityName": "Chicago",
       "event": {
-        "name": "Leather Night",
-        "time": "9:00PM-2:00AM",
-        "day": "Wednesday",
-        "bar": "The Eagle",
-        "cover": "Free",
-        "startDate": "2025-01-15T21:00:00",
+        "name": "Bearracuda Chicago Jockstrap Party: Tix at the DOOR",
+        "startDate": "2025-08-30T02:00:00.000Z",
+        "endDate": "2025-08-30T09:00:00.000Z",
         "recurring": false,
-        "tea": "Weekly leather and kink night for the bear community"
+        "cityKey": "chicago",
+        "cityName": "Chicago",
+        "tea": "Music & Entertainment",
+        "bar": "The Jackhammer Complex",
+        "cover": "$19.24 - $24.89 (as of 8/29)",
+        "time": "2AM-9AM",
+        "day": "Saturday"
       }
     },
     {
-      "cityKey": "seattle",
-      "cityName": "Seattle",
+      "cityKey": "new-orleans",
+      "cityName": "New Orleans",
       "event": {
-        "name": "Woof Wednesday",
-        "time": "7:00PM-11:00PM",
-        "day": "Wednesday",
-        "bar": "R Place",
-        "startDate": "2025-01-15T19:00:00",
-        "recurring": true
+        "name": "NEW ORLEANS",
+        "startDate": "2025-08-30T02:00:00.000Z",
+        "endDate": "2025-08-30T07:00:00.000Z",
+        "recurring": false,
+        "cityKey": "new-orleans",
+        "cityName": "New Orleans",
+        "tea": "Music & Entertainment",
+        "bar": "Joy Theatre",
+        "time": "2AM-7AM",
+        "day": "Saturday"
       }
     }
   ],
   "tomorrowEvents": [
     {
-      "cityKey": "new-york",
-      "cityName": "New York",
-      "event": {
-        "name": "Thursday Night Dance",
-        "time": "10:00PM-3:00AM",
-        "day": "Thursday",
-        "bar": "Stonewall Inn",
-        "cover": "$15",
-        "startDate": "2025-01-16T22:00:00",
-        "recurring": false,
-        "tea": "Special DJ night with bear-friendly crowd"
-      }
-    },
-    {
       "cityKey": "los-angeles",
       "cityName": "Los Angeles",
       "event": {
-        "name": "Bear Pool Party",
-        "time": "2:00PM-8:00PM",
-        "day": "Thursday",
-        "bar": "The Abbey",
-        "cover": "$20",
-        "startDate": "2025-01-16T14:00:00",
-        "recurring": false
+        "name": "MEGAWOOF",
+        "startDate": "2025-08-31T04:00:00.000Z",
+        "endDate": "2025-08-31T09:00:00.000Z",
+        "recurring": false,
+        "cityKey": "los-angeles",
+        "cityName": "Los Angeles",
+        "tea": "LONG BEACH — WE’RE BACK!",
+        "bar": "Falcon North",
+        "cover": "$11.58 - $20 (as of 8/30)",
+        "coordinates": {
+          "lat": 33.87445400000001,
+          "lng": -118.1680614
+        },
+        "time": "4AM-9AM",
+        "day": "Sunday"
+      }
+    },
+    {
+      "cityKey": "vegas",
+      "cityName": "Las Vegas",
+      "event": {
+        "name": "MEGAWOOF",
+        "startDate": "2025-08-31T04:00:00.000Z",
+        "endDate": "2025-08-31T09:00:00.000Z",
+        "recurring": false,
+        "cityKey": "vegas",
+        "cityName": "Las Vegas",
+        "tea": "MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :\r BEARS AT WORK",
+        "bar": "Dust Las Vegas",
+        "cover": "$11.58 - $23.14 (as of 8/30)",
+        "coordinates": {
+          "lat": 36.1214368,
+          "lng": -115.144945
+        },
+        "time": "4AM-9AM",
+        "day": "Sunday"
       }
     }
   ]
