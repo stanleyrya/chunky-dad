@@ -1256,6 +1256,18 @@ class ScriptableAdapter {
             line-height: 1.6;
         }
         
+        /* Global link styles */
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        a:hover {
+            color: var(--accent-color);
+            text-decoration: underline;
+        }
+        
         .header {
             background: var(--gradient-primary);
             color: var(--text-inverse);
@@ -1282,16 +1294,18 @@ class ScriptableAdapter {
         .header-content {
             position: relative;
             z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
         
         .header-logo {
             width: 80px;
             height: 80px;
             border-radius: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
             transition: transform 0.3s ease;
             display: block;
+            flex-shrink: 0;
         }
         
         .header-logo:hover {
@@ -1305,6 +1319,7 @@ class ScriptableAdapter {
             z-index: 1;
             font-weight: 700;
             line-height: 1.2;
+            flex: 1;
         }
         
         .header-title {
@@ -1359,7 +1374,7 @@ class ScriptableAdapter {
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid var(--border-color);
         }
         
         .section-icon {
@@ -1430,8 +1445,8 @@ class ScriptableAdapter {
         }
         
         .event-metadata {
-            background: #fff;
-            border: 1px solid #e0e0e0;
+            background: var(--background-primary);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 10px;
             margin-top: 10px;
@@ -1446,7 +1461,7 @@ class ScriptableAdapter {
         .metadata-label {
             font-weight: 500;
             margin-right: 8px;
-            color: #666;
+            color: var(--text-secondary);
             min-width: 80px;
         }
         
@@ -1520,21 +1535,23 @@ class ScriptableAdapter {
         }
         
         .conflict-info {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
+            background: ${isDarkMode ? 'rgba(255, 193, 7, 0.1)' : '#fff3cd'};
+            border: 1px solid ${isDarkMode ? 'rgba(255, 193, 7, 0.3)' : '#ffeaa7'};
             border-radius: 8px;
             padding: 10px;
             margin-top: 10px;
             font-size: 13px;
+            color: ${isDarkMode ? '#ffc107' : '#856404'};
         }
         
         .existing-info {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
+            background: ${isDarkMode ? 'rgba(23, 162, 184, 0.1)' : '#d1ecf1'};
+            border: 1px solid ${isDarkMode ? 'rgba(23, 162, 184, 0.3)' : '#bee5eb'};
             border-radius: 8px;
             padding: 10px;
             margin-top: 10px;
             font-size: 13px;
+            color: ${isDarkMode ? '#17a2b8' : '#0c5460'};
         }
         
         .empty-state {
@@ -1571,8 +1588,8 @@ class ScriptableAdapter {
         }
         
         .notes-preview {
-            background: #f8f8f8;
-            border-left: 3px solid #007aff;
+            background: ${isDarkMode ? '#2a2a2a' : '#f8f8f8'};
+            border-left: 3px solid var(--primary-color);
             padding: 10px;
             margin-top: 10px;
             font-size: 12px;
@@ -1584,20 +1601,20 @@ class ScriptableAdapter {
         }
         
         .diff-view {
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-            background: white;
+            background: var(--background-primary);
             position: relative;
         }
         
         .notes-preview strong {
             font-weight: 600;
-            color: #333;
+            color: var(--text-primary);
         }
         
         details {
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.5)'};
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 5px;
             transition: all 0.2s ease;
@@ -1627,16 +1644,16 @@ class ScriptableAdapter {
         }
         
         details summary:hover {
-            background: rgba(0, 0, 0, 0.05);
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
             border-radius: 5px;
         }
         
         details[open] {
-            background: rgba(255, 255, 255, 0.8);
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.8)'};
         }
         
         details[open] summary {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid var(--border-color);
             margin-bottom: 10px;
         }
         
@@ -1659,6 +1676,16 @@ class ScriptableAdapter {
             .header-logo {
                 width: 60px;
                 height: 60px;
+            }
+            
+            .header-content {
+                gap: 15px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .header-content .header-logo {
+                align-self: center;
             }
             
             .header .stats {
@@ -1755,7 +1782,7 @@ class ScriptableAdapter {
         .coordinates {
             font-family: monospace;
             font-size: 12px;
-            color: #666;
+            color: var(--text-secondary);
         }
         
         .display-toggle {
@@ -1764,9 +1791,9 @@ class ScriptableAdapter {
             gap: 10px;
             margin-bottom: 20px;
             padding: 15px;
-            background: white;
+            background: var(--background-primary);
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: var(--card-shadow);
         }
         
         .toggle-switch {
@@ -1816,8 +1843,8 @@ class ScriptableAdapter {
         
         .raw-display {
             display: none;
-            background: #f8f8f8;
-            border: 1px solid #e0e0e0;
+            background: ${isDarkMode ? '#1e1e1e' : '#f8f8f8'};
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 15px;
             margin-top: 10px;
@@ -1828,6 +1855,7 @@ class ScriptableAdapter {
             max-height: 300px;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            color: var(--text-primary);
         }
         
         .event-card.raw-mode .event-details,
@@ -2448,12 +2476,12 @@ class ScriptableAdapter {
                 ${event.image ? `
                     <div class="event-detail" style="margin-top: 12px;">
                         <span>🖼️</span>
-                        <span><a href="${this.escapeHtml(event.image)}" target="_blank" rel="noopener" style="color: #007aff; font-weight: 500;">View Full Image</a></span>
+                        <span><a href="${this.escapeHtml(event.image)}" target="_blank" rel="noopener" style="color: var(--primary-color); font-weight: 500;">View Full Image</a></span>
                         <div style="margin-top: 8px; text-align: center;">
                             <img src="${this.escapeHtml(event.image)}" alt="Event Image" 
                                  style="max-width: 100%; width: 280px; max-height: 200px; border-radius: 12px; 
                                         object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-                                        border: 2px solid #f0f0f0; transition: transform 0.2s ease;" 
+                                        border: 2px solid var(--border-color); transition: transform 0.2s ease;" 
                                  onload="this.style.opacity='1'" 
                                  onerror="this.style.display='none'"
                                  onmouseover="this.style.transform='scale(1.02)'" 
@@ -2464,37 +2492,37 @@ class ScriptableAdapter {
                 ${event.instagram ? `
                     <div class="event-detail">
                         <span>📸</span>
-                        <span><a href="${this.escapeHtml(event.instagram)}" target="_blank" rel="noopener" style="color: #007aff;">Instagram</a></span>
+                        <span><a href="${this.escapeHtml(event.instagram)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Instagram</a></span>
                     </div>
                 ` : ''}
                 ${event.facebook ? `
                     <div class="event-detail">
                         <span>👥</span>
-                        <span><a href="${this.escapeHtml(event.facebook)}" target="_blank" rel="noopener" style="color: #007aff;">Facebook</a></span>
+                        <span><a href="${this.escapeHtml(event.facebook)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Facebook</a></span>
                     </div>
                 ` : ''}
                 ${event.ticketUrl ? `
                     <div class="event-detail">
                         <span>🎫</span>
-                        <span><a href="${this.escapeHtml(event.ticketUrl)}" target="_blank" rel="noopener" style="color: #007aff;">Tickets</a></span>
+                        <span><a href="${this.escapeHtml(event.ticketUrl)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Tickets</a></span>
                     </div>
                 ` : ''}
                 ${event.website ? `
                     <div class="event-detail">
                         <span>🌐</span>
-                        <span><a href="${this.escapeHtml(event.website)}" target="_blank" rel="noopener" style="color: #007aff;">Website</a></span>
+                        <span><a href="${this.escapeHtml(event.website)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Website</a></span>
                     </div>
                 ` : ''}
                 ${event.url && event.url !== event.website ? `
                     <div class="event-detail">
                         <span>🎫</span>
-                        <span><a href="${this.escapeHtml(event.url)}" target="_blank" rel="noopener" style="color: #007aff;">Event Link</a></span>
+                        <span><a href="${this.escapeHtml(event.url)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Event Link</a></span>
                     </div>
                 ` : ''}
                 ${event.googleMapsLink ? `
                     <div class="event-detail">
                         <span>🗺️</span>
-                        <span><a href="${this.escapeHtml(event.googleMapsLink)}" target="_blank" rel="noopener" style="color: #007aff;">Google Maps</a></span>
+                        <span><a href="${this.escapeHtml(event.googleMapsLink)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Google Maps</a></span>
                     </div>
                 ` : ''}
                 ${event.price ? `
@@ -2612,11 +2640,11 @@ class ScriptableAdapter {
                         </div>
                         <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: auto;">
                             <tr>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Field</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Existing Event</th>
-                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Flow</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">New Event</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd; word-wrap: break-word; overflow-wrap: break-word;">Result</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Field</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Existing Event</th>
+                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Flow</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">New Event</th>
+                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Result</th>
                             </tr>
                             ${this.generateComparisonRows(event)}
                         </table>
@@ -3387,20 +3415,20 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             rows.push(`
                 <tr>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word;">
+                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">
                         <strong>${field}</strong>
-                        <br><small style="color: #666;">${strategy}</small>
+                        <br><small style="color: var(--text-secondary);">${strategy}</small>
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
+                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; color: var(--text-primary);">
                         ${formatValue(existingValue)}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #007aff; word-wrap: break-word; overflow-wrap: break-word;">
+                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); text-align: center; font-size: 16px; color: var(--primary-color); word-wrap: break-word; overflow-wrap: break-word;">
                         ${flowIcon}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
+                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; color: var(--text-primary);">
                         ${formatValue(newValue)}
                     </td>
-                    <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: center; word-wrap: break-word; overflow-wrap: break-word;">
+                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); text-align: center; word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">
                         ${resultText}
                     </td>
                 </tr>
