@@ -93,16 +93,48 @@ class ChunkParser {
             // Clean up the JSON string
             let jsonString = jsonLdMatch[1].trim();
             
-            // Replace HTML entities
+            // Replace HTML entities - these are the most common issues
             jsonString = jsonString
                 .replace(/&quot;/g, '"')
-                .replace(/&#010;/g, '\n')
+                .replace(/&#010;/g, ' ')  // Replace newline entities with space
                 .replace(/&#x27;/g, "'")
+                .replace(/&apos;/g, "'")   // Apostrophe entity
                 .replace(/&amp;/g, '&')
                 .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>');
+                .replace(/&gt;/g, '>')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&#039;/g, "'")
+                .replace(/&#8217;/g, "'")  // Right single quote
+                .replace(/&#8220;/g, '"')  // Left double quote
+                .replace(/&#8221;/g, '"'); // Right double quote
             
-            const jsonData = JSON.parse(jsonString);
+            // Clean up common JSON issues before parsing
+            jsonString = jsonString
+                .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
+                .replace(/([^\\])\\n/g, '$1 ')  // Replace literal \n with space
+                .replace(/([^\\])\\r/g, '$1')   // Remove literal \r
+                .replace(/([^\\])\\t/g, '$1 '); // Replace literal \t with space
+            
+            // Try to parse the JSON
+            let jsonData;
+            try {
+                jsonData = JSON.parse(jsonString);
+            } catch (parseError) {
+                // If parsing fails, try more aggressive cleaning
+                console.warn(`🎉 Chunk: Initial JSON parse failed, attempting cleanup: ${parseError.message}`);
+                
+                // Remove any control characters that might be causing issues
+                jsonString = jsonString
+                    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' '); // Replace control chars with space
+                
+                // Try one more time
+                try {
+                    jsonData = JSON.parse(jsonString);
+                } catch (finalError) {
+                    console.error(`🎉 Chunk: Failed to parse JSON-LD: ${finalError}`);
+                    return null;
+                }
+            }
             
             if (jsonData['@type'] !== 'Event') {
                 console.warn(`🎉 Chunk: JSON-LD is not an Event type: ${jsonData['@type']}`);
@@ -140,10 +172,30 @@ class ChunkParser {
                 }
             }
             
-            // Extract image URL
-            let image = jsonData.image || '';
-            if (Array.isArray(image) && image.length > 0) {
-                image = image[0];
+            // Extract image URL - handle various formats
+            let image = '';
+            if (jsonData.image) {
+                if (typeof jsonData.image === 'string') {
+                    // Simple string URL
+                    image = jsonData.image;
+                } else if (typeof jsonData.image === 'object') {
+                    // ImageObject with url property
+                    if (jsonData.image.url) {
+                        image = jsonData.image.url;
+                    } else if (jsonData.image['@type'] === 'ImageObject' && jsonData.image.contentUrl) {
+                        image = jsonData.image.contentUrl;
+                    }
+                } else if (Array.isArray(jsonData.image) && jsonData.image.length > 0) {
+                    // Array of images - take the first one
+                    const firstImage = jsonData.image[0];
+                    if (typeof firstImage === 'string') {
+                        image = firstImage;
+                    } else if (typeof firstImage === 'object' && firstImage.url) {
+                        image = firstImage.url;
+                    } else if (typeof firstImage === 'object' && firstImage.contentUrl) {
+                        image = firstImage.contentUrl;
+                    }
+                }
             }
             
             // Get ticket URL from offers or use the detail page URL
