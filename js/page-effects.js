@@ -15,7 +15,30 @@ class PageEffectsManager {
     }
 
     checkIfCityPage() {
-        return window.location.pathname.includes('city.html');
+        // Check for both legacy city.html format and new city subdirectory format
+        if (window.location.pathname.includes('city.html')) {
+            return true;
+        }
+        
+        // Check if we're in a city subdirectory using app.js logic
+        if (window.chunkyApp && window.chunkyApp.getCitySlugFromPath) {
+            const citySlug = window.chunkyApp.getCitySlugFromPath();
+            return !!citySlug;
+        }
+        
+        // Fallback detection for city subdirectories
+        const pathname = window.location.pathname;
+        const pathSegments = pathname.split('/').filter(Boolean);
+        
+        if (pathSegments.length > 0) {
+            const firstSegment = pathSegments[0].toLowerCase();
+            // Check if first segment matches a known city
+            if (window.CITY_CONFIG && window.CITY_CONFIG[firstSegment]) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     init() {

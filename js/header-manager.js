@@ -66,12 +66,57 @@ class HeaderManager {
     }
 
     isCityPage() {
-        return window.location.pathname.includes('city.html');
+        // Check for both legacy city.html format and new city subdirectory format
+        if (window.location.pathname.includes('city.html')) {
+            return true;
+        }
+        
+        // Check if we're in a city subdirectory using app.js logic
+        if (window.chunkyApp && window.chunkyApp.getCitySlugFromPath) {
+            const citySlug = window.chunkyApp.getCitySlugFromPath();
+            return !!citySlug;
+        }
+        
+        // Fallback detection for city subdirectories
+        const pathname = window.location.pathname;
+        const pathSegments = pathname.split('/').filter(Boolean);
+        
+        if (pathSegments.length > 0) {
+            const firstSegment = pathSegments[0].toLowerCase();
+            // Check if first segment matches a known city
+            if (window.CITY_CONFIG && window.CITY_CONFIG[firstSegment]) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     getCityFromURL() {
+        // First try URL parameters (legacy city.html format)
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('city');
+        const cityParam = urlParams.get('city');
+        if (cityParam) {
+            return cityParam;
+        }
+        
+        // Then try path-based detection (new subdirectory format)
+        if (window.chunkyApp && window.chunkyApp.getCitySlugFromPath) {
+            return window.chunkyApp.getCitySlugFromPath();
+        }
+        
+        // Fallback path detection
+        const pathname = window.location.pathname;
+        const pathSegments = pathname.split('/').filter(Boolean);
+        
+        if (pathSegments.length > 0) {
+            const firstSegment = pathSegments[0].toLowerCase();
+            if (window.CITY_CONFIG && window.CITY_CONFIG[firstSegment]) {
+                return firstSegment;
+            }
+        }
+        
+        return null;
     }
 
     addCitySelector() {
@@ -240,7 +285,16 @@ class HeaderManager {
 
     switchCity(cityKey) {
         this.logger.userInteraction('HEADER', `Switching to city: ${cityKey}`);
-        window.location.href = `city.html?city=${cityKey}`;
+        
+        // Use the new city subdirectory format
+        // If we're already in a subdirectory, navigate relative to root
+        const currentPath = window.location.pathname;
+        const isInSubdirectory = currentPath.split('/').filter(Boolean).length > 0 && 
+            !currentPath.includes('index.html') && 
+            !currentPath.includes('city.html');
+        
+        const basePath = isInSubdirectory ? '../' : '';
+        window.location.href = `${basePath}${cityKey}/`;
     }
 
     setupDebugOptions() {

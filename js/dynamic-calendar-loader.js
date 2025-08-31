@@ -431,7 +431,7 @@ class DynamicCalendarLoader extends CalendarCore {
             availableCitiesList.innerHTML = getAvailableCities()
                 .filter(city => hasCityCalendar(city.key))
                 .map(city => `
-                    <a href="city.html?city=${city.key}" class="city-link">
+                    <a href="${city.key}/" class="city-link">
                         ${city.emoji} ${city.name}
                     </a>
                 `).join('');
@@ -1169,9 +1169,25 @@ class DynamicCalendarLoader extends CalendarCore {
     buildLocalCalendarUrl(cityKey) {
         try {
             const pathname = window.location.pathname || '';
+            
+            // Use PathUtils if available for consistent path resolution
+            if (window.pathUtils) {
+                return window.pathUtils.resolvePath(`data/calendars/${cityKey}.ics`);
+            }
+            
+            // Fallback logic for path detection
             // Test pages are served under /testing/, need to go up one level
             const isTesting = pathname.includes('/testing/');
-            const prefix = isTesting ? '../' : '';
+            
+            // City subdirectories (like /new-york/, /seattle/) need to go up one level
+            const pathSegments = pathname.split('/').filter(Boolean);
+            const isInCitySubdirectory = pathSegments.length > 0 && 
+                window.CITY_CONFIG && 
+                window.CITY_CONFIG[pathSegments[0].toLowerCase()];
+            
+            const needsParentPath = isTesting || isInCitySubdirectory;
+            const prefix = needsParentPath ? '../' : '';
+            
             return `${prefix}data/calendars/${cityKey}.ics`;
         } catch (e) {
             // Safe fallback
