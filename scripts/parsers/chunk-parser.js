@@ -45,28 +45,25 @@ class ChunkParser {
             
             console.log(`🎉 Chunk: Parsing URL: ${url}`);
             
-            // Check if this is a detail page or main page
+            // ONLY TWO PATHS: Detail page with JSON-LD, or main page for URL extraction
             const isDetailPage = url.includes('/event-details/');
             
             if (isDetailPage) {
-                // Parse detail page using JSON-LD schema
-                const detailEvent = this.parseDetailPage(html, url, parserConfig, cityConfig);
-                if (detailEvent) {
-                    events.push(detailEvent);
-                    console.log(`🎉 Chunk: Parsed detail page event: ${detailEvent.title}`);
+                // Detail pages ALWAYS have JSON-LD - this is the ONLY way we parse them
+                const event = this.parseDetailPageJsonLD(html, url, parserConfig, cityConfig);
+                if (event) {
+                    events.push(event);
+                    console.log(`🎉 Chunk: Parsed event from JSON-LD: ${event.title}`);
                 }
-            } else {
-                // Parse main page for upcoming events
-                const mainPageEvents = this.parseMainPage(html, url, parserConfig, cityConfig);
-                events.push(...mainPageEvents);
-                console.log(`🎉 Chunk: Found ${mainPageEvents.length} events on main page`);
             }
             
-            // Extract additional URLs if urlDiscoveryDepth > 0
+            // Extract additional event detail URLs (works on both main and detail pages)
             let additionalLinks = [];
             if (parserConfig.urlDiscoveryDepth > 0) {
-                additionalLinks = this.extractAdditionalUrls(html, url, parserConfig);
-                console.log(`🎉 Chunk: Found ${additionalLinks.length} additional links`);
+                additionalLinks = this.extractEventDetailUrls(html);
+                if (additionalLinks.length > 0) {
+                    console.log(`🎉 Chunk: Found ${additionalLinks.length} event detail URLs`);
+                }
             }
             
             return {
@@ -82,48 +79,37 @@ class ChunkParser {
         }
     }
 
-    // Parse detail page using JSON-LD schema
-    parseDetailPage(html, url, parserConfig, cityConfig) {
+    // Parse detail page using JSON-LD (the ONLY method that works reliably)
+    parseDetailPageJsonLD(html, url, parserConfig, cityConfig) {
         try {
-            // Extract JSON-LD schema data
+            // Extract JSON-LD schema - Chunk detail pages ALWAYS have this
             const jsonLdMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
             
-            if (jsonLdMatch && jsonLdMatch[1]) {
-                try {
-                    // Clean up the JSON string
-                    let jsonString = jsonLdMatch[1].trim();
-                    
-                    // Replace HTML entities
-                    jsonString = jsonString
-                        .replace(/&quot;/g, '"')
-                        .replace(/&#010;/g, '\n')
-                        .replace(/&#x27;/g, "'")
-                        .replace(/&amp;/g, '&')
-                        .replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>');
-                    
-                    const jsonData = JSON.parse(jsonString);
-                    
-                    if (jsonData['@type'] === 'Event') {
-                        return this.parseJsonLdEvent(jsonData, url, parserConfig, cityConfig);
-                    }
-                } catch (error) {
-                    console.warn(`🎉 Chunk: Failed to parse JSON-LD: ${error}`);
-                }
+            if (!jsonLdMatch || !jsonLdMatch[1]) {
+                console.warn(`🎉 Chunk: No JSON-LD found on detail page: ${url}`);
+                return null;
             }
             
-            // Fallback to parsing HTML content if JSON-LD fails
-            return this.parseDetailPageHtml(html, url, parserConfig, cityConfig);
+            // Clean up the JSON string
+            let jsonString = jsonLdMatch[1].trim();
             
-        } catch (error) {
-            console.warn(`🎉 Chunk: Error parsing detail page: ${error}`);
-            return null;
-        }
-    }
-
-    // Parse JSON-LD event data
-    parseJsonLdEvent(jsonData, url, parserConfig, cityConfig) {
-        try {
+            // Replace HTML entities
+            jsonString = jsonString
+                .replace(/&quot;/g, '"')
+                .replace(/&#010;/g, '\n')
+                .replace(/&#x27;/g, "'")
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>');
+            
+            const jsonData = JSON.parse(jsonString);
+            
+            if (jsonData['@type'] !== 'Event') {
+                console.warn(`🎉 Chunk: JSON-LD is not an Event type: ${jsonData['@type']}`);
+                return null;
+            }
+            
+            // Extract all the data we need from JSON-LD
             const title = jsonData.name || 'Untitled Event';
             const description = jsonData.description || '';
             const startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
@@ -158,7 +144,7 @@ class ChunkParser {
                 }
             }
             
-            // Extract image URL if available
+            // Extract image URL
             let image = jsonData.image || '';
             if (Array.isArray(image) && image.length > 0) {
                 image = image[0];
@@ -197,271 +183,22 @@ class ChunkParser {
                 });
             }
             
-            console.log(`🎉 Chunk: Created event from JSON-LD: ${title} on ${startDate}`);
+            console.log(`🎉 Chunk: Successfully parsed event: ${title} on ${startDate}`);
             
             return event;
             
         } catch (error) {
-            console.warn(`🎉 Chunk: Failed to parse JSON-LD event: ${error}`);
+            console.error(`🎉 Chunk: Failed to parse JSON-LD: ${error}`);
             return null;
         }
     }
 
-    // Fallback HTML parsing for detail page
-    parseDetailPageHtml(html, url, parserConfig, cityConfig) {
-        try {
-            // Extract title from meta tags or page title
-            let title = '';
-            const titleMatch = html.match(/<title>([^<]+)<\/title>/i) ||
-                              html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i);
-            if (titleMatch) {
-                title = titleMatch[1].replace(' | CHUNK', '').trim();
-            }
-            
-            // Extract description from meta tags
-            let description = '';
-            const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i) ||
-                             html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i);
-            if (descMatch) {
-                description = descMatch[1];
-            }
-            
-            // Extract date and time
-            let startDate = null;
-            let endDate = null;
-            
-            // Look for date patterns in the description
-            const dateMatch = description.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/i);
-            const timeMatch = description.match(/(\d{1,2}):(\d{2})\s*(PM|AM)/gi);
-            
-            if (dateMatch) {
-                const monthNames = {
-                    'january': 0, 'february': 1, 'march': 2, 'april': 3,
-                    'may': 4, 'june': 5, 'july': 6, 'august': 7,
-                    'september': 8, 'october': 9, 'november': 10, 'december': 11
-                };
-                
-                const month = monthNames[dateMatch[1].toLowerCase()];
-                const day = parseInt(dateMatch[2]);
-                const year = parseInt(dateMatch[3]);
-                
-                if (timeMatch && timeMatch.length > 0) {
-                    // Parse start time
-                    const startTimeMatch = timeMatch[0].match(/(\d{1,2}):(\d{2})\s*(PM|AM)/i);
-                    if (startTimeMatch) {
-                        let hours = parseInt(startTimeMatch[1]);
-                        const minutes = parseInt(startTimeMatch[2]);
-                        const ampm = startTimeMatch[3].toUpperCase();
-                        
-                        if (ampm === 'PM' && hours !== 12) hours += 12;
-                        if (ampm === 'AM' && hours === 12) hours = 0;
-                        
-                        startDate = new Date(year, month, day, hours, minutes);
-                    }
-                    
-                    // Parse end time if available
-                    if (timeMatch.length > 1) {
-                        const endTimeMatch = timeMatch[1].match(/(\d{1,2}):(\d{2})\s*(PM|AM)/i);
-                        if (endTimeMatch) {
-                            let hours = parseInt(endTimeMatch[1]);
-                            const minutes = parseInt(endTimeMatch[2]);
-                            const ampm = endTimeMatch[3].toUpperCase();
-                            
-                            if (ampm === 'PM' && hours !== 12) hours += 12;
-                            if (ampm === 'AM' && hours === 12) hours = 0;
-                            
-                            // If end time is in AM and start time was PM, it's next day
-                            let endDay = day;
-                            if (ampm === 'AM' && startDate && startDate.getHours() > 12) {
-                                endDay = day + 1;
-                            }
-                            
-                            endDate = new Date(year, month, endDay, hours, minutes);
-                        }
-                    }
-                } else {
-                    // No time found, set to evening by default
-                    startDate = new Date(year, month, day, 22, 0); // 10 PM default
-                }
-            }
-            
-            // Extract venue and address
-            let venue = '';
-            let address = '';
-            
-            // Look for venue patterns in description
-            const venuePatterns = [
-                /([A-Z0-9][A-Z0-9\s&]+(?:NIGHTCLUB|CLUB|BAR|LOUNGE|VENUE))/,
-                /at\s+([^\/\n]+)/i
-            ];
-            
-            for (const pattern of venuePatterns) {
-                const match = description.match(pattern);
-                if (match) {
-                    venue = match[1].trim();
-                    break;
-                }
-            }
-            
-            // Look for address pattern
-            const addressMatch = description.match(/(\d+\s+[A-Z][A-Za-z\s]+(?:ST|STREET|AVE|AVENUE|RD|ROAD|BLVD|BOULEVARD))/i);
-            if (addressMatch) {
-                address = addressMatch[1].trim();
-            }
-            
-            // Extract city
-            const city = this.extractCityFromText(`${title} ${description} ${venue} ${address}`);
-            
-            // Extract price
-            let price = '';
-            const priceMatches = html.match(/\$(\d+(?:\.\d{2})?)/g);
-            if (priceMatches && priceMatches.length > 0) {
-                if (priceMatches.length === 1) {
-                    price = priceMatches[0];
-                } else {
-                    // Find min and max prices
-                    const prices = priceMatches.map(p => parseFloat(p.replace('$', ''))).sort((a, b) => a - b);
-                    price = `$${prices[0].toFixed(2)} - $${prices[prices.length - 1].toFixed(2)}`;
-                }
-            }
-            
-            // Extract image URL from og:image
-            let image = '';
-            const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
-            if (imageMatch) {
-                image = imageMatch[1];
-            }
-            
-            const event = {
-                title: title,
-                description: description,
-                startDate: startDate,
-                endDate: endDate,
-                bar: venue,
-                location: null,
-                address: address,
-                city: city,
-                timezone: this.getTimezoneForCity(city, cityConfig),
-                url: url,
-                ticketUrl: url, // Detail page is also the ticket page
-                cover: price,
-                image: image,
-                source: this.config.source,
-                isBearEvent: true // Chunk parties are always bear events
-            };
-            
-            // Apply source-specific metadata values from config
-            if (parserConfig.metadata) {
-                Object.keys(parserConfig.metadata).forEach(key => {
-                    const metaValue = parserConfig.metadata[key];
-                    
-                    // Apply value if it exists (source-specific overrides)
-                    if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
-                        event[key] = metaValue.value;
-                    }
-                });
-            }
-            
-            console.log(`🎉 Chunk: Created event from HTML: ${title}`);
-            
-            return event;
-            
-        } catch (error) {
-            console.warn(`🎉 Chunk: Failed to parse detail page HTML: ${error}`);
-            return null;
-        }
-    }
-
-    // Parse main page for upcoming events
-    parseMainPage(html, url, parserConfig, cityConfig) {
-        const events = [];
-        
-        try {
-            // Look for "Upcoming Events" section
-            // The main page shows event cards with dates and titles
-            
-            // Extract event titles and dates from the HTML
-            // Pattern: Look for date patterns followed by event names
-            const eventPatterns = [
-                /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})[^<]*?([A-Z][^<]+)/gi
-            ];
-            
-            for (const pattern of eventPatterns) {
-                let match;
-                while ((match = pattern.exec(html)) !== null) {
-                    const monthName = match[1];
-                    const day = parseInt(match[2]);
-                    const year = parseInt(match[3]);
-                    let title = match[4].trim();
-                    
-                    // Clean up title
-                    title = title.replace(/["\n\r]/g, '').trim();
-                    
-                    // Skip if title is too short or looks like HTML
-                    if (title.length < 5 || title.includes('<') || title.includes('>')) {
-                        continue;
-                    }
-                    
-                    const monthNames = {
-                        'january': 0, 'february': 1, 'march': 2, 'april': 3,
-                        'may': 4, 'june': 5, 'july': 6, 'august': 7,
-                        'september': 8, 'october': 9, 'november': 10, 'december': 11
-                    };
-                    
-                    const month = monthNames[monthName.toLowerCase()];
-                    const startDate = new Date(year, month, day, 22, 0); // Default to 10 PM
-                    
-                    // Extract city from title
-                    const city = this.extractCityFromText(title);
-                    
-                    const event = {
-                        title: `CHUNK ${title}`,
-                        description: '',
-                        startDate: startDate,
-                        endDate: null,
-                        bar: '',
-                        location: null,
-                        address: '',
-                        city: city,
-                        timezone: this.getTimezoneForCity(city, cityConfig),
-                        url: url,
-                        ticketUrl: url,
-                        cover: '',
-                        image: '',
-                        source: this.config.source,
-                        isBearEvent: true
-                    };
-                    
-                    // Apply source-specific metadata values from config
-                    if (parserConfig.metadata) {
-                        Object.keys(parserConfig.metadata).forEach(key => {
-                            const metaValue = parserConfig.metadata[key];
-                            
-                            // Apply value if it exists (source-specific overrides)
-                            if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
-                                event[key] = metaValue.value;
-                            }
-                        });
-                    }
-                    
-                    events.push(event);
-                    console.log(`🎉 Chunk: Found main page event: ${title} on ${monthName} ${day}, ${year}`);
-                }
-            }
-            
-        } catch (error) {
-            console.warn(`🎉 Chunk: Error parsing main page events: ${error}`);
-        }
-        
-        return events;
-    }
-
-    // Extract additional URLs for detail page processing
-    extractAdditionalUrls(html, sourceUrl, parserConfig) {
+    // Extract event detail URLs - the ONLY thing we need from the main page
+    extractEventDetailUrls(html) {
         const urls = new Set();
         
         try {
-            // Look for event detail page links
+            // Look for event detail page links - these are the ONLY URLs we care about
             const linkPatterns = [
                 /href="(\/event-details\/[^"]+)"/gi,
                 /href="(https?:\/\/[^"]*chunk-party\.com\/event-details\/[^"]+)"/gi
@@ -477,53 +214,22 @@ class ChunkParser {
                         url = `https://www.chunk-party.com${url}`;
                     }
                     
-                    // Validate URL
-                    if (this.isValidEventUrl(url)) {
+                    // Only add valid event detail URLs
+                    if (url.includes('chunk-party.com') && url.includes('/event-details/')) {
                         urls.add(url);
                     }
                 }
             }
             
-            console.log(`🎉 Chunk: Extracted ${urls.size} additional event detail URLs`);
-            
         } catch (error) {
-            console.warn(`🎉 Chunk: Error extracting additional URLs: ${error}`);
+            console.warn(`🎉 Chunk: Error extracting event detail URLs: ${error}`);
         }
         
-        // Limit to configured max (if specified)
-        const maxUrls = parserConfig.maxAdditionalUrls !== undefined ? parserConfig.maxAdditionalUrls : this.config.maxAdditionalUrls;
-        
-        if (maxUrls === null) {
-            // No limit
-            return Array.from(urls);
-        } else {
-            // Apply limit
-            return Array.from(urls).slice(0, maxUrls);
-        }
+        // Return all found URLs (no limit if maxAdditionalUrls is null)
+        return Array.from(urls);
     }
 
-    // Validate if URL is a valid event URL
-    isValidEventUrl(url) {
-        if (!url || typeof url !== 'string') return false;
-        
-        try {
-            // Must be a Chunk party domain
-            if (!url.includes('chunk-party.com')) return false;
-            
-            // Should be an event details page
-            if (!url.includes('/event-details/')) return false;
-            
-            // Avoid duplicate or invalid patterns
-            if (url.includes('#') || url.includes('?')) return false;
-            
-            return true;
-            
-        } catch (error) {
-            return false;
-        }
-    }
-
-    // Extract city from text
+    // Extract city from text - simple pattern matching
     extractCityFromText(text) {
         const cityPatterns = {
             'sf': /san francisco|sf|folsom/i,
@@ -558,7 +264,6 @@ class ChunkParser {
 
     // Get timezone for a city using centralized configuration
     getTimezoneForCity(city, cityConfig = null) {
-        // City config must be provided - no fallbacks
         if (!cityConfig || !cityConfig[city]) {
             console.log(`🎉 Chunk: No timezone configuration found for city: ${city}`);
             return null;
