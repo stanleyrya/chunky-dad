@@ -234,11 +234,11 @@ class CalendarCore {
         let parsed = true;
         
         if (line.startsWith('SUMMARY:')) {
-            currentEvent.title = line.substring(8).replace(/\\,/g, ',').replace(/\\;/g, ';');
+            currentEvent.title = line.substring(8).replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\:/g, ':');
         } else if (line.startsWith('DESCRIPTION:')) {
-            currentEvent.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';');
+            currentEvent.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\:/g, ':');
         } else if (line.startsWith('LOCATION:')) {
-            currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';');
+            currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\:/g, ':');
         } else if (line.startsWith('DTSTART')) {
             // Handle DTSTART with potential timezone information
             // Examples: DTSTART:20240315T190000Z or DTSTART;TZID=America/New_York:20240315T190000
