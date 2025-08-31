@@ -1257,6 +1257,17 @@ body.index-page main {
     50% { transform: scale(1.1); }
 }
 
+@keyframes slideInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .city-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1321,6 +1332,207 @@ body.index-page main {
     margin: 0;
     position: relative;
     overflow: hidden;
+}
+
+/* Today Events Carousel Section */
+.today-events-carousel {
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 100%);
+    padding: 2.5rem 0;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.today-events-carousel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.today-events-carousel .container h2 {
+    color: var(--text-inverse);
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    font-weight: 700;
+    font-size: 2.2rem;
+}
+
+/* Today Events Scroll Container */
+.today-events-scroll-container {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0;
+    position: relative;
+}
+
+/* Subtle scroll indicators for carousel */
+.today-events-scroll-container::before,
+.today-events-scroll-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.today-events-scroll-container::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(118, 75, 162, 0.3), transparent);
+}
+
+.today-events-scroll-container::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(102, 126, 234, 0.3), transparent);
+}
+
+.today-events-scroll-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Today Events Grid */
+.today-events-grid {
+    display: flex;
+    gap: 0.8rem;
+    padding: 0.5rem 0;
+    min-width: fit-content;
+}
+
+/* Today Event Cards - Smaller and Simpler */
+.today-event-card {
+    text-decoration: none;
+    color: var(--text-inverse);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.4rem;
+    min-width: 85px;
+    animation: slideInUp 0.6s ease-out;
+}
+
+.today-event-card .today-event-emoji-box {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    padding: 0.7rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.today-event-card .today-event-emoji {
+    font-size: 2rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+    line-height: 1;
+}
+
+.today-event-card .today-event-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    align-items: center;
+}
+
+.today-event-card .today-event-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.2px;
+    line-height: 1.1;
+    text-align: center;
+    max-width: 85px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.today-event-card .today-event-time {
+    font-size: 0.7rem;
+    font-weight: 500;
+    opacity: 0.9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.today-event-card .today-event-city {
+    font-size: 0.65rem;
+    font-weight: 400;
+    opacity: 0.8;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Today Event Card Hover Effects */
+.today-event-card:hover {
+    transform: translateY(-2px);
+}
+
+.today-event-card:hover .today-event-emoji-box {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Coming Soon State for Today Events */
+.today-event-card.coming-soon {
+    opacity: 0.8;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.today-event-card.coming-soon .today-event-emoji-box {
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.today-event-card.coming-soon:hover {
+    transform: translateY(-3px);
+    opacity: 1;
+}
+
+.today-event-card.coming-soon:hover .today-event-emoji-box {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Loading and Error States for Today Events */
+.today-event-card.loading .today-event-emoji {
+    animation: spin 2s linear infinite;
+}
+
+.today-event-card.error {
+    opacity: 0.7;
+}
+
+.today-event-card.error .today-event-emoji-box {
+    border-color: rgba(255, 107, 107, 0.4);
+    background: rgba(255, 107, 107, 0.1);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .bear-events-compact::before {
@@ -1471,6 +1683,16 @@ body.index-page main {
         margin-bottom: 1.5rem;
     }
     
+    .today-events-carousel {
+        padding: 2rem 0;
+        margin: 0;
+    }
+    
+    .today-events-carousel .container h2 {
+        font-size: 1.8rem;
+        margin-bottom: 1.5rem;
+    }
+    
     /* Shared Mobile Card Styles */
     .city-compact-card {
         min-width: 85px;
@@ -1528,9 +1750,42 @@ body.index-page main {
         font-size: 0.7rem;
     }
     
+    /* Today Event Cards Mobile Styles */
+    .today-event-card {
+        min-width: 75px;
+    }
+    
+    .today-event-card .today-event-emoji-box {
+        width: 55px;
+        height: 55px;
+        padding: 0.6rem;
+    }
+    
+    .today-event-card .today-event-emoji {
+        font-size: 1.8rem;
+    }
+    
+    .today-event-card .today-event-name {
+        font-size: 0.75rem;
+        max-width: 75px;
+    }
+    
+    .today-event-card .today-event-time {
+        font-size: 0.65rem;
+    }
+    
+    .today-event-card .today-event-city {
+        font-size: 0.6rem;
+    }
+    
     /* Grid Mobile Styles */
     .city-compact-grid,
     .event-compact-grid {
+        padding: 0.5rem 0;
+    }
+    
+    .today-events-grid {
+        gap: 0.6rem;
         padding: 0.5rem 0;
     }
     
@@ -4297,6 +4552,12 @@ footer {
         max-width: 900px;
         margin: 0 auto;
     }
+    
+    .today-events-grid {
+        justify-content: center;
+        max-width: 800px;
+        margin: 0 auto;
+    }
 }
 
 /* Desktop and large screens - ensure full information is always shown */
@@ -4363,7 +4624,8 @@ footer {
 
     /* Improved slider layout for desktop */
     .city-scroll-container,
-    .event-scroll-container {
+    .event-scroll-container,
+    .today-events-scroll-container {
         display: flex;
         justify-content: center;
         overflow-x: visible;
@@ -4374,6 +4636,13 @@ footer {
         justify-content: center;
         flex-wrap: wrap;
         max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .today-events-grid {
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: 1000px;
         margin: 0 auto;
     }
 
