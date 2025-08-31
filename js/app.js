@@ -109,11 +109,50 @@ class ChunkyDadApp {
     }
 
     checkIfCityPage() {
-        return window.location.pathname.includes('city.html');
+        try {
+            // City page if using legacy template OR if first path segment matches a city slug/alias
+            if (window.location.pathname.includes('city.html')) return true;
+            const slug = this.getCitySlugFromPath();
+            return !!slug;
+        } catch (e) {
+            logger.warn('SYSTEM', 'City page detection failed, defaulting to non-city page', { error: e?.message });
+            return false;
+        }
     }
 
     checkIfTestPage() {
         return window.location.pathname.includes('test-calendar-logging.html');
+    }
+
+    // Detect a city slug from the first path segment (supports aliases if defined in CITY_CONFIG)
+    getCitySlugFromPath() {
+        try {
+            const path = window.location.pathname || '/';
+            const parts = path.split('/').filter(Boolean);
+            // Handle project pages on GitHub Pages where repo name is first segment
+            // Try to find a segment that matches a city slug by scanning from the end backwards
+            const candidates = parts.length > 0 ? parts.slice(0) : [];
+            if (candidates.length === 0) return null;
+            // Prefer the first segment after potential repo segment; check both first and second
+            const possibleSlugs = [];
+            if (candidates.length >= 1) possibleSlugs.push(candidates[0].toLowerCase());
+            if (candidates.length >= 2 && candidates[1].toLowerCase() !== 'index.html') {
+                possibleSlugs.push(candidates[1].toLowerCase());
+            }
+            const cityConfig = (typeof window !== 'undefined' && window.CITY_CONFIG) ? window.CITY_CONFIG : {};
+            for (const slug of possibleSlugs) {
+                if (cityConfig && cityConfig[slug]) return slug;
+                // Check aliases if present
+                for (const [key, cfg] of Object.entries(cityConfig || {})) {
+                    if (cfg && Array.isArray(cfg.aliases)) {
+                        if (cfg.aliases.map(a => String(a).toLowerCase()).includes(slug)) return key;
+                    }
+                }
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
     }
 
     checkIfDirectoryPage() {
