@@ -1158,9 +1158,12 @@ class SharedCore {
         Object.keys(fields).forEach(key => {
             const value = fields[key];
             if (value !== undefined && value !== null && value !== '') {
-                // Escape colons in values to prevent parsing issues
-                const escapedValue = this.escapeText(value);
-                lines.push(`${key}: ${escapedValue}`);
+                // Escape selectively: do not escape URL-like fields
+                const valueString = String(value);
+                const valueForNotes = this.isUrlLikeField(key, valueString)
+                    ? valueString
+                    : this.escapeText(valueString);
+                lines.push(`${key}: ${valueForNotes}`);
             }
         });
         
@@ -1810,14 +1813,33 @@ class SharedCore {
                 event[fieldName] !== '') {
                 // Description field is now saved and read literally - no normalization
                 const value = event[fieldName];
-                // Escape colons in values to prevent parsing issues
-                const escapedValue = this.escapeText(value);
-                notes.push(`${fieldName}: ${escapedValue}`);
+                const valueString = String(value);
+                // Escape selectively: do not escape URL-like fields
+                const valueForNotes = this.isUrlLikeField(fieldName, valueString)
+                    ? valueString
+                    : this.escapeText(valueString);
+                notes.push(`${fieldName}: ${valueForNotes}`);
                 savedFieldCount++;
             }
         });
         
         return notes.join('\n');
+    }
+
+    // Determine if a field/value should be treated as URL-like (no colon escaping)
+    isUrlLikeField(fieldName, valueString) {
+        // Known URL-bearing fields
+        const urlFields = new Set([
+            'url', 'ticketUrl', 'gmaps', 'website', 'facebook', 'instagram', 'twitter', 'image'
+        ]);
+        if (urlFields.has(fieldName)) return true;
+        if (!valueString || typeof valueString !== 'string') return false;
+        const lower = valueString.trim().toLowerCase();
+        return lower.startsWith('http://') ||
+               lower.startsWith('https://') ||
+               lower.startsWith('mailto:') ||
+               lower.startsWith('tel:') ||
+               lower.startsWith('sms:');
     }
     
     // Get event date ranges with optional expansion
