@@ -1,4 +1,4 @@
-name: Generate City Pages
+name: Generate City Pages and Sitemap
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - 'city.html'
       - 'js/city-config.js'
       - 'tools/generate-city-pages.js'
+      - 'tools/generate-sitemap.js'
       - '.github/workflows/generate-city-pages.yml'
     paths-ignore:
       - 'data/calendars/**'
@@ -26,13 +27,15 @@ jobs:
           node-version: '18'
       - name: Generate city pages
         run: node tools/generate-city-pages.js
+      - name: Generate sitemap
+        run: node tools/generate-sitemap.js
       - name: Commit changes if any
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "chore: regenerate city pages"
+            git commit -m "chore: regenerate city pages and sitemap"
             git push
           else
             echo "No changes to commit."
