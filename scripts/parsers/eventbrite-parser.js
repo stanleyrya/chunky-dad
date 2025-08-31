@@ -214,10 +214,11 @@ class EventbriteParser {
                         console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data (organizer page)`);
                         
                         futureEvents.forEach(eventData => {
-                            if (eventData.url && eventData.name && (eventData.name.text || typeof eventData.name === 'string')) {
+                            const hasUrlField = !!(eventData.url || eventData.vanity_url);
+                            if (hasUrlField && eventData.name && (eventData.name.text || typeof eventData.name === 'string')) {
                                 // Double-check that it's actually a future event
                                 if (this.isFutureEvent(eventData)) {
-                                    const event = this.parseJsonEvent(eventData, null, parserConfig, serverData, cityConfig);
+                                    const event = this.parseJsonEvent(eventData, htmlData.url, parserConfig, serverData, cityConfig);
                                     if (event) {
                                         events.push(event);
                                         console.log(`🎫 Eventbrite: Parsed future event: ${event.title} (${event.startDate || event.date})`);
@@ -261,7 +262,7 @@ class EventbriteParser {
                         console.log(`🎫 Eventbrite: Detail page validation - hasFields: ${hasRequiredFields}, isFuture: ${isFuture}, name: "${adaptedEventData.name}"`);
                         
                         if (hasRequiredFields && isFuture) {
-                            const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData, cityConfig);
+                            const event = this.parseJsonEvent(adaptedEventData, htmlData.url, parserConfig, serverData, cityConfig);
                             if (event) {
                                 events.push(event);
                                 console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
@@ -376,7 +377,19 @@ class EventbriteParser {
             }
             
             console.log(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
-            const url = eventData.url || eventData.vanity_url || '';
+            // Ensure URL is absolute; Eventbrite often provides relative paths
+            const baseUrl = htmlContext || 'https://www.eventbrite.com';
+            let url = eventData.url || eventData.vanity_url || '';
+            if (url) {
+                if (url.startsWith('/')) {
+                    url = this.normalizeUrl(url, baseUrl);
+                } else if (!url.startsWith('http')) {
+                    // Handle bare relative like "e/slug" without leading slash
+                    const trimmedBase = baseUrl.replace(/\/$/, '');
+                    const trimmedPath = url.replace(/^\/*/, '');
+                    url = `${trimmedBase}/${trimmedPath}`;
+                }
+            }
             
             // Enhanced venue processing - get both name and address from multiple sources
             let venue = null;
@@ -667,8 +680,9 @@ class EventbriteParser {
                         console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data for URL extraction`);
                         
                         futureEvents.forEach(eventData => {
-                            if (eventData.url) {
-                                let eventUrl = eventData.url;
+                            const rawUrl = eventData.url || eventData.vanity_url;
+                            if (rawUrl) {
+                                let eventUrl = rawUrl;
                                 
                                 // Ensure it's a full URL
                                 if (!eventUrl.startsWith('http')) {
