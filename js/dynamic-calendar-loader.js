@@ -1020,7 +1020,16 @@ class DynamicCalendarLoader extends CalendarCore {
         if (this.currentView === 'week') {
             this.currentDate.setDate(this.currentDate.getDate() + (delta * 7));
         } else {
+            // Prevent month skip when current day exceeds next month's length (e.g., Jan 31 -> Mar 3)
+            const previousDay = this.currentDate.getDate();
+            this.currentDate.setDate(1);
             this.currentDate.setMonth(this.currentDate.getMonth() + delta);
+            const lastDayOfTargetMonth = new Date(
+                this.currentDate.getFullYear(),
+                this.currentDate.getMonth() + 1,
+                0
+            ).getDate();
+            this.currentDate.setDate(Math.min(previousDay, lastDayOfTargetMonth));
         }
         
         // Only update display immediately if not part of a swipe animation
