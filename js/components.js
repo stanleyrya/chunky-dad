@@ -45,11 +45,12 @@ class ComponentsManager {
             return;
         }
 
+        const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
         const modalHTML = `
             <div id="bear-intel-modal" class="bear-intel-modal" style="display: none;">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3><img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
+                        <h3><img src="${logoPath}" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
                         <button class="modal-close" id="modal-close-btn">&times;</button>
                     </div>
                     <div class="modal-body">
@@ -65,7 +66,7 @@ class ComponentsManager {
                                 <option value="other">Other Bear Intel</option>
                             </select>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
-                            <button type="submit">Send Bear Intel <img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="button-icon"></button>
+                            <button type="submit">Send Bear Intel <img src="${logoPath}" alt="chunky.dad" class="button-icon"></button>
                         </form>
                     </div>
                 </div>
@@ -79,11 +80,12 @@ class ComponentsManager {
 
     // Method to get the modal HTML for pages that need it before JS loads
     static getModalHTML() {
+        const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
         return `
             <div id="bear-intel-modal" class="bear-intel-modal" style="display: none;">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3><img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
+                        <h3><img src="${logoPath}" alt="chunky.dad" class="modal-icon"> Share Bear Intel</h3>
                         <button class="modal-close" id="modal-close-btn">&times;</button>
                     </div>
                     <div class="modal-body">
@@ -99,7 +101,7 @@ class ComponentsManager {
                                 <option value="other">Other Bear Intel</option>
                             </select>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
-                            <button type="submit">Send Bear Intel <img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="button-icon"></button>
+                            <button type="submit">Send Bear Intel <img src="${logoPath}" alt="chunky.dad" class="button-icon"></button>
                         </form>
                     </div>
                 </div>

@@ -246,9 +246,10 @@ class BearDirectory {
             displayContent = this.createInstagramContent(item);
         } else {
             // No specific display content - show placeholder
+            const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
             displayContent = `
                 <div class="tile-placeholder">
-                    <div class="bear-icon"><img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="bear-directory-icon"></div>
+                    <div class="bear-icon"><img src="${logoPath}" alt="chunky.dad" class="bear-directory-icon"></div>
                 </div>`;
         }
         
@@ -293,7 +294,7 @@ class BearDirectory {
                 </blockquote>
             </div>` :
             `<div class="tile-placeholder">
-                <div class="bear-icon"><img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="bear-directory-icon"></div>
+                <div class="bear-icon"><img src="${window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png'}" alt="chunky.dad" class="bear-directory-icon"></div>
             </div>`;
             
         return instagramContent;
@@ -308,7 +309,8 @@ class BearDirectory {
             'shop': '🛍️',
             'service': '💼'
         };
-        return icons[type.toLowerCase()] || '<img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="bear-directory-icon">';
+        const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
+        return icons[type.toLowerCase()] || `<img src="${logoPath}" alt="chunky.dad" class="bear-directory-icon">`;
     }
     
     updateMap() {
