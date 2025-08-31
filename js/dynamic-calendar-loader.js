@@ -1932,11 +1932,12 @@ class DynamicCalendarLoader extends CalendarCore {
             const markers = []; // Store markers for fit all function
             
             // Create custom marker icon
+            const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
             const customIcon = L.divIcon({
                 className: 'custom-marker',
                 html: `
                     <div class="marker-pin">
-                        <div class="marker-icon"><img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="map-marker-icon"></div>
+                        <div class="marker-icon"><img src="${logoPath}" alt="chunky.dad" class="map-marker-icon"></div>
                     </div>
                 `,
                 iconSize: [44, 56],

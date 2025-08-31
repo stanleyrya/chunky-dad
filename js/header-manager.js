@@ -41,17 +41,18 @@ class HeaderManager {
             return;
         }
 
-        let title = '<img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad';
+        const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
+        let title = `<img src="${logoPath}" alt="chunky.dad logo" class="logo-img"> chunky.dad`;
         
         if (this.isCityPage()) {
             const cityKey = this.getCityFromURL();
             const cityConfig = getCityConfig(cityKey);
             if (cityConfig) {
-                title = `<img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}`;
+                title = `<img src="${logoPath}" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}`;
                 this.currentCity = cityConfig;
             }
         } else if (this.isTestPage) {
-            title = '<img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad [DEBUG]';
+            title = `<img src="${logoPath}" alt="chunky.dad logo" class="logo-img"> chunky.dad [DEBUG]`;
         }
 
         // Update the title
