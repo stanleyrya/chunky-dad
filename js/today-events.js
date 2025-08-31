@@ -248,25 +248,7 @@ class TodayEventsAggregator {
   }
 }
 
-// Auto-init on main page once DOM is ready
-(function () {
-  const isMainPage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
-  if (!isMainPage) return;
-  const init = () => {
-    try {
-      const aggregator = new TodayEventsAggregator();
-      window.todayEventsAggregator = aggregator;
-      aggregator.init();
-    } catch (e) {
-      logger.componentError('CALENDAR', 'Failed to initialize TodayEventsAggregator', e);
-    }
-  };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+// Note: Initialization is now handled by app.js
 
 // Export for tests
 if (typeof module !== 'undefined' && module.exports) {
