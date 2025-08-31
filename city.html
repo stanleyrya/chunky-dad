@@ -119,6 +119,70 @@
         </div>
     </footer>
 
+    <!-- URL Normalization Script - Must run before other scripts -->
+    <script>
+        // URL Normalization: Redirect city.html?city=X to /X/ format
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cityParam = urlParams.get('city');
+            
+            if (cityParam) {
+                // Validate that the city exists in our configuration
+                // We'll use a simple list since CITY_CONFIG isn't loaded yet
+                const validCities = [
+                    'new-york', 'seattle', 'los-angeles', 'toronto', 'london', 
+                    'chicago', 'berlin', 'palm-springs', 'denver', 'vegas', 
+                    'atlanta', 'new-orleans', 'sf', 'portland', 'sitges'
+                ];
+                
+                if (validCities.includes(cityParam.toLowerCase())) {
+                    // Log the redirect for analytics before redirecting
+                    if (window.gtag) {
+                        gtag('event', 'url_normalization', {
+                            'event_category': 'navigation',
+                            'event_label': 'legacy_city_redirect',
+                            'custom_parameter_1': cityParam,
+                            'custom_parameter_2': window.location.href
+                        });
+                    }
+                    
+                    // Redirect to the proper city directory URL
+                    const normalizedUrl = `/${cityParam.toLowerCase()}/`;
+                    
+                    // Use replace to avoid adding to browser history
+                    // This ensures the back button works correctly
+                    window.location.replace(normalizedUrl);
+                    return; // Stop execution since we're redirecting
+                } else {
+                    // Invalid city parameter - log and redirect to home
+                    if (window.gtag) {
+                        gtag('event', 'url_normalization', {
+                            'event_category': 'navigation',
+                            'event_label': 'invalid_city_redirect', 
+                            'custom_parameter_1': cityParam,
+                            'custom_parameter_2': window.location.href
+                        });
+                    }
+                    
+                    window.location.replace('/');
+                    return;
+                }
+            }
+            
+            // If no city parameter, redirect to home page
+            if (window.gtag) {
+                gtag('event', 'url_normalization', {
+                    'event_category': 'navigation', 
+                    'event_label': 'city_template_no_param_redirect',
+                    'custom_parameter_1': 'no_city_specified',
+                    'custom_parameter_2': window.location.href
+                });
+            }
+            
+            window.location.replace('/');
+        })();
+    </script>
+
     <!-- Scripts -->
     <script src="js/logger.js"></script>
 <script src="js/debug-overlay.js"></script>
