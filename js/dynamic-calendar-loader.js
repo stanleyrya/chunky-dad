@@ -378,16 +378,46 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Get city from URL parameters
     getCityFromURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const cityParam = urlParams.get('city');
-        
-        // If no city parameter, try to get from hash or default to new-york
-        if (!cityParam) {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cityParam = urlParams.get('city');
+            if (cityParam) return cityParam;
+
+            // Fallback: detect from first path segment (supports aliases)
+            const slug = this.getCitySlugFromPath();
+            if (slug) return slug;
+
+            // Legacy: hash or default
             const hash = window.location.hash.replace('#', '');
             return hash || 'new-york';
+        } catch (e) {
+            logger.warn('CITY', 'Failed to resolve city from URL, defaulting to new-york', { error: e?.message });
+            return 'new-york';
         }
-        
-        return cityParam;
+    }
+
+    // Helper: detect slug from first path segment, similar to app-level logic
+    getCitySlugFromPath() {
+        try {
+            const path = window.location.pathname || '/';
+            const parts = path.split('/').filter(Boolean);
+            if (parts.length === 0) return null;
+            const candidates = [];
+            if (parts.length >= 1) candidates.push(parts[0].toLowerCase());
+            if (parts.length >= 2 && parts[1].toLowerCase() !== 'index.html') candidates.push(parts[1].toLowerCase());
+            const cityConfig = (typeof window !== 'undefined' && window.CITY_CONFIG) ? window.CITY_CONFIG : {};
+            for (const slug of candidates) {
+                if (cityConfig && cityConfig[slug]) return slug;
+                for (const [key, cfg] of Object.entries(cityConfig || {})) {
+                    if (cfg && Array.isArray(cfg.aliases)) {
+                        if (cfg.aliases.map(a => String(a).toLowerCase()).includes(slug)) return key;
+                    }
+                }
+            }
+            return null;
+        } catch (_) {
+            return null;
+        }
     }
 
     // Set up city selector and populate with available cities
