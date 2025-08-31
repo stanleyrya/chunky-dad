@@ -342,6 +342,7 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
             const failedEvents = [];
             const actionCounts = { merge: [], update: [], skip: [], create: [] };
+            let processedCount = 0;
             
             for (const event of analyzedEvents) {
                 try {
@@ -434,7 +435,7 @@ class ScriptableAdapter {
                 if (actionCounts.update.length > 0) actionSummary.push(`${actionCounts.update.length} updated`);
                 if (actionCounts.skip.length > 0) actionSummary.push(`${actionCounts.skip.length} skipped`);
                 
-                console.log(`📱 Scriptable: ✓ Processed ${totalActions} events: ${actionSummary.join(', ')}`);
+                console.log(`📱 Scriptable: ✓ Processed ${processedCount} events: ${actionSummary.join(', ')}`);
             }
             
             if (failedEvents.length > 0) {
