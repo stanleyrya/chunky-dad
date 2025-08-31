@@ -66,8 +66,12 @@ class CompactCardRenderer {
 
     createCard(item) {
         const link = document.createElement('a');
-        link.href = `${this.type}.html?${this.type}=${item.key}`;
         link.className = `${this.type}-compact-card`;
+        if (this.type === 'city') {
+            link.href = `${item.key}/`;
+        } else {
+            link.href = `${this.type}.html?${this.type}=${item.key}`;
+        }
 
         // Create emoji box
         const emojiBox = document.createElement('div');
