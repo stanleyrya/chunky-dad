@@ -99,6 +99,38 @@ const scraperConfig = {
         shortName: { value: "Bear-rac-uda" },
         instagram: { value: "https://www.instagram.com/bearracuda" }
       }
+    },
+    {
+      name: "CHUNK",
+      enabled: true,
+      urls: ["https://www.chunk-party.com"],
+      alwaysBear: true,        // Chunk parties are always bear events
+      urlDiscoveryDepth: 1,    // Depth 1 to find detail pages from main page
+      maxAdditionalUrls: null, // No limit on additional URLs discovered
+      dryRun: false,           // Override global dryRun if needed
+      
+      // Field priorities for merging data from different sources
+      fieldPriorities: {
+        title: { priority: ["chunk", "static"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["chunk"], merge: "clobber" },
+        bar: { priority: ["chunk"], merge: "clobber" },
+        address: { priority: ["chunk"], merge: "clobber" },
+        startDate: { priority: ["chunk"], merge: "clobber" },
+        endDate: { priority: ["chunk"], merge: "clobber" },
+        url: { priority: ["chunk"], merge: "clobber" },
+        gmaps: { priority: ["chunk"], merge: "clobber" },
+        image: { priority: ["chunk"], merge: "clobber" },
+        cover: { priority: ["chunk"], merge: "clobber" },
+        ticketUrl: { priority: ["chunk"], merge: "clobber" }
+      },
+      
+      // Static metadata to add to all Chunk events
+      metadata: {
+        shortName: { value: "CHUNK" },
+        instagram: { value: "https://www.instagram.com/chunkparty" }
+      }
     }
   ],
   // Centralized city configuration
