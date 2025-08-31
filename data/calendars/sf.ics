@@ -8,21 +8,21 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250927T040000Z
 DTEND:20250927T100000Z
-DTSTAMP:20250830T181727Z
+DTSTAMP:20250831T173112Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
 DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
  isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
  m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
- 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
- sm-friday/\ncover: $57.79 - $99.99 (as of 8/30)\nimage: https://bearracuda.
- com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.
- com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearra
- cuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagr
- am: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/map
- s/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nke
- y: bearracuda-2025-09-27-sf
-LAST-MODIFIED:20250830T170546Z
+ 94103\ntimezone: America/Los_Angeles\nurl: https\\://bearracuda.com/events/
+ flsm-friday/\ncover: $57.79 - $99.99 (as of 8/31)\nimage: https\\://bearrac
+ uda.com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https\\://www.fac
+ ebook.com/events/564754916670823/\nticketUrl: https\\://www.eventbrite.com/
+ e/bearracuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\
+ ninstagram: https\\://www.instagram.com/bearracuda\ngmaps: https\\://www.go
+ ogle.com/maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=
+ 85922583\nkey: bearracuda-2025-09-27-sf
+LAST-MODIFIED:20250831T154124Z
 LOCATION:37.7689137\, -122.4192514
 SEQUENCE:2
 STATUS:CONFIRMED

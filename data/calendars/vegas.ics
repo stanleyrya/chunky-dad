@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20250830T181727Z
+DTSTAMP:20250831T173112Z
 UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
 CREATED:20250823T205551Z
 DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
@@ -37,24 +37,25 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251102T040000Z
 DTEND:20251102T110000Z
-DTSTAMP:20250830T181727Z
+DTSTAMP:20250831T173112Z
 UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
 CREATED:20250830T012218Z
 DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
  HALLOWOOF  LAS VEGAS. FULL DETAILS COMING SOON\nbar: Dust Las Vegas\naddres
  s: 855 East Twain Avenue\, Las Vegas\, NV 89169\ntimezone: America/Los_Ange
- les\nurl: https://www.eventbrite.com/e/megawoof-10-year-us-anniversary-inte
- rnational-hallowoof-las-vegas-tickets-1636556246789\nticketUrl: https://www
- .eventbrite.com/e/megawoof-10-year-us-anniversary-international-hallowoof-l
- as-vegas-tickets-1636556246789\ncover: $14.73 - $24.20 (as of 8/30)\nimage:
-  https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1106846473%2F
- 185013722403%2F1%2Foriginal.20250827-183354?crop=focalpoint&fit=crop&h=230&
- w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.562374813779&fp-y=0.39299
- 6108949&s=db221aa70153d817d65e10a1d00d1e3e\nshortName: MEGA-WOOF\ninstagram
- : https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com
- /maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6
- N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-11-02|dust las vegas|eventbrite
-LAST-MODIFIED:20250830T170549Z
+ les\nurl: https\\://www.eventbrite.com/e/megawoof-10-year-us-anniversary-in
+ ternational-hallowoof-las-vegas-tickets-1636556246789\nticketUrl: https\\:/
+ /www.eventbrite.com/e/megawoof-10-year-us-anniversary-international-hallowo
+ of-las-vegas-tickets-1636556246789\ncover: $14.73 - $24.20 (as of 8/31)\nim
+ age: https\\://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1106846
+ 473%2F185013722403%2F1%2Foriginal.20250827-183354?crop=focalpoint&fit=crop&
+ h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.562374813779&fp-y=0
+ .392996108949&s=db221aa70153d817d65e10a1d00d1e3e\nshortName: MEGA-WOOF\nins
+ tagram: https\\://www.instagram.com/megawoof_america\ngmaps: https\\://www.
+ google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id
+ =ChIJxfTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-11-02|dust las vegas|event
+ brite
+LAST-MODIFIED:20250831T154125Z
 LOCATION:36.1214368\, -115.144945
 SEQUENCE:0
 STATUS:CONFIRMED
