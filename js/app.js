@@ -90,6 +90,7 @@ class ChunkyDadApp {
         this.bearEventRenderer = null;
         this.dadJokesManager = null;
         this.todayEventsAggregator = null;
+        this.urlRouter = null;
         
         logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
@@ -109,7 +110,14 @@ class ChunkyDadApp {
     }
 
     checkIfCityPage() {
-        return window.location.pathname.includes('city.html');
+        // Check for traditional city.html OR friendly city URLs
+        if (window.location.pathname.includes('city.html')) {
+            return true;
+        }
+        
+        // Check if this is a friendly city URL
+        const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+        return path && window.CITY_CONFIG && window.CITY_CONFIG[path];
     }
 
     checkIfTestPage() {
@@ -148,6 +156,12 @@ class ChunkyDadApp {
 
     initializeCoreModules() {
         logger.info('SYSTEM', 'Initializing core modules');
+        
+        // Initialize URL router first (handles friendly URLs)
+        if (window.URLRouter) {
+            this.urlRouter = new URLRouter();
+            window.urlRouter = this.urlRouter;
+        }
         
         // Components manager injects common UI elements
         this.componentsManager = new ComponentsManager();

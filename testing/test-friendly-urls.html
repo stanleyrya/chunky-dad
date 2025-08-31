@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friendly URLs Test - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .test-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .test-link {
+            display: block;
+            padding: 1rem;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        .test-link:hover {
+            background: var(--primary-dark);
+        }
+        .result {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Friendly URLs Test</h1>
+        <p>Testing the new friendly URL system for city pages.</p>
+        
+        <div class="test-section">
+            <h2>📍 Friendly City URLs</h2>
+            <p>Click these links to test the new friendly URL format:</p>
+            <div class="test-links" id="friendly-links">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔗 Traditional URLs (for comparison)</h2>
+            <p>These use the old URL parameter format:</p>
+            <div class="test-links" id="traditional-links">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Current Page Info</h2>
+            <div class="result" id="page-info">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧭 Router Status</h2>
+            <div class="result" id="router-status">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Load necessary scripts -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/city-config.js"></script>
+    <script src="../js/url-router.js"></script>
+    
+    <script>
+        // Test script
+        document.addEventListener('DOMContentLoaded', () => {
+            logger.componentInit('TEST', 'Friendly URLs test page initializing');
+            
+            // Populate friendly links
+            const friendlyContainer = document.getElementById('friendly-links');
+            const traditionalContainer = document.getElementById('traditional-links');
+            const pageInfoContainer = document.getElementById('page-info');
+            const routerStatusContainer = document.getElementById('router-status');
+            
+            if (window.CITY_CONFIG) {
+                const cities = Object.keys(window.CITY_CONFIG)
+                    .filter(key => window.CITY_CONFIG[key].visible !== false)
+                    .slice(0, 6); // Show first 6 cities for testing
+                
+                // Friendly URLs
+                friendlyContainer.innerHTML = cities.map(cityKey => {
+                    const config = window.CITY_CONFIG[cityKey];
+                    return `<a href="../${cityKey}.html" class="test-link" target="_blank">
+                        ${config.emoji} ${config.name}<br>
+                        <small>/${cityKey}</small>
+                    </a>`;
+                }).join('');
+                
+                // Traditional URLs
+                traditionalContainer.innerHTML = cities.map(cityKey => {
+                    const config = window.CITY_CONFIG[cityKey];
+                    return `<a href="../city.html?city=${cityKey}" class="test-link" target="_blank">
+                        ${config.emoji} ${config.name}<br>
+                        <small>/city.html?city=${cityKey}</small>
+                    </a>`;
+                }).join('');
+            }
+            
+            // Page info
+            pageInfoContainer.innerHTML = `
+                <strong>Current URL:</strong> ${window.location.href}<br>
+                <strong>Pathname:</strong> ${window.location.pathname}<br>
+                <strong>Search:</strong> ${window.location.search}<br>
+                <strong>Hash:</strong> ${window.location.hash}<br>
+                <strong>User Agent:</strong> ${navigator.userAgent.substring(0, 80)}...
+            `;
+            
+            // Router status
+            if (window.URLRouter) {
+                const router = new URLRouter();
+                const currentCity = router.getCurrentCity();
+                
+                routerStatusContainer.innerHTML = `
+                    <strong>Router Available:</strong> ✅ Yes<br>
+                    <strong>Current City:</strong> ${currentCity || 'None detected'}<br>
+                    <strong>Is Friendly URL:</strong> ${router.isFriendlyUrl() ? '✅ Yes' : '❌ No'}<br>
+                    <strong>Available Cities:</strong> ${Object.keys(window.CITY_CONFIG).length}
+                `;
+            } else {
+                routerStatusContainer.innerHTML = `
+                    <strong>Router Available:</strong> ❌ No<br>
+                    <strong>Status:</strong> URLRouter class not loaded
+                `;
+            }
+            
+            logger.componentLoad('TEST', 'Friendly URLs test page loaded');
+        });
+    </script>
+</body>
+</html>

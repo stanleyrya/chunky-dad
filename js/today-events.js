@@ -166,7 +166,7 @@ class TodayEventsAggregator {
 
   createEventCard(ev) {
     const link = document.createElement('a');
-    link.href = `city.html?city=${ev.cityKey}`;
+    link.href = `/${ev.cityKey}`;
     link.className = 'event-compact-card';
 
     const emojiBox = document.createElement('div');

@@ -66,7 +66,14 @@ class CompactCardRenderer {
 
     createCard(item) {
         const link = document.createElement('a');
-        link.href = `${this.type}.html?${this.type}=${item.key}`;
+        
+        // Use friendly URLs for cities, traditional URLs for events
+        if (this.type === 'city') {
+            link.href = `/${item.key}`;
+        } else {
+            link.href = `${this.type}.html?${this.type}=${item.key}`;
+        }
+        
         link.className = `${this.type}-compact-card`;
 
         // Create emoji box
