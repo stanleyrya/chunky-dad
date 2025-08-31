@@ -23,7 +23,7 @@ class ChunkParser {
     constructor(config = {}) {
         this.config = {
             source: 'chunk',
-            maxAdditionalUrls: 20,
+            maxAdditionalUrls: null, // No limit by default
             ...config
         };
         
@@ -490,9 +490,16 @@ class ChunkParser {
             console.warn(`🎉 Chunk: Error extracting additional URLs: ${error}`);
         }
         
-        // Limit to configured max
-        const maxUrls = parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls;
-        return Array.from(urls).slice(0, maxUrls);
+        // Limit to configured max (if specified)
+        const maxUrls = parserConfig.maxAdditionalUrls !== undefined ? parserConfig.maxAdditionalUrls : this.config.maxAdditionalUrls;
+        
+        if (maxUrls === null) {
+            // No limit
+            return Array.from(urls);
+        } else {
+            // Apply limit
+            return Array.from(urls).slice(0, maxUrls);
+        }
     }
 
     // Validate if URL is a valid event URL
