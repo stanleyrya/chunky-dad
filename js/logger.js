@@ -1,56 +1,6 @@
 // Centralized Logging System for chunky.dad
 // Provides consistent, useful debugging information for users and developers
 
-// Path utility for resolving asset paths based on current page location
-class PathUtils {
-    constructor() {
-        this.isSubdirectory = this.detectSubdirectory();
-        this.pathPrefix = this.isSubdirectory ? '../' : '';
-    }
-    
-    // Detect if we're in a city subdirectory
-    detectSubdirectory() {
-        const pathname = window.location.pathname;
-        // Check if we're in a city directory (not root, not testing, not tools)
-        const pathSegments = pathname.split('/').filter(Boolean);
-        
-        // If we have path segments and the first one isn't a known root file
-        if (pathSegments.length > 0) {
-            const firstSegment = pathSegments[0].toLowerCase();
-            // Skip known root files and testing directories
-            const rootFiles = ['index.html', 'city.html', 'bear-directory.html', 'test', 'testing', 'tools', 'scripts'];
-            const isRootFile = rootFiles.some(file => firstSegment.includes(file));
-            
-            // If not a root file and we have segments, we're likely in a subdirectory
-            if (!isRootFile && pathSegments.length >= 1) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    // Resolve asset path based on current location
-    resolvePath(assetPath) {
-        // Don't modify absolute URLs or data URLs
-        if (assetPath.startsWith('http') || assetPath.startsWith('//') || assetPath.startsWith('data:')) {
-            return assetPath;
-        }
-        
-        // Don't modify paths that already have ../ prefix
-        if (assetPath.startsWith('../')) {
-            return assetPath;
-        }
-        
-        return this.pathPrefix + assetPath;
-    }
-    
-    // Convenience method for the common logo image
-    getLogoPath() {
-        return this.resolvePath('Rising_Star_Ryan_Head_Compressed.png');
-    }
-}
-
 class ChunkyLogger {
     constructor() {
         this.debugMode = true; // Set to false in production
@@ -97,9 +47,6 @@ class ChunkyLogger {
                 readyState: document.readyState
             });
         });
-        
-        // Add path resolution utility
-        this.pathUtils = new PathUtils();
         
         // Monitor DOM ready
         if (document.readyState === 'loading') {
@@ -268,12 +215,10 @@ class ChunkyLogger {
 
 // Create global logger instance
 const logger = new ChunkyLogger();
-const pathUtils = new PathUtils();
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { logger, pathUtils };
+    module.exports = logger;
 } else {
     window.logger = logger;
-    window.pathUtils = pathUtils;
 }

@@ -1,3 +1,57 @@
+// Path utility for resolving asset paths based on current page location
+class PathUtils {
+    constructor() {
+        this.isSubdirectory = this.detectSubdirectory();
+        this.pathPrefix = this.isSubdirectory ? '../' : '';
+    }
+    
+    // Detect if we're in a city subdirectory
+    detectSubdirectory() {
+        const pathname = window.location.pathname;
+        // Check if we're in a city directory (not root, not testing, not tools)
+        const pathSegments = pathname.split('/').filter(Boolean);
+        
+        // If we have path segments and the first one isn't a known root file
+        if (pathSegments.length > 0) {
+            const firstSegment = pathSegments[0].toLowerCase();
+            // Skip known root files and testing directories
+            const rootFiles = ['index.html', 'city.html', 'bear-directory.html', 'test', 'testing', 'tools', 'scripts'];
+            const isRootFile = rootFiles.some(file => firstSegment.includes(file));
+            
+            // If not a root file and we have segments, we're likely in a subdirectory
+            if (!isRootFile && pathSegments.length >= 1) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    // Resolve asset path based on current location
+    resolvePath(assetPath) {
+        // Don't modify absolute URLs or data URLs
+        if (assetPath.startsWith('http') || assetPath.startsWith('//') || assetPath.startsWith('data:')) {
+            return assetPath;
+        }
+        
+        // Don't modify paths that already have ../ prefix
+        if (assetPath.startsWith('../')) {
+            return assetPath;
+        }
+        
+        return this.pathPrefix + assetPath;
+    }
+    
+    // Convenience method for the common logo image
+    getLogoPath() {
+        return this.resolvePath('Rising_Star_Ryan_Head_Compressed.png');
+    }
+}
+
+// Initialize PathUtils early so it's available to all modules
+const pathUtils = new PathUtils();
+window.pathUtils = pathUtils;
+
 // Global error handlers
 window.addEventListener('unhandledrejection', function(event) {
     // Enhanced logging for promise rejections with better context
@@ -77,6 +131,9 @@ class ChunkyDadApp {
         this.isCityPage = this.checkIfCityPage();
         this.isTestPage = this.checkIfTestPage();
         this.isDirectoryPage = this.checkIfDirectoryPage();
+        
+        // Initialize path utilities
+        this.pathUtils = window.pathUtils;
         
         // Initialize modules
         this.componentsManager = null;
@@ -367,6 +424,10 @@ class ChunkyDadApp {
 
     getTodayEventsAggregator() {
         return this.todayEventsAggregator;
+    }
+
+    getPathUtils() {
+        return this.pathUtils;
     }
 
     // Global function for scrolling (backward compatibility)
