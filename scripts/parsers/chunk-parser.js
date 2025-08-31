@@ -118,14 +118,10 @@ class ChunkParser {
             // Extract venue information
             let venue = '';
             let address = '';
-            let city = null;
             
             if (jsonData.location) {
                 venue = jsonData.location.name || '';
                 address = jsonData.location.address || '';
-                
-                // Extract city from venue name or address
-                city = this.extractCityFromText(`${venue} ${address} ${title}`);
             }
             
             // Extract price information from offers
@@ -161,8 +157,8 @@ class ChunkParser {
                 bar: venue,
                 location: null, // No coordinates in JSON-LD
                 address: address,
-                city: city,
-                timezone: this.getTimezoneForCity(city, cityConfig),
+                city: null, // Let SharedCore detect city from address/venue
+                timezone: null, // Let SharedCore assign timezone based on detected city
                 url: url,
                 ticketUrl: ticketUrl,
                 cover: price,
@@ -229,48 +225,7 @@ class ChunkParser {
         return Array.from(urls);
     }
 
-    // Extract city from text - simple pattern matching
-    extractCityFromText(text) {
-        const cityPatterns = {
-            'sf': /san francisco|sf|folsom/i,
-            'chicago': /chicago/i,
-            'portland': /portland/i,
-            'nyc': /new york|nyc|manhattan|brooklyn/i,
-            'la': /los angeles|la|hollywood|weho/i,
-            'seattle': /seattle/i,
-            'denver': /denver/i,
-            'atlanta': /atlanta/i,
-            'miami': /miami/i,
-            'boston': /boston/i,
-            'philadelphia': /philadelphia|philly/i,
-            'austin': /austin/i,
-            'dallas': /dallas/i,
-            'houston': /houston/i,
-            'phoenix': /phoenix/i,
-            'dc': /washington|dc/i,
-            'orlando': /orlando/i,
-            'tampa': /tampa/i,
-            'vegas': /vegas|las vegas/i
-        };
-        
-        for (const [city, pattern] of Object.entries(cityPatterns)) {
-            if (pattern.test(text)) {
-                return city;
-            }
-        }
-        
-        return null;
-    }
 
-    // Get timezone for a city using centralized configuration
-    getTimezoneForCity(city, cityConfig = null) {
-        if (!cityConfig || !cityConfig[city]) {
-            console.log(`🎉 Chunk: No timezone configuration found for city: ${city}`);
-            return null;
-        }
-        
-        return cityConfig[city].timezone;
-    }
 }
 
 // Export for both environments
