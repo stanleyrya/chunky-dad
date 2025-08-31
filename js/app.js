@@ -14,6 +14,12 @@ class PathUtils {
         // If we have path segments and the first one isn't a known root file
         if (pathSegments.length > 0) {
             const firstSegment = pathSegments[0].toLowerCase();
+            
+            // First check if it's a known city (most reliable)
+            if (window.CITY_CONFIG && window.CITY_CONFIG[firstSegment]) {
+                return true;
+            }
+            
             // Skip known root files and testing directories
             const rootFiles = ['index.html', 'city.html', 'bear-directory.html', 'test', 'testing', 'tools', 'scripts'];
             const isRootFile = rootFiles.some(file => firstSegment.includes(file));
@@ -169,8 +175,15 @@ class ChunkyDadApp {
         try {
             // City page if using legacy template OR if first path segment matches a city slug/alias
             if (window.location.pathname.includes('city.html')) return true;
+            
+            // Check if we're in a city subdirectory
             const slug = this.getCitySlugFromPath();
-            return !!slug;
+            if (slug) {
+                logger.debug('SYSTEM', 'Detected city page via slug', { slug, pathname: window.location.pathname });
+                return true;
+            }
+            
+            return false;
         } catch (e) {
             logger.warn('SYSTEM', 'City page detection failed, defaulting to non-city page', { error: e?.message });
             return false;

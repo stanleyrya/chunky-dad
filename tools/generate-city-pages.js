@@ -81,6 +81,8 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
   // Replace src/href of project JS files to parent
   html = html.replace(/src="js\//g, 'src="../js/');
   html = html.replace(/href="index\.html"/g, 'href="../index.html"');
+  // Fix navigation anchor links
+  html = html.replace(/href="index\.html#/g, 'href="../index.html#');
   html = html.replace(/src="Rising_Star_Ryan_Head_Compressed\.png"/g, 'src="../Rising_Star_Ryan_Head_Compressed.png"');
   html = html.replace(/href="Rising_Star_Ryan_Head_Compressed\.png"/g, 'href="../Rising_Star_Ryan_Head_Compressed.png"');
 

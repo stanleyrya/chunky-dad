@@ -77,8 +77,24 @@ class TodayEventsAggregator {
 
   getCachedCalendarPath(cityKey) {
     try {
-      const isTesting = window.location.pathname.includes('/testing/');
-      const prefix = isTesting ? '../' : '';
+      // Use PathUtils if available for consistent path resolution
+      if (window.pathUtils) {
+        return window.pathUtils.resolvePath(`data/calendars/${cityKey}.ics`);
+      }
+      
+      // Fallback logic for path detection
+      const pathname = window.location.pathname || '';
+      const isTesting = pathname.includes('/testing/');
+      
+      // City subdirectories (like /new-york/, /seattle/) need to go up one level
+      const pathSegments = pathname.split('/').filter(Boolean);
+      const isInCitySubdirectory = pathSegments.length > 0 && 
+          window.CITY_CONFIG && 
+          window.CITY_CONFIG[pathSegments[0].toLowerCase()];
+      
+      const needsParentPath = isTesting || isInCitySubdirectory;
+      const prefix = needsParentPath ? '../' : '';
+      
       return `${prefix}data/calendars/${cityKey}.ics`;
     } catch (e) {
       return `data/calendars/${cityKey}.ics`;
@@ -166,7 +182,7 @@ class TodayEventsAggregator {
 
   createEventCard(ev) {
     const link = document.createElement('a');
-    link.href = `city.html?city=${ev.cityKey}`;
+    link.href = `${ev.cityKey}/`;
     link.className = 'event-compact-card';
 
     const emojiBox = document.createElement('div');
