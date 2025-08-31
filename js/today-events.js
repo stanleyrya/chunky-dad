@@ -167,7 +167,7 @@ class TodayEventsAggregator {
 
     const name = document.createElement('span');
     name.className = 'event-name';
-    name.textContent = ev.shortName || ev.shorterName || ev.name || 'Event';
+    name.textContent = ev.name || 'Event';
 
     const time = document.createElement('span');
     time.className = 'event-dates';
@@ -219,9 +219,9 @@ class TodayEventsAggregator {
 
     let dayLabel;
     if (eventDate.getTime() === today.getTime()) {
-      dayLabel = 'today';
+      dayLabel = 'Today';
     } else if (eventDate.getTime() === tomorrow.getTime()) {
-      dayLabel = 'tomorrow';
+      dayLabel = 'Tomorrow';
     } else {
       dayLabel = start.toLocaleDateString([], { month: 'short', day: 'numeric' });
     }
