@@ -18,10 +18,24 @@ class TodayEventsAggregator {
       const cities = (window.getAvailableCities ? getAvailableCities() : []).filter(c => hasCityCalendar(c.key));
       const selectedCities = cities.slice(0, this.maxCities);
 
-      logger.info('CALENDAR', 'Loading cached ICS for today aggregation', { count: selectedCities.length });
+      logger.info('CALENDAR', 'Loading cached ICS for today aggregation', { 
+        count: selectedCities.length,
+        currentDate: new Date().toISOString(),
+        dayOfWeek: new Date().getDay()
+      });
 
       const allEvents = await this.loadAllCityEvents(selectedCities);
+      logger.info('CALENDAR', 'All events loaded', { 
+        total: allEvents.length,
+        recurringCount: allEvents.filter(e => e.recurring).length
+      });
+
       const todayEvents = this.filterEventsForToday(allEvents);
+      logger.info('CALENDAR', 'Events filtered for today', { 
+        todayCount: todayEvents.length,
+        events: todayEvents.map(e => ({ name: e.name, recurring: e.recurring, startDate: e.startDate }))
+      });
+
       const deduped = this.dedupeBySlug(todayEvents);
       const sorted = deduped.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
@@ -234,25 +248,7 @@ class TodayEventsAggregator {
   }
 }
 
-// Auto-init on main page once DOM is ready
-(function () {
-  const isMainPage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
-  if (!isMainPage) return;
-  const init = () => {
-    try {
-      const aggregator = new TodayEventsAggregator();
-      window.todayEventsAggregator = aggregator;
-      aggregator.init();
-    } catch (e) {
-      logger.componentError('CALENDAR', 'Failed to initialize TodayEventsAggregator', e);
-    }
-  };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+
 
 // Export for tests
 if (typeof module !== 'undefined' && module.exports) {
