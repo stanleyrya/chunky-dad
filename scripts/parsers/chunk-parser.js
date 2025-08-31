@@ -27,12 +27,8 @@ class ChunkParser {
             ...config
         };
         
-        // Chunk parties are always bear events
-        this.bearKeywords = [
-            'chunk', 'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
-            'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
-            'furball', 'leather bears', 'bear night', 'bear party'
-        ];
+        // Note: Chunk parties are always bear events, so no keyword filtering needed
+        // This is handled by setting alwaysBear: true in the scraper configuration
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
