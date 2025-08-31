@@ -171,6 +171,8 @@ class ChunkyDadApp {
             this.initializeCityRenderer();
             this.initializeBearEventRenderer();
             this.initializeDadJokes();
+            // Initialize calendar loader for today events functionality
+            this.initializeMainPageCalendarLoader();
         }
         
         logger.componentLoad('SYSTEM', 'Core modules initialized');
@@ -230,6 +232,17 @@ class ChunkyDadApp {
             logger.componentInit('SYSTEM', 'Dad jokes manager initialized in app');
         } else {
             logger.warn('SYSTEM', 'DadJokesManager not available');
+        }
+    }
+
+    initializeMainPageCalendarLoader() {
+        // Initialize calendar loader on main page for today events functionality
+        if (window.DynamicCalendarLoader) {
+            this.calendarLoader = new DynamicCalendarLoader();
+            window.calendarLoader = this.calendarLoader;
+            logger.componentInit('SYSTEM', 'Calendar loader initialized for main page today events');
+        } else {
+            logger.warn('SYSTEM', 'DynamicCalendarLoader not available for main page');
         }
     }
 
