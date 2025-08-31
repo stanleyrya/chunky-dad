@@ -125,7 +125,7 @@ class ChunkyDadApp {
             this.initializeCoreModules();
             
             // Initialize page-specific modules (don't let them block each other)
-            if (this.isCityPage || this.isTestPage) {
+            if (this.isCityPage || this.isTestPage || this.isMainPage) {
                 // Don't await city page modules to prevent hanging
                 this.initializeCityPageModules().catch(error => {
                     logger.componentError('SYSTEM', 'City page module initialization failed', error);
@@ -171,8 +171,6 @@ class ChunkyDadApp {
             this.initializeCityRenderer();
             this.initializeBearEventRenderer();
             this.initializeDadJokes();
-            // Initialize calendar loader for today events functionality
-            this.initializeMainPageCalendarLoader();
         }
         
         logger.componentLoad('SYSTEM', 'Core modules initialized');
@@ -235,36 +233,31 @@ class ChunkyDadApp {
         }
     }
 
-    initializeMainPageCalendarLoader() {
-        // Initialize calendar loader on main page for today events functionality
-        if (window.DynamicCalendarLoader) {
-            this.calendarLoader = new DynamicCalendarLoader();
-            window.calendarLoader = this.calendarLoader;
-            logger.componentInit('SYSTEM', 'Calendar loader initialized for main page today events');
-        } else {
-            logger.warn('SYSTEM', 'DynamicCalendarLoader not available for main page');
-        }
-    }
+
 
     async initializeCityPageModules() {
-        const pageType = this.isTestPage ? 'test page' : 'city page';
+        const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
         logger.info('SYSTEM', `Initializing ${pageType} modules`);
         
         try {
-            // Calendar functionality is only needed on city pages
+            // Calendar functionality needed on city pages and main page (for today events)
             if (window.DynamicCalendarLoader) {
                 this.calendarLoader = new DynamicCalendarLoader();
                 // Make it globally accessible for backward compatibility
                 window.calendarLoader = this.calendarLoader;
-                await this.calendarLoader.init();
+                
+                // Only initialize full calendar on city/test pages, not main page
+                if (this.isCityPage || this.isTestPage) {
+                    await this.calendarLoader.init();
+                }
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
             }
             
-            const pageType = this.isTestPage ? 'test page' : 'city page';
+            const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
             logger.componentLoad('SYSTEM', `${pageType} modules initialized`);
         } catch (error) {
-            const pageType = this.isTestPage ? 'test page' : 'city page';
+            const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
             logger.componentError('SYSTEM', `${pageType} module initialization failed`, error);
         }
     }
