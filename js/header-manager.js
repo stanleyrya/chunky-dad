@@ -239,7 +239,14 @@ class HeaderManager {
 
     switchCity(cityKey) {
         this.logger.userInteraction('HEADER', `Switching to city: ${cityKey}`);
-        window.location.href = `city.html?city=${cityKey}`;
+        
+        // Use URL router for friendly URLs if available
+        if (window.urlRouter) {
+            window.urlRouter.navigateToCity(cityKey);
+        } else {
+            // Fallback to traditional URL
+            window.location.href = `city.html?city=${cityKey}`;
+        }
     }
 
     setupDebugOptions() {

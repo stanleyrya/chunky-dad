@@ -376,8 +376,22 @@ class DynamicCalendarLoader extends CalendarCore {
         });
     }
 
-    // Get city from URL parameters
+    // Get city from URL parameters or friendly URL path
     getCityFromURL() {
+        // First check if this is a dedicated city page with configuration
+        if (window.CITY_PAGE_CONFIG && window.CITY_PAGE_CONFIG.cityKey) {
+            return window.CITY_PAGE_CONFIG.cityKey;
+        }
+        
+        // Check if URL router is available and has a current city
+        if (window.urlRouter && window.urlRouter.getCurrentCity) {
+            const routerCity = window.urlRouter.getCurrentCity();
+            if (routerCity) {
+                return routerCity;
+            }
+        }
+        
+        // Fallback to traditional URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const cityParam = urlParams.get('city');
         
@@ -401,7 +415,7 @@ class DynamicCalendarLoader extends CalendarCore {
             availableCitiesList.innerHTML = getAvailableCities()
                 .filter(city => hasCityCalendar(city.key))
                 .map(city => `
-                    <a href="city.html?city=${city.key}" class="city-link">
+                    <a href="/${city.key}" class="city-link">
                         ${city.emoji} ${city.name}
                     </a>
                 `).join('');

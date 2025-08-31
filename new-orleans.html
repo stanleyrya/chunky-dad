@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>City Guide - chunky.dad Bear Guide</title>
-    <meta name="description" content="Complete gay bear guide to your city - events, bars, and the hottest bear scene">
+    <title>New Orleans - chunky.dad Bear Guide</title>
+    <meta name="description" content="Gay bear guide to New Orleans - events, bars, and the hottest bear scene">
     <link rel="icon" type="image/png" href="Rising_Star_Ryan_Head_Compressed.png">
     <link rel="apple-touch-icon" href="Rising_Star_Ryan_Head_Compressed.png">
     
@@ -15,7 +15,19 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'G-YKQBFFQR5E');
+      gtag('config', 'G-YKQBFFQR5E', {
+        page_title: 'New Orleans - chunky.dad Bear Guide',
+        page_location: window.location.href
+      });
+    </script>
+    
+    <!-- City-specific configuration -->
+    <script>
+        // Set the city for this page
+        window.CITY_PAGE_CONFIG = {
+            cityKey: 'new-orleans',
+            friendlyUrl: true
+        };
     </script>
     
     <link rel="stylesheet" href="styles.css">
