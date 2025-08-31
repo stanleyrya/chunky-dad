@@ -149,13 +149,23 @@ class ChunkParser {
             // Get ticket URL from offers or use the detail page URL
             const ticketUrl = (jsonData.offers && jsonData.offers.url) || url;
             
+            // Try to extract coordinates from Wix warmup data
+            let location = null;
+            const wixWarmupMatch = html.match(/"coordinates":\s*{\s*"lat":\s*([\d.-]+),\s*"lng":\s*([\d.-]+)/);
+            if (wixWarmupMatch) {
+                location = {
+                    lat: parseFloat(wixWarmupMatch[1]),
+                    lng: parseFloat(wixWarmupMatch[2])
+                };
+            }
+            
             const event = {
                 title: title,
                 description: description,
                 startDate: startDate,
                 endDate: endDate,
                 bar: venue,
-                location: null, // No coordinates in JSON-LD
+                location: location, // Coordinates from Wix warmup data
                 address: address,
                 city: null, // Let SharedCore detect city from address/venue
                 timezone: null, // Let SharedCore assign timezone based on detected city
