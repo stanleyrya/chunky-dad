@@ -162,6 +162,9 @@ class ChunkyDadApp {
             pathname: window.location.pathname
         });
         
+        // Track page load analytics for city pages
+        this.trackPageLoad();
+        
         this.init();
     }
 
@@ -227,6 +230,43 @@ class ChunkyDadApp {
 
     checkIfDirectoryPage() {
         return window.location.pathname.includes('bear-directory.html');
+    }
+
+    trackPageLoad() {
+        // Enhanced Google Analytics tracking for page loads
+        if (typeof gtag === 'function') {
+            const citySlug = this.getCitySlugFromPath();
+            const isLegacyFormat = window.location.pathname.includes('city.html');
+            
+            if (this.isCityPage && citySlug) {
+                // Track city page views with enhanced metadata
+                gtag('event', 'page_view', {
+                    'event_category': 'navigation',
+                    'event_label': 'city_page_direct_access',
+                    'custom_parameter_1': citySlug,
+                    'custom_parameter_2': isLegacyFormat ? 'legacy_template' : 'city_directory',
+                    'custom_parameter_3': window.location.href,
+                    'page_title': document.title,
+                    'page_location': window.location.href
+                });
+                
+                logger.info('SYSTEM', 'City page view tracked', {
+                    citySlug,
+                    isLegacyFormat,
+                    url: window.location.href
+                });
+            } else if (this.isMainPage) {
+                // Track main page views
+                gtag('event', 'page_view', {
+                    'event_category': 'navigation',
+                    'event_label': 'main_page_access',
+                    'page_title': document.title,
+                    'page_location': window.location.href
+                });
+            }
+        } else {
+            logger.warn('SYSTEM', 'Google Analytics not available for page tracking');
+        }
     }
 
     async init() {
