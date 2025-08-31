@@ -248,7 +248,7 @@ class TodayEventsAggregator {
   }
 }
 
-// Note: Initialization is now handled by app.js
+
 
 // Export for tests
 if (typeof module !== 'undefined' && module.exports) {
