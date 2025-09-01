@@ -179,8 +179,8 @@ class ChunkParser {
                 console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
                 
                 // Detect city from address to determine correct timezone
-                const detectedCity = this.detectCityFromAddress(address);
-                const correctedStartDate = this.correctTimezoneIfNeeded(jsonData.startDate, detectedCity);
+                const detectedCity = this.detectCityFromAddress(address, cityConfig);
+                const correctedStartDate = this.correctTimezoneIfNeeded(jsonData.startDate, detectedCity, cityConfig);
                 
                 try {
                     startDate = new Date(correctedStartDate);
@@ -194,8 +194,8 @@ class ChunkParser {
             
             if (jsonData.endDate) {
                 // Apply same timezone correction to end date
-                const detectedCity = this.detectCityFromAddress(address);
-                const correctedEndDate = this.correctTimezoneIfNeeded(jsonData.endDate, detectedCity);
+                const detectedCity = this.detectCityFromAddress(address, cityConfig);
+                const correctedEndDate = this.correctTimezoneIfNeeded(jsonData.endDate, detectedCity, cityConfig);
                 
                 try {
                     endDate = new Date(correctedEndDate);
@@ -336,26 +336,22 @@ class ChunkParser {
         return Array.from(urls);
     }
 
-    // Detect city from address string using common city patterns
-    detectCityFromAddress(address) {
-        if (!address) return null;
+    // Detect city from address using centralized city configuration
+    detectCityFromAddress(address, cityConfig) {
+        if (!address || !cityConfig) return null;
         
         const addressLower = address.toLowerCase();
         
-        // City detection patterns based on CHUNK's known locations
-        const cityPatterns = {
-            'chicago': ['chicago', 'chi'],
-            'sf': ['san francisco', 'sf'],
-            'portland': ['portland'],
-            'la': ['los angeles', 'hollywood', 'west hollywood'],
-            'nyc': ['new york', 'nyc', 'manhattan', 'brooklyn']
-        };
-        
-        for (const [city, patterns] of Object.entries(cityPatterns)) {
-            for (const pattern of patterns) {
-                if (addressLower.includes(pattern)) {
-                    console.log(`🎉 Chunk: Detected city '${city}' from address: ${address}`);
-                    return city;
+        // Use centralized city configuration from scraper-input.js
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns) {
+                for (const pattern of cityData.patterns) {
+                    // Use word boundaries to avoid substring matches
+                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                    if (regex.test(addressLower)) {
+                        console.log(`🎉 Chunk: Detected city '${cityKey}' from address: ${address}`);
+                        return cityKey;
+                    }
                 }
             }
         }
@@ -365,39 +361,31 @@ class ChunkParser {
     }
 
     // Correct timezone offset if CHUNK published wrong timezone data
-    correctTimezoneIfNeeded(dateString, detectedCity) {
-        if (!dateString || !detectedCity) {
+    correctTimezoneIfNeeded(dateString, detectedCity, cityConfig) {
+        if (!dateString || !detectedCity || !cityConfig) {
             return dateString; // No correction possible
         }
         
-        // Expected timezone offsets for each city (accounting for DST)
-        const expectedTimezones = {
-            'chicago': { 
-                dst: '-05:00',    // Central Daylight Time (March-November)
-                std: '-06:00'     // Central Standard Time (November-March)
-            },
-            'sf': { 
-                dst: '-07:00',    // Pacific Daylight Time
-                std: '-08:00'     // Pacific Standard Time
-            },
-            'portland': { 
-                dst: '-07:00',    // Pacific Daylight Time
-                std: '-08:00'     // Pacific Standard Time
-            },
-            'la': { 
-                dst: '-07:00',    // Pacific Daylight Time
-                std: '-08:00'     // Pacific Standard Time
-            },
-            'nyc': { 
-                dst: '-04:00',    // Eastern Daylight Time
-                std: '-05:00'     // Eastern Standard Time
-            }
+        // Get timezone from centralized city configuration
+        const cityData = cityConfig[detectedCity];
+        if (!cityData || !cityData.timezone) {
+            console.log(`🎉 Chunk: No timezone configuration found for city: ${detectedCity}`);
+            return dateString; // No correction for unknown cities
+        }
+        
+        // Map timezone identifiers to their DST/Standard offsets
+        const timezoneOffsets = {
+            'America/Chicago': { dst: '-05:00', std: '-06:00' },      // Central Time
+            'America/Los_Angeles': { dst: '-07:00', std: '-08:00' },  // Pacific Time  
+            'America/New_York': { dst: '-04:00', std: '-05:00' },     // Eastern Time
+            'America/Denver': { dst: '-06:00', std: '-07:00' },       // Mountain Time
+            'America/Phoenix': { dst: '-07:00', std: '-07:00' },      // Arizona (no DST)
         };
         
-        const cityTimezones = expectedTimezones[detectedCity];
+        const cityTimezones = timezoneOffsets[cityData.timezone];
         if (!cityTimezones) {
-            console.log(`🎉 Chunk: No timezone correction needed for unknown city: ${detectedCity}`);
-            return dateString; // No correction for unknown cities
+            console.log(`🎉 Chunk: No timezone offset mapping for timezone: ${cityData.timezone}`);
+            return dateString; // No correction for unmapped timezones
         }
         
         // Extract the current timezone offset from the date string
