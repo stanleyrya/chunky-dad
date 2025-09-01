@@ -256,7 +256,6 @@ class ChunkParser {
                 location: location, // Coordinates as "lat, lng" string (same format as eventbrite parser)
                 address: address,
                 city: detectedCity || null,
-                timezone: detectedTimezone || null,
                 url: url,
                 ticketUrl: ticketUrl,
                 cover: price,

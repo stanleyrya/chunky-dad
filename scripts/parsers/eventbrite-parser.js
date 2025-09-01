@@ -601,7 +601,6 @@ class EventbriteParser {
                 location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: finalAddress,
                 city: city,
-                timezone: this.getTimezoneForCity(city, cityConfig),
                 url: url, // Use consistent 'url' field name across all parsers
                 ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
                 cover: price, // Use 'cover' field name that calendar-core.js expects
