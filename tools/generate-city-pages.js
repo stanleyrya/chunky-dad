@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Resolve project root relative to this script
 const ROOT = path.resolve(__dirname, '..');
@@ -60,7 +61,9 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
   }
 
   // Basic OpenGraph tags (optional but included by default)
-  const ogImageUrl = `https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png`;
+  // Add a daily version to city OG image to encourage preview refreshes
+  const dailyVersion = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const ogImageUrl = `https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png?v=${dailyVersion}`;
   const ogTags = [
     `<meta property="og:type" content="website">`,
     `<meta property="og:title" content="${cityTitle}">`,
