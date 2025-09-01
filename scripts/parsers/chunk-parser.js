@@ -172,6 +172,23 @@ class ChunkParser {
             // Simplest path: trust JSON-LD ISO dates (including offsets) and use new Date()
             let startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
             let endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
+            
+            // Also capture the local date/time components (no timezone) in a separate object
+            const parseLocalParts = (iso) => {
+                if (!iso || typeof iso !== 'string') return null;
+                const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+                if (!m) return null;
+                return {
+                    year: parseInt(m[1], 10),
+                    month: parseInt(m[2], 10),
+                    day: parseInt(m[3], 10),
+                    hour: parseInt(m[4], 10),
+                    minute: parseInt(m[5], 10),
+                    second: m[6] ? parseInt(m[6], 10) : 0
+                };
+            };
+            const localStart = parseLocalParts(jsonData.startDate);
+            const localEnd = parseLocalParts(jsonData.endDate);
             if (!startDate || isNaN(startDate.getTime())) return null;
             if (endDate && !isNaN(endDate.getTime()) && endDate <= startDate) {
                 endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
@@ -253,7 +270,10 @@ class ChunkParser {
                 cover: price,
                 image: image,
                 source: this.config.source,
-                isBearEvent: true // Chunk parties are always bear events
+                isBearEvent: true, // Chunk parties are always bear events
+                // Local date/time components without timezone; SharedCore will add timezone
+                localStart: localStart || null,
+                localEnd: localEnd || null
             };
             
             // Apply source-specific metadata values from config

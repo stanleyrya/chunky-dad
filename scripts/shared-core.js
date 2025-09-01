@@ -1391,6 +1391,31 @@ class SharedCore {
     // ============================================================================
     // EVENT ENRICHMENT - Add Google Maps links, validate addresses, extract cities
     // ============================================================================
+
+    // Convert local wall-time parts to a UTC Date using a specific IANA timezone
+    computeUtcFromLocalParts(parts, timezone) {
+        if (!parts || !timezone) return null;
+        try {
+            const y = String(parts.year).padStart(4, '0');
+            const m = String(parts.month).padStart(2, '0');
+            const d = String(parts.day).padStart(2, '0');
+            const hh = String(parts.hour).padStart(2, '0');
+            const mm = String(parts.minute).padStart(2, '0');
+            const ss = String(parts.second || 0).padStart(2, '0');
+            const dateForOffset = new Date(`${y}-${m}-${d}T12:00:00`);
+            const fmt = new Intl.DateTimeFormat('en', { timeZone: timezone, timeZoneName: 'longOffset' });
+            const tzPart = fmt.formatToParts(dateForOffset).find(p => p.type === 'timeZoneName');
+            if (!tzPart || !tzPart.value) return null;
+            const mOff = tzPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+            if (!mOff) return null;
+            const sign = mOff[1] === '+' ? 1 : -1;
+            const totalMin = sign * (parseInt(mOff[2], 10) * 60 + parseInt(mOff[3], 10));
+            const localAsUTC = Date.UTC(parseInt(y,10), parseInt(m,10) - 1, parseInt(d,10), parseInt(hh,10), parseInt(mm,10), parseInt(ss,10));
+            return new Date(localAsUTC - totalMin * 60000);
+        } catch (_e) {
+            return null;
+        }
+    }
     
     // Enrich event with Google Maps links and city information
     enrichEventLocation(event) {
@@ -1459,6 +1484,23 @@ class SharedCore {
         // Ensure timezone is set from centralized config when city is known
         if (!event.timezone && event.city && this.cities[event.city] && this.cities[event.city].timezone) {
             event.timezone = this.cities[event.city].timezone;
+        }
+
+        // If parser provided localStart/localEnd (no timezone), convert to UTC using city timezone
+        if (event.localStart && event.timezone) {
+            const computedStart = this.computeUtcFromLocalParts(event.localStart, event.timezone);
+            if (computedStart) {
+                event.startDate = computedStart;
+            }
+        }
+        if (event.localEnd && event.timezone) {
+            const computedEnd = this.computeUtcFromLocalParts(event.localEnd, event.timezone);
+            if (computedEnd) {
+                event.endDate = computedEnd;
+                if (event.startDate && event.endDate <= event.startDate) {
+                    event.endDate = new Date(event.endDate.getTime() + 24 * 60 * 60 * 1000);
+                }
+            }
         }
 
         // Clean up location data based on what we have
