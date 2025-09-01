@@ -9,6 +9,41 @@
     <link rel="icon" type="image/png" href="../Rising_Star_Ryan_Head_Compressed.png">
     <link rel="apple-touch-icon" href="../Rising_Star_Ryan_Head_Compressed.png">
     
+    <script>
+      (function() {
+        try {
+          var path = window.location.pathname || '';
+          if (path.indexOf('city.html') !== -1) {
+            var url = new URL(window.location.href);
+            var params = url.searchParams;
+            var slug = params.get('city') || (window.location.hash ? window.location.hash.replace('#', '') : '');
+            if (slug) {
+              slug = String(slug).trim().toLowerCase().replace(/\s+/g, '-');
+              var newUrl = '/' + slug + '/';
+              var preserved = [];
+              params.forEach(function(value, key) {
+                if (key !== 'city' && value != null && value !== '') {
+                  preserved.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                }
+              });
+              if (preserved.length > 0) {
+                newUrl += '?' + preserved.join('&');
+              }
+              if (url.hash && url.hash !== '#' + slug) {
+                newUrl += url.hash;
+              }
+              var currentFull = (window.location.pathname || '') + (window.location.search || '') + (window.location.hash || '');
+              if (newUrl !== currentFull) {
+                console.info('[CITY] Normalizing URL to canonical path:', newUrl);
+                window.location.replace(newUrl);
+              }
+            }
+          }
+        } catch (e) {
+          // Silently ignore normalization errors
+        }
+      })();
+    </script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-YKQBFFQR5E"></script>
     <script>
@@ -30,6 +65,7 @@
   <meta property="og:title" content="Sitges - chunky.dad Bear Guide">
   <meta property="og:description" content="Complete gay bear guide to Sitges - events, bars, and the hottest bear scene">
   <meta property="og:url" content="https://chunky.dad/sitges/">
+  <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png">
 </head>
 <body>
     <header>
