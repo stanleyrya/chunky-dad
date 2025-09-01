@@ -815,17 +815,6 @@ class EventbriteParser {
 
                  return false;
     }
-    
-    // Get timezone identifier for a city using centralized configuration
-    getTimezoneForCity(city, cityConfig = null) {
-        // City config must be provided - no fallbacks
-        if (!cityConfig || !cityConfig[city]) {
-            console.log(`🎫 Eventbrite: No timezone configuration found for city: ${city}`);
-            return null;
-        }
-        
-        return cityConfig[city].timezone;
-    }
 }
 
 // Export for both environments
