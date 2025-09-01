@@ -90,9 +90,6 @@ async function main() {
       const evIndex = path.join(ROOT, cityKey, evDir.name, 'index.html');
       if (!fs.existsSync(evIndex)) continue;
       const html = fs.readFileSync(evIndex, 'utf8');
-      // Only generate when og:image is not already a per-event PNG under /img/og/
-      const hasGenerated = html.includes(`/img/og/${cityKey}/${evDir.name}.png`);
-      if (hasGenerated) continue;
 
       // Extract minimal data from title/description for rendering
       const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/);

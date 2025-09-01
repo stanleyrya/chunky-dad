@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
@@ -73,9 +74,24 @@ function buildEventHtml(cityKey, cityName, event) {
   if (event.bar) descriptionParts.push(`@ ${event.bar}`);
   const description = sanitize(descriptionParts.join(' · ')) || `${cityName} bear event`;
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
-  // Prefer generated per-event OG image if present
+  // Prefer generated per-event OG image and add a content-hash version for cache busting
   const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;
-  const ogImage = event.image || `${SITE_BASE}${generatedPng}` || FALLBACK_IMAGE;
+  let version = '';
+  try {
+    const seed = JSON.stringify({
+      name: event.name || '',
+      day: event.day || '',
+      time: event.time || '',
+      bar: event.bar || '',
+      cover: event.cover || '',
+      description: event.tea || event.unprocessedDescription || ''
+    });
+    version = crypto.createHash('md5').update(seed).digest('hex').slice(0, 8);
+  } catch (e) {
+    version = '';
+  }
+  const generatedUrl = `${SITE_BASE}${generatedPng}${version ? `?v=${version}` : ''}`;
+  const ogImage = generatedUrl;
 
   const canonical = `/${cityKey}/`;
   const redirectTarget = `../?event=${encodeURIComponent(event.slug)}`;

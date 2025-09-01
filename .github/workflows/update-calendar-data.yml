@@ -9,6 +9,9 @@ on:
     paths:
       - 'js/city-config.js'
       - '.github/workflows/update-calendar-data.yml'
+      - 'tools/generate-event-pages.js'
+      - 'tools/generate-og-images.js'
+      - 'js/calendar-core.js'
 
 jobs:
   update-calendar-data:
@@ -225,12 +228,11 @@ jobs:
             echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
       
-      - name: Generate event pages when calendar changed
-        if: env.CALENDAR_CHANGED == 'true'
+      - name: Generate event pages
         run: |
           node tools/generate-event-pages.js
-          # Stage only generated event pages under city directories
-          git add */*/index.html 2>/dev/null || true
+          # Stage generated event pages and capture deletions under city/slug dirs
+          git add -A */*/ 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No event page changes to commit"
             echo "EVENT_PAGES_CHANGED=false" >> $GITHUB_ENV
@@ -240,16 +242,14 @@ jobs:
             echo "EVENT_PAGES_CHANGED=true" >> $GITHUB_ENV
           fi
 
-      - name: Install Puppeteer when event pages changed
-        if: env.EVENT_PAGES_CHANGED == 'true'
+      - name: Install Node dependencies
         run: |
-          npm ci --prefer-offline --no-audit --no-fund
+          npm install --no-audit --no-fund --prefer-offline
 
       - name: Generate OG images for events
-        if: env.EVENT_PAGES_CHANGED == 'true'
         run: |
           node tools/generate-og-images.js
-          git add img/og/ 2>/dev/null || true
+          git add -A img/og/ 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No OG image changes to commit"
           else
