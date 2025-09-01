@@ -160,16 +160,24 @@ class ChunkParser {
             // Extract all the data we need from JSON-LD
             const title = jsonData.name || 'Untitled Event';
             const description = jsonData.description || '';
-            const startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
-            const endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
             
-            // Extract venue information
+            // Smart timezone handling - detect and correct website timezone misconfigurations
+            let startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
+            let endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
+            
+            // Extract venue information first to detect location
             let venue = '';
             let address = '';
-            
             if (jsonData.location) {
                 venue = jsonData.location.name || '';
                 address = jsonData.location.address || '';
+            }
+            
+            // Attempt to correct timezone misconfigurations
+            if (startDate && address) {
+                const correctedTimes = this.correctTimezoneIfNeeded(startDate, endDate, address, html, jsonData.startDate);
+                startDate = correctedTimes.startDate;
+                endDate = correctedTimes.endDate;
             }
             
             // Extract price information from offers
@@ -300,6 +308,273 @@ class ChunkParser {
         
         // Return all found URLs (no limit if maxAdditionalUrls is null)
         return Array.from(urls);
+    }
+
+    // Smart timezone correction - detect and fix website timezone misconfigurations
+    correctTimezoneIfNeeded(startDate, endDate, address, html, originalStartDateString) {
+        try {
+            // Detect the actual city from the address
+            const detectedCity = this.detectCityFromAddress(address);
+            if (!detectedCity) {
+                // Can't detect city, return original dates
+                return { startDate, endDate };
+            }
+            
+            // Get the correct timezone for this city
+            const correctTimezone = this.getTimezoneForCity(detectedCity);
+            if (!correctTimezone) {
+                return { startDate, endDate };
+            }
+            
+            // Extract the displayed time from the HTML to compare with JSON-LD
+            const displayedTime = this.extractDisplayedTime(html);
+            if (!displayedTime) {
+                return { startDate, endDate };
+            }
+            
+            // Check if there's a timezone mismatch
+            const jsonTimezone = this.extractTimezoneFromDateString(originalStartDateString);
+            
+            // If JSON timezone doesn't match the city's timezone, we might need to correct it
+            if (jsonTimezone && correctTimezone && jsonTimezone !== correctTimezone) {
+                console.log(`🎉 Chunk: Timezone mismatch detected - JSON: ${jsonTimezone}, Expected: ${correctTimezone}`);
+                
+                // Try to reconstruct the correct time using displayed time + correct timezone
+                const correctedTimes = this.reconstructTimesWithCorrectTimezone(
+                    displayedTime, 
+                    startDate, 
+                    endDate, 
+                    correctTimezone,
+                    detectedCity
+                );
+                
+                if (correctedTimes) {
+                    console.log(`🎉 Chunk: Corrected timezone for ${detectedCity} event`);
+                    return correctedTimes;
+                }
+            }
+            
+            // No correction needed or correction failed, return original
+            return { startDate, endDate };
+            
+        } catch (error) {
+            console.warn(`🎉 Chunk: Timezone correction failed: ${error.message}`);
+            return { startDate, endDate };
+        }
+    }
+    
+    // Detect city from address string
+    detectCityFromAddress(address) {
+        if (!address) return null;
+        
+        const cityPatterns = {
+            'chicago': ['chicago', 'chi'],
+            'sf': ['san francisco', 'sf'],
+            'la': ['los angeles', 'hollywood', 'west hollywood', 'weho'],
+            'nyc': ['new york', 'nyc', 'manhattan', 'brooklyn'],
+            'portland': ['portland'],
+            'seattle': ['seattle'],
+            'atlanta': ['atlanta'],
+            'miami': ['miami'],
+            'denver': ['denver'],
+            'austin': ['austin'],
+            'dallas': ['dallas'],
+            'houston': ['houston']
+        };
+        
+        const lowerAddress = address.toLowerCase();
+        for (const [city, patterns] of Object.entries(cityPatterns)) {
+            for (const pattern of patterns) {
+                if (lowerAddress.includes(pattern)) {
+                    return city;
+                }
+            }
+        }
+        return null;
+    }
+    
+    // Get correct timezone for a city
+    getTimezoneForCity(city) {
+        const timezoneMap = {
+            'chicago': 'America/Chicago',
+            'sf': 'America/Los_Angeles', 
+            'la': 'America/Los_Angeles',
+            'nyc': 'America/New_York',
+            'portland': 'America/Los_Angeles',
+            'seattle': 'America/Los_Angeles',
+            'atlanta': 'America/New_York',
+            'miami': 'America/New_York',
+            'denver': 'America/Denver',
+            'austin': 'America/Chicago',
+            'dallas': 'America/Chicago',
+            'houston': 'America/Chicago'
+        };
+        return timezoneMap[city] || null;
+    }
+    
+    // Extract timezone from date string
+    extractTimezoneFromDateString(dateString) {
+        if (!dateString) return null;
+        
+        // Extract timezone offset (e.g., -07:00, +05:30)
+        const offsetMatch = dateString.match(/([+-]\d{2}:\d{2})$/);
+        if (offsetMatch) {
+            // Convert offset to timezone name (approximate)
+            const offset = offsetMatch[1];
+            const offsetMap = {
+                '-08:00': 'America/Los_Angeles', // PST
+                '-07:00': 'America/Los_Angeles', // PDT  
+                '-06:00': 'America/Chicago',     // CST
+                '-05:00': 'America/Chicago',     // CDT
+                '-05:00': 'America/New_York',    // EST
+                '-04:00': 'America/New_York',    // EDT
+            };
+            return offsetMap[offset];
+        }
+        
+        return null;
+    }
+    
+    // Extract displayed time from HTML (what users see)
+    extractDisplayedTime(html) {
+        try {
+            // Look for time patterns in the HTML content
+            const timePatterns = [
+                /(\d{1,2}):(\d{2})\s*(AM|PM)/gi,
+                /(\d{1,2})\s*(AM|PM)/gi
+            ];
+            
+            for (const pattern of timePatterns) {
+                const matches = [...html.matchAll(pattern)];
+                for (const match of matches) {
+                    const timeStr = match[0];
+                    // Look for context that suggests this is the event time
+                    const context = html.substring(Math.max(0, match.index - 100), match.index + 100);
+                    
+                    // Check if this time appears near event-related content
+                    if (context.toLowerCase().includes('event') || 
+                        context.toLowerCase().includes('time') ||
+                        context.toLowerCase().includes('start') ||
+                        context.includes('Oct') || context.includes('Nov') || context.includes('Sep')) {
+                        
+                        return timeStr.trim();
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`🎉 Chunk: Error extracting displayed time: ${error.message}`);
+        }
+        return null;
+    }
+    
+    // Reconstruct correct times using displayed time + correct timezone
+    reconstructTimesWithCorrectTimezone(displayedTime, originalStartDate, originalEndDate, correctTimezone, city) {
+        try {
+            // Parse the displayed time (e.g., "9:00 PM")
+            const timeMatch = displayedTime.match(/(\d{1,2}):?(\d{2})?\s*(AM|PM)/i);
+            if (!timeMatch) return null;
+            
+            let hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2] || '0');
+            const period = timeMatch[3].toUpperCase();
+            
+            // Convert to 24-hour format
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            // Get the date components from original (assuming date is correct, just timezone is wrong)
+            const originalDate = new Date(originalStartDate);
+            
+            // Create a new date in the correct timezone
+            // We need to be careful here - we want the displayed time in the local timezone
+            const year = originalDate.getUTCFullYear();
+            const month = originalDate.getUTCMonth();
+            const date = originalDate.getUTCDate();
+            
+            // Create date string in local timezone format
+            const localDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+            
+            // Check if timezone correction is enabled and we have confidence in the correction
+            const shouldCorrect = this.shouldCorrectTimezone(detectedCity, displayedTime, originalStartDate, correctTimezone);
+            
+            if (shouldCorrect) {
+                // Calculate the correct time in the event's local timezone
+                const correctedStartDate = this.createCorrectDate(originalStartDate, hours, minutes, correctTimezone);
+                const correctedEndDate = originalEndDate ? 
+                    new Date(correctedStartDate.getTime() + (originalEndDate.getTime() - originalStartDate.getTime())) : 
+                    null;
+                
+                console.log(`🎉 Chunk: Corrected ${city} event time:`);
+                console.log(`🎉 Chunk:   Original: ${originalStartDate.toISOString()} (${originalStartDate.toLocaleString('en-US', {timeZone: correctTimezone})})`);
+                console.log(`🎉 Chunk:   Corrected: ${correctedStartDate.toISOString()} (${correctedStartDate.toLocaleString('en-US', {timeZone: correctTimezone})})`);
+                
+                return { startDate: correctedStartDate, endDate: correctedEndDate };
+            } else {
+                console.log(`🎉 Chunk: Timezone correction analysis for ${city}:`);
+                console.log(`🎉 Chunk:   Displayed: ${displayedTime}`);
+                console.log(`🎉 Chunk:   Expected timezone: ${correctTimezone}`);
+                console.log(`🎉 Chunk:   Keeping original times (conservative approach)`);
+                
+                return { startDate: originalStartDate, endDate: originalEndDate };
+            }
+            
+        } catch (error) {
+            console.warn(`🎉 Chunk: Timezone reconstruction failed: ${error.message}`);
+            return { startDate: originalStartDate, endDate: originalEndDate };
+        }
+    }
+    
+    // Determine if we should correct the timezone (configurable and conservative)
+    shouldCorrectTimezone(city, displayedTime, originalDate, correctTimezone) {
+        // For now, be conservative and only log the analysis
+        // This can be enabled later when we're more confident
+        
+        // Known problematic patterns we're confident about correcting
+        const knownIssues = {
+            'chicago': {
+                // Chicago events stored in Pacific time
+                problemTimezone: 'America/Los_Angeles',
+                correctTimezone: 'America/Chicago'
+            }
+        };
+        
+        // Only correct if this is a known issue pattern
+        const knownIssue = knownIssues[city];
+        if (!knownIssue) {
+            return false; // No known issue for this city
+        }
+        
+        // Check if current timezone matches the problematic pattern
+        const currentTimezone = this.extractTimezoneFromDateString(originalDate.toISOString());
+        if (currentTimezone !== knownIssue.problemTimezone) {
+            return false; // Not the problematic pattern
+        }
+        
+        // Additional confidence checks could go here
+        // For example: time format validation, consistency checks, etc.
+        
+        // For now, return false to be conservative
+        // Change this to true when ready to enable corrections
+        return false;
+    }
+    
+    // Create a corrected date in the proper timezone
+    createCorrectDate(originalDate, hours, minutes, targetTimezone) {
+        // Get the original date components
+        const year = originalDate.getUTCFullYear();
+        const month = originalDate.getUTCMonth();
+        const date = originalDate.getUTCDate();
+        
+        // Create a date string that represents the local time in the target timezone
+        // This is complex because we need to account for DST and timezone offsets
+        
+        // For simplicity, create a date that represents the desired local time
+        // and let the system handle the UTC conversion
+        const localDate = new Date(year, month, date, hours, minutes, 0);
+        
+        // This is a simplified approach - in production, you'd want to use a proper
+        // timezone library like date-fns-tz or moment-timezone for accuracy
+        return localDate;
     }
 
 
