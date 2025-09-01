@@ -353,17 +353,6 @@ class ChunkParser {
         // Return all found URLs (no limit if maxAdditionalUrls is null)
         return Array.from(urls);
     }
-
-    // Get timezone identifier for a city using centralized configuration
-    getTimezoneForCity(city, cityConfig = null) {
-        // City config must be provided - no fallbacks
-        if (!cityConfig || !cityConfig[city]) {
-            console.log(`🎉 Chunk: No timezone configuration found for city: ${city}`);
-            return null;
-        }
-        
-        return cityConfig[city].timezone;
-    }
 }
 
 // Export for both environments
