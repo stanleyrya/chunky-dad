@@ -176,17 +176,17 @@ class ChunkParser {
             if (jsonData.startDate && address) {
                 // Extract the "local time" that CHUNK intends (ignoring their timezone)
                 const localTime = this.extractLocalTimeFromChunkDate(jsonData.startDate);
-                const city = this.detectCityFromAddress(address);
+                const city = this.detectCityFromAddress(address, cityConfig);
                 
                 if (localTime && city) {
                     // Convert using the correct timezone for the city (like Bearracuda does)
-                    startDate = this.convertChunkTimeToUTC(localTime, city, jsonData.startDate);
+                    startDate = this.convertChunkTimeToUTC(localTime, city, cityConfig, jsonData.startDate);
                     
                     // Handle end date if available
                     if (jsonData.endDate) {
                         const endLocalTime = this.extractLocalTimeFromChunkDate(jsonData.endDate);
                         if (endLocalTime) {
-                            endDate = this.convertChunkTimeToUTC(endLocalTime, city, jsonData.endDate);
+                            endDate = this.convertChunkTimeToUTC(endLocalTime, city, cityConfig, jsonData.endDate);
                         }
                     }
                 }
@@ -376,10 +376,10 @@ class ChunkParser {
     }
     
     // Convert CHUNK local time to UTC using correct city timezone (like Bearracuda)
-    convertChunkTimeToUTC(localTime, city, originalDateString) {
+    convertChunkTimeToUTC(localTime, city, cityConfig, originalDateString) {
         try {
-            // Get the correct timezone for this city
-            const timezone = this.getTimezoneForCity(city);
+            // Get the correct timezone for this city using cityConfig
+            const timezone = this.getTimezoneForCity(city, cityConfig);
             if (!timezone) {
                 console.log(`🎉 Chunk: No timezone found for city: ${city}`);
                 return null;
@@ -427,53 +427,35 @@ class ChunkParser {
         }
     }
     
-    // Detect city from address string
-    detectCityFromAddress(address) {
-        if (!address) return null;
-        
-        const cityPatterns = {
-            'chicago': ['chicago', 'chi'],
-            'sf': ['san francisco', 'sf'],
-            'la': ['los angeles', 'hollywood', 'west hollywood', 'weho'],
-            'nyc': ['new york', 'nyc', 'manhattan', 'brooklyn'],
-            'portland': ['portland'],
-            'seattle': ['seattle'],
-            'atlanta': ['atlanta'],
-            'miami': ['miami'],
-            'denver': ['denver'],
-            'austin': ['austin'],
-            'dallas': ['dallas'],
-            'houston': ['houston']
-        };
+    // Detect city from address string using cityConfig patterns
+    detectCityFromAddress(address, cityConfig = null) {
+        if (!address || !cityConfig) return null;
         
         const lowerAddress = address.toLowerCase();
-        for (const [city, patterns] of Object.entries(cityPatterns)) {
-            for (const pattern of patterns) {
-                if (lowerAddress.includes(pattern)) {
-                    return city;
+        
+        // Use cityConfig patterns like other parsers
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns && Array.isArray(cityData.patterns)) {
+                for (const pattern of cityData.patterns) {
+                    if (lowerAddress.includes(pattern.toLowerCase())) {
+                        return cityKey;
+                    }
                 }
             }
         }
+        
         return null;
     }
     
-    // Get correct timezone for a city (matches Bearracuda approach)
-    getTimezoneForCity(city) {
-        const timezoneMap = {
-            'chicago': 'America/Chicago',
-            'sf': 'America/Los_Angeles', 
-            'la': 'America/Los_Angeles',
-            'nyc': 'America/New_York',
-            'portland': 'America/Los_Angeles',
-            'seattle': 'America/Los_Angeles',
-            'atlanta': 'America/New_York',
-            'miami': 'America/New_York',
-            'denver': 'America/Denver',
-            'austin': 'America/Chicago',
-            'dallas': 'America/Chicago',
-            'houston': 'America/Chicago'
-        };
-        return timezoneMap[city] || null;
+    // Get timezone for a city using centralized configuration (like Bearracuda)
+    getTimezoneForCity(city, cityConfig = null) {
+        // City config must be provided - no fallbacks
+        if (!cityConfig || !cityConfig[city]) {
+            console.log(`🎉 Chunk: No timezone configuration found for city: ${city}`);
+            return null;
+        }
+        
+        return cityConfig[city].timezone;
     }
 
 
