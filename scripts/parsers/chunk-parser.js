@@ -170,56 +170,32 @@ class ChunkParser {
             }
             
             // CHUNK provides dates with timezone offsets in their JSON-LD
-            // PROBLEM: They use "local time as if it was in PST" but the timezone offset may be wrong
-            // SOLUTION: Parse the date/time as local, then let SharedCore apply the correct city timezone
+            // SOLUTION: Use the original timezone-aware date string to create proper Date objects
             let startDate = null;
             let endDate = null;
             
             if (jsonData.startDate) {
                 console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
                 
-                // Step 1: Extract date/time components directly from the string
-                // This ignores the timezone offset and treats the time as local
-                const match = jsonData.startDate.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-                if (match) {
-                    const [, year, month, day, hours, minutes, seconds] = match;
-                    
-                    // Step 2: Create a new local Date object with the extracted components
-                    // Month is 0-based in Date constructor, so subtract 1
-                    startDate = new Date(
-                        parseInt(year), 
-                        parseInt(month) - 1, 
-                        parseInt(day), 
-                        parseInt(hours), 
-                        parseInt(minutes), 
-                        parseInt(seconds)
-                    );
-                    
-                    console.log(`🎉 Chunk: Extracted local components: ${year}-${month}-${day} ${hours}:${minutes}:${seconds}`);
-                    console.log(`🎉 Chunk: Created local date object: ${startDate.toISOString()}`);
-                } else {
-                    console.warn(`🎉 Chunk: Could not parse date format: ${jsonData.startDate}`);
+                // Parse the full timezone-aware date string directly
+                // This preserves the original timezone information from the JSON-LD
+                try {
+                    startDate = new Date(jsonData.startDate);
+                    console.log(`🎉 Chunk: Created timezone-aware date object: ${startDate.toISOString()}`);
+                    console.log(`🎉 Chunk: Local display time: ${startDate.toString()}`);
+                } catch (error) {
+                    console.warn(`🎉 Chunk: Could not parse date format: ${jsonData.startDate}, error: ${error}`);
                     startDate = null;
                 }
             }
             
             if (jsonData.endDate) {
-                const match = jsonData.endDate.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-                if (match) {
-                    const [, year, month, day, hours, minutes, seconds] = match;
-                    
-                    endDate = new Date(
-                        parseInt(year), 
-                        parseInt(month) - 1, 
-                        parseInt(day), 
-                        parseInt(hours), 
-                        parseInt(minutes), 
-                        parseInt(seconds)
-                    );
-                    
-                    console.log(`🎉 Chunk: Created local end date object: ${endDate.toISOString()}`);
-                } else {
-                    console.warn(`🎉 Chunk: Could not parse end date format: ${jsonData.endDate}`);
+                // Parse the full timezone-aware end date string directly
+                try {
+                    endDate = new Date(jsonData.endDate);
+                    console.log(`🎉 Chunk: Created timezone-aware end date object: ${endDate.toISOString()}`);
+                } catch (error) {
+                    console.warn(`🎉 Chunk: Could not parse end date format: ${jsonData.endDate}, error: ${error}`);
                     endDate = null;
                 }
             }
@@ -308,7 +284,7 @@ class ChunkParser {
                 });
             }
             
-            console.log(`🎉 Chunk: Successfully parsed event: ${title} on ${startDate}`);
+            console.log(`🎉 Chunk: Successfully parsed event: ${title} on ${startDate ? startDate.toString() : 'no date'}`);
             
             return event;
             
