@@ -373,21 +373,6 @@ class ChunkParser {
             return dateString; // No correction for unknown cities
         }
         
-        // Map timezone identifiers to their DST/Standard offsets
-        const timezoneOffsets = {
-            'America/Chicago': { dst: '-05:00', std: '-06:00' },      // Central Time
-            'America/Los_Angeles': { dst: '-07:00', std: '-08:00' },  // Pacific Time  
-            'America/New_York': { dst: '-04:00', std: '-05:00' },     // Eastern Time
-            'America/Denver': { dst: '-06:00', std: '-07:00' },       // Mountain Time
-            'America/Phoenix': { dst: '-07:00', std: '-07:00' },      // Arizona (no DST)
-        };
-        
-        const cityTimezones = timezoneOffsets[cityData.timezone];
-        if (!cityTimezones) {
-            console.log(`🎉 Chunk: No timezone offset mapping for timezone: ${cityData.timezone}`);
-            return dateString; // No correction for unmapped timezones
-        }
-        
         // Extract the current timezone offset from the date string
         const timezoneMatch = dateString.match(/([+-]\d{2}:\d{2})$/);
         if (!timezoneMatch) {
@@ -397,38 +382,44 @@ class ChunkParser {
         
         const currentOffset = timezoneMatch[1];
         
-        // Determine if we're in DST period (more accurate)
-        // DST 2025: March 9 - November 2
-        const dateObj = new Date(dateString);
-        const year = dateObj.getUTCFullYear();
-        const month = dateObj.getUTCMonth() + 1; // 1-12
-        const day = dateObj.getUTCDate();
+        // Create a temporary date object in the city's timezone to get the correct offset
+        // This uses the browser's built-in timezone handling
+        const tempDate = new Date(dateString.replace(currentOffset, ''));
         
-        // DST starts second Sunday in March, ends first Sunday in November
-        // For 2025: DST starts March 9, ends November 2
-        let isDST = false;
-        if (month > 3 && month < 11) {
-            isDST = true; // April through October
-        } else if (month === 3 && day >= 9) {
-            isDST = true; // March 9 onwards
-        } else if (month === 11 && day < 2) {
-            isDST = true; // November 1
+        // Use Intl.DateTimeFormat to get the correct offset for this city's timezone at this date
+        try {
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: cityData.timezone,
+                timeZoneName: 'longOffset'
+            });
+            
+            const parts = formatter.formatToParts(tempDate);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            
+            if (offsetPart && offsetPart.value) {
+                // Convert from "GMT-05:00" format to "-05:00" format
+                const expectedOffset = offsetPart.value.replace('GMT', '');
+                
+                if (currentOffset === expectedOffset) {
+                    console.log(`🎉 Chunk: Timezone offset is correct for ${detectedCity}: ${currentOffset}`);
+                    return dateString; // Already correct
+                }
+                
+                // Apply timezone correction
+                const correctedDateString = dateString.replace(currentOffset, expectedOffset);
+                console.log(`🎉 Chunk: Corrected timezone for ${detectedCity}: ${currentOffset} → ${expectedOffset}`);
+                console.log(`🎉 Chunk: Original: ${dateString}`);
+                console.log(`🎉 Chunk: Corrected: ${correctedDateString}`);
+                
+                return correctedDateString;
+            }
+        } catch (error) {
+            console.warn(`🎉 Chunk: Could not determine timezone offset for ${cityData.timezone}: ${error}`);
         }
         
-        const expectedOffset = isDST ? cityTimezones.dst : cityTimezones.std;
-        
-        if (currentOffset === expectedOffset) {
-            console.log(`🎉 Chunk: Timezone offset is correct for ${detectedCity}: ${currentOffset}`);
-            return dateString; // Already correct
-        }
-        
-        // Apply timezone correction
-        const correctedDateString = dateString.replace(currentOffset, expectedOffset);
-        console.log(`🎉 Chunk: Corrected timezone for ${detectedCity}: ${currentOffset} → ${expectedOffset}`);
-        console.log(`🎉 Chunk: Original: ${dateString}`);
-        console.log(`🎉 Chunk: Corrected: ${correctedDateString}`);
-        
-        return correctedDateString;
+        // Fallback: return original if we can't determine the correct offset
+        console.log(`🎉 Chunk: Could not correct timezone for ${detectedCity}, using original: ${dateString}`);
+        return dateString;
     }
 }
 
