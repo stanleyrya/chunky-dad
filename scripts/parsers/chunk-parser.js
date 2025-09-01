@@ -169,37 +169,19 @@ class ChunkParser {
                 address = jsonData.location.address || '';
             }
             
-            // Smart timezone handling - extract local time from JSON-LD, then convert using city timezone
-            let startDate = null;
-            let endDate = null;
+            // CHUNK provides dates with timezone offsets in their JSON-LD
+            // IMPORTANT: They often use the WRONG timezone (e.g., Pacific time for Chicago events)
+            // So we must use the date AS PROVIDED and let JavaScript handle the conversion
+            // Do NOT try to re-interpret the time in a different timezone
+            let startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
+            let endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
             
-            if (jsonData.startDate && address) {
-                // Extract the "local time" that CHUNK intends (ignoring their timezone)
-                const localTime = this.extractLocalTimeFromChunkDate(jsonData.startDate);
-                const city = this.detectCityFromAddress(address, cityConfig);
-                
-                if (localTime && city) {
-                    // Convert using the correct timezone for the city (like Bearracuda does)
-                    startDate = this.convertChunkTimeToUTC(localTime, city, cityConfig, jsonData.startDate);
-                    
-                    // Handle end date if available
-                    if (jsonData.endDate) {
-                        const endLocalTime = this.extractLocalTimeFromChunkDate(jsonData.endDate);
-                        if (endLocalTime) {
-                            endDate = this.convertChunkTimeToUTC(endLocalTime, city, cityConfig, jsonData.endDate);
-                        }
-                    }
+            // Log what we're parsing for debugging
+            if (jsonData.startDate) {
+                console.log(`🎉 Chunk: Parsing start date directly from JSON-LD: ${jsonData.startDate}`);
+                if (startDate) {
+                    console.log(`🎉 Chunk: Converted to UTC: ${startDate.toISOString()}`);
                 }
-                
-                // Fallback to original parsing if conversion fails
-                if (!startDate) {
-                    startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
-                    endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
-                }
-            } else {
-                // No address or startDate, use original parsing
-                startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
-                endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
             }
             
             // Extract price information from offers
@@ -332,6 +314,13 @@ class ChunkParser {
         return Array.from(urls);
     }
 
+    // NOTE: The following timezone conversion methods are kept for reference but are NOT USED
+    // CHUNK provides dates with timezone offsets that are often WRONG (e.g., Pacific time for Chicago events)
+    // We now parse their dates directly and let JavaScript handle the timezone conversion
+    // This means Chicago events might show as "9PM Pacific" when they're really "11PM Central"
+    // but at least the UTC time will be correct for calendar storage
+    
+    /*
     // Extract local time components from CHUNK's date string (ignoring their timezone)
     extractLocalTimeFromChunkDate(dateString) {
         try {
@@ -457,6 +446,7 @@ class ChunkParser {
         
         return cityConfig[city].timezone;
     }
+    */
 
 
 }
