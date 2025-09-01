@@ -170,17 +170,57 @@ class ChunkParser {
             }
             
             // CHUNK provides dates with timezone offsets in their JSON-LD
-            // IMPORTANT: They often use the WRONG timezone (e.g., Pacific time for Chicago events)
-            // So we must use the date AS PROVIDED and let JavaScript handle the conversion
-            // Do NOT try to re-interpret the time in a different timezone
-            let startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
-            let endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
+            // PROBLEM: They use "local time as if it was in PST" but the timezone offset may be wrong
+            // SOLUTION: Parse the date/time as local, then let SharedCore apply the correct city timezone
+            let startDate = null;
+            let endDate = null;
             
-            // Log what we're parsing for debugging
             if (jsonData.startDate) {
-                console.log(`🎉 Chunk: Parsing start date directly from JSON-LD: ${jsonData.startDate}`);
-                if (startDate) {
-                    console.log(`🎉 Chunk: Converted to UTC: ${startDate.toISOString()}`);
+                console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
+                
+                // Step 1: Extract date/time components directly from the string
+                // This ignores the timezone offset and treats the time as local
+                const match = jsonData.startDate.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+                if (match) {
+                    const [, year, month, day, hours, minutes, seconds] = match;
+                    
+                    // Step 2: Create a new local Date object with the extracted components
+                    // Month is 0-based in Date constructor, so subtract 1
+                    startDate = new Date(
+                        parseInt(year), 
+                        parseInt(month) - 1, 
+                        parseInt(day), 
+                        parseInt(hours), 
+                        parseInt(minutes), 
+                        parseInt(seconds)
+                    );
+                    
+                    console.log(`🎉 Chunk: Extracted local components: ${year}-${month}-${day} ${hours}:${minutes}:${seconds}`);
+                    console.log(`🎉 Chunk: Created local date object: ${startDate.toISOString()}`);
+                } else {
+                    console.warn(`🎉 Chunk: Could not parse date format: ${jsonData.startDate}`);
+                    startDate = null;
+                }
+            }
+            
+            if (jsonData.endDate) {
+                const match = jsonData.endDate.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+                if (match) {
+                    const [, year, month, day, hours, minutes, seconds] = match;
+                    
+                    endDate = new Date(
+                        parseInt(year), 
+                        parseInt(month) - 1, 
+                        parseInt(day), 
+                        parseInt(hours), 
+                        parseInt(minutes), 
+                        parseInt(seconds)
+                    );
+                    
+                    console.log(`🎉 Chunk: Created local end date object: ${endDate.toISOString()}`);
+                } else {
+                    console.warn(`🎉 Chunk: Could not parse end date format: ${jsonData.endDate}`);
+                    endDate = null;
                 }
             }
             
@@ -247,7 +287,7 @@ class ChunkParser {
                 location: location, // Coordinates as "lat, lng" string (same format as eventbrite parser)
                 address: address,
                 city: null, // Let SharedCore detect city from address/venue
-                timezone: null, // Let SharedCore assign timezone based on detected city
+                timezone: null, // Will be set by SharedCore after city detection
                 url: url,
                 ticketUrl: ticketUrl,
                 cover: price,
@@ -313,10 +353,6 @@ class ChunkParser {
         // Return all found URLs (no limit if maxAdditionalUrls is null)
         return Array.from(urls);
     }
-
-
-
-
 }
 
 // Export for both environments

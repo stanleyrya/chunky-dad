@@ -32,6 +32,9 @@ class SharedCore {
             'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
         ];
         
+        // Store cities config for timezone assignment
+        this.cities = cities;
+        
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
         
@@ -1400,6 +1403,13 @@ class SharedCore {
         // Extract city if not already present (parser may have set it for venue-specific logic)
         if (!event.city) {
             event.city = this.extractCityFromEvent(event);
+        }
+        
+        // Apply timezone from city configuration if not already set
+        // This is needed for parsers like chunk that pass timezone: null
+        if (!event.timezone && event.city && this.cities[event.city]) {
+            event.timezone = this.cities[event.city].timezone;
+            console.log(`🗺️ SharedCore: Applied timezone ${event.timezone} for city ${event.city}`);
         }
         
         // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)

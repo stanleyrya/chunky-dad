@@ -1543,7 +1543,7 @@ class DynamicCalendarLoader extends CalendarCore {
                             eventSlug,
                             eventName
                         });
-                        this.showShareToast('Event shared! 🎉');
+                        // No toast for successful share - rely on native share sheet experience
                     } catch (err) {
                         if (err.name !== 'AbortError') {
                             logger.error('EVENT', 'Share failed', err);
