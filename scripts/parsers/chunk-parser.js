@@ -201,14 +201,13 @@ class ChunkParser {
             // Get ticket URL from offers or use the detail page URL
             const ticketUrl = (jsonData.offers && jsonData.offers.url) || url;
             
-            // Try to extract coordinates from Wix warmup data
+            // Try to extract coordinates from Wix warmup data and format as string
             let location = null;
             const wixWarmupMatch = html.match(/"coordinates":\s*{\s*"lat":\s*([\d.-]+),\s*"lng":\s*([\d.-]+)/);
             if (wixWarmupMatch) {
-                location = {
-                    lat: parseFloat(wixWarmupMatch[1]),
-                    lng: parseFloat(wixWarmupMatch[2])
-                };
+                const lat = parseFloat(wixWarmupMatch[1]);
+                const lng = parseFloat(wixWarmupMatch[2]);
+                location = `${lat}, ${lng}`; // Store as "lat, lng" string like eventbrite parser
             }
             
             const event = {
@@ -217,7 +216,7 @@ class ChunkParser {
                 startDate: startDate,
                 endDate: endDate,
                 bar: venue,
-                location: location ? `${location.lat}, ${location.lng}` : null, // Convert coordinates to string for calendar compatibility
+                location: location, // Coordinates as "lat, lng" string (same format as eventbrite parser)
                 address: address,
                 city: null, // Let SharedCore detect city from address/venue
                 timezone: null, // Let SharedCore assign timezone based on detected city
