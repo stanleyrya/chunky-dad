@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OG Image Variations – chunky.dad</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --og-bg-1: linear-gradient(135deg, #10151a 0%, #1c2833 100%);
+      --og-bg-2: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      --og-bg-3: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #CD853F 100%);
+      --og-bg-4: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      --og-bg-5: radial-gradient(1000px 400px at 0% 0%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%), linear-gradient(135deg, #222 0%, #111 100%);
+    }
+
+    body { font-family: 'Poppins', sans-serif; background: #0b0f14; color: #e6edf3; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    /* City-style header (simplified) */
+    header { position: sticky; top: 0; background: rgba(11,15,20,0.9); backdrop-filter: blur(8px); z-index: 10; }
+    nav .nav-container { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; }
+    .logo h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; }
+    .logo a { color: #e6edf3; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+    .logo-img { width: 28px; height: 28px; border-radius: 50%; }
+
+    main { padding: 24px 0 40px; }
+    .page-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .page-title h2 { font-size: 28px; font-weight: 700; margin: 0; }
+    .subtitle { color: #9fb2c8; font-size: 14px; }
+
+    .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; background: #0f1520; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px; }
+    .controls label { display: block; font-size: 12px; color: #9fb2c8; margin-bottom: 6px; }
+    .controls input, .controls select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: #101826; color: #e6edf3; }
+
+    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+    .variant-card { background: #0f1520; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+    .variant-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #9fb2c8; font-size: 12px; }
+    .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #111; display: grid; place-items: center; }
+    .artboard { width: 100%; height: 100%; position: relative; overflow: hidden; }
+
+    /* Core artboard shared styles matching generator dimensions */
+    .artboard .brand { position: absolute; top: 28px; left: 32px; font-weight: 700; letter-spacing: .6px; color: #f8f9fa; opacity: .9; font-size: 22px; }
+    .artboard .title { position: absolute; left: 60px; right: 60px; font-size: 64px; line-height: 1.05; font-weight: 800; color: #fff; }
+    .artboard .subtitle { position: absolute; left: 60px; right: 60px; font-size: 28px; color: #d0d7de; }
+    .artboard .venue { position: absolute; left: 60px; right: 60px; font-size: 28px; color: #e6edf3; }
+
+    /* Variant themes */
+    .v1 { background: var(--og-bg-1); }
+    .v2 { background: var(--og-bg-2); }
+    .v3 { background: var(--og-bg-3); }
+    .v4 { background: var(--og-bg-4); }
+    .v5 { background: var(--og-bg-5); }
+
+    /* Layouts */
+    .layout-card .card { position: absolute; inset: 60px; border-radius: 24px; padding: 48px; background: rgba(255,255,255,0.06); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .layout-card .title { top: 140px; }
+    .layout-card .subtitle { top: 260px; }
+    .layout-card .venue { top: 306px; }
+
+    .layout-stripes::before, .layout-stripes::after { content: ""; position: absolute; inset: -10% -10% auto -10%; height: 60%; background: repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 16px, rgba(0,0,0,0.06) 16px 48px); mix-blend-mode: overlay; transform: skewY(-8deg); border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; }
+    .layout-stripes .title { top: 220px; }
+    .layout-stripes .subtitle { top: 320px; }
+    .layout-stripes .venue { top: 366px; }
+
+    .layout-diagonal::before { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(255,255,255,0.06), transparent 40%); }
+    .layout-diagonal .title { top: 210px; }
+    .layout-diagonal .subtitle { top: 308px; }
+    .layout-diagonal .venue { top: 354px; }
+
+    .layout-ring::before { content: ""; position: absolute; width: 900px; height: 900px; left: -200px; top: -220px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,0.12), transparent 70%); filter: blur(8px); }
+    .layout-ring .title { top: 230px; }
+    .layout-ring .subtitle { top: 328px; }
+    .layout-ring .venue { top: 374px; }
+
+    .layout-grid::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 24px 24px; mix-blend-mode: overlay; }
+    .layout-grid .title { top: 200px; }
+    .layout-grid .subtitle { top: 298px; }
+    .layout-grid .venue { top: 344px; }
+
+    /* Fun extras */
+    .badge { position: absolute; right: 40px; top: 40px; background: rgba(0,0,0,0.5); color: #fff; border: 2px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 10px 16px; font-weight: 700; font-size: 16px; letter-spacing: .4px; text-transform: uppercase; }
+    .mascot { position: absolute; bottom: -10px; right: -6px; width: 240px; height: 240px; opacity: .15; filter: grayscale(0.2) contrast(1.1); background: url('../Rising_Star_Ryan_Head_Compressed.png') center/contain no-repeat; transform: rotate(-10deg); }
+
+    .preview-meta { padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.06); display: grid; gap: 6px; font-size: 12px; color: #9fb2c8; }
+    .preview-meta code { background: rgba(255,255,255,0.06); padding: 3px 6px; border-radius: 6px; color: #e6edf3; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="nav-container">
+        <div class="logo">
+          <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad</a></h1>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="page-title">
+        <h2>Bear Event Open Graph Variations</h2>
+        <div class="subtitle">1200x630 previews – styled like city pages</div>
+      </div>
+
+      <section class="controls">
+        <div>
+          <label for="cityInput">City</label>
+          <input id="cityInput" type="text" value="Seattle">
+        </div>
+        <div>
+          <label for="eventInput">Event name</label>
+          <input id="eventInput" type="text" value="Bearracuda Seattle: SERIOUS WOOD">
+        </div>
+        <div>
+          <label for="dayInput">Day</label>
+          <input id="dayInput" type="text" value="Friday">
+        </div>
+        <div>
+          <label for="timeInput">Time</label>
+          <input id="timeInput" type="text" value="9PM–3AM">
+        </div>
+        <div>
+          <label for="barInput">Venue</label>
+          <input id="barInput" type="text" value="MASSIVE">
+        </div>
+        <div>
+          <label for="badgeInput">Badge text (optional)</label>
+          <input id="badgeInput" type="text" placeholder="e.g. New! or Tonight!">
+        </div>
+        <div>
+          <label for="themeSelect">Theme</label>
+          <select id="themeSelect">
+            <option value="v1">Classic Night</option>
+            <option value="v2">Cool Neon</option>
+            <option value="v3">Bear Flag</option>
+            <option value="v4">Midnight</option>
+            <option value="v5">Spotlight</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="variants-grid" id="variantsGrid"></section>
+    </div>
+  </main>
+
+  <script src="../js/logger.js"></script>
+  <script>
+    (function(){
+      const COMPONENT = 'EVENT';
+      logger.componentInit(COMPONENT, 'OG variations tester init');
+
+      const cityEl = document.getElementById('cityInput');
+      const eventEl = document.getElementById('eventInput');
+      const dayEl = document.getElementById('dayInput');
+      const timeEl = document.getElementById('timeInput');
+      const barEl = document.getElementById('barInput');
+      const badgeEl = document.getElementById('badgeInput');
+      const themeEl = document.getElementById('themeSelect');
+      const grid = document.getElementById('variantsGrid');
+
+      const VARIANTS = [
+        { key: 'card-classic', name: 'Card – Classic', classes: 'v1 layout-card' },
+        { key: 'stripes-fun', name: 'Stripes – Fun', classes: 'v2 layout-stripes' },
+        { key: 'diagonal-glow', name: 'Diagonal – Glow', classes: 'v4 layout-diagonal' },
+        { key: 'ring-pop', name: 'Halo – Pop', classes: 'v5 layout-ring' },
+        { key: 'grid-tech', name: 'Grid – Tech', classes: 'v3 layout-grid' }
+      ];
+
+      function buildVariantCard(variant, data) {
+        const card = document.createElement('div');
+        card.className = 'variant-card';
+        card.innerHTML = `
+          <div class="variant-header">
+            <div>${variant.name}</div>
+            <div>theme: <code>${data.theme}</code></div>
+          </div>
+          <div class="variant-preview">
+            <div class="artboard ${variant.classes} ${data.theme}">
+              <div class="brand">chunky.dad</div>
+              <div class="card"></div>
+              <div class="title"></div>
+              <div class="subtitle"></div>
+              <div class="venue"></div>
+              <div class="badge" style="display:none"></div>
+              <div class="mascot"></div>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <div>og:title: <code></code></div>
+            <div>og:description: <code></code></div>
+            <div>dimensions: <code>1200x630</code></div>
+          </div>
+        `;
+        return card;
+      }
+
+      function computeMeta(data) {
+        const title = `${data.event} – ${data.city} – chunky.dad`;
+        const descriptionBits = [];
+        if (data.day) descriptionBits.push(data.day);
+        if (data.time) descriptionBits.push(data.time);
+        if (data.bar) descriptionBits.push(`@ ${data.bar}`);
+        const description = descriptionBits.join(' · ') || `${data.city} bear event`;
+        return { title, description };
+      }
+
+      function update() {
+        const data = {
+          city: cityEl.value.trim() || 'City',
+          event: eventEl.value.trim() || 'Bear Event',
+          day: dayEl.value.trim(),
+          time: timeEl.value.trim(),
+          bar: barEl.value.trim(),
+          badge: badgeEl.value.trim(),
+          theme: themeEl.value
+        };
+
+        logger.debug(COMPONENT, 'Updating OG previews', data);
+
+        grid.innerHTML = '';
+        const meta = computeMeta(data);
+
+        VARIANTS.forEach(variant => {
+          const card = buildVariantCard(variant, data);
+          const art = card.querySelector('.artboard');
+          art.classList.remove('v1','v2','v3','v4','v5');
+          art.classList.add(data.theme);
+
+          const titleEl = card.querySelector('.title');
+          const subtitleEl = card.querySelector('.subtitle');
+          const venueEl = card.querySelector('.venue');
+          const badge = card.querySelector('.badge');
+
+          titleEl.textContent = data.event;
+          subtitleEl.textContent = [data.city, data.day, data.time].filter(Boolean).join(' • ');
+          venueEl.textContent = data.bar ? `@ ${data.bar}` : '';
+          badge.style.display = data.badge ? 'inline-block' : 'none';
+          badge.textContent = data.badge || '';
+
+          const metaTitle = card.querySelector('.preview-meta div:nth-child(1) code');
+          const metaDesc = card.querySelector('.preview-meta div:nth-child(2) code');
+          metaTitle.textContent = meta.title;
+          metaDesc.textContent = meta.description;
+
+          grid.appendChild(card);
+        });
+      }
+
+      ['input','change'].forEach(evt => {
+        cityEl.addEventListener(evt, update);
+        eventEl.addEventListener(evt, update);
+        dayEl.addEventListener(evt, update);
+        timeEl.addEventListener(evt, update);
+        barEl.addEventListener(evt, update);
+        badgeEl.addEventListener(evt, update);
+        themeEl.addEventListener(evt, update);
+      });
+
+      update();
+      logger.componentLoad(COMPONENT, 'OG variations tester ready');
+    })();
+  </script>
+</body>
+</html>
