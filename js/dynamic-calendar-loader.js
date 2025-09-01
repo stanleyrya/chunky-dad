@@ -2109,6 +2109,24 @@ class DynamicCalendarLoader extends CalendarCore {
             } else if (filteredEvents?.length > 0) {
                 // Events are already sorted by upcoming time in getFilteredEvents()
                 eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
+
+                // Deep-link: highlight event from ?event=<slug> or #<slug>
+                try {
+                    const url = new URL(window.location.href);
+                    const eventParam = url.searchParams.get('event') || (window.location.hash ? window.location.hash.replace('#','') : '');
+                    if (eventParam) {
+                        const selector = `.event-card[data-event-slug="${CSS && CSS.escape ? CSS.escape(eventParam) : eventParam}"]`;
+                        const target = document.querySelector(selector);
+                        if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            target.classList.add('highlight');
+                            setTimeout(() => target.classList.remove('highlight'), 2000);
+                            logger.debug('EVENT', `Deep-linked event highlighted: ${eventParam}`);
+                        } else {
+                            logger.debug('EVENT', `Deep-linked event not found in current render: ${eventParam}`);
+                        }
+                    }
+                } catch (_) {}
             } else {
                 eventsList.innerHTML = '<div class="loading-message">No events found for this period. Try switching Week/Month or check back soon.</div>';
                 logger.info('CALENDAR', 'No events to display for current period', {

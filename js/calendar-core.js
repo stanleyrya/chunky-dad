@@ -487,12 +487,17 @@ class CalendarCore {
             }
             
             // Convert HTML breaks to newlines
-            textBlock = textBlock.replace(/<br\s?\/?>/gi, "\n");
+            textBlock = textBlock.replace(/<br\s?\/?>(?=\s*\n?)/gi, "\n");
             
-            // Remove any remaining HTML tags
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = textBlock;
-            textBlock = tempDiv.textContent || tempDiv.innerText || '';
+            // Remove any remaining HTML tags - use DOM when available, else regex fallback
+            if (typeof document !== 'undefined' && document.createElement) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = textBlock;
+                textBlock = tempDiv.textContent || tempDiv.innerText || '';
+            } else {
+                // Basic fallback: strip tags
+                textBlock = textBlock.replace(/<[^>]+>/g, '');
+            }
         }
         
         // Replace escaped newlines with actual newlines

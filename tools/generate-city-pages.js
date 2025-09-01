@@ -60,11 +60,13 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
   }
 
   // Basic OpenGraph tags (optional but included by default)
+  const ogImageUrl = `https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png`;
   const ogTags = [
     `<meta property="og:type" content="website">`,
     `<meta property="og:title" content="${cityTitle}">`,
     `<meta property="og:description" content="${cityDesc}">`,
-    `<meta property="og:url" content="https://chunky.dad${canonicalHref}">`
+    `<meta property="og:url" content="https://chunky.dad${canonicalHref}">`,
+    `<meta property="og:image" content="${ogImageUrl}">`
   ].join('\n  ');
 
   if (!html.includes('property="og:title"')) {
@@ -73,6 +75,11 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
     html = html.replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${cityTitle}">`)
                .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${cityDesc}">`)
                .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="https:\/\/chunky.dad${canonicalHref}">`);
+    if (html.includes('property="og:image"')) {
+      html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${ogImageUrl}">`);
+    } else {
+      html = html.replace('</head>', `  <meta property="og:image" content="${ogImageUrl}">\n</head>`);
+    }
   }
 
   // Rewrite asset and link paths for subdirectory depth

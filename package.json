@@ -23,5 +23,7 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {},
-  "dependencies": {}
+  "dependencies": {
+    "puppeteer": "22.15.0"
+  }
 }
