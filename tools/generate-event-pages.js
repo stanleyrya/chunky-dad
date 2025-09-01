@@ -94,7 +94,22 @@ function buildEventHtml(cityKey, cityName, event) {
   const ogImage = generatedUrl;
 
   const canonical = `/${cityKey}/`;
-  const redirectTarget = `../?event=${encodeURIComponent(event.slug)}`;
+  // Build a date parameter from event.startDate in YYYY-MM-DD for deep-link
+  let dateParam = '';
+  try {
+    const d = event.startDate instanceof Date ? event.startDate : (event.startDate ? new Date(event.startDate) : null);
+    if (d && !isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      dateParam = `${y}-${m}-${dd}`;
+    }
+  } catch (e) {
+    dateParam = '';
+  }
+  const redirectTarget = dateParam
+    ? `../?event=${encodeURIComponent(event.slug)}&date=${encodeURIComponent(dateParam)}&view=week`
+    : `../?event=${encodeURIComponent(event.slug)}&view=week`;
 
   return `<!DOCTYPE html>
 ${MARKER}
@@ -118,7 +133,24 @@ ${MARKER}
 </head>
 <body>
   <noscript><meta http-equiv="refresh" content="0; url=${redirectTarget}"></noscript>
-  <script>location.replace(${JSON.stringify(redirectTarget)});</script>
+  <script>
+    (function(){
+      try {
+        var extra = window.location.search || '';
+        var hash = window.location.hash || '';
+        // If incoming URL already has date/view, prefer those by appending missing params only
+        var target = new URL(${JSON.stringify(redirectTarget)}, window.location.origin);
+        var incoming = new URL(window.location.href);
+        incoming.searchParams.forEach(function(v, k){
+          if (!target.searchParams.has(k)) target.searchParams.set(k, v);
+        });
+        var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
+        location.replace(finalUrl);
+      } catch (e) {
+        location.replace(${JSON.stringify(redirectTarget)});
+      }
+    })();
+  </script>
 </body>
 </html>`;
 }
