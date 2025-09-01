@@ -170,57 +170,35 @@ class ChunkParser {
             }
             
             // CHUNK provides dates with timezone offsets in their JSON-LD
-            // PROBLEM: They use "local time as if it was in PST" but the timezone offset may be wrong
-            // SOLUTION: Parse the date/time as local, then let SharedCore apply the correct city timezone
+            // SOLUTION: Parse the ISO string directly - JavaScript Date handles timezone conversion correctly
             let startDate = null;
             let endDate = null;
             
             if (jsonData.startDate) {
                 console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
                 
-                // Step 1: Extract date/time components directly from the string
-                // This ignores the timezone offset and treats the time as local
-                const match = jsonData.startDate.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-                if (match) {
-                    const [, year, month, day, hours, minutes, seconds] = match;
-                    
-                    // Step 2: Create a new local Date object with the extracted components
-                    // Month is 0-based in Date constructor, so subtract 1
-                    startDate = new Date(
-                        parseInt(year), 
-                        parseInt(month) - 1, 
-                        parseInt(day), 
-                        parseInt(hours), 
-                        parseInt(minutes), 
-                        parseInt(seconds)
-                    );
-                    
-                    console.log(`🎉 Chunk: Extracted local components: ${year}-${month}-${day} ${hours}:${minutes}:${seconds}`);
-                    console.log(`🎉 Chunk: Created local date object: ${startDate.toISOString()}`);
-                } else {
+                // Parse the ISO string directly - JavaScript Date handles timezone conversion correctly
+                startDate = new Date(jsonData.startDate);
+                
+                if (isNaN(startDate.getTime())) {
                     console.warn(`🎉 Chunk: Could not parse date format: ${jsonData.startDate}`);
                     startDate = null;
+                } else {
+                    console.log(`🎉 Chunk: Created date from ISO string: ${startDate.toISOString()}`);
                 }
             }
             
             if (jsonData.endDate) {
-                const match = jsonData.endDate.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-                if (match) {
-                    const [, year, month, day, hours, minutes, seconds] = match;
-                    
-                    endDate = new Date(
-                        parseInt(year), 
-                        parseInt(month) - 1, 
-                        parseInt(day), 
-                        parseInt(hours), 
-                        parseInt(minutes), 
-                        parseInt(seconds)
-                    );
-                    
-                    console.log(`🎉 Chunk: Created local end date object: ${endDate.toISOString()}`);
-                } else {
+                console.log(`🎉 Chunk: Parsing end date from JSON-LD: ${jsonData.endDate}`);
+                
+                // Parse the ISO string directly - JavaScript Date handles timezone conversion correctly
+                endDate = new Date(jsonData.endDate);
+                
+                if (isNaN(endDate.getTime())) {
                     console.warn(`🎉 Chunk: Could not parse end date format: ${jsonData.endDate}`);
                     endDate = null;
+                } else {
+                    console.log(`🎉 Chunk: Created end date from ISO string: ${endDate.toISOString()}`);
                 }
             }
             
