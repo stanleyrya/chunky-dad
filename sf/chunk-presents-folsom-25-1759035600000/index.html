@@ -16,10 +16,27 @@
   <meta name="twitter:title" content="CHUNK presents FOLSOM '25 – San Francisco – chunky.dad">
   <meta name="twitter:description" content="Sunday · 5AM-11AM · @ f8 NIGHTCLUB">
   <meta name="twitter:image" content="https://chunky.dad/img/og/sf/chunk-presents-folsom-25-1759035600000.png?v=94d4f9c9">
-  <meta http-equiv="refresh" content="0; url=../?event=chunk-presents-folsom-25-1759035600000">
+  <meta http-equiv="refresh" content="0; url=../?event=chunk-presents-folsom-25-1759035600000&date=2025-09-28&view=week">
 </head>
 <body>
-  <noscript><meta http-equiv="refresh" content="0; url=../?event=chunk-presents-folsom-25-1759035600000"></noscript>
-  <script>location.replace("../?event=chunk-presents-folsom-25-1759035600000");</script>
+  <noscript><meta http-equiv="refresh" content="0; url=../?event=chunk-presents-folsom-25-1759035600000&date=2025-09-28&view=week"></noscript>
+  <script>
+    (function(){
+      try {
+        var extra = window.location.search || '';
+        var hash = window.location.hash || '';
+        // If incoming URL already has date/view, prefer those by appending missing params only
+        var target = new URL("../?event=chunk-presents-folsom-25-1759035600000&date=2025-09-28&view=week", window.location.origin);
+        var incoming = new URL(window.location.href);
+        incoming.searchParams.forEach(function(v, k){
+          if (!target.searchParams.has(k)) target.searchParams.set(k, v);
+        });
+        var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
+        location.replace(finalUrl);
+      } catch (e) {
+        location.replace("../?event=chunk-presents-folsom-25-1759035600000&date=2025-09-28&view=week");
+      }
+    })();
+  </script>
 </body>
 </html>

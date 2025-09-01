@@ -14,6 +14,10 @@ class DynamicCalendarLoader extends CalendarCore {
         this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
         
+        // Event selection state (for URL sync)
+        this.selectedEventSlug = null;
+        this.selectedEventDateISO = null;
+        
         // Enhanced swipe functionality
         this.touchStartX = 0;
         this.touchStartY = 0;
@@ -394,6 +398,115 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.warn('CITY', 'Failed to resolve city from URL, defaulting to new-york', { error: e?.message });
             return 'new-york';
         }
+    }
+
+    // ======== URL STATE HELPERS ========
+    // Parse initial state (date/view/event) from URL and apply to loader
+    parseStateFromUrl() {
+        try {
+            const url = new URL(window.location.href);
+            const dateParam = url.searchParams.get('date');
+            const viewParam = url.searchParams.get('view');
+            const eventParam = url.searchParams.get('event');
+            
+            // View
+            if (viewParam === 'week' || viewParam === 'month') {
+                this.currentView = viewParam;
+            }
+            
+            // Date (YYYY-MM-DD)
+            if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+                const parts = dateParam.split('-');
+                const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                if (!isNaN(parsed.getTime())) {
+                    this.currentDate = parsed;
+                }
+            }
+            
+            // Event selection from URL (no slug->date inference)
+            if (eventParam) {
+                this.selectedEventSlug = eventParam;
+                // If date provided, bind selection to that date; else leave date undefined
+                if (url.searchParams.get('date')) {
+                    this.selectedEventDateISO = url.searchParams.get('date');
+                }
+            }
+        } catch (e) {
+            logger.warn('CALENDAR', 'Failed to parse state from URL', { error: e?.message });
+        }
+    }
+    
+    // Build ISO date string from Date
+    formatDateToISO(date) {
+        try {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        } catch (_) {
+            return '';
+        }
+    }
+    
+    // Sync current state to URL (replaceState to avoid history spam)
+    syncUrl(replace = true) {
+        try {
+            const url = new URL(window.location.href);
+            // Always ensure we are at the city path; preserve other params except we control these keys
+            const params = url.searchParams;
+            // View + date
+            params.set('view', this.currentView);
+            params.set('date', this.formatDateToISO(this.currentDate));
+            
+            // Event parameter only when selected
+            if (this.selectedEventSlug) {
+                params.set('event', this.selectedEventSlug);
+            } else {
+                params.delete('event');
+            }
+            
+            // Apply and replace
+            const newUrl = `${url.pathname}?${params.toString()}${url.hash || ''}`;
+            if (replace) {
+                history.replaceState({}, '', newUrl);
+            } else {
+                history.pushState({}, '', newUrl);
+            }
+            logger.debug('CALENDAR', 'URL synced', { url: newUrl, view: this.currentView, date: params.get('date'), event: params.get('event') || null });
+        } catch (e) {
+            logger.warn('CALENDAR', 'Failed to sync URL', { error: e?.message });
+        }
+    }
+    
+    // Clear current event selection
+    clearEventSelection() {
+        const hadSelection = !!this.selectedEventSlug;
+        this.selectedEventSlug = null;
+        this.selectedEventDateISO = null;
+        if (hadSelection) {
+            logger.userInteraction('EVENT', 'Event selection cleared');
+        }
+    }
+    
+    // Toggle/select event for URL/state
+    toggleEventSelection(eventSlug, eventDateISO) {
+        if (!eventSlug) return;
+        const normalizedDateISO = eventDateISO && /^\d{4}-\d{2}-\d{2}$/.test(eventDateISO) ? eventDateISO : this.formatDateToISO(this.currentDate);
+        if (this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO) {
+            this.clearEventSelection();
+        } else {
+            this.selectedEventSlug = eventSlug;
+            this.selectedEventDateISO = normalizedDateISO;
+            // Align currentDate to selected date for consistency
+            const parts = normalizedDateISO.split('-');
+            const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            if (!isNaN(parsed.getTime())) {
+                this.currentDate = parsed;
+            }
+            logger.userInteraction('EVENT', 'Event selected', { eventSlug, date: normalizedDateISO });
+        }
+        // Reflect selection in URL
+        this.syncUrl(true);
     }
 
     // Helper: detect slug from first path segment, similar to app-level logic
@@ -1005,7 +1118,10 @@ class DynamicCalendarLoader extends CalendarCore {
         // Remove modal
         document.querySelector('.day-events-modal')?.remove();
         
+        // Clear current selection when jumping views
+        this.clearEventSelection();
         this.updateCalendarDisplay();
+        this.syncUrl(true);
     }
 
     navigatePeriod(direction, skipAnimation = false) {
@@ -1032,6 +1148,10 @@ class DynamicCalendarLoader extends CalendarCore {
             this.currentDate.setDate(Math.min(previousDay, lastDayOfTargetMonth));
         }
         
+        // Changing period clears selection and syncs URL
+        this.clearEventSelection();
+        this.syncUrl(true);
+        
         // Only update display immediately if not part of a swipe animation
         if (skipAnimation) {
             this.updateCalendarDisplay();
@@ -1040,7 +1160,9 @@ class DynamicCalendarLoader extends CalendarCore {
 
     goToToday() {
         this.currentDate = new Date();
+        this.clearEventSelection();
         this.updateCalendarDisplay();
+        this.syncUrl(true);
     }
 
     formatDateRange(start, end) {
@@ -1516,10 +1638,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 const eventVenue = button.dataset.eventVenue;
                 const eventTime = button.dataset.eventTime;
                 
-                // Build the full share URL: /city/event-slug
-                // Use the full city page URL for proper OpenGraph support
+                // Build share URL with date + view for accurate deep link
                 const citySlug = this.currentCity || window.location.pathname.replace(/\//g, '');
-                const shareUrl = `${window.location.origin}/${citySlug}/${eventSlug}`;
+                const dateISO = this.formatDateToISO(this.currentDate);
+                const view = this.currentView;
+                const shareUrl = `${window.location.origin}/${citySlug}/${eventSlug}?date=${encodeURIComponent(dateISO)}&view=${encodeURIComponent(view)}`;
                 
                 // Build share text
                 const shareTitle = `${eventName}`;
@@ -2249,6 +2372,12 @@ class DynamicCalendarLoader extends CalendarCore {
                             target.classList.add('highlight');
                             setTimeout(() => target.classList.remove('highlight'), 2000);
                             logger.debug('EVENT', `Deep-linked event highlighted: ${eventParam}`);
+                            // Maintain selection state based on URL
+                            const dateParam = url.searchParams.get('date');
+                            if (dateParam) {
+                                this.selectedEventSlug = eventParam;
+                                this.selectedEventDateISO = dateParam;
+                            }
                         } else {
                             logger.debug('EVENT', `Deep-linked event not found in current render: ${eventParam}`);
                         }
@@ -2257,6 +2386,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 // Add share button event handlers
                 this.setupShareButtons();
+                
+                // Add card click handlers for selection toggle and URL sync
+                this.attachEventCardSelectionHandlers();
             } else {
                 eventsList.innerHTML = '<div class="loading-message">No events found for this period. Try switching Week/Month or check back soon.</div>';
                 logger.info('CALENDAR', 'No events to display for current period', {
@@ -2280,6 +2412,11 @@ class DynamicCalendarLoader extends CalendarCore {
             city: this.currentCity,
             hideEvents
         });
+
+        // After updating UI, keep URL in sync with the new date/view/selection
+        if (!hideEvents) {
+            this.syncUrl(true);
+        }
     }
 
     // Set up calendar controls
@@ -2304,7 +2441,10 @@ class DynamicCalendarLoader extends CalendarCore {
                     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
                     e.target.classList.add('active');
                     
+                    // View change clears selection and syncs URL
+                    this.clearEventSelection();
                     this.updateCalendarDisplay();
+                    this.syncUrl(true);
                 }
             });
         });
@@ -2340,6 +2480,9 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Setup keyboard navigation
         this.setupKeyboardHandlers();
+        
+        // Ensure active state matches current view
+        this.updateViewToggleActive();
         
         logger.componentLoad('CALENDAR', 'Calendar controls setup complete', {
             hasNavigation: !!(prevBtn && nextBtn && todayBtn),
@@ -2427,10 +2570,16 @@ class DynamicCalendarLoader extends CalendarCore {
         eventItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 const eventSlug = item.dataset.eventSlug;
+                // Determine the date for this event from the closest day element
+                const dayEl = item.closest('[data-date]');
+                const dayISO = dayEl ? dayEl.getAttribute('data-date') : this.formatDateToISO(this.currentDate);
                 logger.userInteraction('EVENT', `Calendar event clicked: ${eventSlug}`, {
                     eventSlug,
                     city: this.currentCity
                 });
+                
+                // Toggle selection and sync URL
+                this.toggleEventSelection(eventSlug, dayISO);
                 
                 const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
                 if (eventCard) {
@@ -2447,10 +2596,44 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', `Attached interactions to ${eventItems.length} calendar items`);
     }
 
+    // Add click-to-select behavior on event cards as well
+    attachEventCardSelectionHandlers() {
+        const cards = document.querySelectorAll('.event-card.detailed');
+        cards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                // Ignore clicks that originate from share button
+                const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
+                if (shareBtn) return;
+                const slug = card.getAttribute('data-event-slug');
+                // Prefer the date from selectedEventDateISO if it matches slug, else use currentDate
+                const dayISO = this.selectedEventSlug === slug && this.selectedEventDateISO ? this.selectedEventDateISO : this.formatDateToISO(this.currentDate);
+                logger.userInteraction('EVENT', 'Event card clicked', { slug, date: dayISO });
+                this.toggleEventSelection(slug, dayISO);
+                // Visual feedback
+                card.classList.add('highlight');
+                setTimeout(() => card.classList.remove('highlight'), 2000);
+            });
+        });
+        logger.debug('EVENT', `Attached selection handlers to ${cards.length} event cards`);
+    }
+
+    // Ensure view toggle buttons reflect current view
+    updateViewToggleActive() {
+        try {
+            const active = this.currentView === 'month' ? 'month' : 'week';
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`.view-btn[data-view="${active}"]`);
+            if (btn) btn.classList.add('active');
+        } catch (_) {}
+    }
+
     // Main render function
     async renderCityPage() {
         this.currentCity = this.getCityFromURL();
         this.currentCityConfig = getCityConfig(this.currentCity);
+        
+        // Parse initial state (view/date/event) from URL before rendering
+        this.parseStateFromUrl();
         
         logger.info('CITY', `Rendering city page for: ${this.currentCity}`);
         
@@ -2560,6 +2743,9 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             
             this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
+            
+            // Ensure URL reflects initial state after first render
+            this.syncUrl(true);
             
         } catch (error) {
             logger.componentError('CALENDAR', '🔍 RENDER: Calendar loading failed with error', error);
