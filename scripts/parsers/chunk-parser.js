@@ -143,38 +143,12 @@ class ChunkParser {
                     continue; // Not an event, try next block
                 }
                 
-                // Detect timezone information in startDate and prioritize accordingly
-                const hasExplicitTimezone = testJsonData.startDate && (
-                    // ISO 8601 timezone offset format: ±HH:MM (e.g., -07:00, +05:30, +00:00)
-                    /[+-]\d{2}:\d{2}$/.test(testJsonData.startDate) ||
-                    // ISO 8601 timezone offset without colon: ±HHMM (e.g., -0700, +0530)
-                    /[+-]\d{4}$/.test(testJsonData.startDate) ||
-                    // Named timezone suffixes (e.g., PST, EST, GMT, UTC+5)
-                    /[A-Z]{3,4}([+-]\d{1,2})?$/.test(testJsonData.startDate)
-                );
-                
-                const isUTC = testJsonData.startDate && testJsonData.startDate.endsWith('Z');
-                
-                // Priority order: 1) Explicit timezone offset, 2) UTC, 3) No timezone info
-                const currentPriority = hasExplicitTimezone ? 3 : (isUTC ? 2 : 1);
-                const existingPriority = !jsonData ? 0 : (
-                    jsonData.startDate && (
-                        /[+-]\d{2}:\d{2}$/.test(jsonData.startDate) ||
-                        /[+-]\d{4}$/.test(jsonData.startDate) ||
-                        /[A-Z]{3,4}([+-]\d{1,2})?$/.test(jsonData.startDate)
-                    ) ? 3 : (jsonData.startDate && jsonData.startDate.endsWith('Z') ? 2 : 1)
-                );
-                
-                // Use this block if it has higher priority or we don't have a candidate yet
-                if (currentPriority > existingPriority) {
+                // Use the first valid Event JSON-LD block we find
+                // JavaScript Date() will handle any timezone format correctly
+                if (!jsonData) {
                     jsonData = testJsonData;
                     selectedJsonString = testJsonString;
-                    console.log(`🎉 Chunk: Selected JSON-LD with timezone: ${testJsonData.startDate}`);
-                    
-                    // If we found the highest priority (explicit timezone), stop looking
-                    if (hasExplicitTimezone) {
-                        break;
-                    }
+                    console.log(`🎉 Chunk: Selected JSON-LD: ${testJsonData.startDate}`);
                 }
             }
             
