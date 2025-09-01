@@ -169,37 +169,19 @@ class ChunkParser {
                 address = jsonData.location.address || '';
             }
             
-            // Smart timezone handling - extract local time from JSON-LD, then convert using city timezone
-            let startDate = null;
-            let endDate = null;
+            // CHUNK provides dates with timezone offsets in their JSON-LD
+            // IMPORTANT: They often use the WRONG timezone (e.g., Pacific time for Chicago events)
+            // So we must use the date AS PROVIDED and let JavaScript handle the conversion
+            // Do NOT try to re-interpret the time in a different timezone
+            let startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
+            let endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
             
-            if (jsonData.startDate && address) {
-                // Extract the "local time" that CHUNK intends (ignoring their timezone)
-                const localTime = this.extractLocalTimeFromChunkDate(jsonData.startDate);
-                const city = this.detectCityFromAddress(address, cityConfig);
-                
-                if (localTime && city) {
-                    // Convert using the correct timezone for the city (like Bearracuda does)
-                    startDate = this.convertChunkTimeToUTC(localTime, city, cityConfig, jsonData.startDate);
-                    
-                    // Handle end date if available
-                    if (jsonData.endDate) {
-                        const endLocalTime = this.extractLocalTimeFromChunkDate(jsonData.endDate);
-                        if (endLocalTime) {
-                            endDate = this.convertChunkTimeToUTC(endLocalTime, city, cityConfig, jsonData.endDate);
-                        }
-                    }
+            // Log what we're parsing for debugging
+            if (jsonData.startDate) {
+                console.log(`🎉 Chunk: Parsing start date directly from JSON-LD: ${jsonData.startDate}`);
+                if (startDate) {
+                    console.log(`🎉 Chunk: Converted to UTC: ${startDate.toISOString()}`);
                 }
-                
-                // Fallback to original parsing if conversion fails
-                if (!startDate) {
-                    startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
-                    endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
-                }
-            } else {
-                // No address or startDate, use original parsing
-                startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
-                endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
             }
             
             // Extract price information from offers
@@ -332,131 +314,7 @@ class ChunkParser {
         return Array.from(urls);
     }
 
-    // Extract local time components from CHUNK's date string (ignoring their timezone)
-    extractLocalTimeFromChunkDate(dateString) {
-        try {
-            // Parse the date string to get the time components
-            // We want the "local time" that CHUNK intends (e.g., 9:00 PM from "2025-10-11T21:00:00-07:00")
-            const date = new Date(dateString);
-            
-            // Extract the time components from the original string (before timezone conversion)
-            const timeMatch = dateString.match(/T(\d{2}):(\d{2}):(\d{2})/);
-            if (timeMatch) {
-                const hours = parseInt(timeMatch[1]);
-                const minutes = parseInt(timeMatch[2]);
-                
-                // Get the date components
-                const year = date.getUTCFullYear();
-                const month = date.getUTCMonth();
-                const day = date.getUTCDate();
-                
-                // Check if we need to adjust the date due to timezone conversion
-                // If the original had a timezone offset, the date might have shifted
-                const originalDateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                if (originalDateMatch) {
-                    const origYear = parseInt(originalDateMatch[1]);
-                    const origMonth = parseInt(originalDateMatch[2]) - 1; // Month is 0-based
-                    const origDay = parseInt(originalDateMatch[3]);
-                    
-                    return {
-                        year: origYear,
-                        month: origMonth,
-                        day: origDay,
-                        hours: hours,
-                        minutes: minutes
-                    };
-                }
-            }
-            
-            return null;
-        } catch (error) {
-            console.warn(`🎉 Chunk: Error extracting local time: ${error.message}`);
-            return null;
-        }
-    }
-    
-    // Convert CHUNK local time to UTC using correct city timezone (like Bearracuda)
-    convertChunkTimeToUTC(localTime, city, cityConfig, originalDateString) {
-        try {
-            // Get the correct timezone for this city using cityConfig
-            const timezone = this.getTimezoneForCity(city, cityConfig);
-            if (!timezone) {
-                console.log(`🎉 Chunk: No timezone found for city: ${city}`);
-                return null;
-            }
-            
-            console.log(`🎉 Chunk: Converting ${city} time ${localTime.hours}:${localTime.minutes} (${timezone}) to UTC`);
-            
-            // Use the same approach as Bearracuda for timezone conversion
-            const tempDate = new Date(`${localTime.year}-${String(localTime.month + 1).padStart(2, '0')}-${String(localTime.day).padStart(2, '0')}T12:00:00`);
-            
-            // Get the timezone offset for this specific date in this city
-            const formatter = new Intl.DateTimeFormat('en', {
-                timeZone: timezone,
-                timeZoneName: 'longOffset'
-            });
-            
-            const parts = formatter.formatToParts(tempDate);
-            const offsetPart = parts.find(part => part.type === 'timeZoneName');
-            
-            if (offsetPart && offsetPart.value) {
-                // Parse offset like "GMT-05:00" or "GMT+09:00"
-                const offsetMatch = offsetPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
-                if (offsetMatch) {
-                    const sign = offsetMatch[1] === '+' ? 1 : -1;
-                    const offsetHours = parseInt(offsetMatch[2]);
-                    const offsetMinutes = parseInt(offsetMatch[3]);
-                    const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
-                    
-                    // Create local time as UTC first, then apply timezone offset
-                    const localTimeAsUTC = new Date(Date.UTC(localTime.year, localTime.month, localTime.day, localTime.hours, localTime.minutes, 0, 0));
-                    const utcTime = new Date(localTimeAsUTC.getTime() - (totalOffsetMinutes * 60 * 1000));
-                    
-                    console.log(`🎉 Chunk: Converted ${city} time ${localTime.hours}:${localTime.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
-                    
-                    return utcTime;
-                }
-            }
-            
-            console.log(`🎉 Chunk: Could not determine timezone offset for ${city}, using original`);
-            return new Date(originalDateString);
-            
-        } catch (error) {
-            console.log(`🎉 Chunk: Error in timezone conversion: ${error.message}, using original`);
-            return new Date(originalDateString);
-        }
-    }
-    
-    // Detect city from address string using cityConfig patterns
-    detectCityFromAddress(address, cityConfig = null) {
-        if (!address || !cityConfig) return null;
-        
-        const lowerAddress = address.toLowerCase();
-        
-        // Use cityConfig patterns like other parsers
-        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
-            if (cityData.patterns && Array.isArray(cityData.patterns)) {
-                for (const pattern of cityData.patterns) {
-                    if (lowerAddress.includes(pattern.toLowerCase())) {
-                        return cityKey;
-                    }
-                }
-            }
-        }
-        
-        return null;
-    }
-    
-    // Get timezone for a city using centralized configuration (like Bearracuda)
-    getTimezoneForCity(city, cityConfig = null) {
-        // City config must be provided - no fallbacks
-        if (!cityConfig || !cityConfig[city]) {
-            console.log(`🎉 Chunk: No timezone configuration found for city: ${city}`);
-            return null;
-        }
-        
-        return cityConfig[city].timezone;
-    }
+
 
 
 }
