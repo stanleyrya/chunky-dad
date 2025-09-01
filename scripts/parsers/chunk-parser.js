@@ -169,34 +169,44 @@ class ChunkParser {
                 address = jsonData.location.address || '';
             }
             
-            // CHUNK provides dates with timezone offsets in their JSON-LD
-            // SOLUTION: Use the original timezone-aware date string to create proper Date objects
+            // CHUNK provides dates with timezone offsets in their JSON-LD, but the numeric offset
+            // may reflect the publisher's timezone rather than the event's city (e.g., Chicago dates
+            // tagged with -07:00). We will extract the wall-clock components and recompute UTC using
+            // the detected city timezone from cityConfig.
             let startDate = null;
             let endDate = null;
             
+            // Detect city from address/title using centralized patterns
+            const detectedCity = this.extractCityFromText(`${address} ${title}`, cityConfig);
+            const detectedTimezone = detectedCity && cityConfig && cityConfig[detectedCity] ? cityConfig[detectedCity].timezone : null;
+
             if (jsonData.startDate) {
                 console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
-                
-                // Parse the full timezone-aware date string directly
-                // This preserves the original timezone information from the JSON-LD
-                try {
-                    startDate = new Date(jsonData.startDate);
-                    console.log(`🎉 Chunk: Created timezone-aware date object: ${startDate.toISOString()}`);
-                    console.log(`🎉 Chunk: Local display time: ${startDate.toString()}`);
-                } catch (error) {
-                    console.warn(`🎉 Chunk: Could not parse date format: ${jsonData.startDate}, error: ${error}`);
-                    startDate = null;
+                // Extract local wall-clock components and compute UTC via city timezone
+                startDate = this.computeZonedUtcFromIsoLocal(jsonData.startDate, detectedTimezone);
+                if (startDate) {
+                    console.log(`🎉 Chunk: Created timezone-corrected start date: ${startDate.toISOString()}`);
+                } else {
+                    console.warn(`🎉 Chunk: Failed zoned conversion for startDate, falling back to Date()`);
+                    try {
+                        startDate = new Date(jsonData.startDate);
+                    } catch (_) {
+                        startDate = null;
+                    }
                 }
             }
             
             if (jsonData.endDate) {
-                // Parse the full timezone-aware end date string directly
-                try {
-                    endDate = new Date(jsonData.endDate);
-                    console.log(`🎉 Chunk: Created timezone-aware end date object: ${endDate.toISOString()}`);
-                } catch (error) {
-                    console.warn(`🎉 Chunk: Could not parse end date format: ${jsonData.endDate}, error: ${error}`);
-                    endDate = null;
+                // Compute UTC from local wall-clock using the same city timezone
+                endDate = this.computeZonedUtcFromIsoLocal(jsonData.endDate, detectedTimezone);
+                if (endDate) {
+                    console.log(`🎉 Chunk: Created timezone-corrected end date: ${endDate.toISOString()}`);
+                } else {
+                    try {
+                        endDate = new Date(jsonData.endDate);
+                    } catch (_) {
+                        endDate = null;
+                    }
                 }
             }
             
@@ -262,8 +272,8 @@ class ChunkParser {
                 bar: venue,
                 location: location, // Coordinates as "lat, lng" string (same format as eventbrite parser)
                 address: address,
-                city: null, // Let SharedCore detect city from address/venue
-                timezone: null, // Will be set by SharedCore after city detection
+                city: detectedCity || null,
+                timezone: detectedTimezone || null,
                 url: url,
                 ticketUrl: ticketUrl,
                 cover: price,
@@ -328,6 +338,59 @@ class ChunkParser {
         
         // Return all found URLs (no limit if maxAdditionalUrls is null)
         return Array.from(urls);
+    }
+
+    // Extract city key from text using centralized cityConfig patterns
+    extractCityFromText(text, cityConfig = null) {
+        if (!text || !cityConfig) return null;
+        const lower = text.toLowerCase();
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (!cityData.patterns) continue;
+            for (const pattern of cityData.patterns) {
+                if (lower.includes(String(pattern).toLowerCase())) {
+                    return cityKey;
+                }
+            }
+        }
+        return null;
+    }
+
+    // Compute a UTC Date from an ISO string by ignoring its numeric offset and
+    // treating the wall-clock components as local time in the provided IANA timezone
+    computeZonedUtcFromIsoLocal(isoString, timezone) {
+        try {
+            if (!isoString) return null;
+            // Extract yyyy-mm-dd and hh:mm:ss
+            const m = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+            if (!m) return null;
+            const year = parseInt(m[1], 10);
+            const month = parseInt(m[2], 10);
+            const day = parseInt(m[3], 10);
+            const hours = parseInt(m[4], 10);
+            const minutes = parseInt(m[5], 10);
+            const seconds = m[6] ? parseInt(m[6], 10) : 0;
+
+            if (!timezone) return null;
+
+            // Determine the GMT offset for this date in the target timezone
+            const tempDate = new Date(`${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00`);
+            const formatter = new Intl.DateTimeFormat('en', { timeZone: timezone, timeZoneName: 'longOffset' });
+            const parts = formatter.formatToParts(tempDate);
+            const tzName = parts.find(p => p.type === 'timeZoneName')?.value || '';
+            const offsetMatch = tzName.match(/GMT([+-])(\d{2}):(\d{2})/);
+            if (!offsetMatch) return null;
+            const sign = offsetMatch[1] === '+' ? 1 : -1;
+            const offsetHours = parseInt(offsetMatch[2], 10);
+            const offsetMinutes = parseInt(offsetMatch[3], 10);
+            const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
+
+            // Local wall time as UTC baseline, then subtract offset to get true UTC
+            const localAsUtcMs = Date.UTC(year, month - 1, day, hours, minutes, seconds, 0);
+            const utcMs = localAsUtcMs - totalOffsetMinutes * 60 * 1000;
+            return new Date(utcMs);
+        } catch (_) {
+            return null;
+        }
     }
 }
 
