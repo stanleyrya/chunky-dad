@@ -25,6 +25,9 @@ class SharedCore {
             throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-input.js');
         }
 
+        // Keep original cities config for timezone lookups and calendars
+        this.cities = cities;
+
         this.visitedUrls = new Set();
         this.bearKeywords = [
             'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
@@ -1453,6 +1456,11 @@ class SharedCore {
             }
         }
         
+        // Ensure timezone is set from centralized config when city is known
+        if (!event.timezone && event.city && this.cities[event.city] && this.cities[event.city].timezone) {
+            event.timezone = this.cities[event.city].timezone;
+        }
+
         // Clean up location data based on what we have
         if (event.address && this.isFullAddress(event.address)) {
             // Keep address and gmaps URL
