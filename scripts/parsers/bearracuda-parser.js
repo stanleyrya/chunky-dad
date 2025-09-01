@@ -246,7 +246,6 @@ class BearraccudaParser {
                 location: null, // No coordinates available in HTML parsing
                 address: address,
                 city: city,
-                timezone: this.getTimezoneForCity(city, cityConfig),
                 url: sourceUrl, // Use consistent 'url' field name across all parsers
                 cover: '', // No cover charge info found in the sample
                 image: this.extractImage(html),
