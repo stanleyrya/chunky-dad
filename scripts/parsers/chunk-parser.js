@@ -82,62 +82,92 @@ class ChunkParser {
     // Parse detail page using JSON-LD (the ONLY method that works reliably)
     parseDetailPageJsonLD(html, url, parserConfig, cityConfig) {
         try {
-            // Extract JSON-LD schema - Chunk detail pages ALWAYS have this
-            const jsonLdMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+            // Extract ALL JSON-LD schemas - Chunk detail pages have multiple, we need the right one
+            const jsonLdMatches = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
             
-            if (!jsonLdMatch || !jsonLdMatch[1]) {
+            if (!jsonLdMatches || jsonLdMatches.length === 0) {
                 console.warn(`🎉 Chunk: No JSON-LD found on detail page: ${url}`);
                 return null;
             }
             
-            // Clean up the JSON string
-            let jsonString = jsonLdMatch[1].trim();
+            // Try each JSON-LD block to find the Event one with timezone information
+            let jsonData = null;
+            let selectedJsonString = null;
             
-            // Replace HTML entities - these are the most common issues
-            jsonString = jsonString
-                .replace(/&quot;/g, '"')
-                .replace(/&#010;/g, ' ')  // Replace newline entities with space
-                .replace(/&#x27;/g, "'")
-                .replace(/&apos;/g, "'")   // Apostrophe entity
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&#039;/g, "'")
-                .replace(/&#8217;/g, "'")  // Right single quote
-                .replace(/&#8220;/g, '"')  // Left double quote
-                .replace(/&#8221;/g, '"'); // Right double quote
-            
-            // Clean up common JSON issues before parsing
-            jsonString = jsonString
-                .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
-                .replace(/([^\\])\\n/g, '$1 ')  // Replace literal \n with space
-                .replace(/([^\\])\\r/g, '$1')   // Remove literal \r
-                .replace(/([^\\])\\t/g, '$1 '); // Replace literal \t with space
-            
-            // Try to parse the JSON
-            let jsonData;
-            try {
-                jsonData = JSON.parse(jsonString);
-            } catch (parseError) {
-                // If parsing fails, try more aggressive cleaning
-                console.warn(`🎉 Chunk: Initial JSON parse failed, attempting cleanup: ${parseError.message}`);
+            for (const match of jsonLdMatches) {
+                const contentMatch = match.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+                if (!contentMatch || !contentMatch[1]) continue;
                 
-                // Remove any control characters that might be causing issues
-                jsonString = jsonString
-                    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' '); // Replace control chars with space
+                // Clean up the JSON string for this block
+                let testJsonString = contentMatch[1].trim();
+                testJsonString = testJsonString
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#010;/g, ' ')  // Replace newline entities with space
+                    .replace(/&#x27;/g, "'")
+                    .replace(/&apos;/g, "'")   // Apostrophe entity
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&#039;/g, "'")
+                    .replace(/&#8217;/g, "'")  // Right single quote
+                    .replace(/&#8220;/g, '"')  // Left double quote
+                    .replace(/&#8221;/g, '"'); // Right double quote
                 
-                // Try one more time
+                // Clean up common JSON issues before parsing
+                testJsonString = testJsonString
+                    .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
+                    .replace(/([^\\])\\n/g, '$1 ')  // Replace literal \n with space
+                    .replace(/([^\\])\\r/g, '$1')   // Remove literal \r
+                    .replace(/([^\\])\\t/g, '$1 '); // Replace literal \t with space
+                
+                // Try to parse this JSON block
+                let testJsonData;
                 try {
-                    jsonData = JSON.parse(jsonString);
-                } catch (finalError) {
-                    console.error(`🎉 Chunk: Failed to parse JSON-LD: ${finalError}`);
-                    return null;
+                    testJsonData = JSON.parse(testJsonString);
+                } catch (parseError) {
+                    // If parsing fails, try more aggressive cleaning
+                    testJsonString = testJsonString
+                        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' '); // Replace control chars with space
+                    
+                    try {
+                        testJsonData = JSON.parse(testJsonString);
+                    } catch (finalError) {
+                        console.warn(`🎉 Chunk: Failed to parse JSON-LD block: ${finalError.message}`);
+                        continue; // Try next JSON-LD block
+                    }
+                }
+                
+                // Check if this is an Event type
+                if (testJsonData['@type'] !== 'Event') {
+                    continue; // Not an event, try next block
+                }
+                
+                // Prefer JSON-LD blocks that have timezone information in startDate
+                // Look for explicit timezone offsets (not just any dash after T)
+                const hasTimezone = testJsonData.startDate && 
+                    (testJsonData.startDate.includes('-07:00') || 
+                     testJsonData.startDate.includes('-06:00') || 
+                     testJsonData.startDate.includes('-05:00') || 
+                     testJsonData.startDate.includes('-04:00') || 
+                     testJsonData.startDate.includes('+') || 
+                     /T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}/.test(testJsonData.startDate));
+                
+                // If we don't have a candidate yet, or this one has timezone info, use it
+                if (!jsonData || hasTimezone) {
+                    jsonData = testJsonData;
+                    selectedJsonString = testJsonString;
+                    
+                    // If we found one with timezone info, prefer it and stop looking
+                    if (hasTimezone) {
+                        console.log(`🎉 Chunk: Selected JSON-LD with timezone: ${testJsonData.startDate}`);
+                        break;
+                    }
                 }
             }
             
-            if (jsonData['@type'] !== 'Event') {
-                console.warn(`🎉 Chunk: JSON-LD is not an Event type: ${jsonData['@type']}`);
+            if (!jsonData) {
+                console.warn(`🎉 Chunk: No valid Event JSON-LD found on detail page: ${url}`);
                 return null;
             }
             
