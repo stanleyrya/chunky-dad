@@ -60,16 +60,23 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
     html = html.replace('</head>', `  <link rel="canonical" href="${canonicalHref}">\n</head>`);
   }
 
-  // Basic OpenGraph tags (optional but included by default)
-  // Add a daily version to city OG image to encourage preview refreshes
-  const dailyVersion = new Date().toISOString().slice(0,10).replace(/-/g,'');
-  const ogImageUrl = `https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png?v=${dailyVersion}`;
+  // Compute a stable version based on the city's ICS content to avoid daily commits
+  const icsPath = path.join(ROOT, 'data', 'calendars', `${cityKey}.ics`);
+  let ogVersion = '';
+  if (fs.existsSync(icsPath)) {
+    try {
+      const data = fs.readFileSync(icsPath);
+      ogVersion = crypto.createHash('sha256').update(data).digest('hex').slice(0, 8);
+    } catch {}
+  }
+
+  // Basic OpenGraph tags with ICS-hash-based version for cache-busting when data changes
   const ogTags = [
     `<meta property="og:type" content="website">`,
     `<meta property="og:title" content="${cityTitle}">`,
     `<meta property="og:description" content="${cityDesc}">`,
     `<meta property="og:url" content="https://chunky.dad${canonicalHref}">`,
-    `<meta property="og:image" content="${ogImageUrl}">`
+    `<meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">`
   ].join('\n  ');
 
   if (!html.includes('property="og:title"')) {
@@ -79,25 +86,19 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
                .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${cityDesc}">`)
                .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="https:\/\/chunky.dad${canonicalHref}">`);
     if (html.includes('property="og:image"')) {
-      html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${ogImageUrl}">`);
+      html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">`);
     } else {
-      html = html.replace('</head>', `  <meta property="og:image" content="${ogImageUrl}">\n</head>`);
+      html = html.replace('</head>', `  <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">\n</head>`);
     }
   }
 
   // Rewrite asset and link paths for subdirectory depth
-  // Replace href="styles.css" -> href="../styles.css"
   html = html.replace(/href="(styles\.css)"/g, 'href="../$1"');
-  // Replace src/href of project JS files to parent
   html = html.replace(/src="js\//g, 'src="../js/');
   html = html.replace(/href="index\.html"/g, 'href="../index.html"');
-  // Fix navigation anchor links
   html = html.replace(/href="index\.html#/g, 'href="../index.html#');
   html = html.replace(/src="Rising_Star_Ryan_Head_Compressed\.png"/g, 'src="../Rising_Star_Ryan_Head_Compressed.png"');
   html = html.replace(/href="Rising_Star_Ryan_Head_Compressed\.png"/g, 'href="../Rising_Star_Ryan_Head_Compressed.png"');
-
-  // Ensure calendar data relative paths still work (loader already handles testing prefix)
-  // Nothing to change here because loader resolves based on pathname.
 
   return html;
 }
@@ -144,7 +145,6 @@ function pruneRemovedCities() {
       if (fs.existsSync(candidate)) {
         const html = fs.readFileSync(candidate, 'utf8');
         if (html.includes('generated: chunky.dad city page')) {
-          // Safe to remove generated folder
           fs.rmSync(path.join(ROOT, name), { recursive: true, force: true });
           removed++;
           console.log(`🗑️  Removed generated directory: ${name}`);

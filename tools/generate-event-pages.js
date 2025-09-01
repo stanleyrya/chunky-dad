@@ -82,7 +82,9 @@ function buildEventHtml(cityKey, cityName, event) {
       name: event.name || '',
       day: event.day || '',
       time: event.time || '',
-      bar: event.bar || ''
+      bar: event.bar || '',
+      cover: event.cover || '',
+      description: event.tea || event.unprocessedDescription || ''
     });
     version = crypto.createHash('md5').update(seed).digest('hex').slice(0, 8);
   } catch (e) {
