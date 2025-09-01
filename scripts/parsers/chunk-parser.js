@@ -217,7 +217,7 @@ class ChunkParser {
                 startDate: startDate,
                 endDate: endDate,
                 bar: venue,
-                location: location, // Coordinates from Wix warmup data
+                location: location ? `${location.lat}, ${location.lng}` : null, // Convert coordinates to string for calendar compatibility
                 address: address,
                 city: null, // Let SharedCore detect city from address/venue
                 timezone: null, // Let SharedCore assign timezone based on detected city

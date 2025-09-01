@@ -361,7 +361,7 @@ class ScriptableAdapter {
                             targetEvent.title = event.title;
                             targetEvent.startDate = event.startDate;
                             targetEvent.endDate = event.endDate;
-                            targetEvent.location = event.address || event.bar || '';
+                            targetEvent.location = event.location;
                             targetEvent.notes = event.notes;
                             targetEvent.url = event.url;
                             
@@ -383,10 +383,9 @@ class ScriptableAdapter {
                                 updateChanges.push('notes (replaced)');
                                 updateTarget.notes = event.notes;
                             }
-                            const newLocation = event.address || event.bar || '';
-                            if (updateTarget.location !== newLocation) {
+                            if (updateTarget.location !== event.location) {
                                 updateChanges.push('location (replaced)');
-                                updateTarget.location = newLocation;
+                                updateTarget.location = event.location;
                             }
                             if (updateTarget.url !== event.url && event.url) {
                                 updateChanges.push('url (replaced)');
@@ -409,7 +408,7 @@ class ScriptableAdapter {
                             calendarEvent.title = event.title;
                             calendarEvent.startDate = event.startDate;
                             calendarEvent.endDate = event.endDate;
-                            calendarEvent.location = event.address || event.bar || '';
+                            calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
                             
