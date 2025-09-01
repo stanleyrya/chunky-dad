@@ -170,32 +170,38 @@ class ChunkParser {
             }
             
             // CHUNK provides dates with timezone offsets in their JSON-LD
-            // SOLUTION: Use the original timezone-aware date string to create proper Date objects
+            // BUG FIX: CHUNK website publishes incorrect timezone offsets for non-Pacific events
+            // Chicago events show -07:00 (Pacific) instead of -06:00 (Central)
             let startDate = null;
             let endDate = null;
             
             if (jsonData.startDate) {
                 console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
                 
-                // Parse the full timezone-aware date string directly
-                // This preserves the original timezone information from the JSON-LD
+                // Detect city from address to determine correct timezone
+                const detectedCity = this.detectCityFromAddress(address);
+                const correctedStartDate = this.correctTimezoneIfNeeded(jsonData.startDate, detectedCity);
+                
                 try {
-                    startDate = new Date(jsonData.startDate);
+                    startDate = new Date(correctedStartDate);
                     console.log(`🎉 Chunk: Created timezone-aware date object: ${startDate.toISOString()}`);
                     console.log(`🎉 Chunk: Local display time: ${startDate.toString()}`);
                 } catch (error) {
-                    console.warn(`🎉 Chunk: Could not parse date format: ${jsonData.startDate}, error: ${error}`);
+                    console.warn(`🎉 Chunk: Could not parse date format: ${correctedStartDate}, error: ${error}`);
                     startDate = null;
                 }
             }
             
             if (jsonData.endDate) {
-                // Parse the full timezone-aware end date string directly
+                // Apply same timezone correction to end date
+                const detectedCity = this.detectCityFromAddress(address);
+                const correctedEndDate = this.correctTimezoneIfNeeded(jsonData.endDate, detectedCity);
+                
                 try {
-                    endDate = new Date(jsonData.endDate);
+                    endDate = new Date(correctedEndDate);
                     console.log(`🎉 Chunk: Created timezone-aware end date object: ${endDate.toISOString()}`);
                 } catch (error) {
-                    console.warn(`🎉 Chunk: Could not parse end date format: ${jsonData.endDate}, error: ${error}`);
+                    console.warn(`🎉 Chunk: Could not parse end date format: ${correctedEndDate}, error: ${error}`);
                     endDate = null;
                 }
             }
@@ -328,6 +334,113 @@ class ChunkParser {
         
         // Return all found URLs (no limit if maxAdditionalUrls is null)
         return Array.from(urls);
+    }
+
+    // Detect city from address string using common city patterns
+    detectCityFromAddress(address) {
+        if (!address) return null;
+        
+        const addressLower = address.toLowerCase();
+        
+        // City detection patterns based on CHUNK's known locations
+        const cityPatterns = {
+            'chicago': ['chicago', 'chi'],
+            'sf': ['san francisco', 'sf'],
+            'portland': ['portland'],
+            'la': ['los angeles', 'hollywood', 'west hollywood'],
+            'nyc': ['new york', 'nyc', 'manhattan', 'brooklyn']
+        };
+        
+        for (const [city, patterns] of Object.entries(cityPatterns)) {
+            for (const pattern of patterns) {
+                if (addressLower.includes(pattern)) {
+                    console.log(`🎉 Chunk: Detected city '${city}' from address: ${address}`);
+                    return city;
+                }
+            }
+        }
+        
+        console.warn(`🎉 Chunk: Could not detect city from address: ${address}`);
+        return null;
+    }
+
+    // Correct timezone offset if CHUNK published wrong timezone data
+    correctTimezoneIfNeeded(dateString, detectedCity) {
+        if (!dateString || !detectedCity) {
+            return dateString; // No correction possible
+        }
+        
+        // Expected timezone offsets for each city (accounting for DST)
+        const expectedTimezones = {
+            'chicago': { 
+                dst: '-05:00',    // Central Daylight Time (March-November)
+                std: '-06:00'     // Central Standard Time (November-March)
+            },
+            'sf': { 
+                dst: '-07:00',    // Pacific Daylight Time
+                std: '-08:00'     // Pacific Standard Time
+            },
+            'portland': { 
+                dst: '-07:00',    // Pacific Daylight Time
+                std: '-08:00'     // Pacific Standard Time
+            },
+            'la': { 
+                dst: '-07:00',    // Pacific Daylight Time
+                std: '-08:00'     // Pacific Standard Time
+            },
+            'nyc': { 
+                dst: '-04:00',    // Eastern Daylight Time
+                std: '-05:00'     // Eastern Standard Time
+            }
+        };
+        
+        const cityTimezones = expectedTimezones[detectedCity];
+        if (!cityTimezones) {
+            console.log(`🎉 Chunk: No timezone correction needed for unknown city: ${detectedCity}`);
+            return dateString; // No correction for unknown cities
+        }
+        
+        // Extract the current timezone offset from the date string
+        const timezoneMatch = dateString.match(/([+-]\d{2}:\d{2})$/);
+        if (!timezoneMatch) {
+            console.log(`🎉 Chunk: No timezone offset found in date string: ${dateString}`);
+            return dateString; // No timezone offset to correct
+        }
+        
+        const currentOffset = timezoneMatch[1];
+        
+        // Determine if we're in DST period (more accurate)
+        // DST 2025: March 9 - November 2
+        const dateObj = new Date(dateString);
+        const year = dateObj.getUTCFullYear();
+        const month = dateObj.getUTCMonth() + 1; // 1-12
+        const day = dateObj.getUTCDate();
+        
+        // DST starts second Sunday in March, ends first Sunday in November
+        // For 2025: DST starts March 9, ends November 2
+        let isDST = false;
+        if (month > 3 && month < 11) {
+            isDST = true; // April through October
+        } else if (month === 3 && day >= 9) {
+            isDST = true; // March 9 onwards
+        } else if (month === 11 && day < 2) {
+            isDST = true; // November 1
+        }
+        
+        const expectedOffset = isDST ? cityTimezones.dst : cityTimezones.std;
+        
+        if (currentOffset === expectedOffset) {
+            console.log(`🎉 Chunk: Timezone offset is correct for ${detectedCity}: ${currentOffset}`);
+            return dateString; // Already correct
+        }
+        
+        // Apply timezone correction
+        const correctedDateString = dateString.replace(currentOffset, expectedOffset);
+        console.log(`🎉 Chunk: Corrected timezone for ${detectedCity}: ${currentOffset} → ${expectedOffset}`);
+        console.log(`🎉 Chunk: Original: ${dateString}`);
+        console.log(`🎉 Chunk: Corrected: ${correctedDateString}`);
+        
+        return correctedDateString;
     }
 }
 
