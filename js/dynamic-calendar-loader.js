@@ -1530,7 +1530,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     shareUrl
                 });
                 
-                // Try to use Web Share API if available
+                // Use Web Share API if available, otherwise copy to clipboard
                 if (navigator.share) {
                     try {
                         await navigator.share({
@@ -1538,83 +1538,37 @@ class DynamicCalendarLoader extends CalendarCore {
                             text: shareText,
                             url: shareUrl
                         });
-                        logger.info('EVENT', 'Event shared successfully via Web Share API', {
+                        logger.info('EVENT', 'Event shared successfully', {
                             eventSlug,
                             eventName
                         });
+                        this.showShareToast('Event shared! 🎉');
                     } catch (err) {
-                        // User cancelled or error occurred
                         if (err.name !== 'AbortError') {
-                            logger.warn('EVENT', 'Web Share API failed', err);
-                            this.fallbackShare(shareUrl, shareText);
-                        } else {
-                            logger.debug('EVENT', 'User cancelled share');
+                            logger.error('EVENT', 'Share failed', err);
+                            this.showShareToast('Unable to share event');
                         }
                     }
+                } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                    // Simple clipboard copy
+                    const shareContent = `${shareText}\n${shareUrl}`;
+                    try {
+                        await navigator.clipboard.writeText(shareContent);
+                        this.showShareToast('Link copied! 📋');
+                        logger.info('EVENT', 'Event URL copied to clipboard');
+                    } catch (err) {
+                        logger.error('EVENT', 'Copy failed', err);
+                        this.showShareToast('Unable to copy link');
+                    }
                 } else {
-                    // Fallback to copy to clipboard
-                    this.fallbackShare(shareUrl, shareText);
+                    // No share capability available
+                    this.showShareToast('Sharing not supported on this browser');
+                    logger.warn('EVENT', 'No share method available');
                 }
             });
         });
         
         logger.debug('EVENT', `Set up ${shareButtons.length} share button handlers`);
-    }
-    
-    // Fallback share method - copy to clipboard
-    fallbackShare(url, text) {
-        const shareContent = `${text}\n${url}`;
-        
-        // Try modern clipboard API first
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(shareContent)
-                .then(() => {
-                    this.showShareToast('Link copied to clipboard! 📋');
-                    logger.info('EVENT', 'Event URL copied to clipboard via Clipboard API');
-                })
-                .catch(err => {
-                    logger.error('EVENT', 'Clipboard API failed', err);
-                    this.legacyClipboardCopy(shareContent);
-                });
-        } else {
-            // Fallback to legacy method
-            this.legacyClipboardCopy(shareContent);
-        }
-    }
-    
-    // Legacy clipboard copy method
-    legacyClipboardCopy(text) {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.top = '0';
-        textArea.style.left = '0';
-        textArea.style.width = '2em';
-        textArea.style.height = '2em';
-        textArea.style.padding = '0';
-        textArea.style.border = 'none';
-        textArea.style.outline = 'none';
-        textArea.style.boxShadow = 'none';
-        textArea.style.background = 'transparent';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                this.showShareToast('Link copied to clipboard! 📋');
-                logger.info('EVENT', 'Event URL copied to clipboard via legacy method');
-            } else {
-                this.showShareToast('Failed to copy link');
-                logger.error('EVENT', 'Legacy clipboard copy failed');
-            }
-        } catch (err) {
-            this.showShareToast('Failed to copy link');
-            logger.error('EVENT', 'Legacy clipboard copy error', err);
-        }
-        
-        document.body.removeChild(textArea);
     }
     
     // Show toast notification for share feedback
