@@ -169,19 +169,11 @@ class ChunkParser {
                 address = jsonData.location.address || '';
             }
             
-            // Simple city detection: scan address, URL, then text
-            const detectedCity = this.findCity(address || url || `${title} ${description}`, cityConfig);
-            const detectedTimezone = detectedCity && cityConfig?.[detectedCity]?.timezone || null;
-
-            // Treat JSON-LD date-time as local wall time in detected timezone; no fallbacks
-            let startDate = jsonData.startDate && detectedTimezone
-                ? this.parseInTimezone(jsonData.startDate, detectedTimezone)
-                : null;
-            let endDate = jsonData.endDate && detectedTimezone
-                ? this.parseInTimezone(jsonData.endDate, detectedTimezone)
-                : null;
-            if (!startDate) return null;
-            if (endDate && endDate <= startDate) {
+            // Simplest path: trust JSON-LD ISO dates (including offsets) and use new Date()
+            let startDate = jsonData.startDate ? new Date(jsonData.startDate) : null;
+            let endDate = jsonData.endDate ? new Date(jsonData.endDate) : null;
+            if (!startDate || isNaN(startDate.getTime())) return null;
+            if (endDate && !isNaN(endDate.getTime()) && endDate <= startDate) {
                 endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
             }
             
@@ -255,7 +247,7 @@ class ChunkParser {
                 bar: venue,
                 location: location, // Coordinates as "lat, lng" string (same format as eventbrite parser)
                 address: address,
-                city: detectedCity || null,
+                city: null,
                 url: url,
                 ticketUrl: ticketUrl,
                 cover: price,
@@ -322,39 +314,7 @@ class ChunkParser {
         return Array.from(urls);
     }
 
-    // Compact city detection: find first city whose pattern appears in text
-    findCity(text, cityConfig = null) {
-        if (!text || !cityConfig) return null;
-        const lower = String(text).toLowerCase();
-        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
-            const patterns = cityData?.patterns || [];
-            for (const p of patterns) {
-                if (lower.includes(String(p).toLowerCase())) return cityKey;
-            }
-        }
-        return null;
-    }
-
-    // Minimal timezone conversion: interpret dateTimeString as local time in tz
-    parseInTimezone(dateTimeString, tz) {
-        const m = String(dateTimeString).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
-        if (!m || !tz) return null;
-        const year = parseInt(m[1], 10);
-        const month = parseInt(m[2], 10);
-        const day = parseInt(m[3], 10);
-        const hour = parseInt(m[4], 10);
-        const minute = parseInt(m[5], 10);
-        const second = m[6] ? parseInt(m[6], 10) : 0;
-        const tempDate = new Date(`${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00`);
-        const parts = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'longOffset' }).formatToParts(tempDate);
-        const off = parts.find(p => p.type === 'timeZoneName')?.value || '';
-        const mm = off.match(/GMT([+-])(\d{2}):(\d{2})/);
-        if (!mm) return null;
-        const sign = mm[1] === '+' ? 1 : -1;
-        const totalMinutes = sign * (parseInt(mm[2], 10) * 60 + parseInt(mm[3], 10));
-        const localAsUTC = Date.UTC(year, month - 1, day, hour, minute, second);
-        return new Date(localAsUTC - totalMinutes * 60000);
-    }
+    
 }
 
 // Export for both environments
