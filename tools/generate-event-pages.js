@@ -73,7 +73,9 @@ function buildEventHtml(cityKey, cityName, event) {
   if (event.bar) descriptionParts.push(`@ ${event.bar}`);
   const description = sanitize(descriptionParts.join(' · ')) || `${cityName} bear event`;
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
-  const ogImage = event.image || FALLBACK_IMAGE;
+  // Prefer generated per-event OG image if present
+  const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;
+  const ogImage = event.image || `${SITE_BASE}${generatedPng}` || FALLBACK_IMAGE;
 
   const canonical = `/${cityKey}/`;
   const redirectTarget = `../?event=${encodeURIComponent(event.slug)}`;
