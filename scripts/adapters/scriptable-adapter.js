@@ -2171,8 +2171,10 @@ class ScriptableAdapter {
         }
         
         function toggleDiffView(button, eventKey) {
-            const tableView = document.getElementById('table-view-' + eventKey);
-            const lineView = document.getElementById('line-view-' + eventKey);
+            // Convert eventKey to safe ID for DOM lookups
+            const safeEventKey = eventKey.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            const tableView = document.getElementById('table-view-' + safeEventKey);
+            const lineView = document.getElementById('line-view-' + safeEventKey);
             
             // Check current state - table view is visible if display is not 'none'
             const isTableVisible = tableView.style.display !== 'none';
@@ -2191,9 +2193,11 @@ class ScriptableAdapter {
         }
         
         function toggleComparisonSection(eventId) {
-            const content = document.getElementById('comparison-content-' + eventId);
-            const icon = document.getElementById('expand-icon-' + eventId);
-            const diffToggle = document.getElementById('diff-toggle-' + eventId);
+            // Convert eventId to safe ID for DOM lookups
+            const safeEventId = eventId.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            const content = document.getElementById('comparison-content-' + safeEventId);
+            const icon = document.getElementById('expand-icon-' + safeEventId);
+            const diffToggle = document.getElementById('diff-toggle-' + safeEventId);
             
             if (content.style.display === 'none') {
                 content.style.display = 'block';
@@ -2641,27 +2645,29 @@ class ScriptableAdapter {
             ${event._original && event._action !== 'new' ? (() => {
                 const hasDifferences = this.hasEventDifferences(event);
                 const eventId = event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
+                const safeEventId = eventId.replace(/[^a-zA-Z0-9\-_]/g, '_'); // Create safe ID for DOM elements
+                const escapedEventId = eventId.replace(/'/g, "\\'"); // Escape single quotes for JavaScript
                 const isExpanded = false; // Start collapsed; expand on click
                 
                 return `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;"
-                         onclick="toggleComparisonSection('${eventId}')">
+                         onclick="toggleComparisonSection('${escapedEventId}')">
                         <h4 style="margin: 0; font-size: 14px;">
-                            <span id="expand-icon-${eventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">
+                            <span id="expand-icon-${safeEventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">
                                 ${isExpanded ? '▼' : '▶'}
                             </span>
                             📊 ${event._action === 'conflict' ? 'Conflict Resolution' : 'Merge Comparison'}
                             ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
                         </h4>
-                        <button onclick="event.stopPropagation(); toggleDiffView(this, '${eventId}');" 
+                        <button onclick="event.stopPropagation(); toggleDiffView(this, '${escapedEventId}');" 
                                 style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? 'display: none;' : ''}"
-                                id="diff-toggle-${eventId}">
+                                id="diff-toggle-${safeEventId}">
                             Switch to Line View
                         </button>
                     </div>
                     
-                    <div id="comparison-content-${eventId}" style="${!isExpanded ? 'display: none;' : ''}">
+                    <div id="comparison-content-${safeEventId}" style="${!isExpanded ? 'display: none;' : ''}">
                     <!-- Simple three-object comparison -->
                     <div style="margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
@@ -2672,7 +2678,7 @@ class ScriptableAdapter {
                     </div>
                     
                     <!-- Table view (default) -->
-                    <div id="table-view-${eventId}" class="diff-view" style="display: block; padding: 10px;">
+                    <div id="table-view-${safeEventId}" class="diff-view" style="display: block; padding: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <div style="font-size: 12px; color: #666;">
                                 <strong>📊 Field-by-Field Comparison</strong>
@@ -2720,7 +2726,7 @@ class ScriptableAdapter {
                     </div>
                     
                     <!-- Line view (hidden by default) -->
-                    <div id="line-view-${eventId}" class="diff-view" style="display: none; padding: 10px;">
+                    <div id="line-view-${safeEventId}" class="diff-view" style="display: none; padding: 10px;">
                         <div style="margin-bottom: 12px;">
                             <strong style="font-size: 12px; color: #666;">📝 Line-by-Line Diff</strong>
                             <div style="font-size: 10px; margin-top: 2px; color: #888;">
