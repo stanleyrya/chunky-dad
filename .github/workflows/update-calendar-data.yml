@@ -244,7 +244,7 @@ jobs:
 
       - name: Install Node dependencies
         run: |
-          npm ci --prefer-offline --no-audit --no-fund
+          npm install --no-audit --no-fund --prefer-offline
 
       - name: Generate OG images for events
         run: |
