@@ -2229,6 +2229,8 @@ body.index-page main {
     margin-top: 1rem;
     display: flex;
     flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .event-links a {
@@ -2244,6 +2246,36 @@ body.index-page main {
 
 .event-links a:hover {
     transform: translateY(-2px);
+}
+
+/* Share button styling */
+.share-event-btn {
+    background: var(--solid-secondary, #6c757d);
+    color: var(--white);
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.share-event-btn:hover {
+    background: var(--solid-primary);
+    transform: translateY(-2px);
+}
+
+.share-event-btn:active {
+    transform: translateY(0);
+}
+
+.share-event-btn .share-icon {
+    font-size: 1rem;
 }
 
 /* Enhanced event link styling */
@@ -3340,6 +3372,16 @@ footer {
 
     .event-card.detailed h3 {
         font-size: 1.1rem;
+    }
+    
+    /* Mobile share button adjustments */
+    .share-event-btn {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.75rem;
+    }
+    
+    .share-event-btn .share-icon {
+        font-size: 0.9rem;
     }
 
     .event-day {

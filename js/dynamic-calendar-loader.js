@@ -1494,10 +1494,137 @@ class DynamicCalendarLoader extends CalendarCore {
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
+                        <button class="share-event-btn" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event">
+                            <span class="share-icon">📤</span> Share
+                        </button>
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    // Setup share button handlers for event cards
+    setupShareButtons() {
+        const shareButtons = document.querySelectorAll('.share-event-btn');
+        
+        shareButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent event card click
+                
+                const eventSlug = button.dataset.eventSlug;
+                const eventName = button.dataset.eventName;
+                const eventVenue = button.dataset.eventVenue;
+                const eventTime = button.dataset.eventTime;
+                
+                // Build the full share URL: /city/event-slug
+                // Use the full city page URL for proper OpenGraph support
+                const citySlug = this.currentCity || window.location.pathname.replace(/\//g, '');
+                const shareUrl = `${window.location.origin}/${citySlug}/${eventSlug}`;
+                
+                // Build share text
+                const shareTitle = `${eventName}`;
+                const shareText = `Check out ${eventName} at ${eventVenue} - ${eventTime}`;
+                
+                logger.userInteraction('EVENT', 'Share button clicked', {
+                    eventSlug,
+                    eventName,
+                    shareUrl
+                });
+                
+                // Use Web Share API if available, otherwise copy to clipboard
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: shareTitle,
+                            text: shareText,
+                            url: shareUrl
+                        });
+                        logger.info('EVENT', 'Event shared successfully', {
+                            eventSlug,
+                            eventName
+                        });
+                        this.showShareToast('Event shared! 🎉');
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            logger.error('EVENT', 'Share failed', err);
+                            this.showShareToast('Unable to share event');
+                        }
+                    }
+                } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                    // Simple clipboard copy
+                    const shareContent = `${shareText}\n${shareUrl}`;
+                    try {
+                        await navigator.clipboard.writeText(shareContent);
+                        this.showShareToast('Link copied! 📋');
+                        logger.info('EVENT', 'Event URL copied to clipboard');
+                    } catch (err) {
+                        logger.error('EVENT', 'Copy failed', err);
+                        this.showShareToast('Unable to copy link');
+                    }
+                } else {
+                    // No share capability available
+                    this.showShareToast('Sharing not supported on this browser');
+                    logger.warn('EVENT', 'No share method available');
+                }
+            });
+        });
+        
+        logger.debug('EVENT', `Set up ${shareButtons.length} share button handlers`);
+    }
+    
+    // Show toast notification for share feedback
+    showShareToast(message) {
+        // Remove any existing toast
+        const existingToast = document.querySelector('.share-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Create new toast
+        const toast = document.createElement('div');
+        toast.className = 'share-toast';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color, #8B4513);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            animation: slideUp 0.3s ease-out;
+            font-family: 'Poppins', sans-serif;
+        `;
+        
+        // Add animation keyframes if not already present
+        if (!document.querySelector('#share-toast-animations')) {
+            const style = document.createElement('style');
+            style.id = 'share-toast-animations';
+            style.textContent = `
+                @keyframes slideUp {
+                    from {
+                        transform: translateX(-50%) translateY(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(-50%) translateY(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(toast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideUp 0.3s ease-out reverse';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     // Filter events by current period
@@ -2127,6 +2254,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         }
                     }
                 } catch (_) {}
+                
+                // Add share button event handlers
+                this.setupShareButtons();
             } else {
                 eventsList.innerHTML = '<div class="loading-message">No events found for this period. Try switching Week/Month or check back soon.</div>';
                 logger.info('CALENDAR', 'No events to display for current period', {
