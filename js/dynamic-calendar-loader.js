@@ -1516,9 +1516,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 const eventVenue = button.dataset.eventVenue;
                 const eventTime = button.dataset.eventTime;
                 
-                // Build the share URL with the event slug
-                const baseUrl = window.location.origin + window.location.pathname;
-                const shareUrl = `${baseUrl}?event=${eventSlug}`;
+                // Build the full share URL with city and event parameters
+                // Use the full city page URL for proper OpenGraph support
+                const citySlug = this.currentCity || window.location.pathname.replace(/\//g, '');
+                const shareUrl = `${window.location.origin}/${citySlug}/?event=${eventSlug}`;
                 
                 // Build share text
                 const shareTitle = `${eventName}`;
