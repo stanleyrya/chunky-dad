@@ -1494,10 +1494,182 @@ class DynamicCalendarLoader extends CalendarCore {
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
+                        <button class="share-event-btn" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event">
+                            <span class="share-icon">📤</span> Share
+                        </button>
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    // Setup share button handlers for event cards
+    setupShareButtons() {
+        const shareButtons = document.querySelectorAll('.share-event-btn');
+        
+        shareButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent event card click
+                
+                const eventSlug = button.dataset.eventSlug;
+                const eventName = button.dataset.eventName;
+                const eventVenue = button.dataset.eventVenue;
+                const eventTime = button.dataset.eventTime;
+                
+                // Build the share URL with the event slug
+                const baseUrl = window.location.origin + window.location.pathname;
+                const shareUrl = `${baseUrl}?event=${eventSlug}`;
+                
+                // Build share text
+                const shareTitle = `${eventName}`;
+                const shareText = `Check out ${eventName} at ${eventVenue} - ${eventTime}`;
+                
+                logger.userInteraction('EVENT', 'Share button clicked', {
+                    eventSlug,
+                    eventName,
+                    shareUrl
+                });
+                
+                // Try to use Web Share API if available
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: shareTitle,
+                            text: shareText,
+                            url: shareUrl
+                        });
+                        logger.info('EVENT', 'Event shared successfully via Web Share API', {
+                            eventSlug,
+                            eventName
+                        });
+                    } catch (err) {
+                        // User cancelled or error occurred
+                        if (err.name !== 'AbortError') {
+                            logger.warn('EVENT', 'Web Share API failed', err);
+                            this.fallbackShare(shareUrl, shareText);
+                        } else {
+                            logger.debug('EVENT', 'User cancelled share');
+                        }
+                    }
+                } else {
+                    // Fallback to copy to clipboard
+                    this.fallbackShare(shareUrl, shareText);
+                }
+            });
+        });
+        
+        logger.debug('EVENT', `Set up ${shareButtons.length} share button handlers`);
+    }
+    
+    // Fallback share method - copy to clipboard
+    fallbackShare(url, text) {
+        const shareContent = `${text}\n${url}`;
+        
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareContent)
+                .then(() => {
+                    this.showShareToast('Link copied to clipboard! 📋');
+                    logger.info('EVENT', 'Event URL copied to clipboard via Clipboard API');
+                })
+                .catch(err => {
+                    logger.error('EVENT', 'Clipboard API failed', err);
+                    this.legacyClipboardCopy(shareContent);
+                });
+        } else {
+            // Fallback to legacy method
+            this.legacyClipboardCopy(shareContent);
+        }
+    }
+    
+    // Legacy clipboard copy method
+    legacyClipboardCopy(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.width = '2em';
+        textArea.style.height = '2em';
+        textArea.style.padding = '0';
+        textArea.style.border = 'none';
+        textArea.style.outline = 'none';
+        textArea.style.boxShadow = 'none';
+        textArea.style.background = 'transparent';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                this.showShareToast('Link copied to clipboard! 📋');
+                logger.info('EVENT', 'Event URL copied to clipboard via legacy method');
+            } else {
+                this.showShareToast('Failed to copy link');
+                logger.error('EVENT', 'Legacy clipboard copy failed');
+            }
+        } catch (err) {
+            this.showShareToast('Failed to copy link');
+            logger.error('EVENT', 'Legacy clipboard copy error', err);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+    
+    // Show toast notification for share feedback
+    showShareToast(message) {
+        // Remove any existing toast
+        const existingToast = document.querySelector('.share-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Create new toast
+        const toast = document.createElement('div');
+        toast.className = 'share-toast';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color, #8B4513);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            animation: slideUp 0.3s ease-out;
+            font-family: 'Poppins', sans-serif;
+        `;
+        
+        // Add animation keyframes if not already present
+        if (!document.querySelector('#share-toast-animations')) {
+            const style = document.createElement('style');
+            style.id = 'share-toast-animations';
+            style.textContent = `
+                @keyframes slideUp {
+                    from {
+                        transform: translateX(-50%) translateY(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(-50%) translateY(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(toast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideUp 0.3s ease-out reverse';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     // Filter events by current period
@@ -2127,6 +2299,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         }
                     }
                 } catch (_) {}
+                
+                // Add share button event handlers
+                this.setupShareButtons();
             } else {
                 eventsList.innerHTML = '<div class="loading-message">No events found for this period. Try switching Week/Month or check back soon.</div>';
                 logger.info('CALENDAR', 'No events to display for current period', {
