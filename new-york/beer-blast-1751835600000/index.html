@@ -25,7 +25,7 @@
       try {
         var hash = window.location.hash || '';
         // Prefer incoming params (date/view) when provided; always enforce event param
-        var target = new URL("../?event=beer-blast-1751835600000&date=2025-07-06&view=week", window.location.origin);
+        var target = new URL("../?event=beer-blast-1751835600000&date=2025-07-06&view=week", window.location.href);
         var incoming = new URL(window.location.href);
         // Copy ALL incoming params over target (override)
         incoming.searchParams.forEach(function(v, k){
