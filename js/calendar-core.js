@@ -336,6 +336,9 @@ class CalendarCore {
                     if (additionalData.cover) {
                         eventData.cover = additionalData.cover;
                     }
+                    if (additionalData.image) {
+                        eventData.image = additionalData.image;
+                    }
                     eventData.tea = additionalData.tea || additionalData.description;
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;
@@ -458,7 +461,8 @@ class CalendarCore {
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
             'gmaps': 'gmaps', 'google maps': 'gmaps',
             'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
-            'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName'
+            'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName',
+            'image': 'image'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing
@@ -535,7 +539,7 @@ class CalendarCore {
                     const mappedKey = keyMap[key] || key;
                     
                     // Additional validation for URLs
-                    if (['website', 'instagram', 'facebook', 'gmaps'].includes(mappedKey)) {
+                    if (['website', 'instagram', 'facebook', 'gmaps', 'image'].includes(mappedKey)) {
                         // Ensure we have a valid URL
                         if (value.startsWith('http://') || value.startsWith('https://')) {
                             data[mappedKey] = value;

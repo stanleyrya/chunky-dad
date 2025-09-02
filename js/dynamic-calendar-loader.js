@@ -2930,6 +2930,7 @@ calculatedData: {
             coordinates: null,
             cover: 'Test Event',
             tea: 'This is a test event for character limit testing',
+            image: testEventData.image || null,
             links: []
         };
         
