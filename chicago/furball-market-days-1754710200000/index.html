@@ -5,36 +5,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Furball Market Days – Chicago – chunky.dad</title>
-  <meta name="description" content="Saturday · 3:30AM-9AM · @ Metro">
+  <meta name="description" content="Friday · 10:30PM-4AM · @ Metro">
   <link rel="canonical" href="/chicago/">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Furball Market Days – Chicago – chunky.dad">
-  <meta property="og:description" content="Saturday · 3:30AM-9AM · @ Metro">
+  <meta property="og:description" content="Friday · 10:30PM-4AM · @ Metro">
   <meta property="og:url" content="https://chunky.dad/chicago/furball-market-days-1754710200000/">
-  <meta property="og:image" content="https://chunky.dad/img/og/chicago/furball-market-days-1754710200000.png?v=f2c438f3">
+  <meta property="og:image" content="https://chunky.dad/img/og/chicago/furball-market-days-1754710200000.png?v=d93471f6">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Furball Market Days – Chicago – chunky.dad">
-  <meta name="twitter:description" content="Saturday · 3:30AM-9AM · @ Metro">
-  <meta name="twitter:image" content="https://chunky.dad/img/og/chicago/furball-market-days-1754710200000.png?v=f2c438f3">
-  <meta http-equiv="refresh" content="0; url=../?event=furball-market-days-1754710200000&date=2025-08-09&view=week">
+  <meta name="twitter:description" content="Friday · 10:30PM-4AM · @ Metro">
+  <meta name="twitter:image" content="https://chunky.dad/img/og/chicago/furball-market-days-1754710200000.png?v=d93471f6">
+  <meta http-equiv="refresh" content="0; url=../?event=furball-market-days-1754710200000&date=2025-08-08&view=week">
 </head>
 <body>
-  <noscript><meta http-equiv="refresh" content="0; url=../?event=furball-market-days-1754710200000&date=2025-08-09&view=week"></noscript>
+  <noscript><meta http-equiv="refresh" content="0; url=../?event=furball-market-days-1754710200000&date=2025-08-08&view=week"></noscript>
   <script>
     (function(){
       try {
-        var extra = window.location.search || '';
         var hash = window.location.hash || '';
-        // If incoming URL already has date/view, prefer those by appending missing params only
-        var target = new URL("../?event=furball-market-days-1754710200000&date=2025-08-09&view=week", window.location.origin);
+        // Prefer incoming params (date/view) when provided; always enforce event param
+        var target = new URL("../?event=furball-market-days-1754710200000&date=2025-08-08&view=week", window.location.origin);
         var incoming = new URL(window.location.href);
+        // Copy ALL incoming params over target (override)
         incoming.searchParams.forEach(function(v, k){
-          if (!target.searchParams.has(k)) target.searchParams.set(k, v);
+          target.searchParams.set(k, v);
         });
+        // Ensure event param matches this page's event slug
+        target.searchParams.set('event', "furball-market-days-1754710200000");
         var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
         location.replace(finalUrl);
       } catch (e) {
-        location.replace("../?event=furball-market-days-1754710200000&date=2025-08-09&view=week");
+        location.replace("../?event=furball-market-days-1754710200000&date=2025-08-08&view=week");
       }
     })();
   </script>

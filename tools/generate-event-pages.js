@@ -68,6 +68,21 @@ function withinWindow(date, now, days) {
   return diffDays >= -PAST_DAYS_WINDOW && diffDays <= days; // configurable negative tolerance for recent past
 }
 
+// Check if an event should get a stub within the window. For recurring events,
+// include if any occurrence happens within the window.
+function occursInWindow(calendar, event, now, days) {
+  if (withinWindow(event.startDate, now, days)) return true;
+  if (event.recurring && event.recurrence) {
+    try {
+      const end = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+      return calendar.isRecurringEventInPeriod(event, now, end);
+    } catch (_) {
+      return false;
+    }
+  }
+  return false;
+}
+
 function buildEventHtml(cityKey, cityName, event) {
   const title = `${sanitize(event.name)} – ${cityName} – chunky.dad`;
   const descriptionParts = [];
@@ -138,14 +153,16 @@ ${MARKER}
   <script>
     (function(){
       try {
-        var extra = window.location.search || '';
         var hash = window.location.hash || '';
-        // If incoming URL already has date/view, prefer those by appending missing params only
+        // Prefer incoming params (date/view) when provided; always enforce event param
         var target = new URL(${JSON.stringify(redirectTarget)}, window.location.origin);
         var incoming = new URL(window.location.href);
+        // Copy ALL incoming params over target (override)
         incoming.searchParams.forEach(function(v, k){
-          if (!target.searchParams.has(k)) target.searchParams.set(k, v);
+          target.searchParams.set(k, v);
         });
+        // Ensure event param matches this page's event slug
+        target.searchParams.set('event', ${JSON.stringify(event.slug)});
         var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
         location.replace(finalUrl);
       } catch (e) {
@@ -191,8 +208,16 @@ async function main() {
     }
 
     const icalText = fs.readFileSync(icsPath, 'utf8');
+    // Set process timezone to calendar TZID before parsing, so Node Date uses the intended zone
+    try {
+      const tzMatch = icalText.match(/X-WR-TIMEZONE:(.+)/);
+      if (tzMatch && tzMatch[1]) {
+        // This influences Node's Date parsing in this process only
+        process.env.TZ = tzMatch[1].trim();
+      }
+    } catch (_) {}
     const events = calendar.parseICalData(icalText) || [];
-    const upcoming = BUILD_ALL ? events : events.filter(ev => withinWindow(ev.startDate, now, OUTPUT_DAYS_WINDOW));
+    const upcoming = BUILD_ALL ? events : events.filter(ev => occursInWindow(calendar, ev, now, OUTPUT_DAYS_WINDOW));
     if (BUILD_ALL) {
       console.log(`🧱 BUILD_ALL enabled for ${cityKey}: generating ${upcoming.length}/${events.length} events`);
     }
