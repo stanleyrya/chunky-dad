@@ -23,14 +23,16 @@
   <script>
     (function(){
       try {
-        var extra = window.location.search || '';
         var hash = window.location.hash || '';
-        // If incoming URL already has date/view, prefer those by appending missing params only
+        // Prefer incoming params (date/view) when provided; always enforce event param
         var target = new URL("../?event=chunk-portland-friday-november-7th-1762578000000&date=2025-11-08&view=week", window.location.origin);
         var incoming = new URL(window.location.href);
+        // Copy ALL incoming params over target (override)
         incoming.searchParams.forEach(function(v, k){
-          if (!target.searchParams.has(k)) target.searchParams.set(k, v);
+          target.searchParams.set(k, v);
         });
+        // Ensure event param matches this page's event slug
+        target.searchParams.set('event', "chunk-portland-friday-november-7th-1762578000000");
         var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
         location.replace(finalUrl);
       } catch (e) {
