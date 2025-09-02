@@ -155,7 +155,7 @@ ${MARKER}
       try {
         var hash = window.location.hash || '';
         // Prefer incoming params (date/view) when provided; always enforce event param
-        var target = new URL(${JSON.stringify(redirectTarget)}, window.location.origin);
+        var target = new URL(${JSON.stringify(redirectTarget)}, window.location.href);
         var incoming = new URL(window.location.href);
         // Copy ALL incoming params over target (override)
         incoming.searchParams.forEach(function(v, k){
