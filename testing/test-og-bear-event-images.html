@@ -8,11 +8,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --og-bg-1: linear-gradient(135deg, #10151a 0%, #1c2833 100%);
-      --og-bg-2: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-      --og-bg-3: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #CD853F 100%);
-      --og-bg-4: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-      --og-bg-5: radial-gradient(1000px 400px at 0% 0%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%), linear-gradient(135deg, #222 0%, #111 100%);
+      /* Use site theme variables from styles.css */
+      --og-bg-1: var(--gradient-primary);
+      --og-bg-2: var(--gradient-success-alt);
+      --og-bg-3: var(--gradient-secondary);
+      --og-bg-4: linear-gradient(135deg, var(--background-dark) 0%, var(--background-darker) 100%);
+      --og-bg-5: radial-gradient(1000px 400px at 0% 0%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%), var(--gradient-warning);
     }
 
     body { font-family: 'Poppins', sans-serif; background: var(--background-primary); color: var(--text-primary); }
@@ -41,10 +42,13 @@
     .artboard { width: 1200px; height: 630px; position: relative; overflow: hidden; transform-origin: top left; }
 
     /* Core artboard shared styles matching generator dimensions */
-    .artboard .brand { position: absolute; top: 28px; left: 32px; font-weight: 800; letter-spacing: .6px; color: #ffffff; font-size: 24px; text-shadow: 0 2px 10px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.8); z-index: 2; }
-    .artboard .title { position: absolute; left: 60px; right: 60px; font-size: 72px; line-height: 1.05; font-weight: 900; color: #ffffff; text-shadow: 0 3px 18px rgba(0,0,0,0.75), 0 0 2px rgba(0,0,0,0.9); z-index: 2; }
-    .artboard .subtitle { position: absolute; left: 60px; right: 60px; font-size: 30px; color: #e8eef4; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.85); z-index: 2; }
-    .artboard .venue { position: absolute; left: 60px; right: 60px; font-size: 28px; color: #ffffff; opacity: 0.95; text-shadow: 0 2px 12px rgba(0,0,0,0.75), 0 0 1px rgba(0,0,0,0.85); z-index: 2; }
+    .artboard .brand { position: absolute; top: 28px; left: 32px; font-weight: 800; letter-spacing: .6px; color: #ffffff; font-size: 24px; text-shadow: 0 2px 10px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.8); z-index: 3; }
+    /* Flow-based content container to avoid overlap and support multi-line */
+    .artboard .content { position: absolute; left: 60px; right: 60px; top: 140px; bottom: 60px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; z-index: 2; }
+    .artboard .content .title { position: static !important; font-size: 72px; line-height: 1.05; font-weight: 900; color: #ffffff; text-shadow: 0 3px 18px rgba(0,0,0,0.75), 0 0 2px rgba(0,0,0,0.9); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .artboard .content .subtitle { position: static !important; font-size: 30px; color: #e8eef4; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.85); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .artboard .content .venue { position: static !important; font-size: 28px; color: #ffffff; opacity: 0.95; text-shadow: 0 2px 12px rgba(0,0,0,0.75), 0 0 1px rgba(0,0,0,0.85); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    .artboard .content .desc { position: static !important; font-size: 24px; color: #f3f7fb; opacity: 0.92; text-shadow: 0 2px 10px rgba(0,0,0,0.65); max-width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
     /* Variant themes */
     .v1 { background: var(--og-bg-1); }
@@ -55,29 +59,14 @@
 
     /* Layouts */
     .layout-card .card { position: absolute; inset: 60px; border-radius: 24px; padding: 48px; background: rgba(0,0,0,0.28); box-shadow: 0 20px 60px rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 1; }
-    .layout-card .title { top: 140px; }
-    .layout-card .subtitle { top: 260px; }
-    .layout-card .venue { top: 306px; }
 
     .layout-stripes::before, .layout-stripes::after { content: ""; position: absolute; inset: -10% -10% auto -10%; height: 60%; background: repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 16px, rgba(0,0,0,0.25) 16px 48px); mix-blend-mode: overlay; transform: skewY(-8deg); border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; z-index: 0; }
-    .layout-stripes .title { top: 220px; }
-    .layout-stripes .subtitle { top: 320px; }
-    .layout-stripes .venue { top: 366px; }
 
     .layout-diagonal::before { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(0,0,0,0.35), rgba(0,0,0,0.1) 40%); z-index: 0; }
-    .layout-diagonal .title { top: 210px; }
-    .layout-diagonal .subtitle { top: 308px; }
-    .layout-diagonal .venue { top: 354px; }
 
     .layout-ring::before { content: ""; position: absolute; width: 900px; height: 900px; left: -200px; top: -220px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.35), transparent 70%); filter: blur(8px); z-index: 0; }
-    .layout-ring .title { top: 230px; }
-    .layout-ring .subtitle { top: 328px; }
-    .layout-ring .venue { top: 374px; }
 
     .layout-grid::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px); background-size: 24px 24px; mix-blend-mode: overlay; z-index: 0; }
-    .layout-grid .title { top: 200px; }
-    .layout-grid .subtitle { top: 298px; }
-    .layout-grid .venue { top: 344px; }
 
     /* Fun extras */
     .badge { position: absolute; right: 40px; top: 40px; background: rgba(0,0,0,0.65); color: #fff; border: 2px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 10px 16px; font-weight: 800; font-size: 16px; letter-spacing: .4px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.6); z-index: 3; }
@@ -85,33 +74,32 @@
     /* Optional global dark overlay for text contrast */
     .artboard::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.0), rgba(0,0,0,0.45) 60%); pointer-events: none; z-index: 0; }
 
+    /* Cover image support */
+    .artboard .cover { position: absolute; inset: 0; background-position: center; background-size: cover; background-repeat: no-repeat; z-index: 0; filter: saturate(1.05) contrast(1.05); opacity: 0.9; }
+    /* Variant-specific cover masks for distinct looks */
+    .layout-card .cover { clip-path: inset(0); }
+    .layout-stripes .cover { clip-path: polygon(0 0, 100% 0, 100% 70%, 0 85%); filter: brightness(0.9) contrast(1.1); }
+    .layout-diagonal .cover { clip-path: polygon(0 0, 100% 0, 100% 80%, 0 100%); filter: brightness(0.9) saturate(1.1); }
+    .layout-ring .cover { transform: scale(1.05); filter: blur(0.3px) saturate(1.05); }
+    .layout-grid .cover { opacity: 0.8; }
+
     .preview-meta { padding: 12px 14px; border-top: 1px solid var(--border-lighter); display: grid; gap: 6px; font-size: 12px; color: var(--text-secondary); }
     .preview-meta code { background: var(--background-light); padding: 3px 6px; border-radius: 6px; color: var(--text-primary); }
 
     /* Dramatic new layouts */
     .layout-sunburst::before { content: ""; position: absolute; inset: -15%; background: repeating-conic-gradient(from -30deg at 30% 30%, rgba(255,255,255,0.18) 0 8deg, rgba(0,0,0,0) 8deg 22deg); mix-blend-mode: overlay; transform: rotate(-12deg); z-index: 0; }
-    .layout-sunburst .title { top: 190px; }
-    .layout-sunburst .subtitle { top: 288px; }
-    .layout-sunburst .venue { top: 334px; }
 
     .layout-split::before { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, rgba(0,0,0,0.5) 0 48%, rgba(255,255,255,0.18) 48% 52%, rgba(0,0,0,0.35) 52% 100%); mix-blend-mode: overlay; z-index: 0; }
-    .layout-split .title { top: 210px; }
-    .layout-split .subtitle { top: 308px; }
-    .layout-split .venue { top: 354px; }
+    .layout-split .cover { clip-path: polygon(0 0, 60% 0, 40% 100%, 0 100%); transform: scale(1.03); }
 
     .layout-angles::before { content: ""; position: absolute; inset: -10% -25% 40% -15%; background: linear-gradient(-18deg, rgba(255,255,255,0.22), rgba(0,0,0,0.25)); filter: blur(0.5px); mix-blend-mode: overlay; z-index: 0; }
     .layout-angles::after { content: ""; position: absolute; inset: 45% -20% -15% -10%; background: linear-gradient(-18deg, rgba(0,0,0,0.35), rgba(255,255,255,0.12)); filter: blur(0.5px); mix-blend-mode: overlay; z-index: 0; }
-    .layout-angles .title { top: 200px; }
-    .layout-angles .subtitle { top: 298px; }
-    .layout-angles .venue { top: 344px; }
 
     .layout-wave::before { content: ""; position: absolute; inset: -20%; background:
       radial-gradient(1200px 360px at -10% 110%, rgba(255,255,255,0.16), transparent 60%),
       radial-gradient(900px 300px at 110% -10%, rgba(0,0,0,0.28), transparent 60%);
       mix-blend-mode: overlay; z-index: 0; }
-    .layout-wave .title { top: 220px; }
-    .layout-wave .subtitle { top: 318px; }
-    .layout-wave .venue { top: 364px; }
+    .layout-wave .cover { transform: scale(1.06); filter: saturate(1.2); }
 
     .layout-bokeh::before { content: ""; position: absolute; inset: -10%; background:
       radial-gradient(80px 80px at 18% 32%, rgba(255,255,255,0.22), transparent 60%),
@@ -119,29 +107,20 @@
       radial-gradient(60px 60px at 62% 72%, rgba(255,255,255,0.14), transparent 60%),
       radial-gradient(100px 100px at 35% 75%, rgba(255,255,255,0.12), transparent 60%);
       filter: blur(0.5px); mix-blend-mode: screen; opacity: 0.7; z-index: 0; }
-    .layout-bokeh .title { top: 210px; }
-    .layout-bokeh .subtitle { top: 308px; }
-    .layout-bokeh .venue { top: 354px; }
+    .layout-bokeh .cover { opacity: 0.85; filter: saturate(1.15); }
 
     .layout-halftone::before { content: ""; position: absolute; inset: 0; background:
       radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
       background-size: 12px 12px; mix-blend-mode: overlay; opacity: 0.9; z-index: 0; }
-    .layout-halftone .title { top: 200px; }
-    .layout-halftone .subtitle { top: 298px; }
-    .layout-halftone .venue { top: 344px; }
+    .layout-halftone .cover { opacity: 0.85; }
 
     .layout-frame::before { content: ""; position: absolute; inset: 36px; border: 10px solid rgba(255,255,255,0.6); border-radius: 24px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2); mix-blend-mode: overlay; z-index: 1; }
-    .layout-frame .title { top: 180px; }
-    .layout-frame .subtitle { top: 278px; }
-    .layout-frame .venue { top: 324px; }
 
     .layout-spotlight-center::before { content: ""; position: absolute; inset: 0; background:
       radial-gradient(closest-side at 50% 45%, rgba(255,255,255,0.25), rgba(0,0,0,0) 55%),
       radial-gradient(closest-side at 50% 45%, rgba(255,255,255,0.15), rgba(0,0,0,0) 35%);
       mix-blend-mode: screen; z-index: 0; }
-    .layout-spotlight-center .title { top: 220px; }
-    .layout-spotlight-center .subtitle { top: 318px; }
-    .layout-spotlight-center .venue { top: 364px; }
+    .layout-spotlight-center .cover { filter: brightness(0.95); }
   </style>
 </head>
 <body>
@@ -182,6 +161,14 @@
         <div>
           <label for="barInput">Venue</label>
           <input id="barInput" type="text" value="MASSIVE">
+        </div>
+        <div>
+          <label for="descInput">Description</label>
+          <input id="descInput" type="text" placeholder="Short description to show on image">
+        </div>
+        <div>
+          <label for="coverInput">Cover image URL</label>
+          <input id="coverInput" type="url" placeholder="https://...">
         </div>
         <div>
           <label for="badgeInput">Badge text (optional)</label>
@@ -238,6 +225,8 @@
       const dayEl = document.getElementById('dayInput');
       const timeEl = document.getElementById('timeInput');
       const barEl = document.getElementById('barInput');
+      const descInputEl = document.getElementById('descInput');
+      const coverInputEl = document.getElementById('coverInput');
       const badgeEl = document.getElementById('badgeInput');
       const themeEl = document.getElementById('themeSelect');
       const grid = document.getElementById('variantsGrid');
@@ -274,11 +263,15 @@
           </div>
           <div class="variant-preview">
             <div class="artboard ${variant.classes} ${data.theme}">
+              <div class="cover" style="display:none"></div>
               <div class="brand">chunky.dad</div>
               <div class="card"></div>
-              <div class="title"></div>
-              <div class="subtitle"></div>
-              <div class="venue"></div>
+              <div class="content">
+                <div class="title"></div>
+                <div class="subtitle"></div>
+                <div class="venue"></div>
+                <div class="desc"></div>
+              </div>
               <div class="badge" style="display:none"></div>
               <div class="mascot"></div>
             </div>
@@ -286,6 +279,7 @@
           <div class="preview-meta">
             <div>og:title: <code></code></div>
             <div>og:description: <code></code></div>
+            <div>cover: <code></code></div>
             <div>dimensions: <code>1200x630</code></div>
           </div>
         `;
@@ -298,7 +292,8 @@
         if (data.day) descriptionBits.push(data.day);
         if (data.time) descriptionBits.push(data.time);
         if (data.bar) descriptionBits.push(`@ ${data.bar}`);
-        const description = descriptionBits.join(' · ') || `${data.city} bear event`;
+        const primary = descriptionBits.join(' · ');
+        const description = data.description?.trim() ? `${primary ? primary + ' · ' : ''}${data.description.trim()}` : (primary || `${data.city} bear event`);
         return { title, description };
       }
 
@@ -309,6 +304,8 @@
           day: dayEl.value.trim(),
           time: timeEl.value.trim(),
           bar: barEl.value.trim(),
+          description: (document.getElementById('descInput').value || '').trim(),
+          cover: (document.getElementById('coverInput').value || '').trim(),
           badge: badgeEl.value.trim(),
           theme: themeEl.value,
           scale: parseFloat(scaleEl.value) || 1,
@@ -334,39 +331,40 @@
           const titleEl = card.querySelector('.title');
           const subtitleEl = card.querySelector('.subtitle');
           const venueEl = card.querySelector('.venue');
+          const descEl = card.querySelector('.desc');
           const badge = card.querySelector('.badge');
           const brand = card.querySelector('.brand');
           const mascot = card.querySelector('.mascot');
+          const cover = card.querySelector('.cover');
 
           titleEl.textContent = data.event;
           subtitleEl.textContent = [data.city, data.day, data.time].filter(Boolean).join(' • ');
           venueEl.textContent = data.bar ? `@ ${data.bar}` : '';
+          descEl.textContent = data.description || '';
           // Apply toggles
           brand.style.display = data.showBrand ? 'block' : 'none';
           mascot.style.display = data.showMascot ? 'block' : 'none';
           badge.style.display = data.showBadge && data.badge ? 'inline-block' : 'none';
           badge.textContent = data.showBadge ? (data.badge || '') : '';
 
+          // Cover image
+          if (data.cover) {
+            cover.style.display = 'block';
+            cover.style.backgroundImage = `url('${data.cover.replace(/'/g, "%27")}')`;
+          } else {
+            cover.style.display = 'none';
+            cover.style.backgroundImage = '';
+          }
+
           // Alignment
           const textAlign = data.align;
-          [titleEl, subtitleEl, venueEl].forEach(el => {
-            el.style.textAlign = textAlign;
-            if (textAlign === 'center') {
-              el.style.left = '60px';
-              el.style.right = '60px';
-            } else if (textAlign === 'right') {
-              el.style.left = 'auto';
-              el.style.right = '60px';
-            } else {
-              el.style.left = '60px';
-              el.style.right = '60px';
-            }
-          });
+          [titleEl, subtitleEl, venueEl, descEl].forEach(el => { el.style.textAlign = textAlign; });
 
           // Scaling
           titleEl.style.fontSize = `${72 * data.scale}px`;
           subtitleEl.style.fontSize = `${30 * data.scale}px`;
           venueEl.style.fontSize = `${28 * data.scale}px`;
+          descEl.style.fontSize = `${24 * data.scale}px`;
 
           // Overlay strength
           art.style.setProperty('--overlay-strength', data.overlay);
@@ -387,8 +385,10 @@
 
           const metaTitle = card.querySelector('.preview-meta div:nth-child(1) code');
           const metaDesc = card.querySelector('.preview-meta div:nth-child(2) code');
+          const metaCover = card.querySelector('.preview-meta div:nth-child(3) code');
           metaTitle.textContent = meta.title;
           metaDesc.textContent = meta.description;
+          metaCover.textContent = data.cover ? 'yes' : 'no';
 
           grid.appendChild(card);
           artboards.push({ art, card });
@@ -413,6 +413,8 @@
         dayEl.addEventListener(evt, update);
         timeEl.addEventListener(evt, update);
         barEl.addEventListener(evt, update);
+        descInputEl.addEventListener(evt, update);
+        coverInputEl.addEventListener(evt, update);
         badgeEl.addEventListener(evt, update);
         themeEl.addEventListener(evt, update);
         scaleEl.addEventListener(evt, update);
