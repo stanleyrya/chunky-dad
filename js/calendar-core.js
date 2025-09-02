@@ -726,43 +726,17 @@ class CalendarCore {
                         });
                     }
                 } else {
-                    // Non-UTC time with TZID (calendar-local time) – convert from that timezone to a stable UTC instant
-                    if (timezone && this.timezoneData && (timezone === this.timezoneData.tzid || this.calendarTimezone === timezone)) {
-                        // Determine the correct offset for this local date in the calendar timezone (handles DST)
-                        const probeLocal = new Date(year, month - 1, day, hour, minute, second);
-                        const offsetStr = this.getTimezoneOffsetForDate(probeLocal); // e.g. "-0400"
-                        if (offsetStr !== null) {
-                            const offsetMinutes = this.parseOffsetString(offsetStr); // e.g. -240
-                            // Convert local calendar time to UTC milliseconds
-                            const utcMillis = Date.UTC(year, month - 1, day, hour, minute, second) - (offsetMinutes * 60 * 1000);
-                            date = new Date(utcMillis);
-                            logger.debug('CALENDAR', 'Converted calendar-local time to absolute UTC instant', {
-                                calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                                timezone,
-                                calendarOffset: offsetStr,
-                                offsetMinutes,
-                                resultISO: date.toISOString(),
-                                note: 'Slug/time calculations now stable across environments'
-                            });
-                        } else {
-                            // Fallback if we cannot resolve offset
-                            date = new Date(year, month - 1, day, hour, minute, second);
-                            logger.warn('CALENDAR', 'Failed to resolve timezone offset; using environment local time as fallback', {
-                                timezone,
-                                calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                                resultISO: date.toISOString()
-                            });
-                        }
-                    } else {
-                        // No timezone data available – fallback to environment local time
-                        date = new Date(year, month - 1, day, hour, minute, second);
-                        logger.debug('CALENDAR', 'Calendar timezone time (created as environment local date - no TZ data)', {
-                            calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                            timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
-                            resultISO: date.toISOString(),
-                            note: 'No VTIMEZONE data available for precise conversion'
-                        });
-                    }
+                    // Non-UTC time - this is already in the calendar's timezone, create as local date
+                    date = new Date(year, month - 1, day, hour, minute, second);
+                    
+                    // No conversion needed - JavaScript will display this correctly in user's local timezone
+                    logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
+                        calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                        timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
+                        localDisplay: date.toLocaleString(),
+                        resultDate: date.toString(),
+                        note: 'Time is in calendar timezone, created as local date for correct display'
+                    });
                 }
                 
                 // Store wasUTC flag on the date object for debugging

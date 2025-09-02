@@ -208,6 +208,14 @@ async function main() {
     }
 
     const icalText = fs.readFileSync(icsPath, 'utf8');
+    // Set process timezone to calendar TZID before parsing, so Node Date uses the intended zone
+    try {
+      const tzMatch = icalText.match(/X-WR-TIMEZONE:(.+)/);
+      if (tzMatch && tzMatch[1]) {
+        // This influences Node's Date parsing in this process only
+        process.env.TZ = tzMatch[1].trim();
+      }
+    } catch (_) {}
     const events = calendar.parseICalData(icalText) || [];
     const upcoming = BUILD_ALL ? events : events.filter(ev => occursInWindow(calendar, ev, now, OUTPUT_DAYS_WINDOW));
     if (BUILD_ALL) {
