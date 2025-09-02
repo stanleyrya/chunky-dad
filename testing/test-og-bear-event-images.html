@@ -37,8 +37,8 @@
     .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
     .variant-card { background: #0f1520; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
     .variant-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #9fb2c8; font-size: 12px; }
-    .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #111; display: grid; place-items: center; }
-    .artboard { width: 100%; height: 100%; position: relative; overflow: hidden; }
+    .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #111; display: grid; place-items: center; overflow: hidden; position: relative; }
+    .artboard { width: 1200px; height: 630px; position: relative; overflow: hidden; transform-origin: top left; }
 
     /* Core artboard shared styles matching generator dimensions */
     .artboard .brand { position: absolute; top: 28px; left: 32px; font-weight: 800; letter-spacing: .6px; color: #ffffff; font-size: 24px; text-shadow: 0 2px 10px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.8); z-index: 2; }
@@ -261,6 +261,7 @@
         grid.innerHTML = '';
         const meta = computeMeta(data);
 
+        const artboards = [];
         VARIANTS.forEach(variant => {
           const card = buildVariantCard(variant, data);
           const art = card.querySelector('.artboard');
@@ -327,6 +328,19 @@
           metaDesc.textContent = meta.description;
 
           grid.appendChild(card);
+          artboards.push({ art, card });
+        });
+
+        // Fit each 1200x630 artboard into its preview container
+        requestAnimationFrame(() => {
+          artboards.forEach(({ art }) => {
+            const preview = art.closest('.variant-preview');
+            if (!preview) return;
+            const pw = preview.clientWidth;
+            const ph = preview.clientHeight; // dictated by aspect-ratio
+            const scale = Math.min(pw / 1200, ph / 630);
+            art.style.transform = `scale(${scale})`;
+          });
         });
       }
 
@@ -347,6 +361,14 @@
       });
 
       update();
+      // Recompute scales on resize
+      window.addEventListener('resize', () => {
+        try {
+          update();
+        } catch (err) {
+          logger.componentError(COMPONENT, 'resize update failed', err);
+        }
+      });
       logger.componentLoad(COMPONENT, 'OG variations tester ready');
     })();
   </script>
