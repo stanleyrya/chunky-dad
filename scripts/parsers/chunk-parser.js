@@ -170,32 +170,38 @@ class ChunkParser {
             }
             
             // CHUNK provides dates with timezone offsets in their JSON-LD
-            // SOLUTION: Use the original timezone-aware date string to create proper Date objects
+            // BUG FIX: CHUNK website publishes incorrect timezone offsets for non-Pacific events
+            // Chicago events show -07:00 (Pacific) instead of -06:00 (Central)
             let startDate = null;
             let endDate = null;
             
             if (jsonData.startDate) {
                 console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
                 
-                // Parse the full timezone-aware date string directly
-                // This preserves the original timezone information from the JSON-LD
+                // Detect city from address to determine correct timezone
+                const detectedCity = this.detectCityFromAddress(address, cityConfig);
+                const correctedStartDate = this.correctTimezoneIfNeeded(jsonData.startDate, detectedCity, cityConfig);
+                
                 try {
-                    startDate = new Date(jsonData.startDate);
+                    startDate = new Date(correctedStartDate);
                     console.log(`🎉 Chunk: Created timezone-aware date object: ${startDate.toISOString()}`);
                     console.log(`🎉 Chunk: Local display time: ${startDate.toString()}`);
                 } catch (error) {
-                    console.warn(`🎉 Chunk: Could not parse date format: ${jsonData.startDate}, error: ${error}`);
+                    console.warn(`🎉 Chunk: Could not parse date format: ${correctedStartDate}, error: ${error}`);
                     startDate = null;
                 }
             }
             
             if (jsonData.endDate) {
-                // Parse the full timezone-aware end date string directly
+                // Apply same timezone correction to end date
+                const detectedCity = this.detectCityFromAddress(address, cityConfig);
+                const correctedEndDate = this.correctTimezoneIfNeeded(jsonData.endDate, detectedCity, cityConfig);
+                
                 try {
-                    endDate = new Date(jsonData.endDate);
+                    endDate = new Date(correctedEndDate);
                     console.log(`🎉 Chunk: Created timezone-aware end date object: ${endDate.toISOString()}`);
                 } catch (error) {
-                    console.warn(`🎉 Chunk: Could not parse end date format: ${jsonData.endDate}, error: ${error}`);
+                    console.warn(`🎉 Chunk: Could not parse end date format: ${correctedEndDate}, error: ${error}`);
                     endDate = null;
                 }
             }
@@ -328,6 +334,92 @@ class ChunkParser {
         
         // Return all found URLs (no limit if maxAdditionalUrls is null)
         return Array.from(urls);
+    }
+
+    // Detect city from address using centralized city configuration
+    detectCityFromAddress(address, cityConfig) {
+        if (!address || !cityConfig) return null;
+        
+        const addressLower = address.toLowerCase();
+        
+        // Use centralized city configuration from scraper-input.js
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns) {
+                for (const pattern of cityData.patterns) {
+                    // Use word boundaries to avoid substring matches
+                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                    if (regex.test(addressLower)) {
+                        console.log(`🎉 Chunk: Detected city '${cityKey}' from address: ${address}`);
+                        return cityKey;
+                    }
+                }
+            }
+        }
+        
+        console.warn(`🎉 Chunk: Could not detect city from address: ${address}`);
+        return null;
+    }
+
+    // Correct timezone offset if CHUNK published wrong timezone data
+    correctTimezoneIfNeeded(dateString, detectedCity, cityConfig) {
+        if (!dateString || !detectedCity || !cityConfig) {
+            return dateString; // No correction possible
+        }
+        
+        // Get timezone from centralized city configuration
+        const cityData = cityConfig[detectedCity];
+        if (!cityData || !cityData.timezone) {
+            console.log(`🎉 Chunk: No timezone configuration found for city: ${detectedCity}`);
+            return dateString; // No correction for unknown cities
+        }
+        
+        // Extract the current timezone offset from the date string
+        const timezoneMatch = dateString.match(/([+-]\d{2}:\d{2})$/);
+        if (!timezoneMatch) {
+            console.log(`🎉 Chunk: No timezone offset found in date string: ${dateString}`);
+            return dateString; // No timezone offset to correct
+        }
+        
+        const currentOffset = timezoneMatch[1];
+        
+        // Create a temporary date object in the city's timezone to get the correct offset
+        // This uses the browser's built-in timezone handling
+        const tempDate = new Date(dateString.replace(currentOffset, ''));
+        
+        // Use Intl.DateTimeFormat to get the correct offset for this city's timezone at this date
+        try {
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: cityData.timezone,
+                timeZoneName: 'longOffset'
+            });
+            
+            const parts = formatter.formatToParts(tempDate);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            
+            if (offsetPart && offsetPart.value) {
+                // Convert from "GMT-05:00" format to "-05:00" format
+                const expectedOffset = offsetPart.value.replace('GMT', '');
+                
+                if (currentOffset === expectedOffset) {
+                    console.log(`🎉 Chunk: Timezone offset is correct for ${detectedCity}: ${currentOffset}`);
+                    return dateString; // Already correct
+                }
+                
+                // Apply timezone correction
+                const correctedDateString = dateString.replace(currentOffset, expectedOffset);
+                console.log(`🎉 Chunk: Corrected timezone for ${detectedCity}: ${currentOffset} → ${expectedOffset}`);
+                console.log(`🎉 Chunk: Original: ${dateString}`);
+                console.log(`🎉 Chunk: Corrected: ${correctedDateString}`);
+                
+                return correctedDateString;
+            }
+        } catch (error) {
+            console.warn(`🎉 Chunk: Could not determine timezone offset for ${cityData.timezone}: ${error}`);
+        }
+        
+        // Fallback: return original if we can't determine the correct offset
+        console.log(`🎉 Chunk: Could not correct timezone for ${detectedCity}, using original: ${dateString}`);
+        return dateString;
     }
 }
 
