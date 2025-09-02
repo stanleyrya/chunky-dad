@@ -33,6 +33,8 @@ global.logger = {
 
 // Config
 const OUTPUT_DAYS_WINDOW = parseInt(process.env.EVENT_STUB_DAYS || '180', 10); // Upcoming days to generate
+const PAST_DAYS_WINDOW = parseInt(process.env.EVENT_STUB_PAST_DAYS || '2', 10); // Past-days tolerance
+const BUILD_ALL = /^(1|true|yes)$/i.test(process.env.EVENT_STUB_BUILD_ALL || ''); // Build all events regardless of date
 const MARKER = '<!-- generated: chunky.dad event page -->';
 const SITE_BASE = 'https://chunky.dad';
 const FALLBACK_IMAGE = `${SITE_BASE}/Rising_Star_Ryan_Head_Compressed.png`;
@@ -63,7 +65,7 @@ function withinWindow(date, now, days) {
   if (!date) return false;
   const diffMs = date.getTime() - now.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
-  return diffDays >= -2 && diffDays <= days; // small negative tolerance for late events
+  return diffDays >= -PAST_DAYS_WINDOW && diffDays <= days; // configurable negative tolerance for recent past
 }
 
 function buildEventHtml(cityKey, cityName, event) {
@@ -190,7 +192,10 @@ async function main() {
 
     const icalText = fs.readFileSync(icsPath, 'utf8');
     const events = calendar.parseICalData(icalText) || [];
-    const upcoming = events.filter(ev => withinWindow(ev.startDate, now, OUTPUT_DAYS_WINDOW));
+    const upcoming = BUILD_ALL ? events : events.filter(ev => withinWindow(ev.startDate, now, OUTPUT_DAYS_WINDOW));
+    if (BUILD_ALL) {
+      console.log(`🧱 BUILD_ALL enabled for ${cityKey}: generating ${upcoming.length}/${events.length} events`);
+    }
 
     // Map by slug to guarantee unique stubs
     const uniqueBySlug = new Map();

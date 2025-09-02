@@ -229,6 +229,10 @@ jobs:
           fi
       
       - name: Generate event pages
+        env:
+          EVENT_STUB_DAYS: '240'
+          EVENT_STUB_PAST_DAYS: '7'
+          EVENT_STUB_BUILD_ALL: 'true'
         run: |
           node tools/generate-event-pages.js
           # Stage generated event pages and capture deletions under city/slug dirs
