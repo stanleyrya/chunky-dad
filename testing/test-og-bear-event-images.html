@@ -41,10 +41,10 @@
     .artboard { width: 100%; height: 100%; position: relative; overflow: hidden; }
 
     /* Core artboard shared styles matching generator dimensions */
-    .artboard .brand { position: absolute; top: 28px; left: 32px; font-weight: 700; letter-spacing: .6px; color: #f8f9fa; opacity: .9; font-size: 22px; }
-    .artboard .title { position: absolute; left: 60px; right: 60px; font-size: 64px; line-height: 1.05; font-weight: 800; color: #fff; }
-    .artboard .subtitle { position: absolute; left: 60px; right: 60px; font-size: 28px; color: #d0d7de; }
-    .artboard .venue { position: absolute; left: 60px; right: 60px; font-size: 28px; color: #e6edf3; }
+    .artboard .brand { position: absolute; top: 28px; left: 32px; font-weight: 800; letter-spacing: .6px; color: #ffffff; font-size: 24px; text-shadow: 0 2px 10px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.8); z-index: 2; }
+    .artboard .title { position: absolute; left: 60px; right: 60px; font-size: 72px; line-height: 1.05; font-weight: 900; color: #ffffff; text-shadow: 0 3px 18px rgba(0,0,0,0.75), 0 0 2px rgba(0,0,0,0.9); z-index: 2; }
+    .artboard .subtitle { position: absolute; left: 60px; right: 60px; font-size: 30px; color: #e8eef4; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.85); z-index: 2; }
+    .artboard .venue { position: absolute; left: 60px; right: 60px; font-size: 28px; color: #ffffff; opacity: 0.95; text-shadow: 0 2px 12px rgba(0,0,0,0.75), 0 0 1px rgba(0,0,0,0.85); z-index: 2; }
 
     /* Variant themes */
     .v1 { background: var(--og-bg-1); }
@@ -54,34 +54,36 @@
     .v5 { background: var(--og-bg-5); }
 
     /* Layouts */
-    .layout-card .card { position: absolute; inset: 60px; border-radius: 24px; padding: 48px; background: rgba(255,255,255,0.06); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .layout-card .card { position: absolute; inset: 60px; border-radius: 24px; padding: 48px; background: rgba(0,0,0,0.28); box-shadow: 0 20px 60px rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 1; }
     .layout-card .title { top: 140px; }
     .layout-card .subtitle { top: 260px; }
     .layout-card .venue { top: 306px; }
 
-    .layout-stripes::before, .layout-stripes::after { content: ""; position: absolute; inset: -10% -10% auto -10%; height: 60%; background: repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 16px, rgba(0,0,0,0.06) 16px 48px); mix-blend-mode: overlay; transform: skewY(-8deg); border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; }
+    .layout-stripes::before, .layout-stripes::after { content: ""; position: absolute; inset: -10% -10% auto -10%; height: 60%; background: repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 16px, rgba(0,0,0,0.25) 16px 48px); mix-blend-mode: overlay; transform: skewY(-8deg); border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; z-index: 0; }
     .layout-stripes .title { top: 220px; }
     .layout-stripes .subtitle { top: 320px; }
     .layout-stripes .venue { top: 366px; }
 
-    .layout-diagonal::before { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(255,255,255,0.06), transparent 40%); }
+    .layout-diagonal::before { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(0,0,0,0.35), rgba(0,0,0,0.1) 40%); z-index: 0; }
     .layout-diagonal .title { top: 210px; }
     .layout-diagonal .subtitle { top: 308px; }
     .layout-diagonal .venue { top: 354px; }
 
-    .layout-ring::before { content: ""; position: absolute; width: 900px; height: 900px; left: -200px; top: -220px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,0.12), transparent 70%); filter: blur(8px); }
+    .layout-ring::before { content: ""; position: absolute; width: 900px; height: 900px; left: -200px; top: -220px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.35), transparent 70%); filter: blur(8px); z-index: 0; }
     .layout-ring .title { top: 230px; }
     .layout-ring .subtitle { top: 328px; }
     .layout-ring .venue { top: 374px; }
 
-    .layout-grid::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 24px 24px; mix-blend-mode: overlay; }
+    .layout-grid::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px); background-size: 24px 24px; mix-blend-mode: overlay; z-index: 0; }
     .layout-grid .title { top: 200px; }
     .layout-grid .subtitle { top: 298px; }
     .layout-grid .venue { top: 344px; }
 
     /* Fun extras */
-    .badge { position: absolute; right: 40px; top: 40px; background: rgba(0,0,0,0.5); color: #fff; border: 2px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 10px 16px; font-weight: 700; font-size: 16px; letter-spacing: .4px; text-transform: uppercase; }
-    .mascot { position: absolute; bottom: -10px; right: -6px; width: 240px; height: 240px; opacity: .15; filter: grayscale(0.2) contrast(1.1); background: url('../Rising_Star_Ryan_Head_Compressed.png') center/contain no-repeat; transform: rotate(-10deg); }
+    .badge { position: absolute; right: 40px; top: 40px; background: rgba(0,0,0,0.65); color: #fff; border: 2px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 10px 16px; font-weight: 800; font-size: 16px; letter-spacing: .4px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.6); z-index: 3; }
+    .mascot { position: absolute; bottom: -10px; right: -6px; width: 240px; height: 240px; opacity: .12; filter: grayscale(0.2) contrast(1.1); background: url('../Rising_Star_Ryan_Head_Compressed.png') center/contain no-repeat; transform: rotate(-10deg); z-index: 0; }
+    /* Optional global dark overlay for text contrast */
+    .artboard::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.0), rgba(0,0,0,0.45) 60%); pointer-events: none; z-index: 0; }
 
     .preview-meta { padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.06); display: grid; gap: 6px; font-size: 12px; color: #9fb2c8; }
     .preview-meta code { background: rgba(255,255,255,0.06); padding: 3px 6px; border-radius: 6px; color: #e6edf3; }
@@ -140,6 +142,30 @@
             <option value="v5">Spotlight</option>
           </select>
         </div>
+        <div>
+          <label for="scaleInput">Font scale</label>
+          <input id="scaleInput" type="range" min="0.6" max="1.4" step="0.05" value="1">
+        </div>
+        <div>
+          <label for="alignSelect">Text alignment</label>
+          <select id="alignSelect">
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+        <div>
+          <label for="overlayInput">Overlay strength</label>
+          <input id="overlayInput" type="range" min="0" max="0.75" step="0.05" value="0.45">
+        </div>
+        <div>
+          <label>Elements</label>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label style="display:flex; gap:6px; align-items:center; font-size:12px; color:#9fb2c8;"><input id="toggleBrand" type="checkbox" checked> brand</label>
+            <label style="display:flex; gap:6px; align-items:center; font-size:12px; color:#9fb2c8;"><input id="toggleBadge" type="checkbox"> badge</label>
+            <label style="display:flex; gap:6px; align-items:center; font-size:12px; color:#9fb2c8;"><input id="toggleMascot" type="checkbox" checked> mascot</label>
+          </div>
+        </div>
       </section>
 
       <section class="variants-grid" id="variantsGrid"></section>
@@ -160,6 +186,12 @@
       const badgeEl = document.getElementById('badgeInput');
       const themeEl = document.getElementById('themeSelect');
       const grid = document.getElementById('variantsGrid');
+      const scaleEl = document.getElementById('scaleInput');
+      const alignEl = document.getElementById('alignSelect');
+      const overlayEl = document.getElementById('overlayInput');
+      const toggleBrandEl = document.getElementById('toggleBrand');
+      const toggleBadgeEl = document.getElementById('toggleBadge');
+      const toggleMascotEl = document.getElementById('toggleMascot');
 
       const VARIANTS = [
         { key: 'card-classic', name: 'Card – Classic', classes: 'v1 layout-card' },
@@ -215,7 +247,13 @@
           time: timeEl.value.trim(),
           bar: barEl.value.trim(),
           badge: badgeEl.value.trim(),
-          theme: themeEl.value
+          theme: themeEl.value,
+          scale: parseFloat(scaleEl.value) || 1,
+          align: alignEl.value,
+          overlay: parseFloat(overlayEl.value) || 0,
+          showBrand: !!toggleBrandEl.checked,
+          showBadge: !!toggleBadgeEl.checked,
+          showMascot: !!toggleMascotEl.checked
         };
 
         logger.debug(COMPONENT, 'Updating OG previews', data);
@@ -233,12 +271,55 @@
           const subtitleEl = card.querySelector('.subtitle');
           const venueEl = card.querySelector('.venue');
           const badge = card.querySelector('.badge');
+          const brand = card.querySelector('.brand');
+          const mascot = card.querySelector('.mascot');
 
           titleEl.textContent = data.event;
           subtitleEl.textContent = [data.city, data.day, data.time].filter(Boolean).join(' • ');
           venueEl.textContent = data.bar ? `@ ${data.bar}` : '';
-          badge.style.display = data.badge ? 'inline-block' : 'none';
-          badge.textContent = data.badge || '';
+          // Apply toggles
+          brand.style.display = data.showBrand ? 'block' : 'none';
+          mascot.style.display = data.showMascot ? 'block' : 'none';
+          badge.style.display = data.showBadge && data.badge ? 'inline-block' : 'none';
+          badge.textContent = data.showBadge ? (data.badge || '') : '';
+
+          // Alignment
+          const textAlign = data.align;
+          [titleEl, subtitleEl, venueEl].forEach(el => {
+            el.style.textAlign = textAlign;
+            if (textAlign === 'center') {
+              el.style.left = '60px';
+              el.style.right = '60px';
+            } else if (textAlign === 'right') {
+              el.style.left = 'auto';
+              el.style.right = '60px';
+            } else {
+              el.style.left = '60px';
+              el.style.right = '60px';
+            }
+          });
+
+          // Scaling
+          titleEl.style.fontSize = `${72 * data.scale}px`;
+          subtitleEl.style.fontSize = `${30 * data.scale}px`;
+          venueEl.style.fontSize = `${28 * data.scale}px`;
+
+          // Overlay strength
+          art.style.setProperty('--overlay-strength', data.overlay);
+          art.style.position = 'relative';
+          art.style.overflow = 'hidden';
+          // Inject a dynamic overlay by updating ::after via inline style
+          const overlay = document.createElement('div');
+          overlay.style.position = 'absolute';
+          overlay.style.inset = '0';
+          overlay.style.pointerEvents = 'none';
+          overlay.style.zIndex = '0';
+          overlay.style.background = `radial-gradient(circle at 50% 40%, rgba(0,0,0,0), rgba(0,0,0,${data.overlay}) 60%)`;
+          // Remove prior overlay if any
+          const existing = art.querySelector('[data-overlay]');
+          if (existing) existing.remove();
+          overlay.setAttribute('data-overlay', 'true');
+          art.appendChild(overlay);
 
           const metaTitle = card.querySelector('.preview-meta div:nth-child(1) code');
           const metaDesc = card.querySelector('.preview-meta div:nth-child(2) code');
@@ -257,6 +338,12 @@
         barEl.addEventListener(evt, update);
         badgeEl.addEventListener(evt, update);
         themeEl.addEventListener(evt, update);
+        scaleEl.addEventListener(evt, update);
+        alignEl.addEventListener(evt, update);
+        overlayEl.addEventListener(evt, update);
+        toggleBrandEl.addEventListener(evt, update);
+        toggleBadgeEl.addEventListener(evt, update);
+        toggleMascotEl.addEventListener(evt, update);
       });
 
       update();
