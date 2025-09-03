@@ -137,8 +137,8 @@ class FurballParser {
             const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
             let title = titleParts.join(' — ').trim();
 
-            // Ticket URL: pick the first anchor href found near this block (no vendor allowlist)
-            const ticketUrls = this.extractNearbyTicketLinks(block, /*vendorAgnostic*/ true);
+            // Ticket URL: pick anchor hrefs by label/text only
+            const ticketUrls = this.extractNearbyTicketLinks(block);
             const ticketUrl = ticketUrls.length > 0 ? ticketUrls[0] : '';
 
             const event = {
@@ -159,8 +159,8 @@ class FurballParser {
         }
     }
 
-    // Find nearby ticket links; when vendorAgnostic is true, accept any link text that suggests tickets
-    extractNearbyTicketLinks(block, vendorAgnostic = false) {
+    // Find nearby ticket links relying solely on anchor label/text
+    extractNearbyTicketLinks(block) {
         const links = [];
         try {
             const html = block.neighborhood || '';
@@ -170,32 +170,12 @@ class FurballParser {
             while ((m = anchorRegex.exec(html)) !== null) {
                 const href = (m[1] || '').trim();
                 const text = (m[2] || '').replace(/<[^>]+>/g, ' ').trim();
-                if (vendorAgnostic ? this.isLikelyTicketByText(text) : this.isLikelyTicketUrl(href, text)) {
+                if (this.isLikelyTicketByText(text)) {
                     links.push(href);
                 }
             }
         } catch (_) { /* no-op */ }
         return Array.from(new Set(links));
-    }
-
-    isLikelyTicketUrl(href, text) {
-        if (!href) return false;
-        const lower = href.toLowerCase();
-        const vendors = [
-            'ticketleap.com',
-            'ticketweb.com',
-            'tixr.com',
-            'dice.fm',
-            'seetickets',
-            'eventbrite.com',
-            'posh.vip',
-            'purplepass',
-            'feverup',
-            'stubhub'
-        ];
-        const isVendor = vendors.some(v => lower.includes(v));
-        const isLabeled = /ticket|admission|rsvp/i.test(text || '');
-        return isVendor || isLabeled;
     }
 
     isLikelyTicketByText(text) {
