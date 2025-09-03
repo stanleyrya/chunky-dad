@@ -2252,6 +2252,8 @@ body.index-page main {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    top: -1px; /* Adjust icon positioning to center better in circle */
 }
 
 .event-links a {
@@ -2302,6 +2304,11 @@ body.index-page main {
 
 .share-event-btn .share-icon {
     display: contents; /* Makes the span wrapper transparent to layout */
+    color: var(--white);
+}
+
+.share-event-btn .share-icon i {
+    color: var(--white);
 }
 
 /* Enhanced event link styling */
@@ -3408,6 +3415,11 @@ footer {
     
     .share-event-btn .share-icon {
         display: contents; /* Makes the span wrapper transparent to layout */
+        color: var(--white);
+    }
+    
+    .share-event-btn .share-icon i {
+        color: var(--white);
     }
 
     .event-day {
