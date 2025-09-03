@@ -1617,7 +1617,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     <div class="event-links">
                         ${linksHtml}
                         <button class="share-event-btn icon-only" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event" aria-label="Share this event">
-                            <span class="share-icon" aria-hidden="true"><i class="bi bi-share"></i></span>
+                            <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
                         </button>
                     </div>
                 </div>
