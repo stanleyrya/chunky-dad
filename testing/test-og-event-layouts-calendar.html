@@ -175,6 +175,27 @@
     .layout-circle .venue { margin-top: 6px; font-size: 22px; opacity: 0.8; }
     .layout-circle .description { position: absolute; bottom: 60px; right: 60px; width: 480px; color: #fff; opacity: 0.9; line-height: 1.5; }
 
+    /* NEW LAYOUT: Speech Bubble (logo talks) */
+    .layout-speech { background: var(--og-bg-4); position: relative; }
+    .layout-speech .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.2; }
+    .layout-speech .logo-avatar { position: absolute; left: 80px; bottom: 80px; width: 160px; height: 160px; border-radius: 50%; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 6px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
+    .layout-speech .speech-bubble { position: absolute; left: 270px; bottom: 160px; max-width: 760px; background: #fff; color: #111; border-radius: 22px; padding: 22px 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); font-size: 26px; line-height: 1.25; }
+    .layout-speech .speech-bubble:after { content: ""; position: absolute; left: -28px; bottom: 22px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-right: 28px solid #fff; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.2)); }
+    .layout-speech .headline { position: absolute; left: 80px; top: 70px; right: 60px; color: #fff; font-size: 64px; line-height: 0.95; font-weight: 900; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
+    .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; background-size: cover; background-position: center; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .layout-speech .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.85); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
+
+    /* NEW LAYOUT: Newspaper */
+    .layout-news { background: #fdfaf5; color: #111; position: relative; }
+    .layout-news .masthead { position: absolute; left: 60px; right: 60px; top: 40px; text-align: center; font-family: 'Oswald', sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 38px; border-bottom: 4px double #111; padding-bottom: 10px; }
+    .layout-news .kicker { position: absolute; left: 60px; top: 110px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #c00; }
+    .layout-news .headline { position: absolute; left: 60px; right: 60px; top: 140px; font-size: 72px; line-height: 0.95; font-weight: 900; letter-spacing: -1px; }
+    .layout-news .subhead { position: absolute; left: 60px; right: 60px; top: 220px; font-size: 22px; color: #333; }
+    .layout-news .columns { position: absolute; left: 60px; right: 60px; top: 270px; bottom: 60px; display: grid; grid-template-columns: 1fr 420px; gap: 30px; }
+    .layout-news .col .description { font-size: 18px; line-height: 1.6; color: #222; }
+    .layout-news .event-image { width: 100%; height: 360px; background: #ddd; background-size: cover; background-position: center; border: 8px solid #111; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    .layout-news .dateline { position: absolute; left: 60px; bottom: 20px; font-size: 14px; color: #555; }
+
     .preview-meta { padding: 12px 14px; border-top: 1px solid var(--border-lighter); display: grid; gap: 6px; font-size: 12px; color: var(--text-secondary); }
     .preview-meta code { background: var(--background-light); padding: 3px 6px; border-radius: 6px; color: var(--text-primary); font-size: 11px; word-break: break-all; }
   </style>
@@ -531,6 +552,32 @@
               if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
               break;
             }
+            case 'speech': {
+              const head = artboard.querySelector('.headline');
+              const bubble = artboard.querySelector('.speech-bubble');
+              const img = artboard.querySelector('.event-image');
+              const cov = artboard.querySelector('.cover');
+              if (head) head.textContent = data.event;
+              if (bubble) bubble.textContent = `${data.date} · ${data.time} @ ${data.venue}. ${data.description}`;
+              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
+              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'news': {
+              const kicker = artboard.querySelector('.kicker');
+              const head = artboard.querySelector('.headline');
+              const sub = artboard.querySelector('.subhead');
+              const desc = artboard.querySelector('.description');
+              const img = artboard.querySelector('.event-image');
+              const dateLine = artboard.querySelector('.dateline');
+              if (kicker) kicker.textContent = `${data.city} • Events`; 
+              if (head) head.textContent = data.event;
+              if (sub) sub.textContent = `${data.date} · ${data.time} • @ ${data.venue}`;
+              if (desc) desc.textContent = data.description;
+              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; } else if (data.cover) { img.style.backgroundImage = `url('${data.cover}')`; } }
+              if (dateLine) dateLine.textContent = `Published by chunky.dad — ${data.city}`;
+              break;
+            }
           }
         }
 
@@ -669,6 +716,29 @@
                 <div class="venue"></div>
               </div>
               <div class="description"></div>
+            `,
+            'speech': `
+              <div class="cover"></div>
+              <div class="headline"></div>
+              <img class="logo-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+              <div class="speech-bubble"></div>
+              <div class="event-image"></div>
+              <div class="brand">chunky.dad</div>
+            `,
+            'news': `
+              <div class="masthead">chunky.dad Times</div>
+              <div class="kicker"></div>
+              <div class="headline"></div>
+              <div class="subhead"></div>
+              <div class="columns">
+                <div class="col">
+                  <div class="description"></div>
+                </div>
+                <div class="col">
+                  <div class="event-image"></div>
+                </div>
+              </div>
+              <div class="dateline"></div>
             `
           };
           return layouts[variant.key] || '';
@@ -686,7 +756,9 @@
             { key: 'blocks', name: 'Color Blocks', class: 'layout-blocks', description: 'Bold two-column color composition' },
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass over photo backdrop' },
             { key: 'ticket', name: 'Ticket', class: 'layout-ticket', description: 'Admit-one ticket aesthetic' },
-            { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' }
+            { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' },
+            { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' },
+            { key: 'news', name: 'Newspaper', class: 'layout-news', description: 'Classic newspaper-style layout' }
           ];
 
           grid.innerHTML = '';
