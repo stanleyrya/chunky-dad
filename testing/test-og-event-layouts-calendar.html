@@ -37,8 +37,9 @@
     .controls .field-3 { grid-column: span 9; }
     .controls label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
     .controls input, .controls select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); color: var(--text-primary); }
-    .controls .inline { display: flex; gap: 10px; align-items: center; }
-    .controls .btn { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); cursor: pointer; }
+    .controls .inline { display: flex; gap: 10px; align-items: end; }
+    .controls .inline > * { flex: 1; }
+    .controls .btn { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); cursor: pointer; white-space: nowrap; }
     .controls .btn.primary { background: var(--gradient-primary); color: var(--text-inverse); border: 0; }
 
     .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
@@ -79,35 +80,9 @@
     .layout-magazine .event-details .description { font-size: 16px; line-height: 1.4; opacity: 0.8; }
     .layout-magazine .event-image { position: absolute; bottom: 40px; right: 60px; width: 300px; height: 200px; background-size: cover; background-position: center; border: 8px solid #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 2; transform: rotate(-2deg); }
 
-    /* LAYOUT: Neon */
-    .layout-neon { background: #0a0a0a; }
-    .layout-neon .cover { opacity: 0.15; filter: blur(2px); }
-    .layout-neon::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(255,0,150,0.2), transparent 60%); z-index: 1; }
-    .layout-neon .neon-frame { position: absolute; inset: 60px; border: 4px solid #ff00ff; border-radius: 20px; z-index: 2; box-shadow: 0 0 20px #ff00ff, inset 0 0 20px #ff00ff; animation: neon-flicker 2s infinite alternate; }
-    @keyframes neon-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.95; } }
-    .layout-neon .event-title { position: absolute; top: 120px; left: 0; right: 0; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 84px; letter-spacing: 8px; text-transform: uppercase; color: #fff; z-index: 3; text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff; }
-    .layout-neon .event-date { position: absolute; top: 220px; left: 0; right: 0; text-align: center; font-size: 36px; color: #00ffff; text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; z-index: 3; letter-spacing: 4px; }
-    .layout-neon .venue-box { position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%); background: #ff00ff; padding: 10px 40px; z-index: 3; box-shadow: 0 0 30px #ff00ff; }
-    .layout-neon .venue-box .venue { font-size: 28px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 2px; }
-    .layout-neon .description { position: absolute; bottom: 80px; left: 100px; right: 100px; text-align: center; font-size: 20px; color: #fff; opacity: 0.9; z-index: 3; line-height: 1.4; }
-    .layout-neon .event-image { position: absolute; top: 340px; left: 50%; transform: translateX(-50%); width: 200px; height: 140px; border: 3px solid #00ffff; background-size: cover; background-position: center; z-index: 3; box-shadow: 0 0 20px #00ffff; }
 
-    /* LAYOUT: Polaroid */
-    .layout-polaroid { background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%); }
-    .layout-polaroid .cover { display: none; }
-    .layout-polaroid .photo-1 { position: absolute; left: 80px; top: 60px; width: 340px; background: #fff; padding: 15px 15px 60px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: rotate(-5deg); z-index: 2; }
-    .layout-polaroid .photo-1 .image { width: 100%; height: 260px; background: var(--og-bg-3); background-size: cover; background-position: center; }
-    .layout-polaroid .photo-1 .caption { position: absolute; bottom: 15px; left: 20px; right: 20px; font-family: 'Courier New', monospace; font-size: 18px; color: #333; text-align: center; }
-    .layout-polaroid .photo-2 { position: absolute; right: 100px; top: 40px; width: 300px; background: #fff; padding: 15px 15px 60px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: rotate(8deg); z-index: 1; }
-    .layout-polaroid .photo-2 .image { width: 100%; height: 230px; background: var(--og-bg-2); }
-    .layout-polaroid .main-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-2deg); width: 500px; background: #fff; padding: 20px 20px 80px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); z-index: 3; }
-    .layout-polaroid .main-card .image { width: 100%; height: 320px; background-size: cover; background-position: center; }
-    .layout-polaroid .main-card .text { position: absolute; bottom: 20px; left: 30px; right: 30px; }
-    .layout-polaroid .main-card .event-title { font-family: 'Courier New', monospace; font-size: 24px; font-weight: 700; color: #333; margin-bottom: 5px; }
-    .layout-polaroid .main-card .details { font-family: 'Courier New', monospace; font-size: 14px; color: #666; }
-    .layout-polaroid .tape { position: absolute; width: 80px; height: 30px; background: rgba(255,255,200,0.7); opacity: 0.8; }
-    .layout-polaroid .tape-1 { top: -10px; left: 40%; transform: rotate(-15deg); z-index: 4; }
-    .layout-polaroid .tape-2 { top: -10px; right: 20%; transform: rotate(12deg); z-index: 4; }
+
+
 
     /* LAYOUT: Split Screen */
     .layout-split-screen { background: #000; position: relative; }
@@ -185,16 +160,7 @@
     .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; background-size: cover; background-position: center; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
     .layout-speech .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.85); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
 
-    /* NEW LAYOUT: Newspaper */
-    .layout-news { background: #fdfaf5; color: #111; position: relative; }
-    .layout-news .masthead { position: absolute; left: 60px; right: 60px; top: 40px; text-align: center; font-family: 'Oswald', sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 38px; border-bottom: 4px double #111; padding-bottom: 10px; }
-    .layout-news .kicker { position: absolute; left: 60px; top: 110px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #c00; }
-    .layout-news .headline { position: absolute; left: 60px; right: 60px; top: 140px; font-size: 72px; line-height: 0.95; font-weight: 900; letter-spacing: -1px; }
-    .layout-news .subhead { position: absolute; left: 60px; right: 60px; top: 220px; font-size: 22px; color: #333; }
-    .layout-news .columns { position: absolute; left: 60px; right: 60px; top: 270px; bottom: 60px; display: grid; grid-template-columns: 1fr 420px; gap: 30px; }
-    .layout-news .col .description { font-size: 18px; line-height: 1.6; color: #222; }
-    .layout-news .event-image { width: 100%; height: 360px; background: #ddd; background-size: cover; background-position: center; border: 8px solid #111; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-    .layout-news .dateline { position: absolute; left: 60px; bottom: 20px; font-size: 14px; color: #555; }
+
 
     .preview-meta { padding: 12px 14px; border-top: 1px solid var(--border-lighter); display: grid; gap: 6px; font-size: 12px; color: var(--text-secondary); }
     .preview-meta code { background: var(--background-light); padding: 3px 6px; border-radius: 6px; color: var(--text-primary); font-size: 11px; word-break: break-all; }
@@ -231,8 +197,10 @@
           <label for="eventSearch">Search</label>
           <input id="eventSearch" type="text" placeholder="Filter events by name or venue">
         </div>
-        <div class="field inline">
+        <div class="field">
           <button id="reloadBtn" class="btn">Reload Calendar</button>
+        </div>
+        <div class="field">
           <button id="randomBtn" class="btn">Random Event</button>
         </div>
         <div class="field">
@@ -256,12 +224,12 @@
             <option value="t16">Custom</option>
           </select>
         </div>
-        <div class="field inline">
-          <label>Custom A</label>
+        <div class="field">
+          <label for="customA">Custom A</label>
           <input id="customA" type="color" value="#8e2de2" title="Custom color A">
         </div>
-        <div class="field inline">
-          <label>Custom B</label>
+        <div class="field">
+          <label for="customB">Custom B</label>
           <input id="customB" type="color" value="#4a00e0" title="Custom color B">
         </div>
         <div class="field-3">
@@ -382,7 +350,7 @@
             time: ev.time || 'Time TBA',
             city: getCityConfig(this.currentCity)?.name || 'City',
             description: ev.tea || 'Join us for an amazing bear community event!',
-            image: (imageInput.value || '').trim(),
+            image: (imageInput.value || '').trim() || (ev.image || '').trim(),
             cover: (coverInput.value || '').trim(),
             theme: themeSelect.value
           };
@@ -417,9 +385,26 @@
             this.render();
           });
 
-          [themeSelect, customA, customB, coverInput, imageInput].forEach(el => {
+          [themeSelect, coverInput, imageInput].forEach(el => {
             el.addEventListener('input', () => this.render());
             el.addEventListener('change', () => this.render());
+          });
+          
+          // Special handling for color inputs to update CSS vars immediately
+          [customA, customB].forEach(el => {
+            el.addEventListener('input', () => {
+              this.updateThemeVars();
+              this.render();
+            });
+            el.addEventListener('change', () => {
+              this.updateThemeVars();
+              this.render();
+            });
+          });
+          
+          // Update theme vars when theme changes to custom
+          themeSelect.addEventListener('change', () => {
+            this.updateThemeVars();
           });
         }
 
@@ -427,6 +412,7 @@
           if (themeSelect.value === 't16') {
             document.documentElement.style.setProperty('--custom-color-1', customA.value);
             document.documentElement.style.setProperty('--custom-color-2', customB.value);
+            logger.debug(COMPONENT, 'Updated custom theme colors', { colorA: customA.value, colorB: customB.value });
           }
         }
 
@@ -450,32 +436,8 @@
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
-            case 'neon': {
-              const t = artboard.querySelector('.event-title');
-              const d = artboard.querySelector('.event-date');
-              const v = artboard.querySelector('.venue');
-              const desc = artboard.querySelector('.description');
-              const img = artboard.querySelector('.event-image');
-              if (t) t.textContent = data.event;
-              if (d) d.textContent = `${data.date} · ${data.time}`;
-              if (v) v.textContent = data.venue;
-              if (desc) desc.textContent = data.description;
-              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
-              break;
-            }
-            case 'polaroid': {
-              const t = artboard.querySelector('.main-card .event-title');
-              const det = artboard.querySelector('.main-card .details');
-              const mc = artboard.querySelector('.main-card .image');
-              const p1 = artboard.querySelector('.photo-1 .image');
-              const p2 = artboard.querySelector('.photo-2 .image');
-              if (t) t.textContent = data.event;
-              if (det) det.textContent = `${data.date} @ ${data.venue}`;
-              if (mc) { mc.style.backgroundImage = data.image ? `url('${data.image}')` : (data.cover ? `url('${data.cover}')` : 'none'); }
-              if (p1 && data.cover) p1.style.backgroundImage = `url('${data.cover}')`;
-              if (p2 && data.cover) p2.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
+
+
             case 'split': {
               const t = artboard.querySelector('.event-title');
               const d = artboard.querySelector('.event-date');
@@ -563,21 +525,7 @@
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
-            case 'news': {
-              const kicker = artboard.querySelector('.kicker');
-              const head = artboard.querySelector('.headline');
-              const sub = artboard.querySelector('.subhead');
-              const desc = artboard.querySelector('.description');
-              const img = artboard.querySelector('.event-image');
-              const dateLine = artboard.querySelector('.dateline');
-              if (kicker) kicker.textContent = `${data.city} • Events`; 
-              if (head) head.textContent = data.event;
-              if (sub) sub.textContent = `${data.date} · ${data.time} • @ ${data.venue}`;
-              if (desc) desc.textContent = data.description;
-              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; } else if (data.cover) { img.style.backgroundImage = `url('${data.cover}')`; } }
-              if (dateLine) dateLine.textContent = `Published by chunky.dad — ${data.city}`;
-              break;
-            }
+
           }
         }
 
@@ -615,36 +563,8 @@
               </div>
               <div class="event-image"></div>
             `,
-            'neon': `
-              <div class="cover"></div>
-              <div class="brick-wall"></div>
-              <div class="neon-frame"></div>
-              <div class="event-title"></div>
-              <div class="event-date"></div>
-              <div class="venue-box">
-                <div class="venue"></div>
-              </div>
-              <div class="event-image"></div>
-              <div class="description"></div>
-            `,
-            'polaroid': `
-              <div class="photo-1">
-                <div class="image"></div>
-                <div class="caption">bear night vibes</div>
-              </div>
-              <div class="photo-2">
-                <div class="image"></div>
-              </div>
-              <div class="main-card">
-                <div class="image"></div>
-                <div class="text">
-                  <div class="event-title"></div>
-                  <div class="details"></div>
-                </div>
-              </div>
-              <div class="tape tape-1"></div>
-              <div class="tape tape-2"></div>
-            `,
+
+
             'split': `
               <div class="left-side">
                 <div class="cover"></div>
@@ -725,21 +645,7 @@
               <div class="event-image"></div>
               <div class="brand">chunky.dad</div>
             `,
-            'news': `
-              <div class="masthead">chunky.dad Times</div>
-              <div class="kicker"></div>
-              <div class="headline"></div>
-              <div class="subhead"></div>
-              <div class="columns">
-                <div class="col">
-                  <div class="description"></div>
-                </div>
-                <div class="col">
-                  <div class="event-image"></div>
-                </div>
-              </div>
-              <div class="dateline"></div>
-            `
+
           };
           return layouts[variant.key] || '';
         }
@@ -750,15 +656,12 @@
           const VARIANTS = [
             { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition with image focus' },
             { key: 'magazine', name: 'Magazine Cover', class: 'layout-magazine', description: 'Editorial style with bold typography and featured image' },
-            { key: 'neon', name: 'Neon Sign', class: 'layout-neon', description: 'Retro bar signage with glowing effects' },
-            { key: 'polaroid', name: 'Polaroid Stack', class: 'layout-polaroid', description: 'Vintage photo collection with handwritten notes' },
             { key: 'minimal', name: 'Minimalist Card', class: 'layout-minimal', description: 'Clean modern design with subtle shadows' },
             { key: 'blocks', name: 'Color Blocks', class: 'layout-blocks', description: 'Bold two-column color composition' },
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass over photo backdrop' },
             { key: 'ticket', name: 'Ticket', class: 'layout-ticket', description: 'Admit-one ticket aesthetic' },
             { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' },
-            { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' },
-            { key: 'news', name: 'Newspaper', class: 'layout-news', description: 'Classic newspaper-style layout' }
+            { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' }
           ];
 
           grid.innerHTML = '';
