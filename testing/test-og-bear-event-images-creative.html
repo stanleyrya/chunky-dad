@@ -95,117 +95,9 @@
       transform: rotate(-2deg);
     }
 
-    /* LAYOUT 2: Neon Sign - Retro bar signage */
-    .layout-neon { background: #0a0a0a; }
-    .layout-neon .cover { opacity: 0.15; filter: blur(2px); }
-    .layout-neon::before {
-      content: ""; position: absolute; inset: 0;
-      background: radial-gradient(circle at 50% 50%, rgba(255,0,150,0.2), transparent 60%);
-      z-index: 1;
-    }
-    .layout-neon .brick-wall {
-      position: absolute; inset: 0; opacity: 0.3;
-      background: repeating-linear-gradient(0deg, #1a1a1a 0, #1a1a1a 3px, #0a0a0a 3px, #0a0a0a 30px),
-                  repeating-linear-gradient(90deg, #1a1a1a 0, #1a1a1a 3px, #0a0a0a 3px, #0a0a0a 60px);
-      z-index: 0;
-    }
-    .layout-neon .neon-frame {
-      position: absolute; inset: 60px; border: 4px solid #ff00ff;
-      border-radius: 20px; z-index: 2;
-      box-shadow: 0 0 20px #ff00ff, inset 0 0 20px #ff00ff;
-      animation: neon-flicker 2s infinite alternate;
-    }
-    @keyframes neon-flicker {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.95; }
-    }
-    .layout-neon .event-title {
-      position: absolute; top: 120px; left: 0; right: 0;
-      text-align: center; font-family: 'Bebas Neue', sans-serif;
-      font-size: 84px; letter-spacing: 8px; text-transform: uppercase;
-      color: #fff; z-index: 3;
-      text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
-    }
-    .layout-neon .event-date {
-      position: absolute; top: 220px; left: 0; right: 0;
-      text-align: center; font-size: 36px; color: #00ffff;
-      text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
-      z-index: 3; letter-spacing: 4px;
-    }
-    .layout-neon .venue-box {
-      position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%);
-      background: #ff00ff; padding: 10px 40px; z-index: 3;
-      box-shadow: 0 0 30px #ff00ff;
-    }
-    .layout-neon .venue-box .venue {
-      font-size: 28px; font-weight: 700; color: #000;
-      text-transform: uppercase; letter-spacing: 2px;
-    }
-    .layout-neon .description {
-      position: absolute; bottom: 80px; left: 100px; right: 100px;
-      text-align: center; font-size: 20px; color: #fff;
-      opacity: 0.9; z-index: 3; line-height: 1.4;
-    }
-    .layout-neon .event-image {
-      position: absolute; top: 340px; left: 50%; transform: translateX(-50%);
-      width: 200px; height: 140px; border: 3px solid #00ffff;
-      background-size: cover; background-position: center;
-      z-index: 3; box-shadow: 0 0 20px #00ffff;
-    }
 
-    /* LAYOUT 3: Polaroid Stack - Vintage photo collection */
-    .layout-polaroid { background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%); }
-    .layout-polaroid .cover { display: none; }
-    .layout-polaroid .photo-1 {
-      position: absolute; left: 80px; top: 60px;
-      width: 340px; background: #fff; padding: 15px 15px 60px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: rotate(-5deg);
-      z-index: 2;
-    }
-    .layout-polaroid .photo-1 .image {
-      width: 100%; height: 260px; background: var(--og-bg-3);
-      background-size: cover; background-position: center;
-    }
-    .layout-polaroid .photo-1 .caption {
-      position: absolute; bottom: 15px; left: 20px; right: 20px;
-      font-family: 'Courier New', monospace; font-size: 18px;
-      color: #333; text-align: center;
-    }
-    .layout-polaroid .photo-2 {
-      position: absolute; right: 100px; top: 40px;
-      width: 300px; background: #fff; padding: 15px 15px 60px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: rotate(8deg);
-      z-index: 1;
-    }
-    .layout-polaroid .photo-2 .image {
-      width: 100%; height: 230px; background: var(--og-bg-2);
-    }
-    .layout-polaroid .main-card {
-      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-2deg);
-      width: 500px; background: #fff; padding: 20px 20px 80px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4); z-index: 3;
-    }
-    .layout-polaroid .main-card .image {
-      width: 100%; height: 320px; background-size: cover;
-      background-position: center;
-    }
-    .layout-polaroid .main-card .text {
-      position: absolute; bottom: 20px; left: 30px; right: 30px;
-    }
-    .layout-polaroid .main-card .event-title {
-      font-family: 'Courier New', monospace; font-size: 24px;
-      font-weight: 700; color: #333; margin-bottom: 5px;
-    }
-    .layout-polaroid .main-card .details {
-      font-family: 'Courier New', monospace; font-size: 14px;
-      color: #666;
-    }
-    .layout-polaroid .tape {
-      position: absolute; width: 80px; height: 30px;
-      background: rgba(255,255,200,0.7); opacity: 0.8;
-    }
-    .layout-polaroid .tape-1 { top: -10px; left: 40%; transform: rotate(-15deg); z-index: 4; }
-    .layout-polaroid .tape-2 { top: -10px; right: 20%; transform: rotate(12deg); z-index: 4; }
+
+
 
     /* LAYOUT 4: Split Screen - Dynamic diagonal composition */
     .layout-split-screen { background: #000; position: relative; }
@@ -418,18 +310,6 @@
           description: 'Editorial style with bold typography and featured image'
         },
         { 
-          key: 'neon', 
-          name: 'Neon Sign', 
-          class: 'layout-neon',
-          description: 'Retro bar signage with glowing effects'
-        },
-        { 
-          key: 'polaroid', 
-          name: 'Polaroid Stack', 
-          class: 'layout-polaroid',
-          description: 'Vintage photo collection with handwritten notes'
-        },
-        { 
           key: 'split', 
           name: 'Split Screen', 
           class: 'layout-split-screen',
@@ -456,36 +336,8 @@
             </div>
             <div class="event-image"></div>
           `,
-          'neon': `
-            <div class="cover"></div>
-            <div class="brick-wall"></div>
-            <div class="neon-frame"></div>
-            <div class="event-title"></div>
-            <div class="event-date"></div>
-            <div class="venue-box">
-              <div class="venue"></div>
-            </div>
-            <div class="event-image"></div>
-            <div class="description"></div>
-          `,
-          'polaroid': `
-            <div class="photo-1">
-              <div class="image"></div>
-              <div class="caption">bear night vibes</div>
-            </div>
-            <div class="photo-2">
-              <div class="image"></div>
-            </div>
-            <div class="main-card">
-              <div class="image"></div>
-              <div class="text">
-                <div class="event-title"></div>
-                <div class="details"></div>
-              </div>
-            </div>
-            <div class="tape tape-1"></div>
-            <div class="tape tape-2"></div>
-          `,
+
+
           'split': `
             <div class="left-side">
               <div class="cover"></div>
@@ -571,38 +423,9 @@
             }
             break;
             
-          case 'neon':
-            const neonTitle = artboard.querySelector('.event-title');
-            const neonDate = artboard.querySelector('.event-date');
-            const neonVenue = artboard.querySelector('.venue');
-            const neonDesc = artboard.querySelector('.description');
-            const neonImage = artboard.querySelector('.event-image');
+          
             
-            if (neonTitle) neonTitle.textContent = data.event;
-            if (neonDate) neonDate.textContent = `${data.date} · ${data.time}`;
-            if (neonVenue) neonVenue.textContent = data.venue;
-            if (neonDesc) neonDesc.textContent = data.description;
-            if (neonImage && data.image) {
-              neonImage.style.backgroundImage = `url('${data.image}')`;
-              neonImage.style.display = 'block';
-            } else if (neonImage) {
-              neonImage.style.display = 'none';
-            }
-            break;
-            
-          case 'polaroid':
-            const polaroidTitle = artboard.querySelector('.main-card .event-title');
-            const polaroidDetails = artboard.querySelector('.main-card .details');
-            const polaroidImage = artboard.querySelector('.main-card .image');
-            
-            if (polaroidTitle) polaroidTitle.textContent = data.event;
-            if (polaroidDetails) polaroidDetails.textContent = `${data.date} @ ${data.venue}`;
-            if (polaroidImage && data.image) {
-              polaroidImage.style.backgroundImage = `url('${data.image}')`;
-            } else if (polaroidImage && data.cover) {
-              polaroidImage.style.backgroundImage = `url('${data.cover}')`;
-            }
-            break;
+          
             
           case 'split':
             const splitTitle = artboard.querySelector('.event-title');
