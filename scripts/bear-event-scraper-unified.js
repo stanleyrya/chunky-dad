@@ -76,6 +76,7 @@ class BearEventScraperOrchestrator {
             const bearracudaParserModule = importModule('parsers/bearracuda-parser');
             const genericParserModule = importModule('parsers/generic-parser');
             const chunkParserModule = importModule('parsers/chunk-parser');
+            const furballParserModule = importModule('parsers/furball-parser');
             
             // Store modules
             this.modules = {
@@ -85,7 +86,8 @@ class BearEventScraperOrchestrator {
                     eventbrite: eventbriteParserModule.EventbriteParser,
                     bearracuda: bearracudaParserModule.BearraccudaParser,
                     generic: genericParserModule.GenericParser,
-                    chunk: chunkParserModule.ChunkParser
+                    chunk: chunkParserModule.ChunkParser,
+                    furball: furballParserModule.FurballParser
                 }
             };
         } catch (error) {
@@ -107,6 +109,7 @@ class BearEventScraperOrchestrator {
             const bearracudaParserModule = require('./parsers/bearracuda-parser');
             const genericParserModule = require('./parsers/generic-parser');
             const chunkParserModule = require('./parsers/chunk-parser');
+            const furballParserModule = require('./parsers/furball-parser');
             
             // Store modules
             this.modules = {
@@ -116,7 +119,8 @@ class BearEventScraperOrchestrator {
                     eventbrite: eventbriteParserModule.EventbriteParser,
                     bearracuda: bearracudaParserModule.BearraccudaParser,
                     generic: genericParserModule.GenericParser,
-                    chunk: chunkParserModule.ChunkParser
+                    chunk: chunkParserModule.ChunkParser,
+                    furball: furballParserModule.FurballParser
                 }
             };
         } catch (error) {
@@ -132,7 +136,7 @@ class BearEventScraperOrchestrator {
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
                 'SharedCore', 'WebAdapter', 
-                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser'
+                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser'
             ];
             
             const missingModules = requiredModules.filter(module => !window[module]);
@@ -149,7 +153,8 @@ class BearEventScraperOrchestrator {
                     eventbrite: window.EventbriteParser,
                     bearracuda: window.BearraccudaParser,
                     generic: window.GenericParser,
-                    chunk: window.ChunkParser
+                    chunk: window.ChunkParser,
+                    furball: window.FurballParser
                 }
             };
         } catch (error) {

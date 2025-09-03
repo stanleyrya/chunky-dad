@@ -132,6 +132,34 @@ const scraperConfig = {
         instagram: { value: "https://www.instagram.com/chunkparty" }
       }
     }
+    ,
+    {
+      name: "Furball",
+      enabled: true,
+      urls: ["https://www.furball.nyc/ticket-information"],
+      alwaysBear: true,
+      urlDiscoveryDepth: 0,
+      dryRun: false,
+      fieldPriorities: {
+        title: { priority: ["furball", "static"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["furball"], merge: "clobber" },
+        bar: { priority: ["furball"], merge: "clobber" },
+        address: { priority: ["furball"], merge: "clobber" },
+        startDate: { priority: ["furball"], merge: "clobber" },
+        endDate: { priority: ["furball"], merge: "clobber" },
+        url: { priority: ["furball"], merge: "clobber" },
+        ticketUrl: { priority: ["furball"], merge: "clobber" },
+        gmaps: { priority: ["furball"], merge: "preserve" },
+        image: { priority: ["furball"], merge: "preserve" },
+        cover: { priority: ["furball"], merge: "preserve" }
+      },
+      metadata: {
+        shortName: { value: "FURBALL" },
+        instagram: { value: "https://instagram.com/furballnyc/" }
+      }
+    }
   ],
   // Centralized city configuration
   cities: {
