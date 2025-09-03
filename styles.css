@@ -2243,11 +2243,15 @@ body.index-page main {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .icon-only i {
     font-size: 1rem;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .event-links a {
@@ -2297,7 +2301,7 @@ body.index-page main {
 }
 
 .share-event-btn .share-icon {
-    font-size: 1rem;
+    display: contents; /* Makes the span wrapper transparent to layout */
 }
 
 /* Enhanced event link styling */
@@ -3403,7 +3407,7 @@ footer {
     }
     
     .share-event-btn .share-icon {
-        font-size: 0.9rem;
+        display: contents; /* Makes the span wrapper transparent to layout */
     }
 
     .event-day {
