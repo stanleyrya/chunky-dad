@@ -136,12 +136,9 @@ class FurballParser {
             // Build title by taking non-date, non-venue lines
             const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
             let title = titleParts.join(' — ').trim();
-            if (!title) {
-                title = 'FURBALL';
-            }
 
-            // Ticket URL: look in neighborhood for vendor links or "Tickets Here!" buttons
-            const ticketUrls = this.extractNearbyTicketLinks(block);
+            // Ticket URL: pick the first anchor href found near this block (no vendor allowlist)
+            const ticketUrls = this.extractNearbyTicketLinks(block, /*vendorAgnostic*/ true);
             const ticketUrl = ticketUrls.length > 0 ? ticketUrls[0] : '';
 
             const event = {
@@ -162,8 +159,8 @@ class FurballParser {
         }
     }
 
-    // Find nearby ticket links from common vendors or labeled buttons
-    extractNearbyTicketLinks(block) {
+    // Find nearby ticket links; when vendorAgnostic is true, accept any link text that suggests tickets
+    extractNearbyTicketLinks(block, vendorAgnostic = false) {
         const links = [];
         try {
             const html = block.neighborhood || '';
@@ -173,7 +170,7 @@ class FurballParser {
             while ((m = anchorRegex.exec(html)) !== null) {
                 const href = (m[1] || '').trim();
                 const text = (m[2] || '').replace(/<[^>]+>/g, ' ').trim();
-                if (this.isLikelyTicketUrl(href, text)) {
+                if (vendorAgnostic ? this.isLikelyTicketByText(text) : this.isLikelyTicketUrl(href, text)) {
                     links.push(href);
                 }
             }
@@ -197,68 +194,20 @@ class FurballParser {
             'stubhub'
         ];
         const isVendor = vendors.some(v => lower.includes(v));
-        const isLabeled = /tickets?\s+here/i.test(text || '');
+        const isLabeled = /ticket|admission|rsvp/i.test(text || '');
         return isVendor || isLabeled;
     }
 
-    // Parse date string into a Date object (reused logic from generic parser)
+    isLikelyTicketByText(text) {
+        if (!text) return false;
+        return /ticket|admission|rsvp|buy now|get tickets|purchase/i.test(text);
+    }
+
+    // Parse date string into a Date object (simplified as requested)
     parseDate(dateString) {
         if (!dateString) return null;
-        try {
-            dateString = dateString.replace(/\s+/g, ' ').trim();
-            const formats = [
-                /(\d{1,2})\/(\d{1,2})\/(\d{4})/,         // MM/DD/YYYY
-                /(\d{1,2})-(\d{1,2})-(\d{4})/,             // MM-DD-YYYY
-                /(\d{4})-(\d{2})-(\d{2})/,                 // YYYY-MM-DD
-                /(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i, // Month DD, YYYY
-                /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i // DD Month YYYY
-            ];
-            for (const format of formats) {
-                const match = dateString.match(format);
-                if (match) {
-                    let date;
-                    if (format.source.includes('january|february')) {
-                        const months = {
-                            'january': '01', 'february': '02', 'march': '03', 'april': '04',
-                            'may': '05', 'june': '06', 'july': '07', 'august': '08',
-                            'september': '09', 'october': '10', 'november': '11', 'december': '12'
-                        };
-                        if (match[3]) {
-                            // Month DD, YYYY
-                            const month = months[match[1].toLowerCase()];
-                            const day = match[2].padStart(2, '0');
-                            const year = match[3];
-                            date = new Date(`${year}-${month}-${day}`);
-                        } else {
-                            // DD Month YYYY
-                            const day = match[1].padStart(2, '0');
-                            const month = months[match[2].toLowerCase()];
-                            const year = match[3];
-                            date = new Date(`${year}-${month}-${day}`);
-                        }
-                    } else if (match[3] && match[3].length === 4) {
-                        // YYYY-MM-DD
-                        date = new Date(`${match[1]}-${match[2]}-${match[3]}`);
-                    } else {
-                        // MM/DD/YYYY or MM-DD-YYYY
-                        const month = match[1].padStart(2, '0');
-                        const day = match[2].padStart(2, '0');
-                        const year = match[3];
-                        date = new Date(`${year}-${month}-${day}`);
-                    }
-                    if (!isNaN(date.getTime())) {
-                        return date;
-                    }
-                }
-            }
-            const date = new Date(dateString);
-            if (!isNaN(date.getTime())) {
-                return date;
-            }
-        } catch (error) {
-            console.warn(`🐻‍❄️ Furball: Failed to parse date "${dateString}": ${error}`);
-        }
-        return null;
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? null : date;
     }
 }
 

@@ -15,7 +15,7 @@ const scraperConfig = {
   parsers: [
     {
       name: "Megawoof America",
-      enabled: true,
+      enabled: false,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
       urlDiscoveryDepth: 0,
@@ -43,7 +43,7 @@ const scraperConfig = {
     },
     {
       name: "Bear Happy Hour",
-      enabled: true,
+      enabled: false,
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
       urlDiscoveryDepth: 0,
@@ -69,7 +69,7 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Events",
-      enabled: true,
+      enabled: false,
       urls: [
         "https://bearracuda.com/",
         //"https://www.eventbrite.com/o/bearracuda-21867032189"
@@ -102,7 +102,7 @@ const scraperConfig = {
     },
     {
       name: "CHUNK",
-      enabled: true,
+      enabled: false,
       urls: ["https://www.chunk-party.com"],
       alwaysBear: true,        // Chunk parties are always bear events
       urlDiscoveryDepth: 1,    // Depth 1 to find detail pages from main page
@@ -141,7 +141,7 @@ const scraperConfig = {
       urlDiscoveryDepth: 0,
       dryRun: false,
       fieldPriorities: {
-        title: { priority: ["furball", "static"], merge: "clobber" },
+        title: { priority: ["furball"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["furball"], merge: "clobber" },
@@ -151,12 +151,12 @@ const scraperConfig = {
         endDate: { priority: ["furball"], merge: "clobber" },
         url: { priority: ["furball"], merge: "clobber" },
         ticketUrl: { priority: ["furball"], merge: "clobber" },
-        gmaps: { priority: ["furball"], merge: "preserve" },
-        image: { priority: ["furball"], merge: "preserve" },
-        cover: { priority: ["furball"], merge: "preserve" }
+        gmaps: { priority: ["furball"], merge: "clobber" },
+        image: { priority: ["furball"], merge: "clobber" },
+        cover: { priority: ["furball"], merge: "clobber" }
       },
       metadata: {
-        shortName: { value: "FURBALL" },
+        shortName: { value: "FUR-BALL" },
         instagram: { value: "https://instagram.com/furballnyc/" }
       }
     }
