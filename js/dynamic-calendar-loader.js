@@ -1542,19 +1542,19 @@ class DynamicCalendarLoader extends CalendarCore {
     // Generate event card
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => {
-            // Add appropriate emoji based on link type
-            let emoji = '🔗'; // default link emoji
-            const label = link.label.toLowerCase();
-            
-            if (label.includes('facebook')) emoji = '📘';
-            else if (label.includes('instagram')) emoji = '📷';
-            else if (label.includes('twitter')) emoji = '🐦';
-            else if (label.includes('website') || label.includes('site')) emoji = '🔗';
-            else if (label.includes('tickets') || label.includes('ticket')) emoji = '🎫';
-            else if (label.includes('rsvp')) emoji = '✅';
-            else if (label.includes('more info')) emoji = 'ℹ️';
-            
-            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link">${link.label}</a>`;
+            const labelLower = (link.label || '').toLowerCase();
+            let iconClass = 'bi-link-45deg';
+            let aria = 'Open link';
+            if (labelLower.includes('facebook')) { iconClass = 'bi-facebook'; aria = 'Facebook'; }
+            else if (labelLower.includes('instagram')) { iconClass = 'bi-instagram'; aria = 'Instagram'; }
+            else if (labelLower.includes('twitter') || labelLower.includes('x ' ) || labelLower === 'x') { iconClass = 'bi-twitter-x'; aria = 'Twitter/X'; }
+            else if (labelLower.includes('website') || labelLower.includes('site')) { iconClass = 'bi-globe2'; aria = 'Website'; }
+            else if (labelLower.includes('tickets') || labelLower.includes('ticket')) { iconClass = 'bi-ticket-perforated'; aria = 'Tickets'; }
+            else if (labelLower.includes('rsvp')) { iconClass = 'bi-check2-circle'; aria = 'RSVP'; }
+            else if (labelLower.includes('map')) { iconClass = 'bi-geo-alt'; aria = 'Map'; }
+            else if (labelLower.includes('more info') || labelLower.includes('info')) { iconClass = 'bi-info-circle'; aria = 'More info'; }
+
+            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="${aria}" title="${aria}"><i class="bi ${iconClass}"></i></a>`;
         }).join(' ') : '';
 
         const teaHtml = event.tea ? `
@@ -1616,8 +1616,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
-                        <button class="share-event-btn" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event">
-                            <span class="share-icon">📤</span> Share
+                        <button class="share-event-btn icon-only" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event" aria-label="Share this event">
+                            <span class="share-icon" aria-hidden="true"><i class="bi bi-share"></i></span>
                         </button>
                     </div>
                 </div>
