@@ -5,48 +5,24 @@
       "size": 34161
     },
     {
-      "name": "calendar-timeout-test.html",
-      "size": 9897
-    },
-    {
-      "name": "debug-calendar-loading.html",
-      "size": 4061
-    },
-    {
       "name": "hero-variations-tester.html",
       "size": 26248
-    },
-    {
-      "name": "iframe-fix-test.html",
-      "size": 9922
     },
     {
       "name": "index.html",
       "size": 18216
     },
     {
-      "name": "simple-calendar-test.html",
-      "size": 1795
-    },
-    {
       "name": "style-test.html",
-      "size": 26360
+      "size": 33096
     },
     {
       "name": "test-calendar-logging.html",
       "size": 68099
     },
     {
-      "name": "test-direct-google-calendar.html",
-      "size": 8920
-    },
-    {
       "name": "test-display-modes.html",
       "size": 10729
-    },
-    {
-      "name": "test-error-logging-fix.html",
-      "size": 6806
     },
     {
       "name": "test-eventbrite-address-fix.html",
@@ -57,20 +33,12 @@
       "size": 40540
     },
     {
-      "name": "test-hyphenation-fix.html",
-      "size": 6108
-    },
-    {
       "name": "test-map-icons.html",
       "size": 61258
     },
     {
-      "name": "test-og-bear-event-images-creative.html",
-      "size": 30851
-    },
-    {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 42479
+      "size": 39254
     },
     {
       "name": "test-unified-scraper.html",
