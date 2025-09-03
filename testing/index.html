@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Testing Tools - chunky.dad</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>🔧 chunky.dad's Toolbox</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,11 +13,35 @@
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            color: #fff;
+            font-family: 'Roboto Mono', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #0a0a0a 100%);
+            background-size: 400% 400%;
+            animation: constructionGradient 8s ease infinite;
+            color: #e0e0e0;
             min-height: 100vh;
             padding: 40px 20px;
+            position: relative;
+        }
+
+        @keyframes constructionGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(255, 140, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 69, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(255, 165, 0, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
         }
 
         .container {
@@ -28,35 +52,74 @@
         .header {
             text-align: center;
             margin-bottom: 50px;
+            position: relative;
+        }
+
+        .header::before {
+            content: '⚡';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem;
+            opacity: 0.3;
+            animation: sparkle 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+            100% { opacity: 0.6; transform: translateX(-50%) scale(1.1); }
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #ff8c00, #ff4500, #ffa500, #ff6347);
+            background-size: 300% 300%;
+            animation: constructionGlow 3s ease infinite;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 140, 0, 0.5);
+            letter-spacing: 2px;
+        }
+
+        @keyframes constructionGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         .header p {
-            font-size: 1.1rem;
-            opacity: 0.8;
+            font-size: 1.2rem;
+            opacity: 0.9;
+            color: #ffa500;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .back-link {
             display: inline-block;
             margin-bottom: 30px;
-            color: #4ecdc4;
+            color: #ffa500;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s ease;
+            border: 2px solid transparent;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: rgba(255, 140, 0, 0.1);
         }
 
         .back-link:hover {
-            color: #45b7d1;
+            color: #ff4500;
             transform: translateX(-5px);
+            border-color: #ff8c00;
+            background: rgba(255, 140, 0, 0.2);
+            box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
         }
 
         .loading {
@@ -74,30 +137,49 @@
         }
 
         .test-card {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(45, 45, 45, 0.8);
             backdrop-filter: blur(20px);
-            border-radius: 15px;
+            border-radius: 12px;
             padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 140, 0, 0.3);
             transition: all 0.3s ease;
             cursor: pointer;
             text-decoration: none;
             color: inherit;
             display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .test-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 140, 0, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .test-card:hover::before {
+            left: 100%;
         }
 
         .test-card:hover {
-            background: rgba(78, 205, 196, 0.1);
-            border-color: #4ecdc4;
+            background: rgba(255, 140, 0, 0.1);
+            border-color: #ff8c00;
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(78, 205, 196, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4);
         }
 
         .test-card h3 {
+            font-family: 'Orbitron', monospace;
             font-size: 1.1rem;
             margin-bottom: 10px;
-            color: #4ecdc4;
+            color: #ffa500;
             word-break: break-word;
+            font-weight: 600;
         }
 
         .test-card .file-info {
@@ -156,8 +238,8 @@
         <a href="../index.html" class="back-link">← Back to Main Site</a>
         
         <div class="header">
-            <h1>chunky.dad Test Files</h1>
-            <p class="subtitle">Development and testing utilities</p>
+            <h1>🔧 chunky.dad's Toolbox</h1>
+            <p class="subtitle">Construction Zone • Development Tools • Testing Utilities</p>
         </div>
 
         <div id="debug-info" style="background: #f0f0f0; padding: 10px; margin: 20px 0; border-radius: 5px; font-family: monospace; font-size: 0.9em; display: none;">
@@ -173,30 +255,35 @@
     <script>
         // File descriptions and icons based on filename patterns
         const fileDescriptions = {
-            'ultimate-style-tester': { icon: '🎨', desc: 'Comprehensive style testing tool with live preview' },
-            'style-test': { icon: '🎭', desc: 'UI component showcase with all event display variations' },
-            'event-test-index': { icon: '📋', desc: 'Index of all event display test variations' },
-            'event-test-1-carousel': { icon: '🎠', desc: 'Event carousel display test' },
-            'event-test-2-timeline': { icon: '📅', desc: 'Timeline view for events' },
-            'event-test-3-map': { icon: '🗺️', desc: 'Map-based event display' },
-            'event-test-4-masonry': { icon: '🧱', desc: 'Masonry grid layout for events' },
-            'event-test-5-heatmap': { icon: '🔥', desc: 'Event density heatmap visualization' },
-            'event-test-6-ticker': { icon: '📜', desc: 'Scrolling ticker display for events' },
-            'event-test-7-circular': { icon: '⭕', desc: 'Circular/radial event display' },
-            'event-test-8-kanban': { icon: '📊', desc: 'Kanban board style event organization' },
-            'event-test-9-bubbles': { icon: '🫧', desc: 'Bubble chart event visualization' },
-            'event-test-10-flipcards': { icon: '🃏', desc: 'Flip card event display' },
-            'event-test-11-weekview': { icon: '📆', desc: 'Week view calendar display' },
-            'event-test-12-swipe-tiles': { icon: '👆', desc: 'Swipeable tile event display' },
-            'test-calendar-logging': { icon: '📝', desc: 'Calendar system logging and debugging' },
-            'test-google-sheets-loader': { icon: '📊', desc: 'Google Sheets data loader testing' },
-            'test-display-modes': { icon: '🖥️', desc: 'Display mode testing and configuration' },
-            'breakpoint-test': { icon: '📐', desc: 'Responsive breakpoint testing' },
-            'css-breakpoint-test': { icon: '🎯', desc: 'CSS media query breakpoint tester' },
-            'multiline-breakpoint-test': { icon: '📏', desc: 'Multi-line responsive breakpoint testing' },
-            'hyphenation-test': { icon: '📝', desc: 'Text hyphenation testing' },
-            'simplified-hyphenation-test': { icon: '✂️', desc: 'Simplified hyphenation algorithm testing' },
-            'hyphenation-debug-test': { icon: '🔍', desc: 'Debug hyphenation issues at 320px width' }
+            'ultimate-style-tester': { icon: '🔧', desc: 'Master construction tool - comprehensive style testing with live preview' },
+            'style-test': { icon: '⚡', desc: 'Power tool - UI component showcase with all event display variations' },
+            'event-test-index': { icon: '📋', desc: 'Blueprint index - all event display test variations' },
+            'event-test-1-carousel': { icon: '🎠', desc: 'Rotating display mechanism - event carousel test' },
+            'event-test-2-timeline': { icon: '⏰', desc: 'Time measurement tool - timeline view for events' },
+            'event-test-3-map': { icon: '🗺️', desc: 'Navigation system - map-based event display' },
+            'event-test-4-masonry': { icon: '🧱', desc: 'Brick laying tool - masonry grid layout for events' },
+            'event-test-5-heatmap': { icon: '🔥', desc: 'Thermal scanner - event density heatmap visualization' },
+            'event-test-6-ticker': { icon: '📜', desc: 'Scroll mechanism - scrolling ticker display for events' },
+            'event-test-7-circular': { icon: '⭕', desc: 'Circular saw - circular/radial event display' },
+            'event-test-8-kanban': { icon: '📊', desc: 'Project board - kanban style event organization' },
+            'event-test-9-bubbles': { icon: '🫧', desc: 'Bubble level - bubble chart event visualization' },
+            'event-test-10-flipcards': { icon: '🃏', desc: 'Flip mechanism - flip card event display' },
+            'event-test-11-weekview': { icon: '📆', desc: 'Calendar tool - week view calendar display' },
+            'event-test-12-swipe-tiles': { icon: '👆', desc: 'Touch interface - swipeable tile event display' },
+            'test-calendar-logging': { icon: '📝', desc: 'Diagnostic tool - calendar system logging and debugging' },
+            'test-google-sheets-loader': { icon: '📊', desc: 'Data loader - Google Sheets data loader testing' },
+            'test-display-modes': { icon: '🖥️', desc: 'Display calibrator - display mode testing and configuration' },
+            'breakpoint-test': { icon: '📐', desc: 'Measuring tool - responsive breakpoint testing' },
+            'css-breakpoint-test': { icon: '🎯', desc: 'Precision tool - CSS media query breakpoint tester' },
+            'multiline-breakpoint-test': { icon: '📏', desc: 'Multi-line ruler - responsive breakpoint testing' },
+            'hyphenation-test': { icon: '✂️', desc: 'Text cutter - text hyphenation testing' },
+            'simplified-hyphenation-test': { icon: '🔪', desc: 'Precision cutter - simplified hyphenation algorithm testing' },
+            'hyphenation-debug-test': { icon: '🔍', desc: 'Magnifying glass - debug hyphenation issues at 320px width' },
+            'hero-variations-tester': { icon: '🦸', desc: 'Hero builder - hero section variation testing' },
+            'test-map-icons': { icon: '🗺️', desc: 'Icon mapper - map icon testing and configuration' },
+            'test-og-event-layouts-calendar': { icon: '📅', desc: 'Layout architect - OG event layouts calendar testing' },
+            'test-unified-scraper': { icon: '🕷️', desc: 'Data scraper - unified scraper testing tool' },
+            'test-eventbrite-address-fix': { icon: '📍', desc: 'Address fixer - Eventbrite address correction tool' }
         };
 
         // Function to get file info

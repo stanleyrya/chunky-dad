@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
+// chunky.dad's Toolbox - Manifest Generator
+// Automatically generates manifest.json for all test files in the toolbox
 // Get all HTML files in the current directory
 const testingDir = __dirname;
 const files = fs.readdirSync(testingDir)
