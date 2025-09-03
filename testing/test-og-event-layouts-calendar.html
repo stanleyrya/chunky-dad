@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creative Event OG Layouts (Calendar) – chunky.dad</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --og-bg-1: var(--gradient-primary);
+      --og-bg-2: var(--gradient-success-alt);
+      --og-bg-3: var(--gradient-secondary);
+      --og-bg-4: linear-gradient(135deg, var(--background-dark) 0%, var(--background-darker) 100%);
+      --og-bg-5: radial-gradient(1000px 400px at 0% 0%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%), var(--gradient-warning);
+      --custom-color-1: #8e2de2;
+      --custom-color-2: #4a00e0;
+    }
+
+    body { font-family: 'Poppins', sans-serif; background: var(--background-primary); color: var(--text-primary); }
+    .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+    header { position: sticky; top: 0; background: var(--gradient-primary); z-index: 10; }
+    nav .nav-container { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; max-width: 1280px; margin: 0 auto; }
+    .logo h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; }
+    .logo a { color: var(--text-inverse); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+    .logo-img { width: 28px; height: 28px; border-radius: 50%; }
+
+    main { padding: 24px 0 40px; }
+    .page-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .page-title h2 { font-size: 28px; font-weight: 700; margin: 0; }
+    .subtitle { color: var(--text-secondary); font-size: 14px; }
+
+    .controls { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; background: var(--background-light); padding: 16px; border-radius: 12px; border: 1px solid var(--border-lighter); margin-bottom: 20px; align-items: end; }
+    .controls .field { grid-column: span 3; }
+    .controls .field-2 { grid-column: span 6; }
+    .controls .field-3 { grid-column: span 9; }
+    .controls label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+    .controls input, .controls select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); color: var(--text-primary); }
+    .controls .inline { display: flex; gap: 10px; align-items: center; }
+    .controls .btn { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); cursor: pointer; }
+    .controls .btn.primary { background: var(--gradient-primary); color: var(--text-inverse); border: 0; }
+
+    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+    .variant-card { background: var(--white); border: 1px solid var(--border-lighter); border-radius: 14px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .variant-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border-lighter); color: var(--text-secondary); font-size: 12px; }
+    .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #111; display: grid; place-items: center; overflow: hidden; position: relative; }
+    .artboard { width: 1200px; height: 630px; position: relative; overflow: hidden; transform-origin: top left; font-family: 'Poppins', sans-serif; }
+
+    /* Theme packs (MUCH MORE colors) */
+    .t1 { background: var(--og-bg-1); }
+    .t2 { background: var(--og-bg-2); }
+    .t3 { background: var(--og-bg-3); }
+    .t4 { background: var(--og-bg-4); }
+    .t5 { background: var(--og-bg-5); }
+    .t6 { background: linear-gradient(135deg, #ff512f, #dd2476); }
+    .t7 { background: linear-gradient(135deg, #2193b0, #6dd5ed); }
+    .t8 { background: linear-gradient(135deg, #134e5e, #71b280); }
+    .t9 { background: linear-gradient(135deg, #f12711, #f5af19); }
+    .t10 { background: linear-gradient(135deg, #8e2de2, #4a00e0); }
+    .t11 { background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%); }
+    .t12 { background: linear-gradient(135deg, #00c6ff, #0072ff); }
+    .t13 { background: linear-gradient(135deg, #00b09b, #96c93d); }
+    .t14 { background: conic-gradient(from 180deg at 50% 50%, #ff6a00, #ee0979, #8e2de2, #4a00e0, #00c6ff, #00b09b, #ff6a00); }
+    .t15 { background: linear-gradient(135deg, #1f4037, #99f2c8); }
+    .t16 { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
+
+    /* Cover image support */
+    .artboard .cover { position: absolute; inset: 0; background-position: center; background-size: cover; background-repeat: no-repeat; z-index: 0; }
+
+    /* LAYOUT: Magazine */
+    .layout-magazine .cover { filter: contrast(1.1) brightness(0.7); }
+    .layout-magazine::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0.7) 100%); z-index: 1; }
+    .layout-magazine .brand { position: absolute; top: 40px; left: 60px; font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 3px; color: #fff; z-index: 2; text-transform: uppercase; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
+    .layout-magazine .event-title { position: absolute; top: 120px; left: 60px; right: 60px; font-size: 96px; line-height: 0.9; font-weight: 900; color: #fff; text-transform: uppercase; z-index: 2; text-shadow: 0 6px 30px rgba(0,0,0,0.9); letter-spacing: -2px; }
+    .layout-magazine .event-date { position: absolute; top: 50px; right: 60px; background: #ff0066; color: #fff; padding: 8px 20px; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; z-index: 2; transform: rotate(3deg); }
+    .layout-magazine .event-details { position: absolute; bottom: 60px; left: 60px; right: 400px; background: rgba(255,255,255,0.95); color: #000; padding: 24px; z-index: 2; }
+    .layout-magazine .event-details .venue { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .layout-magazine .event-details .description { font-size: 16px; line-height: 1.4; opacity: 0.8; }
+    .layout-magazine .event-image { position: absolute; bottom: 40px; right: 60px; width: 300px; height: 200px; background-size: cover; background-position: center; border: 8px solid #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 2; transform: rotate(-2deg); }
+
+    /* LAYOUT: Neon */
+    .layout-neon { background: #0a0a0a; }
+    .layout-neon .cover { opacity: 0.15; filter: blur(2px); }
+    .layout-neon::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(255,0,150,0.2), transparent 60%); z-index: 1; }
+    .layout-neon .neon-frame { position: absolute; inset: 60px; border: 4px solid #ff00ff; border-radius: 20px; z-index: 2; box-shadow: 0 0 20px #ff00ff, inset 0 0 20px #ff00ff; animation: neon-flicker 2s infinite alternate; }
+    @keyframes neon-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.95; } }
+    .layout-neon .event-title { position: absolute; top: 120px; left: 0; right: 0; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 84px; letter-spacing: 8px; text-transform: uppercase; color: #fff; z-index: 3; text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff; }
+    .layout-neon .event-date { position: absolute; top: 220px; left: 0; right: 0; text-align: center; font-size: 36px; color: #00ffff; text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; z-index: 3; letter-spacing: 4px; }
+    .layout-neon .venue-box { position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%); background: #ff00ff; padding: 10px 40px; z-index: 3; box-shadow: 0 0 30px #ff00ff; }
+    .layout-neon .venue-box .venue { font-size: 28px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 2px; }
+    .layout-neon .description { position: absolute; bottom: 80px; left: 100px; right: 100px; text-align: center; font-size: 20px; color: #fff; opacity: 0.9; z-index: 3; line-height: 1.4; }
+    .layout-neon .event-image { position: absolute; top: 340px; left: 50%; transform: translateX(-50%); width: 200px; height: 140px; border: 3px solid #00ffff; background-size: cover; background-position: center; z-index: 3; box-shadow: 0 0 20px #00ffff; }
+
+    /* LAYOUT: Polaroid */
+    .layout-polaroid { background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%); }
+    .layout-polaroid .cover { display: none; }
+    .layout-polaroid .photo-1 { position: absolute; left: 80px; top: 60px; width: 340px; background: #fff; padding: 15px 15px 60px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: rotate(-5deg); z-index: 2; }
+    .layout-polaroid .photo-1 .image { width: 100%; height: 260px; background: var(--og-bg-3); background-size: cover; background-position: center; }
+    .layout-polaroid .photo-1 .caption { position: absolute; bottom: 15px; left: 20px; right: 20px; font-family: 'Courier New', monospace; font-size: 18px; color: #333; text-align: center; }
+    .layout-polaroid .photo-2 { position: absolute; right: 100px; top: 40px; width: 300px; background: #fff; padding: 15px 15px 60px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: rotate(8deg); z-index: 1; }
+    .layout-polaroid .photo-2 .image { width: 100%; height: 230px; background: var(--og-bg-2); }
+    .layout-polaroid .main-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-2deg); width: 500px; background: #fff; padding: 20px 20px 80px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); z-index: 3; }
+    .layout-polaroid .main-card .image { width: 100%; height: 320px; background-size: cover; background-position: center; }
+    .layout-polaroid .main-card .text { position: absolute; bottom: 20px; left: 30px; right: 30px; }
+    .layout-polaroid .main-card .event-title { font-family: 'Courier New', monospace; font-size: 24px; font-weight: 700; color: #333; margin-bottom: 5px; }
+    .layout-polaroid .main-card .details { font-family: 'Courier New', monospace; font-size: 14px; color: #666; }
+    .layout-polaroid .tape { position: absolute; width: 80px; height: 30px; background: rgba(255,255,200,0.7); opacity: 0.8; }
+    .layout-polaroid .tape-1 { top: -10px; left: 40%; transform: rotate(-15deg); z-index: 4; }
+    .layout-polaroid .tape-2 { top: -10px; right: 20%; transform: rotate(12deg); z-index: 4; }
+
+    /* LAYOUT: Split Screen */
+    .layout-split-screen { background: #000; position: relative; }
+    .layout-split-screen .left-side { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; background: var(--og-bg-1); clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%); z-index: 1; }
+    .layout-split-screen .left-side .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.3; }
+    .layout-split-screen .left-content { position: absolute; left: 60px; top: 60px; bottom: 60px; width: 420px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+    .layout-split-screen .brand { font-size: 20px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; opacity: 0.9; }
+    .layout-split-screen .event-title { font-size: 64px; line-height: 0.95; font-weight: 900; color: #fff; margin-bottom: 20px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .layout-split-screen .event-date { font-size: 24px; color: #fff; opacity: 0.9; margin-bottom: 10px; }
+    .layout-split-screen .venue { font-size: 20px; color: #fff; opacity: 0.8; }
+    .layout-split-screen .right-side { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; display: flex; align-items: center; justify-content: center; z-index: 0; }
+    .layout-split-screen .event-image { width: 400px; height: 500px; background-size: cover; background-position: center; z-index: 1; box-shadow: -20px 0 60px rgba(0,0,0,0.5); }
+    .layout-split-screen .description { position: absolute; bottom: 60px; right: 60px; width: 380px; font-size: 18px; color: #fff; opacity: 0.9; line-height: 1.5; z-index: 2; text-align: right; }
+
+    /* LAYOUT: Minimal */
+    .layout-minimal { background: #fafafa; }
+    .layout-minimal .card { position: absolute; inset: 60px; background: #fff; border-radius: 30px; box-shadow: 0 30px 100px rgba(0,0,0,0.15); overflow: hidden; z-index: 1; }
+    .layout-minimal .card-header { height: 280px; background: var(--og-bg-2); position: relative; overflow: hidden; }
+    .layout-minimal .card-header .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.4; }
+    .layout-minimal .card-header .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%); }
+    .layout-minimal .card-header .date-badge { position: absolute; top: 30px; right: 30px; background: #fff; color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+    .layout-minimal .event-image { position: absolute; bottom: -40px; left: 60px; width: 160px; height: 160px; border-radius: 20px; background-size: cover; background-position: center; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2; }
+    .layout-minimal .card-body { padding: 60px 60px 40px 260px; position: relative; }
+    .layout-minimal .event-title { font-size: 48px; font-weight: 900; color: #333; line-height: 1.1; margin-bottom: 15px; }
+    .layout-minimal .venue { font-size: 20px; color: #666; margin-bottom: 20px; }
+    .layout-minimal .description { font-size: 16px; color: #888; line-height: 1.6; }
+    .layout-minimal .brand { position: absolute; bottom: 30px; left: 60px; font-size: 14px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
+
+    /* NEW LAYOUT: Color Blocks (bold editorial) */
+    .layout-blocks { position: relative; background: #000; }
+    .layout-blocks .block-a { position: absolute; inset: 0 60% 0 0; background: var(--og-bg-1); }
+    .layout-blocks .block-b { position: absolute; inset: 0 0 0 60%; background: var(--og-bg-3); filter: brightness(0.7); }
+    .layout-blocks .event-title { position: absolute; left: 60px; top: 60px; right: 50%; color: #fff; font-size: 86px; font-weight: 900; line-height: 0.95; text-transform: uppercase; letter-spacing: -1px; }
+    .layout-blocks .meta { position: absolute; left: 60px; bottom: 60px; color: #fff; font-size: 20px; opacity: 0.9; }
+    .layout-blocks .poster { position: absolute; right: 80px; top: 80px; width: 420px; height: 470px; background-size: cover; background-position: center; box-shadow: 0 30px 80px rgba(0,0,0,0.5); border: 10px solid #111; }
+
+    /* NEW LAYOUT: Glass Card */
+    .layout-glass { position: relative; backdrop-filter: blur(0px); }
+    .layout-glass .cover { filter: brightness(0.6); }
+    .layout-glass .glass { position: absolute; inset: 80px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 24px; backdrop-filter: blur(12px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .layout-glass .glass .inner { position: absolute; inset: 0; padding: 40px; color: #fff; }
+    .layout-glass .event-title { font-size: 72px; font-weight: 900; line-height: 0.95; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
+    .layout-glass .event-date { margin-top: 16px; font-size: 26px; opacity: 0.95; }
+    .layout-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
+    .layout-glass .description { position: absolute; left: 40px; right: 40px; bottom: 40px; font-size: 18px; opacity: 0.95; }
+
+    /* NEW LAYOUT: Ticket */
+    .layout-ticket { background: #101014; }
+    .layout-ticket .stub { position: absolute; left: 80px; right: 80px; top: 80px; bottom: 80px; background: #fff; border-radius: 20px; overflow: hidden; display: grid; grid-template-columns: 1fr 280px; }
+    .layout-ticket .left { position: relative; padding: 40px; }
+    .layout-ticket .right { background: repeating-linear-gradient(90deg, #111 0, #111 6px, #fff 6px, #fff 12px); display: grid; place-items: center; color: #111; font-weight: 900; }
+    .layout-ticket .band { position: absolute; left: 0; right: 0; height: 90px; top: 0; background: var(--og-bg-2); opacity: 0.85; }
+    .layout-ticket .event-title { position: relative; margin-top: 20px; font-size: 58px; font-weight: 900; line-height: 1; color: #111; }
+    .layout-ticket .meta { position: relative; margin-top: 10px; font-size: 18px; color: #333; }
+    .layout-ticket .venue { position: relative; margin-top: 4px; font-size: 18px; color: #333; }
+    .layout-ticket .barcode { font-family: 'Oswald', sans-serif; font-size: 42px; letter-spacing: 6px; }
+
+    /* NEW LAYOUT: Circle Focus */
+    .layout-circle { position: relative; background: #0b0b0f; }
+    .layout-circle .ring { position: absolute; width: 560px; height: 560px; border-radius: 50%; left: 60px; top: 35px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 60%); border: 3px solid rgba(255,255,255,0.18); }
+    .layout-circle .event-image { position: absolute; left: 100px; top: 75px; width: 480px; height: 480px; border-radius: 50%; background-size: cover; background-position: center; box-shadow: 0 20px 80px rgba(0,0,0,0.6); }
+    .layout-circle .text { position: absolute; right: 60px; top: 100px; width: 480px; color: #fff; }
+    .layout-circle .event-title { font-size: 72px; line-height: 0.95; font-weight: 900; }
+    .layout-circle .event-date { margin-top: 10px; font-size: 26px; opacity: 0.9; }
+    .layout-circle .venue { margin-top: 6px; font-size: 22px; opacity: 0.8; }
+    .layout-circle .description { position: absolute; bottom: 60px; right: 60px; width: 480px; color: #fff; opacity: 0.9; line-height: 1.5; }
+
+    .preview-meta { padding: 12px 14px; border-top: 1px solid var(--border-lighter); display: grid; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+    .preview-meta code { background: var(--background-light); padding: 3px 6px; border-radius: 6px; color: var(--text-primary); font-size: 11px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="nav-container">
+        <div class="logo">
+          <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad</a></h1>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="page-title">
+        <h2>Creative Event OG Layouts (Calendar-powered)</h2>
+        <div class="subtitle">Select a city and event to auto-fill creative layouts</div>
+      </div>
+
+      <section class="controls">
+        <div class="field">
+          <label for="citySelect">City</label>
+          <select id="citySelect"></select>
+        </div>
+        <div class="field-2">
+          <label for="eventSelect">Event</label>
+          <select id="eventSelect"></select>
+        </div>
+        <div class="field">
+          <label for="eventSearch">Search</label>
+          <input id="eventSearch" type="text" placeholder="Filter events by name or venue">
+        </div>
+        <div class="field inline">
+          <button id="reloadBtn" class="btn">Reload Calendar</button>
+          <button id="randomBtn" class="btn">Random Event</button>
+        </div>
+        <div class="field">
+          <label for="themeSelect">Theme</label>
+          <select id="themeSelect">
+            <option value="t1">Classic Night</option>
+            <option value="t2">Cool Neon</option>
+            <option value="t3">Hot Red</option>
+            <option value="t4">Midnight</option>
+            <option value="t5">Spotlight</option>
+            <option value="t6">Sunset</option>
+            <option value="t7">Ocean</option>
+            <option value="t8">Forest</option>
+            <option value="t9">Fire</option>
+            <option value="t10">Blurple</option>
+            <option value="t11">Soft Pastel</option>
+            <option value="t12">Blue Bolt</option>
+            <option value="t13">Green Glow</option>
+            <option value="t14">Rainbow Ring</option>
+            <option value="t15">Emerald Mist</option>
+            <option value="t16">Custom</option>
+          </select>
+        </div>
+        <div class="field inline">
+          <label>Custom A</label>
+          <input id="customA" type="color" value="#8e2de2" title="Custom color A">
+        </div>
+        <div class="field inline">
+          <label>Custom B</label>
+          <input id="customB" type="color" value="#4a00e0" title="Custom color B">
+        </div>
+        <div class="field-3">
+          <label for="coverInput">Optional Background/Cover Image URL</label>
+          <input id="coverInput" type="url" placeholder="https://example.com/cover.jpg">
+        </div>
+        <div class="field-3">
+          <label for="imageInput">Optional Event Image URL</label>
+          <input id="imageInput" type="url" placeholder="https://example.com/event-image.jpg">
+        </div>
+      </section>
+
+      <section class="variants-grid" id="variantsGrid"></section>
+    </div>
+  </main>
+
+  <script src="../js/logger.js"></script>
+  <script src="../js/city-config.js"></script>
+  <script src="../js/calendar-core.js"></script>
+  <script src="../js/dynamic-calendar-loader.js"></script>
+  <script>
+    (function(){
+      const COMPONENT = 'EVENT';
+      logger.componentInit(COMPONENT, 'Creative calendar-powered OG builder initialized');
+
+      const citySelect = document.getElementById('citySelect');
+      const eventSelect = document.getElementById('eventSelect');
+      const eventSearch = document.getElementById('eventSearch');
+      const reloadBtn = document.getElementById('reloadBtn');
+      const randomBtn = document.getElementById('randomBtn');
+      const themeSelect = document.getElementById('themeSelect');
+      const customA = document.getElementById('customA');
+      const customB = document.getElementById('customB');
+      const coverInput = document.getElementById('coverInput');
+      const imageInput = document.getElementById('imageInput');
+      const grid = document.getElementById('variantsGrid');
+
+      class CreativeCalendarPreview extends DynamicCalendarLoader {
+        constructor() {
+          super();
+          this.currentCity = this.getInitialCityFromUrl();
+          this.filteredEvents = [];
+          this.selectedEvent = null;
+        }
+
+        getInitialCityFromUrl() {
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const city = params.get('city');
+            return city && hasCityCalendar(city) ? city : 'new-york';
+          } catch (e) {
+            return 'new-york';
+          }
+        }
+
+        async init() {
+          this.populateCities();
+          await this.loadCity(this.currentCity);
+          this.attachHandlers();
+          this.render();
+          logger.componentLoad(COMPONENT, 'Creative builder ready');
+        }
+
+        populateCities() {
+          const cities = getAvailableCities();
+          citySelect.innerHTML = cities.map(c => `<option value="${c.key}">${c.emoji} ${c.name}</option>`).join('');
+          citySelect.value = this.currentCity;
+        }
+
+        async loadCity(cityKey) {
+          logger.apiCall('CALENDAR', 'Loading calendar for creative builder', { cityKey });
+          this.currentCity = cityKey;
+          const data = await this.loadCalendarData(cityKey);
+          if (!data || !this.allEvents || !this.allEvents.length) {
+            logger.warn(COMPONENT, 'No events loaded for city', { cityKey });
+            eventSelect.innerHTML = '';
+            this.filteredEvents = [];
+            this.selectedEvent = null;
+            this.render();
+            return;
+          }
+          this.filteredEvents = this.allEvents.slice();
+          this.filteredEvents.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+          this.populateEventSelect();
+          this.selectedEvent = this.filteredEvents[0];
+          this.render();
+        }
+
+        populateEventSelect() {
+          const options = this.filteredEvents.map((ev, idx) => {
+            const venue = ev.bar ? ` @ ${ev.bar}` : '';
+            const time = ev.time ? ` · ${ev.time}` : '';
+            return `<option value="${idx}">${(ev.name || 'Unnamed Event')}${venue}${time}</option>`;
+          }).join('');
+          eventSelect.innerHTML = options;
+          eventSelect.selectedIndex = 0;
+        }
+
+        filterEvents(term) {
+          const t = (term || '').toLowerCase();
+          if (!this.allEvents) return;
+          this.filteredEvents = this.allEvents.filter(ev => {
+            const text = `${ev.name || ''} ${ev.bar || ''} ${ev.tea || ''}`.toLowerCase();
+            return text.includes(t);
+          });
+          this.filteredEvents.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+          this.populateEventSelect();
+          this.selectedEvent = this.filteredEvents[0] || null;
+          this.render();
+        }
+
+        getPreviewData() {
+          const ev = this.selectedEvent || {};
+          return {
+            event: ev.name || 'Bear Event',
+            venue: ev.bar || 'Venue',
+            date: ev.day || 'Date TBA',
+            time: ev.time || 'Time TBA',
+            city: getCityConfig(this.currentCity)?.name || 'City',
+            description: ev.tea || 'Join us for an amazing bear community event!',
+            image: (imageInput.value || '').trim(),
+            cover: (coverInput.value || '').trim(),
+            theme: themeSelect.value
+          };
+        }
+
+        attachHandlers() {
+          citySelect.addEventListener('change', async () => {
+            const cityKey = citySelect.value;
+            await this.loadCity(cityKey);
+            this.updateUrlCity(cityKey);
+          });
+
+          eventSelect.addEventListener('change', () => {
+            const idx = eventSelect.value ? parseInt(eventSelect.value, 10) : 0;
+            this.selectedEvent = this.filteredEvents[idx] || null;
+            this.render();
+          });
+
+          eventSearch.addEventListener('input', () => {
+            this.filterEvents(eventSearch.value);
+          });
+
+          reloadBtn.addEventListener('click', async () => {
+            await this.loadCity(this.currentCity);
+          });
+
+          randomBtn.addEventListener('click', () => {
+            if (!this.filteredEvents.length) return;
+            const idx = Math.floor(Math.random() * this.filteredEvents.length);
+            this.selectedEvent = this.filteredEvents[idx];
+            eventSelect.selectedIndex = idx;
+            this.render();
+          });
+
+          [themeSelect, customA, customB, coverInput, imageInput].forEach(el => {
+            el.addEventListener('input', () => this.render());
+            el.addEventListener('change', () => this.render());
+          });
+        }
+
+        updateThemeVars() {
+          if (themeSelect.value === 't16') {
+            document.documentElement.style.setProperty('--custom-color-1', customA.value);
+            document.documentElement.style.setProperty('--custom-color-2', customB.value);
+          }
+        }
+
+        updateVariant(card, variant, data) {
+          const artboard = card.querySelector('.artboard');
+          switch(variant.key) {
+            case 'magazine': {
+              const t = artboard.querySelector('.event-title');
+              const d = artboard.querySelector('.event-date');
+              const v = artboard.querySelector('.venue');
+              const desc = artboard.querySelector('.description');
+              const img = artboard.querySelector('.event-image');
+              const cov = artboard.querySelector('.cover');
+              if (t) t.textContent = data.event;
+              if (d) d.textContent = data.date;
+              if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
+              if (desc) desc.textContent = data.description;
+              if (img) {
+                if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; }
+              }
+              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'neon': {
+              const t = artboard.querySelector('.event-title');
+              const d = artboard.querySelector('.event-date');
+              const v = artboard.querySelector('.venue');
+              const desc = artboard.querySelector('.description');
+              const img = artboard.querySelector('.event-image');
+              if (t) t.textContent = data.event;
+              if (d) d.textContent = `${data.date} · ${data.time}`;
+              if (v) v.textContent = data.venue;
+              if (desc) desc.textContent = data.description;
+              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
+              break;
+            }
+            case 'polaroid': {
+              const t = artboard.querySelector('.main-card .event-title');
+              const det = artboard.querySelector('.main-card .details');
+              const mc = artboard.querySelector('.main-card .image');
+              const p1 = artboard.querySelector('.photo-1 .image');
+              const p2 = artboard.querySelector('.photo-2 .image');
+              if (t) t.textContent = data.event;
+              if (det) det.textContent = `${data.date} @ ${data.venue}`;
+              if (mc) { mc.style.backgroundImage = data.image ? `url('${data.image}')` : (data.cover ? `url('${data.cover}')` : 'none'); }
+              if (p1 && data.cover) p1.style.backgroundImage = `url('${data.cover}')`;
+              if (p2 && data.cover) p2.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'split': {
+              const t = artboard.querySelector('.event-title');
+              const d = artboard.querySelector('.event-date');
+              const v = artboard.querySelector('.venue');
+              const desc = artboard.querySelector('.description');
+              const img = artboard.querySelector('.event-image');
+              const cov = artboard.querySelector('.left-side .cover');
+              if (t) t.textContent = data.event;
+              if (d) d.textContent = `${data.date} · ${data.time}`;
+              if (v) v.textContent = `@ ${data.venue}`;
+              if (desc) desc.textContent = data.description;
+              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
+              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'minimal': {
+              const t = artboard.querySelector('.event-title');
+              const v = artboard.querySelector('.venue');
+              const desc = artboard.querySelector('.description');
+              const dateBadge = artboard.querySelector('.date-badge');
+              const img = artboard.querySelector('.event-image');
+              const cov = artboard.querySelector('.card-header .cover');
+              if (t) t.textContent = data.event;
+              if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
+              if (desc) desc.textContent = data.description;
+              if (dateBadge) dateBadge.textContent = data.date;
+              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
+              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'blocks': {
+              const t = artboard.querySelector('.event-title');
+              const meta = artboard.querySelector('.meta');
+              const poster = artboard.querySelector('.poster');
+              if (t) t.textContent = data.event;
+              if (meta) meta.textContent = `${data.date} · ${data.time} · @ ${data.venue}`;
+              if (poster) { if (data.image) { poster.style.backgroundImage = `url('${data.image}')`; poster.style.display = 'block'; } else { poster.style.display = 'none'; } }
+              break;
+            }
+            case 'glass': {
+              const t = artboard.querySelector('.event-title');
+              const d = artboard.querySelector('.event-date');
+              const v = artboard.querySelector('.venue');
+              const desc = artboard.querySelector('.description');
+              const cov = artboard.querySelector('.cover');
+              if (t) t.textContent = data.event;
+              if (d) d.textContent = `${data.date} · ${data.time}`;
+              if (v) v.textContent = `@ ${data.venue}`;
+              if (desc) desc.textContent = data.description;
+              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'ticket': {
+              const t = artboard.querySelector('.event-title');
+              const meta = artboard.querySelector('.meta');
+              const ven = artboard.querySelector('.venue');
+              const code = artboard.querySelector('.barcode');
+              if (t) t.textContent = data.event;
+              if (meta) meta.textContent = `${data.date} · ${data.time}`;
+              if (ven) ven.textContent = `@ ${data.venue}`;
+              if (code) code.textContent = (data.event || 'EVENT').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);
+              break;
+            }
+            case 'circle': {
+              const t = artboard.querySelector('.event-title');
+              const d = artboard.querySelector('.event-date');
+              const v = artboard.querySelector('.venue');
+              const desc = artboard.querySelector('.description');
+              const img = artboard.querySelector('.event-image');
+              if (t) t.textContent = data.event;
+              if (d) d.textContent = `${data.date} · ${data.time}`;
+              if (v) v.textContent = `@ ${data.venue}`;
+              if (desc) desc.textContent = data.description;
+              if (img) { if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
+              break;
+            }
+          }
+        }
+
+        buildVariantCard(variant, data) {
+          const card = document.createElement('div');
+          card.className = 'variant-card';
+          card.innerHTML = `
+            <div class="variant-header">
+              <div><strong>${variant.name}</strong> - ${variant.description}</div>
+            </div>
+            <div class="variant-preview">
+              <div class="artboard ${variant.class} ${data.theme}">
+                ${this.createVariantHTML(variant)}
+              </div>
+            </div>
+            <div class="preview-meta">
+              <div>og:title: <code>${data.event} – ${data.city} – chunky.dad</code></div>
+              <div>og:description: <code>${data.date} · ${data.time} · @ ${data.venue} · ${data.description}</code></div>
+              <div>og:image: <code>Generated with ${variant.name} layout</code></div>
+            </div>
+          `;
+          return card;
+        }
+
+        createVariantHTML(variant) {
+          const layouts = {
+            'magazine': `
+              <div class="cover"></div>
+              <div class="brand">chunky.dad</div>
+              <div class="event-date"></div>
+              <div class="event-title"></div>
+              <div class="event-details">
+                <div class="venue"></div>
+                <div class="description"></div>
+              </div>
+              <div class="event-image"></div>
+            `,
+            'neon': `
+              <div class="cover"></div>
+              <div class="brick-wall"></div>
+              <div class="neon-frame"></div>
+              <div class="event-title"></div>
+              <div class="event-date"></div>
+              <div class="venue-box">
+                <div class="venue"></div>
+              </div>
+              <div class="event-image"></div>
+              <div class="description"></div>
+            `,
+            'polaroid': `
+              <div class="photo-1">
+                <div class="image"></div>
+                <div class="caption">bear night vibes</div>
+              </div>
+              <div class="photo-2">
+                <div class="image"></div>
+              </div>
+              <div class="main-card">
+                <div class="image"></div>
+                <div class="text">
+                  <div class="event-title"></div>
+                  <div class="details"></div>
+                </div>
+              </div>
+              <div class="tape tape-1"></div>
+              <div class="tape tape-2"></div>
+            `,
+            'split': `
+              <div class="left-side">
+                <div class="cover"></div>
+              </div>
+              <div class="left-content">
+                <div class="brand">chunky.dad</div>
+                <div class="event-title"></div>
+                <div class="event-date"></div>
+                <div class="venue"></div>
+              </div>
+              <div class="right-side">
+                <div class="event-image"></div>
+              </div>
+              <div class="description"></div>
+            `,
+            'minimal': `
+              <div class="card">
+                <div class="card-header">
+                  <div class="cover"></div>
+                  <div class="overlay"></div>
+                  <div class="date-badge"></div>
+                </div>
+                <div class="event-image"></div>
+                <div class="card-body">
+                  <div class="event-title"></div>
+                  <div class="venue"></div>
+                  <div class="description"></div>
+                </div>
+                <div class="brand">chunky.dad</div>
+              </div>
+            `,
+            'blocks': `
+              <div class="block-a"></div>
+              <div class="block-b"></div>
+              <div class="event-title"></div>
+              <div class="meta"></div>
+              <div class="poster"></div>
+            `,
+            'glass': `
+              <div class="cover"></div>
+              <div class="glass">
+                <div class="inner">
+                  <div class="event-title"></div>
+                  <div class="event-date"></div>
+                  <div class="venue"></div>
+                  <div class="description"></div>
+                </div>
+              </div>
+            `,
+            'ticket': `
+              <div class="stub">
+                <div class="left">
+                  <div class="band"></div>
+                  <div class="event-title"></div>
+                  <div class="meta"></div>
+                  <div class="venue"></div>
+                </div>
+                <div class="right">
+                  <div class="barcode"></div>
+                </div>
+              </div>
+            `,
+            'circle': `
+              <div class="ring"></div>
+              <div class="event-image"></div>
+              <div class="text">
+                <div class="event-title"></div>
+                <div class="event-date"></div>
+                <div class="venue"></div>
+              </div>
+              <div class="description"></div>
+            `
+          };
+          return layouts[variant.key] || '';
+        }
+
+        render() {
+          this.updateThemeVars();
+          const data = this.getPreviewData();
+          const VARIANTS = [
+            { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition with image focus' },
+            { key: 'magazine', name: 'Magazine Cover', class: 'layout-magazine', description: 'Editorial style with bold typography and featured image' },
+            { key: 'neon', name: 'Neon Sign', class: 'layout-neon', description: 'Retro bar signage with glowing effects' },
+            { key: 'polaroid', name: 'Polaroid Stack', class: 'layout-polaroid', description: 'Vintage photo collection with handwritten notes' },
+            { key: 'minimal', name: 'Minimalist Card', class: 'layout-minimal', description: 'Clean modern design with subtle shadows' },
+            { key: 'blocks', name: 'Color Blocks', class: 'layout-blocks', description: 'Bold two-column color composition' },
+            { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass over photo backdrop' },
+            { key: 'ticket', name: 'Ticket', class: 'layout-ticket', description: 'Admit-one ticket aesthetic' },
+            { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' }
+          ];
+
+          grid.innerHTML = '';
+          const artboards = [];
+          VARIANTS.forEach(variant => {
+            const card = this.buildVariantCard(variant, data);
+            this.updateVariant(card, variant, data);
+            grid.appendChild(card);
+            const art = card.querySelector('.artboard');
+            artboards.push({ art, card });
+          });
+
+          requestAnimationFrame(() => {
+            artboards.forEach(({ art }) => {
+              const preview = art.closest('.variant-preview');
+              if (!preview) return;
+              const pw = preview.clientWidth;
+              const ph = preview.clientHeight;
+              const scale = Math.min(pw / 1200, ph / 630);
+              art.style.transform = `scale(${scale})`;
+            });
+          });
+        }
+
+        updateUrlCity(city) {
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('city', city);
+            history.replaceState({}, '', url);
+          } catch (e) {}
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const app = new CreativeCalendarPreview();
+        await app.init();
+        window._creativePreviewApp = app;
+      });
+    })();
+  </script>
+</body>
+</html>
+
