@@ -2253,7 +2253,7 @@ body.index-page main {
     align-items: center;
     justify-content: center;
     position: relative;
-    top: -1px; /* Adjust icon positioning to center better in circle */
+    top: 0px; /* Center icon properly in circle */
 }
 
 .event-links a {
