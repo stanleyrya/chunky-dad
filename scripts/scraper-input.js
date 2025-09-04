@@ -156,6 +156,7 @@ const scraperConfig = {
         cover: { priority: ["furball"], merge: "clobber" }
       },
       metadata: {
+        title: { value: "FURBALL", merge: "clobber" },
         shortName: { value: "FUR-BALL" },
         instagram: { value: "https://instagram.com/furballnyc/" }
       }

@@ -128,14 +128,26 @@ class FurballParser {
             let bar = '';
             let address = '';
             if (venueLine) {
-                const parts = venueLine.split(/\s-\s/);
-                bar = (parts[0] || '').trim();
-                address = (parts[1] || '').trim();
+                // Extract venue name and address from the venue line
+                // The venue line contains the full event description, we need to extract the last "Venue - City" part
+                const venueMatch = venueLine.match(/(\w+)\s*-\s*([^&]+?)(?:\s*&nbsp;)?\s*$/);
+                if (venueMatch) {
+                    bar = venueMatch[1].trim();
+                    address = venueMatch[2].trim()
+                        .replace(/&nbsp;/g, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                }
             }
 
             // Build title by taking non-date, non-venue lines
             const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
             let title = titleParts.join(' — ').trim();
+            
+            // If no title found, use default
+            if (!title) {
+                title = 'FURBALL';
+            }
 
             // Ticket URL: pick anchor hrefs by label/text only
             const ticketUrls = this.extractNearbyTicketLinks(block);
