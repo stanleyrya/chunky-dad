@@ -123,7 +123,7 @@ class FurballParser {
             // Split lines based on our injected newlines from <br>
             const lines = content.split('\n').map(s => s.trim()).filter(Boolean);
 
-            // Find a line that looks like "Venue - City[, ST]"
+            // Find the venue line that contains " - " (e.g., "Heretic - Atlanta, GA")
             let venueLine = lines.find(l => /\s-\s/.test(l));
             let bar = '';
             let address = '';
@@ -131,11 +131,14 @@ class FurballParser {
                 const parts = venueLine.split(/\s-\s/);
                 bar = (parts[0] || '').trim();
                 address = (parts[1] || '').trim();
+                // Clean up address - remove HTML entities and extra spaces
+                address = address.replace(/&nbsp;/g, '').replace(/\s+/g, ' ').trim();
             }
 
-            // Build title by taking non-date, non-venue lines
+            // Build title from non-date, non-venue lines
+            // Example: "FURBALL Atlanta" + "CAMP: Underwear + Gear Party"
             const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
-            let title = titleParts.join(' — ').trim();
+            let title = titleParts.join(' ').trim();
 
             // Ticket URL: pick anchor hrefs by label/text only
             const ticketUrls = this.extractNearbyTicketLinks(block);
