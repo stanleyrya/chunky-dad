@@ -123,7 +123,7 @@ class FurballParser {
             // Split lines based on our injected newlines from <br>
             const lines = content.split('\n').map(s => s.trim()).filter(Boolean);
 
-            // Find a line that looks like "Venue - City[, ST]"
+            // Find the venue line that contains " - " (e.g., "Heretic - Atlanta, GA")
             let venueLine = lines.find(l => /\s-\s/.test(l));
             let bar = '';
             let address = '';
@@ -135,31 +135,19 @@ class FurballParser {
                 address = address.replace(/&nbsp;/g, '').replace(/\s+/g, ' ').trim();
             }
 
-            // Build title by taking non-date, non-venue lines
+            // Build title from non-date, non-venue lines
+            // Example: "FURBALL Atlanta" + "CAMP: Underwear + Gear Party"
             const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
-            let title = titleParts.join(' — ').trim();
-            
-            // If no title found, use "FURBALL" as default
-            if (!title) {
-                title = 'FURBALL';
-            }
+            let title = titleParts.join(' ').trim();
 
             // Ticket URL: pick anchor hrefs by label/text only
             const ticketUrls = this.extractNearbyTicketLinks(block);
             const ticketUrl = ticketUrls.length > 0 ? ticketUrls[0] : '';
 
-            // Set default times: 10pm start, 2am end (next day)
-            const startTime = new Date(startDate);
-            startTime.setHours(22, 0, 0, 0); // 10pm
-            
-            const endTime = new Date(startDate);
-            endTime.setDate(endTime.getDate() + 1); // Next day
-            endTime.setHours(2, 0, 0, 0); // 2am
-
             const event = {
                 title,
-                startDate: startTime,
-                endDate: endTime,
+                startDate,
+                endDate: new Date(startDate),
                 bar,
                 address,
                 url: sourceUrl,
