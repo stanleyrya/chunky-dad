@@ -131,20 +131,35 @@ class FurballParser {
                 const parts = venueLine.split(/\s-\s/);
                 bar = (parts[0] || '').trim();
                 address = (parts[1] || '').trim();
+                // Clean up address - remove HTML entities and extra spaces
+                address = address.replace(/&nbsp;/g, '').replace(/\s+/g, ' ').trim();
             }
 
             // Build title by taking non-date, non-venue lines
             const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
             let title = titleParts.join(' — ').trim();
+            
+            // If no title found, use "FURBALL" as default
+            if (!title) {
+                title = 'FURBALL';
+            }
 
             // Ticket URL: pick anchor hrefs by label/text only
             const ticketUrls = this.extractNearbyTicketLinks(block);
             const ticketUrl = ticketUrls.length > 0 ? ticketUrls[0] : '';
 
+            // Set default times: 10pm start, 2am end (next day)
+            const startTime = new Date(startDate);
+            startTime.setHours(22, 0, 0, 0); // 10pm
+            
+            const endTime = new Date(startDate);
+            endTime.setDate(endTime.getDate() + 1); // Next day
+            endTime.setHours(2, 0, 0, 0); // 2am
+
             const event = {
                 title,
-                startDate,
-                endDate: new Date(startDate),
+                startDate: startTime,
+                endDate: endTime,
                 bar,
                 address,
                 url: sourceUrl,
