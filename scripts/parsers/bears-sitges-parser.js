@@ -109,11 +109,10 @@ class BearsSitgesParser {
    */
   getEventKey(event) {
     const title = (event.title || '').toLowerCase().trim();
-    const startHour = event.startHour || '';
-    const endHour = event.endHour || '';
-    const isAllDay = event.isAllDay || false;
+    const startDate = event.startDate ? event.startDate.toISOString() : '';
+    const endDate = event.endDate ? event.endDate.toISOString() : '';
     
-    return `${title}-${startHour}-${endHour}-${isAllDay}`;
+    return `${title}-${startDate}-${endDate}`;
   }
 
   /**
@@ -265,7 +264,20 @@ class BearsSitgesParser {
         description = `Bears Sitges Week Event (${startHour}h-${endHour}h)`;
       }
 
-      // Create event object
+      // Create event object with placeholder dates
+      // The actual dates will need to be set by the user or higher-level logic
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setHours(startHour, 0, 0, 0);
+      
+      const endDate = new Date(today);
+      endDate.setHours(endHour, 59, 59, 999);
+      
+      // If end hour is earlier than start hour, assume it's next day
+      if (endHour < startHour) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+
       const event = {
         title: description,
         description: description,
@@ -274,8 +286,8 @@ class BearsSitgesParser {
         city: 'sitges',
         country: 'Spain',
         timezone: 'Europe/Madrid',
-        startHour: startHour,
-        endHour: endHour
+        startDate: startDate,
+        endDate: endDate
       };
 
       return event;
@@ -305,6 +317,14 @@ class BearsSitgesParser {
         description = 'Bears Sitges Week All-Day Event';
       }
 
+      // Create all-day event with 00:00 to 23:59 times
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setHours(0, 0, 0, 0);  // 00:00:00
+      
+      const endDate = new Date(today);
+      endDate.setHours(23, 59, 59, 999);  // 23:59:59
+
       const event = {
         title: description,
         description: description,
@@ -313,8 +333,8 @@ class BearsSitgesParser {
         city: 'sitges',
         country: 'Spain',
         timezone: 'Europe/Madrid',
-        startHour: 0,    // 00:00
-        endHour: 23      // 23:59 (we'll handle minutes in date processing)
+        startDate: startDate,
+        endDate: endDate
       };
 
       return event;
@@ -338,19 +358,35 @@ class BearsSitgesParser {
       const startHour = parseInt(timeMatch[1]);
       const endHour = parseInt(timeMatch[2]);
       
-      timeInfo.startHour = startHour;
-      timeInfo.endHour = endHour;
+      // Create actual DateTime objects
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setHours(startHour, 0, 0, 0);
       
-      // Add internal flags for processing
-      if (startHour >= 1 && startHour <= 6) {
-        timeInfo._earlyMorning = true;
+      const endDate = new Date(today);
+      endDate.setHours(endHour, 59, 59, 999);
+      
+      // If end hour is earlier than start hour, assume it's next day
+      if (endHour < startHour) {
+        endDate.setDate(endDate.getDate() + 1);
       }
+      
+      timeInfo.startDate = startDate;
+      timeInfo.endDate = endDate;
     } else {
       // Check for all-day indicators
       const allDayMatch = block.match(/(?:all\s+day|24h|open\s+all\s+day)/i);
       if (allDayMatch) {
-        timeInfo.startHour = 0;    // 00:00
-        timeInfo.endHour = 23;     // 23:59
+        // Create all-day event with 00:00 to 23:59 times
+        const today = new Date();
+        const startDate = new Date(today);
+        startDate.setHours(0, 0, 0, 0);  // 00:00:00
+        
+        const endDate = new Date(today);
+        endDate.setHours(23, 59, 59, 999);  // 23:59:59
+        
+        timeInfo.startDate = startDate;
+        timeInfo.endDate = endDate;
       }
     }
 

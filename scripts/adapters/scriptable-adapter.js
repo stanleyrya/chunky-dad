@@ -201,12 +201,26 @@ class ScriptableAdapter {
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
     }
 
-    // Detect all-day events at save-time based on time patterns
+    // Detect all-day events at save-time based on DateTime patterns
     isAllDayEvent(event) {
-        if (!event) return false;
+        if (!event || !event.startDate || !event.endDate) return false;
         
-        // All-day events are 00:00 to 23:59 (or 0 to 23 in hour format)
-        return event.startHour === 0 && event.endHour === 23;
+        const startDate = new Date(event.startDate);
+        const endDate = new Date(event.endDate);
+        
+        // Check if start time is 00:00:00
+        const isStartMidnight = startDate.getHours() === 0 && 
+                               startDate.getMinutes() === 0 && 
+                               startDate.getSeconds() === 0;
+        
+        // Check if end time is 23:59:59 (or 23:59:00)
+        const isEndLateNight = endDate.getHours() === 23 && 
+                              (endDate.getMinutes() === 59 || endDate.getMinutes() === 0);
+        
+        // Check if it's the same day
+        const isSameDay = startDate.toDateString() === endDate.toDateString();
+        
+        return isStartMidnight && isEndLateNight && isSameDay;
     }
 
     // Get calendar name for a city
