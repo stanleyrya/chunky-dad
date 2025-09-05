@@ -55,6 +55,10 @@ class SharedCore {
             {
                 pattern: /furball\.nyc/i,
                 parser: 'furball'
+            },
+            {
+                pattern: /bearssitges\.org/i,
+                parser: 'bears-sitges'
             }
             // Generic parser will be used as fallback if no pattern matches
         ];
@@ -1205,11 +1209,35 @@ class SharedCore {
         // Create a copy to avoid modifying the original
         const normalizedEvent = { ...event };
         
+        // Handle all-day events and early morning times
+        normalizedEvent = this.processSpecialEventTimes(normalizedEvent);
+        
         // Description field is now saved and read literally - no normalization
         // We could normalize other text fields here if needed in the future
         // For example: title, bar, address, etc.
         
         return normalizedEvent;
+    }
+
+    // Process special event times (all-day events and early morning times)
+    processSpecialEventTimes(event) {
+        if (!event) return event;
+        
+        // Handle all-day events
+        if (event.isAllDay === true) {
+            event.isAllDay = true;
+            // For all-day events, we don't need specific start/end times
+            // The calendar system will handle this automatically
+        }
+        
+        // Handle early morning times (01h-06h = next day)
+        if (event.isEarlyMorning === true && event.startHour && event.endHour) {
+            // Early morning events that start at 01h-06h are actually the next day
+            // This is handled by the parser, but we can add additional logic here if needed
+            event.isEarlyMorning = true;
+        }
+        
+        return event;
     }
 
     // Helper method to normalize event dates for consistent comparison across timezones
