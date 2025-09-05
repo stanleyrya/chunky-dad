@@ -201,6 +201,30 @@ class ScriptableAdapter {
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
     }
 
+    // Detect all-day events at save-time
+    isAllDayEvent(event) {
+        if (!event) return false;
+        
+        // Check for explicit all-day indicators in the event data
+        if (event.isAllDay === true || event._allDay === true) {
+            return true;
+        }
+        
+        // Check for all-day patterns in title or description
+        const text = `${event.title || ''} ${event.description || ''}`.toLowerCase();
+        const allDayPatterns = [
+            'all day',
+            'all-day',
+            '24h',
+            '24 hours',
+            'open all day',
+            'all day event',
+            'full day'
+        ];
+        
+        return allDayPatterns.some(pattern => text.includes(pattern));
+    }
+
     // Get calendar name for a city
     getCalendarName(city) {
         if (city && this.cities[city] && this.cities[city].calendar) {
@@ -411,6 +435,11 @@ class ScriptableAdapter {
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
+                            
+                            // Detect all-day events at save-time
+                            if (this.isAllDayEvent(event)) {
+                                calendarEvent.isAllDay = true;
+                            }
                             
                             if (event.url) {
                                 calendarEvent.url = event.url;

@@ -265,7 +265,8 @@ class BearsSitgesParser {
         description = `Bears Sitges Week Event (${startHour}h-${endHour}h)`;
       }
 
-      // Determine if this is an early morning event (next day)
+      // For early morning events (01h-06h), we need to adjust the day
+      // This will be handled by setting the correct startDate/endDate
       const isEarlyMorning = startHour >= 1 && startHour <= 6;
       
       // Create event object
@@ -278,10 +279,13 @@ class BearsSitgesParser {
         country: 'Spain',
         timezone: 'Europe/Madrid',
         startHour: startHour,
-        endHour: endHour,
-        isEarlyMorning: isEarlyMorning,
-        isAllDay: false
+        endHour: endHour
       };
+      
+      // Add a note about early morning timing for later processing
+      if (isEarlyMorning) {
+        event._earlyMorning = true;
+      }
 
       return event;
     } catch (error) {
@@ -317,9 +321,11 @@ class BearsSitgesParser {
         source: 'bears-sitges',
         city: 'sitges',
         country: 'Spain',
-        timezone: 'Europe/Madrid',
-        isAllDay: true
+        timezone: 'Europe/Madrid'
       };
+      
+      // Add a note about all-day timing for later processing
+      event._allDay = true;
 
       return event;
     } catch (error) {
@@ -344,13 +350,16 @@ class BearsSitgesParser {
       
       timeInfo.startHour = startHour;
       timeInfo.endHour = endHour;
-      timeInfo.isEarlyMorning = startHour >= 1 && startHour <= 6;
-      timeInfo.isAllDay = false;
+      
+      // Add internal flags for processing
+      if (startHour >= 1 && startHour <= 6) {
+        timeInfo._earlyMorning = true;
+      }
     } else {
       // Check for all-day indicators
       const allDayMatch = block.match(/(?:all\s+day|24h|open\s+all\s+day)/i);
       if (allDayMatch) {
-        timeInfo.isAllDay = true;
+        timeInfo._allDay = true;
       }
     }
 

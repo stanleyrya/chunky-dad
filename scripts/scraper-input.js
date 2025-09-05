@@ -180,13 +180,9 @@ const scraperConfig = {
         url: { priority: ["bears-sitges"], merge: "clobber" },
         gmaps: { priority: ["bears-sitges"], merge: "clobber" },
         image: { priority: ["bears-sitges"], merge: "clobber" },
-        cover: { priority: ["bears-sitges"], merge: "clobber" },
-        isAllDay: { priority: ["bears-sitges"], merge: "clobber" },
-        isEarlyMorning: { priority: ["bears-sitges"], merge: "clobber" }
+        cover: { priority: ["bears-sitges"], merge: "clobber" }
       },
       metadata: {
-        title: { value: "Bears Sitges Week" },
-        shortName: { value: "Bears Sitges" },
         instagram: { value: "https://www.instagram.com/bearssitges" },
         city: { value: "sitges" },
         country: { value: "Spain" },
