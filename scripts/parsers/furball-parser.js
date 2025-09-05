@@ -105,9 +105,9 @@ class FurballParser {
             const content = block.raw
                 .replace(/\r/g, ' ')
                 .replace(/\n/g, ' ')
-                .replace(/<br[^>]*>/gi, '\n')
+                .replace(/<br[^>]*\/?>/gi, '\n')
                 .replace(/<[^>]+>/g, '')
-                .replace(/\s+/g, ' ')
+                .replace(/[ \t]+/g, ' ')
                 .trim();
 
             // The first line should be a date like "AUGUST 30, 2025"
@@ -139,6 +139,8 @@ class FurballParser {
             // Example: "FURBALL Atlanta" + "CAMP: Underwear + Gear Party"
             const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
             let title = titleParts.join(' ').trim();
+            // Clean up HTML entities
+            title = title.replace(/&nbsp;/g, '').replace(/\s+/g, ' ').trim();
 
             // Ticket URL: pick anchor hrefs by label/text only
             const ticketUrls = this.extractNearbyTicketLinks(block);
