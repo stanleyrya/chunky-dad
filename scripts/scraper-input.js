@@ -37,7 +37,6 @@ const scraperConfig = {
       },
       metadata: {
         title: { value: "MEGAWOOF" },
-        shortName: { value: "MEGA-WOOF" },
         instagram: { value: "https://www.instagram.com/megawoof_america" }
       }
     },
@@ -63,7 +62,6 @@ const scraperConfig = {
         cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
-        shortName: { value: "Coach After Dark" },
         instagram: { value: "https://www.instagram.com/coachafterdark" }
       }
     },
@@ -96,7 +94,6 @@ const scraperConfig = {
         key: { priority: ["bearracuda", "eventbrite"], merge: "clobber" }
       },
       metadata: {
-        shortName: { value: "Bear-rac-uda" },
         instagram: { value: "https://www.instagram.com/bearracuda" }
       }
     },
@@ -128,7 +125,6 @@ const scraperConfig = {
       
       // Static metadata to add to all Chunk events
       metadata: {
-        shortName: { value: "CHUNK" },
         instagram: { value: "https://www.instagram.com/chunkparty" }
       }
     }
@@ -157,7 +153,6 @@ const scraperConfig = {
       },
       metadata: {
         title: { value: "FURBALL" },
-        shortName: { value: "FUR-BALL" },
         instagram: { value: "https://instagram.com/furballnyc/" }
       }
     },
