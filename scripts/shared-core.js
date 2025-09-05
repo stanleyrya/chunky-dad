@@ -1361,6 +1361,71 @@ class SharedCore {
         if (typeof date === 'string') date = new Date(date);
         return date.toISOString();
     }
+
+    // Combine date object with time string to create proper start/end dates
+    // This is used when static metadata provides startTime/endTime as strings
+    combineDateTimeFromStrings(date, timeString, timezone = null) {
+        if (!date || !timeString) return date;
+        
+        // Parse time string (format: "HH:MM" or "H:MM")
+        const timeMatch = timeString.match(/^(\d{1,2}):(\d{2})$/);
+        if (!timeMatch) {
+            console.warn(`🗺️ SharedCore: Invalid time format "${timeString}", expected "HH:MM"`);
+            return date;
+        }
+        
+        const hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+            console.warn(`🗺️ SharedCore: Invalid time values: ${hours}:${minutes}`);
+            return date;
+        }
+        
+        // Create new date with the time applied
+        const newDate = new Date(date);
+        newDate.setHours(hours, minutes, 0, 0);
+        
+        // If timezone is provided, convert to UTC
+        if (timezone) {
+            try {
+                // Create a date string in the specified timezone
+                const year = newDate.getFullYear();
+                const month = String(newDate.getMonth() + 1).padStart(2, '0');
+                const day = String(newDate.getDate()).padStart(2, '0');
+                const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                
+                // Use Intl.DateTimeFormat to get the timezone offset
+                const formatter = new Intl.DateTimeFormat('en', {
+                    timeZone: timezone,
+                    timeZoneName: 'longOffset'
+                });
+                
+                const parts = formatter.formatToParts(newDate);
+                const offsetPart = parts.find(part => part.type === 'timeZoneName');
+                
+                if (offsetPart && offsetPart.value) {
+                    const offsetMatch = offsetPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+                    if (offsetMatch) {
+                        const sign = offsetMatch[1] === '+' ? 1 : -1;
+                        const offsetHours = parseInt(offsetMatch[2]);
+                        const offsetMinutes = parseInt(offsetMatch[3]);
+                        const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
+                        
+                        // Convert to UTC
+                        const utcTime = new Date(newDate.getTime() - (totalOffsetMinutes * 60 * 1000));
+                        console.log(`🗺️ SharedCore: Converted ${timeString} (${timezone}) to UTC: ${utcTime.toISOString()}`);
+                        return utcTime;
+                    }
+                }
+            } catch (error) {
+                console.warn(`🗺️ SharedCore: Timezone conversion failed: ${error.message}`);
+            }
+        }
+        
+        console.log(`🗺️ SharedCore: Applied time ${timeString} to date: ${newDate.toISOString()}`);
+        return newDate;
+    }
     
     // ============================================================================
     // GOOGLE MAPS URL GENERATION - iOS-compatible URL construction
@@ -1797,6 +1862,27 @@ class SharedCore {
                     }
                 }
             });
+        }
+        
+        // Apply time strings from static metadata to startDate/endDate
+        // This handles cases where static metadata provides startTime/endTime as strings
+        if (event.startTime && event.startDate && typeof event.startTime === 'string') {
+            const timezone = event.timezone || (event.city && this.cities[event.city]?.timezone);
+            event.startDate = this.combineDateTimeFromStrings(event.startDate, event.startTime, timezone);
+            console.log(`🗺️ SharedCore: Applied startTime "${event.startTime}" to startDate: ${event.startDate.toISOString()}`);
+        }
+        
+        if (event.endTime && event.endDate && typeof event.endTime === 'string') {
+            const timezone = event.timezone || (event.city && this.cities[event.city]?.timezone);
+            event.endDate = this.combineDateTimeFromStrings(event.endDate, event.endTime, timezone);
+            
+            // If end time is earlier than start time, assume it's next day
+            if (event.startDate && event.endDate && event.endDate <= event.startDate) {
+                event.endDate = new Date(event.endDate.getTime() + 24 * 60 * 60 * 1000);
+                console.log(`🗺️ SharedCore: End time is earlier than start time, moved to next day: ${event.endDate.toISOString()}`);
+            }
+            
+            console.log(`🗺️ SharedCore: Applied endTime "${event.endTime}" to endDate: ${event.endDate.toISOString()}`);
         }
         
         // Return the event with all fields intact
