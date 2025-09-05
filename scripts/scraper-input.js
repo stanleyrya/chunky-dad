@@ -158,9 +158,7 @@ const scraperConfig = {
       metadata: {
         title: { value: "FURBALL" },
         shortName: { value: "FUR-BALL" },
-        instagram: { value: "https://instagram.com/furballnyc/" },
-        startTime: { value: "22:00" },
-        endTime: { value: "02:00" }
+        instagram: { value: "https://instagram.com/furballnyc/" }
       }
     }
   ],
