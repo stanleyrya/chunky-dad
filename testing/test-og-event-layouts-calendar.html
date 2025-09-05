@@ -32,14 +32,15 @@
     .subtitle { color: var(--text-secondary); font-size: 14px; }
 
     .controls { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; background: var(--background-light); padding: 16px; border-radius: 12px; border: 1px solid var(--border-lighter); margin-bottom: 20px; align-items: end; }
-    .controls .field { grid-column: span 3; }
-    .controls .field-2 { grid-column: span 6; }
-    .controls .field-3 { grid-column: span 9; }
+    .controls .field { grid-column: span 2; }
+    .controls .field-2 { grid-column: span 4; }
+    .controls .field-3 { grid-column: span 6; }
+    .controls .field-4 { grid-column: span 8; }
     .controls label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
     .controls input, .controls select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); color: var(--text-primary); }
     .controls .inline { display: flex; gap: 10px; align-items: end; }
     .controls .inline > * { flex: 1; }
-    .controls .btn { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); cursor: pointer; white-space: nowrap; }
+    .controls .btn { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); cursor: pointer; white-space: nowrap; font-size: 12px; }
     .controls .btn.primary { background: var(--gradient-primary); color: var(--text-inverse); border: 0; }
 
     .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
@@ -48,22 +49,37 @@
     .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #111; display: grid; place-items: center; overflow: hidden; position: relative; }
     .artboard { width: 1200px; height: 630px; position: relative; overflow: hidden; transform-origin: top left; font-family: 'Poppins', sans-serif; }
 
-    /* Theme packs (MUCH MORE colors) */
+    /* Theme packs (MUCH MORE colors) - All themes now support custom color override */
     .t1 { background: var(--og-bg-1); }
+    .t1.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t2 { background: var(--og-bg-2); }
+    .t2.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t3 { background: var(--og-bg-3); }
+    .t3.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t4 { background: var(--og-bg-4); }
+    .t4.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t5 { background: var(--og-bg-5); }
+    .t5.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t6 { background: linear-gradient(135deg, #ff512f, #dd2476); }
+    .t6.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t7 { background: linear-gradient(135deg, #2193b0, #6dd5ed); }
+    .t7.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t8 { background: linear-gradient(135deg, #134e5e, #71b280); }
+    .t8.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t9 { background: linear-gradient(135deg, #f12711, #f5af19); }
+    .t9.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t10 { background: linear-gradient(135deg, #8e2de2, #4a00e0); }
+    .t10.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t11 { background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%); }
+    .t11.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t12 { background: linear-gradient(135deg, #00c6ff, #0072ff); }
+    .t12.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t13 { background: linear-gradient(135deg, #00b09b, #96c93d); }
+    .t13.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t14 { background: conic-gradient(from 180deg at 50% 50%, #ff6a00, #ee0979, #8e2de2, #4a00e0, #00c6ff, #00b09b, #ff6a00); }
+    .t14.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t15 { background: linear-gradient(135deg, #1f4037, #99f2c8); }
+    .t15.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
     .t16 { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
 
     /* Cover image support */
@@ -195,13 +211,13 @@
         </div>
         <div class="field">
           <label for="eventSearch">Search</label>
-          <input id="eventSearch" type="text" placeholder="Filter events by name or venue">
+          <input id="eventSearch" type="text" placeholder="Filter events">
         </div>
         <div class="field">
-          <button id="reloadBtn" class="btn">Reload Calendar</button>
+          <button id="reloadBtn" class="btn">Reload</button>
         </div>
         <div class="field">
-          <button id="randomBtn" class="btn">Random Event</button>
+          <button id="randomBtn" class="btn">Random</button>
         </div>
         <div class="field">
           <label for="themeSelect">Theme</label>
@@ -232,12 +248,12 @@
           <label for="customB">Custom B</label>
           <input id="customB" type="color" value="#4a00e0" title="Custom color B">
         </div>
-        <div class="field-3">
-          <label for="coverInput">Optional Background/Cover Image URL</label>
+        <div class="field-4">
+          <label for="coverInput">Background/Cover Image URL</label>
           <input id="coverInput" type="url" placeholder="https://example.com/cover.jpg">
         </div>
-        <div class="field-3">
-          <label for="imageInput">Optional Event Image URL</label>
+        <div class="field-4">
+          <label for="imageInput">Event Image URL</label>
           <input id="imageInput" type="url" placeholder="https://example.com/event-image.jpg">
         </div>
       </section>
@@ -409,11 +425,10 @@
         }
 
         updateThemeVars() {
-          if (themeSelect.value === 't16') {
-            document.documentElement.style.setProperty('--custom-color-1', customA.value);
-            document.documentElement.style.setProperty('--custom-color-2', customB.value);
-            logger.debug(COMPONENT, 'Updated custom theme colors', { colorA: customA.value, colorB: customB.value });
-          }
+          // Always update custom color variables regardless of theme
+          document.documentElement.style.setProperty('--custom-color-1', customA.value);
+          document.documentElement.style.setProperty('--custom-color-2', customB.value);
+          logger.debug(COMPONENT, 'Updated custom theme colors', { colorA: customA.value, colorB: customB.value });
         }
 
         updateVariant(card, variant, data) {
@@ -532,12 +547,17 @@
         buildVariantCard(variant, data) {
           const card = document.createElement('div');
           card.className = 'variant-card';
+          
+          // Check if custom colors are being used (not default values)
+          const isCustomOverride = customA.value !== '#8e2de2' || customB.value !== '#4a00e0';
+          const themeClass = isCustomOverride ? `${data.theme} custom-override` : data.theme;
+          
           card.innerHTML = `
             <div class="variant-header">
               <div><strong>${variant.name}</strong> - ${variant.description}</div>
             </div>
             <div class="variant-preview">
-              <div class="artboard ${variant.class} ${data.theme}">
+              <div class="artboard ${variant.class} ${themeClass}">
                 ${this.createVariantHTML(variant)}
               </div>
             </div>
