@@ -36,8 +36,11 @@ class BearsSitgesParser {
     }
 
     try {
-      // Extract events from the HTML structure
-      const events = this.extractEvents(html, url);
+      // Extract the event dates first (September 5-14, 2025)
+      const eventDates = this.extractEventDates(html);
+      
+      // Extract events from the HTML structure with actual dates
+      const events = this.extractEvents(html, url, eventDates);
       return events;
     } catch (error) {
       console.log(`BearsSitgesParser error: ${error.message}`);
@@ -46,49 +49,119 @@ class BearsSitgesParser {
   }
 
   /**
+   * Extract event dates from the Bears Sitges Week page
+   * @param {string} html - Raw HTML content
+   * @returns {Object} Object mapping day names to Date objects
+   */
+  extractEventDates(html) {
+    const eventDates = {};
+    
+    // Bears Sitges Week 2025 is September 5-14, 2025
+    const baseYear = 2025;
+    const baseMonth = 8; // September (0-indexed)
+    
+    // Map day names to dates
+    const dayMappings = {
+      'VIERNES - 05': new Date(baseYear, baseMonth, 5),
+      'SÁBADO - 06': new Date(baseYear, baseMonth, 6),
+      'DOMINGO - 07': new Date(baseYear, baseMonth, 7),
+      'LUNES - 08': new Date(baseYear, baseMonth, 8),
+      'MARTES - 09': new Date(baseYear, baseMonth, 9),
+      'MIÉRCOLES - 10': new Date(baseYear, baseMonth, 10),
+      'JUEVES - 11': new Date(baseYear, baseMonth, 11),
+      'VIERNES - 12': new Date(baseYear, baseMonth, 12),
+      'SABADO -13': new Date(baseYear, baseMonth, 13),
+      'DOMINGO - 14': new Date(baseYear, baseMonth, 14)
+    };
+    
+    // Look for day headers in the HTML
+    for (const [dayText, date] of Object.entries(dayMappings)) {
+      if (html.includes(dayText)) {
+        eventDates[dayText] = date;
+      }
+    }
+    
+    return eventDates;
+  }
+
+  /**
    * Extract events from HTML content
    * @param {string} html - Raw HTML content
    * @param {string} url - Source URL
+   * @param {Object} eventDates - Object mapping day names to Date objects
    * @returns {Array} Array of event objects
    */
-  extractEvents(html, url) {
+  extractEvents(html, url, eventDates = {}) {
     const events = [];
     const seenEvents = new Set(); // For deduplication
     
-    // Look for event patterns in the HTML
-    // The page structure may vary, so we'll use multiple approaches
-    
-    // Method 1: Look for structured event blocks
-    const eventBlocks = this.findEventBlocks(html);
-    for (const block of eventBlocks) {
-      const event = this.parseEventBlock(block, url);
-      if (event && this.isUniqueEvent(event, seenEvents)) {
-        events.push(event);
-        seenEvents.add(this.getEventKey(event));
-      }
-    }
-
-    // Method 2: Look for time-based patterns (01h to 06h, etc.)
-    const timePatterns = this.findTimePatterns(html);
-    for (const pattern of timePatterns) {
-      const event = this.parseTimePattern(pattern, url);
-      if (event && this.isUniqueEvent(event, seenEvents)) {
-        events.push(event);
-        seenEvents.add(this.getEventKey(event));
-      }
-    }
-
-    // Method 3: Look for all-day event indicators
-    const allDayEvents = this.findAllDayEvents(html);
-    for (const allDayEvent of allDayEvents) {
-      const event = this.parseAllDayEvent(allDayEvent, url);
-      if (event && this.isUniqueEvent(event, seenEvents)) {
-        events.push(event);
-        seenEvents.add(this.getEventKey(event));
+    // Parse events by day
+    for (const [dayText, eventDate] of Object.entries(eventDates)) {
+      console.log(`Parsing events for ${dayText}: ${eventDate.toDateString()}`);
+      
+      // Find events within this day's section
+      const dayEvents = this.extractEventsForDay(html, url, eventDate, dayText);
+      
+      for (const event of dayEvents) {
+        if (this.isUniqueEvent(event, seenEvents)) {
+          events.push(event);
+          seenEvents.add(this.getEventKey(event));
+        }
       }
     }
 
     return events;
+  }
+
+  /**
+   * Extract events for a specific day
+   * @param {string} html - Raw HTML content
+   * @param {string} url - Source URL
+   * @param {Date} eventDate - The actual date for this event
+   * @param {string} dayText - The day text to look for
+   * @returns {Array} Array of event objects for this day
+   */
+  extractEventsForDay(html, url, eventDate, dayText) {
+    const events = [];
+    
+    // Find the section for this day
+    const daySection = this.findDaySection(html, dayText);
+    if (!daySection) {
+      return events;
+    }
+    
+    // Look for time-based patterns within this day's section
+    const timePatterns = this.findTimePatterns(daySection);
+    for (const pattern of timePatterns) {
+      const event = this.parseTimePattern(pattern, url, eventDate);
+      if (event) {
+        events.push(event);
+      }
+    }
+
+    // Look for all-day event indicators within this day's section
+    const allDayEvents = this.findAllDayEvents(daySection);
+    for (const allDayEvent of allDayEvents) {
+      const event = this.parseAllDayEvent(allDayEvent, url, eventDate);
+      if (event) {
+        events.push(event);
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Find the HTML section for a specific day
+   * @param {string} html - Raw HTML content
+   * @param {string} dayText - The day text to look for
+   * @returns {string|null} The HTML section for this day
+   */
+  findDaySection(html, dayText) {
+    // Look for the day header and extract content until the next day or end
+    const dayRegex = new RegExp(`${dayText}[\\s\\S]*?(?=(?:VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)\\s*-\\s*\\d{2}|$)`, 'i');
+    const match = html.match(dayRegex);
+    return match ? match[0] : null;
   }
 
   /**
@@ -239,9 +312,10 @@ class BearsSitgesParser {
    * Parse a time pattern (e.g., "01h to 06h DISCO POP")
    * @param {string} pattern - Time pattern string
    * @param {string} url - Source URL
+   * @param {Date} eventDate - The actual date for this event
    * @returns {Object|null} Parsed event object or null
    */
-  parseTimePattern(pattern, url) {
+  parseTimePattern(pattern, url, eventDate = null) {
     try {
       // Extract time range
       const timeMatch = pattern.match(/(\d{1,2})h\s+to\s+(\d{1,2})h/);
@@ -264,13 +338,12 @@ class BearsSitgesParser {
         description = `Bears Sitges Week Event (${startHour}h-${endHour}h)`;
       }
 
-      // Create event object with placeholder dates
-      // The actual dates will need to be set by the user or higher-level logic
-      const today = new Date();
-      const startDate = new Date(today);
+      // Use the actual event date if provided, otherwise use today as fallback
+      const baseDate = eventDate || new Date();
+      const startDate = new Date(baseDate);
       startDate.setHours(startHour, 0, 0, 0);
       
-      const endDate = new Date(today);
+      const endDate = new Date(baseDate);
       endDate.setHours(endHour, 59, 59, 999);
       
       // If end hour is earlier than start hour, assume it's next day
@@ -301,9 +374,10 @@ class BearsSitgesParser {
    * Parse an all-day event
    * @param {string} allDayEvent - All-day event string
    * @param {string} url - Source URL
+   * @param {Date} eventDate - The actual date for this event
    * @returns {Object|null} Parsed event object or null
    */
-  parseAllDayEvent(allDayEvent, url) {
+  parseAllDayEvent(allDayEvent, url, eventDate = null) {
     try {
       // Extract event description - look for text after all-day indicators
       const descMatch = allDayEvent.match(/(?:all\s+day|24h|open\s+all\s+day)[^<]*?([^<]+?)(?:\s*$|\s*<)/i);
@@ -317,12 +391,12 @@ class BearsSitgesParser {
         description = 'Bears Sitges Week All-Day Event';
       }
 
-      // Create all-day event with 00:00 to 23:59 times
-      const today = new Date();
-      const startDate = new Date(today);
+      // Use the actual event date if provided, otherwise use today as fallback
+      const baseDate = eventDate || new Date();
+      const startDate = new Date(baseDate);
       startDate.setHours(0, 0, 0, 0);  // 00:00:00
       
-      const endDate = new Date(today);
+      const endDate = new Date(baseDate);
       endDate.setHours(23, 59, 59, 999);  // 23:59:59
 
       const event = {
