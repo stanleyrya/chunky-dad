@@ -265,10 +265,6 @@ class BearsSitgesParser {
         description = `Bears Sitges Week Event (${startHour}h-${endHour}h)`;
       }
 
-      // For early morning events (01h-06h), we need to adjust the day
-      // This will be handled by setting the correct startDate/endDate
-      const isEarlyMorning = startHour >= 1 && startHour <= 6;
-      
       // Create event object
       const event = {
         title: description,
@@ -281,11 +277,6 @@ class BearsSitgesParser {
         startHour: startHour,
         endHour: endHour
       };
-      
-      // Add a note about early morning timing for later processing
-      if (isEarlyMorning) {
-        event._earlyMorning = true;
-      }
 
       return event;
     } catch (error) {
@@ -321,11 +312,10 @@ class BearsSitgesParser {
         source: 'bears-sitges',
         city: 'sitges',
         country: 'Spain',
-        timezone: 'Europe/Madrid'
+        timezone: 'Europe/Madrid',
+        startHour: 0,    // 00:00
+        endHour: 23      // 23:59 (we'll handle minutes in date processing)
       };
-      
-      // Add a note about all-day timing for later processing
-      event._allDay = true;
 
       return event;
     } catch (error) {
@@ -359,7 +349,8 @@ class BearsSitgesParser {
       // Check for all-day indicators
       const allDayMatch = block.match(/(?:all\s+day|24h|open\s+all\s+day)/i);
       if (allDayMatch) {
-        timeInfo._allDay = true;
+        timeInfo.startHour = 0;    // 00:00
+        timeInfo.endHour = 23;     // 23:59
       }
     }
 

@@ -201,16 +201,22 @@ class ScriptableAdapter {
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
     }
 
-    // Detect all-day events at save-time
+    // Detect all-day events at save-time based on time patterns
     isAllDayEvent(event) {
         if (!event) return false;
         
-        // Check for explicit all-day indicators in the event data
+        // Check if we have start and end times
+        if (event.startHour !== undefined && event.endHour !== undefined) {
+            // All-day events are 00:00 to 23:59 (or 0 to 23 in hour format)
+            return event.startHour === 0 && event.endHour === 23;
+        }
+        
+        // Fallback: check for explicit all-day indicators in the event data
         if (event.isAllDay === true || event._allDay === true) {
             return true;
         }
         
-        // Check for all-day patterns in title or description
+        // Fallback: check for all-day patterns in title or description
         const text = `${event.title || ''} ${event.description || ''}`.toLowerCase();
         const allDayPatterns = [
             'all day',
