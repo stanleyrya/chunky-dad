@@ -1361,6 +1361,7 @@ class SharedCore {
         if (typeof date === 'string') date = new Date(date);
         return date.toISOString();
     }
+
     
     // ============================================================================
     // GOOGLE MAPS URL GENERATION - iOS-compatible URL construction
@@ -1798,6 +1799,7 @@ class SharedCore {
                 }
             });
         }
+        
         
         // Return the event with all fields intact
         // The actual priority logic will be handled later during event merging

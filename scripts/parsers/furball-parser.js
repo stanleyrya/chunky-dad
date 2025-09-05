@@ -146,10 +146,18 @@ class FurballParser {
             const ticketUrls = this.extractNearbyTicketLinks(block);
             const ticketUrl = ticketUrls.length > 0 ? ticketUrls[0] : '';
 
+            // FURBALL events always run 10 PM - 2 AM (next day)
+            const startDateTime = new Date(startDate);
+            startDateTime.setHours(22, 0, 0, 0); // 10 PM
+            
+            const endDateTime = new Date(startDate);
+            endDateTime.setHours(2, 0, 0, 0); // 2 AM next day
+            endDateTime.setDate(endDateTime.getDate() + 1); // Move to next day
+
             const event = {
                 title,
-                startDate,
-                endDate: new Date(startDate),
+                startDate: startDateTime,
+                endDate: endDateTime,
                 bar,
                 address,
                 url: sourceUrl,
