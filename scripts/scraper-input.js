@@ -170,7 +170,6 @@ const scraperConfig = {
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["bears-sitges"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["bears-sitges"], merge: "clobber" },
         bar: { priority: ["bears-sitges"], merge: "clobber" },
