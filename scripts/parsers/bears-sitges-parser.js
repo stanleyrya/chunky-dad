@@ -56,29 +56,30 @@ class BearsSitgesParser {
   extractEventDates(html) {
     const eventDates = {};
     
-    // Bears Sitges Week 2025 is September 5-14, 2025
-    const baseYear = 2025;
-    const baseMonth = 8; // September (0-indexed)
+    // Extract year from the page content
+    const yearMatch = html.match(/BEARS SITGES WEEK (\d{4})/i);
+    const year = yearMatch ? parseInt(yearMatch[1]) : new Date().getFullYear();
     
-    // Map day names to dates
-    const dayMappings = {
-      'VIERNES - 05': new Date(baseYear, baseMonth, 5),
-      'SÁBADO - 06': new Date(baseYear, baseMonth, 6),
-      'DOMINGO - 07': new Date(baseYear, baseMonth, 7),
-      'LUNES - 08': new Date(baseYear, baseMonth, 8),
-      'MARTES - 09': new Date(baseYear, baseMonth, 9),
-      'MIÉRCOLES - 10': new Date(baseYear, baseMonth, 10),
-      'JUEVES - 11': new Date(baseYear, baseMonth, 11),
-      'VIERNES - 12': new Date(baseYear, baseMonth, 12),
-      'SABADO -13': new Date(baseYear, baseMonth, 13),
-      'DOMINGO - 14': new Date(baseYear, baseMonth, 14)
-    };
+    // Extract month from the page content (look for "SEPTIEMBRE" or "SEPTEMBER")
+    const monthMatch = html.match(/(?:SEPTIEMBRE|SEPTEMBER)/i);
+    const month = monthMatch ? 8 : 8; // September (0-indexed), default to September
     
-    // Look for day headers in the HTML
-    for (const [dayText, date] of Object.entries(dayMappings)) {
-      if (html.includes(dayText)) {
-        eventDates[dayText] = date;
-      }
+    console.log(`Bears Sitges Week detected: Year ${year}, Month ${month + 1}`);
+    
+    // Look for day patterns in the HTML and extract dates dynamically
+    const dayPattern = /(VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)\s*-\s*(\d{1,2})/gi;
+    let match;
+    
+    while ((match = dayPattern.exec(html)) !== null) {
+      const dayName = match[1];
+      const dayNumber = parseInt(match[2]);
+      const dayText = `${dayName} - ${dayNumber.toString().padStart(2, '0')}`;
+      
+      // Create date object
+      const eventDate = new Date(year, month, dayNumber);
+      eventDates[dayText] = eventDate;
+      
+      console.log(`Found day: ${dayText} -> ${eventDate.toDateString()}`);
     }
     
     return eventDates;
