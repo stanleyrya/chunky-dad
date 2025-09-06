@@ -405,19 +405,6 @@ class BearsSitgesParser {
   }
 
 
-  /**
-   * Get parser metadata
-   * @returns {Object} Parser metadata
-   */
-  getMetadata() {
-    return {
-      name: this.name,
-      version: '1.0.0',
-      description: 'Parser for Bears Sitges Week events',
-      supportedFeatures: ['all-day-events', 'early-morning-times', 'multi-day-events'],
-      url: this.baseUrl
-    };
-  }
 }
 
 // Export for different environments
