@@ -168,7 +168,7 @@ const scraperConfig = {
       alwaysBear: true,
       urlDiscoveryDepth: 0,
       dryRun: false,
-      maxDays: 3,  // Process 3 days to avoid memory issues
+      maxDays: 1,  // Process 1 day to avoid memory issues
       allowPastEvents: true,  // TEMPORARY: Allow processing past events for testing
       fieldPriorities: {
         title: { priority: ["bears-sitges"], merge: "clobber" },
