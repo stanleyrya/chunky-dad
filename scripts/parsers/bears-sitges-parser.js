@@ -60,22 +60,32 @@ class BearsSitgesParser {
     const yearMatch = html.match(/BEARS SITGES WEEK (\d{4})/i);
     const year = yearMatch ? parseInt(yearMatch[1]) : new Date().getFullYear();
     
-    // Extract month from the page content (look for "SEPTIEMBRE" or "SEPTEMBER")
-    const monthMatch = html.match(/(?:SEPTIEMBRE|SEPTEMBER)/i);
-    const month = monthMatch ? 8 : 8; // September (0-indexed), default to September
-    
-    console.log(`Bears Sitges Week detected: Year ${year}, Month ${month + 1}`);
-    
     // Look for day patterns in the HTML and extract dates dynamically
     const dayPattern = /(VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)\s*-\s*(\d{1,2})/gi;
+    const dayMatches = [];
     let match;
     
+    // Collect all day matches first
     while ((match = dayPattern.exec(html)) !== null) {
       const dayName = match[1];
       const dayNumber = parseInt(match[2]);
+      dayMatches.push({ dayName, dayNumber });
+    }
+    
+    if (dayMatches.length === 0) {
+      console.log('No day patterns found in HTML');
+      return eventDates;
+    }
+    
+    // Determine the month by checking what day of the week the first day falls on
+    const firstDay = dayMatches[0];
+    const month = this.determineMonthFromDayOfWeek(year, firstDay.dayNumber, firstDay.dayName);
+    
+    console.log(`Bears Sitges Week detected: Year ${year}, Month ${month + 1}`);
+    
+    // Create date objects for all found days
+    for (const { dayName, dayNumber } of dayMatches) {
       const dayText = `${dayName} - ${dayNumber.toString().padStart(2, '0')}`;
-      
-      // Create date object
       const eventDate = new Date(year, month, dayNumber);
       eventDates[dayText] = eventDate;
       
@@ -83,6 +93,46 @@ class BearsSitgesParser {
     }
     
     return eventDates;
+  }
+
+  /**
+   * Determine the month by checking what day of the week a given date falls on
+   * @param {number} year - The year
+   * @param {number} dayNumber - The day of the month
+   * @param {string} dayName - The Spanish day name (VIERNES, SÁBADO, etc.)
+   * @returns {number} The month (0-indexed)
+   */
+  determineMonthFromDayOfWeek(year, dayNumber, dayName) {
+    // Map Spanish day names to JavaScript day numbers (0=Sunday, 1=Monday, etc.)
+    const spanishDayMap = {
+      'DOMINGO': 0,   // Sunday
+      'LUNES': 1,     // Monday
+      'MARTES': 2,    // Tuesday
+      'MIÉRCOLES': 3, // Wednesday
+      'JUEVES': 4,    // Thursday
+      'VIERNES': 5,   // Friday
+      'SÁBADO': 6,    // Saturday
+      'SABADO': 6     // Alternative spelling
+    };
+    
+    const expectedDayOfWeek = spanishDayMap[dayName.toUpperCase()];
+    if (expectedDayOfWeek === undefined) {
+      console.log(`Unknown day name: ${dayName}, defaulting to September`);
+      return 8; // September (0-indexed)
+    }
+    
+    // Try each month to find which one has the correct day of the week
+    for (let month = 0; month < 12; month++) {
+      const testDate = new Date(year, month, dayNumber);
+      if (testDate.getDay() === expectedDayOfWeek) {
+        console.log(`Day ${dayNumber} in month ${month + 1} falls on ${dayName} (day ${expectedDayOfWeek})`);
+        return month;
+      }
+    }
+    
+    // If no match found, default to September
+    console.log(`Could not determine month for ${dayName} ${dayNumber}, defaulting to September`);
+    return 8; // September (0-indexed)
   }
 
   /**
