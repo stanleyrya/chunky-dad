@@ -253,19 +253,12 @@ class BearsSitgesParser {
     const patterns = [];
     
     // Look for time patterns like "01h to 06h", "22h to 02h", etc.
+    // Only match patterns with explicit start and end times
     const timeRegex = /(\d{1,2})h\s+to\s+(\d{1,2})h[^<]*?([^<]+?)(?=<|$)/gi;
     const matches = html.match(timeRegex);
     
     if (matches) {
       patterns.push(...matches);
-    }
-
-    // Also look for single time patterns
-    const singleTimeRegex = /(\d{1,2})h[^<]*?([^<]+?)(?=<|$)/gi;
-    const singleMatches = html.match(singleTimeRegex);
-    
-    if (singleMatches) {
-      patterns.push(...singleMatches);
     }
 
     return patterns;
