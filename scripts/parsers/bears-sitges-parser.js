@@ -49,6 +49,42 @@ class BearsSitgesParser {
   }
 
   /**
+   * Main parsing method - receives HTML data and returns events + additional links
+   * @param {Object} htmlData - Object containing html and url properties
+   * @param {Object} parserConfig - Parser configuration
+   * @param {Object} cityConfig - City configuration
+   * @returns {Object} Object with events, additionalLinks, source, and url
+   */
+  parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
+    try {
+      const events = [];
+      const html = htmlData.html;
+      
+      if (!html) {
+        console.warn('🐻 Bears Sitges: No HTML content to parse');
+        return { events: [], additionalLinks: [], source: this.name, url: htmlData.url };
+      }
+      
+      // Parse events using the existing parse method
+      const parsedEvents = this.parse(html, htmlData.url);
+      events.push(...parsedEvents);
+      
+      // Bears Sitges doesn't have additional links to discover
+      const additionalLinks = [];
+      
+      return { 
+        events, 
+        additionalLinks, 
+        source: this.name, 
+        url: htmlData.url 
+      };
+    } catch (error) {
+      console.log(`BearsSitgesParser parseEvents error: ${error.message}`);
+      return { events: [], additionalLinks: [], source: this.name, url: htmlData.url };
+    }
+  }
+
+  /**
    * Extract event dates from the Bears Sitges Week page
    * @param {string} html - Raw HTML content
    * @returns {Object} Object mapping day names to Date objects
@@ -412,10 +448,10 @@ class BearsSitgesParser {
 
 // Export for different environments
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = BearsSitgesParser;
+  module.exports = { BearsSitgesParser };
 } else if (typeof window !== 'undefined') {
   window.BearsSitgesParser = BearsSitgesParser;
 } else {
   // Scriptable environment
-  BearsSitgesParser;
+  this.BearsSitgesParser = BearsSitgesParser;
 }
