@@ -28,9 +28,10 @@ class BearsSitgesParser {
    * Parse HTML content from Bears Sitges Week page
    * @param {string} html - Raw HTML content
    * @param {string} url - Source URL
+   * @param {number} maxDays - Maximum number of days to parse (for memory management)
    * @returns {Array} Array of parsed event objects
    */
-  parse(html, url) {
+  parse(html, url, maxDays = null) {
     if (!html || typeof html !== 'string') {
       return [];
     }
@@ -40,7 +41,7 @@ class BearsSitgesParser {
       const eventDates = this.extractEventDates(html);
       
       // Extract events from the HTML structure with actual dates
-      const events = this.extractEvents(html, url, eventDates);
+      const events = this.extractEvents(html, url, eventDates, maxDays);
       return events;
     } catch (error) {
       console.log(`BearsSitgesParser error: ${error.message}`);
@@ -65,8 +66,11 @@ class BearsSitgesParser {
         return { events: [], additionalLinks: [], source: this.name, url: htmlData.url };
       }
       
-      // Parse events using the existing parse method
-      const parsedEvents = this.parse(html, htmlData.url);
+      // Get maxDays from parser config for memory management
+      const maxDays = parserConfig.maxDays || null;
+      
+      // Parse events using the existing parse method with day limit
+      const parsedEvents = this.parse(html, htmlData.url, maxDays);
       events.push(...parsedEvents);
       
       // Bears Sitges doesn't have additional links to discover
@@ -180,14 +184,22 @@ class BearsSitgesParser {
    * @param {string} html - Raw HTML content
    * @param {string} url - Source URL
    * @param {Object} eventDates - Object mapping day names to Date objects
+   * @param {number} maxDays - Maximum number of days to parse (for memory management)
    * @returns {Array} Array of event objects
    */
-  extractEvents(html, url, eventDates = {}) {
+  extractEvents(html, url, eventDates = {}, maxDays = null) {
     const events = [];
     const seenEvents = new Set(); // For deduplication
     
+    // Convert to array and sort by date, then limit if maxDays is specified
+    const sortedDays = Object.entries(eventDates)
+      .sort(([, dateA], [, dateB]) => dateA - dateB)
+      .slice(0, maxDays || undefined);
+    
+    console.log(`Parsing events for ${sortedDays.length} days (maxDays: ${maxDays || 'unlimited'})`);
+    
     // Parse events by day
-    for (const [dayText, eventDate] of Object.entries(eventDates)) {
+    for (const [dayText, eventDate] of sortedDays) {
       console.log(`Parsing events for ${dayText}: ${eventDate.toDateString()}`);
       
       // Find events within this day's section
