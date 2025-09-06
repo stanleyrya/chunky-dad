@@ -344,8 +344,6 @@ class BearsSitgesParser {
         url: url,
         source: 'bears-sitges',
         city: 'sitges',
-        country: 'Spain',
-        timezone: 'Europe/Madrid',
         startDate: startDate,
         endDate: endDate
       };
@@ -395,8 +393,6 @@ class BearsSitgesParser {
         url: url,
         source: 'bears-sitges',
         city: 'sitges',
-        country: 'Spain',
-        timezone: 'Europe/Madrid',
         startDate: startDate,
         endDate: endDate
       };

@@ -182,10 +182,7 @@ const scraperConfig = {
         cover: { priority: ["bears-sitges"], merge: "clobber" }
       },
       metadata: {
-        instagram: { value: "https://www.instagram.com/bearssitges" },
-        city: { value: "sitges" },
-        country: { value: "Spain" },
-        timezone: { value: "Europe/Madrid" }
+        instagram: { value: "https://www.instagram.com/bearssitges" }
       }
     }
   ],
