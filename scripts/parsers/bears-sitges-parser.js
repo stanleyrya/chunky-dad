@@ -239,31 +239,6 @@ class BearsSitgesParser {
     return `${title}-${startDate}-${endDate}`;
   }
 
-  /**
-   * Find structured event blocks in HTML
-   * @param {string} html - Raw HTML content
-   * @returns {Array} Array of event block strings
-   */
-  findEventBlocks(html) {
-    const blocks = [];
-    
-    // Look for common event container patterns
-    const patterns = [
-      /<div[^>]*class="[^"]*event[^"]*"[^>]*>.*?<\/div>/gis,
-      /<article[^>]*>.*?<\/article>/gis,
-      /<section[^>]*class="[^"]*event[^"]*"[^>]*>.*?<\/section>/gis,
-      /<div[^>]*class="[^"]*program[^"]*"[^>]*>.*?<\/div>/gis
-    ];
-
-    for (const pattern of patterns) {
-      const matches = html.match(pattern);
-      if (matches) {
-        blocks.push(...matches);
-      }
-    }
-
-    return blocks;
-  }
 
   /**
    * Find time-based patterns (01h to 06h, etc.)
@@ -293,71 +268,32 @@ class BearsSitgesParser {
   }
 
   /**
-   * Find all-day event indicators
+   * Find all-day event indicators (events without specific times)
    * @param {string} html - Raw HTML content
    * @returns {Array} Array of all-day event strings
    */
   findAllDayEvents(html) {
     const events = [];
     
-    // Look for all-day indicators
-    const allDayPatterns = [
-      /all\s+day[^<]*?([^<]+?)(?=<|$)/gi,
-      /all\s+day\s+event[^<]*?([^<]+?)(?=<|$)/gi,
-      /24h[^<]*?([^<]+?)(?=<|$)/gi,
-      /open\s+all\s+day[^<]*?([^<]+?)(?=<|$)/gi
-    ];
+    // Look for text blocks that don't contain time patterns (no "XXh" or "XX:XX")
+    // Split by common separators and check each block
+    const textBlocks = html.split(/<[^>]+>|[\n\r]+/).filter(block => 
+      block.trim().length > 10 && // Must have some content
+      !block.match(/\d{1,2}h/) && // No hour patterns
+      !block.match(/\d{1,2}:\d{2}/) && // No time patterns
+      !block.match(/(VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)\s*-\s*\d{1,2}/i) // Not day headers
+    );
 
-    for (const pattern of allDayPatterns) {
-      const matches = html.match(pattern);
-      if (matches) {
-        events.push(...matches);
+    for (const block of textBlocks) {
+      const trimmed = block.trim();
+      if (trimmed.length > 0) {
+        events.push(trimmed);
       }
     }
 
     return events;
   }
 
-  /**
-   * Parse a structured event block
-   * @param {string} block - HTML block containing event info
-   * @param {string} url - Source URL
-   * @returns {Object|null} Parsed event object or null
-   */
-  parseEventBlock(block, url) {
-    try {
-      // Extract title
-      const titleMatch = block.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i);
-      const title = titleMatch ? titleMatch[1].trim() : 'Bears Sitges Week Event';
-
-      // Extract description
-      const descMatch = block.match(/<p[^>]*>([^<]+)<\/p>/i);
-      const description = descMatch ? descMatch[1].trim() : '';
-
-      // Extract time information
-      const timeInfo = this.extractTimeFromBlock(block);
-
-      // Extract location
-      const location = this.extractLocationFromBlock(block);
-
-      const event = {
-        title: title,
-        description: description,
-        url: url,
-        source: 'bears-sitges',
-        city: 'sitges',
-        country: 'Spain',
-        timezone: 'Europe/Madrid',
-        ...timeInfo,
-        ...location
-      };
-
-      return event;
-    } catch (error) {
-      console.log(`Error parsing event block: ${error.message}`);
-      return null;
-    }
-  }
 
   /**
    * Parse a time pattern (e.g., "01h to 06h DISCO POP")
@@ -422,7 +358,7 @@ class BearsSitgesParser {
   }
 
   /**
-   * Parse an all-day event
+   * Parse an all-day event (event without specific times)
    * @param {string} allDayEvent - All-day event string
    * @param {string} url - Source URL
    * @param {Date} eventDate - The actual date for this event
@@ -430,15 +366,18 @@ class BearsSitgesParser {
    */
   parseAllDayEvent(allDayEvent, url, eventDate = null) {
     try {
-      // Extract event description - look for text after all-day indicators
-      const descMatch = allDayEvent.match(/(?:all\s+day|24h|open\s+all\s+day)[^<]*?([^<]+?)(?:\s*$|\s*<)/i);
-      let description = descMatch ? descMatch[1].trim() : '';
+      // Clean up the description - remove any remaining HTML tags or extra whitespace
+      let description = allDayEvent.replace(/<[^>]+>/g, '').trim();
       
-      // Clean up the description
-      description = description.replace(/^event[:\s]*/i, '').trim();
+      // Skip if it's too short or looks like navigation text
+      if (description.length < 5 || 
+          description.match(/^(BEARS SITGES WEEK|Del \d+ al \d+)/i) ||
+          description.match(/^(VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)/i)) {
+        return null;
+      }
       
-      // If no description found, create a generic one
-      if (!description) {
+      // If no meaningful description found, create a generic one
+      if (!description || description.length < 5) {
         description = 'Bears Sitges Week All-Day Event';
       }
 
@@ -469,77 +408,6 @@ class BearsSitgesParser {
     }
   }
 
-  /**
-   * Extract time information from HTML block
-   * @param {string} block - HTML block
-   * @returns {Object} Time information object
-   */
-  extractTimeFromBlock(block) {
-    const timeInfo = {};
-
-    // Look for time patterns
-    const timeMatch = block.match(/(\d{1,2})h\s+to\s+(\d{1,2})h/);
-    if (timeMatch) {
-      const startHour = parseInt(timeMatch[1]);
-      const endHour = parseInt(timeMatch[2]);
-      
-      // Create actual DateTime objects
-      const today = new Date();
-      const startDate = new Date(today);
-      startDate.setHours(startHour, 0, 0, 0);
-      
-      const endDate = new Date(today);
-      endDate.setHours(endHour, 59, 59, 999);
-      
-      // If end hour is earlier than start hour, assume it's next day
-      if (endHour < startHour) {
-        endDate.setDate(endDate.getDate() + 1);
-      }
-      
-      timeInfo.startDate = startDate;
-      timeInfo.endDate = endDate;
-    } else {
-      // Check for all-day indicators
-      const allDayMatch = block.match(/(?:all\s+day|24h|open\s+all\s+day)/i);
-      if (allDayMatch) {
-        // Create all-day event with 00:00 to 23:59 times
-        const today = new Date();
-        const startDate = new Date(today);
-        startDate.setHours(0, 0, 0, 0);  // 00:00:00
-        
-        const endDate = new Date(today);
-        endDate.setHours(23, 59, 59, 999);  // 23:59:59
-        
-        timeInfo.startDate = startDate;
-        timeInfo.endDate = endDate;
-      }
-    }
-
-    return timeInfo;
-  }
-
-  /**
-   * Extract location information from HTML block
-   * @param {string} block - HTML block
-   * @returns {Object} Location information object
-   */
-  extractLocationFromBlock(block) {
-    const locationInfo = {};
-
-    // Look for location patterns
-    const locationMatch = block.match(/(?:at|in|@)\s+([^<]+?)(?:\s|$)/i);
-    if (locationMatch) {
-      locationInfo.bar = locationMatch[1].trim();
-    }
-
-    // Look for address patterns
-    const addressMatch = block.match(/(?:address|location):\s*([^<]+)/i);
-    if (addressMatch) {
-      locationInfo.address = addressMatch[1].trim();
-    }
-
-    return locationInfo;
-  }
 
   /**
    * Get parser metadata
