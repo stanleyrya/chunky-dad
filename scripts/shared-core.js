@@ -55,6 +55,10 @@ class SharedCore {
             {
                 pattern: /furball\.nyc/i,
                 parser: 'furball'
+            },
+            {
+                pattern: /bearssitges\.org/i,
+                parser: 'bears-sitges'
             }
             // Generic parser will be used as fallback if no pattern matches
         ];

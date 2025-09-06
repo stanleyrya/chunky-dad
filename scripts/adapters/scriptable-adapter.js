@@ -201,6 +201,28 @@ class ScriptableAdapter {
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
     }
 
+    // Detect all-day events at save-time based on DateTime patterns
+    isAllDayEvent(event) {
+        if (!event || !event.startDate || !event.endDate) return false;
+        
+        const startDate = new Date(event.startDate);
+        const endDate = new Date(event.endDate);
+        
+        // Check if start time is 00:00:00
+        const isStartMidnight = startDate.getHours() === 0 && 
+                               startDate.getMinutes() === 0 && 
+                               startDate.getSeconds() === 0;
+        
+        // Check if end time is 23:59:59 (or 23:59:00)
+        const isEndLateNight = endDate.getHours() === 23 && 
+                              (endDate.getMinutes() === 59 || endDate.getMinutes() === 0);
+        
+        // Check if it's the same day
+        const isSameDay = startDate.toDateString() === endDate.toDateString();
+        
+        return isStartMidnight && isEndLateNight && isSameDay;
+    }
+
     // Get calendar name for a city
     getCalendarName(city) {
         if (city && this.cities[city] && this.cities[city].calendar) {
@@ -411,6 +433,11 @@ class ScriptableAdapter {
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
+                            
+                            // Detect all-day events at save-time
+                            if (this.isAllDayEvent(event)) {
+                                calendarEvent.isAllDay = true;
+                            }
                             
                             if (event.url) {
                                 calendarEvent.url = event.url;

@@ -135,7 +135,7 @@ const scraperConfig = {
     ,
     {
       name: "Furball",
-      enabled: true,
+      enabled: false,
       urls: ["https://www.furball.nyc/ticket-information"],
       alwaysBear: true,
       urlDiscoveryDepth: 0,
@@ -159,6 +159,30 @@ const scraperConfig = {
         title: { value: "FURBALL" },
         shortName: { value: "FUR-BALL" },
         instagram: { value: "https://instagram.com/furballnyc/" }
+      }
+    },
+    {
+      name: "Bears Sitges Week",
+      enabled: true,
+      urls: ["https://bearssitges.org/bears-sitges-week/"],
+      alwaysBear: true,
+      urlDiscoveryDepth: 0,
+      dryRun: false,
+      fieldPriorities: {
+        title: { priority: ["bears-sitges"], merge: "clobber" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["bears-sitges"], merge: "clobber" },
+        bar: { priority: ["bears-sitges"], merge: "clobber" },
+        address: { priority: ["bears-sitges"], merge: "clobber" },
+        startDate: { priority: ["bears-sitges"], merge: "clobber" },
+        endDate: { priority: ["bears-sitges"], merge: "clobber" },
+        url: { priority: ["bears-sitges"], merge: "clobber" },
+        gmaps: { priority: ["bears-sitges"], merge: "clobber" },
+        image: { priority: ["bears-sitges"], merge: "clobber" },
+        cover: { priority: ["bears-sitges"], merge: "clobber" }
+      },
+      metadata: {
+        instagram: { value: "https://www.instagram.com/bearssitges" }
       }
     }
   ],

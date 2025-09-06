@@ -77,6 +77,7 @@ class BearEventScraperOrchestrator {
             const genericParserModule = importModule('parsers/generic-parser');
             const chunkParserModule = importModule('parsers/chunk-parser');
             const furballParserModule = importModule('parsers/furball-parser');
+            const bearsSitgesParserModule = importModule('parsers/bears-sitges-parser');
             
             // Store modules
             this.modules = {
@@ -87,7 +88,8 @@ class BearEventScraperOrchestrator {
                     bearracuda: bearracudaParserModule.BearraccudaParser,
                     generic: genericParserModule.GenericParser,
                     chunk: chunkParserModule.ChunkParser,
-                    furball: furballParserModule.FurballParser
+                    furball: furballParserModule.FurballParser,
+                    'bears-sitges': bearsSitgesParserModule.BearsSitgesParser
                 }
             };
         } catch (error) {
@@ -110,6 +112,7 @@ class BearEventScraperOrchestrator {
             const genericParserModule = require('./parsers/generic-parser');
             const chunkParserModule = require('./parsers/chunk-parser');
             const furballParserModule = require('./parsers/furball-parser');
+            const bearsSitgesParserModule = require('./parsers/bears-sitges-parser');
             
             // Store modules
             this.modules = {
@@ -120,7 +123,8 @@ class BearEventScraperOrchestrator {
                     bearracuda: bearracudaParserModule.BearraccudaParser,
                     generic: genericParserModule.GenericParser,
                     chunk: chunkParserModule.ChunkParser,
-                    furball: furballParserModule.FurballParser
+                    furball: furballParserModule.FurballParser,
+                    'bears-sitges': bearsSitgesParserModule.BearsSitgesParser
                 }
             };
         } catch (error) {
@@ -136,7 +140,7 @@ class BearEventScraperOrchestrator {
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
                 'SharedCore', 'WebAdapter', 
-                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser'
+                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser', 'BearsSitgesParser'
             ];
             
             const missingModules = requiredModules.filter(module => !window[module]);
@@ -154,7 +158,8 @@ class BearEventScraperOrchestrator {
                     bearracuda: window.BearraccudaParser,
                     generic: window.GenericParser,
                     chunk: window.ChunkParser,
-                    furball: window.FurballParser
+                    furball: window.FurballParser,
+                    'bears-sitges': window.BearsSitgesParser
                 }
             };
         } catch (error) {
