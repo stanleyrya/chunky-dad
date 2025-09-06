@@ -281,7 +281,7 @@ class SharedCore {
 
         // Filter and process events
         await displayAdapter.logInfo(`SYSTEM: Filtering events: ${allEvents.length} total → processing...`);
-        const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead);
+        const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead, parserConfig.allowPastEvents);
         const bearEvents = this.filterBearEvents(futureEvents, parserConfig);
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
         
@@ -407,7 +407,7 @@ class SharedCore {
     }
 
     // Pure utility functions
-    filterFutureEvents(events, daysToLookAhead = null) {
+    filterFutureEvents(events, daysToLookAhead = null, allowPastEvents = false) {
         const now = new Date();
         const cutoffDate = daysToLookAhead ? 
             new Date(now.getTime() + (daysToLookAhead * 24 * 60 * 60 * 1000)) : 
@@ -417,7 +417,9 @@ class SharedCore {
             if (!event.startDate) return false;
             
             const eventDate = event.startDate;
-            if (eventDate <= now) return false;
+            
+            // Skip past events unless explicitly allowed
+            if (!allowPastEvents && eventDate <= now) return false;
             
             if (cutoffDate && eventDate > cutoffDate) return false;
             
