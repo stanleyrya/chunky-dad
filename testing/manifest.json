@@ -2,51 +2,51 @@
   "files": [
     {
       "name": "breakpoint-test.html",
-      "size": 34161
+      "size": 34204
     },
     {
       "name": "hero-variations-tester.html",
-      "size": 26248
+      "size": 26292
     },
     {
       "name": "index.html",
-      "size": 18216
+      "size": 22109
     },
     {
       "name": "style-test.html",
-      "size": 33096
+      "size": 33138
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 68099
+      "size": 68179
     },
     {
       "name": "test-display-modes.html",
-      "size": 10729
+      "size": 10743
     },
     {
       "name": "test-eventbrite-address-fix.html",
-      "size": 7179
+      "size": 7180
     },
     {
       "name": "test-google-sheets-loader.html",
-      "size": 40540
+      "size": 40583
     },
     {
       "name": "test-map-icons.html",
-      "size": 61258
+      "size": 61328
     },
     {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 39254
+      "size": 41355
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 32064
+      "size": 32062
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 116287
+      "size": 116356
     }
   ]
 }
