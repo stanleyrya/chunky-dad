@@ -58,7 +58,11 @@ class BearsSitgesParser {
     
     // Extract year from the page content
     const yearMatch = html.match(/BEARS SITGES WEEK (\d{4})/i);
-    const year = yearMatch ? parseInt(yearMatch[1]) : new Date().getFullYear();
+    if (!yearMatch) {
+      console.log('No year found in HTML');
+      return eventDates;
+    }
+    const year = parseInt(yearMatch[1]);
     
     // Look for day patterns in the HTML and extract dates dynamically
     const dayPattern = /(VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)\s*-\s*(\d{1,2})/gi;
@@ -117,8 +121,8 @@ class BearsSitgesParser {
     
     const expectedDayOfWeek = spanishDayMap[dayName.toUpperCase()];
     if (expectedDayOfWeek === undefined) {
-      console.log(`Unknown day name: ${dayName}, defaulting to September`);
-      return 8; // September (0-indexed)
+      console.log(`Unknown day name: ${dayName}`);
+      throw new Error(`Unknown day name: ${dayName}`);
     }
     
     // Try each month to find which one has the correct day of the week
@@ -130,9 +134,9 @@ class BearsSitgesParser {
       }
     }
     
-    // If no match found, default to September
-    console.log(`Could not determine month for ${dayName} ${dayNumber}, defaulting to September`);
-    return 8; // September (0-indexed)
+    // If no match found, throw error
+    console.log(`Could not determine month for ${dayName} ${dayNumber}`);
+    throw new Error(`Could not determine month for ${dayName} ${dayNumber}`);
   }
 
   /**
@@ -320,13 +324,16 @@ class BearsSitgesParser {
       // Clean up the description
       description = description.replace(/^in\s+/, '').replace(/^by\s+/, '').trim();
       
-      // If no description found, create a generic one
+      // If no description found, skip this event
       if (!description) {
-        description = `Bears Sitges Week Event (${startHour}h-${endHour}h)`;
+        return null;
       }
 
-      // Use the actual event date if provided, otherwise use today as fallback
-      const baseDate = eventDate || new Date();
+      // Use the actual event date (required)
+      if (!eventDate) {
+        return null;
+      }
+      const baseDate = eventDate;
       const startDate = new Date(baseDate);
       startDate.setHours(startHour, 0, 0, 0);
       
@@ -374,13 +381,16 @@ class BearsSitgesParser {
         return null;
       }
       
-      // If no meaningful description found, create a generic one
+      // If no meaningful description found, skip this event
       if (!description || description.length < 5) {
-        description = 'Bears Sitges Week All-Day Event';
+        return null;
       }
 
-      // Use the actual event date if provided, otherwise use today as fallback
-      const baseDate = eventDate || new Date();
+      // Use the actual event date (required)
+      if (!eventDate) {
+        return null;
+      }
+      const baseDate = eventDate;
       const startDate = new Date(baseDate);
       startDate.setHours(0, 0, 0, 0);  // 00:00:00
       
