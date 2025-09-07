@@ -308,13 +308,12 @@ class BearsSitgesParser {
         startHour = parseInt(singleTimeMatch[1]);
         eventText = singleTimeMatch[2].trim();
         
-        // Determine end time based on start time
-        if (startHour === 20) {
-          endHour = 22; // Opening event
-        } else if (startHour === 22) {
-          endHour = 1; // Bear Route (next day)
-        } else {
-          endHour = startHour + 2; // Default 2 hours
+        // Generic end time calculation - default 2 hours duration
+        endHour = startHour + 2;
+        
+        // Handle next-day events (when end hour would be >= 24)
+        if (endHour >= 24) {
+          endHour = endHour - 24;
         }
       } else {
         return null; // No time pattern found
