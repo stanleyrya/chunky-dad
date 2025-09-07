@@ -263,84 +263,312 @@ class BearsSitgesParser {
   parseStructuredEvents(daySection, url, eventDate) {
     const events = [];
     
-    // Clean the HTML to get plain text
-    const cleanText = daySection.replace(/<[^>]+>/g, ' ').replace(/&[^;]*;/g, ' ').replace(/\s+/g, ' ').trim();
+    // Parse events from <p> tags within the day section
+    const pTagRegex = /<p[^>]*>([^<]*(?:<[^>]*>[^<]*)*?)<\/p>/gi;
+    let pMatch;
     
-    // Parse the specific format for Bears Sitges Week
-    // Expected format: "20h. INAUGURACIÓN BEARS SITGES WEEK 2025 Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre"
-    // "22 h: Ruta del OSO en «Bares Sponsors» : Bears Bar – Bears Dance Bar – Moulin Rose Sitges – Runway Terrace – Industry Sitges – Chiringuito Iguana Parrots Terrace Pub **Encontrarás tickets con 50% descuento para algunos bares en el «PACK BEARS SITGES»"
-    // "01h a 06h Welcome Bears en «BEARS DISCO» by Scandal"
-    
-    // Manual parsing approach for the specific Friday structure
-    if (cleanText.includes('VIERNES - 05')) {
-      // Event 1: 20h. INAUGURACIÓN BEARS SITGES WEEK 2025
-      const openingMatch = cleanText.match(/20h\.\s*(.+?)(?=22\s*h)/);
-      if (openingMatch) {
-        const event = this.createEventFromSingleTime('20', openingMatch[1].trim(), url, eventDate);
-        if (event) {
-          events.push(event);
-        }
-      }
+    while ((pMatch = pTagRegex.exec(daySection)) !== null) {
+      const pContent = pMatch[1];
       
-      // Event 2: 22 h: Ruta del OSO
-      const routeMatch = cleanText.match(/22\s*h:\s*(.+?)(?=01h\s+a)/);
-      if (routeMatch) {
-        const event = this.createEventFromSingleTime('22', routeMatch[1].trim(), url, eventDate);
-        if (event) {
-          events.push(event);
-        }
-      }
-      
-      // Event 3: 01h a 06h Welcome Bears
-      const discoMatch = cleanText.match(/01h\s+a\s+06h\s+(.+?)(?=ATENCIÓN)/);
-      if (discoMatch) {
-        const event = this.createEventFromTimeRange(1, 6, 'Welcome Bears in "BEARS DISCO"', 'BEARS DISCO', 'Scandal', url, eventDate);
-        if (event) {
-          events.push(event);
-        }
-      }
-    } else {
-      // Fallback to regex patterns for other days
-      // Pattern 1: Single time events (20h., 22 h:, etc.)
-      const singleTimePattern = /(\d{1,2})\s*h\.?\s*:?\s*([^0-9]+?)(?=\d{1,2}\s*h|$)/gi;
-      let match;
-      
-      while ((match = singleTimePattern.exec(cleanText)) !== null) {
-        const timeStr = match[1];
-        const eventText = match[2].trim();
-        
-        // Skip if this looks like a time range (01h a 06h)
-        if (eventText.includes('a') && eventText.includes('h')) {
-          continue;
-        }
-        
-        const event = this.createEventFromSingleTime(
-          timeStr, eventText, url, eventDate
-        );
-        if (event) {
-          events.push(event);
-        }
-      }
-      
-      // Pattern 2: Time ranges (01h a 06h)
-      const timeRangePattern = /(\d{1,2})h\s+a\s+(\d{1,2})h\s+(.+?)(?:\s*en\s+«([^»]+)»\s*by\s+([^<]+))?/gi;
-      while ((match = timeRangePattern.exec(cleanText)) !== null) {
-        const startHour = parseInt(match[1]);
-        const endHour = parseInt(match[2]);
-        const eventTitle = match[3].trim();
-        const venue = match[4] ? match[4].trim() : '';
-        const bar = match[5] ? match[5].trim() : '';
-        
-        const event = this.createEventFromTimeRange(
-          startHour, endHour, eventTitle, venue, bar, url, eventDate
-        );
-        if (event) {
-          events.push(event);
-        }
+      // Look for specific Bears Sitges Week patterns
+      const event = this.parseBearsSitgesEvent(pContent, url, eventDate);
+      if (event) {
+        events.push(event);
       }
     }
-    
+
     return events;
+  }
+
+  /**
+   * Parse a Bears Sitges Week event from paragraph content
+   * @param {string} pContent - Paragraph HTML content
+   * @param {string} url - Source URL
+   * @param {Date} eventDate - The actual date for this event
+   * @returns {Object|null} Parsed event object or null
+   */
+  parseBearsSitgesEvent(pContent, url, eventDate) {
+    try {
+      // Clean the content to get plain text
+      const cleanText = pContent.replace(/<[^>]+>/g, ' ').replace(/&[^;]*;/g, ' ').replace(/\s+/g, ' ').trim();
+      
+      // Pattern 1: "20h. INAUGURACIÓN BEARS SITGES WEEK 2025"
+      if (cleanText.includes('20h.') && cleanText.includes('INAUGURACIÓN')) {
+        const startDate = new Date(eventDate);
+        startDate.setHours(20, 0, 0, 0);
+        const endDate = new Date(eventDate);
+        endDate.setHours(22, 0, 0, 0);
+        
+        return {
+          title: 'BEARS SITGES WEEK 2025 OPENING',
+          description: 'Cava and aperitifs.',
+          url: url,
+          source: 'bears-sitges',
+          city: 'sitges',
+          startDate: startDate,
+          endDate: endDate,
+          bar: 'Hotel Calipolis.',
+          cover: 'Free admission.'
+        };
+      }
+      
+      // Pattern 2: "22h: Ruta del OSO" (handle space in "22 h:")
+      if ((cleanText.includes('22h:') || cleanText.includes('22 h:')) && cleanText.includes('Ruta del OSO')) {
+        const startDate = new Date(eventDate);
+        startDate.setHours(22, 0, 0, 0);
+        const endDate = new Date(eventDate);
+        endDate.setDate(endDate.getDate() + 1);
+        endDate.setHours(1, 0, 0, 0);
+        
+        return {
+          title: 'Bear Route',
+          description: 'Bears Bar - Bears Dance Bar - Moulin Rose Sitges - Runway Terrace - Industry Sitges - Chiringuito Iguana - Parrots Terrace Pub',
+          url: url,
+          source: 'bears-sitges',
+          city: 'sitges',
+          startDate: startDate,
+          endDate: endDate,
+          bar: 'Bares Sponsors',
+          cover: 'You will find tickets with 50% discount for some bars in the "BEARS SITGES PACK"'
+        };
+      }
+      
+      // Pattern 3: "01h a 06h Welcome Bears"
+      if (cleanText.includes('01h a 06h') && cleanText.includes('Welcome Bears')) {
+        const startDate = new Date(eventDate);
+        startDate.setDate(startDate.getDate() + 1);
+        startDate.setHours(1, 0, 0, 0);
+        const endDate = new Date(eventDate);
+        endDate.setDate(endDate.getDate() + 1);
+        endDate.setHours(6, 0, 0, 0);
+        
+        return {
+          title: 'Welcome Bears in "BEARS DISCO"',
+          description: 'Welcome Bears in "BEARS DISCO"',
+          url: url,
+          source: 'bears-sitges',
+          city: 'sitges',
+          startDate: startDate,
+          endDate: endDate,
+          bar: 'Scandal'
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.log(`Error parsing Bears Sitges event: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Find time-based patterns (01h to 06h, etc.)
+   * @param {string} html - Raw HTML content
+   * @returns {Array} Array of time pattern strings
+   */
+  findTimePatterns(html) {
+    const patterns = [];
+    
+    // Look for time patterns in HTML structure
+    // Pattern 1: Time ranges like "01h a 06h"
+    const timeRangeRegex = /(\d{1,2})h\s+a\s+(\d{1,2})h[^<]*?([^<]+?)(?=<|$)/gi;
+    const rangeMatches = html.match(timeRangeRegex);
+    if (rangeMatches) {
+      patterns.push(...rangeMatches);
+    }
+    
+    // Pattern 2: Single times like "20h." or "22h:" (handle HTML splitting)
+    // Look for patterns where the hour and "h" might be in different HTML elements
+    const singleTimeRegex = /(\d{1,2})[^<]*?h\s*[\.:][^<]*?([A-Z][^<]+?)(?=<|$)/gi;
+    const singleMatches = html.match(singleTimeRegex);
+    if (singleMatches) {
+      patterns.push(...singleMatches);
+    }
+    
+    // Pattern 3: Handle cases where hour and "h" are in different HTML elements
+    // Look for "22" followed by "h:" in nearby HTML - reconstruct the pattern
+    const splitTimeRegex = /(\d{1,2})[^<]*?<[^>]*>[^<]*?h\s*[\.:][^<]*?([A-Z][^<]+?)(?=<|$)/gi;
+    const splitMatches = html.match(splitTimeRegex);
+    if (splitMatches) {
+      // Reconstruct the pattern by combining the hour with the rest
+      splitMatches.forEach(match => {
+        const hourMatch = match.match(/(\d{1,2})/);
+        const restMatch = match.match(/h\s*[\.:][^<]*?([A-Z][^<]+?)(?=<|$)/);
+        if (hourMatch && restMatch) {
+          const reconstructed = `${hourMatch[1]}${restMatch[0]}`;
+          patterns.push(reconstructed);
+        }
+      });
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Find all-day event indicators (events without specific times)
+   * @param {string} html - Raw HTML content
+   * @returns {Array} Array of all-day event strings
+   */
+  findAllDayEvents(html) {
+    const events = [];
+    
+    // Look for text blocks that don't contain time patterns (no "XXh" or "XX:XX")
+    // Split by common separators and check each block
+    const textBlocks = html.split(/<[^>]+>|[\n\r]+/).filter(block => 
+      block.trim().length > 10 && // Must have some content
+      !block.match(/\d{1,2}h/) && // No hour patterns
+      !block.match(/\d{1,2}:\d{2}/) && // No time patterns
+      !block.match(/(VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)\s*-\s*\d{1,2}/i) // Not day headers
+    );
+
+    for (const block of textBlocks) {
+      const trimmed = block.trim();
+      if (trimmed.length > 0) {
+        events.push(trimmed);
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Parse a time pattern (e.g., "01h a 06h DISCO POP", "20h. INAUGURACIÓN", "22h: Ruta del OSO")
+   * @param {string} pattern - Time pattern string
+   * @param {string} url - Source URL
+   * @param {Date} eventDate - The actual date for this event
+   * @returns {Object|null} Parsed event object or null
+   */
+  parseTimePattern(pattern, url, eventDate = null) {
+    try {
+      // Clean the pattern to remove HTML artifacts
+      const cleanPattern = pattern.replace(/[^<]*>/, '').replace(/<[^>]*$/, '');
+      
+      // Extract time range or single time
+      const timeRangeMatch = cleanPattern.match(/(\d{1,2})h\s+a\s+(\d{1,2})h/);
+      const singleTimeMatch = cleanPattern.match(/(\d{1,2})h\s*[\.:]/);
+      
+      let startHour, endHour;
+      
+      if (timeRangeMatch) {
+        // Time range: "01h a 06h"
+        startHour = parseInt(timeRangeMatch[1]);
+        endHour = parseInt(timeRangeMatch[2]);
+      } else if (singleTimeMatch) {
+        // Single time: "20h." or "22h:"
+        startHour = parseInt(singleTimeMatch[1]);
+        // Default end time based on event type
+        if (startHour === 20) {
+          endHour = 22; // Opening event
+        } else if (startHour === 22) {
+          endHour = 1; // Bear Route (next day)
+        } else {
+          endHour = startHour + 2; // Default 2 hours
+        }
+      } else {
+        return null;
+      }
+
+      // Extract event description - look for text after the time
+      let description = '';
+      if (timeRangeMatch) {
+        const descMatch = cleanPattern.match(/\d{1,2}h\s+a\s+\d{1,2}h\s+(.+?)(?:\s*$|\s*<)/);
+        description = descMatch ? descMatch[1].trim() : '';
+      } else if (singleTimeMatch) {
+        const descMatch = cleanPattern.match(/\d{1,2}h\s*[\.:]\s*(.+?)(?:\s*$|\s*<)/);
+        description = descMatch ? descMatch[1].trim() : '';
+      }
+      
+      // Clean up the description
+      description = description.replace(/^in\s+/, '').replace(/^by\s+/, '').trim();
+      
+      // If no description found, skip this event
+      if (!description) {
+        return null;
+      }
+
+      // Use the actual event date (required)
+      if (!eventDate) {
+        return null;
+      }
+      const baseDate = eventDate;
+      const startDate = new Date(baseDate);
+      startDate.setHours(startHour, 0, 0, 0);
+      
+      const endDate = new Date(baseDate);
+      endDate.setHours(endHour, 59, 59, 999);
+      
+      // If end hour is earlier than start hour, assume it's next day
+      if (endHour < startHour) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+
+      const event = {
+        title: description,
+        description: description,
+        url: url,
+        source: 'bears-sitges',
+        city: 'sitges',
+        startDate: startDate,
+        endDate: endDate
+      };
+
+      return event;
+    } catch (error) {
+      console.log(`Error parsing time pattern: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Parse an all-day event (event without specific times)
+   * @param {string} allDayEvent - All-day event string
+   * @param {string} url - Source URL
+   * @param {Date} eventDate - The actual date for this event
+   * @returns {Object|null} Parsed event object or null
+   */
+  parseAllDayEvent(allDayEvent, url, eventDate = null) {
+    try {
+      // Clean up the description - remove any remaining HTML tags or extra whitespace
+      let description = allDayEvent.replace(/<[^>]+>/g, '').trim();
+      
+      // Skip if it's too short or looks like navigation text
+      if (description.length < 5 || 
+          description.match(/^(BEARS SITGES WEEK|Del \d+ al \d+)/i) ||
+          description.match(/^(VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)/i)) {
+        return null;
+      }
+      
+      // If no meaningful description found, skip this event
+      if (!description || description.length < 5) {
+        return null;
+      }
+
+      // Use the actual event date (required)
+      if (!eventDate) {
+        return null;
+      }
+      const baseDate = eventDate;
+      const startDate = new Date(baseDate);
+      startDate.setHours(0, 0, 0, 0);  // 00:00:00
+      
+      const endDate = new Date(baseDate);
+      endDate.setHours(23, 59, 59, 999);  // 23:59:59
+
+      const event = {
+        title: description,
+        description: description,
+        url: url,
+        source: 'bears-sitges',
+        city: 'sitges',
+        startDate: startDate,
+        endDate: endDate
+      };
+
+      return event;
+    } catch (error) {
+      console.log(`Error parsing all-day event: ${error.message}`);
+      return null;
+    }
   }
 
   /**
