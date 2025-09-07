@@ -292,73 +292,151 @@ class BearsSitgesParser {
       // Clean the content to get plain text
       const cleanText = pContent.replace(/<[^>]+>/g, ' ').replace(/&[^;]*;/g, ' ').replace(/\s+/g, ' ').trim();
       
-      // Pattern 1: "20h. INAUGURACIÓN BEARS SITGES WEEK 2025"
-      if (cleanText.includes('20h.') && cleanText.includes('INAUGURACIÓN')) {
-        const startDate = new Date(eventDate);
-        startDate.setHours(20, 0, 0, 0);
-        const endDate = new Date(eventDate);
-        endDate.setHours(22, 0, 0, 0);
+      // Look for time patterns in the text
+      const timeRangeMatch = cleanText.match(/(\d{1,2})h\s+a\s+(\d{1,2})h\s+(.+)/);
+      const singleTimeMatch = cleanText.match(/(\d{1,2})\s*h\s*[\.:]\s*(.+)/);
+      
+      let startHour, endHour, eventText;
+      
+      if (timeRangeMatch) {
+        // Time range: "01h a 06h Welcome Bears"
+        startHour = parseInt(timeRangeMatch[1]);
+        endHour = parseInt(timeRangeMatch[2]);
+        eventText = timeRangeMatch[3].trim();
+      } else if (singleTimeMatch) {
+        // Single time: "20h. INAUGURACIÓN" or "22 h: Ruta del OSO"
+        startHour = parseInt(singleTimeMatch[1]);
+        eventText = singleTimeMatch[2].trim();
         
-        return {
-          title: 'BEARS SITGES WEEK 2025 OPENING',
-          description: 'Cava and aperitifs.',
-          url: url,
-          source: 'bears-sitges',
-          city: 'sitges',
-          startDate: startDate,
-          endDate: endDate,
-          bar: 'Hotel Calipolis.',
-          cover: 'Free admission.'
-        };
+        // Determine end time based on start time
+        if (startHour === 20) {
+          endHour = 22; // Opening event
+        } else if (startHour === 22) {
+          endHour = 1; // Bear Route (next day)
+        } else {
+          endHour = startHour + 2; // Default 2 hours
+        }
+      } else {
+        return null; // No time pattern found
       }
       
-      // Pattern 2: "22h: Ruta del OSO" (handle space in "22 h:")
-      if ((cleanText.includes('22h:') || cleanText.includes('22 h:')) && cleanText.includes('Ruta del OSO')) {
-        const startDate = new Date(eventDate);
-        startDate.setHours(22, 0, 0, 0);
-        const endDate = new Date(eventDate);
+      // Extract title and description from event text
+      const title = this.extractEventTitle(eventText);
+      const description = this.extractEventDescription(eventText);
+      const bar = this.extractEventBar(eventText);
+      const cover = this.extractEventCover(eventText);
+      
+      // Create start and end dates
+      const startDate = new Date(eventDate);
+      startDate.setHours(startHour, 0, 0, 0);
+      
+      const endDate = new Date(eventDate);
+      if (endHour < startHour) {
         endDate.setDate(endDate.getDate() + 1);
-        endDate.setHours(1, 0, 0, 0);
-        
-        return {
-          title: 'Bear Route',
-          description: 'Bears Bar - Bears Dance Bar - Moulin Rose Sitges - Runway Terrace - Industry Sitges - Chiringuito Iguana - Parrots Terrace Pub',
-          url: url,
-          source: 'bears-sitges',
-          city: 'sitges',
-          startDate: startDate,
-          endDate: endDate,
-          bar: 'Bares Sponsors',
-          cover: 'You will find tickets with 50% discount for some bars in the "BEARS SITGES PACK"'
-        };
       }
+      endDate.setHours(endHour, 0, 0, 0);
       
-      // Pattern 3: "01h a 06h Welcome Bears"
-      if (cleanText.includes('01h a 06h') && cleanText.includes('Welcome Bears')) {
-        const startDate = new Date(eventDate);
-        startDate.setDate(startDate.getDate() + 1);
-        startDate.setHours(1, 0, 0, 0);
-        const endDate = new Date(eventDate);
-        endDate.setDate(endDate.getDate() + 1);
-        endDate.setHours(6, 0, 0, 0);
-        
-        return {
-          title: 'Welcome Bears in "BEARS DISCO"',
-          description: 'Welcome Bears in "BEARS DISCO"',
-          url: url,
-          source: 'bears-sitges',
-          city: 'sitges',
-          startDate: startDate,
-          endDate: endDate,
-          bar: 'Scandal'
-        };
-      }
-      
-      return null;
+      return {
+        title: title,
+        description: description,
+        url: url,
+        source: 'bears-sitges',
+        city: 'sitges',
+        startDate: startDate,
+        endDate: endDate,
+        bar: bar,
+        cover: cover
+      };
     } catch (error) {
       console.log(`Error parsing Bears Sitges event: ${error.message}`);
       return null;
     }
+  }
+
+  /**
+   * Extract event title from event text
+   * @param {string} eventText - The event text after time
+   * @returns {string} Extracted title
+   */
+  extractEventTitle(eventText) {
+    // Look for the main event name (usually the first part before periods or "en")
+    const titleMatch = eventText.match(/^([A-Z][^.]*?)(?:\s+en\s+«|\.|$)/);
+    if (titleMatch) {
+      return titleMatch[1].trim();
+    }
+    
+    // Look for title before any periods
+    const periodMatch = eventText.match(/^([^.]*?)(?:\s*\.|$)/);
+    if (periodMatch) {
+      return periodMatch[1].trim();
+    }
+    
+    // Fallback: take first part
+    return eventText.split(' ')[0] || eventText;
+  }
+
+  /**
+   * Extract event description from event text
+   * @param {string} eventText - The event text after time
+   * @returns {string} Extracted description
+   */
+  extractEventDescription(eventText) {
+    // Look for description after the title (after first period)
+    const descMatch = eventText.match(/^[^.]*\.?\s*(.+?)(?:\s*en\s+«|$)/);
+    if (descMatch) {
+      return descMatch[1].trim();
+    }
+    
+    // Look for description after first period
+    const parts = eventText.split('.');
+    if (parts.length > 1) {
+      return parts.slice(1).join('.').trim();
+    }
+    
+    // Fallback: return the full text
+    return eventText;
+  }
+
+  /**
+   * Extract event bar/venue from event text
+   * @param {string} eventText - The event text after time
+   * @returns {string|null} Extracted bar/venue
+   */
+  extractEventBar(eventText) {
+    // Look for venue in quotes
+    const venueMatch = eventText.match(/en\s+«([^»]+)»/);
+    if (venueMatch) {
+      return venueMatch[1].trim();
+    }
+    
+    // Look for "by" pattern
+    const byMatch = eventText.match(/by\s+([^<]+)/);
+    if (byMatch) {
+      return byMatch[1].trim();
+    }
+    
+    return null;
+  }
+
+  /**
+   * Extract event cover/ticket info from event text
+   * @param {string} eventText - The event text after time
+   * @returns {string|null} Extracted cover/ticket info
+   */
+  extractEventCover(eventText) {
+    // Look for ticket info in asterisks
+    const ticketMatch = eventText.match(/\*\*([^*]+)\*\*/);
+    if (ticketMatch) {
+      return ticketMatch[1].trim();
+    }
+    
+    // Look for "Entrada" info
+    const entradaMatch = eventText.match(/(Entrada[^.]*\.?)/);
+    if (entradaMatch) {
+      return entradaMatch[1].trim();
+    }
+    
+    return null;
   }
 
   /**
