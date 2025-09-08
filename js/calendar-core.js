@@ -730,17 +730,47 @@ class CalendarCore {
                         });
                     }
                 } else {
-                    // Non-UTC time - this is already in the calendar's timezone, create as local date
-                    date = new Date(year, month - 1, day, hour, minute, second);
-                    
-                    // No conversion needed - JavaScript will display this correctly in user's local timezone
-                    logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
-                        calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                        timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
-                        localDisplay: date.toLocaleString(),
-                        resultDate: date.toString(),
-                        note: 'Time is in calendar timezone, created as local date for correct display'
-                    });
+                    // Non-UTC time - this is in the specified timezone, need to convert to UTC for proper timestamp
+                    if (timezone && this.timezoneData && this.timezoneData.tzid === timezone) {
+                        // We have timezone data for this specific timezone
+                        const tempDate = new Date(year, month - 1, day, hour, minute, second);
+                        const offset = this.getTimezoneOffsetForDate(tempDate);
+                        
+                        if (offset !== null) {
+                            // Convert from timezone to UTC
+                            const timezoneOffset = this.parseOffsetString(offset);
+                            const utcTime = tempDate.getTime() - (timezoneOffset * 60 * 1000);
+                            date = new Date(utcTime);
+                            
+                            logger.debug('CALENDAR', 'Converted timezone time to UTC', {
+                                originalTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                                timezone: timezone,
+                                timezoneOffset: offset,
+                                offsetMinutes: timezoneOffset,
+                                utcTime: date.toISOString(),
+                                resultTimestamp: date.getTime(),
+                                note: 'Converted timezone-specific time to UTC for accurate timestamp'
+                            });
+                        } else {
+                            // No offset data available, fall back to treating as local
+                            date = new Date(year, month - 1, day, hour, minute, second);
+                            logger.debug('CALENDAR', 'Timezone time without offset data (treated as local)', {
+                                timezone: timezone,
+                                note: 'No timezone offset data available, treating as local time'
+                            });
+                        }
+                    } else {
+                        // No timezone specified or no timezone data available, treat as local
+                        date = new Date(year, month - 1, day, hour, minute, second);
+                        
+                        logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
+                            calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                            timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
+                            localDisplay: date.toLocaleString(),
+                            resultDate: date.toString(),
+                            note: 'Time is in calendar timezone, created as local date for correct display'
+                        });
+                    }
                 }
                 
                 // Store wasUTC flag on the date object for debugging
