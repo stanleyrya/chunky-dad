@@ -139,35 +139,33 @@ class TodayEventsAggregator {
     // Clear
     this.container.innerHTML = '';
 
-    // Left spacer for consistent scroll gutters
-    this.container.appendChild(this.createSpacerCard());
-
     if (!events.length) {
       const empty = document.createElement('div');
-      empty.className = 'event-compact-card coming-soon';
-      const emojiBox = document.createElement('div');
-      emojiBox.className = 'event-emoji-box';
-      const emoji = document.createElement('span');
-      emoji.className = 'event-emoji';
-      emoji.textContent = '😴';
-      emojiBox.appendChild(emoji);
-      empty.appendChild(emojiBox);
+      empty.className = 'event-card detailed today-event-card no-events-card';
+      
+      const header = document.createElement('div');
+      header.className = 'event-header';
+      const title = document.createElement('h3');
+      title.textContent = 'No events today';
+      header.appendChild(title);
+      empty.appendChild(header);
 
-      const content = document.createElement('div');
-      content.className = 'event-content';
-      const name = document.createElement('span');
-      name.className = 'event-name';
-      name.textContent = 'No events today';
-      const subtitle = document.createElement('span');
-      subtitle.className = 'event-dates';
-      subtitle.textContent = 'Check back soon!';
-      content.appendChild(name);
-      content.appendChild(subtitle);
-      empty.appendChild(content);
+      const details = document.createElement('div');
+      details.className = 'event-details';
+      const messageRow = document.createElement('div');
+      messageRow.className = 'detail-row';
+      const messageLabel = document.createElement('span');
+      messageLabel.className = 'label';
+      messageLabel.textContent = '😴';
+      const messageValue = document.createElement('span');
+      messageValue.className = 'value';
+      messageValue.textContent = 'Check back soon for upcoming events!';
+      messageRow.appendChild(messageLabel);
+      messageRow.appendChild(messageValue);
+      details.appendChild(messageRow);
+      empty.appendChild(details);
+
       this.container.appendChild(empty);
-
-      // Right spacer
-      this.container.appendChild(this.createSpacerCard());
       return;
     }
 
@@ -175,52 +173,93 @@ class TodayEventsAggregator {
       const card = this.createEventCard(ev);
       this.container.appendChild(card);
     }
-
-    // Right spacer
-    this.container.appendChild(this.createSpacerCard());
   }
 
   createEventCard(ev) {
-    const link = document.createElement('a');
-    link.href = `${ev.cityKey}/`;
-    link.className = 'event-compact-card';
+    const card = document.createElement('div');
+    card.className = 'event-card detailed today-event-card';
+    card.setAttribute('data-event-slug', ev.slug || '');
 
-    const emojiBox = document.createElement('div');
-    emojiBox.className = 'event-emoji-box';
-    const emoji = document.createElement('span');
-    emoji.className = 'event-emoji';
-    emoji.textContent = '🎉';
-    emojiBox.appendChild(emoji);
-    link.appendChild(emojiBox);
+    // Event header with title and meta info
+    const header = document.createElement('div');
+    header.className = 'event-header';
 
-    const content = document.createElement('div');
-    content.className = 'event-content';
+    const title = document.createElement('h3');
+    title.textContent = ev.name || 'Event';
+    header.appendChild(title);
 
-    const name = document.createElement('span');
-    name.className = 'event-name';
-    name.textContent = ev.name || 'Event';
+    // Event meta information (time and city)
+    const meta = document.createElement('div');
+    meta.className = 'event-meta';
 
-    const time = document.createElement('span');
-    time.className = 'event-dates';
-    time.textContent = this.formatTimeRange(ev.startDate, ev.endDate);
+    const timeDisplay = document.createElement('div');
+    timeDisplay.className = 'event-day';
+    timeDisplay.textContent = this.formatTimeRange(ev.startDate, ev.endDate);
+    meta.appendChild(timeDisplay);
 
-    const bar = document.createElement('span');
-    bar.className = 'event-bar';
-    bar.textContent = ev.bar || '';
-
-    const city = document.createElement('span');
-    city.className = 'event-location';
-    city.textContent = ev.cityName || '';
-
-    content.appendChild(name);
-    content.appendChild(time);
-    if (ev.bar) {
-      content.appendChild(bar);
+    if (ev.recurring) {
+      const recurringBadge = document.createElement('span');
+      recurringBadge.className = 'recurring-badge';
+      recurringBadge.textContent = 'Weekly';
+      meta.appendChild(recurringBadge);
     }
-    content.appendChild(city);
-    link.appendChild(content);
 
-    return link;
+    header.appendChild(meta);
+    card.appendChild(header);
+
+    // Event details
+    const details = document.createElement('div');
+    details.className = 'event-details';
+
+    if (ev.bar) {
+      const venueRow = document.createElement('div');
+      venueRow.className = 'detail-row';
+      const venueLabel = document.createElement('span');
+      venueLabel.className = 'label';
+      venueLabel.textContent = '📍';
+      const venueValue = document.createElement('span');
+      venueValue.className = 'value';
+      venueValue.textContent = ev.bar;
+      venueRow.appendChild(venueLabel);
+      venueRow.appendChild(venueValue);
+      details.appendChild(venueRow);
+    }
+
+    const cityRow = document.createElement('div');
+    cityRow.className = 'detail-row';
+    const cityLabel = document.createElement('span');
+    cityLabel.className = 'label';
+    cityLabel.textContent = '🏙️';
+    const cityValue = document.createElement('span');
+    cityValue.className = 'value';
+    cityValue.textContent = ev.cityName || '';
+    cityRow.appendChild(cityLabel);
+    cityRow.appendChild(cityValue);
+    details.appendChild(cityRow);
+
+    if (ev.cover && ev.cover.trim() && ev.cover.toLowerCase() !== 'free') {
+      const coverRow = document.createElement('div');
+      coverRow.className = 'detail-row';
+      const coverLabel = document.createElement('span');
+      coverLabel.className = 'label';
+      coverLabel.textContent = '💰';
+      const coverValue = document.createElement('span');
+      coverValue.className = 'value';
+      coverValue.textContent = ev.cover;
+      coverRow.appendChild(coverLabel);
+      coverRow.appendChild(coverValue);
+      details.appendChild(coverRow);
+    }
+
+    card.appendChild(details);
+
+    // Add link functionality
+    card.addEventListener('click', () => {
+      window.location.href = `${ev.cityKey}/`;
+    });
+    card.style.cursor = 'pointer';
+
+    return card;
   }
 
   createSpacerCard() {
