@@ -10,7 +10,58 @@ class BearsSitgesParser {
   }
 
   /**
-   * Parse events from HTML content
+   * Main parsing method - receives HTML data and returns events + additional links
+   * @param {Object} htmlData - HTML data object with html and url properties
+   * @param {Object} parserConfig - Parser configuration
+   * @param {Object} cityConfig - City configuration
+   * @returns {Object} Parsed events and metadata
+   */
+  parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
+    try {
+      const html = htmlData.html;
+      const url = htmlData.url;
+      const maxDays = parserConfig.maxDays || 1;
+      
+      if (!html) {
+        console.log('🔧 Bears Sitges: No HTML content to parse');
+        return { events: [], additionalLinks: [], source: this.name, url: url };
+      }
+
+      // Extract event dates from the HTML
+      const eventDates = this.extractEventDates(html);
+      
+      if (eventDates.length === 0) {
+        console.log('🔧 Bears Sitges: No event dates found in HTML');
+        return { events: [], additionalLinks: [], source: this.name, url: url };
+      }
+
+      // Parse events for each day
+      const allEvents = [];
+      const daysToProcess = eventDates.slice(0, maxDays);
+      
+      for (const eventDate of daysToProcess) {
+        const dayText = this.getDayText(eventDate);
+        const dayEvents = this.extractEventsForDay(html, url, eventDate, dayText);
+        allEvents.push(...dayEvents);
+      }
+
+      // Remove duplicates
+      const uniqueEvents = this.removeDuplicateEvents(allEvents);
+
+      return { 
+        events: uniqueEvents, 
+        additionalLinks: [], 
+        source: this.name, 
+        url: url 
+      };
+    } catch (error) {
+      console.log(`🔧 Bears Sitges: Error parsing events: ${error.message}`);
+      return { events: [], additionalLinks: [], source: this.name, url: htmlData.url };
+    }
+  }
+
+  /**
+   * Parse events from HTML content (legacy method for backward compatibility)
    * @param {string} html - HTML content
    * @param {string} url - Source URL
    * @param {number} maxDays - Maximum number of days to parse
@@ -39,10 +90,15 @@ class BearsSitgesParser {
       // Remove duplicates
       const uniqueEvents = this.removeDuplicateEvents(allEvents);
 
-      return uniqueEvents;
+      return { 
+        events: uniqueEvents, 
+        additionalLinks: [], 
+        source: this.name, 
+        url: url 
+      };
     } catch (error) {
       console.log(`Error parsing Bears Sitges events: ${error.message}`);
-      return [];
+      return { events: [], additionalLinks: [], source: this.name, url: url };
     }
   }
 
