@@ -1374,6 +1374,122 @@ body.index-page main {
     padding-bottom: 1rem;
 }
 
+/* Today Events Section - Updated for detailed cards */
+#today-events .event-scroll-container {
+    overflow-x: visible; /* Allow vertical layout */
+    overflow-y: visible;
+}
+
+#today-events .event-compact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    padding: 0;
+}
+
+/* Today Event Cards - Detailed styling */
+.today-event-card {
+    min-width: 300px;
+    max-width: 100%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.today-event-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px var(--shadow-medium);
+}
+
+.today-event-card .event-header {
+    padding-right: 0; /* Remove right padding since we're not floating meta */
+}
+
+.today-event-card .event-meta {
+    position: static; /* Change from absolute positioning */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    justify-content: flex-start;
+}
+
+.today-event-card .event-day {
+    background: var(--solid-secondary);
+    color: var(--white);
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.today-event-card .recurring-badge {
+    background: var(--solid-success);
+    color: var(--white);
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.no-events-card {
+    text-align: center;
+    opacity: 0.8;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+.no-events-card .event-header h3 {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.no-events-card .detail-row .value {
+    color: rgba(255, 255, 255, 0.8);
+    font-style: italic;
+}
+
+/* Responsive adjustments for today events */
+@media (max-width: 768px) {
+    #today-events .event-compact-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 0 0.5rem;
+    }
+    
+    .today-event-card {
+        min-width: unset;
+    }
+    
+    .today-event-card .event-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+    
+    .today-event-card .event-day {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .today-event-card .recurring-badge {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .today-event-card .event-header h3 {
+        font-size: 1.2rem;
+    }
+    
+    .today-event-card .detail-row {
+        margin-bottom: 0.3rem;
+    }
+    
+    .today-event-card .label {
+        margin-right: 0.3rem;
+    }
+}
+
 
 
 .city-scroll-container::-webkit-scrollbar,
