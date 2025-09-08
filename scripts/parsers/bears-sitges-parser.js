@@ -104,23 +104,20 @@ class BearsSitgesParser {
     // Check for "BEARS SITGES WEEK 2025" or similar patterns
     const bearsWeekMatch = html.match(/BEARS SITGES WEEK\s+(\d{4})/i);
     if (bearsWeekMatch) {
-      const year = parseInt(bearsWeekMatch[1]);
-      if (year >= 2020 && year <= 2030) {
-        return year;
-      }
+      return parseInt(bearsWeekMatch[1]);
     }
     
-    // Look for year patterns in the context of the event
-    const yearMatches = html.match(/\b(202[0-9])\b/g);
+    // Look for any 4-digit year patterns in the context of the event
+    const yearMatches = html.match(/\b(\d{4})\b/g);
     if (yearMatches) {
-      // Get the most recent year that's not too far in the future
-      const years = yearMatches.map(match => parseInt(match)).filter(year => year >= 2020 && year <= 2026);
+      // Get the most recent year
+      const years = yearMatches.map(match => parseInt(match));
       if (years.length > 0) {
         return Math.max(...years);
       }
     }
     
-    // Default to current year + 1 (Bears Sitges Week is usually next year)
+    // Default to current year + 1
     return new Date().getFullYear() + 1;
   }
 
@@ -130,22 +127,65 @@ class BearsSitgesParser {
    * @returns {number} Month (1-12)
    */
   extractMonth(html) {
-    // Look for month patterns like "Septiembre", "September", "09", etc.
-    const monthPatterns = [
-      /septiembre|september/i,
-      /octubre|october/i,
-      /noviembre|november/i,
-      /diciembre|december/i
+    // Look for month patterns in the context of event dates
+    // Check for patterns like "Del 5 al 14 de SEPTIEMBRE" or "Bears Sitges Week (Septiembre)"
+    const eventContextPatterns = [
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(enero|january)/i, month: 1 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(febrero|february)/i, month: 2 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(marzo|march)/i, month: 3 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(abril|april)/i, month: 4 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(mayo|may)/i, month: 5 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(junio|june)/i, month: 6 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(julio|july)/i, month: 7 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(agosto|august)/i, month: 8 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(septiembre|september)/i, month: 9 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(octubre|october)/i, month: 10 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(noviembre|november)/i, month: 11 },
+      { pattern: /del\s+\d+\s+al\s+\d+\s+de\s+(diciembre|december)/i, month: 12 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(enero|january)/i, month: 1 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(febrero|february)/i, month: 2 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(marzo|march)/i, month: 3 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(abril|april)/i, month: 4 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(mayo|may)/i, month: 5 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(junio|june)/i, month: 6 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(julio|july)/i, month: 7 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(agosto|august)/i, month: 8 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(septiembre|september)/i, month: 9 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(octubre|october)/i, month: 10 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(noviembre|november)/i, month: 11 },
+      { pattern: /bears\s+sitges\s+week\s*\([^)]*(diciembre|december)/i, month: 12 }
     ];
     
-    for (let i = 0; i < monthPatterns.length; i++) {
-      if (monthPatterns[i].test(html)) {
-        return i + 9; // September = 9, October = 10, etc.
+    for (const { pattern, month } of eventContextPatterns) {
+      if (pattern.test(html)) {
+        return month;
       }
     }
     
-    // Default to September (Bears Sitges Week is usually in September)
-    return 9;
+    // Fallback: Look for any month patterns
+    const monthPatterns = [
+      { pattern: /enero|january/i, month: 1 },
+      { pattern: /febrero|february/i, month: 2 },
+      { pattern: /marzo|march/i, month: 3 },
+      { pattern: /abril|april/i, month: 4 },
+      { pattern: /mayo|may/i, month: 5 },
+      { pattern: /junio|june/i, month: 6 },
+      { pattern: /julio|july/i, month: 7 },
+      { pattern: /agosto|august/i, month: 8 },
+      { pattern: /septiembre|september/i, month: 9 },
+      { pattern: /octubre|october/i, month: 10 },
+      { pattern: /noviembre|november/i, month: 11 },
+      { pattern: /diciembre|december/i, month: 12 }
+    ];
+    
+    for (const { pattern, month } of monthPatterns) {
+      if (pattern.test(html)) {
+        return month;
+      }
+    }
+    
+    // Default to current month
+    return new Date().getMonth() + 1;
   }
 
   /**
