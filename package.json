@@ -23,6 +23,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
+    "express": "^5.1.0",
     "puppeteer": "^22.15.0"
   }
 }
