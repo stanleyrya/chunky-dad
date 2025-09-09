@@ -274,7 +274,10 @@ class CalendarCore {
             }
         } else if (line.startsWith('RRULE:')) {
             currentEvent.recurrence = line.substring(6);
-        } else if (line.startsWith('UID:') || line.startsWith('DTSTAMP:') || line.startsWith('CREATED:') || 
+        } else if (line.startsWith('UID:')) {
+            currentEvent.uid = line.substring(4).trim();
+            parsed = true;
+        } else if (line.startsWith('DTSTAMP:') || line.startsWith('CREATED:') || 
                    line.startsWith('LAST-MODIFIED:') || line.startsWith('SEQUENCE:') || line.startsWith('STATUS:') || 
                    line.startsWith('TRANSP:') || line.startsWith('ORGANIZER:') || line.startsWith('ATTENDEE:') ||
                    line.startsWith('CLASS:') || line.startsWith('PRIORITY:') || line.startsWith('CATEGORIES:') ||
@@ -363,7 +366,7 @@ class CalendarCore {
                 };
             }
 
-            eventData.slug = this.generateSlug(eventData.name, calendarEvent.start);
+            eventData.slug = this.generateSlug(eventData.name, calendarEvent.uid);
 
             // Log timezone usage for debugging
             if (eventData.startTimezone || eventData.calendarTimezone) {
@@ -592,21 +595,35 @@ class CalendarCore {
         return links.length > 0 ? links : null;
     }
 
-    // Generate URL slug from event name
-    generateSlug(name, startDate = null) {
+    // Generate URL slug from event name and UID
+    generateSlug(name, uid = null) {
         const baseSlug = name.toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
             .replace(/\s+/g, '-')
             .replace(/-+/g, '-')
             .trim();
         
-        // Add date/time suffix to ensure uniqueness for events with same name
-        if (startDate) {
-            const timestamp = startDate.getTime();
-            return `${baseSlug}-${timestamp}`;
+        // Add UID hash suffix to ensure uniqueness for events with same name
+        if (uid) {
+            // Create a short hash from the UID for clean URLs
+            const uidHash = this.hashUID(uid);
+            return `${baseSlug}-${uidHash}`;
         }
         
         return baseSlug;
+    }
+
+    // Create a short hash from UID for clean URLs
+    hashUID(uid) {
+        // Simple hash function that creates a consistent 8-character hash
+        let hash = 0;
+        for (let i = 0; i < uid.length; i++) {
+            const char = uid.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        // Convert to positive hex string and take first 8 characters
+        return Math.abs(hash).toString(16).padStart(8, '0').slice(0, 8);
     }
 
     // Date and time utility methods
@@ -730,47 +747,17 @@ class CalendarCore {
                         });
                     }
                 } else {
-                    // Non-UTC time - this is in the specified timezone, need to convert to UTC for proper timestamp
-                    if (timezone && this.timezoneData && this.timezoneData.tzid === timezone) {
-                        // We have timezone data for this specific timezone
-                        const tempDate = new Date(year, month - 1, day, hour, minute, second);
-                        const offset = this.getTimezoneOffsetForDate(tempDate);
-                        
-                        if (offset !== null) {
-                            // Convert from timezone to UTC
-                            const timezoneOffset = this.parseOffsetString(offset);
-                            const utcTime = tempDate.getTime() - (timezoneOffset * 60 * 1000);
-                            date = new Date(utcTime);
-                            
-                            logger.debug('CALENDAR', 'Converted timezone time to UTC', {
-                                originalTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                                timezone: timezone,
-                                timezoneOffset: offset,
-                                offsetMinutes: timezoneOffset,
-                                utcTime: date.toISOString(),
-                                resultTimestamp: date.getTime(),
-                                note: 'Converted timezone-specific time to UTC for accurate timestamp'
-                            });
-                        } else {
-                            // No offset data available, fall back to treating as local
-                            date = new Date(year, month - 1, day, hour, minute, second);
-                            logger.debug('CALENDAR', 'Timezone time without offset data (treated as local)', {
-                                timezone: timezone,
-                                note: 'No timezone offset data available, treating as local time'
-                            });
-                        }
-                    } else {
-                        // No timezone specified or no timezone data available, treat as local
-                        date = new Date(year, month - 1, day, hour, minute, second);
-                        
-                        logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
-                            calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                            timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
-                            localDisplay: date.toLocaleString(),
-                            resultDate: date.toString(),
-                            note: 'Time is in calendar timezone, created as local date for correct display'
-                        });
-                    }
+                    // Non-UTC time - this is already in the calendar's timezone, create as local date
+                    date = new Date(year, month - 1, day, hour, minute, second);
+                    
+                    // No conversion needed - JavaScript will display this correctly in user's local timezone
+                    logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
+                        calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                        timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
+                        localDisplay: date.toLocaleString(),
+                        resultDate: date.toString(),
+                        note: 'Time is in calendar timezone, created as local date for correct display'
+                    });
                 }
                 
                 // Store wasUTC flag on the date object for debugging
