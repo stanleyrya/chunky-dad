@@ -995,9 +995,51 @@ class CalendarCore {
                                 note: 'Created local Date object for display in user\'s timezone'
                             });
                         }
+                    } else if (this.calendarTimezone) {
+                        // No VTIMEZONE data but we have calendar timezone from X-WR-TIMEZONE
+                        // Convert UTC to calendar timezone using browser's Intl API
+                        try {
+                            // Use Intl.DateTimeFormat to convert UTC time to calendar timezone
+                            const formatter = new Intl.DateTimeFormat('en-CA', {
+                                timeZone: this.calendarTimezone,
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            });
+                            
+                            const parts = formatter.formatToParts(date);
+                            const localYear = parseInt(parts.find(p => p.type === 'year').value);
+                            const localMonth = parseInt(parts.find(p => p.type === 'month').value) - 1; // JavaScript months are 0-based
+                            const localDay = parseInt(parts.find(p => p.type === 'day').value);
+                            const localHour = parseInt(parts.find(p => p.type === 'hour').value);
+                            const localMinute = parseInt(parts.find(p => p.type === 'minute').value);
+                            const localSecond = parseInt(parts.find(p => p.type === 'second').value);
+                            
+                            // Create a new local Date object with the converted time components
+                            date = new Date(localYear, localMonth, localDay, localHour, localMinute, localSecond);
+                            
+                            logger.debug('CALENDAR', 'Converted UTC to calendar timezone using Intl API', {
+                                originalUTC: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
+                                calendarTimezone: this.calendarTimezone,
+                                convertedLocal: `${localYear}-${(localMonth + 1).toString().padStart(2, '0')}-${localDay.toString().padStart(2, '0')} ${localHour.toString().padStart(2, '0')}:${localMinute.toString().padStart(2, '0')}`,
+                                resultDate: date.toString(),
+                                resultISO: date.toISOString(),
+                                note: 'Used Intl API for timezone conversion'
+                            });
+                            
+                        } catch (error) {
+                            logger.warn('CALENDAR', 'Failed to convert timezone using Intl API, using UTC date', {
+                                error: error.message,
+                                calendarTimezone: this.calendarTimezone
+                            });
+                        }
                     } else {
-                        // No timezone data available, create local date from UTC components
-                        logger.debug('CALENDAR', 'UTC date without timezone conversion (creating local date from UTC)', {
+                        // No timezone data available at all
+                        logger.debug('CALENDAR', 'UTC date without timezone conversion (no timezone info)', {
                             utcTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`,
                             resultDate: date.toString(),
                             resultISO: date.toISOString(),
