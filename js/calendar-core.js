@@ -6,6 +6,11 @@ class CalendarCore {
         this.locationCache = new Map();
         this.calendarTimezone = null; // Store calendar's default timezone
         this.timezoneData = null; // Store detailed timezone information
+        
+        // Day name arrays for consistent formatting
+        this.dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        this.dayAbbrevs = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        
         logger.componentInit('CALENDAR', 'Calendar core initialized');
     }
 
@@ -693,16 +698,13 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(recurrence);
         if (!pattern) return null;
         
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const dayAbbrevs = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        
         // Handle weekly events
         if (pattern.frequency === 'WEEKLY') {
             if (pattern.byDay && pattern.byDay.length === 1) {
                 const dayCode = pattern.byDay[0];
                 const dayIndex = this.getDayIndexFromCode(dayCode);
                 if (dayIndex !== -1) {
-                    return `Every ${dayAbbrevs[dayIndex]}`;
+                    return `Every ${this.dayAbbrevs[dayIndex]}`;
                 }
             }
             return pattern.interval === 1 ? 'Weekly' : `Every ${pattern.interval} weeks`;
@@ -717,9 +719,9 @@ class CalendarCore {
                     const occurrence = this.getOccurrenceFromDayCode(dayCode);
                     if (occurrence > 0) {
                         const ordinal = this.getOrdinal(occurrence);
-                        return `${ordinal} ${dayAbbrevs[dayIndex]} of month`;
+                        return `${ordinal} ${this.dayAbbrevs[dayIndex]} of month`;
                     } else if (occurrence < 0) {
-                        return `Last ${dayAbbrevs[dayIndex]} of month`;
+                        return `Last ${this.dayAbbrevs[dayIndex]} of month`;
                     }
                 }
             }
