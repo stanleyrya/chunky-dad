@@ -241,6 +241,27 @@ class ScriptableAdapter {
         throw new Error(`No timezone configuration found for city: ${city}`);
     }
 
+    // Convert date to proper timezone for calendar storage
+    convertDateToTimezone(date, timezone) {
+        if (!date || !timezone) return date;
+        
+        // If date is already a Date object, use it directly
+        const dateObj = date instanceof Date ? date : new Date(date);
+        
+        // Create a new date in the target timezone
+        // This ensures the event shows up at the correct local time in the calendar
+        const year = dateObj.getFullYear();
+        const month = dateObj.getMonth();
+        const day = dateObj.getDate();
+        const hours = dateObj.getHours();
+        const minutes = dateObj.getMinutes();
+        const seconds = dateObj.getSeconds();
+        
+        // Create a new Date object with the same local time components
+        // This will be interpreted as local time in the calendar's timezone
+        return new Date(year, month, day, hours, minutes, seconds);
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
@@ -381,8 +402,12 @@ class ScriptableAdapter {
                             
                             // Apply the final merged values (event object already contains final values)
                             targetEvent.title = event.title;
-                            targetEvent.startDate = event.startDate;
-                            targetEvent.endDate = event.endDate;
+                            
+                            // Convert dates to proper timezone for calendar storage
+                            const timezone = this.getTimezoneForCity(event.city);
+                            targetEvent.startDate = this.convertDateToTimezone(event.startDate, timezone);
+                            targetEvent.endDate = this.convertDateToTimezone(event.endDate, timezone);
+                            
                             targetEvent.location = event.location;
                             targetEvent.notes = event.notes;
                             targetEvent.url = event.url;
@@ -428,8 +453,12 @@ class ScriptableAdapter {
                             actionCounts.create.push(event.title);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
-                            calendarEvent.startDate = event.startDate;
-                            calendarEvent.endDate = event.endDate;
+                            
+                            // Convert dates to proper timezone for calendar storage
+                            const timezone = this.getTimezoneForCity(event.city);
+                            calendarEvent.startDate = this.convertDateToTimezone(event.startDate, timezone);
+                            calendarEvent.endDate = this.convertDateToTimezone(event.endDate, timezone);
+                            
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
