@@ -1424,7 +1424,7 @@ body.index-page main {
 }
 
 .today-event-card .recurring-badge {
-    background: var(--solid-primary);
+    background: var(--solid-secondary);
     color: var(--white);
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
@@ -1433,7 +1433,7 @@ body.index-page main {
 }
 
 .today-event-card .date-badge {
-    background: var(--text-secondary);
+    background: var(--solid-secondary);
     color: var(--white);
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
@@ -2305,7 +2305,7 @@ body.index-page main {
 }
 
 .recurring-badge {
-    background: var(--solid-primary);
+    background: var(--solid-secondary);
     color: var(--white);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
@@ -2315,7 +2315,7 @@ body.index-page main {
 }
 
 .date-badge {
-    background: var(--text-secondary);
+    background: var(--solid-secondary);
     color: var(--white);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
