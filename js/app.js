@@ -207,6 +207,8 @@ class ChunkyDadApp {
                 // Don't await city page modules to prevent hanging
                 this.initializeCityPageModules().catch(error => {
                     logger.componentError('SYSTEM', 'City page module initialization failed', error);
+                    // Show user-friendly error message
+                    this.showCalendarError();
                 });
             }
             
@@ -409,6 +411,30 @@ class ChunkyDadApp {
 
     getPathUtils() {
         return this.pathUtils;
+    }
+
+    // Show calendar error message when initialization fails
+    showCalendarError() {
+        const eventsList = document.querySelector('.events-list');
+        if (eventsList) {
+            eventsList.innerHTML = `
+                <div class="error-message">
+                    <h3>📅 Calendar Temporarily Unavailable</h3>
+                    <p>We're having trouble loading the calendar data. This usually resolves itself within a few minutes.</p>
+                    <p>Please try refreshing the page, or check back later.</p>
+                    <button onclick="window.location.reload()" class="cta-button">🔄 Refresh Page</button>
+                </div>
+            `;
+        }
+        
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (calendarGrid) {
+            calendarGrid.innerHTML = `
+                <div class="calendar-error">
+                    <p>Calendar data is temporarily unavailable. Please try refreshing the page.</p>
+                </div>
+            `;
+        }
     }
 
     // Global function for scrolling (backward compatibility)
