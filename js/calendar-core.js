@@ -663,6 +663,239 @@ class CalendarCore {
         return 'recurring';
     }
 
+    // Enhanced recurrence parsing for better display
+    parseRecurrencePattern(recurrence) {
+        if (!recurrence) return null;
+        
+        const rules = {};
+        recurrence.split(';').forEach(rule => {
+            const [key, value] = rule.split('=');
+            rules[key] = value;
+        });
+        
+        const pattern = {
+            frequency: rules.FREQ || null,
+            interval: parseInt(rules.INTERVAL) || 1,
+            byDay: rules.BYDAY ? rules.BYDAY.split(',') : null,
+            byMonthDay: rules.BYMONTHDAY ? rules.BYMONTHDAY.split(',').map(d => parseInt(d)) : null,
+            bySetPos: rules.BYSETPOS ? rules.BYSETPOS.split(',').map(p => parseInt(p)) : null,
+            until: rules.UNTIL || null,
+            count: rules.COUNT ? parseInt(rules.COUNT) : null
+        };
+        
+        return pattern;
+    }
+
+    // Get human-readable recurrence description
+    getRecurrenceDescription(recurrence, eventDate) {
+        if (!recurrence) return null;
+        
+        const pattern = this.parseRecurrencePattern(recurrence);
+        if (!pattern) return null;
+        
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayAbbrevs = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        
+        // Handle weekly events
+        if (pattern.frequency === 'WEEKLY') {
+            if (pattern.byDay && pattern.byDay.length === 1) {
+                const dayCode = pattern.byDay[0];
+                const dayIndex = this.getDayIndexFromCode(dayCode);
+                if (dayIndex !== -1) {
+                    return `Every ${dayNames[dayIndex]}`;
+                }
+            }
+            return pattern.interval === 1 ? 'Weekly' : `Every ${pattern.interval} weeks`;
+        }
+        
+        // Handle monthly events
+        if (pattern.frequency === 'MONTHLY') {
+            if (pattern.byDay && pattern.byDay.length === 1) {
+                const dayCode = pattern.byDay[0];
+                const dayIndex = this.getDayIndexFromCode(dayCode);
+                if (dayIndex !== -1) {
+                    const occurrence = this.getOccurrenceFromDayCode(dayCode);
+                    if (occurrence > 0) {
+                        const ordinal = this.getOrdinal(occurrence);
+                        return `${ordinal} ${dayNames[dayIndex]} of each month`;
+                    } else if (occurrence < 0) {
+                        const ordinal = this.getOrdinal(Math.abs(occurrence));
+                        return `Last ${dayNames[dayIndex]} of each month`;
+                    }
+                }
+            }
+            if (pattern.byMonthDay && pattern.byMonthDay.length === 1) {
+                const day = pattern.byMonthDay[0];
+                const ordinal = this.getOrdinal(day);
+                return `${ordinal} of each month`;
+            }
+            return pattern.interval === 1 ? 'Monthly' : `Every ${pattern.interval} months`;
+        }
+        
+        // Handle daily events
+        if (pattern.frequency === 'DAILY') {
+            return pattern.interval === 1 ? 'Daily' : `Every ${pattern.interval} days`;
+        }
+        
+        return 'Recurring';
+    }
+
+    // Helper method to get day index from day code (e.g., "MO" -> 1)
+    getDayIndexFromCode(dayCode) {
+        const dayMap = {
+            'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
+        };
+        return dayMap[dayCode] || -1;
+    }
+
+    // Helper method to get occurrence number from day code (e.g., "2TU" -> 2)
+    getOccurrenceFromDayCode(dayCode) {
+        const match = dayCode.match(/^(-?\d+)([A-Z]{2})$/);
+        return match ? parseInt(match[1]) : 0;
+    }
+
+    // Helper method to get ordinal suffix (e.g., 1 -> "1st", 2 -> "2nd", 3 -> "3rd")
+    getOrdinal(num) {
+        const suffixes = ['th', 'st', 'nd', 'rd'];
+        const v = num % 100;
+        return num + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+    }
+
+    // Enhanced day/time formatting with context - always uses pattern-first approach
+    getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
+        const { day, time, recurring, eventType, recurrence, startDate } = event;
+        
+        logger.debug('CALENDAR', 'Enhanced day/time display', {
+            eventName: event.name,
+            day,
+            time,
+            recurring,
+            eventType,
+            recurrence,
+            calendarView,
+            hasRecurrence: !!recurrence,
+            calendarPeriod: calendarPeriod ? {
+                start: calendarPeriod.start?.toISOString(),
+                end: calendarPeriod.end?.toISOString()
+            } : null
+        });
+        
+        // For desktop, show full day name; for mobile, show abbreviated
+        const isDesktop = window.innerWidth > 768;
+        const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
+        
+        let baseDisplay = `${displayDay} ${time}`;
+        
+        // Always use pattern-first approach (like month view)
+        if (recurring && recurrence) {
+            const recurrenceDesc = this.getRecurrenceDescription(recurrence, startDate);
+            
+            logger.debug('CALENDAR', 'Recurrence description generated', {
+                eventName: event.name,
+                recurrence,
+                recurrenceDesc,
+                eventType
+            });
+            
+            if (recurrenceDesc) {
+                // Extract the specific day pattern for monthly events
+                if (eventType === 'monthly' && recurrenceDesc.includes('of each month')) {
+                    const dayPattern = recurrenceDesc.split(' of each month')[0];
+                    baseDisplay += ` • ${dayPattern}`;
+                } else {
+                    baseDisplay += ` • ${recurrenceDesc}`;
+                }
+            }
+        } else {
+            // One-off event - always show specific date
+            const eventDate = new Date(startDate);
+            const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
+            const date = eventDate.getDate();
+            baseDisplay += ` • ${month} ${date}`;
+        }
+        
+        // Add contextual dates for events visible in current calendar period
+        if (calendarPeriod && calendarPeriod.start && calendarPeriod.end) {
+            const visibleDates = this.getVisibleEventDates(event, calendarPeriod.start, calendarPeriod.end);
+            if (visibleDates.length > 0) {
+                const dateStrings = visibleDates.map(d => {
+                    const month = d.toLocaleDateString('en-US', { month: 'short' });
+                    const day = d.getDate();
+                    return `${month} ${day}`;
+                });
+                
+                if (dateStrings.length === 1) {
+                    baseDisplay += ` (${dateStrings[0]})`;
+                } else if (dateStrings.length <= 3) {
+                    baseDisplay += ` (${dateStrings.join(', ')})`;
+                } else {
+                    // For many occurrences, show first and last
+                    baseDisplay += ` (${dateStrings[0]}-${dateStrings[dateStrings.length - 1]})`;
+                }
+            }
+        }
+        
+        logger.debug('CALENDAR', 'Final display string generated', {
+            eventName: event.name,
+            baseDisplay,
+            calendarView,
+            visibleDates: calendarPeriod ? this.getVisibleEventDates(event, calendarPeriod.start, calendarPeriod.end) : null
+        });
+        
+        return baseDisplay;
+    }
+
+    // Get all dates when an event occurs within a given period
+    getVisibleEventDates(event, periodStart, periodEnd) {
+        const dates = [];
+        
+        if (!event.recurring || !event.recurrence) {
+            // One-off event - check if it falls within the period
+            const eventDate = new Date(event.startDate);
+            if (eventDate >= periodStart && eventDate <= periodEnd) {
+                dates.push(eventDate);
+            }
+            return dates;
+        }
+        
+        // Recurring event - generate all occurrences within the period
+        const pattern = this.parseRecurrencePattern(event.recurrence);
+        if (!pattern) return dates;
+        
+        const eventStartDate = new Date(event.startDate);
+        if (eventStartDate > periodEnd) return dates;
+        
+        // Generate occurrences based on frequency
+        let current = new Date(eventStartDate);
+        const maxIterations = 100; // Safety limit
+        let iterations = 0;
+        
+        while (current <= periodEnd && iterations < maxIterations) {
+            if (current >= periodStart) {
+                dates.push(new Date(current));
+            }
+            
+            // Advance to next occurrence
+            switch (pattern.frequency) {
+                case 'DAILY':
+                    current.setDate(current.getDate() + pattern.interval);
+                    break;
+                case 'WEEKLY':
+                    current.setDate(current.getDate() + (7 * pattern.interval));
+                    break;
+                case 'MONTHLY':
+                    current.setMonth(current.getMonth() + pattern.interval);
+                    break;
+                default:
+                    return dates; // Unknown frequency, return what we have
+            }
+            
+            iterations++;
+        }
+        
+        return dates;
+    }
+
     parseICalDate(icalDate) {
         if (!icalDate) return new Date();
         
