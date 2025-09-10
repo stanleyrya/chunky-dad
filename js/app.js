@@ -96,39 +96,7 @@ window.addEventListener('unhandledrejection', function(event) {
     // event.preventDefault();
 });
 
-window.addEventListener('error', function(event) {
-    // Enhanced logging for script errors with better context
-    const isScriptError = event.message === 'Script error.' && !event.filename;
-    const isCrossOriginError = !event.filename || event.filename === '';
-    
-    logger.error('SYSTEM', 'Global error', {
-        message: event.message,
-        filename: event.filename || 'Unknown file',
-        lineno: event.lineno || 'Unknown line',
-        colno: event.colno || 'Unknown column',
-        error: event.error,
-        stack: event.error?.stack || 'No stack trace',
-        isScriptError,
-        isCrossOriginError,
-        url: window.location.href,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-    });
-    
-    // Provide specific guidance for script errors
-    if (isScriptError || isCrossOriginError) {
-        logger.warn('SYSTEM', 'Cross-origin script error detected', {
-            explanation: 'This error typically occurs when external scripts fail to load or execute',
-            possibleCauses: [
-                'External service (CORS proxy, CDN) temporarily unavailable',
-                'Network connectivity issues',
-                'Browser security restrictions',
-                'External script contains errors'
-            ],
-            suggestion: 'Check browser network tab for failed requests and try refreshing the page'
-        });
-    }
-});
+// Error handling is managed by logger.js to avoid duplicate handlers
 
 // Main Application Module - Coordinates all other modules and handles initialization
 class ChunkyDadApp {
