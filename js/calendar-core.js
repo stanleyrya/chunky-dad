@@ -760,21 +760,6 @@ class CalendarCore {
         return num + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
     }
 
-    // Helper method to create date using same approach as calendar (local timezone)
-    createLocalDate(dateString) {
-        // Handle both ISO strings and YYYY-MM-DD format
-        if (typeof dateString === 'string') {
-            if (dateString.includes('T') || dateString.includes('Z')) {
-                // ISO string - parse normally
-                return new Date(dateString);
-            } else {
-                // YYYY-MM-DD format - create local date (same as calendar)
-                const parts = dateString.split('-');
-                return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            }
-        }
-        return new Date(dateString);
-    }
 
     // Enhanced day/time formatting with context - always uses pattern-first approach
     getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
@@ -830,10 +815,10 @@ class CalendarCore {
         const { recurring, startDate } = event;
         
         if (!recurring) {
-            // One-off event - show the date using same approach as calendar
-            const eventDate = this.createLocalDate(startDate);
-            const month = eventDate.getMonth() + 1; // 0-based to 1-based
-            const date = eventDate.getDate();
+            // One-off event - show the date (same as calendar)
+            const parts = startDate.split('-');
+            const month = parseInt(parts[1]);
+            const date = parseInt(parts[2]);
             return `${month}/${date}`;
         }
         
@@ -847,24 +832,17 @@ class CalendarCore {
             
             // For recurring events, show a cleaner format
             if (visibleDates.length === 1) {
-                const month = visibleDates[0].getMonth() + 1;
-                const date = visibleDates[0].getDate();
-                return `${month}/${date}`;
+                const d = visibleDates[0];
+                return `${d.getMonth() + 1}/${d.getDate()}`;
             } else if (visibleDates.length <= 3) {
                 // Show up to 3 dates cleanly
-                const dateStrings = visibleDates.map(d => {
-                    const month = d.getMonth() + 1;
-                    const date = d.getDate();
-                    return `${month}/${date}`;
-                });
+                const dateStrings = visibleDates.map(d => `${d.getMonth() + 1}/${d.getDate()}`);
                 return dateStrings.join(', ');
             } else {
                 // 4+ dates: show first date + count
-                const firstDate = visibleDates[0];
-                const month = firstDate.getMonth() + 1;
-                const date = firstDate.getDate();
+                const first = visibleDates[0];
                 const remaining = visibleDates.length - 1;
-                return `${month}/${date} +${remaining} more`;
+                return `${first.getMonth() + 1}/${first.getDate()} +${remaining} more`;
             }
         }
         
@@ -874,9 +852,9 @@ class CalendarCore {
         }
         
         // For monthly events without calendar context, show next occurrence
-        const nextOccurrence = this.createLocalDate(startDate);
-        const month = nextOccurrence.getMonth() + 1;
-        const date = nextOccurrence.getDate();
+        const parts = startDate.split('-');
+        const month = parseInt(parts[1]);
+        const date = parseInt(parts[2]);
         return `${month}/${date}`;
     }
 
@@ -886,7 +864,8 @@ class CalendarCore {
         
         if (!event.recurring || !event.recurrence) {
             // One-off event - check if it falls within the period
-            const eventDate = this.createLocalDate(event.startDate);
+            const parts = event.startDate.split('-');
+            const eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             if (eventDate >= periodStart && eventDate <= periodEnd) {
                 dates.push(eventDate);
             }
@@ -897,7 +876,8 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(event.recurrence);
         if (!pattern) return dates;
         
-        const eventStartDate = this.createLocalDate(event.startDate);
+        const parts = event.startDate.split('-');
+        const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         if (eventStartDate > periodEnd) return dates;
         
         // Generate occurrences based on frequency
