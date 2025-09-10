@@ -919,59 +919,28 @@
                 let originalTimeData = 'No raw event data found';
                 let dtStartMatch = null;
                 let dtEndMatch = null;
-                let eventSource = 'Unknown';
                 
                 if (rawEvent) {
                     // Extract DTSTART and DTEND
                     dtStartMatch = rawEvent.match(/DTSTART(?:;[^:]+)?:(.+)/);
                     dtEndMatch = rawEvent.match(/DTEND(?:;[^:]+)?:(.+)/);
                     
-                    // Determine event source (manual vs scriptable)
-                    const creatorMatch = rawEvent.match(/X-APPLE-CREATOR-IDENTITY:(.+)/);
-                    if (creatorMatch && creatorMatch[1].includes('Scriptable')) {
-                        eventSource = 'Scriptable Parser';
-                    } else {
-                        eventSource = 'Manual Entry';
-                    }
-                    
-                    originalTimeData = `Event Source: ${eventSource}\n\n`;
-                    originalTimeData += `Raw iCal Time Data:\n`;
+                    originalTimeData = `Raw iCal Time Data:\n`;
                     originalTimeData += `DTSTART: ${dtStartMatch ? dtStartMatch[0] : 'Not found'}\n`;
                     originalTimeData += `DTEND: ${dtEndMatch ? dtEndMatch[0] : 'Not found'}\n\n`;
                     
                     // Check for timezone info
                     const tzidMatch = rawEvent.match(/DTSTART;TZID=([^:]+):/);
                     if (tzidMatch) {
-                        originalTimeData += `Event Timezone: ${tzidMatch[1]} (timezone-aware format)\n`;
-                        originalTimeData += `Format: Timezone-specific (CORRECT)\n`;
+                        originalTimeData += `Event Timezone: ${tzidMatch[1]}\n`;
                     } else if (dtStartMatch && dtStartMatch[1].endsWith('Z')) {
                         originalTimeData += `Event Timezone: UTC (Z suffix)\n`;
-                        originalTimeData += `Format: UTC format (PROBLEMATIC for scriptable events)\n`;
-                        
-                        // Check if timezone is stored in description
-                        const timezoneInDesc = rawEvent.match(/timezone:\s*([^\n\\]+)/);
-                        if (timezoneInDesc) {
-                            originalTimeData += `Timezone in description: ${timezoneInDesc[1]}\n`;
-                        }
                     } else {
                         originalTimeData += `Event Timezone: Floating (no timezone specified)\n`;
-                        originalTimeData += `Format: Floating time\n`;
                     }
                     
                     originalTimeData += `\nCalendar Default TZ: ${this.calendarCore.calendarTimezone || 'Not specified'}\n`;
-                    originalTimeData += `Was UTC: ${this.selectedEvent.wasUTC ? 'Yes' : 'No'}\n\n`;
-                    
-                    // Add diagnosis
-                    if (eventSource === 'Scriptable Parser' && dtStartMatch && dtStartMatch[1].endsWith('Z')) {
-                        originalTimeData += `🚨 TIMEZONE ISSUE DETECTED:\n`;
-                        originalTimeData += `This event was created by the scriptable parser using UTC format.\n`;
-                        originalTimeData += `It should use timezone-aware format like manual events.\n`;
-                        originalTimeData += `Expected format: DTSTART;TZID=${this.calendarCore.calendarTimezone}:YYYYMMDDTHHMMSS\n`;
-                        originalTimeData += `Actual format: DTSTART:YYYYMMDDTHHMMSSZ\n`;
-                    } else if (eventSource === 'Manual Entry' && tzidMatch) {
-                        originalTimeData += `✅ TIMEZONE FORMAT CORRECT:\n`;
-                        originalTimeData += `This manual event uses proper timezone-aware format.\n`;
-                    }
+                    originalTimeData += `Was UTC: ${this.selectedEvent.wasUTC ? 'Yes' : 'No'}`;
                 }
                 
                 document.getElementById('tz-original').textContent = originalTimeData;
@@ -1086,32 +1055,22 @@
                 const resultsDiv = document.getElementById('timezone-test-results');
                 resultsDiv.innerHTML = '<h4>Running timezone conversion tests...</h4>';
                 
-                // Test cases - showing the problem and the fix
+                // Test cases
                 const testCases = [
                     {
-                        name: 'UTC Event (Z suffix) - PROBLEMATIC',
+                        name: 'UTC Event (Z suffix)',
                         icalDate: '20250817T050000Z',
-                        expectedBehavior: 'Should display in calendar timezone, but often shows wrong time',
-                        isProblematic: true
+                        expectedBehavior: 'Should display in calendar timezone'
                     },
                     {
-                        name: 'Timezone-specific Event - CORRECT',
+                        name: 'Timezone-specific Event',
                         icalDate: 'TZID=America/Los_Angeles:20250817T220000',
-                        expectedBehavior: 'Should display in specified timezone (this works correctly)',
-                        isProblematic: false
+                        expectedBehavior: 'Should display in specified timezone'
                     },
                     {
                         name: 'Floating Time Event',
                         icalDate: '20250817T190000',
-                        expectedBehavior: 'Should display in user local timezone',
-                        isProblematic: false
-                    },
-                    {
-                        name: 'Fixed Scriptable Event (simulated)',
-                        icalDate: 'TZID=America/Denver:20250817T220000',
-                        expectedBehavior: 'Scriptable events should use this format after fix',
-                        isProblematic: false,
-                        isFixed: true
+                        expectedBehavior: 'Should display in user local timezone'
                     }
                 ];
                 
@@ -1147,57 +1106,19 @@
                         }
                     }
                     
-                    // Determine border color based on status
-                    let borderColor = '#333';
-                    if (test.isProblematic) {
-                        borderColor = '#e74c3c'; // Red for problematic
-                    } else if (test.isFixed) {
-                        borderColor = '#2ecc71'; // Green for fixed
-                    }
-                    
                     results += `
-                        <div style="background: #0d0d0d; padding: 15px; margin: 10px 0; border-radius: 8px; border: 2px solid ${borderColor};">
-                            <h5 style="color: ${test.isProblematic ? '#e74c3c' : test.isFixed ? '#2ecc71' : '#FFA500'}; margin-bottom: 10px;">
-                                ${test.name}
-                                ${test.isProblematic ? ' ❌' : test.isFixed ? ' ✅' : ''}
-                            </h5>
+                        <div style="background: #0d0d0d; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #333;">
+                            <h5 style="color: #FFA500; margin-bottom: 10px;">${test.name}</h5>
                             <div style="font-family: monospace; font-size: 0.9em;">
-                                <div><strong>Input:</strong> ${test.icalDate}</div>
-                                <div><strong>Parsed:</strong> ${mockEvent.start.toISOString()}</div>
-                                <div><strong>Local Display:</strong> ${localTime}</div>
-                                <div><strong>Calendar TZ Display:</strong> ${calendarTime}</div>
-                                <div style="color: #999; margin-top: 8px; padding-top: 8px; border-top: 1px solid #333;">
-                                    <strong>Expected:</strong> ${test.expectedBehavior}
-                                </div>
-                                ${test.isProblematic ? `
-                                    <div style="color: #e74c3c; margin-top: 8px; padding: 8px; background: rgba(231, 76, 60, 0.1); border-radius: 4px;">
-                                        <strong>Issue:</strong> UTC events created by scriptable parser are misinterpreted by iOS Calendar
-                                    </div>
-                                ` : ''}
-                                ${test.isFixed ? `
-                                    <div style="color: #2ecc71; margin-top: 8px; padding: 8px; background: rgba(46, 204, 113, 0.1); border-radius: 4px;">
-                                        <strong>Fix:</strong> Scriptable adapter now converts UTC dates to timezone-aware format
-                                    </div>
-                                ` : ''}
+                                <div>Input: ${test.icalDate}</div>
+                                <div>Parsed: ${mockEvent.start.toISOString()}</div>
+                                <div>Local Display: ${localTime}</div>
+                                <div>Calendar TZ Display: ${calendarTime}</div>
+                                <div style="color: #999; margin-top: 5px;">Expected: ${test.expectedBehavior}</div>
                             </div>
                         </div>
                     `;
                 });
-                
-                results += `
-                    <div style="background: #1a1a1a; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #333;">
-                        <h5 style="color: #FFA500; margin-bottom: 15px;">🔧 Timezone Fix Summary</h5>
-                        <div style="color: #ccc; line-height: 1.6;">
-                            <p><strong>Problem:</strong> Scriptable parser was creating events with UTC format (DTSTART:20250817T050000Z), 
-                            which iOS Calendar interprets as local device time instead of the intended calendar timezone.</p>
-                            
-                            <p><strong>Solution:</strong> Updated scriptable adapter to convert UTC dates to the calendar's timezone 
-                            before saving, creating Date objects that represent the correct wall-clock time.</p>
-                            
-                            <p><strong>Result:</strong> Events now display at the correct time regardless of the user's current timezone.</p>
-                        </div>
-                    </div>
-                `;
                 
                 results += '</div>';
                 resultsDiv.innerHTML = results;
