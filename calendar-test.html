@@ -1,54 +1,152 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Calendar Test (Root Level)</title>
+    <title>Calendar Timezone Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .event { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .timezone-info { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
 </head>
 <body>
-    <h1>Calendar Test from Root Level</h1>
+    <h1>Calendar Timezone Test</h1>
     <div id="result">Testing...</div>
 
     <script>
+        // Include the calendar core for parsing
+        const script = document.createElement('script');
+        script.src = 'js/calendar-core.js';
+        script.onload = testCalendar;
+        document.head.appendChild(script);
+
         async function testCalendar() {
             const result = document.getElementById('result');
             
             try {
-                console.log('Testing calendar fetch from root level...');
-                // Same path as used in dynamic-calendar-loader.js
-                const response = await fetch('data/calendars/new-york.ics');
-                console.log('Response:', response);
+                console.log('Testing calendar fetch and timezone parsing...');
                 
-                if (response.ok) {
-                    const text = await response.text();
-                    console.log('Calendar data length:', text.length);
+                // Test both calendars
+                const calendars = [
+                    { name: 'New York', url: 'data/calendars/new-york.ics' },
+                    { name: 'Denver', url: 'data/calendars/denver.ics' }
+                ];
+                
+                let allResults = '';
+                
+                for (const calendar of calendars) {
+                    console.log(`Testing ${calendar.name} calendar...`);
+                    const response = await fetch(calendar.url);
                     
-                    result.innerHTML = `
-                        <h2>✅ SUCCESS</h2>
-                        <p>Status: ${response.status}</p>
-                        <p>Size: ${text.length} bytes</p>
-                        <p>First line: ${text.split('\n')[0]}</p>
-                        <p>Events: ${(text.match(/BEGIN:VEVENT/g) || []).length}</p>
-                        <p><strong>This path works! The issue is elsewhere.</strong></p>
-                    `;
-                } else {
-                    result.innerHTML = `
-                        <h2>❌ FETCH FAILED</h2>
-                        <p>Status: ${response.status}</p>
-                        <p>Status Text: ${response.statusText}</p>
-                        <p>URL: data/calendars/new-york.ics</p>
-                    `;
+                    if (response.ok) {
+                        const text = await response.text();
+                        const calendarCore = new CalendarCore();
+                        const events = calendarCore.parseICalData(text);
+                        
+                        // Find sample events for timezone analysis
+                        const sampleEvents = events.slice(0, 3);
+                        
+                        let calendarResults = `
+                            <div class="event">
+                                <h3>${calendar.name} Calendar (${events.length} events)</h3>
+                                <div class="timezone-info">
+                                    <strong>Calendar Timezone:</strong> ${calendarCore.calendarTimezone || 'Not specified'}<br>
+                                    <strong>Has VTIMEZONE Data:</strong> ${calendarCore.timezoneData ? 'Yes' : 'No'}<br>
+                                    <strong>User Timezone:</strong> ${Intl.DateTimeFormat().resolvedOptions().timeZone}<br>
+                                    <strong>Browser Offset:</strong> ${new Date().getTimezoneOffset()} minutes from UTC
+                                </div>
+                        `;
+                        
+                        sampleEvents.forEach((event, index) => {
+                            const startDate = event.startDate;
+                            const endDate = event.endDate;
+                            
+                            // Time translation analysis
+                            const originalParse = startDate ? startDate.toString() : 'N/A';
+                            const isoString = startDate ? startDate.toISOString() : 'N/A';
+                            const timestamp = startDate ? startDate.getTime() : 'N/A';
+                            
+                            // Timezone detection
+                            const wasUTC = startDate ? startDate._wasUTC : false;
+                            const eventTZ = event.startTimezone || 'None';
+                            const calendarTZ = calendarCore.calendarTimezone || 'None';
+                            const displayTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                            
+                            // Display formatting
+                            const day = startDate ? startDate.toLocaleDateString('en-US', { weekday: 'long' }) : 'N/A';
+                            const time = startDate && endDate ? 
+                                `${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}-${endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 
+                                (startDate ? startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'N/A');
+                            
+                            calendarResults += `
+                                <div style="margin: 10px 0; padding: 10px; border-left: 3px solid #007cba;">
+                                    <h4>Event ${index + 1}: ${event.name}</h4>
+                                    <p><strong>Time Translation Process:</strong></p>
+                                    <ol>
+                                        <li><strong>Original Parse:</strong><br>
+                                            Raw value: ${originalParse}<br>
+                                            ISO String: ${isoString}<br>
+                                            Timestamp: ${timestamp}
+                                        </li>
+                                        <li><strong>Timezone Detection:</strong><br>
+                                            Was UTC: ${wasUTC}<br>
+                                            Event TZ: ${eventTZ}<br>
+                                            Calendar TZ: ${calendarTZ}<br>
+                                            Display TZ: ${displayTZ}
+                                        </li>
+                                        <li><strong>Display Formatting:</strong><br>
+                                            Method: ${wasUTC ? 'UTC conversion' : 'Calendar timezone conversion'}<br>
+                                            Day: ${day}<br>
+                                            Time: ${time}
+                                        </li>
+                                        <li><strong>Browser Information:</strong><br>
+                                            User TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone}<br>
+                                            Local offset: ${new Date().getTimezoneOffset()} minutes
+                                        </li>
+                                    </ol>
+                                </div>
+                            `;
+                        });
+                        
+                        calendarResults += '</div>';
+                        allResults += calendarResults;
+                        
+                    } else {
+                        allResults += `
+                            <div class="event error">
+                                <h3>${calendar.name} Calendar - FETCH FAILED</h3>
+                                <p>Status: ${response.status}</p>
+                                <p>Status Text: ${response.statusText}</p>
+                                <p>URL: ${calendar.url}</p>
+                            </div>
+                        `;
+                    }
                 }
-            } catch (error) {
-                console.error('Calendar fetch error:', error);
+                
                 result.innerHTML = `
-                    <h2>❌ ERROR</h2>
+                    <h2>Calendar Timezone Analysis</h2>
+                    ${allResults}
+                    <div class="timezone-info">
+                        <h3>Key Findings:</h3>
+                        <ul>
+                            <li>Manual events (like Bear Happy Hour) are stored with timezone information</li>
+                            <li>Scriptable events (like Chunk) are stored as UTC without proper timezone conversion</li>
+                            <li>The fix ensures both types of events display correctly in the user's timezone</li>
+                        </ul>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Calendar test error:', error);
+                result.innerHTML = `
+                    <h2 class="error">❌ ERROR</h2>
                     <p>Error: ${error.message}</p>
                     <p>Type: ${error.name}</p>
-                    <p>URL: data/calendars/new-york.ics</p>
                 `;
             }
         }
-        
-        testCalendar();
     </script>
 </body>
 </html>
