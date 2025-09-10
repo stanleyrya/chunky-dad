@@ -761,8 +761,8 @@ class CalendarCore {
         return num + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
     }
 
-    // Enhanced day/time formatting with context
-    getEnhancedDayTimeDisplay(event, calendarView = 'week') {
+    // Enhanced day/time formatting with context - always uses pattern-first approach
+    getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
         const { day, time, recurring, eventType, recurrence, startDate } = event;
         
         logger.debug('CALENDAR', 'Enhanced day/time display', {
@@ -773,7 +773,11 @@ class CalendarCore {
             eventType,
             recurrence,
             calendarView,
-            hasRecurrence: !!recurrence
+            hasRecurrence: !!recurrence,
+            calendarPeriod: calendarPeriod ? {
+                start: calendarPeriod.start?.toISOString(),
+                end: calendarPeriod.end?.toISOString()
+            } : null
         });
         
         // For desktop, show full day name; for mobile, show abbreviated
@@ -782,7 +786,7 @@ class CalendarCore {
         
         let baseDisplay = `${displayDay} ${time}`;
         
-        // Add context based on event type and calendar view
+        // Always use pattern-first approach (like month view)
         if (recurring && recurrence) {
             const recurrenceDesc = this.getRecurrenceDescription(recurrence, startDate);
             
@@ -794,47 +798,102 @@ class CalendarCore {
             });
             
             if (recurrenceDesc) {
-                // For week view, show recurrence type
-                if (calendarView === 'week') {
-                    if (eventType === 'weekly') {
-                        baseDisplay += ` • Weekly`;
-                    } else if (eventType === 'monthly') {
-                        baseDisplay += ` • Monthly`;
-                    } else {
-                        baseDisplay += ` • ${recurrenceDesc}`;
-                    }
+                // Extract the specific day pattern for monthly events
+                if (eventType === 'monthly' && recurrenceDesc.includes('of each month')) {
+                    const dayPattern = recurrenceDesc.split(' of each month')[0];
+                    baseDisplay += ` • ${dayPattern}`;
                 } else {
-                    // For month view, show more specific info
-                    if (eventType === 'monthly' && recurrenceDesc.includes('of each month')) {
-                        // Extract the specific day pattern (e.g., "1st Tuesday")
-                        const dayPattern = recurrenceDesc.split(' of each month')[0];
-                        baseDisplay += ` • ${dayPattern}`;
-                    } else {
-                        baseDisplay += ` • ${recurrenceDesc}`;
-                    }
+                    baseDisplay += ` • ${recurrenceDesc}`;
                 }
             }
         } else {
-            // One-off event
-            if (calendarView === 'month') {
-                // For month view, show the specific date
-                const eventDate = new Date(startDate);
-                const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
-                const date = eventDate.getDate();
-                baseDisplay += ` • ${month} ${date}`;
-            } else {
-                // For week view, indicate it's a one-time event
-                baseDisplay += ` • One-time`;
+            // One-off event - always show specific date
+            const eventDate = new Date(startDate);
+            const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
+            const date = eventDate.getDate();
+            baseDisplay += ` • ${month} ${date}`;
+        }
+        
+        // Add contextual dates for events visible in current calendar period
+        if (calendarPeriod && calendarPeriod.start && calendarPeriod.end) {
+            const visibleDates = this.getVisibleEventDates(event, calendarPeriod.start, calendarPeriod.end);
+            if (visibleDates.length > 0) {
+                const dateStrings = visibleDates.map(d => {
+                    const month = d.toLocaleDateString('en-US', { month: 'short' });
+                    const day = d.getDate();
+                    return `${month} ${day}`;
+                });
+                
+                if (dateStrings.length === 1) {
+                    baseDisplay += ` (${dateStrings[0]})`;
+                } else if (dateStrings.length <= 3) {
+                    baseDisplay += ` (${dateStrings.join(', ')})`;
+                } else {
+                    // For many occurrences, show first and last
+                    baseDisplay += ` (${dateStrings[0]}-${dateStrings[dateStrings.length - 1]})`;
+                }
             }
         }
         
         logger.debug('CALENDAR', 'Final display string generated', {
             eventName: event.name,
             baseDisplay,
-            calendarView
+            calendarView,
+            visibleDates: calendarPeriod ? this.getVisibleEventDates(event, calendarPeriod.start, calendarPeriod.end) : null
         });
         
         return baseDisplay;
+    }
+
+    // Get all dates when an event occurs within a given period
+    getVisibleEventDates(event, periodStart, periodEnd) {
+        const dates = [];
+        
+        if (!event.recurring || !event.recurrence) {
+            // One-off event - check if it falls within the period
+            const eventDate = new Date(event.startDate);
+            if (eventDate >= periodStart && eventDate <= periodEnd) {
+                dates.push(eventDate);
+            }
+            return dates;
+        }
+        
+        // Recurring event - generate all occurrences within the period
+        const pattern = this.parseRecurrencePattern(event.recurrence);
+        if (!pattern) return dates;
+        
+        const eventStartDate = new Date(event.startDate);
+        if (eventStartDate > periodEnd) return dates;
+        
+        // Generate occurrences based on frequency
+        let current = new Date(eventStartDate);
+        const maxIterations = 100; // Safety limit
+        let iterations = 0;
+        
+        while (current <= periodEnd && iterations < maxIterations) {
+            if (current >= periodStart) {
+                dates.push(new Date(current));
+            }
+            
+            // Advance to next occurrence
+            switch (pattern.frequency) {
+                case 'DAILY':
+                    current.setDate(current.getDate() + pattern.interval);
+                    break;
+                case 'WEEKLY':
+                    current.setDate(current.getDate() + (7 * pattern.interval));
+                    break;
+                case 'MONTHLY':
+                    current.setMonth(current.getMonth() + pattern.interval);
+                    break;
+                default:
+                    return dates; // Unknown frequency, return what we have
+            }
+            
+            iterations++;
+        }
+        
+        return dates;
     }
 
     parseICalDate(icalDate) {

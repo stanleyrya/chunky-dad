@@ -1596,7 +1596,9 @@ class DynamicCalendarLoader extends CalendarCore {
         const formatDayTime = (event) => {
             // Use the enhanced display logic from CalendarCore (inherited method)
             if (typeof this.getEnhancedDayTimeDisplay === 'function') {
-                return this.getEnhancedDayTimeDisplay(event, this.currentView);
+                // Get current calendar period bounds for contextual date display
+                const periodBounds = this.getCurrentPeriodBounds();
+                return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
             }
             
             // Fallback to simple format if method not available

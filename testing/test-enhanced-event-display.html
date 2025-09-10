@@ -48,7 +48,9 @@
             <h2>View Toggle</h2>
             <button onclick="testView('week')">Week View</button>
             <button onclick="testView('month')">Month View</button>
+            <button onclick="testView('2week')">2-Week View</button>
             <p>Current view: <span id="current-view">week</span></p>
+            <p>Period: <span id="current-period">Jan 1-7, 2024</span></p>
         </div>
     </div>
 
@@ -117,10 +119,38 @@
         ];
         
         let currentView = 'week';
+        let currentPeriod = null;
         
         function testView(view) {
             currentView = view;
             document.getElementById('current-view').textContent = view;
+            
+            // Set up different periods for testing
+            const baseDate = new Date('2024-01-01');
+            let periodStart, periodEnd;
+            
+            switch (view) {
+                case 'week':
+                    periodStart = new Date(baseDate);
+                    periodEnd = new Date(baseDate);
+                    periodEnd.setDate(periodEnd.getDate() + 6);
+                    break;
+                case '2week':
+                    periodStart = new Date(baseDate);
+                    periodEnd = new Date(baseDate);
+                    periodEnd.setDate(periodEnd.getDate() + 13);
+                    break;
+                case 'month':
+                    periodStart = new Date(baseDate);
+                    periodEnd = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+                    break;
+            }
+            
+            currentPeriod = { start: periodStart, end: periodEnd };
+            
+            const periodText = `${periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            document.getElementById('current-period').textContent = periodText;
+            
             renderEvents();
         }
         
@@ -129,7 +159,7 @@
             container.innerHTML = '';
             
             testEvents.forEach(event => {
-                const display = calendarCore.getEnhancedDayTimeDisplay(event, currentView);
+                const display = calendarCore.getEnhancedDayTimeDisplay(event, currentView, currentPeriod);
                 
                 const eventDiv = document.createElement('div');
                 eventDiv.className = 'test-event';
