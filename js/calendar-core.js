@@ -765,12 +765,8 @@ class CalendarCore {
     getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
         const { day, time } = event;
         
-        // For desktop, show full day name; for mobile, show abbreviated
-        const isDesktop = window.innerWidth > 768;
-        const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
-        
-        // Simple display: just day and time
-        const baseDisplay = `${displayDay} ${time}`;
+        // Simple display: just day and time - consistent across all devices
+        const baseDisplay = `${day} ${time}`;
         
         logger.debug('CALENDAR', 'Enhanced day/time display (simplified)', {
             eventName: event.name,
