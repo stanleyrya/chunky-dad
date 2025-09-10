@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Event Display Test - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-event {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .event-display {
+            font-weight: bold;
+            color: #333;
+        }
+        .event-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Enhanced Event Display Test</h1>
+        <p>Testing the new enhanced event day display logic for different event types and calendar views.</p>
+        
+        <div class="test-section">
+            <h2>Test Events</h2>
+            <div id="test-events"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>View Toggle</h2>
+            <button onclick="testView('week')">Week View</button>
+            <button onclick="testView('month')">Month View</button>
+            <p>Current view: <span id="current-view">week</span></p>
+        </div>
+    </div>
+
+    <script src="../js/logger.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script>
+        // Initialize calendar core
+        const calendarCore = new CalendarCore();
+        
+        // Test events with different patterns
+        const testEvents = [
+            {
+                name: "Weekly Bear Night",
+                day: "Thursday",
+                time: "7pm-9pm",
+                recurring: true,
+                eventType: "weekly",
+                recurrence: "FREQ=WEEKLY;BYDAY=TH",
+                startDate: new Date('2024-01-04T19:00:00')
+            },
+            {
+                name: "Monthly Bear Brunch",
+                day: "Sunday",
+                time: "11am-2pm",
+                recurring: true,
+                eventType: "monthly",
+                recurrence: "FREQ=MONTHLY;BYDAY=1SU",
+                startDate: new Date('2024-01-07T11:00:00')
+            },
+            {
+                name: "3rd Friday Bear Social",
+                day: "Friday",
+                time: "8pm-11pm",
+                recurring: true,
+                eventType: "monthly",
+                recurrence: "FREQ=MONTHLY;BYDAY=3FR",
+                startDate: new Date('2024-01-19T20:00:00')
+            },
+            {
+                name: "One-time Bear Party",
+                day: "Saturday",
+                time: "9pm-1am",
+                recurring: false,
+                eventType: "routine",
+                recurrence: null,
+                startDate: new Date('2024-01-20T21:00:00')
+            },
+            {
+                name: "Daily Bear Coffee",
+                day: "Monday",
+                time: "8am-10am",
+                recurring: true,
+                eventType: "daily",
+                recurrence: "FREQ=DAILY",
+                startDate: new Date('2024-01-01T08:00:00')
+            },
+            {
+                name: "Last Tuesday Bear Meetup",
+                day: "Tuesday",
+                time: "6pm-8pm",
+                recurring: true,
+                eventType: "monthly",
+                recurrence: "FREQ=MONTHLY;BYDAY=-1TU",
+                startDate: new Date('2024-01-30T18:00:00')
+            }
+        ];
+        
+        let currentView = 'week';
+        
+        function testView(view) {
+            currentView = view;
+            document.getElementById('current-view').textContent = view;
+            renderEvents();
+        }
+        
+        function renderEvents() {
+            const container = document.getElementById('test-events');
+            container.innerHTML = '';
+            
+            testEvents.forEach(event => {
+                const display = calendarCore.getEnhancedDayTimeDisplay(event, currentView);
+                
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'test-event';
+                eventDiv.innerHTML = `
+                    <div class="event-display">${display}</div>
+                    <div class="event-info">
+                        <strong>${event.name}</strong><br>
+                        Type: ${event.eventType} | Recurring: ${event.recurring} | Recurrence: ${event.recurrence || 'None'}
+                    </div>
+                `;
+                container.appendChild(eventDiv);
+            });
+        }
+        
+        // Initial render
+        renderEvents();
+        
+        // Test the recurrence parsing
+        console.log('Testing recurrence parsing:');
+        testEvents.forEach(event => {
+            if (event.recurrence) {
+                const pattern = calendarCore.parseRecurrencePattern(event.recurrence);
+                const description = calendarCore.getRecurrenceDescription(event.recurrence, event.startDate);
+                console.log(`${event.name}:`, {
+                    recurrence: event.recurrence,
+                    pattern: pattern,
+                    description: description
+                });
+            }
+        });
+    </script>
+</body>
+</html>

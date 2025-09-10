@@ -1592,9 +1592,15 @@ class DynamicCalendarLoader extends CalendarCore {
         const notCheckedBadge = event.notChecked ? 
             `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
 
-        // Format day/time more concisely (e.g., "Thu 5pm-9pm")
-        const formatDayTime = (day, time) => {
-            // For desktop, show full day name; for mobile, show abbreviated
+        // Enhanced day/time formatting with context based on event type and calendar view
+        const formatDayTime = (event) => {
+            // Use the enhanced display logic from CalendarCore (inherited method)
+            if (typeof this.getEnhancedDayTimeDisplay === 'function') {
+                return this.getEnhancedDayTimeDisplay(event, this.currentView);
+            }
+            
+            // Fallback to simple format if method not available
+            const { day, time } = event;
             const isDesktop = window.innerWidth > 768;
             const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
             return `${displayDay} ${time}`;
@@ -1605,7 +1611,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 <div class="event-header">
                     <h3>${event.name}</h3>
                     <div class="event-meta">
-                        <div class="event-day">${formatDayTime(event.day, event.time)}</div>
+                        <div class="event-day">${formatDayTime(event)}</div>
                         ${recurringBadge}
                         ${notCheckedBadge}
                     </div>
