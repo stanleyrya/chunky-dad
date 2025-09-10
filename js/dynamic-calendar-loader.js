@@ -385,15 +385,27 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const cityParam = urlParams.get('city');
-            if (cityParam) return cityParam;
+            if (cityParam) {
+                logger.debug('CITY', 'City detected from URL parameter', { city: cityParam });
+                return cityParam;
+            }
 
             // Fallback: detect from first path segment (supports aliases)
             const slug = this.getCitySlugFromPath();
-            if (slug) return slug;
+            if (slug) {
+                logger.debug('CITY', 'City detected from path segment', { city: slug });
+                return slug;
+            }
 
             // Legacy: hash or default
             const hash = window.location.hash.replace('#', '');
-            return hash || 'new-york';
+            const defaultCity = hash || 'new-york';
+            logger.debug('CITY', 'Using default city (no URL params or path detected)', { 
+                city: defaultCity, 
+                hash: window.location.hash,
+                pathname: window.location.pathname 
+            });
+            return defaultCity;
         } catch (e) {
             logger.warn('CITY', 'Failed to resolve city from URL, defaulting to new-york', { error: e?.message });
             return 'new-york';
@@ -1316,7 +1328,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 window.CITY_CONFIG && 
                 window.CITY_CONFIG[pathSegments[0].toLowerCase()];
             
-            const needsParentPath = isTesting || isInCitySubdirectory;
+            // city.html pages are served from root, so no prefix needed
+            const isCityHtmlPage = pathname.includes('city.html');
+            
+            const needsParentPath = (isTesting || isInCitySubdirectory) && !isCityHtmlPage;
             const prefix = needsParentPath ? '../' : '';
             
             return `${prefix}data/calendars/${cityKey}.ics`;
@@ -2765,6 +2780,7 @@ class DynamicCalendarLoader extends CalendarCore {
             this.allEvents = [];
             // Show error message instead of empty calendar
             this.showCalendarError();
+            // Don't re-throw the error to prevent unhandled promise rejection
             return;
         }
         
@@ -2979,7 +2995,9 @@ calculatedData: {
             logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
         } catch (error) {
             logger.componentError('CALENDAR', 'Calendar initialization failed', error);
-            throw error;
+            // Show user-friendly error message instead of throwing
+            this.showCalendarError();
+            // Don't re-throw to prevent unhandled promise rejection
         } finally {
             this.isInitializing = false;
         }
