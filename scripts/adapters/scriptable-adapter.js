@@ -241,6 +241,59 @@ class ScriptableAdapter {
         throw new Error(`No timezone configuration found for city: ${city}`);
     }
 
+    // TIMEZONE FIX: Convert a Date object to the proper timezone for calendar storage
+    // This ensures events are stored with the correct timezone information
+    convertToCalendarTimezone(date, timezone) {
+        if (!date) return null;
+        
+        // The problem: When we create Date objects from UTC strings (like "2025-08-24T03:00:00.000Z"),
+        // JavaScript correctly interprets them as UTC. However, when we save them to iOS Calendar,
+        // the Calendar API treats the Date object as if it were in the device's local timezone.
+        //
+        // The solution: We need to create a Date object that represents the same wall-clock time
+        // in the calendar's target timezone. We do this by:
+        // 1. Getting the time components in the target timezone
+        // 2. Creating a new Date object using those components as local time
+        
+        try {
+            // Format the UTC date in the target timezone to get the correct time components
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            const parts = formatter.formatToParts(date);
+            const year = parseInt(parts.find(p => p.type === 'year').value);
+            const month = parseInt(parts.find(p => p.type === 'month').value) - 1; // JavaScript months are 0-based
+            const day = parseInt(parts.find(p => p.type === 'day').value);
+            const hour = parseInt(parts.find(p => p.type === 'hour').value);
+            const minute = parseInt(parts.find(p => p.type === 'minute').value);
+            const second = parseInt(parts.find(p => p.type === 'second').value);
+            
+            // Create a new Date object using these components as LOCAL time
+            // This ensures the Calendar API will store it correctly
+            const localDate = new Date(year, month, day, hour, minute, second);
+            
+            console.log(`🕐 Timezone conversion for ${timezone}:`);
+            console.log(`   Original UTC: ${date.toISOString()}`);
+            console.log(`   Target timezone time: ${formatter.format(date)}`);
+            console.log(`   Created local Date: ${localDate.toString()}`);
+            console.log(`   Local Date ISO: ${localDate.toISOString()}`);
+            
+            return localDate;
+            
+        } catch (error) {
+            console.error(`❌ Error converting timezone for ${timezone}: ${error.message}`);
+            return date; // Fallback to original date
+        }
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
@@ -381,8 +434,12 @@ class ScriptableAdapter {
                             
                             // Apply the final merged values (event object already contains final values)
                             targetEvent.title = event.title;
-                            targetEvent.startDate = event.startDate;
-                            targetEvent.endDate = event.endDate;
+                            
+                            // TIMEZONE FIX: Convert UTC dates to calendar timezone
+                            const mergeTimezone = this.getTimezoneForCity(event.city);
+                            targetEvent.startDate = this.convertToCalendarTimezone(event.startDate, mergeTimezone);
+                            targetEvent.endDate = this.convertToCalendarTimezone(event.endDate, mergeTimezone);
+                            
                             targetEvent.location = event.location;
                             targetEvent.notes = event.notes;
                             targetEvent.url = event.url;
@@ -401,6 +458,21 @@ class ScriptableAdapter {
                                 updateChanges.push('title');
                                 updateTarget.title = event.title;
                             }
+                            
+                            // TIMEZONE FIX: Convert UTC dates to calendar timezone
+                            const updateTimezone = this.getTimezoneForCity(event.city);
+                            const newStartDate = this.convertToCalendarTimezone(event.startDate, updateTimezone);
+                            const newEndDate = this.convertToCalendarTimezone(event.endDate, updateTimezone);
+                            
+                            if (updateTarget.startDate.getTime() !== newStartDate.getTime()) {
+                                updateChanges.push('startDate');
+                                updateTarget.startDate = newStartDate;
+                            }
+                            if (updateTarget.endDate.getTime() !== newEndDate.getTime()) {
+                                updateChanges.push('endDate');
+                                updateTarget.endDate = newEndDate;
+                            }
+                            
                             if (updateTarget.notes !== event.notes) {
                                 updateChanges.push('notes (replaced)');
                                 updateTarget.notes = event.notes;
@@ -428,8 +500,12 @@ class ScriptableAdapter {
                             actionCounts.create.push(event.title);
                             const calendarEvent = new CalendarEvent();
                             calendarEvent.title = event.title;
-                            calendarEvent.startDate = event.startDate;
-                            calendarEvent.endDate = event.endDate;
+                            
+                            // TIMEZONE FIX: Convert UTC dates to calendar timezone
+                            const eventTimezone = this.getTimezoneForCity(event.city);
+                            calendarEvent.startDate = this.convertToCalendarTimezone(event.startDate, eventTimezone);
+                            calendarEvent.endDate = this.convertToCalendarTimezone(event.endDate, eventTimezone);
+                            
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
