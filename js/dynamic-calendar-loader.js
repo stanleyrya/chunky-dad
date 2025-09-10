@@ -2732,8 +2732,14 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             const data = await this.loadCalendarData(this.currentCity);
             
-            if (!data) {
-                logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing error message');
+            if (!data || !data.events || !data.cityConfig) {
+                logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing error message', {
+                    dataIsNull: data === null,
+                    dataIsUndefined: data === undefined,
+                    hasEvents: data && !!data.events,
+                    hasCityConfig: data && !!data.cityConfig,
+                    dataType: typeof data
+                });
                 // Clear fake event from allEvents to prevent it from showing
                 this.allEvents = [];
                 // Show error message instead of empty calendar
