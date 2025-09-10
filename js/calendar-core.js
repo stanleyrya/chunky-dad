@@ -818,7 +818,9 @@ class CalendarCore {
         
         if (!recurring) {
             // One-off event - show the date (same as calendar)
-            const parts = startDate.split('-');
+            const startDateStr = startDate instanceof Date ? 
+                startDate.toISOString().split('T')[0] : startDate;
+            const parts = startDateStr.split('-');
             const month = parseInt(parts[1]);
             const date = parseInt(parts[2]);
             return `${month}/${date}`;
@@ -854,7 +856,9 @@ class CalendarCore {
         }
         
         // For monthly events without calendar context, show next occurrence
-        const parts = startDate.split('-');
+        const startDateStr = startDate instanceof Date ? 
+            startDate.toISOString().split('T')[0] : startDate;
+        const parts = startDateStr.split('-');
         const month = parseInt(parts[1]);
         const date = parseInt(parts[2]);
         return `${month}/${date}`;
@@ -866,7 +870,9 @@ class CalendarCore {
         
         if (!event.recurring || !event.recurrence) {
             // One-off event - check if it falls within the period
-            const parts = event.startDate.split('-');
+            const startDateStr = event.startDate instanceof Date ? 
+                event.startDate.toISOString().split('T')[0] : event.startDate;
+            const parts = startDateStr.split('-');
             const eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             if (eventDate >= periodStart && eventDate <= periodEnd) {
                 dates.push(eventDate);
@@ -878,7 +884,9 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(event.recurrence);
         if (!pattern) return dates;
         
-        const parts = event.startDate.split('-');
+        const startDateStr = event.startDate instanceof Date ? 
+            event.startDate.toISOString().split('T')[0] : event.startDate;
+        const parts = startDateStr.split('-');
         const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         if (eventStartDate > periodEnd) return dates;
         
