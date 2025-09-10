@@ -1586,18 +1586,24 @@ class DynamicCalendarLoader extends CalendarCore {
             </div>
         ` : '';
 
-        const recurringBadge = event.recurring ? 
-            `<span class="recurring-badge">🔄 ${event.eventType}</span>` : '';
+        // Get current calendar period bounds for contextual date display
+        const periodBounds = this.getCurrentPeriodBounds();
+        
+        // New three-badge system
+        const formatDayTime = (event) => {
+            return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
+        };
+        
+        const recurringBadgeContent = this.getRecurringBadgeContent(event);
+        const recurringBadge = recurringBadgeContent ? 
+            `<span class="recurring-badge">${recurringBadgeContent}</span>` : '';
+        
+        const dateBadgeContent = this.getDateBadgeContent(event, periodBounds);
+        const dateBadge = dateBadgeContent ? 
+            `<span class="date-badge">${dateBadgeContent}</span>` : '';
         
         const notCheckedBadge = event.notChecked ? 
             `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
-
-        // Enhanced day/time formatting with context based on event type and calendar view
-        const formatDayTime = (event) => {
-            // Get current calendar period bounds for contextual date display
-            const periodBounds = this.getCurrentPeriodBounds();
-            return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
-        };
 
         return `
             <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
@@ -1606,6 +1612,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     <div class="event-meta">
                         <div class="event-day">${formatDayTime(event)}</div>
                         ${recurringBadge}
+                        ${dateBadge}
                         ${notCheckedBadge}
                     </div>
                 </div>

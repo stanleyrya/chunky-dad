@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Event Display Test - chunky.dad</title>
+    <title>Three-Badge Event Display Test - chunky.dad</title>
     <link rel="stylesheet" href="../styles.css">
     <style>
         .test-container {
@@ -36,8 +36,8 @@
 </head>
 <body>
     <div class="test-container">
-        <h1>Enhanced Event Display Test</h1>
-        <p>Testing the new enhanced event day display logic for different event types and calendar views.</p>
+        <h1>Three-Badge Event Display Test</h1>
+        <p>Testing the new three-badge system: event-day (time only), recurring-badge (pattern), and date-badge (specific dates).</p>
         
         <div class="test-section">
             <h2>Test Events</h2>
@@ -159,12 +159,27 @@
             container.innerHTML = '';
             
             testEvents.forEach(event => {
-                const display = calendarCore.getEnhancedDayTimeDisplay(event, currentView, currentPeriod);
+                // Test the new three-badge system
+                const dayTimeDisplay = calendarCore.getEnhancedDayTimeDisplay(event, currentView, currentPeriod);
+                const recurringBadgeContent = calendarCore.getRecurringBadgeContent(event);
+                const dateBadgeContent = calendarCore.getDateBadgeContent(event, currentPeriod);
                 
                 const eventDiv = document.createElement('div');
                 eventDiv.className = 'test-event';
+                
+                // Create the three-badge display
+                let badgeHtml = `<div class="event-day">${dayTimeDisplay}</div>`;
+                if (recurringBadgeContent) {
+                    badgeHtml += `<span class="recurring-badge">${recurringBadgeContent}</span>`;
+                }
+                if (dateBadgeContent) {
+                    badgeHtml += `<span class="date-badge">${dateBadgeContent}</span>`;
+                }
+                
                 eventDiv.innerHTML = `
-                    <div class="event-display">${display}</div>
+                    <div class="event-meta" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                        ${badgeHtml}
+                    </div>
                     <div class="event-info">
                         <strong>${event.name}</strong><br>
                         Type: ${event.eventType} | Recurring: ${event.recurring} | Recurrence: ${event.recurrence || 'None'}
@@ -177,18 +192,20 @@
         // Initial render
         renderEvents();
         
-        // Test the recurrence parsing
-        console.log('Testing recurrence parsing:');
+        // Test the new badge system
+        console.log('Testing new three-badge system:');
         testEvents.forEach(event => {
-            if (event.recurrence) {
-                const pattern = calendarCore.parseRecurrencePattern(event.recurrence);
-                const description = calendarCore.getRecurrenceDescription(event.recurrence, event.startDate);
-                console.log(`${event.name}:`, {
-                    recurrence: event.recurrence,
-                    pattern: pattern,
-                    description: description
-                });
-            }
+            const dayTimeDisplay = calendarCore.getEnhancedDayTimeDisplay(event, currentView, currentPeriod);
+            const recurringBadgeContent = calendarCore.getRecurringBadgeContent(event);
+            const dateBadgeContent = calendarCore.getDateBadgeContent(event, currentPeriod);
+            
+            console.log(`${event.name}:`, {
+                dayTime: dayTimeDisplay,
+                recurringBadge: recurringBadgeContent,
+                dateBadge: dateBadgeContent,
+                eventType: event.eventType,
+                recurring: event.recurring
+            });
         });
     </script>
 </body>

@@ -192,6 +192,7 @@ class TodayEventsAggregator {
     const meta = document.createElement('div');
     meta.className = 'event-meta';
 
+    // New three-badge system
     const timeDisplay = document.createElement('div');
     timeDisplay.className = 'event-day';
     timeDisplay.textContent = this.formatTimeRange(ev.startDate, ev.endDate);
@@ -200,8 +201,20 @@ class TodayEventsAggregator {
     if (ev.recurring) {
       const recurringBadge = document.createElement('span');
       recurringBadge.className = 'recurring-badge';
-      recurringBadge.textContent = 'Weekly';
+      // Use eventType if available, otherwise default to 'Weekly'
+      recurringBadge.textContent = ev.eventType === 'monthly' ? 'Monthly' : 'Weekly';
       meta.appendChild(recurringBadge);
+    }
+
+    // Add date badge for one-off events
+    if (!ev.recurring) {
+      const dateBadge = document.createElement('span');
+      dateBadge.className = 'date-badge';
+      const eventDate = new Date(ev.startDate);
+      const month = eventDate.getMonth() + 1;
+      const date = eventDate.getDate();
+      dateBadge.textContent = `${month}/${date}`;
+      meta.appendChild(dateBadge);
     }
 
     header.appendChild(meta);
