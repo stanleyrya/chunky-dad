@@ -60,13 +60,32 @@ class ChunkyLogger {
         
         // Monitor errors
         window.addEventListener('error', (event) => {
+            const isScriptError = event.message === 'Script error.' && !event.filename;
+            const isCrossOriginError = !event.filename || event.filename === '';
+            
             this.error('SYSTEM', 'JavaScript error caught', {
                 message: event.error?.message || event.message,
                 filename: event.filename,
                 lineno: event.lineno,
                 colno: event.colno,
-                stack: event.error?.stack
+                stack: event.error?.stack,
+                isScriptError,
+                isCrossOriginError
             });
+            
+            // Provide specific guidance for script errors
+            if (isScriptError || isCrossOriginError) {
+                this.warn('SYSTEM', 'Cross-origin script error detected', {
+                    explanation: 'This error typically occurs when external scripts fail to load or execute',
+                    possibleCauses: [
+                        'External service (CORS proxy, CDN) temporarily unavailable',
+                        'Network connectivity issues',
+                        'Browser security restrictions',
+                        'External script contains errors'
+                    ],
+                    suggestion: 'Check browser network tab for failed requests and try refreshing the page'
+                });
+            }
         });
         
         // Monitor unhandled promise rejections
