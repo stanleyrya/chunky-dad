@@ -5759,19 +5759,3 @@ footer {
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-/* Calendar Error Styles */
-.calendar-error {
-    text-align: center;
-    padding: 20px;
-    background: var(--background-lighter);
-    border-radius: 8px;
-    border: 1px solid var(--border-light);
-    margin: 20px 0;
-    color: var(--text-secondary);
-}
-
-.calendar-error p {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
