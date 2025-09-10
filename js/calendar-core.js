@@ -702,7 +702,7 @@ class CalendarCore {
                 const dayCode = pattern.byDay[0];
                 const dayIndex = this.getDayIndexFromCode(dayCode);
                 if (dayIndex !== -1) {
-                    return `Every ${dayNames[dayIndex]}`;
+                    return `Every ${dayAbbrevs[dayIndex]}`;
                 }
             }
             return pattern.interval === 1 ? 'Weekly' : `Every ${pattern.interval} weeks`;
@@ -717,17 +717,16 @@ class CalendarCore {
                     const occurrence = this.getOccurrenceFromDayCode(dayCode);
                     if (occurrence > 0) {
                         const ordinal = this.getOrdinal(occurrence);
-                        return `${ordinal} ${dayNames[dayIndex]} of each month`;
+                        return `${ordinal} ${dayAbbrevs[dayIndex]} of month`;
                     } else if (occurrence < 0) {
-                        const ordinal = this.getOrdinal(Math.abs(occurrence));
-                        return `Last ${dayNames[dayIndex]} of each month`;
+                        return `Last ${dayAbbrevs[dayIndex]} of month`;
                     }
                 }
             }
             if (pattern.byMonthDay && pattern.byMonthDay.length === 1) {
                 const day = pattern.byMonthDay[0];
                 const ordinal = this.getOrdinal(day);
-                return `${ordinal} of each month`;
+                return `${ordinal} of month`;
             }
             return pattern.interval === 1 ? 'Monthly' : `Every ${pattern.interval} months`;
         }
@@ -761,16 +760,44 @@ class CalendarCore {
         return num + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
     }
 
+    // Helper method to create UTC date to avoid timezone issues
+    createUTCDate(dateString) {
+        // Handle both ISO strings and YYYY-MM-DD format
+        if (typeof dateString === 'string') {
+            if (dateString.includes('T') || dateString.includes('Z')) {
+                // ISO string - parse normally
+                return new Date(dateString);
+            } else {
+                // YYYY-MM-DD format - create UTC date
+                const parts = dateString.split('-');
+                return new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+            }
+        }
+        return new Date(dateString);
+    }
+
     // Enhanced day/time formatting with context - always uses pattern-first approach
     getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
         const { day, time } = event;
         
-        // Simple display: just day and time - consistent across all devices
-        const baseDisplay = `${day} ${time}`;
+        // Convert full day names to abbreviations
+        const dayAbbrevMap = {
+            'Sunday': 'Sun',
+            'Monday': 'Mon', 
+            'Tuesday': 'Tue',
+            'Wednesday': 'Wed',
+            'Thursday': 'Thu',
+            'Friday': 'Fri',
+            'Saturday': 'Sat'
+        };
+        
+        const abbreviatedDay = dayAbbrevMap[day] || day;
+        const baseDisplay = `${abbreviatedDay} ${time}`;
         
         logger.debug('CALENDAR', 'Enhanced day/time display (simplified)', {
             eventName: event.name,
             day,
+            abbreviatedDay,
             time,
             baseDisplay,
             calendarView
@@ -803,10 +830,10 @@ class CalendarCore {
         const { recurring, startDate } = event;
         
         if (!recurring) {
-            // One-off event - show the date
-            const eventDate = new Date(startDate);
-            const month = eventDate.getMonth() + 1; // 0-based to 1-based
-            const date = eventDate.getDate();
+            // One-off event - show the date using UTC to avoid timezone issues
+            const eventDate = this.createUTCDate(startDate);
+            const month = eventDate.getUTCMonth() + 1; // 0-based to 1-based
+            const date = eventDate.getUTCDate();
             return `${month}/${date}`;
         }
         
@@ -818,20 +845,26 @@ class CalendarCore {
                 return null;
             }
             
-            const dateStrings = visibleDates.map(d => {
-                const month = d.getMonth() + 1; // 0-based to 1-based
-                const date = d.getDate();
+            // For recurring events, show a cleaner format
+            if (visibleDates.length === 1) {
+                const month = visibleDates[0].getUTCMonth() + 1;
+                const date = visibleDates[0].getUTCDate();
                 return `${month}/${date}`;
-            });
-            
-            if (dateStrings.length === 1) {
-                return dateStrings[0];
-            } else if (dateStrings.length === 2) {
-                return `${dateStrings[0]}, ${dateStrings[1]}`;
+            } else if (visibleDates.length <= 3) {
+                // Show up to 3 dates cleanly
+                const dateStrings = visibleDates.map(d => {
+                    const month = d.getUTCMonth() + 1;
+                    const date = d.getUTCDate();
+                    return `${month}/${date}`;
+                });
+                return dateStrings.join(', ');
             } else {
-                // 3+ dates: show first two + count
-                const remaining = dateStrings.length - 2;
-                return `${dateStrings[0]}, ${dateStrings[1]} +${remaining} more`;
+                // 4+ dates: show first date + count
+                const firstDate = visibleDates[0];
+                const month = firstDate.getUTCMonth() + 1;
+                const date = firstDate.getUTCDate();
+                const remaining = visibleDates.length - 1;
+                return `${month}/${date} +${remaining} more`;
             }
         }
         
@@ -841,9 +874,9 @@ class CalendarCore {
         }
         
         // For monthly events without calendar context, show next occurrence
-        const nextOccurrence = new Date(startDate);
-        const month = nextOccurrence.getMonth() + 1;
-        const date = nextOccurrence.getDate();
+        const nextOccurrence = this.createUTCDate(startDate);
+        const month = nextOccurrence.getUTCMonth() + 1;
+        const date = nextOccurrence.getUTCDate();
         return `${month}/${date}`;
     }
 
@@ -853,7 +886,7 @@ class CalendarCore {
         
         if (!event.recurring || !event.recurrence) {
             // One-off event - check if it falls within the period
-            const eventDate = new Date(event.startDate);
+            const eventDate = this.createUTCDate(event.startDate);
             if (eventDate >= periodStart && eventDate <= periodEnd) {
                 dates.push(eventDate);
             }
@@ -864,7 +897,7 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(event.recurrence);
         if (!pattern) return dates;
         
-        const eventStartDate = new Date(event.startDate);
+        const eventStartDate = this.createUTCDate(event.startDate);
         if (eventStartDate > periodEnd) return dates;
         
         // Generate occurrences based on frequency
