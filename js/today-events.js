@@ -1,6 +1,7 @@
 // Today Events Aggregator - loads cached ICS files and renders events happening today
-class TodayEventsAggregator {
+class TodayEventsAggregator extends CalendarCore {
   constructor() {
+    super();
     this.containerSelector = '#today-event-grid';
     this.container = null;
     this.maxCities = 20; // safety cap
@@ -192,16 +193,26 @@ class TodayEventsAggregator {
     const meta = document.createElement('div');
     meta.className = 'event-meta';
 
+    // Use inherited CalendarCore methods for consistent three-badge system
     const timeDisplay = document.createElement('div');
     timeDisplay.className = 'event-day';
-    timeDisplay.textContent = this.formatTimeRange(ev.startDate, ev.endDate);
+    timeDisplay.textContent = this.getEnhancedDayTimeDisplay(ev);
     meta.appendChild(timeDisplay);
 
-    if (ev.recurring) {
+    const recurringBadgeContent = this.getRecurringBadgeContent(ev);
+    if (recurringBadgeContent) {
       const recurringBadge = document.createElement('span');
       recurringBadge.className = 'recurring-badge';
-      recurringBadge.textContent = 'Weekly';
+      recurringBadge.textContent = recurringBadgeContent;
       meta.appendChild(recurringBadge);
+    }
+
+    const dateBadgeContent = this.getDateBadgeContent(ev);
+    if (dateBadgeContent) {
+      const dateBadge = document.createElement('span');
+      dateBadge.className = 'date-badge';
+      dateBadge.textContent = dateBadgeContent;
+      meta.appendChild(dateBadge);
     }
 
     header.appendChild(meta);
@@ -273,34 +284,6 @@ class TodayEventsAggregator {
     return spacer;
   }
 
-  formatTimeRange(startDate, endDate) {
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : null;
-    if (Number.isNaN(start.getTime())) return '';
-
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const eventDate = new Date(start);
-    eventDate.setHours(0, 0, 0, 0);
-
-    let dayLabel;
-    if (eventDate.getTime() === today.getTime()) {
-      dayLabel = 'Today';
-    } else if (eventDate.getTime() === tomorrow.getTime()) {
-      dayLabel = 'Tomorrow';
-    } else {
-      dayLabel = start.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-
-    const opts = { hour: 'numeric', minute: '2-digit' };
-    const timeStr = start.toLocaleTimeString([], opts);
-    
-    return `${dayLabel} ${timeStr}`;
-  }
 }
 
 

@@ -1424,7 +1424,16 @@ body.index-page main {
 }
 
 .today-event-card .recurring-badge {
-    background: var(--solid-success);
+    background: var(--solid-secondary);
+    color: var(--white);
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.today-event-card .date-badge {
+    background: var(--solid-secondary);
     color: var(--white);
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
@@ -1471,6 +1480,11 @@ body.index-page main {
     }
     
     .today-event-card .recurring-badge {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .today-event-card .date-badge {
         padding: 0.2rem 0.5rem;
         font-size: 0.7rem;
     }
@@ -2291,7 +2305,17 @@ body.index-page main {
 }
 
 .recurring-badge {
-    background: var(--solid-success);
+    background: var(--solid-secondary);
+    color: var(--white);
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.date-badge {
+    background: var(--solid-secondary);
     color: var(--white);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
@@ -3192,6 +3216,11 @@ footer {
         padding: 0.2rem 0.5rem;
     }
 
+    .date-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+
     .events-map-section {
         padding: 1rem 0;
         margin-left: 0;
@@ -3559,6 +3588,11 @@ footer {
     }
 
     .recurring-badge {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.4rem;
+    }
+
+    .date-badge {
         font-size: 0.65rem;
         padding: 0.15rem 0.4rem;
     }

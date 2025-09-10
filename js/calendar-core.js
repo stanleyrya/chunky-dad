@@ -763,86 +763,88 @@ class CalendarCore {
 
     // Enhanced day/time formatting with context - always uses pattern-first approach
     getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
-        const { day, time, recurring, eventType, recurrence, startDate } = event;
+        const { day, time } = event;
         
-        logger.debug('CALENDAR', 'Enhanced day/time display', {
+        // Simple display: just day and time - consistent across all devices
+        const baseDisplay = `${day} ${time}`;
+        
+        logger.debug('CALENDAR', 'Enhanced day/time display (simplified)', {
             eventName: event.name,
             day,
             time,
-            recurring,
-            eventType,
-            recurrence,
-            calendarView,
-            hasRecurrence: !!recurrence,
-            calendarPeriod: calendarPeriod ? {
-                start: calendarPeriod.start?.toISOString(),
-                end: calendarPeriod.end?.toISOString()
-            } : null
-        });
-        
-        // For desktop, show full day name; for mobile, show abbreviated
-        const isDesktop = window.innerWidth > 768;
-        const displayDay = isDesktop ? day : (day.length > 3 ? day.substring(0, 3) : day);
-        
-        let baseDisplay = `${displayDay} ${time}`;
-        
-        // Always use pattern-first approach (like month view)
-        if (recurring && recurrence) {
-            const recurrenceDesc = this.getRecurrenceDescription(recurrence, startDate);
-            
-            logger.debug('CALENDAR', 'Recurrence description generated', {
-                eventName: event.name,
-                recurrence,
-                recurrenceDesc,
-                eventType
-            });
-            
-            if (recurrenceDesc) {
-                // Extract the specific day pattern for monthly events
-                if (eventType === 'monthly' && recurrenceDesc.includes('of each month')) {
-                    const dayPattern = recurrenceDesc.split(' of each month')[0];
-                    baseDisplay += ` • ${dayPattern}`;
-                } else {
-                    baseDisplay += ` • ${recurrenceDesc}`;
-                }
-            }
-        } else {
-            // One-off event - always show specific date
-            const eventDate = new Date(startDate);
-            const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
-            const date = eventDate.getDate();
-            baseDisplay += ` • ${month} ${date}`;
-        }
-        
-        // Add contextual dates for events visible in current calendar period
-        if (calendarPeriod && calendarPeriod.start && calendarPeriod.end) {
-            const visibleDates = this.getVisibleEventDates(event, calendarPeriod.start, calendarPeriod.end);
-            if (visibleDates.length > 0) {
-                const dateStrings = visibleDates.map(d => {
-                    const month = d.toLocaleDateString('en-US', { month: 'short' });
-                    const day = d.getDate();
-                    return `${month} ${day}`;
-                });
-                
-                if (dateStrings.length === 1) {
-                    baseDisplay += ` (${dateStrings[0]})`;
-                } else if (dateStrings.length <= 3) {
-                    baseDisplay += ` (${dateStrings.join(', ')})`;
-                } else {
-                    // For many occurrences, show first and last
-                    baseDisplay += ` (${dateStrings[0]}-${dateStrings[dateStrings.length - 1]})`;
-                }
-            }
-        }
-        
-        logger.debug('CALENDAR', 'Final display string generated', {
-            eventName: event.name,
             baseDisplay,
-            calendarView,
-            visibleDates: calendarPeriod ? this.getVisibleEventDates(event, calendarPeriod.start, calendarPeriod.end) : null
+            calendarView
         });
         
         return baseDisplay;
+    }
+
+    // Get recurring badge content for the new three-badge system
+    getRecurringBadgeContent(event) {
+        const { recurring, eventType, recurrence, startDate } = event;
+        
+        if (!recurring || !recurrence) {
+            return null;
+        }
+
+        const recurrenceDesc = this.getRecurrenceDescription(recurrence, startDate);
+        
+        logger.debug('CALENDAR', 'Recurring badge content', {
+            eventName: event.name,
+            eventType,
+            recurrenceDesc
+        });
+        
+        return recurrenceDesc;
+    }
+
+    // Get date badge content for the new three-badge system
+    getDateBadgeContent(event, calendarPeriod = null) {
+        const { recurring, startDate } = event;
+        
+        if (!recurring) {
+            // One-off event - show the date
+            const eventDate = new Date(startDate);
+            const month = eventDate.getMonth() + 1; // 0-based to 1-based
+            const date = eventDate.getDate();
+            return `${month}/${date}`;
+        }
+        
+        // Recurring event - show dates if we have calendar period context
+        if (calendarPeriod && calendarPeriod.start && calendarPeriod.end) {
+            const visibleDates = this.getVisibleEventDates(event, calendarPeriod.start, calendarPeriod.end);
+            
+            if (visibleDates.length === 0) {
+                return null;
+            }
+            
+            const dateStrings = visibleDates.map(d => {
+                const month = d.getMonth() + 1; // 0-based to 1-based
+                const date = d.getDate();
+                return `${month}/${date}`;
+            });
+            
+            if (dateStrings.length === 1) {
+                return dateStrings[0];
+            } else if (dateStrings.length === 2) {
+                return `${dateStrings[0]}, ${dateStrings[1]}`;
+            } else {
+                // 3+ dates: show first two + count
+                const remaining = dateStrings.length - 2;
+                return `${dateStrings[0]}, ${dateStrings[1]} +${remaining} more`;
+            }
+        }
+        
+        // For weekly events without calendar context, don't show dates
+        if (event.eventType === 'weekly') {
+            return null;
+        }
+        
+        // For monthly events without calendar context, show next occurrence
+        const nextOccurrence = new Date(startDate);
+        const month = nextOccurrence.getMonth() + 1;
+        const date = nextOccurrence.getDate();
+        return `${month}/${date}`;
     }
 
     // Get all dates when an event occurs within a given period
