@@ -810,15 +810,40 @@ class CalendarCore {
         return recurrenceDesc;
     }
 
+    // Helper function to safely extract date components from startDate (handles both Date objects and strings)
+    getDateComponents(startDate) {
+        if (startDate instanceof Date) {
+            return {
+                year: startDate.getFullYear(),
+                month: startDate.getMonth() + 1, // Convert 0-based to 1-based
+                date: startDate.getDate()
+            };
+        } else if (typeof startDate === 'string') {
+            // Handle string format (YYYY-MM-DD)
+            const parts = startDate.split('-');
+            return {
+                year: parseInt(parts[0]),
+                month: parseInt(parts[1]),
+                date: parseInt(parts[2])
+            };
+        } else {
+            // Fallback to current date
+            const now = new Date();
+            return {
+                year: now.getFullYear(),
+                month: now.getMonth() + 1,
+                date: now.getDate()
+            };
+        }
+    }
+
     // Get date badge content for the new three-badge system
     getDateBadgeContent(event, calendarPeriod = null) {
         const { recurring, startDate } = event;
         
         if (!recurring) {
             // One-off event - show the date (same as calendar)
-            const parts = startDate.split('-');
-            const month = parseInt(parts[1]);
-            const date = parseInt(parts[2]);
+            const { month, date } = this.getDateComponents(startDate);
             return `${month}/${date}`;
         }
         
@@ -852,9 +877,7 @@ class CalendarCore {
         }
         
         // For monthly events without calendar context, show next occurrence
-        const parts = startDate.split('-');
-        const month = parseInt(parts[1]);
-        const date = parseInt(parts[2]);
+        const { month, date } = this.getDateComponents(startDate);
         return `${month}/${date}`;
     }
 
@@ -864,8 +887,15 @@ class CalendarCore {
         
         if (!event.recurring || !event.recurrence) {
             // One-off event - check if it falls within the period
-            const parts = event.startDate.split('-');
-            const eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            let eventDate;
+            if (event.startDate instanceof Date) {
+                eventDate = event.startDate;
+            } else {
+                // Handle string format
+                const { year, month, date } = this.getDateComponents(event.startDate);
+                eventDate = new Date(year, month - 1, date);
+            }
+
             if (eventDate >= periodStart && eventDate <= periodEnd) {
                 dates.push(eventDate);
             }
@@ -876,8 +906,14 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(event.recurrence);
         if (!pattern) return dates;
         
-        const parts = event.startDate.split('-');
-        const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        let eventStartDate;
+        if (event.startDate instanceof Date) {
+            eventStartDate = event.startDate;
+        } else {
+            // Handle string format
+            const { year, month, date } = this.getDateComponents(event.startDate);
+            eventStartDate = new Date(year, month - 1, date);
+        }
         if (eventStartDate > periodEnd) return dates;
         
         // Generate occurrences based on frequency
