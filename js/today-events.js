@@ -247,7 +247,13 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
     cityLabel.textContent = 'City:';
     const cityValue = document.createElement('span');
     cityValue.className = 'value';
-    cityValue.textContent = ev.cityName || '';
+    
+    // Get city emoji from config
+    const cityConfig = getCityConfig(ev.cityKey);
+    const cityEmoji = cityConfig ? cityConfig.emoji : '';
+    const cityDisplayText = cityEmoji ? `${cityEmoji} ${ev.cityName || ''}` : (ev.cityName || '');
+    cityValue.textContent = cityDisplayText;
+    
     cityRow.appendChild(cityLabel);
     cityRow.appendChild(cityValue);
     details.appendChild(cityRow);
