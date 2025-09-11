@@ -20,7 +20,7 @@ class BearsSitgesParser {
     try {
       const html = htmlData.html;
       const url = htmlData.url;
-      const maxDays = parserConfig.maxDays || 1;
+      // const maxDays = parserConfig.maxDays || 1;  // COMMENTED OUT: Allow processing all days
       
       if (!html) {
         console.log('🔧 Bears Sitges: No HTML content to parse');
@@ -29,6 +29,7 @@ class BearsSitgesParser {
 
       // Extract event dates from the HTML
       const eventDates = this.extractEventDates(html);
+      // console.log(`🔧 Bears Sitges: Found ${eventDates.length} event dates:`, eventDates.map(d => d.toDateString()));
       
       if (eventDates.length === 0) {
         console.log('🔧 Bears Sitges: No event dates found in HTML');
@@ -37,7 +38,7 @@ class BearsSitgesParser {
 
       // Parse events for each day
       const allEvents = [];
-      const daysToProcess = eventDates.slice(0, maxDays);
+      const daysToProcess = eventDates;  // Process all days instead of limiting by maxDays
       
       for (const eventDate of daysToProcess) {
         const dayText = this.getDayText(eventDate);
@@ -79,7 +80,7 @@ class BearsSitgesParser {
 
       // Parse events for each day
       const allEvents = [];
-      const daysToProcess = eventDates.slice(0, maxDays);
+      const daysToProcess = eventDates;  // Process all days instead of limiting by maxDays
       
       for (const eventDate of daysToProcess) {
         const dayText = this.getDayText(eventDate);
@@ -320,6 +321,7 @@ class BearsSitgesParser {
   extractEventsForDay(html, url, eventDate, dayText) {
     const events = [];
     const daySection = this.findDaySection(html, dayText);
+    // console.log(`🔧 Bears Sitges: Day section for ${dayText}:`, daySection ? 'Found' : 'Not found');
     if (!daySection) {
       return events;
     }
@@ -338,6 +340,8 @@ class BearsSitgesParser {
   findDaySection(html, dayText) {
     const dayRegex = new RegExp(`${dayText}[\\s\\S]*?(?=(?:VIERNES|SÁBADO|DOMINGO|LUNES|MARTES|MIÉRCOLES|JUEVES|SABADO|DOMINGO)\\s*-\\s*\\d{2}|$)`, 'i');
     const match = html.match(dayRegex);
+    // console.log(`🔧 Bears Sitges: Regex for ${dayText}:`, dayRegex.toString());
+    // console.log(`🔧 Bears Sitges: Match result:`, match ? 'Found' : 'Not found');
     return match ? match[0] : null;
   }
 
