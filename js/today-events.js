@@ -1,5 +1,5 @@
 // Today Events Aggregator - loads cached ICS files and renders events happening today
-class TodayEventsAggregator extends CalendarCore {
+class TodayEventsAggregator extends DynamicCalendarLoader {
   constructor() {
     super();
     this.containerSelector = '#today-event-grid';
@@ -62,8 +62,7 @@ class TodayEventsAggregator extends CalendarCore {
       const icalText = await res.text();
       if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) throw new Error('Invalid ICS');
 
-      const core = new CalendarCore();
-      const events = core.parseICalData(icalText) || [];
+      const events = this.parseICalData(icalText) || [];
       // attach city details for display
       events.forEach(ev => {
         ev.cityKey = city.key;
@@ -114,9 +113,9 @@ class TodayEventsAggregator extends CalendarCore {
       const start = new Date(ev.startDate);
       if (Number.isNaN(start.getTime())) return false;
 
-      // For recurring events, use the existing DynamicCalendarLoader logic
-      if (ev.recurring && window.calendarLoader) {
-        return window.calendarLoader.isRecurringEventInPeriod(ev, startOfToday, endOfTomorrow);
+      // For recurring events, use inherited DynamicCalendarLoader logic
+      if (ev.recurring) {
+        return this.isRecurringEventInPeriod(ev, startOfToday, endOfTomorrow);
       }
 
       // For one-time events, check if they fall within the period
@@ -218,27 +217,24 @@ class TodayEventsAggregator extends CalendarCore {
     header.appendChild(meta);
     card.appendChild(header);
 
-    // Event details - use reusable helper methods from DynamicCalendarLoader
+    // Event details - use inherited helper methods
     const details = document.createElement('div');
     details.className = 'event-details';
 
-    // Get a DynamicCalendarLoader instance for helper methods
-    const calendarHelper = window.calendarLoader || new DynamicCalendarLoader();
-
-    // Location (reuse logic from dynamic-calendar-loader)
-    const locationElement = calendarHelper.createLocationElement(ev);
+    // Location (inherited from DynamicCalendarLoader)
+    const locationElement = this.createLocationElement(ev);
     if (locationElement) {
       details.appendChild(locationElement);
     }
 
-    // Cover (reuse logic from dynamic-calendar-loader)
-    const coverElement = calendarHelper.createCoverElement(ev);
+    // Cover (inherited from DynamicCalendarLoader)
+    const coverElement = this.createCoverElement(ev);
     if (coverElement) {
       details.appendChild(coverElement);
     }
 
-    // Tea (reuse logic from dynamic-calendar-loader)
-    const teaElement = calendarHelper.createTeaElement(ev);
+    // Tea (inherited from DynamicCalendarLoader)
+    const teaElement = this.createTeaElement(ev);
     if (teaElement) {
       details.appendChild(teaElement);
     }
