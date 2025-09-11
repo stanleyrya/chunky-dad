@@ -741,12 +741,15 @@ class CalendarCore {
         return 'Recurring';
     }
 
-    // Helper method to get day index from day code (e.g., "MO" -> 1)
+    // Helper method to get day index from day code (e.g., "MO" -> 1, "-1SA" -> 6)
     getDayIndexFromCode(dayCode) {
         const dayMap = {
             'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
         };
-        return dayMap[dayCode] || -1;
+        
+        // Extract just the day part if the dayCode includes occurrence (e.g., "-1SA" -> "SA")
+        const dayPart = dayCode.replace(/^-?\d+/, '');
+        return dayMap[dayPart] || -1;
     }
 
     // Helper method to get occurrence number from day code (e.g., "2TU" -> 2)
