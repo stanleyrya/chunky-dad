@@ -1387,7 +1387,7 @@ body.index-page main {
     padding: 0;
 }
 
-/* Today Event Cards - Detailed styling */
+/* Today Event Cards - Detailed styling matching city page */
 .today-event-card {
     min-width: 300px;
     max-width: 100%;
@@ -1400,17 +1400,18 @@ body.index-page main {
 }
 
 .today-event-card .event-header {
-    padding-right: 0; /* Remove right padding since we're not floating meta */
+    padding-right: 100px; /* Add space for floating event-meta like city page */
 }
 
 .today-event-card .event-meta {
-    position: static; /* Change from absolute positioning */
+    position: absolute; /* Match city page absolute positioning */
+    top: 2rem;
+    right: 2rem;
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end;
     gap: 0.5rem;
-    margin-top: 0.5rem;
-    justify-content: flex-start;
+    text-align: right;
 }
 
 .today-event-card .event-day {
@@ -1468,9 +1469,15 @@ body.index-page main {
         min-width: unset;
     }
     
+    .today-event-card .event-header {
+        padding-right: 80px; /* Reduce padding on mobile */
+    }
+    
     .today-event-card .event-meta {
+        top: 1rem;
+        right: 1rem;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: flex-end;
         gap: 0.3rem;
     }
     

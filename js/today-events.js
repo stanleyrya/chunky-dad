@@ -218,42 +218,54 @@ class TodayEventsAggregator extends CalendarCore {
     header.appendChild(meta);
     card.appendChild(header);
 
-    // Event details
+    // Event details - match city page structure
     const details = document.createElement('div');
     details.className = 'event-details';
 
-    if (ev.bar) {
-      const venueRow = document.createElement('div');
-      venueRow.className = 'detail-row';
-      const venueLabel = document.createElement('span');
-      venueLabel.className = 'label';
-      venueLabel.textContent = '📍';
-      const venueValue = document.createElement('span');
-      venueValue.className = 'value';
-      venueValue.textContent = ev.bar;
-      venueRow.appendChild(venueLabel);
-      venueRow.appendChild(venueValue);
-      details.appendChild(venueRow);
+    // Location - match city page logic
+    if (ev.coordinates && ev.coordinates.lat && ev.coordinates.lng) {
+      const locationRow = document.createElement('div');
+      locationRow.className = 'detail-row';
+      const locationLabel = document.createElement('span');
+      locationLabel.className = 'label';
+      locationLabel.textContent = 'Location:';
+      const locationValue = document.createElement('span');
+      locationValue.className = 'value';
+      const locationLink = document.createElement('a');
+      locationLink.href = '#';
+      locationLink.className = 'map-link';
+      locationLink.textContent = `📍 ${ev.bar || 'Location'}`;
+      locationLink.onclick = (e) => {
+        e.preventDefault();
+        if (window.showOnMap) {
+          window.showOnMap(ev.coordinates.lat, ev.coordinates.lng, ev.name, ev.bar || '');
+        }
+      };
+      locationValue.appendChild(locationLink);
+      locationRow.appendChild(locationLabel);
+      locationRow.appendChild(locationValue);
+      details.appendChild(locationRow);
+    } else if (ev.bar) {
+      const barRow = document.createElement('div');
+      barRow.className = 'detail-row';
+      const barLabel = document.createElement('span');
+      barLabel.className = 'label';
+      barLabel.textContent = 'Bar:';
+      const barValue = document.createElement('span');
+      barValue.className = 'value';
+      barValue.textContent = ev.bar;
+      barRow.appendChild(barLabel);
+      barRow.appendChild(barValue);
+      details.appendChild(barRow);
     }
 
-    const cityRow = document.createElement('div');
-    cityRow.className = 'detail-row';
-    const cityLabel = document.createElement('span');
-    cityLabel.className = 'label';
-    cityLabel.textContent = '🏙️';
-    const cityValue = document.createElement('span');
-    cityValue.className = 'value';
-    cityValue.textContent = ev.cityName || '';
-    cityRow.appendChild(cityLabel);
-    cityRow.appendChild(cityValue);
-    details.appendChild(cityRow);
-
-    if (ev.cover && ev.cover.trim() && ev.cover.toLowerCase() !== 'free') {
+    // Cover - match city page logic (only show if meaningful)
+    if (ev.cover && ev.cover.trim() && ev.cover.toLowerCase() !== 'free' && ev.cover.toLowerCase() !== 'no cover') {
       const coverRow = document.createElement('div');
       coverRow.className = 'detail-row';
       const coverLabel = document.createElement('span');
       coverLabel.className = 'label';
-      coverLabel.textContent = '💰';
+      coverLabel.textContent = 'Cover:';
       const coverValue = document.createElement('span');
       coverValue.className = 'value';
       coverValue.textContent = ev.cover;
@@ -261,6 +273,19 @@ class TodayEventsAggregator extends CalendarCore {
       coverRow.appendChild(coverValue);
       details.appendChild(coverRow);
     }
+
+    // City information
+    const cityRow = document.createElement('div');
+    cityRow.className = 'detail-row';
+    const cityLabel = document.createElement('span');
+    cityLabel.className = 'label';
+    cityLabel.textContent = 'City:';
+    const cityValue = document.createElement('span');
+    cityValue.className = 'value';
+    cityValue.textContent = ev.cityName || '';
+    cityRow.appendChild(cityLabel);
+    cityRow.appendChild(cityValue);
+    details.appendChild(cityRow);
 
     card.appendChild(details);
 
