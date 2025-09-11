@@ -816,6 +816,11 @@ class CalendarCore {
     getDateBadgeContent(event, calendarPeriod = null) {
         const { recurring, startDate } = event;
         
+        // For weekly events, never show date badge (too many events to be useful)
+        if (event.eventType === 'weekly') {
+            return null;
+        }
+        
         if (!recurring) {
             // One-off event - show the date (same as calendar)
             const startDateStr = startDate instanceof Date ? 
@@ -848,11 +853,6 @@ class CalendarCore {
                 const remaining = visibleDates.length - 1;
                 return `${first.getMonth() + 1}/${first.getDate()} +${remaining} more`;
             }
-        }
-        
-        // For weekly events without calendar context, don't show dates
-        if (event.eventType === 'weekly') {
-            return null;
         }
         
         // For monthly events without calendar context, show next occurrence
