@@ -1557,34 +1557,9 @@ class DynamicCalendarLoader extends CalendarCore {
             return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="${aria}" title="${aria}"><i class="bi ${iconClass}"></i></a>`;
         }).join(' ') : '';
 
-        const teaHtml = event.tea ? `
-            <div class="detail-row">
-                <span class="label">Tea:</span>
-                <span class="value">${event.tea}</span>
-            </div>
-        ` : '';
-
-        const locationHtml = event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
-            `<div class="detail-row">
-                <span class="label">Location:</span>
-                <span class="value">
-                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
-                        📍 ${event.bar || 'Location'}
-                    </a>
-                </span>
-            </div>` :
-            (event.bar ? `<div class="detail-row">
-                <span class="label">Bar:</span>
-                <span class="value">${event.bar}</span>
-            </div>` : '');
-
-        // Only show cover if it exists and has meaningful content
-        const coverHtml = event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
-            <div class="detail-row">
-                <span class="label">Cover:</span>
-                <span class="value">${event.cover}</span>
-            </div>
-        ` : '';
+        const teaHtml = this.generateTeaHtml(event);
+        const locationHtml = this.generateLocationHtml(event);
+        const coverHtml = this.generateCoverHtml(event);
 
         // Get current calendar period bounds for contextual date display
         const periodBounds = this.getCurrentPeriodBounds();
@@ -2600,6 +2575,115 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         logger.debug('CALENDAR', `Attached interactions to ${eventItems.length} calendar items`);
+    }
+
+    // Reusable HTML generation methods for event details
+    generateTeaHtml(event) {
+        return event.tea ? `
+            <div class="detail-row">
+                <span class="label">Tea:</span>
+                <span class="value">${event.tea}</span>
+            </div>
+        ` : '';
+    }
+
+    generateLocationHtml(event) {
+        return event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
+            `<div class="detail-row">
+                <span class="label">Location:</span>
+                <span class="value">
+                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
+                        📍 ${event.bar || 'Location'}
+                    </a>
+                </span>
+            </div>` :
+            (event.bar ? `<div class="detail-row">
+                <span class="label">Bar:</span>
+                <span class="value">${event.bar}</span>
+            </div>` : '');
+    }
+
+    generateCoverHtml(event) {
+        return event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
+            <div class="detail-row">
+                <span class="label">Cover:</span>
+                <span class="value">${event.cover}</span>
+            </div>
+        ` : '';
+    }
+
+    // DOM-based helper methods for creating event detail elements
+    createTeaElement(event) {
+        if (!event.tea) return null;
+        const row = document.createElement('div');
+        row.className = 'detail-row';
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = 'Tea:';
+        const value = document.createElement('span');
+        value.className = 'value';
+        value.textContent = event.tea;
+        row.appendChild(label);
+        row.appendChild(value);
+        return row;
+    }
+
+    createLocationElement(event) {
+        if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+            const row = document.createElement('div');
+            row.className = 'detail-row';
+            const label = document.createElement('span');
+            label.className = 'label';
+            label.textContent = 'Location:';
+            const value = document.createElement('span');
+            value.className = 'value';
+            const link = document.createElement('a');
+            link.href = '#';
+            link.className = 'map-link';
+            link.textContent = `📍 ${event.bar || 'Location'}`;
+            link.onclick = (e) => {
+                e.preventDefault();
+                if (window.showOnMap) {
+                    window.showOnMap(event.coordinates.lat, event.coordinates.lng, event.name, event.bar || '');
+                }
+            };
+            value.appendChild(link);
+            row.appendChild(label);
+            row.appendChild(value);
+            return row;
+        } else if (event.bar) {
+            const row = document.createElement('div');
+            row.className = 'detail-row';
+            const label = document.createElement('span');
+            label.className = 'label';
+            label.textContent = 'Bar:';
+            const value = document.createElement('span');
+            value.className = 'value';
+            value.textContent = event.bar;
+            row.appendChild(label);
+            row.appendChild(value);
+            return row;
+        }
+        return null;
+    }
+
+    createCoverElement(event) {
+        if (!event.cover || !event.cover.trim() || 
+            event.cover.toLowerCase() === 'free' || 
+            event.cover.toLowerCase() === 'no cover') {
+            return null;
+        }
+        const row = document.createElement('div');
+        row.className = 'detail-row';
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = 'Cover:';
+        const value = document.createElement('span');
+        value.className = 'value';
+        value.textContent = event.cover;
+        row.appendChild(label);
+        row.appendChild(value);
+        return row;
     }
 
     // Add click-to-select behavior on event cards as well

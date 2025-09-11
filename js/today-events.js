@@ -218,63 +218,32 @@ class TodayEventsAggregator extends CalendarCore {
     header.appendChild(meta);
     card.appendChild(header);
 
-    // Event details - match city page structure
+    // Event details - use reusable helper methods from DynamicCalendarLoader
     const details = document.createElement('div');
     details.className = 'event-details';
 
-    // Location - match city page logic
-    if (ev.coordinates && ev.coordinates.lat && ev.coordinates.lng) {
-      const locationRow = document.createElement('div');
-      locationRow.className = 'detail-row';
-      const locationLabel = document.createElement('span');
-      locationLabel.className = 'label';
-      locationLabel.textContent = 'Location:';
-      const locationValue = document.createElement('span');
-      locationValue.className = 'value';
-      const locationLink = document.createElement('a');
-      locationLink.href = '#';
-      locationLink.className = 'map-link';
-      locationLink.textContent = `📍 ${ev.bar || 'Location'}`;
-      locationLink.onclick = (e) => {
-        e.preventDefault();
-        if (window.showOnMap) {
-          window.showOnMap(ev.coordinates.lat, ev.coordinates.lng, ev.name, ev.bar || '');
-        }
-      };
-      locationValue.appendChild(locationLink);
-      locationRow.appendChild(locationLabel);
-      locationRow.appendChild(locationValue);
-      details.appendChild(locationRow);
-    } else if (ev.bar) {
-      const barRow = document.createElement('div');
-      barRow.className = 'detail-row';
-      const barLabel = document.createElement('span');
-      barLabel.className = 'label';
-      barLabel.textContent = 'Bar:';
-      const barValue = document.createElement('span');
-      barValue.className = 'value';
-      barValue.textContent = ev.bar;
-      barRow.appendChild(barLabel);
-      barRow.appendChild(barValue);
-      details.appendChild(barRow);
+    // Get a DynamicCalendarLoader instance for helper methods
+    const calendarHelper = window.calendarLoader || new DynamicCalendarLoader();
+
+    // Location (reuse logic from dynamic-calendar-loader)
+    const locationElement = calendarHelper.createLocationElement(ev);
+    if (locationElement) {
+      details.appendChild(locationElement);
     }
 
-    // Cover - match city page logic (only show if meaningful)
-    if (ev.cover && ev.cover.trim() && ev.cover.toLowerCase() !== 'free' && ev.cover.toLowerCase() !== 'no cover') {
-      const coverRow = document.createElement('div');
-      coverRow.className = 'detail-row';
-      const coverLabel = document.createElement('span');
-      coverLabel.className = 'label';
-      coverLabel.textContent = 'Cover:';
-      const coverValue = document.createElement('span');
-      coverValue.className = 'value';
-      coverValue.textContent = ev.cover;
-      coverRow.appendChild(coverLabel);
-      coverRow.appendChild(coverValue);
-      details.appendChild(coverRow);
+    // Cover (reuse logic from dynamic-calendar-loader)
+    const coverElement = calendarHelper.createCoverElement(ev);
+    if (coverElement) {
+      details.appendChild(coverElement);
     }
 
-    // City information
+    // Tea (reuse logic from dynamic-calendar-loader)
+    const teaElement = calendarHelper.createTeaElement(ev);
+    if (teaElement) {
+      details.appendChild(teaElement);
+    }
+
+    // City information (unique to today-events since city page doesn't need this)
     const cityRow = document.createElement('div');
     cityRow.className = 'detail-row';
     const cityLabel = document.createElement('span');
