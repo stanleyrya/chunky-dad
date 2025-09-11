@@ -1414,7 +1414,7 @@ body.index-page main {
 }
 
 .today-event-card .event-day {
-    background: var(--accent-color);
+    background: var(--primary-color);
     color: var(--white);
     padding: 0.4rem 0.8rem;
     border-radius: 15px;
@@ -1424,7 +1424,7 @@ body.index-page main {
 }
 
 .today-event-card .recurring-badge {
-    background: var(--accent-color);
+    background: var(--primary-color);
     color: var(--white);
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
@@ -1433,7 +1433,7 @@ body.index-page main {
 }
 
 .today-event-card .date-badge {
-    background: var(--accent-color);
+    background: var(--primary-color);
     color: var(--white);
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
@@ -2279,7 +2279,7 @@ body.index-page main {
 }
 
 .event-day {
-    background: var(--accent-color);
+    background: var(--primary-color);
     color: var(--white);
     padding: 0.5rem 1rem;
     border-radius: 20px;
@@ -2305,7 +2305,7 @@ body.index-page main {
 }
 
 .recurring-badge {
-    background: var(--accent-color);
+    background: var(--primary-color);
     color: var(--white);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
@@ -2315,7 +2315,7 @@ body.index-page main {
 }
 
 .date-badge {
-    background: var(--accent-color);
+    background: var(--primary-color);
     color: var(--white);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
