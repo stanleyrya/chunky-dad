@@ -1387,58 +1387,16 @@ body.index-page main {
     padding: 0;
 }
 
-/* Today Event Cards - Detailed styling */
+/* Today Event Cards - Use same styling as detailed event cards */
 .today-event-card {
     min-width: 300px;
     max-width: 100%;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Inherits all other styling from .event-card.detailed */
 }
 
 .today-event-card:hover {
     transform: translateY(-8px);
     box-shadow: 0 15px 35px var(--shadow-medium);
-}
-
-.today-event-card .event-header {
-    padding-right: 0; /* Remove right padding since we're not floating meta */
-}
-
-.today-event-card .event-meta {
-    position: static; /* Change from absolute positioning */
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    justify-content: flex-start;
-}
-
-.today-event-card .event-day {
-    background: var(--primary-color);
-    color: var(--white);
-    padding: 0.4rem 0.8rem;
-    border-radius: 15px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.today-event-card .recurring-badge {
-    background: var(--primary-color);
-    color: var(--white);
-    padding: 0.3rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.today-event-card .date-badge {
-    background: var(--primary-color);
-    color: var(--white);
-    padding: 0.3rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
 }
 
 .no-events-card {
@@ -1466,43 +1424,11 @@ body.index-page main {
     
     .today-event-card {
         min-width: unset;
-    }
-    
-    .today-event-card .event-meta {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.3rem;
-    }
-    
-    .today-event-card .event-day {
-        padding: 0.3rem 0.6rem;
-        font-size: 0.8rem;
-    }
-    
-    .today-event-card .recurring-badge {
-        padding: 0.2rem 0.5rem;
-        font-size: 0.7rem;
-    }
-    
-    .today-event-card .date-badge {
-        padding: 0.2rem 0.5rem;
-        font-size: 0.7rem;
+        /* Inherits all other mobile styles from .event-card.detailed */
     }
 }
 
-@media (max-width: 480px) {
-    .today-event-card .event-header h3 {
-        font-size: 1.2rem;
-    }
-    
-    .today-event-card .detail-row {
-        margin-bottom: 0.3rem;
-    }
-    
-    .today-event-card .label {
-        margin-right: 0.3rem;
-    }
-}
+/* Mobile styles for today-event-card inherit from .event-card.detailed */
 
 
 

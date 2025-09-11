@@ -1,5 +1,5 @@
 // Today Events Aggregator - loads cached ICS files and renders events happening today
-class TodayEventsAggregator extends CalendarCore {
+class TodayEventsAggregator extends DynamicCalendarLoader {
   constructor() {
     super();
     this.containerSelector = '#today-event-grid';
@@ -62,8 +62,7 @@ class TodayEventsAggregator extends CalendarCore {
       const icalText = await res.text();
       if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) throw new Error('Invalid ICS');
 
-      const core = new CalendarCore();
-      const events = core.parseICalData(icalText) || [];
+      const events = this.parseICalData(icalText) || [];
       // attach city details for display
       events.forEach(ev => {
         ev.cityKey = city.key;
@@ -114,9 +113,9 @@ class TodayEventsAggregator extends CalendarCore {
       const start = new Date(ev.startDate);
       if (Number.isNaN(start.getTime())) return false;
 
-      // For recurring events, use the existing DynamicCalendarLoader logic
-      if (ev.recurring && window.calendarLoader) {
-        return window.calendarLoader.isRecurringEventInPeriod(ev, startOfToday, endOfTomorrow);
+      // For recurring events, use inherited DynamicCalendarLoader logic
+      if (ev.recurring) {
+        return this.isRecurringEventInPeriod(ev, startOfToday, endOfTomorrow);
       }
 
       // For one-time events, check if they fall within the period
@@ -218,49 +217,40 @@ class TodayEventsAggregator extends CalendarCore {
     header.appendChild(meta);
     card.appendChild(header);
 
-    // Event details
+    // Event details - use inherited helper methods
     const details = document.createElement('div');
     details.className = 'event-details';
 
-    if (ev.bar) {
-      const venueRow = document.createElement('div');
-      venueRow.className = 'detail-row';
-      const venueLabel = document.createElement('span');
-      venueLabel.className = 'label';
-      venueLabel.textContent = '📍';
-      const venueValue = document.createElement('span');
-      venueValue.className = 'value';
-      venueValue.textContent = ev.bar;
-      venueRow.appendChild(venueLabel);
-      venueRow.appendChild(venueValue);
-      details.appendChild(venueRow);
+    // Location (inherited from DynamicCalendarLoader)
+    const locationElement = this.createLocationElement(ev);
+    if (locationElement) {
+      details.appendChild(locationElement);
     }
 
+    // Cover (inherited from DynamicCalendarLoader)
+    const coverElement = this.createCoverElement(ev);
+    if (coverElement) {
+      details.appendChild(coverElement);
+    }
+
+    // Tea (inherited from DynamicCalendarLoader)
+    const teaElement = this.createTeaElement(ev);
+    if (teaElement) {
+      details.appendChild(teaElement);
+    }
+
+    // City information (unique to today-events since city page doesn't need this)
     const cityRow = document.createElement('div');
     cityRow.className = 'detail-row';
     const cityLabel = document.createElement('span');
     cityLabel.className = 'label';
-    cityLabel.textContent = '🏙️';
+    cityLabel.textContent = 'City:';
     const cityValue = document.createElement('span');
     cityValue.className = 'value';
     cityValue.textContent = ev.cityName || '';
     cityRow.appendChild(cityLabel);
     cityRow.appendChild(cityValue);
     details.appendChild(cityRow);
-
-    if (ev.cover && ev.cover.trim() && ev.cover.toLowerCase() !== 'free') {
-      const coverRow = document.createElement('div');
-      coverRow.className = 'detail-row';
-      const coverLabel = document.createElement('span');
-      coverLabel.className = 'label';
-      coverLabel.textContent = '💰';
-      const coverValue = document.createElement('span');
-      coverValue.className = 'value';
-      coverValue.textContent = ev.cover;
-      coverRow.appendChild(coverLabel);
-      coverRow.appendChild(coverValue);
-      details.appendChild(coverRow);
-    }
 
     card.appendChild(details);
 
