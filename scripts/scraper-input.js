@@ -163,7 +163,7 @@ const scraperConfig = {
     },
     {
       name: "Bears Sitges Week",
-      enabled: true,
+      enabled: false,
       urls: ["https://bearssitges.org/bears-sitges-week/"],
       alwaysBear: true,
       urlDiscoveryDepth: 0,
