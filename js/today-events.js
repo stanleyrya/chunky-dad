@@ -260,9 +260,18 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
 
     card.appendChild(details);
 
-    // Add link functionality
+    // Add link functionality - link directly to the specific event
     card.addEventListener('click', () => {
-      window.location.href = `${ev.cityKey}/`;
+      const eventSlug = ev.slug || ev.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const eventDate = ev.startDate ? new Date(ev.startDate).toISOString().split('T')[0] : '';
+      const eventUrl = eventSlug ? `${ev.cityKey}/?event=${encodeURIComponent(eventSlug)}${eventDate ? `&date=${eventDate}` : ''}` : `${ev.cityKey}/`;
+      logger.userInteraction('EVENT', 'Today event clicked', { 
+        eventSlug, 
+        cityKey: ev.cityKey, 
+        eventUrl,
+        eventName: ev.name 
+      });
+      window.location.href = eventUrl;
     });
     card.style.cursor = 'pointer';
 
