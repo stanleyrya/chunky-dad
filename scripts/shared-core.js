@@ -1682,6 +1682,13 @@ class SharedCore {
             }
         }
         
+        // Fallback: Check for "D>U>R>O" pattern and map to LA if no other city found
+        // This handles megawoof events that use this pattern but may expand to other cities later
+        if (lowerText.includes('d>u>r>o')) {
+            console.log('🏙️ SharedCore: Found D>U>R>O pattern, mapping to LA as fallback');
+            return 'la';
+        }
+        
         return null;
     }
     
