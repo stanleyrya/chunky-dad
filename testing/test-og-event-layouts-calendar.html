@@ -166,7 +166,9 @@
     .layout-circle .venue { margin-top: 6px; font-size: 22px; opacity: 0.8; }
     .layout-circle .description { position: absolute; bottom: 60px; right: 60px; width: 480px; color: #fff; opacity: 0.9; line-height: 1.5; }
 
-    /* NEW LAYOUT: Speech Bubble (logo talks) */
+    /* SPEECH BUBBLE LAYOUTS - Multiple Variations */
+    
+    /* Original Speech Bubble (logo talks) */
     .layout-speech { background: var(--og-bg-4); position: relative; }
     .layout-speech .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.2; }
     .layout-speech .logo-avatar { position: absolute; left: 80px; bottom: 80px; width: 160px; height: 160px; border-radius: 50%; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 6px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
@@ -175,6 +177,131 @@
     .layout-speech .headline { position: absolute; left: 80px; top: 70px; right: 60px; color: #fff; font-size: 64px; line-height: 0.95; font-weight: 900; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
     .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; background-size: cover; background-position: center; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
     .layout-speech .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.85); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
+
+    /* Speech Bubble 2: Event Image Speaks */
+    .layout-speech-event { background: var(--og-bg-1); position: relative; }
+    .layout-speech-event .event-avatar { position: absolute; right: 80px; bottom: 80px; width: 200px; height: 200px; border-radius: 50%; box-shadow: 0 15px 50px rgba(0,0,0,0.5); border: 8px solid rgba(255,255,255,0.95); background-size: cover; background-position: center; }
+    .layout-speech-event .speech-bubble { position: absolute; right: 320px; bottom: 180px; max-width: 700px; background: #fff; color: #111; border-radius: 25px; padding: 28px 32px; box-shadow: 0 25px 70px rgba(0,0,0,0.4); font-size: 28px; line-height: 1.3; font-weight: 600; }
+    .layout-speech-event .speech-bubble:after { content: ""; position: absolute; right: -32px; bottom: 28px; width: 0; height: 0; border-top: 24px solid transparent; border-bottom: 24px solid transparent; border-left: 32px solid #fff; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.2)); }
+    .layout-speech-event .title-bg { position: absolute; left: 60px; top: 60px; right: 60px; height: 140px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border-radius: 20px; border: 2px solid rgba(255,255,255,0.25); }
+    .layout-speech-event .event-title { position: absolute; left: 80px; top: 90px; right: 80px; color: #fff; font-size: 56px; line-height: 0.95; font-weight: 900; text-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: center; }
+    .layout-speech-event .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.9); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 16px; }
+
+    /* Speech Bubble 3: Dual Conversation */
+    .layout-speech-dual { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
+    .layout-speech-dual .logo-avatar { position: absolute; left: 60px; top: 120px; width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 4px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
+    .layout-speech-dual .event-avatar { position: absolute; right: 60px; bottom: 120px; width: 140px; height: 140px; border-radius: 50%; box-shadow: 0 12px 35px rgba(0,0,0,0.4); border: 5px solid rgba(255,255,255,0.9); background-size: cover; background-position: center; }
+    .layout-speech-dual .speech-bubble-1 { position: absolute; left: 200px; top: 80px; max-width: 450px; background: #fff; color: #111; border-radius: 18px; padding: 18px 22px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); font-size: 20px; line-height: 1.3; }
+    .layout-speech-dual .speech-bubble-1:after { content: ""; position: absolute; left: -18px; top: 20px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-right: 18px solid #fff; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
+    .layout-speech-dual .speech-bubble-2 { position: absolute; right: 220px; bottom: 80px; max-width: 480px; background: rgba(255,255,255,0.95); color: #111; border-radius: 18px; padding: 18px 22px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); font-size: 18px; line-height: 1.3; }
+    .layout-speech-dual .speech-bubble-2:after { content: ""; position: absolute; right: -18px; bottom: 20px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 18px solid rgba(255,255,255,0.95); filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
+
+    /* Speech Bubble 4: Comic Strip Style */
+    .layout-speech-comic { background: #f0f0f0; position: relative; }
+    .layout-speech-comic .comic-panel { position: absolute; inset: 40px; background: #fff; border: 6px solid #000; border-radius: 0; box-shadow: 8px 8px 0 rgba(0,0,0,0.2); }
+    .layout-speech-comic .event-image { position: absolute; left: 80px; top: 80px; width: 400px; height: 300px; background-size: cover; background-position: center; border: 4px solid #000; box-shadow: 4px 4px 0 rgba(0,0,0,0.3); }
+    .layout-speech-comic .speech-bubble { position: absolute; right: 80px; top: 120px; max-width: 480px; background: #fff; color: #000; border: 3px solid #000; border-radius: 25px; padding: 24px 28px; box-shadow: 4px 4px 0 rgba(0,0,0,0.2); font-size: 24px; line-height: 1.2; font-weight: 700; font-family: 'Comic Sans MS', cursive; }
+    .layout-speech-comic .speech-bubble:after { content: ""; position: absolute; left: -20px; bottom: 30px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-right: 20px solid #fff; }
+    .layout-speech-comic .speech-bubble:before { content: ""; position: absolute; left: -23px; bottom: 27px; width: 0; height: 0; border-top: 18px solid transparent; border-bottom: 18px solid transparent; border-right: 23px solid #000; z-index: -1; }
+    .layout-speech-comic .pow-effect { position: absolute; right: 120px; bottom: 80px; font-size: 48px; font-weight: 900; color: #ff6b35; text-shadow: 3px 3px 0 #000; transform: rotate(-15deg); font-family: 'Comic Sans MS', cursive; }
+
+    /* Speech Bubble 5: Neon Chat */
+    .layout-speech-neon { background: #0a0a0a; position: relative; overflow: hidden; }
+    .layout-speech-neon:before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 30% 70%, rgba(255,0,150,0.1) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(0,255,255,0.1) 0%, transparent 50%); }
+    .layout-speech-neon .logo-avatar { position: absolute; left: 80px; bottom: 100px; width: 140px; height: 140px; border-radius: 50%; box-shadow: 0 0 30px rgba(0,255,255,0.5), 0 10px 20px rgba(0,0,0,0.3); border: 3px solid rgba(0,255,255,0.8); background: #fff; object-fit: cover; }
+    .layout-speech-neon .speech-bubble { position: absolute; left: 260px; bottom: 120px; max-width: 720px; background: rgba(0,0,0,0.8); color: #00ffff; border: 2px solid #00ffff; border-radius: 20px; padding: 24px 28px; box-shadow: 0 0 20px rgba(0,255,255,0.3), inset 0 0 20px rgba(0,255,255,0.1); font-size: 24px; line-height: 1.3; font-family: 'Courier New', monospace; backdrop-filter: blur(10px); }
+    .layout-speech-neon .speech-bubble:after { content: ""; position: absolute; left: -15px; bottom: 25px; width: 0; height: 0; border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-right: 15px solid rgba(0,0,0,0.8); filter: drop-shadow(0 0 5px rgba(0,255,255,0.5)); }
+    .layout-speech-neon .event-title { position: absolute; left: 80px; top: 80px; right: 80px; color: #ff0080; font-size: 52px; line-height: 0.95; font-weight: 900; text-shadow: 0 0 20px rgba(255,0,128,0.8); text-align: center; }
+
+    /* Speech Bubble 6: Polaroid Memory */
+    .layout-speech-polaroid { background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%); position: relative; }
+    .layout-speech-polaroid .polaroid { position: absolute; right: 80px; top: 80px; width: 280px; height: 340px; background: #fff; border-radius: 8px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); transform: rotate(8deg); padding: 20px 20px 60px 20px; }
+    .layout-speech-polaroid .polaroid-image { width: 100%; height: 240px; background-size: cover; background-position: center; border-radius: 4px; }
+    .layout-speech-polaroid .polaroid-text { margin-top: 15px; text-align: center; font-family: 'Comic Sans MS', cursive; font-size: 16px; color: #333; }
+    .layout-speech-polaroid .speech-bubble { position: absolute; left: 80px; bottom: 120px; max-width: 600px; background: #fff; color: #333; border-radius: 25px; padding: 28px 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); font-size: 26px; line-height: 1.3; border: 3px solid #f39c12; }
+    .layout-speech-polaroid .speech-bubble:after { content: ""; position: absolute; right: -25px; top: 40px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-left: 25px solid #fff; }
+    .layout-speech-polaroid .speech-bubble:before { content: ""; position: absolute; right: -28px; top: 37px; width: 0; height: 0; border-top: 23px solid transparent; border-bottom: 23px solid transparent; border-left: 28px solid #f39c12; z-index: -1; }
+    .layout-speech-polaroid .event-title { position: absolute; left: 80px; top: 80px; max-width: 500px; color: #2d3436; font-size: 48px; line-height: 1.1; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+
+    /* Speech Bubble 7: Retro Terminal */
+    .layout-speech-terminal { background: #0f3460; position: relative; }
+    .layout-speech-terminal:before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px); }
+    .layout-speech-terminal .terminal-window { position: absolute; inset: 60px; background: #001122; border: 2px solid #00ff00; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,255,0,0.1); }
+    .layout-speech-terminal .terminal-header { position: absolute; top: 0; left: 0; right: 0; height: 30px; background: #003366; border-bottom: 1px solid #00ff00; display: flex; align-items: center; padding: 0 10px; }
+    .layout-speech-terminal .terminal-buttons { display: flex; gap: 5px; }
+    .layout-speech-terminal .terminal-button { width: 12px; height: 12px; border-radius: 50%; background: #00ff00; }
+    .layout-speech-terminal .terminal-content { position: absolute; top: 40px; left: 20px; right: 20px; bottom: 20px; font-family: 'Courier New', monospace; color: #00ff00; font-size: 18px; line-height: 1.4; }
+    .layout-speech-terminal .event-image { position: absolute; right: 40px; bottom: 40px; width: 200px; height: 150px; background-size: cover; background-position: center; border: 2px solid #00ff00; filter: contrast(1.2) brightness(0.9); }
+    .layout-speech-terminal .cursor { animation: blink 1s infinite; }
+    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+    /* Speech Bubble 8: Instagram Story Style */
+    .layout-speech-story { background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%); position: relative; }
+    .layout-speech-story .story-frame { position: absolute; inset: 40px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .layout-speech-story .story-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.7); }
+    .layout-speech-story .story-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.6) 100%); }
+    .layout-speech-story .profile-section { position: absolute; top: 30px; left: 30px; right: 30px; display: flex; align-items: center; gap: 15px; }
+    .layout-speech-story .profile-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff; background: #fff; object-fit: cover; }
+    .layout-speech-story .profile-info { color: #fff; }
+    .layout-speech-story .profile-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+    .layout-speech-story .profile-time { font-size: 12px; opacity: 0.8; }
+    .layout-speech-story .story-bubble { position: absolute; left: 30px; right: 30px; bottom: 80px; background: rgba(255,255,255,0.95); color: #333; border-radius: 25px; padding: 24px 28px; font-size: 22px; line-height: 1.3; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .layout-speech-story .event-title { position: absolute; left: 30px; right: 30px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 42px; line-height: 1.1; font-weight: 900; text-align: center; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+
+    /* Speech Bubble 9: Thought Cloud */
+    .layout-speech-thought { background: var(--og-bg-2); position: relative; }
+    .layout-speech-thought .dreamer { position: absolute; left: 80px; bottom: 80px; width: 180px; height: 180px; border-radius: 50%; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 6px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
+    .layout-speech-thought .thought-cloud { position: absolute; left: 320px; bottom: 200px; max-width: 700px; background: #fff; color: #333; border-radius: 50px; padding: 32px 40px; box-shadow: 0 25px 60px rgba(0,0,0,0.3); font-size: 24px; line-height: 1.4; position: relative; }
+    .layout-speech-thought .thought-bubble-1 { position: absolute; left: -40px; bottom: 30px; width: 30px; height: 30px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .layout-speech-thought .thought-bubble-2 { position: absolute; left: -20px; bottom: 10px; width: 20px; height: 20px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .layout-speech-thought .thought-bubble-3 { position: absolute; left: -8px; bottom: -5px; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .layout-speech-thought .event-image { position: absolute; right: 80px; top: 80px; width: 320px; height: 240px; background-size: cover; background-position: center; border-radius: 20px; border: 6px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+    .layout-speech-thought .event-title { position: absolute; left: 80px; top: 80px; max-width: 500px; color: #fff; font-size: 52px; line-height: 1.1; font-weight: 900; text-shadow: 0 6px 25px rgba(0,0,0,0.5); }
+
+    /* Speech Bubble 10: Paper Cutout */
+    .layout-speech-paper { background: #f7f1e3; position: relative; }
+    .layout-speech-paper:before { content: ""; position: absolute; inset: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="%23e0e0e0" opacity="0.5"/></svg>'); }
+    .layout-speech-paper .paper-tear { position: absolute; left: 60px; top: 60px; width: 400px; height: 280px; background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.15); transform: rotate(-2deg); }
+    .layout-speech-paper .paper-tear:before { content: ""; position: absolute; top: -5px; left: 0; right: 0; height: 10px; background: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #f7f1e3 8px, #f7f1e3 12px); }
+    .layout-speech-paper .event-image { position: absolute; top: 20px; left: 20px; right: 20px; height: 180px; background-size: cover; background-position: center; border-radius: 8px; }
+    .layout-speech-paper .paper-text { position: absolute; bottom: 20px; left: 20px; right: 20px; font-family: 'Comic Sans MS', cursive; font-size: 16px; color: #333; line-height: 1.3; }
+    .layout-speech-paper .speech-bubble { position: absolute; right: 80px; bottom: 120px; max-width: 550px; background: #fff; color: #333; border-radius: 20px; padding: 24px 28px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); font-size: 22px; line-height: 1.3; border: 2px solid #ddd; }
+    .layout-speech-paper .speech-bubble:after { content: ""; position: absolute; left: -18px; bottom: 25px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-right: 18px solid #fff; filter: drop-shadow(-2px 0 0 #ddd); }
+    .layout-speech-paper .event-title { position: absolute; right: 80px; top: 80px; max-width: 500px; color: #2d3436; font-size: 46px; line-height: 1.1; font-weight: 900; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+
+    /* Speech Bubble 11: Messenger Chat */
+    .layout-speech-messenger { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
+    .layout-speech-messenger .chat-container { position: absolute; inset: 60px; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+    .layout-speech-messenger .chat-header { position: absolute; top: 0; left: 0; right: 0; height: 80px; background: #4267B2; display: flex; align-items: center; padding: 0 20px; gap: 15px; }
+    .layout-speech-messenger .chat-avatar { width: 50px; height: 50px; border-radius: 50%; background: #fff; object-fit: cover; }
+    .layout-speech-messenger .chat-title { color: #fff; font-size: 20px; font-weight: 700; }
+    .layout-speech-messenger .chat-body { position: absolute; top: 80px; left: 0; right: 0; bottom: 0; padding: 30px; background: #f0f2f5; }
+    .layout-speech-messenger .message-bubble { background: #4267B2; color: #fff; border-radius: 20px; padding: 16px 20px; font-size: 18px; line-height: 1.4; max-width: 400px; margin-left: auto; margin-bottom: 15px; }
+    .layout-speech-messenger .message-image { width: 300px; height: 200px; background-size: cover; background-position: center; border-radius: 15px; margin-left: auto; margin-bottom: 15px; }
+    .layout-speech-messenger .typing-indicator { display: flex; align-items: center; gap: 8px; color: #65676b; font-size: 14px; }
+    .layout-speech-messenger .typing-dots { display: flex; gap: 3px; }
+    .layout-speech-messenger .typing-dot { width: 6px; height: 6px; background: #65676b; border-radius: 50%; animation: typingDot 1.4s infinite ease-in-out; }
+    .layout-speech-messenger .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .layout-speech-messenger .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typingDot { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    /* Speech Bubble 12: Discord Style */
+    .layout-speech-discord { background: #36393f; position: relative; }
+    .layout-speech-discord .discord-container { position: absolute; inset: 40px; background: #2f3136; border-radius: 8px; overflow: hidden; }
+    .layout-speech-discord .discord-sidebar { position: absolute; left: 0; top: 0; bottom: 0; width: 200px; background: #202225; border-right: 1px solid #40444b; }
+    .layout-speech-discord .discord-main { position: absolute; left: 200px; top: 0; right: 0; bottom: 0; }
+    .layout-speech-discord .discord-header { position: absolute; top: 0; left: 0; right: 0; height: 60px; background: #36393f; border-bottom: 1px solid #40444b; display: flex; align-items: center; padding: 0 20px; }
+    .layout-speech-discord .channel-name { color: #fff; font-size: 18px; font-weight: 600; }
+    .layout-speech-discord .discord-messages { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 20px; }
+    .layout-speech-discord .message { display: flex; gap: 15px; margin-bottom: 20px; }
+    .layout-speech-discord .message-avatar { width: 40px; height: 40px; border-radius: 50%; background: #fff; object-fit: cover; flex-shrink: 0; }
+    .layout-speech-discord .message-content { flex: 1; }
+    .layout-speech-discord .message-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; }
+    .layout-speech-discord .message-author { color: #fff; font-size: 16px; font-weight: 600; }
+    .layout-speech-discord .message-time { color: #72767d; font-size: 12px; }
+    .layout-speech-discord .message-text { color: #dcddde; font-size: 16px; line-height: 1.4; }
+    .layout-speech-discord .message-embed { background: #2f3136; border-left: 4px solid #5865f2; border-radius: 4px; padding: 15px; margin-top: 10px; }
+    .layout-speech-discord .embed-image { width: 300px; height: 180px; background-size: cover; background-position: center; border-radius: 4px; margin-top: 10px; }
 
 
 
@@ -197,7 +324,7 @@
     <div class="container">
       <div class="page-title">
         <h2>Creative Event OG Layouts (Calendar-powered)</h2>
-        <div class="subtitle">Select a city and event to auto-fill creative layouts</div>
+        <div class="subtitle">Select a city and event to auto-fill creative layouts • Now with 12+ Speech Bubble Variations!</div>
       </div>
 
       <section class="controls">
@@ -540,6 +667,122 @@
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
+            case 'speech-event': {
+              const title = artboard.querySelector('.event-title');
+              const bubble = artboard.querySelector('.speech-bubble');
+              const avatar = artboard.querySelector('.event-avatar');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Join us ${data.date} at ${data.time}! We're hosting an amazing event at ${data.venue}. ${data.description}`;
+              if (avatar && data.image) avatar.style.backgroundImage = `url('${data.image}')`;
+              break;
+            }
+            case 'speech-dual': {
+              const bubble1 = artboard.querySelector('.speech-bubble-1');
+              const bubble2 = artboard.querySelector('.speech-bubble-2');
+              const avatar = artboard.querySelector('.event-avatar');
+              if (bubble1) bubble1.textContent = `Hey! Have you heard about ${data.event}?`;
+              if (bubble2) bubble2.textContent = `Yes! It's ${data.date} at ${data.time} @ ${data.venue}. ${data.description}`;
+              if (avatar && data.image) avatar.style.backgroundImage = `url('${data.image}')`;
+              break;
+            }
+            case 'speech-comic': {
+              const bubble = artboard.querySelector('.speech-bubble');
+              const img = artboard.querySelector('.event-image');
+              const pow = artboard.querySelector('.pow-effect');
+              if (bubble) bubble.textContent = `BOOM! ${data.event} is happening ${data.date} at ${data.venue}!`;
+              if (pow) pow.textContent = 'POW!';
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
+              break;
+            }
+            case 'speech-neon': {
+              const title = artboard.querySelector('.event-title');
+              const bubble = artboard.querySelector('.speech-bubble');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `> EVENT_DETAILS.exe\\n> Date: ${data.date}\\n> Time: ${data.time}\\n> Venue: ${data.venue}\\n> Description: ${data.description}`;
+              break;
+            }
+            case 'speech-polaroid': {
+              const title = artboard.querySelector('.event-title');
+              const bubble = artboard.querySelector('.speech-bubble');
+              const img = artboard.querySelector('.polaroid-image');
+              const text = artboard.querySelector('.polaroid-text');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Remember this amazing time! ${data.date} at ${data.venue} was unforgettable.`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
+              if (text) text.textContent = `${data.event} - ${data.date}`;
+              break;
+            }
+            case 'speech-terminal': {
+              const content = artboard.querySelector('.terminal-content');
+              const img = artboard.querySelector('.event-image');
+              if (content) {
+                content.innerHTML = `$ cat event_info.txt<br/>
+EVENT: ${data.event}<br/>
+DATE: ${data.date}<br/>
+TIME: ${data.time}<br/>
+VENUE: ${data.venue}<br/>
+INFO: ${data.description}<br/>
+$ ./join_event.sh<br/>
+Loading... <span class="cursor">█</span>`;
+              }
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
+              break;
+            }
+            case 'speech-story': {
+              const title = artboard.querySelector('.event-title');
+              const bubble = artboard.querySelector('.story-bubble');
+              const bg = artboard.querySelector('.story-bg');
+              const name = artboard.querySelector('.profile-name');
+              const time = artboard.querySelector('.profile-time');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Can't wait for this! ${data.date} at ${data.time} 🎉`;
+              if (bg && (data.image || data.cover)) bg.style.backgroundImage = `url('${data.image || data.cover}')`;
+              if (name) name.textContent = 'chunky.dad';
+              if (time) time.textContent = '2h ago';
+              break;
+            }
+            case 'speech-thought': {
+              const title = artboard.querySelector('.event-title');
+              const cloud = artboard.querySelector('.thought-cloud');
+              const img = artboard.querySelector('.event-image');
+              if (title) title.textContent = data.event;
+              if (cloud) cloud.textContent = `I'm dreaming about ${data.event}... ${data.date} at ${data.venue} will be perfect! ${data.description}`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
+              break;
+            }
+            case 'speech-paper': {
+              const title = artboard.querySelector('.event-title');
+              const bubble = artboard.querySelector('.speech-bubble');
+              const img = artboard.querySelector('.event-image');
+              const text = artboard.querySelector('.paper-text');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Look what I found! This looks amazing for ${data.date}!`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
+              if (text) text.textContent = `${data.venue} • ${data.time}`;
+              break;
+            }
+            case 'speech-messenger': {
+              const title = artboard.querySelector('.chat-title');
+              const bubble = artboard.querySelector('.message-bubble');
+              const img = artboard.querySelector('.message-image');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Hey! ${data.event} is happening ${data.date} at ${data.time} @ ${data.venue}. You coming?`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
+              break;
+            }
+            case 'speech-discord': {
+              const channel = artboard.querySelector('.channel-name');
+              const author = artboard.querySelector('.message-author');
+              const time = artboard.querySelector('.message-time');
+              const text = artboard.querySelector('.message-text');
+              const img = artboard.querySelector('.embed-image');
+              if (channel) channel.textContent = `# ${data.event.toLowerCase().replace(/\s+/g, '-')}`;
+              if (author) author.textContent = 'chunky.dad';
+              if (time) time.textContent = 'Today at 12:34 PM';
+              if (text) text.textContent = `@everyone ${data.event} is happening ${data.date} at ${data.venue}!`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
+              break;
+            }
 
           }
         }
@@ -665,6 +908,129 @@
               <div class="event-image"></div>
               <div class="brand">chunky.dad</div>
             `,
+            'speech-event': `
+              <div class="title-bg"></div>
+              <div class="event-title"></div>
+              <div class="event-avatar"></div>
+              <div class="speech-bubble"></div>
+              <div class="brand">chunky.dad</div>
+            `,
+            'speech-dual': `
+              <img class="logo-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+              <div class="event-avatar"></div>
+              <div class="speech-bubble-1"></div>
+              <div class="speech-bubble-2"></div>
+            `,
+            'speech-comic': `
+              <div class="comic-panel">
+                <div class="event-image"></div>
+                <div class="speech-bubble"></div>
+                <div class="pow-effect">POW!</div>
+              </div>
+            `,
+            'speech-neon': `
+              <img class="logo-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+              <div class="speech-bubble"></div>
+              <div class="event-title"></div>
+            `,
+            'speech-polaroid': `
+              <div class="event-title"></div>
+              <div class="polaroid">
+                <div class="polaroid-image"></div>
+                <div class="polaroid-text"></div>
+              </div>
+              <div class="speech-bubble"></div>
+            `,
+            'speech-terminal': `
+              <div class="terminal-window">
+                <div class="terminal-header">
+                  <div class="terminal-buttons">
+                    <div class="terminal-button"></div>
+                    <div class="terminal-button"></div>
+                    <div class="terminal-button"></div>
+                  </div>
+                </div>
+                <div class="terminal-content"></div>
+                <div class="event-image"></div>
+              </div>
+            `,
+            'speech-story': `
+              <div class="story-frame">
+                <div class="story-bg"></div>
+                <div class="story-overlay"></div>
+                <div class="profile-section">
+                  <img class="profile-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                  <div class="profile-info">
+                    <div class="profile-name">chunky.dad</div>
+                    <div class="profile-time">2h ago</div>
+                  </div>
+                </div>
+                <div class="event-title"></div>
+                <div class="story-bubble"></div>
+              </div>
+            `,
+            'speech-thought': `
+              <div class="event-title"></div>
+              <img class="dreamer" src="../Rising_Star_Ryan_Head_Compressed.png" alt="dreamer" />
+              <div class="thought-cloud"></div>
+              <div class="thought-bubble-1"></div>
+              <div class="thought-bubble-2"></div>
+              <div class="thought-bubble-3"></div>
+              <div class="event-image"></div>
+            `,
+            'speech-paper': `
+              <div class="event-title"></div>
+              <div class="paper-tear">
+                <div class="event-image"></div>
+                <div class="paper-text"></div>
+              </div>
+              <div class="speech-bubble"></div>
+            `,
+            'speech-messenger': `
+              <div class="chat-container">
+                <div class="chat-header">
+                  <img class="chat-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                  <div class="chat-title"></div>
+                </div>
+                <div class="chat-body">
+                  <div class="message-image"></div>
+                  <div class="message-bubble"></div>
+                  <div class="typing-indicator">
+                    <div class="typing-dots">
+                      <div class="typing-dot"></div>
+                      <div class="typing-dot"></div>
+                      <div class="typing-dot"></div>
+                    </div>
+                    chunky.dad is typing...
+                  </div>
+                </div>
+              </div>
+            `,
+            'speech-discord': `
+              <div class="discord-container">
+                <div class="discord-sidebar"></div>
+                <div class="discord-main">
+                  <div class="discord-header">
+                    <div class="channel-name"># general</div>
+                  </div>
+                  <div class="discord-messages">
+                    <div class="message">
+                      <img class="message-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                      <div class="message-content">
+                        <div class="message-header">
+                          <div class="message-author">chunky.dad</div>
+                          <div class="message-time">Today at 12:34 PM</div>
+                        </div>
+                        <div class="message-text"></div>
+                        <div class="message-embed">
+                          <div class="embed-image"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `,
 
           };
           return layouts[variant.key] || '';
@@ -681,7 +1047,18 @@
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass over photo backdrop' },
             { key: 'ticket', name: 'Ticket', class: 'layout-ticket', description: 'Admit-one ticket aesthetic' },
             { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' },
-            { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' }
+            { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' },
+            { key: 'speech-event', name: 'Event Image Speaks', class: 'layout-speech-event', description: 'Event image in circular frame speaks about details' },
+            { key: 'speech-dual', name: 'Dual Conversation', class: 'layout-speech-dual', description: 'Logo and event image having a conversation' },
+            { key: 'speech-comic', name: 'Comic Strip', class: 'layout-speech-comic', description: 'Comic book style with speech bubble and POW effect' },
+            { key: 'speech-neon', name: 'Neon Chat', class: 'layout-speech-neon', description: 'Cyberpunk neon chat interface with glowing effects' },
+            { key: 'speech-polaroid', name: 'Polaroid Memory', class: 'layout-speech-polaroid', description: 'Vintage polaroid photo with nostalgic speech bubble' },
+            { key: 'speech-terminal', name: 'Retro Terminal', class: 'layout-speech-terminal', description: 'Old-school computer terminal with green text' },
+            { key: 'speech-story', name: 'Instagram Story', class: 'layout-speech-story', description: 'Social media story format with profile and bubble' },
+            { key: 'speech-thought', name: 'Thought Cloud', class: 'layout-speech-thought', description: 'Dreamy thought bubble with floating circles' },
+            { key: 'speech-paper', name: 'Paper Cutout', class: 'layout-speech-paper', description: 'Handmade paper craft aesthetic with torn edges' },
+            { key: 'speech-messenger', name: 'Messenger Chat', class: 'layout-speech-messenger', description: 'Facebook Messenger style chat interface' },
+            { key: 'speech-discord', name: 'Discord Chat', class: 'layout-speech-discord', description: 'Gaming chat platform with embed style' }
           ];
 
           grid.innerHTML = '';
