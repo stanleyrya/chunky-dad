@@ -548,6 +548,13 @@ class EventbriteParser {
                 else if (/(orlando)/i.test(title)) city = 'orlando';
                 else if (/(tampa)/i.test(title)) city = 'tampa';
                 
+                // Fallback: Check for "D>U>R>O" pattern and map to LA if no other city found
+                // This handles megawoof events that use this pattern but may expand to other cities later
+                if (!city && /d>u>r>o/i.test(title)) {
+                    city = 'la';
+                    console.log(`🎫 Eventbrite: Found D>U>R>O pattern in title, mapping to LA as fallback: "${title}"`);
+                }
+                
                 if (city) {
                     console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
                 }
