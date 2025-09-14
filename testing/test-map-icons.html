@@ -374,6 +374,280 @@
                     inset 0 0 10px rgba(0,255,255,0.4);
             }
         }
+
+        /* Title-based markers */
+        .title-full-marker {
+            background: rgba(255, 165, 0, 0.95);
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            min-width: 60px;
+            max-width: 200px;
+            height: auto;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        .title-short-marker {
+            background: rgba(255, 165, 0, 0.95);
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 6px;
+            min-width: 40px;
+            max-width: 120px;
+            height: auto;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        .title-shorter-marker {
+            background: rgba(255, 165, 0, 0.95);
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 4px;
+            min-width: 24px;
+            max-width: 60px;
+            height: auto;
+            min-height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        /* Favicon + Title combination markers */
+        .favicon-title-side-marker {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #FFA500;
+            padding: 4px 6px;
+            min-width: 80px;
+            max-width: 160px;
+            height: auto;
+            min-height: 28px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 14px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        .favicon-title-side-marker img {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .favicon-title-side-marker .title-text {
+            font-size: 10px;
+            font-weight: 600;
+            color: #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .favicon-title-stacked-marker {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #FFA500;
+            padding: 4px;
+            min-width: 50px;
+            max-width: 100px;
+            height: auto;
+            min-height: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        .favicon-title-stacked-marker img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .favicon-title-stacked-marker .title-text {
+            font-size: 8px;
+            font-weight: 600;
+            color: #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            max-width: 100%;
+        }
+
+        /* Additional creative marker styles */
+        .badge-marker {
+            background: linear-gradient(145deg, #FF6B6B, #FF8E53);
+            color: #fff;
+            border: 2px solid #fff;
+            font-size: 12px;
+            font-weight: 700;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .badge-marker::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 12px;
+            height: 12px;
+            background: #2ecc71;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .speech-bubble-marker {
+            background: #fff;
+            color: #333;
+            border: 2px solid #FFA500;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 6px 8px;
+            min-width: 40px;
+            max-width: 120px;
+            height: auto;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+            position: relative;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .speech-bubble-marker::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #FFA500;
+        }
+
+        .speech-bubble-marker::before {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #fff;
+            z-index: 1;
+        }
+
+        .pulsing-marker {
+            background: radial-gradient(circle, #FFA500, #FF8C00);
+            color: #000;
+            border: 2px solid #fff;
+            font-size: 14px;
+            font-weight: 700;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: markerPulse 1.5s ease-in-out infinite;
+            position: relative;
+        }
+
+        .pulsing-marker::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border: 2px solid rgba(255, 165, 0, 0.6);
+            border-radius: 50%;
+            animation: ripple 1.5s ease-in-out infinite;
+        }
+
+        @keyframes markerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        /* Size variants */
+        .marker-small {
+            transform: scale(0.8);
+        }
+
+        .marker-medium {
+            transform: scale(1);
+        }
+
+        .marker-large {
+            transform: scale(1.3);
+        }
         
         @media (max-width: 768px) {
             .icon-style-buttons {
@@ -406,8 +680,12 @@
                 • 🌐 <strong>Favicons:</strong> Use website favicons from event data as map icons<br>
                 • 🌈 <strong>Gradient Circles:</strong> Colorful gradient circles with emojis<br>
                 • ⚡ <strong>Neon Style:</strong> Glowing neon-style markers with animations<br>
+                • 📄 <strong>Title Display:</strong> Show full event titles, short versions, or super short<br>
+                • 🏷️ <strong>Favicon + Title:</strong> Combine favicons with titles (side-by-side or stacked)<br>
+                • 🎪 <strong>Creative Styles:</strong> Badge markers, speech bubbles, pulsing effects<br>
+                • 📏 <strong>Size Controls:</strong> Small, medium, and large marker sizes<br>
                 • 📅 <strong>Real Calendar:</strong> Load actual calendar data using DynamicCalendarLoader (same as calendar tester)<br>
-                <strong style="color: #2ecc71;">✅ FIXED:</strong> Now properly loads Google Calendar data and extracts website URLs for favicons!
+                <strong style="color: #2ecc71;">✅ NEW:</strong> Added title display modes and creative marker styles with size controls!
             </div>
         </div>
         
@@ -424,6 +702,41 @@
                     <button class="style-btn" data-style="favicon">🌐 Favicons</button>
                     <button class="style-btn" data-style="gradient">🌈 Gradient Circles</button>
                     <button class="style-btn" data-style="neon">⚡ Neon Style</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <label class="control-label">Title Display Modes:</label>
+                <div class="icon-style-buttons">
+                    <button class="style-btn" data-style="title-full">📄 Full Title</button>
+                    <button class="style-btn" data-style="title-short">📝 Short Title</button>
+                    <button class="style-btn" data-style="title-shorter">🏷️ Shorter Title</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <label class="control-label">Favicon + Title Combos:</label>
+                <div class="icon-style-buttons">
+                    <button class="style-btn" data-style="favicon-title-side">🌐📝 Favicon + Title (Side)</button>
+                    <button class="style-btn" data-style="favicon-title-stacked">🌐📚 Favicon + Title (Stacked)</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <label class="control-label">Creative Styles:</label>
+                <div class="icon-style-buttons">
+                    <button class="style-btn" data-style="badge">🎖️ Badge Markers</button>
+                    <button class="style-btn" data-style="speech-bubble">💬 Speech Bubbles</button>
+                    <button class="style-btn" data-style="pulsing">💫 Pulsing Markers</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <label class="control-label">Marker Size:</label>
+                <div class="icon-style-buttons">
+                    <button class="style-btn" data-size="small">📏 Small</button>
+                    <button class="style-btn active" data-size="medium">📐 Medium</button>
+                    <button class="style-btn" data-size="large">📏 Large</button>
                 </div>
             </div>
             
@@ -563,6 +876,7 @@
         let map;
         let markers = [];
         let currentStyle = 'emoji';
+        let currentSize = 'medium';
         let calendarLoader = null;
         
         // Initialize the test page
@@ -609,8 +923,9 @@
             // Style button listeners
             document.querySelectorAll('.style-btn[data-style]').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // Update active button
-                    document.querySelectorAll('.style-btn[data-style]').forEach(b => b.classList.remove('active'));
+                    // Update active button within the same control section
+                    const controlSection = this.closest('.control-section');
+                    controlSection.querySelectorAll('.style-btn[data-style]').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     
                     // Update current style and refresh markers
@@ -619,6 +934,22 @@
                     updateEventPreviews();
                     
                     logger.userInteraction('MAP', `Icon style changed to: ${currentStyle}`);
+                });
+            });
+            
+            // Size button listeners
+            document.querySelectorAll('.style-btn[data-size]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Update active button within size controls
+                    document.querySelectorAll('.style-btn[data-size]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update current size and refresh markers
+                    currentSize = this.dataset.size;
+                    updateMapMarkers();
+                    updateEventPreviews();
+                    
+                    logger.userInteraction('MAP', `Marker size changed to: ${currentSize}`);
                 });
             });
         }
@@ -660,6 +991,44 @@
             });
         }
         
+        // Title truncation functions
+        function getTitleForDisplay(eventName, mode) {
+            if (!eventName) return 'Event';
+            
+            switch (mode) {
+                case 'title-full':
+                    return eventName.length > 25 ? eventName.substring(0, 25) + '...' : eventName;
+                case 'title-short':
+                    return eventName.length > 15 ? eventName.substring(0, 15) + '...' : eventName;
+                case 'title-shorter':
+                    return eventName.length > 8 ? eventName.substring(0, 8) + '...' : eventName;
+                default:
+                    return eventName;
+            }
+        }
+        
+        function getSmartTitleTruncation(eventName, maxLength) {
+            if (!eventName || eventName.length <= maxLength) return eventName;
+            
+            // Try to break at word boundaries
+            const words = eventName.split(' ');
+            let result = '';
+            
+            for (const word of words) {
+                if ((result + ' ' + word).length <= maxLength - 3) {
+                    result += (result ? ' ' : '') + word;
+                } else {
+                    break;
+                }
+            }
+            
+            return result ? result + '...' : eventName.substring(0, maxLength - 3) + '...';
+        }
+        
+        function applySizeClass(className) {
+            return `${className} marker-${currentSize}`;
+        }
+
         function createMarker(event, index) {
             if (!event.coordinates?.lat || !event.coordinates?.lng) {
                 return null;
@@ -670,7 +1039,7 @@
             switch (currentStyle) {
                 case 'emoji':
                     icon = L.divIcon({
-                        className: 'emoji-marker',
+                        className: applySizeClass('emoji-marker'),
                         html: event.emoji || '📍',
                         iconSize: [30, 30],
                         iconAnchor: [15, 15],
@@ -681,7 +1050,7 @@
                 case 'initials':
                     const initials = getInitials(event.nickname || event.name);
                     icon = L.divIcon({
-                        className: 'initials-marker',
+                        className: applySizeClass('initials-marker'),
                         html: initials,
                         iconSize: [32, 32],
                         iconAnchor: [16, 16],
@@ -692,7 +1061,7 @@
                 case 'mixed':
                     const mixedContent = shouldUseEmoji(event) ? event.emoji : getInitials(event.nickname || event.name);
                     icon = L.divIcon({
-                        className: 'mixed-marker',
+                        className: applySizeClass('mixed-marker'),
                         html: mixedContent || '?',
                         iconSize: [36, 36],
                         iconAnchor: [18, 18],
@@ -703,7 +1072,7 @@
                 case 'overlay':
                     const overlayContent = event.emoji || getInitials(event.nickname || event.name);
                     icon = L.divIcon({
-                        className: 'overlay-marker',
+                        className: applySizeClass('overlay-marker'),
                         html: overlayContent,
                         iconSize: [40, 40],
                         iconAnchor: [20, 20],
@@ -713,7 +1082,7 @@
                     
                 case 'numbered':
                     icon = L.divIcon({
-                        className: 'numbered-marker',
+                        className: applySizeClass('numbered-marker'),
                         html: `<span>${index + 1}</span>`,
                         iconSize: [28, 28],
                         iconAnchor: [14, 14],
@@ -734,7 +1103,7 @@
                     
                     if (faviconUrl) {
                         icon = L.divIcon({
-                            className: `favicon-marker loading`,
+                            className: applySizeClass('favicon-marker loading'),
                             html: `<div id="${markerId}" class="favicon-content">⏳</div>`,
                             iconSize: [36, 36],
                             iconAnchor: [18, 18],
@@ -746,7 +1115,7 @@
                     } else {
                         // No website URL, use fallback immediately
                         icon = L.divIcon({
-                            className: 'favicon-marker error',
+                            className: applySizeClass('favicon-marker error'),
                             html: `<div class="favicon-content">${event.emoji || '🌐'}</div>`,
                             iconSize: [36, 36],
                             iconAnchor: [18, 18],
@@ -757,7 +1126,7 @@
                      
                 case 'gradient':
                     icon = L.divIcon({
-                        className: 'gradient-marker',
+                        className: applySizeClass('gradient-marker'),
                         html: event.emoji || '🎉',
                         iconSize: [40, 40],
                         iconAnchor: [20, 20],
@@ -767,18 +1136,121 @@
                     
                 case 'neon':
                     icon = L.divIcon({
-                        className: 'neon-marker',
+                        className: applySizeClass('neon-marker'),
                         html: event.emoji || '⚡',
                         iconSize: [38, 38],
                         iconAnchor: [19, 19],
                         popupAnchor: [0, -19]
                     });
                     break;
+                
+                // NEW: Title display modes
+                case 'title-full':
+                    const fullTitle = getTitleForDisplay(event.name, 'title-full');
+                    icon = L.divIcon({
+                        className: applySizeClass('title-full-marker'),
+                        html: fullTitle,
+                        iconSize: [Math.min(200, Math.max(60, fullTitle.length * 8)), 24],
+                        iconAnchor: [Math.min(100, Math.max(30, fullTitle.length * 4)), 12],
+                        popupAnchor: [0, -12]
+                    });
+                    break;
+                    
+                case 'title-short':
+                    const shortTitle = getTitleForDisplay(event.name, 'title-short');
+                    icon = L.divIcon({
+                        className: applySizeClass('title-short-marker'),
+                        html: shortTitle,
+                        iconSize: [Math.min(120, Math.max(40, shortTitle.length * 7)), 20],
+                        iconAnchor: [Math.min(60, Math.max(20, shortTitle.length * 3.5)), 10],
+                        popupAnchor: [0, -10]
+                    });
+                    break;
+                    
+                case 'title-shorter':
+                    const shorterTitle = getTitleForDisplay(event.name, 'title-shorter');
+                    icon = L.divIcon({
+                        className: applySizeClass('title-shorter-marker'),
+                        html: shorterTitle,
+                        iconSize: [Math.min(60, Math.max(24, shorterTitle.length * 6)), 16],
+                        iconAnchor: [Math.min(30, Math.max(12, shorterTitle.length * 3)), 8],
+                        popupAnchor: [0, -8]
+                    });
+                    break;
+                
+                // NEW: Favicon + Title combinations
+                case 'favicon-title-side':
+                    const faviconUrlSide = getFaviconUrl(event.website);
+                    const sideTitle = getSmartTitleTruncation(event.name, 20);
+                    const sideMarkerId = `favicon-side-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    const sideHtml = faviconUrlSide ? 
+                        `<div id="${sideMarkerId}" class="favicon-content"><img src="${faviconUrlSide}" onerror="this.style.display='none'; this.nextSibling.textContent='${event.emoji || '🌐'}';" alt="favicon"><span style="display:none;">${event.emoji || '🌐'}</span></div><div class="title-text">${sideTitle}</div>` :
+                        `<div class="favicon-content">${event.emoji || '🌐'}</div><div class="title-text">${sideTitle}</div>`;
+                    
+                    icon = L.divIcon({
+                        className: applySizeClass('favicon-title-side-marker'),
+                        html: sideHtml,
+                        iconSize: [Math.min(160, Math.max(80, sideTitle.length * 8 + 20)), 28],
+                        iconAnchor: [Math.min(80, Math.max(40, sideTitle.length * 4 + 10)), 14],
+                        popupAnchor: [0, -14]
+                    });
+                    break;
+                    
+                case 'favicon-title-stacked':
+                    const faviconUrlStacked = getFaviconUrl(event.website);
+                    const stackedTitle = getSmartTitleTruncation(event.name, 15);
+                    const stackedMarkerId = `favicon-stacked-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    const stackedHtml = faviconUrlStacked ? 
+                        `<div id="${stackedMarkerId}" class="favicon-content"><img src="${faviconUrlStacked}" onerror="this.style.display='none'; this.nextSibling.textContent='${event.emoji || '🌐'}';" alt="favicon"><span style="display:none;">${event.emoji || '🌐'}</span></div><div class="title-text">${stackedTitle}</div>` :
+                        `<div class="favicon-content">${event.emoji || '🌐'}</div><div class="title-text">${stackedTitle}</div>`;
+                    
+                    icon = L.divIcon({
+                        className: applySizeClass('favicon-title-stacked-marker'),
+                        html: stackedHtml,
+                        iconSize: [Math.min(100, Math.max(50, stackedTitle.length * 6 + 10)), 40],
+                        iconAnchor: [Math.min(50, Math.max(25, stackedTitle.length * 3 + 5)), 20],
+                        popupAnchor: [0, -20]
+                    });
+                    break;
+                
+                // NEW: Creative marker styles
+                case 'badge':
+                    icon = L.divIcon({
+                        className: applySizeClass('badge-marker'),
+                        html: event.emoji || '🎖️',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16],
+                        popupAnchor: [0, -16]
+                    });
+                    break;
+                    
+                case 'speech-bubble':
+                    const bubbleText = getSmartTitleTruncation(event.name, 12);
+                    icon = L.divIcon({
+                        className: applySizeClass('speech-bubble-marker'),
+                        html: bubbleText,
+                        iconSize: [Math.min(120, Math.max(40, bubbleText.length * 8)), 24],
+                        iconAnchor: [Math.min(60, Math.max(20, bubbleText.length * 4)), 20], // Adjust for speech bubble tail
+                        popupAnchor: [0, -24]
+                    });
+                    break;
+                    
+                case 'pulsing':
+                    icon = L.divIcon({
+                        className: applySizeClass('pulsing-marker'),
+                        html: event.emoji || '💫',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18],
+                        popupAnchor: [0, -18]
+                    });
+                    break;
                      
                 case 'original':
                 default:
                     icon = L.divIcon({
-                        className: 'custom-marker',
+                        className: applySizeClass('custom-marker'),
                         html: `
                             <div class="marker-pin">
                                 <div class="marker-icon"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="map-marker-icon"></div>
@@ -793,10 +1265,13 @@
             
             const marker = L.marker([event.coordinates.lat, event.coordinates.lng], { icon });
             
-            // Add popup
+            // Add popup with full title tooltip for shortened displays
+            const fullTitle = event.name;
+            const isShortened = currentStyle.includes('title') && fullTitle.length > 15;
+            
             marker.bindPopup(`
                 <div class="map-popup">
-                    <h4>${event.name}</h4>
+                    <h4>${fullTitle}</h4>
                     <p><strong>📍 ${event.bar}</strong></p>
                     <p>📅 ${event.day} ${event.time}</p>
                     <p>💰 ${event.cover}</p>
@@ -804,8 +1279,19 @@
                     ${event.nickname ? `<p>🏷️ Nickname: ${event.nickname}</p>` : ''}
                     ${event.website ? `<p>🌐 <a href="${event.website}" target="_blank">Website</a></p>` : ''}
                     <p>🎨 Icon Style: ${currentStyle}</p>
+                    <p>📏 Marker Size: ${currentSize}</p>
+                    ${isShortened ? `<p>💡 <em>Full title shown above</em></p>` : ''}
                 </div>
             `);
+            
+            // Add hover tooltip for shortened titles
+            if (isShortened) {
+                marker.bindTooltip(fullTitle, {
+                    permanent: false,
+                    direction: 'top',
+                    opacity: 0.9
+                });
+            }
             
             return marker;
         }
@@ -855,7 +1341,7 @@
                          🎭 ${event.eventType}
                      </div>
                      <div class="icon-preview">
-                         <span class="icon-preview-label">Icon:</span>
+                         <span class="icon-preview-label">Icon (${currentSize}):</span>
                          <span>${iconPreview}</span>
                      </div>
                  `;
@@ -891,6 +1377,22 @@
                     return `🌈 ${event.emoji || '🎉'}`;
                 case 'neon':
                     return `⚡ ${event.emoji || '⚡'}`;
+                case 'title-full':
+                    return `📄 "${getTitleForDisplay(event.name, 'title-full')}"`;
+                case 'title-short':
+                    return `📝 "${getTitleForDisplay(event.name, 'title-short')}"`;
+                case 'title-shorter':
+                    return `🏷️ "${getTitleForDisplay(event.name, 'title-shorter')}"`;
+                case 'favicon-title-side':
+                    return `🌐📝 ${event.website ? 'Favicon' : '❌'} + "${getSmartTitleTruncation(event.name, 20)}"`;
+                case 'favicon-title-stacked':
+                    return `🌐📚 ${event.website ? 'Favicon' : '❌'} / "${getSmartTitleTruncation(event.name, 15)}"`;
+                case 'badge':
+                    return `🎖️ ${event.emoji || '🎖️'}`;
+                case 'speech-bubble':
+                    return `💬 "${getSmartTitleTruncation(event.name, 12)}"`;
+                case 'pulsing':
+                    return `💫 ${event.emoji || '💫'}`;
                 case 'original':
                 default:
                     return '🐻 (Original Pin)';
