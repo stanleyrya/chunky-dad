@@ -24,7 +24,7 @@
     nav .nav-container { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; max-width: 1280px; margin: 0 auto; }
     .logo h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; }
     .logo a { color: var(--text-inverse); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
-    .logo-img { width: 28px; height: 28px; border-radius: 50%; }
+    .logo-img { width: 28px; height: 28px; }
 
     main { padding: 24px 0 40px; }
     .page-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
@@ -85,16 +85,6 @@
     /* Cover image support */
     .artboard .cover { position: absolute; inset: 0; background-position: center; background-size: cover; background-repeat: no-repeat; z-index: 0; }
 
-    /* LAYOUT: Magazine */
-    .layout-magazine .cover { filter: contrast(1.1) brightness(0.7); }
-    .layout-magazine::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0.7) 100%); z-index: 1; }
-    .layout-magazine .brand { position: absolute; top: 40px; left: 60px; font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 3px; color: #fff; z-index: 2; text-transform: uppercase; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
-    .layout-magazine .event-title { position: absolute; top: 120px; left: 60px; right: 60px; font-size: 96px; line-height: 0.9; font-weight: 900; color: #fff; text-transform: uppercase; z-index: 2; text-shadow: 0 6px 30px rgba(0,0,0,0.9); letter-spacing: -2px; }
-    .layout-magazine .event-date { position: absolute; top: 50px; right: 60px; background: #ff0066; color: #fff; padding: 8px 20px; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; z-index: 2; transform: rotate(3deg); }
-    .layout-magazine .event-details { position: absolute; bottom: 60px; left: 60px; right: 400px; background: rgba(255,255,255,0.95); color: #000; padding: 24px; z-index: 2; }
-    .layout-magazine .event-details .venue { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-    .layout-magazine .event-details .description { font-size: 16px; line-height: 1.4; opacity: 0.8; }
-    .layout-magazine .event-image { position: absolute; bottom: 40px; right: 60px; width: 300px; height: 200px; background-size: cover; background-position: center; border: 8px solid #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 2; transform: rotate(-2deg); }
 
 
 
@@ -145,16 +135,6 @@
     .layout-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
     .layout-glass .description { position: absolute; left: 40px; right: 40px; bottom: 40px; font-size: 18px; opacity: 0.95; }
 
-    /* NEW LAYOUT: Ticket */
-    .layout-ticket { background: #101014; }
-    .layout-ticket .stub { position: absolute; left: 80px; right: 80px; top: 80px; bottom: 80px; background: #fff; border-radius: 20px; overflow: hidden; display: grid; grid-template-columns: 1fr 280px; }
-    .layout-ticket .left { position: relative; padding: 40px; }
-    .layout-ticket .right { background: repeating-linear-gradient(90deg, #111 0, #111 6px, #fff 6px, #fff 12px); display: grid; place-items: center; color: #111; font-weight: 900; }
-    .layout-ticket .band { position: absolute; left: 0; right: 0; height: 90px; top: 0; background: var(--og-bg-2); opacity: 0.85; }
-    .layout-ticket .event-title { position: relative; margin-top: 20px; font-size: 58px; font-weight: 900; line-height: 1; color: #111; }
-    .layout-ticket .meta { position: relative; margin-top: 10px; font-size: 18px; color: #333; }
-    .layout-ticket .venue { position: relative; margin-top: 4px; font-size: 18px; color: #333; }
-    .layout-ticket .barcode { font-family: 'Oswald', sans-serif; font-size: 42px; letter-spacing: 6px; }
 
     /* NEW LAYOUT: Circle Focus */
     .layout-circle { position: relative; background: #0b0b0f; }
@@ -171,7 +151,7 @@
     /* Original Speech Bubble (logo talks) */
     .layout-speech { background: var(--og-bg-4); position: relative; }
     .layout-speech .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.2; }
-    .layout-speech .logo-avatar { position: absolute; left: 80px; bottom: 80px; width: 160px; height: 160px; border-radius: 50%; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 6px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
+    .layout-speech .logo-avatar { position: absolute; left: 80px; bottom: 80px; width: 160px; height: 160px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 6px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
     .layout-speech .speech-bubble { position: absolute; left: 270px; bottom: 160px; max-width: 760px; background: #fff; color: #111; border-radius: 22px; padding: 22px 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); font-size: 26px; line-height: 1.25; }
     .layout-speech .speech-bubble:after { content: ""; position: absolute; left: -28px; bottom: 22px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-right: 28px solid #fff; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.2)); }
     .layout-speech .headline { position: absolute; left: 80px; top: 70px; right: 60px; color: #fff; font-size: 64px; line-height: 0.95; font-weight: 900; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
@@ -189,39 +169,15 @@
 
     /* Speech Bubble 3: Dual Conversation */
     .layout-speech-dual { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
-    .layout-speech-dual .logo-avatar { position: absolute; left: 60px; top: 120px; width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 4px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
+    .layout-speech-dual .logo-avatar { position: absolute; left: 60px; top: 120px; width: 120px; height: 120px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 4px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
     .layout-speech-dual .event-avatar { position: absolute; right: 60px; bottom: 120px; width: 140px; height: 140px; border-radius: 50%; box-shadow: 0 12px 35px rgba(0,0,0,0.4); border: 5px solid rgba(255,255,255,0.9); background-size: cover; background-position: center; }
     .layout-speech-dual .speech-bubble-1 { position: absolute; left: 200px; top: 80px; max-width: 450px; background: #fff; color: #111; border-radius: 18px; padding: 18px 22px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); font-size: 20px; line-height: 1.3; }
     .layout-speech-dual .speech-bubble-1:after { content: ""; position: absolute; left: -18px; top: 20px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-right: 18px solid #fff; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
     .layout-speech-dual .speech-bubble-2 { position: absolute; right: 220px; bottom: 80px; max-width: 480px; background: rgba(255,255,255,0.95); color: #111; border-radius: 18px; padding: 18px 22px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); font-size: 18px; line-height: 1.3; }
     .layout-speech-dual .speech-bubble-2:after { content: ""; position: absolute; right: -18px; bottom: 20px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 18px solid rgba(255,255,255,0.95); filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
 
-    /* Speech Bubble 4: Comic Strip Style */
-    .layout-speech-comic { background: #f0f0f0; position: relative; }
-    .layout-speech-comic .comic-panel { position: absolute; inset: 40px; background: #fff; border: 6px solid #000; border-radius: 0; box-shadow: 8px 8px 0 rgba(0,0,0,0.2); }
-    .layout-speech-comic .event-image { position: absolute; left: 80px; top: 80px; width: 400px; height: 300px; background-size: cover; background-position: center; border: 4px solid #000; box-shadow: 4px 4px 0 rgba(0,0,0,0.3); }
-    .layout-speech-comic .speech-bubble { position: absolute; right: 80px; top: 120px; max-width: 480px; background: #fff; color: #000; border: 3px solid #000; border-radius: 25px; padding: 24px 28px; box-shadow: 4px 4px 0 rgba(0,0,0,0.2); font-size: 24px; line-height: 1.2; font-weight: 700; font-family: 'Comic Sans MS', cursive; }
-    .layout-speech-comic .speech-bubble:after { content: ""; position: absolute; left: -20px; bottom: 30px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-right: 20px solid #fff; }
-    .layout-speech-comic .speech-bubble:before { content: ""; position: absolute; left: -23px; bottom: 27px; width: 0; height: 0; border-top: 18px solid transparent; border-bottom: 18px solid transparent; border-right: 23px solid #000; z-index: -1; }
-    .layout-speech-comic .pow-effect { position: absolute; right: 120px; bottom: 80px; font-size: 48px; font-weight: 900; color: #ff6b35; text-shadow: 3px 3px 0 #000; transform: rotate(-15deg); font-family: 'Comic Sans MS', cursive; }
 
-    /* Speech Bubble 5: Neon Chat */
-    .layout-speech-neon { background: #0a0a0a; position: relative; overflow: hidden; }
-    .layout-speech-neon:before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 30% 70%, rgba(255,0,150,0.1) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(0,255,255,0.1) 0%, transparent 50%); }
-    .layout-speech-neon .logo-avatar { position: absolute; left: 80px; bottom: 100px; width: 140px; height: 140px; border-radius: 50%; box-shadow: 0 0 30px rgba(0,255,255,0.5), 0 10px 20px rgba(0,0,0,0.3); border: 3px solid rgba(0,255,255,0.8); background: #fff; object-fit: cover; }
-    .layout-speech-neon .speech-bubble { position: absolute; left: 260px; bottom: 120px; max-width: 720px; background: rgba(0,0,0,0.8); color: #00ffff; border: 2px solid #00ffff; border-radius: 20px; padding: 24px 28px; box-shadow: 0 0 20px rgba(0,255,255,0.3), inset 0 0 20px rgba(0,255,255,0.1); font-size: 24px; line-height: 1.3; font-family: 'Courier New', monospace; backdrop-filter: blur(10px); }
-    .layout-speech-neon .speech-bubble:after { content: ""; position: absolute; left: -15px; bottom: 25px; width: 0; height: 0; border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-right: 15px solid rgba(0,0,0,0.8); filter: drop-shadow(0 0 5px rgba(0,255,255,0.5)); }
-    .layout-speech-neon .event-title { position: absolute; left: 80px; top: 80px; right: 80px; color: #ff0080; font-size: 52px; line-height: 0.95; font-weight: 900; text-shadow: 0 0 20px rgba(255,0,128,0.8); text-align: center; }
 
-    /* Speech Bubble 6: Polaroid Memory */
-    .layout-speech-polaroid { background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%); position: relative; }
-    .layout-speech-polaroid .polaroid { position: absolute; right: 80px; top: 80px; width: 280px; height: 340px; background: #fff; border-radius: 8px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); transform: rotate(8deg); padding: 20px 20px 60px 20px; }
-    .layout-speech-polaroid .polaroid-image { width: 100%; height: 240px; background-size: cover; background-position: center; border-radius: 4px; }
-    .layout-speech-polaroid .polaroid-text { margin-top: 15px; text-align: center; font-family: 'Comic Sans MS', cursive; font-size: 16px; color: #333; }
-    .layout-speech-polaroid .speech-bubble { position: absolute; left: 80px; bottom: 120px; max-width: 600px; background: #fff; color: #333; border-radius: 25px; padding: 28px 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); font-size: 26px; line-height: 1.3; border: 3px solid #f39c12; }
-    .layout-speech-polaroid .speech-bubble:after { content: ""; position: absolute; right: -25px; top: 40px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-left: 25px solid #fff; }
-    .layout-speech-polaroid .speech-bubble:before { content: ""; position: absolute; right: -28px; top: 37px; width: 0; height: 0; border-top: 23px solid transparent; border-bottom: 23px solid transparent; border-left: 28px solid #f39c12; z-index: -1; }
-    .layout-speech-polaroid .event-title { position: absolute; left: 80px; top: 80px; max-width: 500px; color: #2d3436; font-size: 48px; line-height: 1.1; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
 
     /* Speech Bubble 7: Retro Terminal */
     .layout-speech-terminal { background: #0f3460; position: relative; }
@@ -241,7 +197,7 @@
     .layout-speech-story .story-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.7); }
     .layout-speech-story .story-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.6) 100%); }
     .layout-speech-story .profile-section { position: absolute; top: 30px; left: 30px; right: 30px; display: flex; align-items: center; gap: 15px; }
-    .layout-speech-story .profile-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff; background: #fff; object-fit: cover; }
+    .layout-speech-story .profile-avatar { width: 60px; height: 60px; border: 3px solid #fff; background: #fff; object-fit: cover; }
     .layout-speech-story .profile-info { color: #fff; }
     .layout-speech-story .profile-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
     .layout-speech-story .profile-time { font-size: 12px; opacity: 0.8; }
@@ -250,7 +206,7 @@
 
     /* Speech Bubble 9: Thought Cloud */
     .layout-speech-thought { background: var(--og-bg-2); position: relative; }
-    .layout-speech-thought .dreamer { position: absolute; left: 80px; bottom: 80px; width: 180px; height: 180px; border-radius: 50%; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 6px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
+    .layout-speech-thought .dreamer { position: absolute; left: 80px; bottom: 80px; width: 180px; height: 180px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 6px solid rgba(255,255,255,0.9); background: #fff; object-fit: cover; }
     .layout-speech-thought .thought-cloud { position: absolute; left: 320px; bottom: 200px; max-width: 700px; background: #fff; color: #333; border-radius: 50px; padding: 32px 40px; box-shadow: 0 25px 60px rgba(0,0,0,0.3); font-size: 24px; line-height: 1.4; position: relative; }
     .layout-speech-thought .thought-bubble-1 { position: absolute; left: -40px; bottom: 30px; width: 30px; height: 30px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
     .layout-speech-thought .thought-bubble-2 { position: absolute; left: -20px; bottom: 10px; width: 20px; height: 20px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
@@ -258,22 +214,12 @@
     .layout-speech-thought .event-image { position: absolute; right: 80px; top: 80px; width: 320px; height: 240px; background-size: cover; background-position: center; border-radius: 20px; border: 6px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
     .layout-speech-thought .event-title { position: absolute; left: 80px; top: 80px; max-width: 500px; color: #fff; font-size: 52px; line-height: 1.1; font-weight: 900; text-shadow: 0 6px 25px rgba(0,0,0,0.5); }
 
-    /* Speech Bubble 10: Paper Cutout */
-    .layout-speech-paper { background: #f7f1e3; position: relative; }
-    .layout-speech-paper:before { content: ""; position: absolute; inset: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="%23e0e0e0" opacity="0.5"/></svg>'); }
-    .layout-speech-paper .paper-tear { position: absolute; left: 60px; top: 60px; width: 400px; height: 280px; background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.15); transform: rotate(-2deg); }
-    .layout-speech-paper .paper-tear:before { content: ""; position: absolute; top: -5px; left: 0; right: 0; height: 10px; background: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #f7f1e3 8px, #f7f1e3 12px); }
-    .layout-speech-paper .event-image { position: absolute; top: 20px; left: 20px; right: 20px; height: 180px; background-size: cover; background-position: center; border-radius: 8px; }
-    .layout-speech-paper .paper-text { position: absolute; bottom: 20px; left: 20px; right: 20px; font-family: 'Comic Sans MS', cursive; font-size: 16px; color: #333; line-height: 1.3; }
-    .layout-speech-paper .speech-bubble { position: absolute; right: 80px; bottom: 120px; max-width: 550px; background: #fff; color: #333; border-radius: 20px; padding: 24px 28px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); font-size: 22px; line-height: 1.3; border: 2px solid #ddd; }
-    .layout-speech-paper .speech-bubble:after { content: ""; position: absolute; left: -18px; bottom: 25px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-right: 18px solid #fff; filter: drop-shadow(-2px 0 0 #ddd); }
-    .layout-speech-paper .event-title { position: absolute; right: 80px; top: 80px; max-width: 500px; color: #2d3436; font-size: 46px; line-height: 1.1; font-weight: 900; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
 
     /* Speech Bubble 11: Messenger Chat */
     .layout-speech-messenger { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
     .layout-speech-messenger .chat-container { position: absolute; inset: 60px; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
     .layout-speech-messenger .chat-header { position: absolute; top: 0; left: 0; right: 0; height: 80px; background: #4267B2; display: flex; align-items: center; padding: 0 20px; gap: 15px; }
-    .layout-speech-messenger .chat-avatar { width: 50px; height: 50px; border-radius: 50%; background: #fff; object-fit: cover; }
+    .layout-speech-messenger .chat-avatar { width: 50px; height: 50px; background: #fff; object-fit: cover; }
     .layout-speech-messenger .chat-title { color: #fff; font-size: 20px; font-weight: 700; }
     .layout-speech-messenger .chat-body { position: absolute; top: 80px; left: 0; right: 0; bottom: 0; padding: 30px; background: #f0f2f5; }
     .layout-speech-messenger .message-bubble { background: #4267B2; color: #fff; border-radius: 20px; padding: 16px 20px; font-size: 18px; line-height: 1.4; max-width: 400px; margin-left: auto; margin-bottom: 15px; }
@@ -294,7 +240,7 @@
     .layout-speech-discord .channel-name { color: #fff; font-size: 18px; font-weight: 600; }
     .layout-speech-discord .discord-messages { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 20px; }
     .layout-speech-discord .message { display: flex; gap: 15px; margin-bottom: 20px; }
-    .layout-speech-discord .message-avatar { width: 40px; height: 40px; border-radius: 50%; background: #fff; object-fit: cover; flex-shrink: 0; }
+    .layout-speech-discord .message-avatar { width: 40px; height: 40px; background: #fff; object-fit: cover; flex-shrink: 0; }
     .layout-speech-discord .message-content { flex: 1; }
     .layout-speech-discord .message-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; }
     .layout-speech-discord .message-author { color: #fff; font-size: 16px; font-weight: 600; }
@@ -561,23 +507,6 @@
         updateVariant(card, variant, data) {
           const artboard = card.querySelector('.artboard');
           switch(variant.key) {
-            case 'magazine': {
-              const t = artboard.querySelector('.event-title');
-              const d = artboard.querySelector('.event-date');
-              const v = artboard.querySelector('.venue');
-              const desc = artboard.querySelector('.description');
-              const img = artboard.querySelector('.event-image');
-              const cov = artboard.querySelector('.cover');
-              if (t) t.textContent = data.event;
-              if (d) d.textContent = data.date;
-              if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
-              if (desc) desc.textContent = data.description;
-              if (img) {
-                if (data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; } else { img.style.display = 'none'; }
-              }
-              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
 
 
             case 'split': {
@@ -632,17 +561,6 @@
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
-            case 'ticket': {
-              const t = artboard.querySelector('.event-title');
-              const meta = artboard.querySelector('.meta');
-              const ven = artboard.querySelector('.venue');
-              const code = artboard.querySelector('.barcode');
-              if (t) t.textContent = data.event;
-              if (meta) meta.textContent = `${data.date} · ${data.time}`;
-              if (ven) ven.textContent = `@ ${data.venue}`;
-              if (code) code.textContent = (data.event || 'EVENT').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);
-              break;
-            }
             case 'circle': {
               const t = artboard.querySelector('.event-title');
               const d = artboard.querySelector('.event-date');
@@ -685,33 +603,6 @@
               if (avatar && data.image) avatar.style.backgroundImage = `url('${data.image}')`;
               break;
             }
-            case 'speech-comic': {
-              const bubble = artboard.querySelector('.speech-bubble');
-              const img = artboard.querySelector('.event-image');
-              const pow = artboard.querySelector('.pow-effect');
-              if (bubble) bubble.textContent = `BOOM! ${data.event} is happening ${data.date} at ${data.venue}!`;
-              if (pow) pow.textContent = 'POW!';
-              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
-              break;
-            }
-            case 'speech-neon': {
-              const title = artboard.querySelector('.event-title');
-              const bubble = artboard.querySelector('.speech-bubble');
-              if (title) title.textContent = data.event;
-              if (bubble) bubble.textContent = `> EVENT_DETAILS.exe\\n> Date: ${data.date}\\n> Time: ${data.time}\\n> Venue: ${data.venue}\\n> Description: ${data.description}`;
-              break;
-            }
-            case 'speech-polaroid': {
-              const title = artboard.querySelector('.event-title');
-              const bubble = artboard.querySelector('.speech-bubble');
-              const img = artboard.querySelector('.polaroid-image');
-              const text = artboard.querySelector('.polaroid-text');
-              if (title) title.textContent = data.event;
-              if (bubble) bubble.textContent = `Remember this amazing time! ${data.date} at ${data.venue} was unforgettable.`;
-              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
-              if (text) text.textContent = `${data.event} - ${data.date}`;
-              break;
-            }
             case 'speech-terminal': {
               const content = artboard.querySelector('.terminal-content');
               const img = artboard.querySelector('.event-image');
@@ -748,17 +639,6 @@ Loading... <span class="cursor">█</span>`;
               if (title) title.textContent = data.event;
               if (cloud) cloud.textContent = `I'm dreaming about ${data.event}... ${data.date} at ${data.venue} will be perfect! ${data.description}`;
               if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
-              break;
-            }
-            case 'speech-paper': {
-              const title = artboard.querySelector('.event-title');
-              const bubble = artboard.querySelector('.speech-bubble');
-              const img = artboard.querySelector('.event-image');
-              const text = artboard.querySelector('.paper-text');
-              if (title) title.textContent = data.event;
-              if (bubble) bubble.textContent = `Look what I found! This looks amazing for ${data.date}!`;
-              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
-              if (text) text.textContent = `${data.venue} • ${data.time}`;
               break;
             }
             case 'speech-messenger': {
@@ -815,17 +695,6 @@ Loading... <span class="cursor">█</span>`;
 
         createVariantHTML(variant) {
           const layouts = {
-            'magazine': `
-              <div class="cover"></div>
-              <div class="brand">chunky.dad</div>
-              <div class="event-date"></div>
-              <div class="event-title"></div>
-              <div class="event-details">
-                <div class="venue"></div>
-                <div class="description"></div>
-              </div>
-              <div class="event-image"></div>
-            `,
 
 
             'split': `
@@ -877,19 +746,6 @@ Loading... <span class="cursor">█</span>`;
                 </div>
               </div>
             `,
-            'ticket': `
-              <div class="stub">
-                <div class="left">
-                  <div class="band"></div>
-                  <div class="event-title"></div>
-                  <div class="meta"></div>
-                  <div class="venue"></div>
-                </div>
-                <div class="right">
-                  <div class="barcode"></div>
-                </div>
-              </div>
-            `,
             'circle': `
               <div class="ring"></div>
               <div class="event-image"></div>
@@ -920,26 +776,6 @@ Loading... <span class="cursor">█</span>`;
               <div class="event-avatar"></div>
               <div class="speech-bubble-1"></div>
               <div class="speech-bubble-2"></div>
-            `,
-            'speech-comic': `
-              <div class="comic-panel">
-                <div class="event-image"></div>
-                <div class="speech-bubble"></div>
-                <div class="pow-effect">POW!</div>
-              </div>
-            `,
-            'speech-neon': `
-              <img class="logo-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
-              <div class="speech-bubble"></div>
-              <div class="event-title"></div>
-            `,
-            'speech-polaroid': `
-              <div class="event-title"></div>
-              <div class="polaroid">
-                <div class="polaroid-image"></div>
-                <div class="polaroid-text"></div>
-              </div>
-              <div class="speech-bubble"></div>
             `,
             'speech-terminal': `
               <div class="terminal-window">
@@ -977,14 +813,6 @@ Loading... <span class="cursor">█</span>`;
               <div class="thought-bubble-2"></div>
               <div class="thought-bubble-3"></div>
               <div class="event-image"></div>
-            `,
-            'speech-paper': `
-              <div class="event-title"></div>
-              <div class="paper-tear">
-                <div class="event-image"></div>
-                <div class="paper-text"></div>
-              </div>
-              <div class="speech-bubble"></div>
             `,
             'speech-messenger': `
               <div class="chat-container">
@@ -1041,22 +869,16 @@ Loading... <span class="cursor">█</span>`;
           const data = this.getPreviewData();
           const VARIANTS = [
             { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition with image focus' },
-            { key: 'magazine', name: 'Magazine Cover', class: 'layout-magazine', description: 'Editorial style with bold typography and featured image' },
             { key: 'minimal', name: 'Minimalist Card', class: 'layout-minimal', description: 'Clean modern design with subtle shadows' },
             { key: 'blocks', name: 'Color Blocks', class: 'layout-blocks', description: 'Bold two-column color composition' },
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass over photo backdrop' },
-            { key: 'ticket', name: 'Ticket', class: 'layout-ticket', description: 'Admit-one ticket aesthetic' },
             { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' },
             { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' },
             { key: 'speech-event', name: 'Event Image Speaks', class: 'layout-speech-event', description: 'Event image in circular frame speaks about details' },
             { key: 'speech-dual', name: 'Dual Conversation', class: 'layout-speech-dual', description: 'Logo and event image having a conversation' },
-            { key: 'speech-comic', name: 'Comic Strip', class: 'layout-speech-comic', description: 'Comic book style with speech bubble and POW effect' },
-            { key: 'speech-neon', name: 'Neon Chat', class: 'layout-speech-neon', description: 'Cyberpunk neon chat interface with glowing effects' },
-            { key: 'speech-polaroid', name: 'Polaroid Memory', class: 'layout-speech-polaroid', description: 'Vintage polaroid photo with nostalgic speech bubble' },
             { key: 'speech-terminal', name: 'Retro Terminal', class: 'layout-speech-terminal', description: 'Old-school computer terminal with green text' },
             { key: 'speech-story', name: 'Instagram Story', class: 'layout-speech-story', description: 'Social media story format with profile and bubble' },
             { key: 'speech-thought', name: 'Thought Cloud', class: 'layout-speech-thought', description: 'Dreamy thought bubble with floating circles' },
-            { key: 'speech-paper', name: 'Paper Cutout', class: 'layout-speech-paper', description: 'Handmade paper craft aesthetic with torn edges' },
             { key: 'speech-messenger', name: 'Messenger Chat', class: 'layout-speech-messenger', description: 'Facebook Messenger style chat interface' },
             { key: 'speech-discord', name: 'Discord Chat', class: 'layout-speech-discord', description: 'Gaming chat platform with embed style' }
           ];
