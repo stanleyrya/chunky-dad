@@ -296,19 +296,18 @@
         .favicon-marker {
             background: #fff;
             border: 2px solid #FFA500;
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 8px;
             box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-            overflow: hidden;
         }
         
         .favicon-marker img {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             object-fit: contain;
             border-radius: 4px;
             display: block;
@@ -479,7 +478,6 @@
             gap: 6px;
             border-radius: 16px;
             box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-            overflow: hidden;
         }
 
         .favicon-title-side-marker img {
@@ -495,10 +493,9 @@
             font-weight: 600;
             color: #000;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             flex: 1;
             line-height: 1.2;
+            min-width: 0;
         }
 
         .favicon-title-stacked-marker {
@@ -515,7 +512,6 @@
             gap: 4px;
             border-radius: 14px;
             box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-            overflow: hidden;
         }
 
         .favicon-title-stacked-marker img {
@@ -531,11 +527,10 @@
             font-weight: 600;
             color: #000;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             text-align: center;
             max-width: 100%;
             line-height: 1.1;
+            min-width: 0;
         }
 
         /* Additional creative marker styles */
@@ -1166,9 +1161,9 @@
                         icon = L.divIcon({
                             className: applySizeClass('favicon-marker loading'),
                             html: `<div id="${markerId}" class="favicon-content">⏳</div>`,
-                            iconSize: [36, 36],
-                            iconAnchor: [18, 18],
-                            popupAnchor: [0, -18]
+                            iconSize: [40, 40],
+                            iconAnchor: [20, 20],
+                            popupAnchor: [0, -20]
                         });
                         
                         // Load favicon asynchronously with proper error handling
@@ -1178,9 +1173,9 @@
                         icon = L.divIcon({
                             className: applySizeClass('favicon-marker error'),
                             html: `<div class="favicon-content">${event.emoji || '🌐'}</div>`,
-                            iconSize: [36, 36],
-                            iconAnchor: [18, 18],
-                            popupAnchor: [0, -18]
+                            iconSize: [40, 40],
+                            iconAnchor: [20, 20],
+                            popupAnchor: [0, -20]
                         });
                     }
                     break;
@@ -1252,9 +1247,9 @@
                     icon = L.divIcon({
                         className: applySizeClass('favicon-title-side-marker'),
                         html: sideHtml,
-                        iconSize: [Math.min(160, Math.max(80, sideTitle.length * 8 + 20)), 28],
-                        iconAnchor: [Math.min(80, Math.max(40, sideTitle.length * 4 + 10)), 14],
-                        popupAnchor: [0, -14]
+                        iconSize: [Math.min(200, Math.max(100, sideTitle.length * 10 + 40)), 32],
+                        iconAnchor: [Math.min(100, Math.max(50, sideTitle.length * 5 + 20)), 16],
+                        popupAnchor: [0, -16]
                     });
                     break;
                     
@@ -1270,9 +1265,9 @@
                     icon = L.divIcon({
                         className: applySizeClass('favicon-title-stacked-marker'),
                         html: stackedHtml,
-                        iconSize: [Math.min(100, Math.max(50, stackedTitle.length * 6 + 10)), 40],
-                        iconAnchor: [Math.min(50, Math.max(25, stackedTitle.length * 3 + 5)), 20],
-                        popupAnchor: [0, -20]
+                        iconSize: [Math.min(120, Math.max(60, stackedTitle.length * 8 + 20)), 48],
+                        iconAnchor: [Math.min(60, Math.max(30, stackedTitle.length * 4 + 10)), 24],
+                        popupAnchor: [0, -24]
                     });
                     break;
                 
