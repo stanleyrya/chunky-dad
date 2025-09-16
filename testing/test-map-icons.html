@@ -81,6 +81,15 @@
             transition: all 0.3s ease;
             font-size: 0.9rem;
             font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 120px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
         
         .style-btn:hover {
@@ -156,6 +165,20 @@
             color: #ccc;
             font-size: 0.9rem;
             margin-bottom: 8px;
+        }
+        
+        .event-shortname {
+            color: #FFA500;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .event-shortername {
+            color: #FFD700;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-weight: 700;
         }
         
         .event-details {
@@ -920,12 +943,12 @@
         }
         
         function setupEventListeners() {
-            // Style button listeners
+            // Style button listeners - only one style can be active at a time
             document.querySelectorAll('.style-btn[data-style]').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // Update active button within the same control section
-                    const controlSection = this.closest('.control-section');
-                    controlSection.querySelectorAll('.style-btn[data-style]').forEach(b => b.classList.remove('active'));
+                    // Remove active from ALL style buttons first
+                    document.querySelectorAll('.style-btn[data-style]').forEach(b => b.classList.remove('active'));
+                    // Add active to clicked button
                     this.classList.add('active');
                     
                     // Update current style and refresh markers
@@ -937,11 +960,12 @@
                 });
             });
             
-            // Size button listeners
+            // Size button listeners - only one size can be active at a time
             document.querySelectorAll('.style-btn[data-size]').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // Update active button within size controls
+                    // Remove active from ALL size buttons first
                     document.querySelectorAll('.style-btn[data-size]').forEach(b => b.classList.remove('active'));
+                    // Add active to clicked button
                     this.classList.add('active');
                     
                     // Update current size and refresh markers
@@ -950,6 +974,18 @@
                     updateEventPreviews();
                     
                     logger.userInteraction('MAP', `Marker size changed to: ${currentSize}`);
+                });
+            });
+            
+            // Action button listeners
+            document.querySelectorAll('.style-btn[onclick]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const onclick = this.getAttribute('onclick');
+                    if (onclick) {
+                        // Execute the onclick function
+                        eval(onclick);
+                    }
                 });
             });
         }
@@ -991,16 +1027,29 @@
             });
         }
         
-        // Title truncation functions
-        function getTitleForDisplay(eventName, mode) {
-            if (!eventName) return 'Event';
+        // Title truncation functions - now properly uses shortName and shorterName
+        function getTitleForDisplay(event, mode) {
+            if (!event) return 'Event';
+            
+            // Use the event object to access shortName and shorterName
+            const eventName = event.name || 'Event';
+            const shortName = event.shortName;
+            const shorterName = event.shorterName;
             
             switch (mode) {
                 case 'title-full':
                     return eventName.length > 25 ? eventName.substring(0, 25) + '...' : eventName;
                 case 'title-short':
+                    // Use shortName if available, otherwise truncate
+                    if (shortName) {
+                        return shortName.length > 15 ? shortName.substring(0, 15) + '...' : shortName;
+                    }
                     return eventName.length > 15 ? eventName.substring(0, 15) + '...' : eventName;
                 case 'title-shorter':
+                    // Use shorterName if available, otherwise truncate
+                    if (shorterName) {
+                        return shorterName.length > 8 ? shorterName.substring(0, 8) + '...' : shorterName;
+                    }
                     return eventName.length > 8 ? eventName.substring(0, 8) + '...' : eventName;
                 default:
                     return eventName;
@@ -1144,9 +1193,9 @@
                     });
                     break;
                 
-                // NEW: Title display modes
+                // NEW: Title display modes - now properly uses shortName and shorterName
                 case 'title-full':
-                    const fullTitle = getTitleForDisplay(event.name, 'title-full');
+                    const fullTitle = getTitleForDisplay(event, 'title-full');
                     icon = L.divIcon({
                         className: applySizeClass('title-full-marker'),
                         html: fullTitle,
@@ -1157,7 +1206,7 @@
                     break;
                     
                 case 'title-short':
-                    const shortTitle = getTitleForDisplay(event.name, 'title-short');
+                    const shortTitle = getTitleForDisplay(event, 'title-short');
                     icon = L.divIcon({
                         className: applySizeClass('title-short-marker'),
                         html: shortTitle,
@@ -1168,7 +1217,7 @@
                     break;
                     
                 case 'title-shorter':
-                    const shorterTitle = getTitleForDisplay(event.name, 'title-shorter');
+                    const shorterTitle = getTitleForDisplay(event, 'title-shorter');
                     icon = L.divIcon({
                         className: applySizeClass('title-shorter-marker'),
                         html: shorterTitle,
@@ -1334,6 +1383,8 @@
                                  eventCard.innerHTML = `
                      <div class="event-name">${event.name} ${event.isRealEvent ? '🔴 LIVE' : ''}</div>
                      <div class="event-nickname">Nickname: ${event.nickname || 'None'}</div>
+                     ${event.shortName ? `<div class="event-shortname">Short: ${event.shortName}</div>` : ''}
+                     ${event.shorterName ? `<div class="event-shortername">Shorter: ${event.shorterName}</div>` : ''}
                      <div class="event-details">
                          📍 ${event.bar}<br>
                          📅 ${event.day} ${event.time}<br>
@@ -1378,11 +1429,11 @@
                 case 'neon':
                     return `⚡ ${event.emoji || '⚡'}`;
                 case 'title-full':
-                    return `📄 "${getTitleForDisplay(event.name, 'title-full')}"`;
+                    return `📄 "${getTitleForDisplay(event, 'title-full')}"`;
                 case 'title-short':
-                    return `📝 "${getTitleForDisplay(event.name, 'title-short')}"`;
+                    return `📝 "${getTitleForDisplay(event, 'title-short')}"`;
                 case 'title-shorter':
-                    return `🏷️ "${getTitleForDisplay(event.name, 'title-shorter')}"`;
+                    return `🏷️ "${getTitleForDisplay(event, 'title-shorter')}"`;
                 case 'favicon-title-side':
                     return `🌐📝 ${event.website ? 'Favicon' : '❌'} + "${getSmartTitleTruncation(event.name, 20)}"`;
                 case 'favicon-title-stacked':
@@ -1580,170 +1631,158 @@
             document.querySelector('[data-style="favicon"]').click();
         }
         
-                 async function loadRealCalendar() {
-             try {
-                 logger.componentInit('CALENDAR', 'Loading real calendar data for icon testing using DynamicCalendarLoader');
-                 
-                 if (!calendarLoader) {
-                     logger.componentError('CALENDAR', 'Calendar loader not initialized');
-                     return;
-                 }
-                 
-                 // Log the calendar loader state for debugging
-                 logger.info('CALENDAR', 'Calendar loader state', {
-                     hasLoader: !!calendarLoader,
-                     currentCity: calendarLoader.currentCity,
-                     currentCityConfig: calendarLoader.currentCityConfig,
-                     hasLoadCalendarDataMethod: typeof calendarLoader.loadCalendarData === 'function'
-                 });
-                 
-                 // Use NYC as default city for testing (same as calendar tester)
-                 const cityKey = 'new-york';
-                 
-                 // Check if getCityConfig function exists
-                 if (typeof getCityConfig !== 'function') {
-                     logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded');
-                     throw new Error('City configuration not available');
-                 }
-                 
-                 const cityConfig = getCityConfig(cityKey);
-                 
-                 if (!cityConfig || !cityConfig.calendarId) {
-                     logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`, { cityConfig });
-                     throw new Error(`No calendar configuration for ${cityKey}`);
-                 }
-                 
-                 logger.info('CALENDAR', `Loading real calendar data for ${cityConfig.name}`, { cityConfig });
-                 
-                 // Load calendar data using the same method as calendar tester
-                 const calendarData = await calendarLoader.loadCalendarData(cityKey);
-                 
-                 if (!calendarData) {
-                     logger.componentError('CALENDAR', 'No calendar data received - loadCalendarData returned null/undefined');
-                     throw new Error('Calendar data loading failed');
-                 }
-                 
-                 if (!calendarData.events) {
-                     logger.componentError('CALENDAR', 'Calendar data received but no events property', { calendarData });
-                     throw new Error('No events in calendar data');
-                 }
-                 
-                 if (!Array.isArray(calendarData.events)) {
-                     logger.componentError('CALENDAR', 'Calendar events is not an array', { 
-                         eventsType: typeof calendarData.events,
-                         events: calendarData.events 
-                     });
-                     throw new Error('Invalid events data format');
-                 }
-                 
-                 const events = calendarData.events;
-                 logger.info('CALENDAR', `Loaded ${events.length} real calendar events`, { events });
-                 
-                 // Clear existing test events
-                 testEvents.length = 0;
-                 
-                 // Convert calendar events to our test format
-                 events.forEach((event, index) => {
-                     // Generate emoji based on event name/type
-                     const emoji = generateEmojiForEvent(event);
-                     
-                     // Extract nickname from description or generate from name
-                     const nickname = extractNickname(event) || generateNickname(event.name);
-                     
-                     // Extract website URL from event description or use URL field
-                     const website = extractWebsiteFromDescription(event.description) || event.url || event.website || null;
-                     
-                     // Parse coordinates from location field if available
-                     const coordinates = parseCoordinatesFromLocation(event.location) || 
-                                       parseCoordinatesFromLocation(event.barLocation) ||
-                                       generateRandomNYCCoordinates();
-                     
-                     // Extract venue name from bar field or location
-                     const venue = event.bar || event.barName || extractVenueFromLocation(event.location) || 'Unknown Location';
-                     
-                     testEvents.push({
-                         name: event.name || 'Unnamed Event',
-                         nickname: nickname,
-                         bar: venue,
-                         time: event.time || 'Time TBD',
-                         day: event.day || 'Day TBD',
-                         cover: event.cover || extractCoverFromDescription(event.description) || 'TBD',
-                         coordinates: coordinates,
-                         emoji: emoji,
-                         eventType: determineEventType(event),
-                         website: website,
-                         isRealEvent: true,
-                         description: event.description,
-                         originalEvent: event // Keep reference to original for debugging
-                     });
-                 });
-                 
-                 // Update map and events display
-                 logger.info('CALENDAR', `Converting ${events.length} calendar events to test format, now have ${testEvents.length} total events`);
-                 updateMapMarkers();
-                 renderEvents();
-                 
-                 // Log success with details about what was displayed
-                 logger.componentLoad('CALENDAR', `Successfully loaded and displayed ${events.length} real calendar events`, {
-                     totalEventsInArray: testEvents.length,
-                     markersOnMap: markers.length,
-                     eventsWithCoordinates: testEvents.filter(e => e.coordinates).length,
-                     eventsWithWebsites: testEvents.filter(e => e.website).length
-                 });
-                 
-             } catch (error) {
-                 logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
-                 
-                 // Fallback to mock "real-looking" events
-                 testEvents.length = 0;
-                 testEvents.push(
-                     {
-                         name: "Bears Are Animals",
-                         nickname: "BAA",
-                         bar: "Animal NYC",
-                         time: "7:00 PM - 10:00 PM",
-                         day: "Thursday",
-                         cover: "Free",
-                         coordinates: { lat: 40.71739735291992, lng: -73.94930680925715 },
-                         emoji: "🐻",
-                         eventType: "Weekly Social",
-                         website: "https://animal.nyc",
-                         isRealEvent: true
-                     },
-                     {
-                         name: "Thursday Night Social",
-                         nickname: "TNS", 
-                         bar: "The Eagle NYC",
-                         time: "8:00 PM - 12:00 AM",
-                         day: "Thursday",
-                         cover: "$5",
-                         coordinates: { lat: 40.7589, lng: -73.9851 },
-                         emoji: "🦅",
-                         eventType: "Social Hour",
-                         website: "https://eagle-ny.com",
-                         isRealEvent: true
-                     },
-                     {
-                         name: "Underwear Party",
-                         nickname: "UWP",
-                         bar: "NYC Venue",
-                         time: "10:00 PM - 2:00 AM",
-                         day: "Saturday",
-                         cover: "$15",
-                         coordinates: { lat: 40.7505, lng: -73.9934 },
-                         emoji: "🩲",
-                         eventType: "Themed Party",
-                         website: "https://example.com",
-                         isRealEvent: true
-                     }
-                 );
-                 
-                 updateMapMarkers();
-                 renderEvents();
-                 
-                 logger.componentLoad('CALENDAR', 'Loaded fallback real-style events');
-             }
-         }
+        async function loadRealCalendar() {
+            try {
+                logger.componentInit('CALENDAR', 'Loading real calendar data for icon testing using DynamicCalendarLoader');
+                
+                if (!calendarLoader) {
+                    logger.componentError('CALENDAR', 'Calendar loader not initialized');
+                    return;
+                }
+                
+                // Use NYC as default city for testing (same as calendar tester)
+                const cityKey = 'new-york';
+                
+                // Check if getCityConfig function exists
+                if (typeof getCityConfig !== 'function') {
+                    logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded');
+                    throw new Error('City configuration not available');
+                }
+                
+                const cityConfig = getCityConfig(cityKey);
+                
+                if (!cityConfig || !cityConfig.calendarId) {
+                    logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`, { cityConfig });
+                    throw new Error(`No calendar configuration for ${cityKey}`);
+                }
+                
+                logger.info('CALENDAR', `Loading real calendar data for ${cityConfig.name}`, { cityConfig });
+                
+                // Load calendar data using the calendar loader's loadCalendarData method
+                const events = await calendarLoader.loadCalendarData(cityKey);
+                
+                if (!events || !Array.isArray(events)) {
+                    logger.componentError('CALENDAR', 'No valid events array received from calendar loader', { events });
+                    throw new Error('Calendar data loading failed - no events array');
+                }
+                
+                logger.info('CALENDAR', `Loaded ${events.length} real calendar events`, { events });
+                
+                // Clear existing test events
+                testEvents.length = 0;
+                
+                // Convert calendar events to our test format
+                events.forEach((event, index) => {
+                    // Generate emoji based on event name/type
+                    const emoji = generateEmojiForEvent(event);
+                    
+                    // Use shortName and shorterName from calendar data if available
+                    const nickname = event.shortName || event.shorterName || extractNickname(event) || generateNickname(event.name);
+                    
+                    // Extract website URL from event description or use URL field
+                    const website = extractWebsiteFromDescription(event.description) || event.url || event.website || null;
+                    
+                    // Parse coordinates from location field if available
+                    const coordinates = parseCoordinatesFromLocation(event.location) || 
+                                      parseCoordinatesFromLocation(event.barLocation) ||
+                                      generateRandomNYCCoordinates();
+                    
+                    // Extract venue name from bar field or location
+                    const venue = event.bar || event.barName || extractVenueFromLocation(event.location) || 'Unknown Location';
+                    
+                    testEvents.push({
+                        name: event.name || 'Unnamed Event',
+                        nickname: nickname,
+                        shortName: event.shortName || null,
+                        shorterName: event.shorterName || null,
+                        bar: venue,
+                        time: event.time || 'Time TBD',
+                        day: event.day || 'Day TBD',
+                        cover: event.cover || extractCoverFromDescription(event.description) || 'TBD',
+                        coordinates: coordinates,
+                        emoji: emoji,
+                        eventType: determineEventType(event),
+                        website: website,
+                        isRealEvent: true,
+                        description: event.description,
+                        originalEvent: event // Keep reference to original for debugging
+                    });
+                });
+                
+                // Update map and events display
+                logger.info('CALENDAR', `Converting ${events.length} calendar events to test format, now have ${testEvents.length} total events`);
+                updateMapMarkers();
+                renderEvents();
+                
+                // Log success with details about what was displayed
+                logger.componentLoad('CALENDAR', `Successfully loaded and displayed ${events.length} real calendar events`, {
+                    totalEventsInArray: testEvents.length,
+                    markersOnMap: markers.length,
+                    eventsWithCoordinates: testEvents.filter(e => e.coordinates).length,
+                    eventsWithWebsites: testEvents.filter(e => e.website).length,
+                    eventsWithShortNames: testEvents.filter(e => e.shortName).length,
+                    eventsWithShorterNames: testEvents.filter(e => e.shorterName).length
+                });
+                
+            } catch (error) {
+                logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
+                
+                // Fallback to mock "real-looking" events
+                testEvents.length = 0;
+                testEvents.push(
+                    {
+                        name: "Bears Are Animals",
+                        nickname: "BAA",
+                        shortName: "BAA",
+                        shorterName: "BAA",
+                        bar: "Animal NYC",
+                        time: "7:00 PM - 10:00 PM",
+                        day: "Thursday",
+                        cover: "Free",
+                        coordinates: { lat: 40.71739735291992, lng: -73.94930680925715 },
+                        emoji: "🐻",
+                        eventType: "Weekly Social",
+                        website: "https://animal.nyc",
+                        isRealEvent: true
+                    },
+                    {
+                        name: "Thursday Night Social",
+                        nickname: "TNS",
+                        shortName: "TNS",
+                        shorterName: "TNS",
+                        bar: "The Eagle NYC",
+                        time: "8:00 PM - 12:00 AM",
+                        day: "Thursday",
+                        cover: "$5",
+                        coordinates: { lat: 40.7589, lng: -73.9851 },
+                        emoji: "🦅",
+                        eventType: "Social Hour",
+                        website: "https://eagle-ny.com",
+                        isRealEvent: true
+                    },
+                    {
+                        name: "Underwear Party",
+                        nickname: "UWP",
+                        shortName: "UWP",
+                        shorterName: "UWP",
+                        bar: "NYC Venue",
+                        time: "10:00 PM - 2:00 AM",
+                        day: "Saturday",
+                        cover: "$15",
+                        coordinates: { lat: 40.7505, lng: -73.9934 },
+                        emoji: "🩲",
+                        eventType: "Themed Party",
+                        website: "https://example.com",
+                        isRealEvent: true
+                    }
+                );
+                
+                updateMapMarkers();
+                renderEvents();
+                
+                logger.componentLoad('CALENDAR', 'Loaded fallback real-style events');
+            }
+        }
          
          // Helper functions for parsing calendar data
          function extractWebsiteFromDescription(description) {
