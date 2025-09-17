@@ -110,7 +110,7 @@
     .layout-minimal .card-header .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.4; }
     .layout-minimal .card-header .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%); }
     .layout-minimal .card-header .date-badge { position: absolute; top: 30px; right: 30px; background: #fff; color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
-    .layout-minimal .event-image { position: absolute; bottom: -40px; left: 60px; width: 160px; height: 160px; border-radius: 20px; background-size: cover; background-position: center; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2; }
+    .layout-minimal .event-image { position: absolute; bottom: -20px; left: 60px; width: 160px; height: 160px; border-radius: 20px; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2; background: transparent; object-fit: contain; }
     .layout-minimal .card-body { padding: 60px 60px 40px 260px; position: relative; }
     .layout-minimal .event-title { font-size: 48px; font-weight: 900; color: #333; line-height: 1.1; margin-bottom: 15px; }
     .layout-minimal .venue { font-size: 20px; color: #666; margin-bottom: 20px; }
@@ -516,13 +516,11 @@
               const v = artboard.querySelector('.venue');
               const desc = artboard.querySelector('.description');
               const dateBadge = artboard.querySelector('.date-badge');
-              const img = artboard.querySelector('.event-image');
               const cov = artboard.querySelector('.card-header .cover');
               if (t) t.textContent = data.event;
               if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
               if (desc) desc.textContent = data.description;
               if (dateBadge) dateBadge.textContent = data.date;
-              if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
@@ -677,7 +675,6 @@ Loading... <span class="cursor">█</span>`;
 
             'split': `
               <div class="left-side">
-                <div class="cover"></div>
               </div>
               <div class="left-content">
                 <div class="brand">chunky.dad</div>
@@ -697,7 +694,7 @@ Loading... <span class="cursor">█</span>`;
                   <div class="overlay"></div>
                   <div class="date-badge"></div>
                 </div>
-                <div class="event-image"></div>
+                <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" style="position: absolute; bottom: -20px; left: 60px; width: 160px; height: 160px; border-radius: 20px; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2; background: transparent; object-fit: contain;" />
                 <div class="card-body">
                   <div class="event-title"></div>
                   <div class="venue"></div>
@@ -732,7 +729,6 @@ Loading... <span class="cursor">█</span>`;
               <div class="headline"></div>
               <img class="logo-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
               <div class="speech-bubble"></div>
-              <div class="event-image"></div>
               <div class="brand">chunky.dad</div>
             `,
             'speech-event': `
