@@ -513,7 +513,7 @@
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
               if (desc) desc.textContent = data.description;
-              if (img) { img.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`; img.style.display = 'block'; }
+              if (img && data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; }
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
@@ -528,7 +528,7 @@
               if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
               if (desc) desc.textContent = data.description;
               if (dateBadge) dateBadge.textContent = data.date;
-              if (img) { if (data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
+              if (img) { img.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`; img.style.display = 'block'; }
               if (cov && data.image) cov.style.backgroundImage = `url('${data.image}')`;
               break;
             }
@@ -542,7 +542,7 @@
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
               if (desc) desc.textContent = data.description;
-              if (cov && data.image) cov.style.backgroundImage = `url('${data.image}')`;
+              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
             case 'circle': {
@@ -555,7 +555,7 @@
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
               if (desc) desc.textContent = data.description;
-              if (img) { img.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`; img.style.display = 'block'; }
+              if (img && data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; }
               break;
             }
             case 'speech': {
@@ -565,8 +565,8 @@
               const cov = artboard.querySelector('.cover');
               if (head) head.textContent = data.event;
               if (bubble) bubble.textContent = `${data.date} · ${data.time} @ ${data.venue}. ${data.description}`;
-              if (img) { if (data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; } else { img.style.display = 'none'; } }
-              if (cov && data.image) cov.style.backgroundImage = `url('${data.image}')`;
+              if (img && data.image) { img.style.backgroundImage = `url('${data.image}')`; img.style.display = 'block'; }
+              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
             case 'speech-event': {
@@ -575,7 +575,7 @@
               const avatar = artboard.querySelector('.event-avatar');
               if (title) title.textContent = data.event;
               if (bubble) bubble.textContent = `Join us ${data.date} at ${data.time}! We're hosting an amazing event at ${data.venue}. ${data.description}`;
-              if (avatar) avatar.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`;
+              if (avatar && data.image) avatar.style.backgroundImage = `url('${data.image}')`;
               break;
             }
             case 'speech-dual': {
@@ -584,7 +584,7 @@
               const avatar = artboard.querySelector('.event-avatar');
               if (bubble1) bubble1.textContent = `Hey! Have you heard about ${data.event}?`;
               if (bubble2) bubble2.textContent = `Yes! It's ${data.date} at ${data.time} @ ${data.venue}. ${data.description}`;
-              if (avatar) avatar.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`;
+              if (avatar && data.image) avatar.style.backgroundImage = `url('${data.image}')`;
               break;
             }
             case 'speech-terminal': {
@@ -600,7 +600,7 @@ INFO: ${data.description}<br/>
 $ ./join_event.sh<br/>
 Loading... <span class="cursor">█</span>`;
               }
-              if (img) img.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
               break;
             }
             case 'speech-story': {
@@ -611,7 +611,7 @@ Loading... <span class="cursor">█</span>`;
               const time = artboard.querySelector('.profile-time');
               if (title) title.textContent = data.event;
               if (bubble) bubble.textContent = `Can't wait for this! ${data.date} at ${data.time} 🎉`;
-              if (bg && data.cover) bg.style.backgroundImage = `url('${data.cover}')`;
+              if (bg && data.image) bg.style.backgroundImage = `url('${data.image}')`;
               if (name) name.textContent = 'chunky.dad';
               if (time) time.textContent = '2h ago';
               break;
@@ -622,7 +622,7 @@ Loading... <span class="cursor">█</span>`;
               const img = artboard.querySelector('.event-image');
               if (title) title.textContent = data.event;
               if (cloud) cloud.textContent = `I'm dreaming about ${data.event}... ${data.date} at ${data.venue} will be perfect! ${data.description}`;
-              if (img) img.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
               break;
             }
             case 'speech-messenger': {
@@ -631,7 +631,7 @@ Loading... <span class="cursor">█</span>`;
               const img = artboard.querySelector('.message-image');
               if (title) title.textContent = data.event;
               if (bubble) bubble.textContent = `Hey! ${data.event} is happening ${data.date} at ${data.time} @ ${data.venue}. You coming?`;
-              if (img) img.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
               break;
             }
             case 'speech-discord': {
@@ -644,7 +644,7 @@ Loading... <span class="cursor">█</span>`;
               if (author) author.textContent = 'chunky.dad';
               if (time) time.textContent = 'Today at 12:34 PM';
               if (text) text.textContent = `@everyone ${data.event} is happening ${data.date} at ${data.venue}!`;
-              if (img) img.style.backgroundImage = `url('../Rising_Star_Ryan_Head_Compressed.png')`;
+              if (img && data.image) img.style.backgroundImage = `url('${data.image}')`;
               break;
             }
 
