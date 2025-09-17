@@ -204,7 +204,7 @@ class ChunkyDadApp {
             
             // Initialize page-specific modules (don't let them block each other)
             if (this.isCityPage || this.isTestPage || this.isMainPage) {
-                // Don't await city page modules to prevent hanging
+                // Initialize city page modules asynchronously to prevent blocking
                 this.initializeCityPageModules().catch(error => {
                     logger.componentError('SYSTEM', 'City page module initialization failed', error);
                 });
@@ -330,6 +330,18 @@ class ChunkyDadApp {
         logger.info('SYSTEM', `Initializing ${pageType} modules`);
         
         try {
+            // For city pages, update header immediately before any other initialization
+            if (this.isCityPage || this.isTestPage) {
+                const citySlug = this.getCitySlugFromPath();
+                if (citySlug) {
+                    logger.info('SYSTEM', `⚡ Fast header update for city: ${citySlug}`);
+                    this.updateHeaderForCity(citySlug);
+                    
+                    // Show a subtle loading indicator for calendar while it loads
+                    this.showCalendarLoadingIndicator();
+                }
+            }
+            
             // Calendar functionality needed on city pages and main page (for today events)
             if (window.DynamicCalendarLoader) {
                 this.calendarLoader = new DynamicCalendarLoader();
@@ -337,15 +349,23 @@ class ChunkyDadApp {
                 window.calendarLoader = this.calendarLoader;
                 
                 // Only initialize full calendar on city/test pages, not main page
+                // Run calendar initialization asynchronously to not block other page elements
                 if (this.isCityPage || this.isTestPage) {
-                    await this.calendarLoader.init();
+                    // Don't await - let calendar load in background
+                    this.calendarLoader.init().then(() => {
+                        this.hideCalendarLoadingIndicator();
+                        logger.componentLoad('SYSTEM', '📅 Calendar fully loaded');
+                    }).catch(error => {
+                        this.hideCalendarLoadingIndicator();
+                        logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
+                    });
                 }
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
             }
             
             const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
-            logger.componentLoad('SYSTEM', `${pageType} modules initialized`);
+            logger.componentLoad('SYSTEM', `${pageType} modules initialized (calendar loading in background)`);
         } catch (error) {
             const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
             logger.componentError('SYSTEM', `${pageType} module initialization failed`, error);
@@ -409,6 +429,56 @@ class ChunkyDadApp {
 
     getPathUtils() {
         return this.pathUtils;
+    }
+
+    // Show subtle loading indicator while calendar loads
+    showCalendarLoadingIndicator() {
+        const calendarSection = document.querySelector('.weekly-calendar');
+        if (calendarSection) {
+            calendarSection.style.opacity = '0.7';
+            calendarSection.style.pointerEvents = 'none';
+            
+            // Add a subtle loading message
+            const existingLoader = document.querySelector('.calendar-loading-overlay');
+            if (!existingLoader) {
+                const overlay = document.createElement('div');
+                overlay.className = 'calendar-loading-overlay';
+                overlay.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(255, 255, 255, 0.9);
+                    padding: 1rem 2rem;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    color: #666;
+                    z-index: 10;
+                    pointer-events: none;
+                `;
+                overlay.innerHTML = '📅 Loading calendar...';
+                
+                const container = calendarSection.querySelector('.container');
+                if (container) {
+                    container.style.position = 'relative';
+                    container.appendChild(overlay);
+                }
+            }
+        }
+    }
+
+    // Hide loading indicator when calendar is ready
+    hideCalendarLoadingIndicator() {
+        const calendarSection = document.querySelector('.weekly-calendar');
+        if (calendarSection) {
+            calendarSection.style.opacity = '';
+            calendarSection.style.pointerEvents = '';
+            
+            const overlay = document.querySelector('.calendar-loading-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
     }
 
     // Global function for scrolling (backward compatibility)

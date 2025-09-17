@@ -2770,10 +2770,8 @@ class DynamicCalendarLoader extends CalendarCore {
         
         logger.info('CITY', `Rendering city page for: ${this.currentCity}`);
         
-        // Update header for current city
-        if (window.chunkyApp) {
-            window.chunkyApp.updateHeaderForCity(this.currentCity);
-        }
+        // Header update is now handled immediately during page load - no longer needed here
+        // This prevents blocking header updates on slow calendar initialization
         
         // Set up city selector
         this.setupCitySelector();
