@@ -2962,24 +2962,45 @@ calculatedData: {
     // Set up resize listener to clear measurement cache when layout changes
     setupResizeListener() {
         let resizeTimeout;
+        let lastEventTime = 0;
+        const minEventInterval = 50; // Minimum 50ms between events to prevent spam
         
         const handleLayoutChange = (eventType = 'resize') => {
+            const now = Date.now();
+            
+            // Throttle rapid-fire events
+            if (now - lastEventTime < minEventInterval) {
+                return;
+            }
+            lastEventTime = now;
+            
             const newWidth = window.innerWidth;
             const newBreakpoint = this.getCurrentBreakpoint();
             const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
             const significantWidthChange = Math.abs(newWidth - this.lastScreenWidth) > 50; // 50px threshold
             
-            logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change detected via ${eventType}`, {
-                eventType,
-                oldWidth: this.lastScreenWidth,
-                newWidth,
-                widthChange: newWidth - this.lastScreenWidth,
-                oldBreakpoint: this.currentBreakpoint,
-                newBreakpoint,
-                breakpointChanged,
-                significantWidthChange,
-                willClearCache: breakpointChanged || significantWidthChange
-            });
+            // Only log significant changes to reduce noise
+            if (breakpointChanged || significantWidthChange) {
+                logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change detected via ${eventType}`, {
+                    eventType,
+                    oldWidth: this.lastScreenWidth,
+                    newWidth,
+                    widthChange: newWidth - this.lastScreenWidth,
+                    oldBreakpoint: this.currentBreakpoint,
+                    newBreakpoint,
+                    breakpointChanged,
+                    significantWidthChange,
+                    willClearCache: true
+                });
+            } else {
+                // Use debug level for non-significant changes
+                logger.debug('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change not significant enough to clear cache`, {
+                    eventType,
+                    widthChange: newWidth - this.lastScreenWidth,
+                    threshold: 50
+                });
+                return; // Early return to avoid unnecessary processing
+            }
             
             // Clear measurements on any significant resize, not just breakpoint changes
             if (breakpointChanged || significantWidthChange) {
@@ -2991,7 +3012,7 @@ calculatedData: {
                 this.lastScreenWidth = newWidth;
                 this.currentBreakpoint = newBreakpoint;
                 
-                logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Significant layout change detected via ${eventType}`, {
+                logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Significant layout change processed`, {
                     eventType,
                     oldBreakpoint,
                     newBreakpoint,
@@ -3009,38 +3030,47 @@ calculatedData: {
                     logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Updating calendar display after ${eventType}`);
                     this.updateCalendarDisplay();
                     logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Calendar display updated after ${eventType}`);
-                }, 150); // 150ms debounce
-            } else {
-                logger.debug('CALENDAR', `🔍 LAYOUT_CHANGE: Layout change not significant enough to clear cache`, {
-                    eventType,
-                    widthChange: newWidth - this.lastScreenWidth,
-                    threshold: 50
-                });
+                }, 200); // Increased debounce for better mobile performance
             }
         };
         
-        // Listen to window resize events
-        window.addEventListener('resize', () => handleLayoutChange('resize'));
+        // Listen to window resize events with passive option for better performance
+        window.addEventListener('resize', () => handleLayoutChange('resize'), { passive: true });
         
         // Listen to orientation changes (important for mobile/tablet)
-        window.addEventListener('orientationchange', () => handleLayoutChange('orientationchange'));
+        window.addEventListener('orientationchange', () => {
+            // Add longer delay for orientation changes as they often trigger multiple resize events
+            setTimeout(() => handleLayoutChange('orientationchange'), 300);
+        });
         
         // Listen for visual viewport changes (crucial for iPad split screen)
+        // Add error handling for private browsing mode where visualViewport may not work properly
         if (window.visualViewport) {
-            // Use a separate timeout for visual viewport to handle rapid changes during split screen transitions
-            let visualViewportTimeout;
-            window.visualViewport.addEventListener('resize', () => {
-                clearTimeout(visualViewportTimeout);
-                visualViewportTimeout = setTimeout(() => {
-                    handleLayoutChange('visualViewport.resize');
-                }, 100); // Slightly shorter debounce for visual viewport to be more responsive
-            });
+            try {
+                // Use a separate timeout for visual viewport to handle rapid changes during split screen transitions
+                let visualViewportTimeout;
+                window.visualViewport.addEventListener('resize', () => {
+                    clearTimeout(visualViewportTimeout);
+                    visualViewportTimeout = setTimeout(() => {
+                        handleLayoutChange('visualViewport.resize');
+                    }, 150); // Balanced debounce for visual viewport
+                }, { passive: true });
+                
+                logger.debug('CALENDAR', 'Visual viewport listener added successfully');
+            } catch (error) {
+                logger.warn('CALENDAR', 'Failed to add visual viewport listener (may be private browsing mode)', {
+                    error: error.message
+                });
+            }
             // Note: We don't listen to visualViewport scroll as that's just scrolling, not layout change
+        } else {
+            logger.debug('CALENDAR', 'Visual viewport API not available');
         }
         
         logger.debug('CALENDAR', 'Layout change listeners set up for comprehensive detection', {
             events: ['resize', 'orientationchange', 'visualViewport.resize'],
-            hasVisualViewport: !!window.visualViewport
+            hasVisualViewport: !!window.visualViewport,
+            minEventInterval: minEventInterval
         });
     }
     

@@ -2839,11 +2839,19 @@ footer {
     display: block;
 }
 
-/* Responsive Design */
+/* Mobile Performance Optimizations */
 @media (max-width: 768px) {
+    /* Improve mobile header performance */
+    header {
+        will-change: transform; /* Optimize for animations */
+        contain: layout style; /* Improve rendering performance */
+    }
+    
     .nav-container {
         padding: 0.5rem 1rem;
         height: 60px;
+        /* Optimize for mobile performance */
+        transform: translateZ(0); /* Force hardware acceleration */
     }
     
     .nav-menu {

@@ -348,10 +348,20 @@ class ChunkyDadApp {
                 // Only initialize full calendar on city/test pages, not main page
                 // Run calendar initialization asynchronously to not block other page elements
                 if (this.isCityPage || this.isTestPage) {
-                    // Don't await - let calendar load in background
-                    this.calendarLoader.init().catch(error => {
-                        logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
-                    });
+                    // Add mobile-specific delay to prevent blocking header load
+                    const isMobile = window.innerWidth <= 768;
+                    const initDelay = isMobile ? 500 : 0; // 500ms delay on mobile for better perceived performance
+                    
+                    setTimeout(() => {
+                        // Don't await - let calendar load in background
+                        this.calendarLoader.init().catch(error => {
+                            logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
+                        });
+                    }, initDelay);
+                    
+                    if (isMobile) {
+                        logger.info('SYSTEM', 'Mobile device detected - calendar initialization delayed for better header performance');
+                    }
                 }
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
