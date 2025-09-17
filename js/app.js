@@ -204,7 +204,7 @@ class ChunkyDadApp {
             
             // Initialize page-specific modules (don't let them block each other)
             if (this.isCityPage || this.isTestPage || this.isMainPage) {
-                // Don't await city page modules to prevent hanging
+                // Initialize city page modules asynchronously to prevent blocking
                 this.initializeCityPageModules().catch(error => {
                     logger.componentError('SYSTEM', 'City page module initialization failed', error);
                 });
@@ -330,6 +330,15 @@ class ChunkyDadApp {
         logger.info('SYSTEM', `Initializing ${pageType} modules`);
         
         try {
+            // For city pages, update header immediately before any other initialization
+            if (this.isCityPage || this.isTestPage) {
+                const citySlug = this.getCitySlugFromPath();
+                if (citySlug) {
+                    logger.info('SYSTEM', `Fast header update for city: ${citySlug}`);
+                    this.updateHeaderForCity(citySlug);
+                }
+            }
+            
             // Calendar functionality needed on city pages and main page (for today events)
             if (window.DynamicCalendarLoader) {
                 this.calendarLoader = new DynamicCalendarLoader();
@@ -337,15 +346,19 @@ class ChunkyDadApp {
                 window.calendarLoader = this.calendarLoader;
                 
                 // Only initialize full calendar on city/test pages, not main page
+                // Run calendar initialization asynchronously to not block other page elements
                 if (this.isCityPage || this.isTestPage) {
-                    await this.calendarLoader.init();
+                    // Don't await - let calendar load in background
+                    this.calendarLoader.init().catch(error => {
+                        logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
+                    });
                 }
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
             }
             
             const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
-            logger.componentLoad('SYSTEM', `${pageType} modules initialized`);
+            logger.componentLoad('SYSTEM', `${pageType} modules initialized (calendar loading in background)`);
         } catch (error) {
             const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
             logger.componentError('SYSTEM', `${pageType} module initialization failed`, error);
@@ -410,6 +423,7 @@ class ChunkyDadApp {
     getPathUtils() {
         return this.pathUtils;
     }
+
 
     // Global function for scrolling (backward compatibility)
     scrollToSection(sectionId) {

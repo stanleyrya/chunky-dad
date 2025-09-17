@@ -317,7 +317,7 @@ class HeaderManager {
 
     // Public method to update header when city changes
     updateForCity(cityKey) {
-        this.logger.componentLoad('HEADER', `Updating header for city: ${cityKey}`);
+        this.logger.componentLoad('HEADER', `⚡ Fast header update for city: ${cityKey}`);
         this.currentCity = getCityConfig(cityKey);
         this.updateHeaderTitle();
         
