@@ -334,11 +334,8 @@ class ChunkyDadApp {
             if (this.isCityPage || this.isTestPage) {
                 const citySlug = this.getCitySlugFromPath();
                 if (citySlug) {
-                    logger.info('SYSTEM', `⚡ Fast header update for city: ${citySlug}`);
+                    logger.info('SYSTEM', `Fast header update for city: ${citySlug}`);
                     this.updateHeaderForCity(citySlug);
-                    
-                    // Show a subtle loading indicator for calendar while it loads
-                    this.showCalendarLoadingIndicator();
                 }
             }
             
@@ -352,11 +349,7 @@ class ChunkyDadApp {
                 // Run calendar initialization asynchronously to not block other page elements
                 if (this.isCityPage || this.isTestPage) {
                     // Don't await - let calendar load in background
-                    this.calendarLoader.init().then(() => {
-                        this.hideCalendarLoadingIndicator();
-                        logger.componentLoad('SYSTEM', '📅 Calendar fully loaded');
-                    }).catch(error => {
-                        this.hideCalendarLoadingIndicator();
+                    this.calendarLoader.init().catch(error => {
                         logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
                     });
                 }
@@ -431,55 +424,6 @@ class ChunkyDadApp {
         return this.pathUtils;
     }
 
-    // Show subtle loading indicator while calendar loads
-    showCalendarLoadingIndicator() {
-        const calendarSection = document.querySelector('.weekly-calendar');
-        if (calendarSection) {
-            calendarSection.style.opacity = '0.7';
-            calendarSection.style.pointerEvents = 'none';
-            
-            // Add a subtle loading message
-            const existingLoader = document.querySelector('.calendar-loading-overlay');
-            if (!existingLoader) {
-                const overlay = document.createElement('div');
-                overlay.className = 'calendar-loading-overlay';
-                overlay.style.cssText = `
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: rgba(255, 255, 255, 0.9);
-                    padding: 1rem 2rem;
-                    border-radius: 8px;
-                    font-size: 0.9rem;
-                    color: #666;
-                    z-index: 10;
-                    pointer-events: none;
-                `;
-                overlay.innerHTML = '📅 Loading calendar...';
-                
-                const container = calendarSection.querySelector('.container');
-                if (container) {
-                    container.style.position = 'relative';
-                    container.appendChild(overlay);
-                }
-            }
-        }
-    }
-
-    // Hide loading indicator when calendar is ready
-    hideCalendarLoadingIndicator() {
-        const calendarSection = document.querySelector('.weekly-calendar');
-        if (calendarSection) {
-            calendarSection.style.opacity = '';
-            calendarSection.style.pointerEvents = '';
-            
-            const overlay = document.querySelector('.calendar-loading-overlay');
-            if (overlay) {
-                overlay.remove();
-            }
-        }
-    }
 
     // Global function for scrolling (backward compatibility)
     scrollToSection(sectionId) {
