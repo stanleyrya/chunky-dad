@@ -1068,8 +1068,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     className: 'favicon-marker',
                     html: `
                         <div class="favicon-marker-container">
-                            <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon" 
-                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
+                            <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-favicon-url="${faviconUrl}" data-fallback-text="${textFallback.replace(/"/g, '&quot;')}" alt="venue" class="favicon-marker-icon" loading="lazy" decoding="async" referrerpolicy="no-referrer" crossorigin="anonymous">
                         </div>
                     `,
                     iconSize: [32, 32],
@@ -2283,9 +2282,123 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             window.eventsMap = map;
             window.eventsMapMarkers = markers; // Store markers globally for controls
+
+            // Defer favicon loading to avoid blocking header/first paint
+            const scheduleFaviconLoading = () => {
+                try {
+                    if (typeof this.progressivelyLoadFavicons === 'function') {
+                        this.progressivelyLoadFavicons();
+                    }
+                } catch (e) {
+                    logger.warn('MAP', 'Favicon progressive loader failed to schedule', { error: e?.message });
+                }
+            };
+
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => scheduleFaviconLoading(), { timeout: 2000 });
+            } else {
+                setTimeout(scheduleFaviconLoading, 600);
+            }
         } catch (error) {
             logger.componentError('MAP', 'Failed to initialize map', error);
         }
+    }
+
+    // Progressive favicon loader with concurrency limit and timeouts
+    async progressivelyLoadFavicons() {
+        if (this._faviconLoading) return;
+        this._faviconLoading = true;
+
+        try {
+            const container = document.getElementById('events-map') || document;
+            const allImages = Array.from(container.querySelectorAll('img.favicon-marker-icon[data-favicon-url]'));
+
+            // Skip if nothing to do
+            if (allImages.length === 0) {
+                this._faviconLoading = false;
+                return;
+            }
+
+            const concurrency = 4; // limit parallel requests on mobile
+            const timeoutMs = 1500;
+
+            let index = 0;
+            const results = [];
+
+            const worker = async () => {
+                while (index < allImages.length) {
+                    const current = allImages[index++];
+                    if (!current || current.dataset.faviconLoaded === 'true') continue;
+                    const url = current.getAttribute('data-favicon-url');
+                    try {
+                        await this._loadImageInto(current, url, timeoutMs);
+                        current.dataset.faviconLoaded = 'true';
+                    } catch (err) {
+                        // Fallback to text marker quickly
+                        const parent = current.parentElement;
+                        const text = current.getAttribute('data-fallback-text') || 'Event';
+                        if (parent) {
+                            parent.innerHTML = `<span class="marker-text">${text}</span>`;
+                            parent.classList.add('text-marker');
+                        }
+                    }
+                }
+            };
+
+            const workers = Array.from({ length: Math.min(concurrency, allImages.length) }, () => worker());
+            await Promise.allSettled(workers);
+        } finally {
+            this._faviconLoading = false;
+        }
+    }
+
+    _loadImageInto(targetImg, src, timeoutMs = 1500) {
+        return new Promise((resolve, reject) => {
+            let done = false;
+            const img = new Image();
+            img.decoding = 'async';
+            img.crossOrigin = 'anonymous';
+            img.referrerPolicy = 'no-referrer';
+
+            const cleanUp = () => {
+                img.onload = null;
+                img.onerror = null;
+            };
+
+            const to = setTimeout(() => {
+                if (done) return;
+                done = true;
+                cleanUp();
+                reject(new Error('favicon timeout'));
+            }, timeoutMs);
+
+            img.onload = () => {
+                if (done) return;
+                done = true;
+                clearTimeout(to);
+                cleanUp();
+                // Swap into DOM without forcing decode on main thread
+                requestAnimationFrame(() => {
+                    try {
+                        targetImg.src = src;
+                        resolve();
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            };
+
+            img.onerror = () => {
+                if (done) return;
+                done = true;
+                clearTimeout(to);
+                cleanUp();
+                reject(new Error('favicon error'));
+            };
+
+            // Start loading
+            img.src = src;
+        });
     }
 
     // Update calendar display with filtered events
