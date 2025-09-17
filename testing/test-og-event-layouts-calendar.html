@@ -110,20 +110,13 @@
     .layout-minimal .card-header .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.4; }
     .layout-minimal .card-header .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%); }
     .layout-minimal .card-header .date-badge { position: absolute; top: 30px; right: 30px; background: #fff; color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
-    .layout-minimal .event-image { position: absolute; bottom: -40px; left: 60px; width: 160px; height: 160px; border-radius: 20px; background-size: cover; background-position: center; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2; }
+    .layout-minimal .event-image { position: absolute; bottom: -40px; left: 60px; width: 160px; height: 160px; border-radius: 20px; object-fit: cover; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2; }
     .layout-minimal .card-body { padding: 60px 60px 40px 260px; position: relative; }
     .layout-minimal .event-title { font-size: 48px; font-weight: 900; color: #333; line-height: 1.1; margin-bottom: 15px; }
     .layout-minimal .venue { font-size: 20px; color: #666; margin-bottom: 20px; }
     .layout-minimal .description { font-size: 16px; color: #888; line-height: 1.6; }
     .layout-minimal .brand { position: absolute; bottom: 30px; left: 60px; font-size: 14px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* NEW LAYOUT: Color Blocks (bold editorial) */
-    .layout-blocks { position: relative; background: #000; }
-    .layout-blocks .block-a { position: absolute; inset: 0 60% 0 0; background: var(--og-bg-1); }
-    .layout-blocks .block-b { position: absolute; inset: 0 0 0 60%; background: var(--og-bg-3); filter: brightness(0.7); }
-    .layout-blocks .event-title { position: absolute; left: 60px; top: 60px; right: 50%; color: #fff; font-size: 86px; font-weight: 900; line-height: 0.95; text-transform: uppercase; letter-spacing: -1px; }
-    .layout-blocks .meta { position: absolute; left: 60px; bottom: 60px; color: #fff; font-size: 20px; opacity: 0.9; }
-    .layout-blocks .poster { position: absolute; right: 80px; top: 80px; width: 420px; height: 470px; background-size: cover; background-position: center; box-shadow: 0 30px 80px rgba(0,0,0,0.5); border: 10px solid #111; }
 
     /* NEW LAYOUT: Glass Card */
     .layout-glass { position: relative; backdrop-filter: blur(0px); }
@@ -134,6 +127,7 @@
     .layout-glass .event-date { margin-top: 16px; font-size: 26px; opacity: 0.95; }
     .layout-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
     .layout-glass .description { position: absolute; left: 40px; right: 40px; bottom: 40px; font-size: 18px; opacity: 0.95; }
+    .layout-glass .event-image { position: absolute; right: 80px; top: 80px; width: 200px; height: 200px; border-radius: 20px; object-fit: cover; border: 4px solid rgba(255,255,255,0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.4); }
 
 
     /* NEW LAYOUT: Circle Focus */
@@ -155,7 +149,7 @@
     .layout-speech .speech-bubble { position: absolute; left: 270px; bottom: 160px; max-width: 760px; background: #fff; color: #111; border-radius: 22px; padding: 22px 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); font-size: 26px; line-height: 1.25; }
     .layout-speech .speech-bubble:after { content: ""; position: absolute; left: -28px; bottom: 22px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-right: 28px solid #fff; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.2)); }
     .layout-speech .headline { position: absolute; left: 80px; top: 70px; right: 60px; color: #fff; font-size: 64px; line-height: 0.95; font-weight: 900; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
-    .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; background-size: cover; background-position: center; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; object-fit: cover; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
     .layout-speech .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.85); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
 
     /* Speech Bubble 2: Event Image Speaks */
@@ -719,7 +713,7 @@ Loading... <span class="cursor">█</span>`;
                   <div class="overlay"></div>
                   <div class="date-badge"></div>
                 </div>
-                <div class="event-image"></div>
+                <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
                 <div class="card-body">
                   <div class="event-title"></div>
                   <div class="venue"></div>
@@ -728,15 +722,9 @@ Loading... <span class="cursor">█</span>`;
                 <div class="brand">chunky.dad</div>
               </div>
             `,
-            'blocks': `
-              <div class="block-a"></div>
-              <div class="block-b"></div>
-              <div class="event-title"></div>
-              <div class="meta"></div>
-              <div class="poster"></div>
-            `,
             'glass': `
               <div class="cover"></div>
+              <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
               <div class="glass">
                 <div class="inner">
                   <div class="event-title"></div>
@@ -761,7 +749,7 @@ Loading... <span class="cursor">█</span>`;
               <div class="headline"></div>
               <img class="logo-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
               <div class="speech-bubble"></div>
-              <div class="event-image"></div>
+              <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
               <div class="brand">chunky.dad</div>
             `,
             'speech-event': `
@@ -870,7 +858,6 @@ Loading... <span class="cursor">█</span>`;
           const VARIANTS = [
             { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition with image focus' },
             { key: 'minimal', name: 'Minimalist Card', class: 'layout-minimal', description: 'Clean modern design with subtle shadows' },
-            { key: 'blocks', name: 'Color Blocks', class: 'layout-blocks', description: 'Bold two-column color composition' },
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass over photo backdrop' },
             { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' },
             { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' },

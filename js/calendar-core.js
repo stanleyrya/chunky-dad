@@ -344,9 +344,8 @@ class CalendarCore {
                     if (additionalData.cover) {
                         eventData.cover = additionalData.cover;
                     }
-                    if (additionalData.image) {
-                        eventData.image = additionalData.image;
-                    }
+                    // Always use chunky.dad logo as event image
+                    eventData.image = 'Rising_Star_Ryan_Head_Compressed.png';
                     eventData.tea = additionalData.tea || additionalData.description;
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;

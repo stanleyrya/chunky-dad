@@ -512,14 +512,8 @@ class EventbriteParser {
             }
             
             console.log(`🎫 Eventbrite: Final price result for "${title}": "${price}"`);
-            let image = eventData.logo?.url || eventData.image?.url;
-            
-            // NEW: Try to get image from eventHero if not found in eventData
-            if (!image && serverData.event_listing_response?.eventHero?.items?.[0]) {
-                const heroItem = serverData.event_listing_response.eventHero.items[0];
-                image = heroItem.croppedLogoUrl600 || heroItem.croppedLogoUrl480 || heroItem.croppedLogoUrl940;
-                console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
-            }
+            // Always use chunky.dad logo as event image
+            let image = 'Rising_Star_Ryan_Head_Compressed.png';
             
             // Extract city from event title for better event organization
             let city = null;

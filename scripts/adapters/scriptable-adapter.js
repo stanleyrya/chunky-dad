@@ -2581,14 +2581,11 @@ class ScriptableAdapter {
                         <span style="font-style: italic;">${this.escapeHtml(event.tea)}</span>
                     </div>
                 ` : ''}
-                ${event.image ? `
-                    <div class=\"event-image\">
-                        <a href=\"${this.escapeHtml(event.image)}\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--primary-color); font-weight: 500;\">View Full Image</a>
-                        <div style=\"margin-top: 8px;\">
-                            <img src=\"${this.escapeHtml(event.image)}\" alt=\"Event Image\" onerror=\"this.style.display='none'\">
-                        </div>
+                <div class=\"event-image\">
+                    <div style=\"margin-top: 8px;\">
+                        <img src=\"Rising_Star_Ryan_Head_Compressed.png\" alt=\"chunky.dad\" style=\"width: 100px; height: 100px; object-fit: contain;\">
                     </div>
-                ` : ''}
+                </div>
                 ${event.instagram ? `
                     <div class="event-detail">
                         <span>📸</span>
