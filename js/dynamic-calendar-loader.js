@@ -1050,10 +1050,8 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
 
-    // Create marker icon with favicon or fallback
+    // Create marker icon with favicon or three letters
     createMarkerIcon(event) {
-        const defaultLogoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
-        
         if (event.website) {
             try {
                 // Ensure URL has protocol
@@ -1064,13 +1062,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 const hostname = new URL(url).hostname;
                 const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                const threeLetters = this.getThreeLetters(event);
                 
                 return L.divIcon({
                     className: 'favicon-marker',
                     html: `
                         <div class="favicon-marker-container">
                             <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon" 
-                                 onerror="this.src='${defaultLogoPath}'; this.parentElement.classList.add('fallback');">
+                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-letters\\'>${threeLetters}</span>';">
                         </div>
                     `,
                     iconSize: [32, 32],
@@ -1082,18 +1081,47 @@ class DynamicCalendarLoader extends CalendarCore {
             }
         }
         
-        // Fallback to chunky.dad logo
+        // Use three letters from shorter field or create acronym
+        const threeLetters = this.getThreeLetters(event);
         return L.divIcon({
-            className: 'favicon-marker fallback',
+            className: 'favicon-marker text-marker',
             html: `
-                <div class="favicon-marker-container fallback">
-                    <img src="${defaultLogoPath}" alt="chunky.dad" class="favicon-marker-icon">
+                <div class="favicon-marker-container text-marker">
+                    <span class="marker-letters">${threeLetters}</span>
                 </div>
             `,
             iconSize: [32, 32],
             iconAnchor: [16, 16],
             popupAnchor: [0, -16]
         });
+    }
+
+    // Get three letters from event data
+    getThreeLetters(event) {
+        // Try shorter field first
+        if (event.shorter && event.shorter.length >= 3) {
+            return event.shorter.substring(0, 3).toUpperCase();
+        }
+        
+        // Try shortName field
+        if (event.shortName && event.shortName.length >= 3) {
+            return event.shortName.substring(0, 3).toUpperCase();
+        }
+        
+        // Create acronym from event name
+        if (event.name) {
+            const words = event.name.split(/\s+/).filter(word => word.length > 0);
+            if (words.length >= 2) {
+                // Take first letter of first 3 words
+                return words.slice(0, 3).map(word => word[0]).join('').toUpperCase();
+            } else if (words.length === 1 && words[0].length >= 3) {
+                // Take first 3 letters of single word
+                return words[0].substring(0, 3).toUpperCase();
+            }
+        }
+        
+        // Ultimate fallback
+        return 'EVT';
     }
 
     getCurrentPeriodBounds() {

@@ -2689,14 +2689,20 @@ body.index-page main {
     border-radius: 2px;
 }
 
-/* Fallback styling for chunky.dad logo */
-.favicon-marker-container.fallback {
+/* Text marker styling */
+.favicon-marker-container.text-marker {
     background: var(--primary-color);
     border-color: var(--white);
 }
 
-.favicon-marker-container.fallback .favicon-marker-icon {
-    filter: brightness(0) invert(1); /* Make logo white */
+.marker-letters {
+    color: white;
+    font-weight: 600;
+    font-size: 11px;
+    font-family: 'Poppins', sans-serif;
+    line-height: 1;
+    text-align: center;
+    letter-spacing: -0.5px;
 }
 
 .map-link {
@@ -3520,6 +3526,11 @@ footer {
     .favicon-marker-icon {
         width: 18px;
         height: 18px;
+    }
+
+    .marker-letters {
+        font-size: 9px;
+        letter-spacing: -0.3px;
     }
 
 
