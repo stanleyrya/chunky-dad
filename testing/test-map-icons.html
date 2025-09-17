@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🗺️ chunky.dad's Toolbox - Icon Mapper</title>
-    <meta name="description" content="Icon mapping tool for map markers - chunky.dad's toolbox">
+    <title>🗺️ chunky.dad's Map Icon Laboratory</title>
+    <meta name="description" content="Advanced map icon testing and customization tool - chunky.dad's toolbox">
     <link rel="icon" type="image/png" href="../Rising_Star_Ryan_Head_Compressed.png">
     <link rel="apple-touch-icon" href="../Rising_Star_Ryan_Head_Compressed.png">
     <link rel="stylesheet" href="../styles.css">
@@ -14,195 +14,341 @@
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
           crossorigin=""/>
     <style>
+        :root {
+            --primary-orange: #FFA500;
+            --primary-gold: #FFD700;
+            --bg-dark: #0a0a0a;
+            --bg-medium: #1a1a1a;
+            --bg-light: #2a2a2a;
+            --text-light: #e0e0e0;
+            --text-medium: #ccc;
+            --text-dark: #aaa;
+            --border-color: #333;
+            --success-green: #2ecc71;
+            --error-red: #e74c3c;
+            --warning-yellow: #f39c12;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            background: #0a0a0a;
-            color: #e0e0e0;
+            background: var(--bg-dark);
+            color: var(--text-light);
             font-family: 'Poppins', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            line-height: 1.6;
         }
         
-        .test-container {
-            max-width: 1200px;
+        .container {
+            max-width: 1400px;
             margin: 0 auto;
-        }
-        
-        .test-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        .test-title {
-            color: #FFA500;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-        
-        .test-subtitle {
-            color: #ccc;
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-        }
-        
-        .icon-style-controls {
-            background: #1a1a1a;
-            border-radius: 12px;
             padding: 20px;
-            margin-bottom: 30px;
-            border: 2px solid #333;
         }
         
-        .control-section {
-            margin-bottom: 20px;
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: var(--bg-medium);
+            border-radius: 16px;
+            border: 2px solid var(--border-color);
+        }
+        
+        .title {
+            color: var(--primary-orange);
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(255, 165, 0, 0.3);
+        }
+        
+        .subtitle {
+            color: var(--text-medium);
+            font-size: 1.3rem;
+            margin-bottom: 25px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .feature-item {
+            background: var(--bg-light);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .feature-item strong {
+            color: var(--primary-orange);
+        }
+        
+        .controls-section {
+            margin-bottom: 30px;
+        }
+        
+        .control-panel {
+            background: var(--bg-medium);
+            border-radius: 16px;
+            padding: 25px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
         }
         
         .control-label {
-            color: #FFA500;
-            font-weight: 600;
-            margin-bottom: 10px;
             display: block;
+            color: var(--primary-orange);
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
-        .icon-style-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
         }
         
-        .style-btn {
-            background: #333;
-            color: #fff;
-            border: 2px solid #555;
-            padding: 12px 20px;
-            border-radius: 8px;
+        .control-btn {
+            background: var(--bg-light);
+            color: var(--text-light);
+            border: 2px solid var(--border-color);
+            padding: 14px 18px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95rem;
             font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            min-width: 120px;
             text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
+            min-height: 50px;
+            position: relative;
+            overflow: hidden;
         }
         
-        .style-btn:hover {
-            background: #444;
-            border-color: #FFA500;
+        .control-btn:hover {
+            background: var(--bg-light);
+            border-color: var(--primary-orange);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+            box-shadow: 0 6px 20px rgba(255, 165, 0, 0.2);
         }
         
-        .style-btn.active {
-            background: #FFA500;
+        .control-btn.active {
+            background: linear-gradient(135deg, var(--primary-orange), #ff8c00);
             color: #000;
-            border-color: #FFA500;
-            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
+            border-color: var(--primary-orange);
+            box-shadow: 0 6px 20px rgba(255, 165, 0, 0.4);
+            font-weight: 600;
+        }
+
+        .control-btn.active::before {
+            content: '✓';
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .map-section {
+            margin-bottom: 30px;
         }
         
         .map-container {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-            border: 2px solid #333;
+            background: var(--bg-medium);
+            border-radius: 16px;
+            padding: 25px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         
         #test-map {
-            height: 600px;
-            border-radius: 8px;
-            border: 2px solid #333;
-        }
-        
-        .calendar-container {
-            background: #1a1a1a;
+            height: 650px;
             border-radius: 12px;
-            padding: 20px;
-            border: 2px solid #333;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         
-        .calendar-header {
-            color: #FFA500;
-            font-size: 1.5rem;
+        .events-section {
+            background: var(--bg-medium);
+            border-radius: 16px;
+            padding: 25px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .section-header {
+            color: var(--primary-orange);
+            font-size: 1.6rem;
             font-weight: 600;
             margin-bottom: 20px;
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .events-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
         }
         
         .event-card {
-            background: #0d0d0d;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 15px;
+            background: var(--bg-dark);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
             transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .event-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-orange), var(--primary-gold));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
         }
         
         .event-card:hover {
-            border-color: #FFA500;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.2);
+            border-color: var(--primary-orange);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(255, 165, 0, 0.2);
+        }
+
+        .event-card:hover::before {
+            transform: scaleX(1);
         }
         
         .event-name {
-            color: #FFA500;
+            color: var(--primary-orange);
             font-weight: 600;
-            margin-bottom: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .event-nickname {
-            color: #ccc;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
+
+        .live-indicator {
+            background: var(--error-red);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
         }
-        
-        .event-shortname {
-            color: #FFA500;
-            font-size: 0.85rem;
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-        
-        .event-shortername {
-            color: #FFD700;
-            font-size: 0.8rem;
-            margin-bottom: 8px;
-            font-weight: 700;
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
         }
         
         .event-details {
-            color: #aaa;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+
+        .event-details strong {
+            color: var(--text-medium);
+        }
+        
+        .field-display {
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: var(--bg-light);
+            border-radius: 6px;
             font-size: 0.85rem;
+        }
+
+        .field-label {
+            color: var(--primary-orange);
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .field-value {
+            color: var(--text-light);
         }
         
         .icon-preview {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-            padding: 8px;
-            background: #2a2a2a;
-            border-radius: 6px;
+            justify-content: space-between;
+            padding: 12px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
         }
         
-        .icon-preview-label {
-            color: #FFA500;
-            font-size: 0.8rem;
+        .preview-label {
+            color: var(--primary-orange);
+            font-size: 0.85rem;
             font-weight: 600;
         }
-        
-        /* Custom marker styles */
+
+        .preview-content {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Status indicators */
+        .status-bar {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-value {
+            color: var(--primary-orange);
+            font-weight: 600;
+        }
+
+        /* Marker styles */
         .emoji-marker {
             background: transparent;
             border: none;
@@ -217,7 +363,7 @@
         }
         
         .initials-marker {
-            background: #FFA500;
+            background: var(--primary-orange);
             color: #000;
             border: 2px solid #fff;
             font-size: 12px;
@@ -232,7 +378,7 @@
         }
         
         .mixed-marker {
-            background: #FFA500;
+            background: var(--primary-orange);
             color: #000;
             border: 2px solid #fff;
             font-size: 14px;
@@ -245,57 +391,23 @@
             border-radius: 50%;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
-        
-        .overlay-marker {
-            background: rgba(255, 165, 0, 0.9);
+
+        .title-marker {
+            background: rgba(255, 165, 0, 0.95);
             color: #000;
             border: 2px solid #fff;
-            font-size: 16px;
-            font-weight: 700;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 12px;
             box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+            white-space: nowrap;
+            text-align: center;
+            font-size: 11px;
         }
-        
-        .numbered-marker {
-            background: linear-gradient(145deg, #FFA500, #FF8C00);
-            color: #000;
-            border: 2px solid #fff;
-            font-size: 12px;
-            font-weight: 700;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            position: relative;
-        }
-        
-        .numbered-marker::after {
-            content: attr(data-emoji);
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            font-size: 14px;
-            background: #fff;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #333;
-        }
-        
+
         .favicon-marker {
             background: #fff;
-            border: 2px solid #FFA500;
+            border: 2px solid var(--primary-orange);
             width: 40px;
             height: 40px;
             display: flex;
@@ -310,31 +422,8 @@
             height: 28px;
             object-fit: contain;
             border-radius: 4px;
-            display: block;
         }
-        
-        .favicon-content {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .favicon-marker.loading {
-            background: linear-gradient(45deg, #333, #555);
-            color: #FFA500;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .favicon-marker.error {
-            background: #444;
-            color: #FFA500;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        
+
         .gradient-marker {
             background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD);
             background-size: 300% 300%;
@@ -358,7 +447,7 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-        
+
         .neon-marker {
             background: #0a0a0a;
             color: #00ffff;
@@ -374,407 +463,205 @@
             box-shadow: 
                 0 0 5px #00ffff,
                 0 0 10px #00ffff,
-                0 0 15px #00ffff,
-                inset 0 0 5px rgba(0,255,255,0.2);
+                0 0 15px #00ffff;
             animation: neonPulse 2s ease-in-out infinite alternate;
             text-shadow: 0 0 5px #00ffff;
         }
         
         @keyframes neonPulse {
-            from {
-                box-shadow: 
-                    0 0 5px #00ffff,
-                    0 0 10px #00ffff,
-                    0 0 15px #00ffff,
-                    inset 0 0 5px rgba(0,255,255,0.2);
-            }
-            to {
-                box-shadow: 
-                    0 0 10px #00ffff,
-                    0 0 20px #00ffff,
-                    0 0 25px #00ffff,
-                    inset 0 0 10px rgba(0,255,255,0.4);
-            }
+            from { box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff; }
+            to { box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 25px #00ffff; }
         }
 
-        /* Title-based markers */
-        .title-full-marker {
-            background: rgba(255, 165, 0, 0.95);
-            color: #000;
-            border: 2px solid #fff;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 4px 8px;
-            min-width: 60px;
-            max-width: 200px;
-            height: auto;
-            min-height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-        }
-
-        .title-short-marker {
-            background: rgba(255, 165, 0, 0.95);
-            color: #000;
-            border: 2px solid #fff;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 3px 6px;
-            min-width: 40px;
-            max-width: 120px;
-            height: auto;
-            min-height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-        }
-
-        .title-shorter-marker {
-            background: rgba(255, 165, 0, 0.95);
-            color: #000;
-            border: 2px solid #fff;
-            font-size: 9px;
-            font-weight: 700;
-            padding: 2px 4px;
-            min-width: 24px;
-            max-width: 60px;
-            height: auto;
-            min-height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-        }
-
-        /* Favicon + Title combination markers */
-        .favicon-title-side-marker {
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid #FFA500;
-            padding: 6px 8px;
-            min-width: 100px;
-            max-width: 200px;
-            height: auto;
-            min-height: 32px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            border-radius: 16px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-        }
-
-        .favicon-title-side-marker img {
-            width: 20px;
-            height: 20px;
-            object-fit: contain;
-            border-radius: 3px;
-            flex-shrink: 0;
-        }
-
-        .favicon-title-side-marker .title-text {
-            font-size: 11px;
-            font-weight: 600;
-            color: #000;
-            white-space: nowrap;
-            flex: 1;
-            line-height: 1.2;
-            min-width: 0;
-        }
-
-        .favicon-title-stacked-marker {
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid #FFA500;
-            padding: 6px;
-            min-width: 60px;
-            max-width: 120px;
-            height: auto;
-            min-height: 48px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            border-radius: 14px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-        }
-
-        .favicon-title-stacked-marker img {
-            width: 24px;
-            height: 24px;
-            object-fit: contain;
-            border-radius: 4px;
-            flex-shrink: 0;
-        }
-
-        .favicon-title-stacked-marker .title-text {
-            font-size: 9px;
-            font-weight: 600;
-            color: #000;
-            white-space: nowrap;
-            text-align: center;
-            max-width: 100%;
-            line-height: 1.1;
-            min-width: 0;
-        }
-
-        /* Additional creative marker styles */
-        .badge-marker {
-            background: linear-gradient(145deg, #FF6B6B, #FF8E53);
-            color: #fff;
-            border: 2px solid #fff;
-            font-size: 12px;
-            font-weight: 700;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            position: relative;
-        }
-
-        .badge-marker::before {
-            content: '';
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            width: 12px;
-            height: 12px;
-            background: #2ecc71;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            animation: badgePulse 2s ease-in-out infinite;
-        }
-
-        @keyframes badgePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
-
-        .speech-bubble-marker {
-            background: #fff;
-            color: #333;
-            border: 2px solid #FFA500;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 6px 8px;
-            min-width: 40px;
-            max-width: 120px;
-            height: auto;
-            min-height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-            position: relative;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .speech-bubble-marker::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 8px solid #FFA500;
-        }
-
-        .speech-bubble-marker::before {
-            content: '';
-            position: absolute;
-            bottom: -6px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 6px solid #fff;
-            z-index: 1;
-        }
-
-        .pulsing-marker {
-            background: radial-gradient(circle, #FFA500, #FF8C00);
-            color: #000;
-            border: 2px solid #fff;
-            font-size: 14px;
-            font-weight: 700;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: markerPulse 1.5s ease-in-out infinite;
-            position: relative;
-        }
-
-        .pulsing-marker::before {
-            content: '';
-            position: absolute;
-            top: -6px;
-            left: -6px;
-            right: -6px;
-            bottom: -6px;
-            border: 2px solid rgba(255, 165, 0, 0.6);
-            border-radius: 50%;
-            animation: ripple 1.5s ease-in-out infinite;
-        }
-
-        @keyframes markerPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        @keyframes ripple {
-            0% { transform: scale(0.8); opacity: 1; }
-            100% { transform: scale(1.4); opacity: 0; }
-        }
+        /* Color themes */
+        .color-orange { --marker-color: #FFA500; }
+        .color-blue { --marker-color: #4ECDC4; }
+        .color-purple { --marker-color: #9B59B6; }
+        .color-green { --marker-color: #2ECC71; }
+        .color-red { --marker-color: #E74C3C; }
+        .color-gold { --marker-color: #FFD700; }
+        .color-pink { --marker-color: #FF69B4; }
+        .color-cyan { --marker-color: #00FFFF; }
 
         /* Size variants */
-        .marker-small {
-            transform: scale(0.8);
-        }
+        .size-small { transform: scale(0.8); }
+        .size-medium { transform: scale(1.0); }
+        .size-large { transform: scale(1.3); }
+        .size-xl { transform: scale(1.6); }
 
-        .marker-medium {
-            transform: scale(1);
-        }
-
-        .marker-large {
-            transform: scale(1.3);
-        }
-        
+        /* Responsive design */
         @media (max-width: 768px) {
-            .icon-style-buttons {
-                flex-direction: column;
-            }
-            
-            .style-btn {
-                text-align: center;
-            }
-            
-            .events-grid {
-                grid-template-columns: 1fr;
-            }
+            .container { padding: 15px; }
+            .title { font-size: 2.2rem; }
+            .button-grid { grid-template-columns: 1fr; }
+            .events-grid { grid-template-columns: 1fr; }
+            .feature-grid { grid-template-columns: 1fr; }
+            #test-map { height: 400px; }
+        }
+
+        @media (max-width: 480px) {
+            .title { font-size: 1.8rem; }
+            .control-panel { padding: 15px; }
+            .map-container { padding: 15px; }
+            .events-section { padding: 15px; }
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--primary-orange);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-orange);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff8c00;
         }
     </style>
 </head>
 <body>
-    <div class="test-container">
-        <div class="test-header">
-            <h1 class="test-title">🗺️ Map Icon Experiment</h1>
-            <p class="test-subtitle">Testing different icon styles for event markers</p>
-            <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 0.9rem; color: #ccc;">
-                <strong style="color: #FFA500;">Test Features:</strong><br>
-                • 🍺 <strong>Emojis Only:</strong> Beer for happy hour, etc.<br>
-                • 📝 <strong>Initials:</strong> BHH for Bear Happy Hour (from nickname field)<br>
-                • 🎭 <strong>Mixed:</strong> Emojis for common events, initials for unique ones<br>
-                • 📍 <strong>Overlay Icons:</strong> Icons placed directly over map locations (no pins)<br>
-                • 🔢 <strong>Numbered + Emoji:</strong> Numbers with emoji badges<br>
-                • 🐻 <strong>Original Pin:</strong> Current chunky.dad bear head pin<br>
-                • 🌐 <strong>Favicons:</strong> Use website favicons from event data as map icons<br>
-                • 🌈 <strong>Gradient Circles:</strong> Colorful gradient circles with emojis<br>
-                • ⚡ <strong>Neon Style:</strong> Glowing neon-style markers with animations<br>
-                • 📄 <strong>Title Display:</strong> Show full event titles, short versions, or super short<br>
-                • 🏷️ <strong>Favicon + Title:</strong> Combine favicons with titles (side-by-side or stacked)<br>
-                • 🎪 <strong>Creative Styles:</strong> Badge markers, speech bubbles, pulsing effects<br>
-                • 📏 <strong>Size Controls:</strong> Small, medium, and large marker sizes<br>
-                • 📅 <strong>Real Calendar:</strong> Load actual calendar data using DynamicCalendarLoader (same as calendar tester)<br>
-                <strong style="color: #2ecc71;">✅ NEW:</strong> Added title display modes and creative marker styles with size controls!
+    <div class="container">
+        <header class="header">
+            <h1 class="title">🗺️ Map Icon Laboratory</h1>
+            <p class="subtitle">Advanced icon testing & customization for chunky.dad maps</p>
+            
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <strong>🎨 Style Options:</strong> Emojis, initials, titles, favicons, gradients, neon effects
+                </div>
+                <div class="feature-item">
+                    <strong>🌈 Color Themes:</strong> 8 different color schemes for markers
+                </div>
+                <div class="feature-item">
+                    <strong>📏 Size Control:</strong> Small, medium, large, and XL marker sizes
+                </div>
+                <div class="feature-item">
+                    <strong>📅 Real Data:</strong> Import actual calendar events from chunky.dad
+                </div>
+                <div class="feature-item">
+                    <strong>🔧 Smart Fields:</strong> Proper use of title, shortName, and shorterName
+                </div>
+                <div class="feature-item">
+                    <strong>🌐 Favicon Support:</strong> Automatic website favicon detection and fallbacks
+                </div>
+            </div>
+        </header>
+
+        <div class="controls-section">
+            <div class="control-panel">
+                <div class="status-bar">
+                    <div class="status-item">
+                        <span>📍 Events:</span>
+                        <span class="status-value" id="event-count">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span>🎨 Style:</span>
+                        <span class="status-value" id="current-style">emoji</span>
+                    </div>
+                    <div class="status-item">
+                        <span>🌈 Color:</span>
+                        <span class="status-value" id="current-color">orange</span>
+                    </div>
+                    <div class="status-item">
+                        <span>📏 Size:</span>
+                        <span class="status-value" id="current-size">medium</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">🎨 Icon Style</label>
+                    <div class="button-grid" id="style-controls">
+                        <button class="control-btn active" data-style="emoji">🍺 Emojis</button>
+                        <button class="control-btn" data-style="initials">🔤 Initials</button>
+                        <button class="control-btn" data-style="mixed">🎭 Mixed</button>
+                        <button class="control-btn" data-style="title">📝 Event Title</button>
+                        <button class="control-btn" data-style="shortName">📄 Short Name</button>
+                        <button class="control-btn" data-style="shorterName">🏷️ Shorter Name</button>
+                        <button class="control-btn" data-style="favicon">🌐 Favicons</button>
+                        <button class="control-btn" data-style="favicon-title">🌐📝 Favicon + Title</button>
+                        <button class="control-btn" data-style="gradient">🌈 Gradient</button>
+                        <button class="control-btn" data-style="neon">⚡ Neon</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">🌈 Color Theme</label>
+                    <div class="button-grid" id="color-controls">
+                        <button class="control-btn active" data-color="orange">🧡 Orange</button>
+                        <button class="control-btn" data-color="blue">💙 Blue</button>
+                        <button class="control-btn" data-color="purple">💜 Purple</button>
+                        <button class="control-btn" data-color="green">💚 Green</button>
+                        <button class="control-btn" data-color="red">❤️ Red</button>
+                        <button class="control-btn" data-color="gold">💛 Gold</button>
+                        <button class="control-btn" data-color="pink">💗 Pink</button>
+                        <button class="control-btn" data-color="cyan">💎 Cyan</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">📏 Marker Size</label>
+                    <div class="button-grid" id="size-controls">
+                        <button class="control-btn" data-size="small">📏 Small</button>
+                        <button class="control-btn active" data-size="medium">📐 Medium</button>
+                        <button class="control-btn" data-size="large">📏 Large</button>
+                        <button class="control-btn" data-size="xl">📏 XL</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">🔧 Map Actions</label>
+                    <div class="button-grid" id="action-controls">
+                        <button class="control-btn" data-action="refresh">🔄 Refresh</button>
+                        <button class="control-btn" data-action="fit-bounds">🎯 Fit All</button>
+                        <button class="control-btn" data-action="add-random">➕ Add Random</button>
+                        <button class="control-btn" data-action="load-calendar">📅 Load Calendar</button>
+                        <button class="control-btn" data-action="test-favicons">🌐 Test Favicons</button>
+                        <button class="control-btn" data-action="reset">🗑️ Reset</button>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="icon-style-controls">
-            <div class="control-section">
-                <label class="control-label">Icon Style:</label>
-                <div class="icon-style-buttons">
-                    <button class="style-btn active" data-style="emoji">🍺 Emojis Only</button>
-                    <button class="style-btn" data-style="initials">ABC Initials</button>
-                    <button class="style-btn" data-style="mixed">🍺 Mixed (Emoji + Initials)</button>
-                    <button class="style-btn" data-style="overlay">📍 Overlay Icons</button>
-                    <button class="style-btn" data-style="numbered">🔢 Numbered + Emoji</button>
-                    <button class="style-btn" data-style="original">🐻 Original Pin</button>
-                    <button class="style-btn" data-style="favicon">🌐 Favicons</button>
-                    <button class="style-btn" data-style="gradient">🌈 Gradient Circles</button>
-                    <button class="style-btn" data-style="neon">⚡ Neon Style</button>
-                </div>
+
+        <section class="map-section">
+            <div class="map-container">
+                <div id="test-map"></div>
             </div>
-            
-            <div class="control-section">
-                <label class="control-label">Title Display Modes:</label>
-                <div class="icon-style-buttons">
-                    <button class="style-btn" data-style="title-full">📄 Full Title</button>
-                    <button class="style-btn" data-style="title-short">📝 Short Title</button>
-                    <button class="style-btn" data-style="title-shorter">🏷️ Shorter Title</button>
-                    <button class="style-btn" data-style="favicon-title-side">🌐📝 Favicon + Title (Side)</button>
-                    <button class="style-btn" data-style="favicon-title-stacked">🌐📚 Favicon + Title (Stacked)</button>
-                </div>
-            </div>
-            
-            <div class="control-section">
-                <label class="control-label">Creative Styles:</label>
-                <div class="icon-style-buttons">
-                    <button class="style-btn" data-style="badge">🎖️ Badge Markers</button>
-                    <button class="style-btn" data-style="speech-bubble">💬 Speech Bubbles</button>
-                    <button class="style-btn" data-style="pulsing">💫 Pulsing Markers</button>
-                </div>
-            </div>
-            
-            <div class="control-section">
-                <label class="control-label">Marker Size:</label>
-                <div class="icon-style-buttons">
-                    <button class="style-btn" data-size="small">📏 Small</button>
-                    <button class="style-btn active" data-size="medium">📐 Medium</button>
-                    <button class="style-btn" data-size="large">📏 Large</button>
-                </div>
-            </div>
-            
-            <div class="control-section">
-                <label class="control-label">Map Actions:</label>
-                <div class="icon-style-buttons">
-                    <button class="style-btn" onclick="refreshMap()">🔄 Refresh Map</button>
-                    <button class="style-btn" onclick="fitAllMarkers()">🎯 Fit All Markers</button>
-                    <button class="style-btn" onclick="addRandomEvent()">➕ Add Random Event</button>
-                    <button class="style-btn" onclick="loadRealCalendar()">📅 Load Real Calendar</button>
-                    <button class="style-btn" onclick="testFaviconUrls()">🌐 Test Favicon URLs</button>
-                    <button class="style-btn" onclick="clearMap()">🗑️ Clear All</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="map-container">
-            <div id="test-map"></div>
-        </div>
-        
-        <div class="calendar-container">
-            <h2 class="calendar-header">📅 Test Events Calendar</h2>
+        </section>
+
+        <section class="events-section">
+            <h2 class="section-header">📅 Event Details</h2>
             <div id="events-grid" class="events-grid"></div>
-        </div>
+        </section>
     </div>
 
     <!-- Leaflet JS -->
@@ -784,964 +671,670 @@
     
     <!-- Logger -->
     <script src="../js/logger.js"></script>
-    <!-- Calendar integration - use same approach as calendar tester -->
+    <!-- Calendar integration -->
     <script src="../js/city-config.js"></script>
     <script src="../js/calendar-core.js"></script>
     <script src="../js/dynamic-calendar-loader.js"></script>
     
     <script>
-        // Test data with various event types
-        const testEvents = [
-            {
-                name: "Bear Happy Hour",
-                nickname: "BHH",
-                shortName: "Bear Happy Hour",
-                shorterName: "BHH",
-                bar: "The Bear Den",
-                time: "5:00 PM - 8:00 PM",
-                day: "Thursday",
-                cover: "Free",
-                coordinates: { lat: 40.7128, lng: -74.0060 },
-                emoji: "🍺",
-                eventType: "Happy Hour",
-                website: "https://instagram.com/bearhappyhourny"
-            },
-            {
-                name: "Leather Night",
-                nickname: "Leather",
-                shortName: "Leather Night",
-                shorterName: "Leather",
-                bar: "Leather & Lace",
-                time: "9:00 PM - 2:00 AM",
-                day: "Friday",
-                cover: "$10",
-                coordinates: { lat: 40.7589, lng: -73.9851 },
-                emoji: "🖤",
-                eventType: "Themed Night",
-                website: "https://eagle-ny.com"
-            },
-            {
-                name: "Sunday Funday Brunch",
-                nickname: "SFB",
-                shortName: "Sunday Brunch",
-                shorterName: "SFB",
-                bar: "Rainbow Cafe",
-                time: "11:00 AM - 4:00 PM",
-                day: "Sunday",
-                cover: "Free",
-                coordinates: { lat: 40.7505, lng: -73.9934 },
-                emoji: "🥞",
-                eventType: "Brunch",
-                website: "https://animal.nyc"
-            },
-            {
-                name: "Karaoke Night",
-                nickname: "Karaoke",
-                shortName: "Karaoke Night",
-                shorterName: "Karaoke",
-                bar: "Sing Along Bar",
-                time: "8:00 PM - 12:00 AM",
-                day: "Wednesday",
-                cover: "$5",
-                coordinates: { lat: 40.7282, lng: -73.9942 },
-                emoji: "🎤",
-                eventType: "Entertainment",
-                website: "https://www.yelp.com"
-            },
-            {
-                name: "Pool Tournament",
-                nickname: "Pool",
-                shortName: "Pool Tournament",
-                shorterName: "Pool",
-                bar: "Corner Pocket",
-                time: "7:00 PM - 11:00 PM",
-                day: "Tuesday",
-                cover: "$15",
-                coordinates: { lat: 40.7614, lng: -73.9776 },
-                emoji: "🎱",
-                eventType: "Tournament"
-            },
-            {
-                name: "Drag Bingo",
-                nickname: "D-Bingo",
-                shortName: "Drag Bingo",
-                shorterName: "D-Bingo",
-                bar: "Glitter Palace",
-                time: "7:30 PM - 10:30 PM",
-                day: "Monday",
-                cover: "$20",
-                coordinates: { lat: 40.7831, lng: -73.9712 },
-                emoji: "💄",
-                eventType: "Drag Show"
-            },
-            {
-                name: "Bear Weekend Festival",
-                nickname: "BWF",
-                shortName: "Bear Weekend",
-                shorterName: "BWF",
-                bar: "Multiple Venues",
-                time: "All Day",
-                day: "Saturday-Sunday",
-                cover: "$50",
-                coordinates: { lat: 40.7410, lng: -74.0014 },
-                emoji: "🐻",
-                eventType: "Festival",
-                website: "https://github.com"
-            },
-            {
-                name: "Game Night",
-                nickname: "Games",
-                shortName: "Game Night",
-                shorterName: "Games",
-                bar: "Board & Brew",
-                time: "6:00 PM - 10:00 PM",
-                day: "Thursday",
-                cover: "Free",
-                coordinates: { lat: 40.7549, lng: -73.9840 },
-                emoji: "🎲",
-                eventType: "Games"
-            }
-        ];
-        
-        let map;
-        let markers = [];
-        let currentStyle = 'emoji';
-        let currentSize = 'medium';
-        let calendarLoader = null;
-        
-        // Initialize the test page
-        document.addEventListener('DOMContentLoaded', async function() {
-            logger.componentInit('MAP', 'Map icon test page initialized');
-            
-            // Initialize calendar loader for real data
-            calendarLoader = new DynamicCalendarLoader();
-            
-            // Set up the city context manually (since we're not on a real city page)
-            calendarLoader.currentCity = 'new-york';
-            calendarLoader.currentCityConfig = getCityConfig('new-york');
-            
-            // Override getCityFromURL to return 'new-york' for testing
-            calendarLoader.getCityFromURL = function() {
-                return 'new-york';
-            };
-            
-            logger.componentLoad('MAP', 'Calendar loader set up for testing');
-            
-            initializeMap();
-            renderEvents();
-            setupEventListeners();
-        });
-        
-        function initializeMap() {
-            // Initialize map centered on NYC
-            map = L.map('test-map').setView([40.7505, -73.9934], 12);
-            
-            // Add dark theme tile layer
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap contributors © CARTO',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }).addTo(map);
-            
-            // Add initial markers
-            updateMapMarkers();
-            
-            logger.componentLoad('MAP', 'Test map initialized successfully');
-        }
-        
-        function setupEventListeners() {
-            // Style button listeners - only one style can be active at a time
-            document.querySelectorAll('.style-btn[data-style]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    // Remove active from ALL style buttons first
-                    document.querySelectorAll('.style-btn[data-style]').forEach(b => b.classList.remove('active'));
-                    // Add active to clicked button
-                    this.classList.add('active');
-                    
-                    // Update current style and refresh markers
-                    currentStyle = this.dataset.style;
-                    updateMapMarkers();
-                    updateEventPreviews();
-                    
-                    logger.userInteraction('MAP', `Icon style changed to: ${currentStyle}`);
-                });
-            });
-            
-            // Size button listeners - only one size can be active at a time
-            document.querySelectorAll('.style-btn[data-size]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    // Remove active from ALL size buttons first
-                    document.querySelectorAll('.style-btn[data-size]').forEach(b => b.classList.remove('active'));
-                    // Add active to clicked button
-                    this.classList.add('active');
-                    
-                    // Update current size and refresh markers
-                    currentSize = this.dataset.size;
-                    updateMapMarkers();
-                    updateEventPreviews();
-                    
-                    logger.userInteraction('MAP', `Marker size changed to: ${currentSize}`);
-                });
-            });
-            
-            // Action button listeners
-            document.querySelectorAll('.style-btn[onclick]').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const onclick = this.getAttribute('onclick');
-                    if (onclick) {
-                        // Execute the onclick function
-                        eval(onclick);
-                    }
-                });
-            });
-        }
-        
-        function updateMapMarkers() {
-            // Clear existing markers
-            markers.forEach(marker => map.removeLayer(marker));
-            markers = [];
-            
-            logger.info('MAP', `Updating markers for ${testEvents.length} events with style: ${currentStyle}`);
-            
-            // Add new markers with current style
-            let successCount = 0;
-            let failureCount = 0;
-            
-            testEvents.forEach((event, index) => {
-                if (!event.coordinates || !event.coordinates.lat || !event.coordinates.lng) {
-                    logger.warn('MAP', `Event ${index + 1} missing coordinates: ${event.name}`, { event });
-                    failureCount++;
-                    return;
-                }
+        class MapIconLaboratory {
+            constructor() {
+                this.map = null;
+                this.markers = [];
+                this.events = [];
+                this.calendarLoader = null;
                 
-                const marker = createMarker(event, index);
-                if (marker) {
-                    marker.addTo(map);
-                    markers.push(marker);
-                    successCount++;
-                } else {
-                    logger.warn('MAP', `Failed to create marker for event: ${event.name}`, { event });
-                    failureCount++;
-                }
-            });
-            
-            logger.componentLoad('MAP', `Updated ${successCount} markers with style: ${currentStyle}`, {
-                totalEvents: testEvents.length,
-                successfulMarkers: successCount,
-                failedMarkers: failureCount,
-                markersOnMap: markers.length
-            });
-        }
-        
-        // Title truncation functions - now properly uses shortName and shorterName
-        function getTitleForDisplay(event, mode) {
-            if (!event) return 'Event';
-            
-            // Use the event object to access shortName and shorterName
-            const eventName = event.name || 'Event';
-            const shortName = event.shortName;
-            const shorterName = event.shorterName;
-            
-            switch (mode) {
-                case 'title-full':
-                    return eventName.length > 25 ? eventName.substring(0, 25) + '...' : eventName;
-                case 'title-short':
-                    // Use shortName if available, otherwise truncate
-                    if (shortName) {
-                        return shortName.length > 15 ? shortName.substring(0, 15) + '...' : shortName;
-                    }
-                    return eventName.length > 15 ? eventName.substring(0, 15) + '...' : eventName;
-                case 'title-shorter':
-                    // Use shorterName if available, otherwise truncate
-                    if (shorterName) {
-                        return shorterName.length > 8 ? shorterName.substring(0, 8) + '...' : shorterName;
-                    }
-                    return eventName.length > 8 ? eventName.substring(0, 8) + '...' : eventName;
-                default:
-                    return eventName;
-            }
-        }
-        
-        function getSmartTitleTruncation(eventName, maxLength) {
-            if (!eventName || eventName.length <= maxLength) return eventName;
-            
-            // Try to break at word boundaries
-            const words = eventName.split(' ');
-            let result = '';
-            
-            for (const word of words) {
-                if ((result + ' ' + word).length <= maxLength - 3) {
-                    result += (result ? ' ' : '') + word;
-                } else {
-                    break;
-                }
-            }
-            
-            return result ? result + '...' : eventName.substring(0, maxLength - 3) + '...';
-        }
-        
-        function applySizeClass(className) {
-            return `${className} marker-${currentSize}`;
-        }
+                // Current settings
+                this.settings = {
+                    style: 'emoji',
+                    color: 'orange',
+                    size: 'medium'
+                };
 
-        function createMarker(event, index) {
-            if (!event.coordinates?.lat || !event.coordinates?.lng) {
-                return null;
+                // Color theme mapping
+                this.colorThemes = {
+                    orange: '#FFA500',
+                    blue: '#4ECDC4',
+                    purple: '#9B59B6',
+                    green: '#2ECC71',
+                    red: '#E74C3C',
+                    gold: '#FFD700',
+                    pink: '#FF69B4',
+                    cyan: '#00FFFF'
+                };
+
+                this.init();
             }
-            
-            let icon;
-            
-            switch (currentStyle) {
-                case 'emoji':
-                    icon = L.divIcon({
-                        className: applySizeClass('emoji-marker'),
-                        html: event.emoji || '📍',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15],
-                        popupAnchor: [0, -15]
-                    });
-                    break;
+
+            async init() {
+                logger.componentInit('MAP', 'Map Icon Laboratory initializing');
+                
+                try {
+                    this.setupCalendarLoader();
+                    this.loadDefaultEvents();
+                    this.initializeMap();
+                    this.setupEventListeners();
+                    this.updateDisplay();
                     
-                case 'initials':
-                    const initials = getInitials(event.nickname || event.name);
-                    icon = L.divIcon({
-                        className: applySizeClass('initials-marker'),
-                        html: initials,
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 16],
-                        popupAnchor: [0, -16]
-                    });
-                    break;
-                    
-                case 'mixed':
-                    const mixedContent = shouldUseEmoji(event) ? event.emoji : getInitials(event.nickname || event.name);
-                    icon = L.divIcon({
-                        className: applySizeClass('mixed-marker'),
-                        html: mixedContent || '?',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18],
-                        popupAnchor: [0, -18]
-                    });
-                    break;
-                    
-                case 'overlay':
-                    const overlayContent = event.emoji || getInitials(event.nickname || event.name);
-                    icon = L.divIcon({
-                        className: applySizeClass('overlay-marker'),
-                        html: overlayContent,
-                        iconSize: [40, 40],
-                        iconAnchor: [20, 20],
-                        popupAnchor: [0, -20]
-                    });
-                    break;
-                    
-                case 'numbered':
-                    icon = L.divIcon({
-                        className: applySizeClass('numbered-marker'),
-                        html: `<span>${index + 1}</span>`,
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14],
-                        popupAnchor: [0, -14]
-                    });
-                    // Add emoji as pseudo-element via data attribute
-                    setTimeout(() => {
-                        const markerEl = document.querySelector(`.numbered-marker:nth-last-child(1)`);
-                        if (markerEl) {
-                            markerEl.setAttribute('data-emoji', event.emoji || '📍');
-                        }
-                    }, 100);
-                    break;
-                    
-                case 'favicon':
-                    const faviconUrl = getFaviconUrl(event.website);
-                    const markerId = `favicon-marker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    
-                    if (faviconUrl) {
-                        icon = L.divIcon({
-                            className: applySizeClass('favicon-marker loading'),
-                            html: `<div id="${markerId}" class="favicon-content">⏳</div>`,
-                            iconSize: [40, 40],
-                            iconAnchor: [20, 20],
-                            popupAnchor: [0, -20]
-                        });
-                        
-                        // Load favicon asynchronously with proper error handling
-                        loadFaviconForMarker(markerId, faviconUrl, event.emoji || '🌐');
-                    } else {
-                        // No website URL, use fallback immediately
-                        icon = L.divIcon({
-                            className: applySizeClass('favicon-marker error'),
-                            html: `<div class="favicon-content">${event.emoji || '🌐'}</div>`,
-                            iconSize: [40, 40],
-                            iconAnchor: [20, 20],
-                            popupAnchor: [0, -20]
-                        });
+                    logger.componentLoad('MAP', 'Map Icon Laboratory initialized successfully');
+                } catch (error) {
+                    logger.componentError('MAP', 'Failed to initialize Map Icon Laboratory', error);
+                }
+            }
+
+            setupCalendarLoader() {
+                if (typeof DynamicCalendarLoader !== 'undefined') {
+                    this.calendarLoader = new DynamicCalendarLoader();
+                    this.calendarLoader.currentCity = 'new-york';
+                    this.calendarLoader.currentCityConfig = getCityConfig('new-york');
+                    this.calendarLoader.getCityFromURL = () => 'new-york';
+                    logger.componentLoad('MAP', 'Calendar loader configured');
+                } else {
+                    logger.warn('MAP', 'DynamicCalendarLoader not available');
+                }
+            }
+
+            loadDefaultEvents() {
+                this.events = [
+                    {
+                        name: "Bear Happy Hour",
+                        shortName: "Bear Happy Hour",
+                        shorterName: "BHH",
+                        nickname: "BHH",
+                        bar: "The Bear Den",
+                        time: "5:00 PM - 8:00 PM",
+                        day: "Thursday",
+                        cover: "Free",
+                        coordinates: { lat: 40.7128, lng: -74.0060 },
+                        emoji: "🍺",
+                        eventType: "Happy Hour",
+                        website: "https://instagram.com/bearhappyhourny"
+                    },
+                    {
+                        name: "Leather Night at The Eagle",
+                        shortName: "Leather Night",
+                        shorterName: "Leather",
+                        nickname: "Leather",
+                        bar: "The Eagle NYC",
+                        time: "9:00 PM - 2:00 AM",
+                        day: "Friday",
+                        cover: "$10",
+                        coordinates: { lat: 40.7589, lng: -73.9851 },
+                        emoji: "🖤",
+                        eventType: "Themed Night",
+                        website: "https://eagle-ny.com"
+                    },
+                    {
+                        name: "Sunday Funday Brunch Special",
+                        shortName: "Sunday Brunch",
+                        shorterName: "Brunch",
+                        nickname: "SFB",
+                        bar: "Rainbow Cafe",
+                        time: "11:00 AM - 4:00 PM",
+                        day: "Sunday",
+                        cover: "Free",
+                        coordinates: { lat: 40.7505, lng: -73.9934 },
+                        emoji: "🥞",
+                        eventType: "Brunch",
+                        website: "https://animal.nyc"
+                    },
+                    {
+                        name: "Karaoke Night Extravaganza",
+                        shortName: "Karaoke Night",
+                        shorterName: "Karaoke",
+                        nickname: "Karaoke",
+                        bar: "Sing Along Bar",
+                        time: "8:00 PM - 12:00 AM",
+                        day: "Wednesday",
+                        cover: "$5",
+                        coordinates: { lat: 40.7282, lng: -73.9942 },
+                        emoji: "🎤",
+                        eventType: "Entertainment",
+                        website: "https://www.yelp.com"
+                    },
+                    {
+                        name: "Monthly Pool Tournament Championship",
+                        shortName: "Pool Tournament",
+                        shorterName: "Pool",
+                        nickname: "Pool",
+                        bar: "Corner Pocket",
+                        time: "7:00 PM - 11:00 PM",
+                        day: "Tuesday",
+                        cover: "$15",
+                        coordinates: { lat: 40.7614, lng: -73.9776 },
+                        emoji: "🎱",
+                        eventType: "Tournament"
+                    },
+                    {
+                        name: "Drag Bingo Spectacular Show",
+                        shortName: "Drag Bingo",
+                        shorterName: "D-Bingo",
+                        nickname: "D-Bingo",
+                        bar: "Glitter Palace",
+                        time: "7:30 PM - 10:30 PM",
+                        day: "Monday",
+                        cover: "$20",
+                        coordinates: { lat: 40.7831, lng: -73.9712 },
+                        emoji: "💄",
+                        eventType: "Drag Show"
                     }
-                    break;
-                     
-                case 'gradient':
-                    icon = L.divIcon({
-                        className: applySizeClass('gradient-marker'),
-                        html: event.emoji || '🎉',
-                        iconSize: [40, 40],
-                        iconAnchor: [20, 20],
-                        popupAnchor: [0, -20]
-                    });
-                    break;
-                    
-                case 'neon':
-                    icon = L.divIcon({
-                        className: applySizeClass('neon-marker'),
-                        html: event.emoji || '⚡',
-                        iconSize: [38, 38],
-                        iconAnchor: [19, 19],
-                        popupAnchor: [0, -19]
-                    });
-                    break;
+                ];
                 
-                // NEW: Title display modes - now properly uses shortName and shorterName
-                case 'title-full':
-                    const fullTitle = getTitleForDisplay(event, 'title-full');
-                    icon = L.divIcon({
-                        className: applySizeClass('title-full-marker'),
-                        html: fullTitle,
-                        iconSize: [Math.min(200, Math.max(60, fullTitle.length * 8)), 24],
-                        iconAnchor: [Math.min(100, Math.max(30, fullTitle.length * 4)), 12],
-                        popupAnchor: [0, -12]
-                    });
-                    break;
-                    
-                case 'title-short':
-                    const shortTitle = getTitleForDisplay(event, 'title-short');
-                    icon = L.divIcon({
-                        className: applySizeClass('title-short-marker'),
-                        html: shortTitle,
-                        iconSize: [Math.min(120, Math.max(40, shortTitle.length * 7)), 20],
-                        iconAnchor: [Math.min(60, Math.max(20, shortTitle.length * 3.5)), 10],
-                        popupAnchor: [0, -10]
-                    });
-                    break;
-                    
-                case 'title-shorter':
-                    const shorterTitle = getTitleForDisplay(event, 'title-shorter');
-                    icon = L.divIcon({
-                        className: applySizeClass('title-shorter-marker'),
-                        html: shorterTitle,
-                        iconSize: [Math.min(60, Math.max(24, shorterTitle.length * 6)), 16],
-                        iconAnchor: [Math.min(30, Math.max(12, shorterTitle.length * 3)), 8],
-                        popupAnchor: [0, -8]
-                    });
-                    break;
-                
-                // NEW: Favicon + Title combinations
-                case 'favicon-title-side':
-                    const faviconUrlSide = getFaviconUrl(event.website);
-                    const sideTitle = getSmartTitleTruncation(event.name, 20);
-                    const sideMarkerId = `favicon-side-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    
-                    const sideHtml = faviconUrlSide ? 
-                        `<div id="${sideMarkerId}" class="favicon-content"><img src="${faviconUrlSide}" onerror="this.style.display='none'; this.nextSibling.textContent='${event.emoji || '🌐'}';" alt="favicon"><span style="display:none;">${event.emoji || '🌐'}</span></div><div class="title-text">${sideTitle}</div>` :
-                        `<div class="favicon-content">${event.emoji || '🌐'}</div><div class="title-text">${sideTitle}</div>`;
-                    
-                    icon = L.divIcon({
-                        className: applySizeClass('favicon-title-side-marker'),
-                        html: sideHtml,
-                        iconSize: [Math.min(200, Math.max(100, sideTitle.length * 10 + 40)), 32],
-                        iconAnchor: [Math.min(100, Math.max(50, sideTitle.length * 5 + 20)), 16],
-                        popupAnchor: [0, -16]
-                    });
-                    break;
-                    
-                case 'favicon-title-stacked':
-                    const faviconUrlStacked = getFaviconUrl(event.website);
-                    const stackedTitle = getSmartTitleTruncation(event.name, 15);
-                    const stackedMarkerId = `favicon-stacked-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    
-                    const stackedHtml = faviconUrlStacked ? 
-                        `<div id="${stackedMarkerId}" class="favicon-content"><img src="${faviconUrlStacked}" onerror="this.style.display='none'; this.nextSibling.textContent='${event.emoji || '🌐'}';" alt="favicon"><span style="display:none;">${event.emoji || '🌐'}</span></div><div class="title-text">${stackedTitle}</div>` :
-                        `<div class="favicon-content">${event.emoji || '🌐'}</div><div class="title-text">${stackedTitle}</div>`;
-                    
-                    icon = L.divIcon({
-                        className: applySizeClass('favicon-title-stacked-marker'),
-                        html: stackedHtml,
-                        iconSize: [Math.min(120, Math.max(60, stackedTitle.length * 8 + 20)), 48],
-                        iconAnchor: [Math.min(60, Math.max(30, stackedTitle.length * 4 + 10)), 24],
-                        popupAnchor: [0, -24]
-                    });
-                    break;
-                
-                // NEW: Creative marker styles
-                case 'badge':
-                    icon = L.divIcon({
-                        className: applySizeClass('badge-marker'),
-                        html: event.emoji || '🎖️',
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 16],
-                        popupAnchor: [0, -16]
-                    });
-                    break;
-                    
-                case 'speech-bubble':
-                    const bubbleText = getSmartTitleTruncation(event.name, 12);
-                    icon = L.divIcon({
-                        className: applySizeClass('speech-bubble-marker'),
-                        html: bubbleText,
-                        iconSize: [Math.min(120, Math.max(40, bubbleText.length * 8)), 24],
-                        iconAnchor: [Math.min(60, Math.max(20, bubbleText.length * 4)), 20], // Adjust for speech bubble tail
-                        popupAnchor: [0, -24]
-                    });
-                    break;
-                    
-                case 'pulsing':
-                    icon = L.divIcon({
-                        className: applySizeClass('pulsing-marker'),
-                        html: event.emoji || '💫',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18],
-                        popupAnchor: [0, -18]
-                    });
-                    break;
-                     
-                case 'original':
-                default:
-                    icon = L.divIcon({
-                        className: applySizeClass('custom-marker'),
-                        html: `
-                            <div class="marker-pin">
-                                <div class="marker-icon"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" class="map-marker-icon"></div>
-                            </div>
-                        `,
-                        iconSize: [44, 56],
-                        iconAnchor: [22, 56],
-                        popupAnchor: [0, -56]
-                    });
-                    break;
+                logger.info('MAP', `Loaded ${this.events.length} default events`);
             }
-            
-            const marker = L.marker([event.coordinates.lat, event.coordinates.lng], { icon });
-            
-            // Add popup with full title tooltip for shortened displays
-            const fullTitle = event.name;
-            const isShortened = currentStyle.includes('title') && fullTitle.length > 15;
-            
-            marker.bindPopup(`
-                <div class="map-popup">
-                    <h4>${fullTitle}</h4>
-                    <p><strong>📍 ${event.bar}</strong></p>
-                    <p>📅 ${event.day} ${event.time}</p>
-                    <p>💰 ${event.cover}</p>
-                    <p>🎭 ${event.eventType}</p>
-                    ${event.nickname ? `<p>🏷️ Nickname: ${event.nickname}</p>` : ''}
-                    ${event.website ? `<p>🌐 <a href="${event.website}" target="_blank">Website</a></p>` : ''}
-                    <p>🎨 Icon Style: ${currentStyle}</p>
-                    <p>📏 Marker Size: ${currentSize}</p>
-                    ${isShortened ? `<p>💡 <em>Full title shown above</em></p>` : ''}
-                </div>
-            `);
-            
-            // Add hover tooltip for shortened titles
-            if (isShortened) {
-                marker.bindTooltip(fullTitle, {
-                    permanent: false,
-                    direction: 'top',
-                    opacity: 0.9
+
+            initializeMap() {
+                this.map = L.map('test-map').setView([40.7505, -73.9934], 12);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© OpenStreetMap contributors © CARTO',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(this.map);
+                
+                this.updateMapMarkers();
+                logger.componentLoad('MAP', 'Map initialized with dark theme');
+            }
+
+            setupEventListeners() {
+                // Style controls
+                document.getElementById('style-controls').addEventListener('click', (e) => {
+                    if (e.target.dataset.style) {
+                        this.setActiveButton('style-controls', e.target);
+                        this.settings.style = e.target.dataset.style;
+                        this.updateDisplay();
+                        logger.userInteraction('MAP', `Style changed to: ${this.settings.style}`);
+                    }
+                });
+
+                // Color controls
+                document.getElementById('color-controls').addEventListener('click', (e) => {
+                    if (e.target.dataset.color) {
+                        this.setActiveButton('color-controls', e.target);
+                        this.settings.color = e.target.dataset.color;
+                        this.updateDisplay();
+                        logger.userInteraction('MAP', `Color changed to: ${this.settings.color}`);
+                    }
+                });
+
+                // Size controls
+                document.getElementById('size-controls').addEventListener('click', (e) => {
+                    if (e.target.dataset.size) {
+                        this.setActiveButton('size-controls', e.target);
+                        this.settings.size = e.target.dataset.size;
+                        this.updateDisplay();
+                        logger.userInteraction('MAP', `Size changed to: ${this.settings.size}`);
+                    }
+                });
+
+                // Action controls
+                document.getElementById('action-controls').addEventListener('click', (e) => {
+                    if (e.target.dataset.action) {
+                        this.handleAction(e.target.dataset.action);
+                    }
                 });
             }
-            
-            return marker;
-        }
-        
-        function getInitials(text) {
-            if (!text) return '?';
-            
-            // Handle hyphenated nicknames (e.g., "D-Bingo" -> "DB")
-            if (text.includes('-')) {
-                return text.split('-').map(part => part.charAt(0).toUpperCase()).join('');
+
+            setActiveButton(containerId, activeButton) {
+                const container = document.getElementById(containerId);
+                container.querySelectorAll('.control-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                activeButton.classList.add('active');
             }
-            
-            // Handle space-separated words
-            const words = text.split(' ').filter(word => word.length > 0);
-            if (words.length >= 2) {
-                return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join('');
+
+            handleAction(action) {
+                logger.userInteraction('MAP', `Action triggered: ${action}`);
+                
+                switch (action) {
+                    case 'refresh':
+                        this.updateMapMarkers();
+                        break;
+                    case 'fit-bounds':
+                        this.fitAllMarkers();
+                        break;
+                    case 'add-random':
+                        this.addRandomEvent();
+                        break;
+                    case 'load-calendar':
+                        this.loadRealCalendar();
+                        break;
+                    case 'test-favicons':
+                        this.testFavicons();
+                        break;
+                    case 'reset':
+                        this.resetToDefault();
+                        break;
+                }
             }
-            
-            // Single word - take first 2 characters
-            return text.substring(0, 2).toUpperCase();
-        }
-        
-        function shouldUseEmoji(event) {
-            // Logic to determine when to use emoji vs initials in mixed mode
-            // Use emoji for common event types, initials for unique/specific events
-            const commonEventTypes = ['Happy Hour', 'Brunch', 'Entertainment', 'Drag Show'];
-            return commonEventTypes.includes(event.eventType) || event.name.toLowerCase().includes('happy hour');
-        }
-        
-        function renderEvents() {
-            const eventsGrid = document.getElementById('events-grid');
-            eventsGrid.innerHTML = '';
-            
-            testEvents.forEach((event, index) => {
-                const eventCard = document.createElement('div');
-                eventCard.className = 'event-card';
+
+            updateDisplay() {
+                this.updateStatusBar();
+                this.updateMapMarkers();
+                this.updateEventCards();
+            }
+
+            updateStatusBar() {
+                document.getElementById('event-count').textContent = this.events.length;
+                document.getElementById('current-style').textContent = this.settings.style;
+                document.getElementById('current-color').textContent = this.settings.color;
+                document.getElementById('current-size').textContent = this.settings.size;
+            }
+
+            updateMapMarkers() {
+                // Clear existing markers
+                this.markers.forEach(marker => this.map.removeLayer(marker));
+                this.markers = [];
                 
-                const iconPreview = getIconPreview(event, index);
+                let successCount = 0;
                 
-                                 eventCard.innerHTML = `
-                     <div class="event-name">${event.name} ${event.isRealEvent ? '🔴 LIVE' : ''}</div>
-                     <div class="event-nickname">Nickname: ${event.nickname || 'None'}</div>
-                     ${event.shortName ? `<div class="event-shortname">Short: ${event.shortName}</div>` : ''}
-                     ${event.shorterName ? `<div class="event-shortername">Shorter: ${event.shorterName}</div>` : ''}
-                     <div class="event-details">
-                         📍 ${event.bar}<br>
-                         📅 ${event.day} ${event.time}<br>
-                         💰 ${event.cover}<br>
-                         🎭 ${event.eventType}
-                     </div>
-                     <div class="icon-preview">
-                         <span class="icon-preview-label">Icon (${currentSize}):</span>
-                         <span>${iconPreview}</span>
-                     </div>
-                 `;
+                this.events.forEach((event, index) => {
+                    if (event.coordinates?.lat && event.coordinates?.lng) {
+                        const marker = this.createMarker(event, index);
+                        if (marker) {
+                            marker.addTo(this.map);
+                            this.markers.push(marker);
+                            successCount++;
+                        }
+                    }
+                });
                 
-                // Add click handler to focus on map marker
-                eventCard.addEventListener('click', () => {
-                    if (markers[index]) {
-                        map.setView([event.coordinates.lat, event.coordinates.lng], 15);
-                        markers[index].openPopup();
+                logger.info('MAP', `Updated ${successCount} markers on map`, {
+                    style: this.settings.style,
+                    color: this.settings.color,
+                    size: this.settings.size
+                });
+            }
+
+            createMarker(event, index) {
+                const { lat, lng } = event.coordinates;
+                const icon = this.createIcon(event, index);
+                
+                if (!icon) return null;
+                
+                const marker = L.marker([lat, lng], { icon });
+                
+                marker.bindPopup(this.createPopupContent(event));
+                
+                return marker;
+            }
+
+            createIcon(event, index) {
+                const baseColor = this.colorThemes[this.settings.color];
+                const sizeClass = `size-${this.settings.size}`;
+                
+                let iconHtml = '';
+                let className = '';
+                let iconSize = [32, 32];
+                let iconAnchor = [16, 16];
+                
+                switch (this.settings.style) {
+                    case 'emoji':
+                        className = `emoji-marker ${sizeClass}`;
+                        iconHtml = event.emoji || '📍';
+                        iconSize = [30, 30];
+                        iconAnchor = [15, 15];
+                        break;
+                        
+                    case 'initials':
+                        className = `initials-marker ${sizeClass}`;
+                        iconHtml = this.getInitials(event.nickname || event.name);
+                        iconSize = [32, 32];
+                        iconAnchor = [16, 16];
+                        break;
+                        
+                    case 'mixed':
+                        className = `mixed-marker ${sizeClass}`;
+                        iconHtml = this.shouldUseEmoji(event) ? 
+                            event.emoji : this.getInitials(event.nickname || event.name);
+                        iconSize = [36, 36];
+                        iconAnchor = [18, 18];
+                        break;
+                        
+                    case 'title':
+                        className = `title-marker ${sizeClass}`;
+                        iconHtml = this.truncateText(event.name, 20);
+                        iconSize = [Math.max(60, iconHtml.length * 8), 24];
+                        iconAnchor = [Math.max(30, iconHtml.length * 4), 12];
+                        break;
+                        
+                    case 'shortName':
+                        className = `title-marker ${sizeClass}`;
+                        iconHtml = event.shortName || this.truncateText(event.name, 15);
+                        iconSize = [Math.max(50, iconHtml.length * 7), 22];
+                        iconAnchor = [Math.max(25, iconHtml.length * 3.5), 11];
+                        break;
+                        
+                    case 'shorterName':
+                        className = `title-marker ${sizeClass}`;
+                        iconHtml = event.shorterName || this.truncateText(event.name, 8);
+                        iconSize = [Math.max(32, iconHtml.length * 6), 20];
+                        iconAnchor = [Math.max(16, iconHtml.length * 3), 10];
+                        break;
+                        
+                    case 'favicon':
+                        className = `favicon-marker ${sizeClass}`;
+                        if (event.website) {
+                            const faviconUrl = this.getFaviconUrl(event.website);
+                            iconHtml = `<img src="${faviconUrl}" onerror="this.outerHTML='${event.emoji || '🌐'}'" alt="favicon">`;
+                        } else {
+                            iconHtml = event.emoji || '🌐';
+                        }
+                        iconSize = [40, 40];
+                        iconAnchor = [20, 20];
+                        break;
+                        
+                    case 'favicon-title':
+                        className = `favicon-marker ${sizeClass}`;
+                        const title = event.shortName || this.truncateText(event.name, 12);
+                        if (event.website) {
+                            const faviconUrl = this.getFaviconUrl(event.website);
+                            iconHtml = `<div style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:white;border-radius:8px;">
+                                <img src="${faviconUrl}" onerror="this.style.display='none'" width="16" height="16" alt="favicon">
+                                <span style="color:black;font-size:10px;font-weight:600;">${title}</span>
+                            </div>`;
+                        } else {
+                            iconHtml = `<div style="padding:4px 8px;background:white;border-radius:8px;color:black;font-size:10px;font-weight:600;">${event.emoji || '🌐'} ${title}</div>`;
+                        }
+                        iconSize = [Math.max(80, title.length * 8 + 30), 32];
+                        iconAnchor = [Math.max(40, title.length * 4 + 15), 16];
+                        break;
+                        
+                    case 'gradient':
+                        className = `gradient-marker ${sizeClass}`;
+                        iconHtml = event.emoji || '🎉';
+                        iconSize = [40, 40];
+                        iconAnchor = [20, 20];
+                        break;
+                        
+                    case 'neon':
+                        className = `neon-marker ${sizeClass}`;
+                        iconHtml = event.emoji || '⚡';
+                        iconSize = [38, 38];
+                        iconAnchor = [19, 19];
+                        break;
+                        
+                    default:
+                        className = `initials-marker ${sizeClass}`;
+                        iconHtml = this.getInitials(event.name);
+                        break;
+                }
+                
+                // Apply color theme for non-special styles
+                const coloredStyles = ['initials', 'mixed', 'title', 'shortName', 'shorterName'];
+                if (coloredStyles.includes(this.settings.style)) {
+                    const style = `background-color: ${baseColor} !important;`;
+                    iconHtml = `<div style="${style}">${iconHtml}</div>`;
+                }
+                
+                return L.divIcon({
+                    className: className,
+                    html: iconHtml,
+                    iconSize: iconSize,
+                    iconAnchor: iconAnchor,
+                    popupAnchor: [0, -iconAnchor[1]]
+                });
+            }
+
+            createPopupContent(event) {
+                return `
+                    <div style="min-width: 200px;">
+                        <h4 style="color: var(--primary-orange); margin: 0 0 10px 0;">${event.name}</h4>
+                        <p><strong>📍 ${event.bar}</strong></p>
+                        <p>📅 ${event.day} ${event.time}</p>
+                        <p>💰 ${event.cover}</p>
+                        <p>🎭 ${event.eventType}</p>
+                        ${event.shortName ? `<p>📄 Short: ${event.shortName}</p>` : ''}
+                        ${event.shorterName ? `<p>🏷️ Shorter: ${event.shorterName}</p>` : ''}
+                        ${event.nickname ? `<p>🏷️ Nickname: ${event.nickname}</p>` : ''}
+                        ${event.website ? `<p>🌐 <a href="${event.website}" target="_blank">Website</a></p>` : ''}
+                        ${event.isRealEvent ? `<p style="color: var(--error-red);">🔴 LIVE EVENT</p>` : ''}
+                    </div>
+                `;
+            }
+
+            updateEventCards() {
+                const container = document.getElementById('events-grid');
+                container.innerHTML = '';
+                
+                this.events.forEach((event, index) => {
+                    const card = this.createEventCard(event, index);
+                    container.appendChild(card);
+                });
+            }
+
+            createEventCard(event, index) {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                
+                card.innerHTML = `
+                    <div class="event-name">
+                        ${event.name}
+                        ${event.isRealEvent ? '<span class="live-indicator">LIVE</span>' : ''}
+                    </div>
+                    
+                    <div class="field-display">
+                        <span class="field-label">Title:</span>
+                        <span class="field-value">${event.name}</span>
+                    </div>
+                    
+                    ${event.shortName ? `
+                        <div class="field-display">
+                            <span class="field-label">Short Name:</span>
+                            <span class="field-value">${event.shortName}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${event.shorterName ? `
+                        <div class="field-display">
+                            <span class="field-label">Shorter Name:</span>
+                            <span class="field-value">${event.shorterName}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${event.nickname ? `
+                        <div class="field-display">
+                            <span class="field-label">Nickname:</span>
+                            <span class="field-value">${event.nickname}</span>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="event-details">
+                        <strong>📍 ${event.bar}</strong><br>
+                        📅 ${event.day} ${event.time}<br>
+                        💰 ${event.cover}<br>
+                        🎭 ${event.eventType}
+                    </div>
+                    
+                    <div class="icon-preview">
+                        <span class="preview-label">Current Icon (${this.settings.size}):</span>
+                        <span class="preview-content">${this.getIconPreview(event, index)}</span>
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => {
+                    if (this.markers[index]) {
+                        this.map.setView([event.coordinates.lat, event.coordinates.lng], 15);
+                        this.markers[index].openPopup();
                         logger.userInteraction('MAP', `Event card clicked: ${event.name}`);
                     }
                 });
                 
-                eventsGrid.appendChild(eventCard);
-            });
-        }
-        
-        function getIconPreview(event, index) {
-            switch (currentStyle) {
-                case 'emoji':
-                    return event.emoji || '📍';
-                case 'initials':
-                    return getInitials(event.nickname || event.name);
-                case 'mixed':
-                    return shouldUseEmoji(event) ? event.emoji : getInitials(event.nickname || event.name);
-                case 'overlay':
-                    return event.emoji || getInitials(event.nickname || event.name);
-                case 'numbered':
-                    return `${index + 1} ${event.emoji || '📍'}`;
-                case 'favicon':
-                    return event.website ? '🌐 (Favicon)' : '❌ (No Website)';
-                case 'gradient':
-                    return `🌈 ${event.emoji || '🎉'}`;
-                case 'neon':
-                    return `⚡ ${event.emoji || '⚡'}`;
-                case 'title-full':
-                    return `📄 "${getTitleForDisplay(event, 'title-full')}"`;
-                case 'title-short':
-                    return `📝 "${getTitleForDisplay(event, 'title-short')}"`;
-                case 'title-shorter':
-                    return `🏷️ "${getTitleForDisplay(event, 'title-shorter')}"`;
-                case 'favicon-title-side':
-                    return `🌐📝 ${event.website ? 'Favicon' : '❌'} + "${getSmartTitleTruncation(event.name, 20)}"`;
-                case 'favicon-title-stacked':
-                    return `🌐📚 ${event.website ? 'Favicon' : '❌'} / "${getSmartTitleTruncation(event.name, 15)}"`;
-                case 'badge':
-                    return `🎖️ ${event.emoji || '🎖️'}`;
-                case 'speech-bubble':
-                    return `💬 "${getSmartTitleTruncation(event.name, 12)}"`;
-                case 'pulsing':
-                    return `💫 ${event.emoji || '💫'}`;
-                case 'original':
-                default:
-                    return '🐻 (Original Pin)';
+                return card;
             }
-        }
-        
-        // Favicon helper functions
-        function getFaviconUrl(websiteUrl) {
-            if (!websiteUrl) return null;
-            
-            try {
-                const url = new URL(websiteUrl);
+
+            // Utility methods
+            getInitials(text) {
+                if (!text) return '?';
                 
-                // Use Google's favicon service with fallback options
-                // This service is more reliable than trying to fetch favicons directly
-                return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`;
+                if (text.includes('-')) {
+                    return text.split('-').map(part => part.charAt(0).toUpperCase()).join('');
+                }
                 
-                // Alternative favicon services could be:
-                // return `https://favicons.githubusercontent.com/${url.hostname}`;
-                // return `https://icon.horse/icon/${url.hostname}`;
+                const words = text.split(' ').filter(word => word.length > 0);
+                if (words.length >= 2) {
+                    return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join('');
+                }
                 
-            } catch (error) {
-                logger.componentError('MAP', 'Invalid website URL for favicon', { url: websiteUrl, error });
-                return null;
+                return text.substring(0, 2).toUpperCase();
             }
-        }
-        
-        function loadFaviconForMarker(markerId, faviconUrl, fallbackEmoji) {
-            const img = new Image();
-            // Remove crossOrigin to avoid CORS issues with Google's favicon service
-            // img.crossOrigin = 'anonymous';
-            
-            // Set a timeout to prevent hanging loads
-            const loadTimeout = setTimeout(() => {
-                logger.componentError('MAP', 'Favicon load timeout', { url: faviconUrl });
-                handleFaviconError(markerId, fallbackEmoji);
-            }, 5000);
-            
-            img.onload = function() {
-                clearTimeout(loadTimeout);
-                // Find the corresponding marker element and update it
-                const iconElement = document.getElementById(markerId);
-                if (iconElement) {
-                    const parentMarker = iconElement.closest('.favicon-marker');
-                    if (parentMarker) {
-                        parentMarker.className = 'favicon-marker';
+
+            shouldUseEmoji(event) {
+                const commonEventTypes = ['Happy Hour', 'Brunch', 'Entertainment', 'Drag Show'];
+                return commonEventTypes.includes(event.eventType) || 
+                       event.name.toLowerCase().includes('happy hour');
+            }
+
+            truncateText(text, maxLength) {
+                if (!text || text.length <= maxLength) return text;
+                
+                const words = text.split(' ');
+                let result = '';
+                
+                for (const word of words) {
+                    if ((result + ' ' + word).length <= maxLength - 3) {
+                        result += (result ? ' ' : '') + word;
+                    } else {
+                        break;
                     }
-                    iconElement.innerHTML = `<img src="${faviconUrl}" alt="Favicon" onerror="handleFaviconImageError('${markerId}', '${fallbackEmoji}');">`;
-                    logger.componentLoad('MAP', 'Favicon loaded successfully', { url: faviconUrl });
                 }
-            };
-            
-            img.onerror = function() {
-                clearTimeout(loadTimeout);
-                logger.componentError('MAP', 'Favicon failed to load, using fallback', { url: faviconUrl, fallback: fallbackEmoji });
-                handleFaviconError(markerId, fallbackEmoji);
-            };
-            
-            img.src = faviconUrl;
-        }
-        
-        function handleFaviconError(markerId, fallbackEmoji) {
-            // Fallback to emoji if favicon fails to load
-            const iconElement = document.getElementById(markerId);
-            if (iconElement) {
-                const parentMarker = iconElement.closest('.favicon-marker');
-                if (parentMarker) {
-                    parentMarker.className = 'favicon-marker error';
-                }
-                iconElement.innerHTML = fallbackEmoji;
-            }
-        }
-        
-        function handleFaviconImageError(markerId, fallbackEmoji) {
-            // Handle inline image load errors
-            handleFaviconError(markerId, fallbackEmoji);
-        }
-        
-        function updateEventPreviews() {
-            renderEvents();
-        }
-        
-        // Utility functions
-        function refreshMap() {
-            updateMapMarkers();
-            logger.userInteraction('MAP', 'Map refreshed');
-        }
-        
-        function fitAllMarkers() {
-            if (markers.length > 0) {
-                const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds(), { padding: [20, 20] });
-                logger.userInteraction('MAP', 'Fitted all markers to view');
-            }
-        }
-        
-        function addRandomEvent() {
-            const randomEvents = [
-                {
-                    name: "Trivia Night",
-                    nickname: "Trivia",
-                    bar: "Quiz Palace",
-                    time: "7:00 PM - 10:00 PM",
-                    day: "Wednesday",
-                    cover: "$5",
-                    coordinates: { lat: 40.7400 + Math.random() * 0.05, lng: -73.9900 + Math.random() * 0.05 },
-                    emoji: "🧠",
-                    eventType: "Quiz"
-                },
-                {
-                    name: "Dance Party",
-                    nickname: "Dance",
-                    bar: "Groove Central",
-                    time: "10:00 PM - 3:00 AM",
-                    day: "Saturday",
-                    cover: "$15",
-                    coordinates: { lat: 40.7500 + Math.random() * 0.05, lng: -73.9800 + Math.random() * 0.05 },
-                    emoji: "💃",
-                    eventType: "Dancing"
-                }
-            ];
-            
-            const randomEvent = randomEvents[Math.floor(Math.random() * randomEvents.length)];
-            testEvents.push(randomEvent);
-            updateMapMarkers();
-            renderEvents();
-            
-            logger.userInteraction('MAP', `Added random event: ${randomEvent.name}`);
-        }
-        
-        function testFaviconUrls() {
-            logger.componentInit('MAP', 'Testing favicon URL extraction and loading');
-            
-            let successCount = 0;
-            let failureCount = 0;
-            let noWebsiteCount = 0;
-            
-            // Test favicon URL generation for current events
-            testEvents.forEach((event, index) => {
-                if (event.website) {
-                    const faviconUrl = getFaviconUrl(event.website);
-                    logger.info('MAP', `Event ${index + 1}: ${event.name}`, {
-                        website: event.website,
-                        faviconUrl: faviconUrl,
-                        hasWebsite: !!event.website
-                    });
-                    
-                    // Test if favicon actually loads
-                    if (faviconUrl) {
-                        const testImg = new Image();
-                        testImg.onload = () => {
-                            successCount++;
-                            logger.componentLoad('MAP', `✅ Favicon loaded: ${event.name}`, { 
-                                url: faviconUrl,
-                                loadTime: Date.now()
-                            });
-                        };
-                        testImg.onerror = () => {
-                            failureCount++;
-                            logger.componentError('MAP', `❌ Favicon failed: ${event.name}`, { 
-                                url: faviconUrl,
-                                error: 'Image load error'
-                            });
-                        };
-                        testImg.src = faviconUrl;
-                    }
-                } else {
-                    noWebsiteCount++;
-                    logger.warn('MAP', `No website URL for event: ${event.name}`);
-                }
-            });
-            
-            // Log summary after a brief delay to allow image loading
-            setTimeout(() => {
-                logger.info('MAP', 'Favicon test summary', {
-                    totalEvents: testEvents.length,
-                    withWebsite: testEvents.length - noWebsiteCount,
-                    successfulLoads: successCount,
-                    failedLoads: failureCount,
-                    noWebsite: noWebsiteCount
-                });
-            }, 2000);
-            
-            // Switch to favicon mode to see results
-            document.querySelector('[data-style="favicon"]').click();
-        }
-        
-        async function loadRealCalendar() {
-            try {
-                logger.componentInit('CALENDAR', 'Loading real calendar data for icon testing using DynamicCalendarLoader');
                 
-                if (!calendarLoader) {
-                    logger.componentError('CALENDAR', 'Calendar loader not initialized');
+                return result ? result + '...' : text.substring(0, maxLength - 3) + '...';
+            }
+
+            getFaviconUrl(websiteUrl) {
+                if (!websiteUrl) return null;
+                
+                try {
+                    const url = new URL(websiteUrl);
+                    return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`;
+                } catch (error) {
+                    logger.componentError('MAP', 'Invalid website URL for favicon', { url: websiteUrl, error });
+                    return null;
+                }
+            }
+
+            getIconPreview(event, index) {
+                switch (this.settings.style) {
+                    case 'emoji':
+                        return event.emoji || '📍';
+                    case 'initials':
+                        return this.getInitials(event.nickname || event.name);
+                    case 'mixed':
+                        return this.shouldUseEmoji(event) ? event.emoji : this.getInitials(event.nickname || event.name);
+                    case 'title':
+                        return `"${this.truncateText(event.name, 20)}"`;
+                    case 'shortName':
+                        return `"${event.shortName || this.truncateText(event.name, 15)}"`;
+                    case 'shorterName':
+                        return `"${event.shorterName || this.truncateText(event.name, 8)}"`;
+                    case 'favicon':
+                        return event.website ? '🌐 (Favicon)' : '❌ (No Website)';
+                    case 'favicon-title':
+                        const title = event.shortName || this.truncateText(event.name, 12);
+                        return `🌐 ${event.website ? 'Favicon' : '❌'} + "${title}"`;
+                    case 'gradient':
+                        return `🌈 ${event.emoji || '🎉'}`;
+                    case 'neon':
+                        return `⚡ ${event.emoji || '⚡'}`;
+                    default:
+                        return event.emoji || '📍';
+                }
+            }
+
+            // Action methods
+            fitAllMarkers() {
+                if (this.markers.length > 0) {
+                    const group = new L.featureGroup(this.markers);
+                    this.map.fitBounds(group.getBounds(), { padding: [20, 20] });
+                    logger.userInteraction('MAP', 'Fitted all markers to view');
+                }
+            }
+
+            addRandomEvent() {
+                const randomEvents = [
+                    {
+                        name: "Trivia Night Championship",
+                        shortName: "Trivia Night",
+                        shorterName: "Trivia",
+                        nickname: "Trivia",
+                        bar: "Quiz Palace",
+                        time: "7:00 PM - 10:00 PM",
+                        day: "Wednesday",
+                        cover: "$5",
+                        coordinates: { 
+                            lat: 40.7400 + Math.random() * 0.05, 
+                            lng: -73.9900 + Math.random() * 0.05 
+                        },
+                        emoji: "🧠",
+                        eventType: "Quiz"
+                    },
+                    {
+                        name: "Saturday Night Dance Party",
+                        shortName: "Dance Party",
+                        shorterName: "Dance",
+                        nickname: "Dance",
+                        bar: "Groove Central",
+                        time: "10:00 PM - 3:00 AM",
+                        day: "Saturday",
+                        cover: "$15",
+                        coordinates: { 
+                            lat: 40.7500 + Math.random() * 0.05, 
+                            lng: -73.9800 + Math.random() * 0.05 
+                        },
+                        emoji: "💃",
+                        eventType: "Dancing"
+                    }
+                ];
+                
+                const randomEvent = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+                this.events.push(randomEvent);
+                this.updateDisplay();
+                
+                logger.userInteraction('MAP', `Added random event: ${randomEvent.name}`);
+            }
+
+            async loadRealCalendar() {
+                if (!this.calendarLoader) {
+                    logger.componentError('CALENDAR', 'Calendar loader not available');
                     return;
                 }
-                
-                // Use NYC as default city for testing (same as calendar tester)
-                const cityKey = 'new-york';
-                
-                // Check if getCityConfig function exists
-                if (typeof getCityConfig !== 'function') {
-                    logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded');
-                    throw new Error('City configuration not available');
-                }
-                
-                const cityConfig = getCityConfig(cityKey);
-                
-                if (!cityConfig || !cityConfig.calendarId) {
-                    logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`, { cityConfig });
-                    throw new Error(`No calendar configuration for ${cityKey}`);
-                }
-                
-                logger.info('CALENDAR', `Loading real calendar data for ${cityConfig.name}`, { cityConfig });
-                
-                // Load calendar data using the calendar loader's loadCalendarData method
-                const events = await calendarLoader.loadCalendarData(cityKey);
-                
-                if (!events || !Array.isArray(events)) {
-                    logger.componentError('CALENDAR', 'No valid events array received from calendar loader', { events });
-                    throw new Error('Calendar data loading failed - no events array');
-                }
-                
-                logger.info('CALENDAR', `Loaded ${events.length} real calendar events`, { events });
-                
-                // Clear existing test events
-                testEvents.length = 0;
-                
-                // Convert calendar events to our test format
-                events.forEach((event, index) => {
-                    // Generate emoji based on event name/type
-                    const emoji = generateEmojiForEvent(event);
+
+                try {
+                    logger.componentInit('CALENDAR', 'Loading real calendar data');
                     
-                    // Use shortName and shorterName from calendar data if available
-                    const nickname = event.shortName || event.shorterName || extractNickname(event) || generateNickname(event.name);
+                    const events = await this.calendarLoader.loadCalendarData('new-york');
                     
-                    // Extract website URL from event description or use URL field
-                    const website = extractWebsiteFromDescription(event.description) || event.url || event.website || null;
+                    if (!events || !Array.isArray(events)) {
+                        throw new Error('No valid events received from calendar');
+                    }
                     
-                    // Parse coordinates from location field if available
-                    const coordinates = parseCoordinatesFromLocation(event.location) || 
-                                      parseCoordinatesFromLocation(event.barLocation) ||
-                                      generateRandomNYCCoordinates();
+                    logger.info('CALENDAR', `Loaded ${events.length} real calendar events`);
                     
-                    // Extract venue name from bar field or location
-                    const venue = event.bar || event.barName || extractVenueFromLocation(event.location) || 'Unknown Location';
+                    // Clear existing events
+                    this.events = [];
                     
-                    testEvents.push({
-                        name: event.name || 'Unnamed Event',
-                        nickname: nickname,
-                        shortName: event.shortName || null,
-                        shorterName: event.shorterName || null,
-                        bar: venue,
-                        time: event.time || 'Time TBD',
-                        day: event.day || 'Day TBD',
-                        cover: event.cover || extractCoverFromDescription(event.description) || 'TBD',
-                        coordinates: coordinates,
-                        emoji: emoji,
-                        eventType: determineEventType(event),
-                        website: website,
-                        isRealEvent: true,
-                        description: event.description,
-                        originalEvent: event // Keep reference to original for debugging
+                    // Convert calendar events to our format
+                    events.forEach((event, index) => {
+                        const convertedEvent = this.convertCalendarEvent(event);
+                        if (convertedEvent) {
+                            this.events.push(convertedEvent);
+                        }
                     });
-                });
-                
-                // Update map and events display
-                logger.info('CALENDAR', `Converting ${events.length} calendar events to test format, now have ${testEvents.length} total events`);
-                updateMapMarkers();
-                renderEvents();
-                
-                // Log success with details about what was displayed
-                logger.componentLoad('CALENDAR', `Successfully loaded and displayed ${events.length} real calendar events`, {
-                    totalEventsInArray: testEvents.length,
-                    markersOnMap: markers.length,
-                    eventsWithCoordinates: testEvents.filter(e => e.coordinates).length,
-                    eventsWithWebsites: testEvents.filter(e => e.website).length,
-                    eventsWithShortNames: testEvents.filter(e => e.shortName).length,
-                    eventsWithShorterNames: testEvents.filter(e => e.shorterName).length
-                });
-                
-            } catch (error) {
-                logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
-                
-                // Fallback to mock "real-looking" events
-                testEvents.length = 0;
-                testEvents.push(
-                    {
-                        name: "Bears Are Animals",
-                        nickname: "BAA",
-                        shortName: "BAA",
+                    
+                    this.updateDisplay();
+                    
+                    logger.componentLoad('CALENDAR', `Successfully loaded ${this.events.length} real events`);
+                    
+                } catch (error) {
+                    logger.componentError('CALENDAR', 'Failed to load real calendar data', error);
+                    
+                    // Add some realistic fallback events
+                    this.events.push({
+                        name: "Bears Are Animals NYC",
+                        shortName: "Bears Are Animals",
                         shorterName: "BAA",
+                        nickname: "BAA",
                         bar: "Animal NYC",
                         time: "7:00 PM - 10:00 PM",
                         day: "Thursday",
@@ -1751,324 +1344,213 @@
                         eventType: "Weekly Social",
                         website: "https://animal.nyc",
                         isRealEvent: true
-                    },
-                    {
-                        name: "Thursday Night Social",
-                        nickname: "TNS",
-                        shortName: "TNS",
-                        shorterName: "TNS",
-                        bar: "The Eagle NYC",
-                        time: "8:00 PM - 12:00 AM",
-                        day: "Thursday",
-                        cover: "$5",
-                        coordinates: { lat: 40.7589, lng: -73.9851 },
-                        emoji: "🦅",
-                        eventType: "Social Hour",
-                        website: "https://eagle-ny.com",
-                        isRealEvent: true
-                    },
-                    {
-                        name: "Underwear Party",
-                        nickname: "UWP",
-                        shortName: "UWP",
-                        shorterName: "UWP",
-                        bar: "NYC Venue",
-                        time: "10:00 PM - 2:00 AM",
-                        day: "Saturday",
-                        cover: "$15",
-                        coordinates: { lat: 40.7505, lng: -73.9934 },
-                        emoji: "🩲",
-                        eventType: "Themed Party",
-                        website: "https://example.com",
-                        isRealEvent: true
+                    });
+                    
+                    this.updateDisplay();
+                    logger.componentLoad('CALENDAR', 'Loaded fallback real-style events');
+                }
+            }
+
+            convertCalendarEvent(event) {
+                const emoji = this.generateEmojiForEvent(event);
+                const nickname = event.shortName || event.shorterName || this.generateNickname(event.name);
+                const website = this.extractWebsiteFromDescription(event.description) || event.url || event.website || null;
+                const coordinates = this.parseCoordinatesFromLocation(event.location) || 
+                                  this.generateRandomNYCCoordinates();
+                const venue = event.bar || event.barName || this.extractVenueFromLocation(event.location) || 'Unknown Location';
+                
+                return {
+                    name: event.name || 'Unnamed Event',
+                    shortName: event.shortName || null,
+                    shorterName: event.shorterName || null,
+                    nickname: nickname,
+                    bar: venue,
+                    time: event.time || 'Time TBD',
+                    day: event.day || 'Day TBD',
+                    cover: event.cover || this.extractCoverFromDescription(event.description) || 'TBD',
+                    coordinates: coordinates,
+                    emoji: emoji,
+                    eventType: this.determineEventType(event),
+                    website: website,
+                    isRealEvent: true,
+                    description: event.description,
+                    originalEvent: event
+                };
+            }
+
+            testFavicons() {
+                logger.componentInit('MAP', 'Testing favicon URLs');
+                
+                let successCount = 0;
+                let failureCount = 0;
+                
+                this.events.forEach((event, index) => {
+                    if (event.website) {
+                        const faviconUrl = this.getFaviconUrl(event.website);
+                        logger.info('MAP', `Event ${index + 1}: ${event.name}`, {
+                            website: event.website,
+                            faviconUrl: faviconUrl
+                        });
+                        
+                        if (faviconUrl) {
+                            const testImg = new Image();
+                            testImg.onload = () => {
+                                successCount++;
+                                logger.componentLoad('MAP', `✅ Favicon loaded: ${event.name}`);
+                            };
+                            testImg.onerror = () => {
+                                failureCount++;
+                                logger.componentError('MAP', `❌ Favicon failed: ${event.name}`);
+                            };
+                            testImg.src = faviconUrl;
+                        }
                     }
-                );
+                });
                 
-                updateMapMarkers();
-                renderEvents();
+                // Switch to favicon mode to see results
+                const faviconBtn = document.querySelector('[data-style="favicon"]');
+                if (faviconBtn) {
+                    faviconBtn.click();
+                }
                 
-                logger.componentLoad('CALENDAR', 'Loaded fallback real-style events');
+                setTimeout(() => {
+                    logger.info('MAP', 'Favicon test summary', {
+                        totalEvents: this.events.length,
+                        withWebsite: this.events.filter(e => e.website).length,
+                        successfulLoads: successCount,
+                        failedLoads: failureCount
+                    });
+                }, 2000);
+            }
+
+            resetToDefault() {
+                this.loadDefaultEvents();
+                this.updateDisplay();
+                logger.userInteraction('MAP', 'Reset to default events');
+            }
+
+            // Helper methods for calendar event conversion
+            generateEmojiForEvent(event) {
+                const name = (event.name || '').toLowerCase();
+                const description = (event.description || '').toLowerCase();
+                const barName = (event.bar || event.barName || '').toLowerCase();
+                
+                if (name.includes('happy hour') || name.includes('social hour')) return '🍺';
+                if (name.includes('brunch')) return '🥞';
+                if (name.includes('karaoke')) return '🎤';
+                if (name.includes('drag') || name.includes('bingo')) return '💄';
+                if (name.includes('leather')) return '🖤';
+                if (name.includes('bear') || name.includes('cub')) return '🐻';
+                if (name.includes('pool') || name.includes('billiards')) return '🎱';
+                if (name.includes('dance') || name.includes('party')) return '💃';
+                if (name.includes('trivia') || name.includes('quiz')) return '🧠';
+                if (name.includes('game')) return '🎲';
+                if (name.includes('festival') || name.includes('weekend')) return '🎪';
+                if (name.includes('underwear') || name.includes('jock')) return '🩲';
+                
+                if (barName.includes('animal')) return '🦁';
+                if (barName.includes('eagle')) return '🦅';
+                if (barName.includes('phoenix')) return '🔥';
+                if (barName.includes('stonewall')) return '🏳️‍🌈';
+                
+                return '🐻';
+            }
+
+            generateNickname(eventName) {
+                if (!eventName) return 'Event';
+                
+                const words = eventName.split(' ')
+                    .filter(word => word.length > 2 && !['the', 'and', 'or', 'at', 'in', 'on'].includes(word.toLowerCase()))
+                    .slice(0, 3);
+                
+                if (words.length >= 2) {
+                    return words.map(word => word.charAt(0).toUpperCase()).join('');
+                }
+                
+                return eventName.substring(0, 3).toUpperCase();
+            }
+
+            extractWebsiteFromDescription(description) {
+                if (!description) return null;
+                
+                const websiteMatch = description.match(/Website:\s*<a[^>]*href="([^"]*)"[^>]*>/i) ||
+                                  description.match(/Website:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
+                                  description.match(/Link:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
+                                  description.match(/(https?:\/\/[^\s<\n\r]+)/);
+                
+                return websiteMatch ? websiteMatch[1] : null;
+            }
+
+            parseCoordinatesFromLocation(location) {
+                if (!location) return null;
+                
+                const coordMatch = location.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+                if (coordMatch) {
+                    const lat = parseFloat(coordMatch[1]);
+                    const lng = parseFloat(coordMatch[2]);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        return { lat, lng };
+                    }
+                }
+                
+                return null;
+            }
+
+            extractVenueFromLocation(location) {
+                if (!location) return null;
+                
+                const coordMatch = location.match(/^([^0-9-]+)\s*(-?\d+\.?\d*\s*,\s*-?\d+\.?\d*)/);
+                if (coordMatch) {
+                    return coordMatch[1].trim();
+                }
+                
+                return location;
+            }
+
+            extractCoverFromDescription(description) {
+                if (!description) return null;
+                
+                const coverMatch = description.match(/cover:\s*\$?([^<\n\r]+)/i) ||
+                                 description.match(/admission:\s*\$?([^<\n\r]+)/i) ||
+                                 description.match(/price:\s*\$?([^<\n\r]+)/i);
+                
+                return coverMatch ? coverMatch[1].trim() : null;
+            }
+
+            determineEventType(event) {
+                const name = (event.name || '').toLowerCase();
+                const description = (event.description || '').toLowerCase();
+                
+                if (name.includes('happy hour') || description.includes('happy hour')) return 'Happy Hour';
+                if (name.includes('brunch') || description.includes('brunch')) return 'Brunch';
+                if (name.includes('drag') || description.includes('drag')) return 'Drag Show';
+                if (name.includes('karaoke') || description.includes('karaoke')) return 'Entertainment';
+                if (name.includes('social') || description.includes('social')) return 'Social Event';
+                if (name.includes('party') || description.includes('party')) return 'Party';
+                if (name.includes('festival') || description.includes('festival')) return 'Festival';
+                if (name.includes('tournament') || description.includes('tournament')) return 'Tournament';
+                if (name.includes('underwear') || description.includes('underwear')) return 'Themed Party';
+                if (name.includes('leather') || description.includes('leather')) return 'Themed Night';
+                
+                return 'Social Event';
+            }
+
+            generateRandomNYCCoordinates() {
+                const baseLat = 40.7505;
+                const baseLng = -73.9934;
+                const range = 0.1;
+                
+                return {
+                    lat: baseLat + (Math.random() - 0.5) * range,
+                    lng: baseLng + (Math.random() - 0.5) * range
+                };
             }
         }
-         
-         // Helper functions for parsing calendar data
-         function extractWebsiteFromDescription(description) {
-             if (!description) return null;
-             
-             // Look for website links in description with various formats
-             const websiteMatch = description.match(/Website:\s*<a[^>]*href="([^"]*)"[^>]*>/i) ||
-                                 description.match(/Website:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
-                                 description.match(/Link:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
-                                 description.match(/URL:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
-                                 description.match(/More info:\s*(https?:\/\/[^\s<\n\r]+)/i) ||
-                                 description.match(/(https?:\/\/[^\s<\n\r]+)/);
-             
-             return websiteMatch ? websiteMatch[1] : null;
-         }
-         
-         function parseCoordinatesFromLocation(location) {
-             if (!location) return null;
-             
-             // Look for coordinates in format "lat, lng" 
-             const coordMatch = location.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
-             if (coordMatch) {
-                 const lat = parseFloat(coordMatch[1]);
-                 const lng = parseFloat(coordMatch[2]);
-                 if (!isNaN(lat) && !isNaN(lng)) {
-                     return { lat, lng };
-                 }
-             }
-             
-             return null;
-         }
-         
-         function extractVenueFromLocation(location) {
-             if (!location) return null;
-             
-             // If location contains coordinates, try to extract venue name before coordinates
-             const coordMatch = location.match(/^([^0-9-]+)\s*(-?\d+\.?\d*\s*,\s*-?\d+\.?\d*)/);
-             if (coordMatch) {
-                 return coordMatch[1].trim();
-             }
-             
-             // If no coordinates, return the location as venue name
-             return location;
-         }
-         
-         function extractCoverFromDescription(description) {
-             if (!description) return null;
-             
-             // Look for cover charge information
-             const coverMatch = description.match(/cover:\s*\$?([^<\n\r]+)/i) ||
-                               description.match(/admission:\s*\$?([^<\n\r]+)/i) ||
-                               description.match(/price:\s*\$?([^<\n\r]+)/i);
-             
-             return coverMatch ? coverMatch[1].trim() : null;
-         }
 
-         function generateEmojiForEvent(event) {
-             const name = (event.name || event.summary || '').toLowerCase();
-             const description = (event.description || '').toLowerCase();
-             const barName = (event.bar || event.barName || '').toLowerCase();
-             
-             // Event type based emoji mapping
-             if (name.includes('happy hour') || name.includes('social hour')) return '🍺';
-             if (name.includes('brunch')) return '🥞';
-             if (name.includes('karaoke')) return '🎤';
-             if (name.includes('drag') || name.includes('bingo')) return '💄';
-             if (name.includes('leather')) return '🖤';
-             if (name.includes('bear') || name.includes('cub')) return '🐻';
-             if (name.includes('pool') || name.includes('billiards')) return '🎱';
-             if (name.includes('dance') || name.includes('party')) return '💃';
-             if (name.includes('trivia') || name.includes('quiz')) return '🧠';
-             if (name.includes('game')) return '🎲';
-             if (name.includes('festival') || name.includes('weekend')) return '🎪';
-             if (name.includes('underwear') || name.includes('jock')) return '🩲';
-             
-             // Bar/venue specific emojis
-             if (barName.includes('animal')) return '🦁';
-             if (barName.includes('eagle')) return '🦅';
-             if (barName.includes('phoenix')) return '🔥';
-             if (barName.includes('stonewall')) return '🏳️‍🌈';
-             
-             // Description-based detection
-             if (description.includes('bear') || description.includes('cub')) return '🐻';
-             if (description.includes('leather')) return '🖤';
-             if (description.includes('dance')) return '💃';
-             
-             // Default bear emoji for bear community events
-             return '🐻';
-         }
-         
-         function extractNickname(event) {
-             const description = event.description || '';
-             
-             // Look for "Nickname:" in description
-             const nicknameMatch = description.match(/nickname:\s*([^\n\r]+)/i);
-             if (nicknameMatch) {
-                 return nicknameMatch[1].trim();
-             }
-             
-             // Look for "Nick:" in description
-             const nickMatch = description.match(/nick:\s*([^\n\r]+)/i);
-             if (nickMatch) {
-                 return nickMatch[1].trim();
-             }
-             
-             return null;
-         }
-         
-         function generateNickname(eventName) {
-             if (!eventName) return 'Event';
-             
-             // Extract meaningful words and create acronym
-             const words = eventName.split(' ')
-                 .filter(word => word.length > 2 && !['the', 'and', 'or', 'at', 'in', 'on'].includes(word.toLowerCase()))
-                 .slice(0, 3);
-             
-             if (words.length >= 2) {
-                 return words.map(word => word.charAt(0).toUpperCase()).join('');
-             }
-             
-             // Single word - take first 3 characters
-             return eventName.substring(0, 3).toUpperCase();
-         }
-         
-
-         
-         function determineEventType(event) {
-             const name = (event.name || event.summary || '').toLowerCase();
-             const description = (event.description || '').toLowerCase();
-             
-             if (name.includes('happy hour') || description.includes('happy hour')) return 'Happy Hour';
-             if (name.includes('brunch') || description.includes('brunch')) return 'Brunch';
-             if (name.includes('drag') || description.includes('drag')) return 'Drag Show';
-             if (name.includes('karaoke') || description.includes('karaoke')) return 'Entertainment';
-             if (name.includes('social') || description.includes('social')) return 'Social Event';
-             if (name.includes('party') || description.includes('party')) return 'Party';
-             if (name.includes('festival') || description.includes('festival')) return 'Festival';
-             if (name.includes('tournament') || description.includes('tournament')) return 'Tournament';
-             if (name.includes('underwear') || description.includes('underwear')) return 'Themed Party';
-             if (name.includes('leather') || description.includes('leather')) return 'Themed Night';
-             
-             return 'Social Event';
-         }
-         
-         function generateRandomNYCCoordinates() {
-             // Generate coordinates within NYC area
-             const baseLat = 40.7505;
-             const baseLng = -73.9934;
-             const range = 0.1;
-             
-             return {
-                 lat: baseLat + (Math.random() - 0.5) * range,
-                 lng: baseLng + (Math.random() - 0.5) * range
-             };
-         }
-         
-         function clearMap() {
-             markers.forEach(marker => map.removeLayer(marker));
-             markers = [];
-             testEvents.length = 0; // Clear the array but keep the reference
-             
-             // Restore original test events
-            testEvents.push(
-                {
-                    name: "Bear Happy Hour",
-                    nickname: "BHH",
-                    shortName: "Bear Happy Hour",
-                    shorterName: "BHH",
-                    bar: "The Bear Den",
-                    time: "5:00 PM - 8:00 PM",
-                    day: "Thursday",
-                    cover: "Free",
-                    coordinates: { lat: 40.7128, lng: -74.0060 },
-                    emoji: "🍺",
-                    eventType: "Happy Hour",
-                    website: "https://instagram.com/bearhappyhourny"
-                },
-                {
-                    name: "Leather Night",
-                    nickname: "Leather",
-                    shortName: "Leather Night",
-                    shorterName: "Leather",
-                    bar: "Leather & Lace",
-                    time: "9:00 PM - 2:00 AM",
-                    day: "Friday",
-                    cover: "$10",
-                    coordinates: { lat: 40.7589, lng: -73.9851 },
-                    emoji: "🖤",
-                    eventType: "Themed Night",
-                    website: "https://eagle-ny.com"
-                },
-                {
-                    name: "Sunday Funday Brunch",
-                    nickname: "SFB",
-                    shortName: "Sunday Brunch",
-                    shorterName: "SFB",
-                    bar: "Rainbow Cafe",
-                    time: "11:00 AM - 4:00 PM",
-                    day: "Sunday",
-                    cover: "Free",
-                    coordinates: { lat: 40.7505, lng: -73.9934 },
-                    emoji: "🥞",
-                    eventType: "Brunch",
-                    website: "https://animal.nyc"
-                },
-                {
-                    name: "Karaoke Night",
-                    nickname: "Karaoke",
-                    shortName: "Karaoke Night",
-                    shorterName: "Karaoke",
-                    bar: "Sing Along Bar",
-                    time: "8:00 PM - 12:00 AM",
-                    day: "Wednesday",
-                    cover: "$5",
-                    coordinates: { lat: 40.7282, lng: -73.9942 },
-                    emoji: "🎤",
-                    eventType: "Entertainment",
-                    website: "https://www.yelp.com"
-                },
-                {
-                    name: "Pool Tournament",
-                    nickname: "Pool",
-                    shortName: "Pool Tournament",
-                    shorterName: "Pool",
-                    bar: "Corner Pocket",
-                    time: "7:00 PM - 11:00 PM",
-                    day: "Tuesday",
-                    cover: "$15",
-                    coordinates: { lat: 40.7614, lng: -73.9776 },
-                    emoji: "🎱",
-                    eventType: "Tournament"
-                },
-                {
-                    name: "Drag Bingo",
-                    nickname: "D-Bingo",
-                    shortName: "Drag Bingo",
-                    shorterName: "D-Bingo",
-                    bar: "Glitter Palace",
-                    time: "7:30 PM - 10:30 PM",
-                    day: "Monday",
-                    cover: "$20",
-                    coordinates: { lat: 40.7831, lng: -73.9712 },
-                    emoji: "💄",
-                    eventType: "Drag Show"
-                },
-                {
-                    name: "Bear Weekend Festival",
-                    nickname: "BWF",
-                    shortName: "Bear Weekend",
-                    shorterName: "BWF",
-                    bar: "Multiple Venues",
-                    time: "All Day",
-                    day: "Saturday-Sunday",
-                    cover: "$50",
-                    coordinates: { lat: 40.7410, lng: -74.0014 },
-                    emoji: "🐻",
-                    eventType: "Festival",
-                    website: "https://github.com"
-                },
-                {
-                    name: "Game Night",
-                    nickname: "Games",
-                    shortName: "Game Night",
-                    shorterName: "Games",
-                    bar: "Board & Brew",
-                    time: "6:00 PM - 10:00 PM",
-                    day: "Thursday",
-                    cover: "Free",
-                    coordinates: { lat: 40.7549, lng: -73.9840 },
-                    emoji: "🎲",
-                    eventType: "Games"
-                }
-            );
-            
-            updateMapMarkers();
-            renderEvents();
-            
-            logger.userInteraction('MAP', 'Map cleared and reset to original events');
-        }
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new MapIconLaboratory();
+        });
     </script>
 </body>
 </html>
