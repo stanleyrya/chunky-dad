@@ -1049,23 +1049,51 @@ class DynamicCalendarLoader extends CalendarCore {
         });
     }
 
-    // Generate favicon HTML for map popup
-    getFaviconHtml(websiteUrl) {
-        if (!websiteUrl) return '';
+
+    // Create marker icon with favicon or fallback
+    createMarkerIcon(event) {
+        const defaultLogoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
         
-        try {
-            // Ensure URL has protocol
-            let url = websiteUrl;
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
+        if (event.website) {
+            try {
+                // Ensure URL has protocol
+                let url = event.website;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                
+                const hostname = new URL(url).hostname;
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                
+                return L.divIcon({
+                    className: 'favicon-marker',
+                    html: `
+                        <div class="favicon-marker-container">
+                            <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon" 
+                                 onerror="this.src='${defaultLogoPath}'; this.parentElement.classList.add('fallback');">
+                        </div>
+                    `,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -16]
+                });
+            } catch (error) {
+                logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
             }
-            
-            const hostname = new URL(url).hostname;
-            return `<img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=16" alt="favicon" class="popup-favicon" onerror="this.style.display='none'">`;
-        } catch (error) {
-            logger.warn('MAP', 'Failed to generate favicon HTML', { websiteUrl, error: error.message });
-            return '';
         }
+        
+        // Fallback to chunky.dad logo
+        return L.divIcon({
+            className: 'favicon-marker fallback',
+            html: `
+                <div class="favicon-marker-container fallback">
+                    <img src="${defaultLogoPath}" alt="chunky.dad" class="favicon-marker-icon">
+                </div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+        });
     }
 
     getCurrentPeriodBounds() {
@@ -2206,36 +2234,20 @@ class DynamicCalendarLoader extends CalendarCore {
             let markersAdded = 0;
             const markers = []; // Store markers for fit all function
             
-            // Create custom marker icon
-            const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
-            const customIcon = L.divIcon({
-                className: 'custom-marker',
-                html: `
-                    <div class="marker-pin">
-                        <div class="marker-icon"><img src="${logoPath}" alt="chunky.dad" class="map-marker-icon"></div>
-                    </div>
-                `,
-                iconSize: [44, 56],
-                iconAnchor: [22, 56],
-                popupAnchor: [0, -56]
-            });
-
             events.forEach(event => {
                 if (event.coordinates?.lat && event.coordinates?.lng && 
                     !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
+                    
+                    // Create custom marker icon with favicon or fallback
+                    const markerIcon = this.createMarkerIcon(event);
+                    
                     const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
-                        icon: customIcon
+                        icon: markerIcon
                     })
                         .addTo(map)
                         .bindPopup(`
                             <div class="map-popup">
-                                <div class="popup-header">
-                                    <div class="popup-title-section">
-                                        ${event.website ? this.getFaviconHtml(event.website) : ''}
-                                        <h4>${event.shorterName || event.shortName || event.name}</h4>
-                                    </div>
-                                    ${event.instagram ? `<a href="${event.instagram}" target="_blank" class="popup-instagram" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
-                                </div>
+                                <h4>${event.shorterName || event.shortName || event.name}</h4>
                                 <p><strong>📍 ${event.bar || 'Location'}</strong></p>
                                 <p>📅 ${event.day} ${event.time}</p>
                                 ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<p>💰 ${event.cover}</p>` : ''}

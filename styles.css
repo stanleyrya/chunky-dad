@@ -2655,102 +2655,48 @@ body.index-page main {
     margin-bottom: 0;
 }
 
-/* Map popup header styling */
-.popup-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.5rem;
-}
-
-.popup-title-section {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-}
-
-.popup-favicon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-}
-
-.popup-instagram {
-    color: var(--primary-color);
-    font-size: 1.2rem;
-    text-decoration: none;
-    flex-shrink: 0;
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-}
-
-.popup-instagram:hover {
-    background-color: rgba(var(--primary-color-rgb), 0.1);
-}
 
 /* Custom Map Marker Styling */
-.custom-marker {
+/* Favicon Map Marker Styling */
+.favicon-marker {
     background: none;
     border: none;
 }
 
-.marker-pin {
+.favicon-marker-container {
     position: relative;
-    width: 44px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.marker-pin::before {
-    content: '';
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%) rotate(-45deg);
     width: 32px;
     height: 32px;
-    background: var(--solid-primary);
-    border-radius: 50% 50% 50% 0;
-    box-shadow: 0 4px 12px var(--shadow-primary);
-    border: 3px solid var(--white);
-}
-
-.marker-pin::after {
-    content: '';
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-top: 12px solid var(--primary-color);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-}
-
-.marker-icon {
-    position: absolute;
-    z-index: 10;
-    font-size: 1.4rem;
-    color: var(--white);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
-    margin-top: -8px;
+    background: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
 }
 
-.marker-pin:hover::before {
-    background: var(--solid-primary);
-    transform: translateX(-50%) rotate(-45deg) scale(1.1);
+.favicon-marker-container:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.favicon-marker-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: 2px;
+}
+
+/* Fallback styling for chunky.dad logo */
+.favicon-marker-container.fallback {
+    background: var(--primary-color);
+    border-color: var(--white);
+}
+
+.favicon-marker-container.fallback .favicon-marker-icon {
+    filter: brightness(0) invert(1); /* Make logo white */
 }
 
 .map-link {
@@ -3566,22 +3512,14 @@ footer {
         border-radius: 10px;
     }
 
-    .marker-pin {
-        transform: scale(1.0);
+    .favicon-marker-container {
+        width: 28px;
+        height: 28px;
     }
 
-    .marker-pin::before {
-        width: 24px;
-        height: 24px;
-    }
-
-    .marker-pin::after {
-        border-width: 8px 4px 0;
-    }
-
-    .marker-icon {
-        font-size: 1.2rem;
-        line-height: 20px;
+    .favicon-marker-icon {
+        width: 18px;
+        height: 18px;
     }
 
 
