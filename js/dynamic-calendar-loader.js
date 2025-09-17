@@ -1049,6 +1049,59 @@ class DynamicCalendarLoader extends CalendarCore {
         });
     }
 
+
+    // Create marker icon with favicon or three letters
+    createMarkerIcon(event) {
+        if (event.website) {
+            try {
+                // Ensure URL has protocol
+                let url = event.website;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                
+                const hostname = new URL(url).hostname;
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                const textFallback = this.getMarkerText(event);
+                
+                return L.divIcon({
+                    className: 'favicon-marker',
+                    html: `
+                        <div class="favicon-marker-container">
+                            <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon" 
+                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
+                        </div>
+                    `,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -16]
+                });
+            } catch (error) {
+                logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
+            }
+        }
+        
+        // Use text from shorter field or shortName or name
+        const markerText = this.getMarkerText(event);
+        return L.divIcon({
+            className: 'favicon-marker text-marker',
+            html: `
+                <div class="favicon-marker-container text-marker">
+                    <span class="marker-text">${markerText}</span>
+                </div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+        });
+    }
+
+    // Get marker text from event data
+    getMarkerText(event) {
+        // Priority: shorter → shortName → name
+        return event.shorter || event.shortName || event.name || 'Event';
+    }
+
     getCurrentPeriodBounds() {
         return this.currentView === 'week' 
             ? this.getWeekBounds(this.currentDate)
@@ -2187,30 +2240,20 @@ class DynamicCalendarLoader extends CalendarCore {
             let markersAdded = 0;
             const markers = []; // Store markers for fit all function
             
-            // Create custom marker icon
-            const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
-            const customIcon = L.divIcon({
-                className: 'custom-marker',
-                html: `
-                    <div class="marker-pin">
-                        <div class="marker-icon"><img src="${logoPath}" alt="chunky.dad" class="map-marker-icon"></div>
-                    </div>
-                `,
-                iconSize: [44, 56],
-                iconAnchor: [22, 56],
-                popupAnchor: [0, -56]
-            });
-
             events.forEach(event => {
                 if (event.coordinates?.lat && event.coordinates?.lng && 
                     !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
+                    
+                    // Create custom marker icon with favicon or fallback
+                    const markerIcon = this.createMarkerIcon(event);
+                    
                     const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
-                        icon: customIcon
+                        icon: markerIcon
                     })
                         .addTo(map)
                         .bindPopup(`
                             <div class="map-popup">
-                                <h4>${event.name}</h4>
+                                <h4>${event.shorterName || event.shortName || event.name}</h4>
                                 <p><strong>📍 ${event.bar || 'Location'}</strong></p>
                                 <p>📅 ${event.day} ${event.time}</p>
                                 ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<p>💰 ${event.cover}</p>` : ''}
