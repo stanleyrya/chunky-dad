@@ -50,8 +50,8 @@
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            padding: 30px;
+            margin-bottom: 20px;
+            padding: 20px;
             background: var(--bg-medium);
             border-radius: 16px;
             border: 2px solid var(--border-color);
@@ -59,30 +59,30 @@
         
         .title {
             color: var(--primary-orange);
-            font-size: 2.8rem;
+            font-size: 2.2rem;
             font-weight: 700;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             text-shadow: 0 2px 4px rgba(255, 165, 0, 0.3);
         }
         
         .subtitle {
             color: var(--text-medium);
-            font-size: 1.3rem;
-            margin-bottom: 25px;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
         }
 
         .feature-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
         }
 
         .feature-item {
             background: var(--bg-light);
-            padding: 12px;
+            padding: 8px;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-align: left;
         }
 
@@ -92,6 +92,7 @@
         
         .controls-section {
             margin-bottom: 30px;
+            margin-top: 10px;
         }
         
         .control-panel {
@@ -492,15 +493,22 @@
         /* Responsive design */
         @media (max-width: 768px) {
             .container { padding: 15px; }
-            .title { font-size: 2.2rem; }
+            .title { font-size: 1.8rem; }
+            .subtitle { font-size: 1rem; }
+            .header { padding: 15px; margin-bottom: 15px; }
+            .feature-grid { grid-template-columns: 1fr; gap: 8px; }
+            .feature-item { padding: 6px; font-size: 0.8rem; }
             .button-grid { grid-template-columns: 1fr; }
             .events-grid { grid-template-columns: 1fr; }
-            .feature-grid { grid-template-columns: 1fr; }
             #test-map { height: 400px; }
         }
 
         @media (max-width: 480px) {
-            .title { font-size: 1.8rem; }
+            .title { font-size: 1.5rem; }
+            .subtitle { font-size: 0.9rem; }
+            .header { padding: 12px; margin-bottom: 12px; }
+            .feature-grid { gap: 6px; }
+            .feature-item { padding: 4px; font-size: 0.75rem; }
             .control-panel { padding: 15px; }
             .map-container { padding: 15px; }
             .events-section { padding: 15px; }
