@@ -1067,8 +1067,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 return L.divIcon({
                     className: 'favicon-marker',
                     html: `
-                        <div class="favicon-marker-container" id="marker-${event.slug || 'unknown'}">
-                            <span class="marker-text" style="display: block;">${textFallback}</span>
+                        <div class="favicon-marker-container">
+                            <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
+                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
                         </div>
                     `,
                     iconSize: [32, 32],
@@ -2283,68 +2284,12 @@ class DynamicCalendarLoader extends CalendarCore {
             window.eventsMap = map;
             window.eventsMapMarkers = markers; // Store markers globally for controls
 
-            // Simple favicon loading after map is ready
-            setTimeout(() => {
-                this.loadSimpleFavicons();
-            }, 100);
+            // Favicons now load directly in marker creation
         } catch (error) {
             logger.componentError('MAP', 'Failed to initialize map', error);
         }
     }
 
-    // Simple favicon loader using the user's suggested approach
-    loadSimpleFavicons() {
-        try {
-            // Find all marker containers that need favicons
-            const markers = document.querySelectorAll('.favicon-marker-container');
-            
-            markers.forEach(markerContainer => {
-                const markerId = markerContainer.id;
-                if (!markerId || !markerId.startsWith('marker-')) return;
-                
-                const eventSlug = markerId.replace('marker-', '');
-                const event = this.eventsData?.find(e => e.slug === eventSlug);
-                
-                if (event && event.website) {
-                    try {
-                        let url = event.website;
-                        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                            url = 'https://' + url;
-                        }
-                        
-                        const hostname = new URL(url).hostname;
-                        const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-                        
-                        // Create simplified img element
-                        const img = document.createElement("img");
-                        img.src = faviconUrl;
-                        img.crossOrigin = "anonymous";
-                        img.style.width = "24px";
-                        img.style.height = "24px";
-                        img.style.objectFit = "contain";
-                        img.onerror = () => {
-                            logger.warn('MAP', 'Favicon failed to load for', { hostname, eventSlug });
-                            // Keep the text fallback that's already there
-                        };
-                        img.onload = () => {
-                            // Replace text with favicon on successful load
-                            const textSpan = markerContainer.querySelector('.marker-text');
-                            if (textSpan) {
-                                textSpan.style.display = 'none';
-                            }
-                            markerContainer.appendChild(img);
-                        };
-                    } catch (error) {
-                        logger.warn('MAP', 'Failed to process favicon for marker', { eventSlug, error: error.message });
-                    }
-                }
-            });
-            
-            logger.componentLoad('MAP', `Simple favicon loading initiated for ${markers.length} markers`);
-        } catch (error) {
-            logger.componentError('MAP', 'Simple favicon loading failed', error);
-        }
-    }
 
 
     // Update calendar display with filtered events
