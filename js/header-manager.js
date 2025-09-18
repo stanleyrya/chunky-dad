@@ -32,6 +32,9 @@ class HeaderManager {
         if (this.isCityPage()) {
             this.addCitySelector();
         }
+
+        // Apply iOS Safari visualViewport workaround for fixed header misalignment bugs
+        this.applyIosHeaderWorkaround(header);
     }
 
     updateHeaderTitle() {
@@ -63,6 +66,42 @@ class HeaderManager {
         }
 
         this.logger.componentLoad('HEADER', `Header title updated: ${title}`);
+    }
+
+    // iOS Safari 18/26 beta header misalignment workaround
+    applyIosHeaderWorkaround(headerEl) {
+        try {
+            const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+            const isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+            const vv = window.visualViewport;
+
+            if (!isIOS || !isSafari || !vv) return;
+            if (!this.isCityPage()) return; // limit scope to city pages per report
+
+            let rafId = null;
+            const adjust = () => {
+                rafId && cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    // Compute header offset based on visual viewport y offset
+                    const offsetY = Math.max(0, Math.round(vv.offsetTop || 0));
+                    // Use transform to avoid layout thrash and preserve position: fixed
+                    headerEl.style.transform = offsetY ? `translateY(${offsetY}px)` : '';
+                });
+            };
+
+            // Respond to viewport changes and scroll
+            vv.addEventListener('scroll', adjust);
+            vv.addEventListener('resize', adjust);
+            window.addEventListener('scroll', adjust, { passive: true });
+
+            // Initial adjustment after a tick to ensure computed styles are ready
+            setTimeout(adjust, 0);
+
+            this.logger.info('HEADER', 'iOS Safari header workaround enabled');
+        } catch (e) {
+            this.logger.warn('HEADER', 'Failed to enable iOS header workaround', { error: e?.message });
+        }
     }
 
     isCityPage() {
