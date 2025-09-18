@@ -33,8 +33,6 @@ class HeaderManager {
             this.addCitySelector();
         }
 
-        // Apply iOS Safari visualViewport workaround for fixed header misalignment bugs
-        this.applyIosHeaderWorkaround(header);
     }
 
 
@@ -69,94 +67,6 @@ class HeaderManager {
         this.logger.componentLoad('HEADER', `Header title updated: ${title}`);
     }
 
-    // iOS Safari header misalignment workaround
-    applyIosHeaderWorkaround(headerEl) {
-        try {
-            const ua = navigator.userAgent || navigator.vendor || window.opera || '';
-            const isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-            const vv = window.visualViewport;
-
-            if (!isIOS || !isSafari) return;
-            if (!this.isCityPage()) return; // limit scope to city pages per report
-
-            const iosVersion = this.getIOSVersion(ua);
-
-            let rafId = null;
-            let adjustmentCount = 0;
-            const maxAdjustments = 10; // Prevent infinite adjustment loops
-
-            const adjust = () => {
-                if (adjustmentCount >= maxAdjustments) return;
-                
-                rafId && cancelAnimationFrame(rafId);
-                rafId = requestAnimationFrame(() => {
-                    adjustmentCount++;
-                    
-                    let offsetY = 0;
-                    
-                    if (vv && typeof vv.offsetTop === 'number') {
-                        // Use visual viewport if available and valid
-                        offsetY = Math.max(0, Math.round(vv.offsetTop || 0));
-                    }
-                    
-                    // Get current transform and remove any existing translateY
-                    const currentTransform = headerEl.style.transform || '';
-                    const baseTransform = currentTransform.replace(/translateY\([^)]*\)\s*/g, '').trim();
-                    
-                    // Build new transform with iOS offset
-                    let newTransform = '';
-                    if (baseTransform) {
-                        newTransform = offsetY > 0 ? `${baseTransform} translateY(${offsetY}px)` : baseTransform;
-                    } else {
-                        newTransform = offsetY > 0 ? `translateY(${offsetY}px)` : '';
-                    }
-                    
-                    // Apply the transform
-                    headerEl.style.transform = newTransform;
-                    
-                    // Debug logging
-                    if (offsetY > 0) {
-                        this.logger.debug('HEADER', `iOS header adjusted: translateY(${offsetY}px)`, {
-                            offsetY, baseTransform, newTransform, adjustmentCount
-                        });
-                    } else if (currentTransform !== newTransform) {
-                        this.logger.debug('HEADER', 'iOS header translateY removed', {
-                            originalTransform: currentTransform,
-                            newTransform, adjustmentCount
-                        });
-                    }
-                });
-            };
-
-
-            // Respond to viewport changes and scroll
-            if (vv) {
-                vv.addEventListener('scroll', adjust);
-                vv.addEventListener('resize', adjust);
-            }
-            window.addEventListener('scroll', adjust, { passive: true });
-
-            // Initial adjustment
-            adjust();
-
-            this.logger.info('HEADER', 'iOS Safari header workaround enabled', {
-                initialOffsetTop: vv?.offsetTop || 0,
-                headerElement: headerEl.tagName,
-                visualViewportSupported: !!vv,
-                iosVersion,
-                adjustmentCount: 0
-            });
-        } catch (e) {
-            this.logger.warn('HEADER', 'Failed to enable iOS header workaround', { error: e?.message });
-        }
-    }
-
-    // Helper method to extract iOS version from user agent
-    getIOSVersion(userAgent) {
-        const match = userAgent.match(/OS (\d+)_/);
-        return match ? parseInt(match[1], 10) : 0;
-    }
 
     isCityPage() {
         // Check for both legacy city.html format and new city subdirectory format

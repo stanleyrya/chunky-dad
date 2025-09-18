@@ -5631,7 +5631,7 @@ footer {
     .bear-intel-form input,
     .bear-intel-form textarea,
     .bear-intel-form select {
-        font-size: 16px; /* Prevents zoom on iOS */
+        font-size: 16px;
     }
 }
 
