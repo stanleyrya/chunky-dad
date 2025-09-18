@@ -94,6 +94,13 @@ class NavigationManager {
             return;
         }
 
+        // Skip dynamic header setup if header is pre-generated (city pages)
+        const existingCitySwitcher = document.querySelector('.city-switcher');
+        if (existingCitySwitcher) {
+            logger.debug('NAV', 'Skipping dynamic header - using pre-generated header');
+            return;
+        }
+
         logger.componentInit('NAV', 'Setting up dynamic header for index page');
         
         

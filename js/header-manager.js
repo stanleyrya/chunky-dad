@@ -25,14 +25,21 @@ class HeaderManager {
             return;
         }
 
-        // Update header title based on page type
+        // Check if header is already pre-generated (for city pages)
+        const existingCitySwitcher = document.querySelector('.city-switcher');
+        if (existingCitySwitcher) {
+            this.logger.componentLoad('HEADER', 'Using pre-generated header with city selector');
+            this.setupPreGeneratedCitySelector();
+            return;
+        }
+
+        // Update header title based on page type (for non-pre-generated headers)
         this.updateHeaderTitle();
         
-        // Add city selector to city pages
+        // Add city selector to city pages (fallback for non-pre-generated)
         if (this.isCityPage()) {
             this.addCitySelector();
         }
-
     }
 
 
@@ -316,6 +323,91 @@ class HeaderManager {
         navContainer.appendChild(debugInfo);
 
         this.logger.componentLoad('HEADER', 'Debug info added to test page');
+    }
+
+    setupPreGeneratedCitySelector() {
+        this.logger.componentInit('HEADER', 'Setting up event handlers for pre-generated city selector');
+        
+        const emojiButton = document.getElementById('city-switcher-btn');
+        const dropdown = document.getElementById('city-dropdown');
+        const citySelector = document.querySelector('.city-switcher');
+        
+        if (!emojiButton || !dropdown || !citySelector) {
+            this.logger.componentError('HEADER', 'Pre-generated city selector elements not found');
+            return;
+        }
+
+        // Set current city from URL
+        const cityKey = this.getCityFromURL();
+        if (cityKey) {
+            this.currentCity = getCityConfig(cityKey);
+        }
+
+        // Add event listeners to city options
+        const cityOptions = dropdown.querySelectorAll('.city-option');
+        cityOptions.forEach((option, index) => {
+            // Get city data from the DOM
+            const emoji = option.querySelector('.city-option-emoji').textContent;
+            const name = option.querySelector('.city-option-name').textContent;
+            
+            // Find matching city key from config
+            const matchingCity = Object.entries(window.CITY_CONFIG || {}).find(([key, config]) => 
+                config.name === name && config.emoji === emoji
+            );
+            
+            if (matchingCity) {
+                const [cityKey] = matchingCity;
+                option.addEventListener('click', () => {
+                    this.switchCity(cityKey);
+                });
+            }
+        });
+
+        // Add event listeners for dropdown toggle
+        emojiButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.logger.userInteraction('HEADER', 'Pre-generated city switcher button clicked');
+            this.toggleDropdown(dropdown);
+        });
+
+        // Add fallback click handler for better compatibility
+        emojiButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+        });
+
+        // Add touch support for mobile devices
+        emojiButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.logger.userInteraction('HEADER', 'Pre-generated city switcher button touched');
+            this.toggleDropdown(dropdown);
+        });
+
+        // Close dropdown when clicking outside
+        const closeDropdown = (e) => {
+            if (!citySelector.contains(e.target)) {
+                dropdown.classList.remove('open');
+                emojiButton.classList.remove('active');
+                // Reset inline styles when closing
+                dropdown.style.pointerEvents = '';
+                dropdown.style.visibility = '';
+                dropdown.style.opacity = '';
+                dropdown.style.transform = '';
+            }
+        };
+        
+        document.addEventListener('click', closeDropdown);
+
+        // Prevent dropdown from closing when clicking inside
+        dropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        this.logger.componentLoad('HEADER', `Pre-generated city selector setup complete with ${cityOptions.length} cities`);
+        
+        // Verify dropdown is properly positioned
+        setTimeout(() => {
+            this.verifyDropdownSetup(dropdown, citySelector);
+        }, 100);
     }
 
     // Public method to update header when city changes
