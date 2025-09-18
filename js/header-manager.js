@@ -510,15 +510,16 @@ class HeaderManager {
     }
 }
 
-// Initialize header manager immediately when script loads
-// This allows header to update as soon as possible without waiting for full DOM
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.headerManager = new HeaderManager();
-    });
-} else {
-    // DOM is already ready, initialize immediately
+function initHeaderWhenReady() {
+  requestAnimationFrame(() => {
     window.headerManager = new HeaderManager();
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initHeaderWhenReady);
+} else {
+  initHeaderWhenReady();
 }
 
 // Export for use in other modules
