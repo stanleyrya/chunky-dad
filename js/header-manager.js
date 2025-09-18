@@ -35,6 +35,56 @@ class HeaderManager {
 
         // Apply iOS Safari visualViewport workaround for fixed header misalignment bugs
         this.applyIosHeaderWorkaround(header);
+        
+        // iOS 26 specific: Additional header visibility check
+        this.ensureHeaderVisibility(header);
+    }
+
+    // iOS 26 specific: Ensure header is visible and properly positioned
+    ensureHeaderVisibility(headerEl) {
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        const isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+        const iosVersion = this.getIOSVersion(ua);
+        const isIOS26 = iosVersion >= 18;
+
+        if (!isIOS || !isSafari || !isIOS26) return;
+
+        // Force header to be visible on iOS 26
+        const forceVisible = () => {
+            const rect = headerEl.getBoundingClientRect();
+            const isVisible = rect.top >= 0 && rect.top < window.innerHeight;
+            
+            if (!isVisible) {
+                this.logger.debug('HEADER', 'iOS 26 header not visible, forcing visibility', {
+                    rectTop: rect.top,
+                    windowHeight: window.innerHeight,
+                    isVisible
+                });
+                
+                // Reset any problematic transforms
+                headerEl.style.transform = '';
+                headerEl.style.position = 'fixed';
+                headerEl.style.top = '0';
+                headerEl.style.left = '0';
+                headerEl.style.right = '0';
+                headerEl.style.zIndex = '9998';
+            }
+        };
+
+        // Check immediately and after delays
+        forceVisible();
+        setTimeout(forceVisible, 50);
+        setTimeout(forceVisible, 200);
+        setTimeout(forceVisible, 500);
+        
+        // Also check on window resize
+        window.addEventListener('resize', forceVisible, { passive: true });
+        
+        this.logger.info('HEADER', 'iOS 26 header visibility check enabled', {
+            iosVersion,
+            isIOS26
+        });
     }
 
     updateHeaderTitle() {
@@ -76,15 +126,38 @@ class HeaderManager {
             const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
             const vv = window.visualViewport;
 
-            if (!isIOS || !isSafari || !vv) return;
+            if (!isIOS || !isSafari) return;
             if (!this.isCityPage()) return; // limit scope to city pages per report
 
+            // iOS 26 specific detection - check for iOS 18+ (which includes 26)
+            const iosVersion = this.getIOSVersion(ua);
+            const isIOS26 = iosVersion >= 18;
+
             let rafId = null;
+            let adjustmentCount = 0;
+            const maxAdjustments = 10; // Prevent infinite adjustment loops
+
             const adjust = () => {
+                if (adjustmentCount >= maxAdjustments) return;
+                
                 rafId && cancelAnimationFrame(rafId);
                 rafId = requestAnimationFrame(() => {
-                    // Compute header offset based on visual viewport y offset
-                    const offsetY = Math.max(0, Math.round(vv.offsetTop || 0));
+                    adjustmentCount++;
+                    
+                    // For iOS 26, use a more conservative approach
+                    let offsetY = 0;
+                    
+                    if (vv && typeof vv.offsetTop === 'number') {
+                        // Use visual viewport if available and valid
+                        offsetY = Math.max(0, Math.round(vv.offsetTop || 0));
+                    } else if (isIOS26) {
+                        // iOS 26 fallback: ensure header is visible by checking its position
+                        const rect = headerEl.getBoundingClientRect();
+                        if (rect.top < 0) {
+                            // Header is above viewport, bring it down
+                            offsetY = Math.abs(rect.top);
+                        }
+                    }
                     
                     // Get current transform and remove any existing translateY
                     const currentTransform = headerEl.style.transform || '';
@@ -101,36 +174,70 @@ class HeaderManager {
                     // Apply the transform
                     headerEl.style.transform = newTransform;
                     
+                    // Ensure header is visible and positioned correctly
+                    if (isIOS26) {
+                        headerEl.style.position = 'fixed';
+                        headerEl.style.top = '0';
+                        headerEl.style.left = '0';
+                        headerEl.style.right = '0';
+                        headerEl.style.zIndex = '9998';
+                    }
+                    
                     // Debug logging
                     if (offsetY > 0) {
                         this.logger.debug('HEADER', `iOS header adjusted: translateY(${offsetY}px)`, {
-                            offsetY, baseTransform, newTransform
+                            offsetY, baseTransform, newTransform, adjustmentCount, isIOS26
                         });
                     } else if (currentTransform !== newTransform) {
                         this.logger.debug('HEADER', 'iOS header translateY removed', {
                             originalTransform: currentTransform,
-                            newTransform
+                            newTransform, adjustmentCount, isIOS26
                         });
                     }
                 });
             };
 
+            // iOS 26 specific: Multiple adjustment attempts with delays
+            if (isIOS26) {
+                // Immediate adjustment
+                adjust();
+                
+                // Additional adjustments with delays for iOS 26
+                setTimeout(adjust, 100);
+                setTimeout(adjust, 300);
+                setTimeout(adjust, 500);
+                setTimeout(adjust, 1000);
+            }
+
             // Respond to viewport changes and scroll
-            vv.addEventListener('scroll', adjust);
-            vv.addEventListener('resize', adjust);
+            if (vv) {
+                vv.addEventListener('scroll', adjust);
+                vv.addEventListener('resize', adjust);
+            }
             window.addEventListener('scroll', adjust, { passive: true });
 
             // Initial adjustment - make it immediate to prevent visual delay on iOS Safari
-            adjust();
+            if (!isIOS26) {
+                adjust();
+            }
 
             this.logger.info('HEADER', 'iOS Safari header workaround enabled', {
-                initialOffsetTop: vv.offsetTop || 0,
+                initialOffsetTop: vv?.offsetTop || 0,
                 headerElement: headerEl.tagName,
-                visualViewportSupported: !!vv
+                visualViewportSupported: !!vv,
+                iosVersion,
+                isIOS26,
+                adjustmentCount: 0
             });
         } catch (e) {
             this.logger.warn('HEADER', 'Failed to enable iOS header workaround', { error: e?.message });
         }
+    }
+
+    // Helper method to extract iOS version from user agent
+    getIOSVersion(userAgent) {
+        const match = userAgent.match(/OS (\d+)_/);
+        return match ? parseInt(match[1], 10) : 0;
     }
 
     isCityPage() {
