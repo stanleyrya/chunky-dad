@@ -2853,6 +2853,54 @@ footer {
         /* Optimize for mobile performance */
         transform: translateZ(0); /* Force hardware acceleration */
     }
+}
+
+/* iOS Safari Header Bug Workarounds */
+@supports (-webkit-touch-callout: none) {
+    /* iOS-specific fixes for Safari header positioning bug */
+    header {
+        /* Enhanced positioning for iOS Safari */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9998;
+        /* Force a new stacking context to prevent rendering issues */
+        transform: translateZ(0);
+        /* Ensure proper rendering with safe areas */
+        padding-top: env(safe-area-inset-top, 0);
+        /* Prevent layout shifts */
+        will-change: transform, padding-top;
+    }
+    
+    /* Prevent body scroll issues that can trigger the bug */
+    body {
+        /* Ensure proper overflow handling */
+        overflow-x: hidden;
+        /* Support for safe areas */
+        padding-top: env(safe-area-inset-top, 0);
+    }
+    
+    /* Additional stability for iOS viewport changes */
+    @media screen and (max-width: 768px) {
+        header {
+            /* More aggressive hardware acceleration on mobile iOS */
+            -webkit-transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            /* Prevent sub-pixel rendering issues */
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Ensure body doesn't interfere with header positioning */
+        body {
+            /* Prevent iOS Safari from adjusting the viewport incorrectly */
+            -webkit-text-size-adjust: 100%;
+            /* Ensure consistent rendering */
+            position: relative;
+        }
+    }
+}
     
     .nav-menu {
         position: fixed;

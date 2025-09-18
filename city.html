@@ -191,6 +191,7 @@
     
     <!-- Critical scripts for header and basic functionality -->
     <script src="js/logger.js" onerror="console.error('Failed to load logger.js')"></script>
+    <script src="js/ios-safari-fix.js" onerror="window.mobileErrorHandler && window.mobileErrorHandler(event.error, 'ios-safari-fix.js')"></script>
     <script src="js/debug-overlay.js" onerror="window.mobileErrorHandler && window.mobileErrorHandler(event.error, 'debug-overlay.js')"></script>
     <script src="js/city-config.js" onerror="window.mobileErrorHandler && window.mobileErrorHandler(event.error, 'city-config.js')"></script>
     <script src="js/header-manager.js" onerror="window.mobileErrorHandler && window.mobileErrorHandler(event.error, 'header-manager.js')"></script>

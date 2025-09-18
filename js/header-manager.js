@@ -298,6 +298,14 @@ class HeaderManager {
     }
 
     setupDebugOptions() {
+        // Add iOS Safari fix button for debugging (always available on mobile)
+        const isMobile = window.innerWidth <= 768;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        
+        if (isMobile || this.isTestPage) {
+            this.addIOSFixButton();
+        }
+        
         if (!this.isTestPage) return;
 
         // Add debug info to header
@@ -313,6 +321,66 @@ class HeaderManager {
         navContainer.appendChild(debugInfo);
 
         this.logger.componentLoad('HEADER', 'Debug info added to test page');
+    }
+    
+    addIOSFixButton() {
+        const navContainer = document.querySelector('.nav-container');
+        if (!navContainer) return;
+        
+        // Create a subtle fix button for iOS users
+        const fixButton = document.createElement('button');
+        fixButton.className = 'ios-fix-button';
+        fixButton.innerHTML = '🔧';
+        fixButton.title = 'Fix header position (iOS Safari bug workaround)';
+        fixButton.style.cssText = `
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+            padding: 4px 6px;
+            cursor: pointer;
+            opacity: 0.7;
+            z-index: 10000;
+            display: none;
+        `;
+        
+        // Only show button if iOS Safari fix is available and needed
+        const checkAndShowButton = () => {
+            if (window.iosSafariFix && window.iosSafariFix.isFixNeeded()) {
+                fixButton.style.display = 'block';
+                this.logger.info('HEADER', 'iOS Safari fix button shown - header misalignment detected');
+            } else {
+                fixButton.style.display = 'none';
+            }
+        };
+        
+        // Check periodically for misalignment
+        setInterval(checkAndShowButton, 2000);
+        
+        // Handle button click
+        fixButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (window.iosSafariFix) {
+                const fixed = window.iosSafariFix.fixHeaderPosition();
+                this.logger.userInteraction('HEADER', 'iOS Safari fix button clicked', { fixed });
+                
+                if (fixed) {
+                    // Hide button temporarily after successful fix
+                    fixButton.style.display = 'none';
+                    setTimeout(checkAndShowButton, 1000);
+                }
+            }
+        });
+        
+        navContainer.appendChild(fixButton);
+        this.logger.componentLoad('HEADER', 'iOS Safari fix button added');
     }
 
     // Public method to update header when city changes
