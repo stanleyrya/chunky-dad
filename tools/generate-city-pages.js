@@ -52,6 +52,51 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
     html = html.replace('</head>', `  <meta name="description" content="${cityDesc}">\n</head>`);
   }
 
+  // Add URL normalization script for city pages
+  const urlNormalizationScript = `
+    <script>
+      (function() {
+        try {
+          // Only run normalization if we're on a city page
+          var path = window.location.pathname || '';
+          if (path.indexOf('city.html') !== -1 || path.split('/').filter(Boolean).length > 0) {
+            var url = new URL(window.location.href);
+            var params = url.searchParams;
+            var slug = params.get('city') || (window.location.hash ? window.location.hash.replace('#', '') : '');
+            if (slug) {
+              slug = String(slug).trim().toLowerCase().replace(/\\s+/g, '-');
+              var newUrl = '/' + slug + '/';
+              var preserved = [];
+              params.forEach(function(value, key) {
+                if (key !== 'city' && value != null && value !== '') {
+                  preserved.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                }
+              });
+              if (preserved.length > 0) {
+                newUrl += '?' + preserved.join('&');
+              }
+              if (url.hash && url.hash !== '#' + slug) {
+                newUrl += url.hash;
+              }
+              var currentFull = (window.location.pathname || '') + (window.location.search || '') + (window.location.hash || '');
+              if (newUrl !== currentFull) {
+                console.info('[CITY] Normalizing URL to canonical path:', newUrl);
+                window.location.replace(newUrl);
+              }
+            }
+          }
+        } catch (e) {
+          // Silently ignore normalization errors
+        }
+      })();
+    </script>`;
+
+  // Inject URL normalization script after the viewport meta tag
+  html = html.replace(
+    /<meta name="viewport"[^>]*>/,
+    `$&\n    ${urlNormalizationScript}`
+  );
+
   // Canonical link
   const canonicalHref = `/${cityKey}/`;
   if (html.match(/<link rel="canonical"[^>]*>/)) {
