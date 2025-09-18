@@ -63,14 +63,6 @@ function generateCityHeader(html, cityKey, cityConfig) {
                     </div>
                 </div>
                 
-                <!-- Navigation menu hidden on city pages - only show on index.html -->
-                <ul class="nav-menu city-page-nav" style="display: none;">
-                    <li><a href="../index.html">Home</a></li>
-                    <li><a href="../index.html#cities">Cities</a></li>
-                    <li><a href="../index.html#events">Events</a></li>
-                    <li><a href="../index.html#businesses">Businesses</a></li>
-                    <li><a href="../index.html#contact">Contact</a></li>
-                </ul>
                 <div class="hamburger">
                     <span></span>
                     <span></span>
