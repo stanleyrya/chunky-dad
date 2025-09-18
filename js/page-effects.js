@@ -43,31 +43,14 @@ class PageEffectsManager {
 
     init() {
         logger.componentInit('PAGE', 'Page effects manager initializing');
-        this.injectDynamicStyles();
-        this.setupParallaxEffects();
         this.setupIntersectionObserver();
         this.setupInteractiveElements();
-        this.setupCityBubbles();
         this.setupPageLoadEffects();
         logger.componentLoad('PAGE', 'Page effects manager initialized');
     }
 
 
 
-    setupParallaxEffects() {
-        if (this.heroImage) {
-            logger.componentInit('PAGE', 'Hero parallax effect setup');
-            
-            window.addEventListener('scroll', () => {
-                const scrolled = window.pageYOffset;
-                this.heroImage.style.transform = `translateY(${scrolled * 0.5}px)`;
-            });
-            
-            logger.componentLoad('PAGE', 'Hero parallax effect enabled');
-        } else {
-            logger.debug('PAGE', 'Hero image not found - parallax effect skipped');
-        }
-    }
 
     setupIntersectionObserver() {
         const observerOptions = {
@@ -95,7 +78,6 @@ class PageEffectsManager {
 
     setupInteractiveElements() {
         this.setupGalleryHoverEffects();
-        this.setupCTAButtonEffects();
     }
 
     setupGalleryHoverEffects() {
@@ -117,50 +99,7 @@ class PageEffectsManager {
         }
     }
 
-    setupCTAButtonEffects() {
-        const ctaButtons = document.querySelectorAll('.cta-button');
-        ctaButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                logger.userInteraction('PAGE', `CTA button clicked: ${this.textContent}`);
-                this.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    this.style.transform = 'scale(1)';
-                }, 150);
-            });
-        });
 
-        if (ctaButtons.length > 0) {
-            logger.componentLoad('PAGE', 'CTA button interactions enabled', {
-                buttonCount: ctaButtons.length
-            });
-        }
-    }
-
-    setupCityBubbles() {
-        // Initialize the new city carousel manager
-        if (typeof CityCarouselManager !== 'undefined') {
-            this.cityCarousel = new CityCarouselManager();
-            logger.componentLoad('PAGE', 'Modern city carousel initialized');
-        } else {
-            logger.warn('PAGE', 'CityCarouselManager not available - falling back to basic interactions');
-            this.setupBasicCityBubbles();
-        }
-    }
-
-    setupBasicCityBubbles() {
-        const cityBubbles = document.querySelectorAll('.city-bubble:not(.coming-soon)');
-        cityBubbles.forEach(bubble => {
-            bubble.addEventListener('mouseenter', () => {
-                logger.userInteraction('PAGE', 'City bubble hovered', {
-                    city: bubble.getAttribute('title')
-                });
-            });
-        });
-
-        logger.componentLoad('PAGE', 'Basic city bubble interactions enabled', {
-            bubbleCount: cityBubbles.length
-        });
-    }
 
     setupPageLoadEffects() {
         window.addEventListener('load', () => {
@@ -190,11 +129,11 @@ class PageEffectsManager {
     initializeMainPageEffects() {
         logger.componentInit('PAGE', 'Main page initialization');
         
-        // Immediately show the cities section which is critical
+        // Cities section is now visible by default in CSS
         const citiesSection = document.querySelector('#cities');
         if (citiesSection) {
             citiesSection.classList.add('fade-in');
-            logger.debug('PAGE', 'Cities section made visible immediately');
+            logger.debug('PAGE', 'Cities section ready');
         }
         
         // Add typing effect for hero title
@@ -204,7 +143,7 @@ class PageEffectsManager {
             logger.debug('PAGE', 'Starting hero title animation');
             setTimeout(() => {
                 this.typeWriter(heroTitle, originalText, 60);
-            }, 300);
+            }, 50);
         }
 
         // Setup scroll animations
@@ -256,9 +195,7 @@ class PageEffectsManager {
         };
 
         // Initial call to show visible sections immediately
-        setTimeout(() => {
-            fadeInOnScroll();
-        }, 100);
+        fadeInOnScroll();
 
         window.addEventListener('scroll', fadeInOnScroll);
         logger.componentLoad('PAGE', 'Main page scroll animations enabled');
@@ -282,112 +219,6 @@ class PageEffectsManager {
         type();
     }
 
-    injectDynamicStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            /* Main page smooth fade-in effects */
-            section {
-                transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            
-            /* Main page sections start hidden and fade in smoothly */
-            body:not(.city-page) section:not(.hero) {
-                opacity: 0;
-                transform: translateY(40px);
-                transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-            }
-            
-            body:not(.city-page) section.fade-in,
-            body:not(.city-page) section:nth-child(-n+3) {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            /* Ensure critical sections are always visible after a delay */
-            body:not(.city-page) section {
-                animation: ensureVisible 1s ease-out 2s both;
-            }
-            
-            @keyframes ensureVisible {
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            
-            /* City pages: all sections visible immediately with smooth transitions */
-            body.city-page section {
-                opacity: 1;
-                transform: translateY(0);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            
-            .hero {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            .animate {
-                animation: fadeInUp 0.6s ease-out;
-            }
-            
-            body.loaded {
-                overflow-x: hidden;
-            }
-            
-            /* Enhanced smooth transitions for all interactive elements */
-            .city-card, .event-card, .category-card, .contact-item {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                will-change: transform;
-            }
-            
-            .city-card:hover, .event-card:hover, .category-card:hover {
-                transform: translateY(-8px) scale(1.02);
-                box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-            }
-            
-            .contact-item:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-            }
-            
-            /* Smooth button interactions */
-            .cta-button {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                will-change: transform;
-            }
-            
-            .cta-button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-            }
-            
-            /* Smooth calendar day interactions */
-            .calendar-day {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                will-change: transform;
-            }
-            
-            .calendar-day:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-            }
-            
-            /* Smooth event card interactions */
-            .event-card.detailed {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                will-change: transform;
-            }
-            
-            .event-card.detailed:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-            }
-        `;
-        document.head.appendChild(style);
-
-        logger.componentLoad('PAGE', 'Dynamic styles injected successfully');
-    }
 }
 
 // Export for use in other modules
