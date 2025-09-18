@@ -429,24 +429,6 @@ class ChunkyDadApp {
     }
 
 
-    // Global function for scrolling (backward compatibility)
-    scrollToSection(sectionId) {
-        if (this.navigationManager) {
-            this.navigationManager.scrollToSection(sectionId);
-        } else {
-            // Fallback scrolling for city pages
-            const element = document.getElementById(sectionId);
-            if (element) {
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-                logger.debug('SYSTEM', `Fallback scroll to section: ${sectionId}`);
-            } else {
-                logger.warn('SYSTEM', `Section not found: ${sectionId}`);
-            }
-        }
-    }
 
     // Update header when city changes (for city pages)
     updateHeaderForCity(cityKey) {
@@ -469,7 +451,7 @@ function initializeApp() {
         window.chunkyApp = chunkyApp;
         
         // Expose global functions for backward compatibility
-        window.scrollToSection = (sectionId) => chunkyApp.scrollToSection(sectionId);
+        // (No global functions needed currently)
     }
 }
 
