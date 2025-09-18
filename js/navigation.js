@@ -96,8 +96,6 @@ class NavigationManager {
 
         logger.componentInit('NAV', 'Setting up dynamic header for index page');
         
-        // iOS 26 specific: Ensure header is immediately visible to prevent loading delay
-        this.ensureIOS26HeaderVisibility();
         
         let lastScrollY = window.scrollY;
         let ticking = false;
@@ -141,34 +139,6 @@ class NavigationManager {
         logger.componentLoad('NAV', 'Dynamic header scroll listener attached');
     }
 
-    // iOS 26 specific: Ensure header is immediately visible to prevent loading delay
-    ensureIOS26HeaderVisibility() {
-        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
-        const isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-        const iosVersion = this.getIOSVersion(ua);
-        const isIOS26 = iosVersion >= 18;
-
-        if (!isIOS || !isSafari || !isIOS26) return;
-
-        logger.info('NAV', 'iOS 26 detected - ensuring immediate header visibility', {
-            iosVersion,
-            isIOS26
-        });
-
-        // Simple fix: just make header visible immediately on iOS 26
-        if (this.header) {
-            this.header.style.opacity = '1';
-            this.header.style.transform = 'translateY(0)';
-            this.header.classList.add('visible');
-        }
-    }
-
-    // Helper method to extract iOS version from user agent
-    getIOSVersion(userAgent) {
-        const match = userAgent.match(/OS (\d+)_/);
-        return match ? parseInt(match[1], 10) : 0;
-    }
 }
 
 // Export for use in other modules
