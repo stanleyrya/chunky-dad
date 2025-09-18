@@ -181,6 +181,11 @@ body.index-page header.visible {
     overflow: visible;
 }
 
+/* Hide the checkbox */
+.city-switcher-toggle {
+    display: none;
+}
+
 .city-switcher-btn {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%);
     border: 2px solid rgba(255, 255, 255, 0.3);
@@ -283,25 +288,24 @@ body.index-page header.visible {
     border: 1px solid rgba(255, 255, 255, 0.4);
     pointer-events: none;
     visibility: hidden;
-    /* Ensure dropdown is always above other elements */
-    position: absolute !important;
-    z-index: 10002 !important;
     /* Ensure dropdown is not clipped by any parent */
     max-height: 80vh;
     overflow-y: auto;
 }
 
-.city-dropdown.open {
-    opacity: 1 !important;
-    transform: translateY(0) scale(1) !important;
-    pointer-events: auto !important;
-    visibility: visible !important;
-    display: block !important;
+/* Show dropdown when checkbox is checked */
+.city-switcher-toggle:checked + .city-switcher-btn + .city-dropdown {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    visibility: visible;
 }
 
-.city-switcher-btn.active .city-carrot {
+/* Rotate arrow when dropdown is open */
+.city-switcher-toggle:checked + .city-switcher-btn .city-carrot {
     transform: rotate(180deg);
 }
+
 
 .city-option {
     display: flex;

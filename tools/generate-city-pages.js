@@ -30,6 +30,55 @@ function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
 }
 
+// Generate pre-populated header with city selector
+function generateCityHeader(html, cityKey, cityConfig) {
+  // Get all available cities for the dropdown
+  const availableCities = Object.entries(CITY_CONFIG)
+    .filter(([, cfg]) => cfg && cfg.visible !== false)
+    .map(([key, cfg]) => ({ key, ...cfg }));
+
+  // Build city dropdown options HTML with direct links
+  const cityOptions = availableCities.map(city => `
+                            <a href="../${city.key}/" class="city-option">
+                                <span class="city-option-emoji">${city.emoji}</span>
+                                <span class="city-option-name">${city.name}</span>
+                            </a>`).join('');
+
+  // Create complete header HTML with pre-populated city selector
+  const headerHtml = `    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
+                </div>
+                
+                <!-- Pure HTML/CSS city selector -->
+                <div class="city-switcher">
+                    <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                    <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
+                        <span class="city-emoji">${cityConfig.emoji}</span>
+                        <span class="city-name">${cityConfig.name}</span>
+                        <span class="city-carrot">▼</span>
+                    </label>
+                    <div class="city-dropdown">${cityOptions}
+                    </div>
+                </div>
+                
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>`;
+
+  // Replace the existing header with the pre-generated one
+  html = html.replace(/<header>[\s\S]*?<\/header>/, headerHtml);
+  
+  return html;
+}
+
 // Replace or inject head elements for per-city metadata
 function buildCityHtml(baseHtml, cityKey, cityConfig) {
   let html = baseHtml;
@@ -39,6 +88,9 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
   if (!html.includes(marker)) {
     html = html.replace('<!DOCTYPE html>', `<!DOCTYPE html>\n${marker}`);
   }
+
+  // Generate pre-populated header with city selector
+  html = generateCityHeader(html, cityKey, cityConfig);
 
   // Title
   const cityTitle = `${cityConfig.name} - chunky.dad Bear Guide`;
