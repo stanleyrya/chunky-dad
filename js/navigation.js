@@ -153,40 +153,15 @@ class NavigationManager {
 
         logger.info('NAV', 'iOS 26 detected - ensuring immediate header visibility', {
             iosVersion,
-            isIOS26,
-            userAgent: ua.substring(0, 50) + '...'
+            isIOS26
         });
 
-        // Force header to be visible immediately on iOS 26
-        const forceHeaderVisible = () => {
-            if (this.header) {
-                // Remove any problematic transforms that might hide the header
-                this.header.style.transform = '';
-                this.header.style.position = 'fixed';
-                this.header.style.top = '0';
-                this.header.style.left = '0';
-                this.header.style.right = '0';
-                this.header.style.zIndex = '9999';
-                this.header.style.opacity = '1';
-                
-                // Add visible class immediately
-                this.header.classList.add('visible');
-                
-                logger.debug('NAV', 'iOS 26 header forced visible', {
-                    hasVisibleClass: this.header.classList.contains('visible'),
-                    computedStyle: window.getComputedStyle(this.header).opacity
-                });
-            }
-        };
-
-        // Apply immediately and with multiple attempts to ensure it sticks
-        forceHeaderVisible();
-        setTimeout(forceHeaderVisible, 10);
-        setTimeout(forceHeaderVisible, 50);
-        setTimeout(forceHeaderVisible, 100);
-        
-        // Also check on window load to ensure it's still visible
-        window.addEventListener('load', forceHeaderVisible, { once: true });
+        // Simple fix: just make header visible immediately on iOS 26
+        if (this.header) {
+            this.header.style.opacity = '1';
+            this.header.style.transform = 'translateY(0)';
+            this.header.classList.add('visible');
+        }
     }
 
     // Helper method to extract iOS version from user agent
