@@ -229,8 +229,12 @@ class ChunkyDadApp {
         // Components manager injects common UI elements
         this.componentsManager = new ComponentsManager();
         
-        // Navigation is needed on all pages
-        this.navigationManager = new NavigationManager();
+        // Navigation is only needed on main page and directory page, not city pages
+        if (this.isMainPage || this.isDirectoryPage) {
+            this.navigationManager = new NavigationManager();
+        } else {
+            logger.debug('SYSTEM', 'Skipping navigation manager for city pages (using city switcher instead)');
+        }
         
         // Page effects are needed on all pages
         this.pageEffectsManager = new PageEffectsManager();
@@ -430,7 +434,17 @@ class ChunkyDadApp {
         if (this.navigationManager) {
             this.navigationManager.scrollToSection(sectionId);
         } else {
-            logger.warn('NAV', 'Navigation manager not available for scrolling');
+            // Fallback scrolling for city pages
+            const element = document.getElementById(sectionId);
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                logger.debug('SYSTEM', `Fallback scroll to section: ${sectionId}`);
+            } else {
+                logger.warn('SYSTEM', `Section not found: ${sectionId}`);
+            }
         }
     }
 
