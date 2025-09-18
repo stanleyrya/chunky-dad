@@ -85,8 +85,33 @@ class HeaderManager {
                 rafId = requestAnimationFrame(() => {
                     // Compute header offset based on visual viewport y offset
                     const offsetY = Math.max(0, Math.round(vv.offsetTop || 0));
-                    // Use transform to avoid layout thrash and preserve position: fixed
-                    headerEl.style.transform = offsetY ? `translateY(${offsetY}px)` : '';
+                    
+                    // Get current transform and remove any existing translateY
+                    const currentTransform = headerEl.style.transform || '';
+                    const baseTransform = currentTransform.replace(/translateY\([^)]*\)\s*/g, '').trim();
+                    
+                    // Build new transform with iOS offset
+                    let newTransform = '';
+                    if (baseTransform) {
+                        newTransform = offsetY > 0 ? `${baseTransform} translateY(${offsetY}px)` : baseTransform;
+                    } else {
+                        newTransform = offsetY > 0 ? `translateY(${offsetY}px)` : '';
+                    }
+                    
+                    // Apply the transform
+                    headerEl.style.transform = newTransform;
+                    
+                    // Debug logging
+                    if (offsetY > 0) {
+                        this.logger.debug('HEADER', `iOS header adjusted: translateY(${offsetY}px)`, {
+                            offsetY, baseTransform, newTransform
+                        });
+                    } else if (currentTransform !== newTransform) {
+                        this.logger.debug('HEADER', 'iOS header translateY removed', {
+                            originalTransform: currentTransform,
+                            newTransform
+                        });
+                    }
                 });
             };
 
@@ -95,10 +120,14 @@ class HeaderManager {
             vv.addEventListener('resize', adjust);
             window.addEventListener('scroll', adjust, { passive: true });
 
-            // Initial adjustment after a tick to ensure computed styles are ready
-            setTimeout(adjust, 0);
+            // Initial adjustment - make it immediate to prevent visual delay on iOS Safari
+            adjust();
 
-            this.logger.info('HEADER', 'iOS Safari header workaround enabled');
+            this.logger.info('HEADER', 'iOS Safari header workaround enabled', {
+                initialOffsetTop: vv.offsetTop || 0,
+                headerElement: headerEl.tagName,
+                visualViewportSupported: !!vv
+            });
         } catch (e) {
             this.logger.warn('HEADER', 'Failed to enable iOS header workaround', { error: e?.message });
         }
