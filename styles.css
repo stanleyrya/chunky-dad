@@ -183,6 +183,15 @@ header {
             top: 0 !important;
             /* Prevent iOS Safari from hiding header during scroll */
             -webkit-overflow-scrolling: touch;
+            /* iOS 26 specific: Override the hidden state to prevent loading delay */
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+        
+        /* Override the index page hidden header state on iOS 26 */
+        body.index-page header {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
         }
     }
 }

@@ -50,38 +50,46 @@ class HeaderManager {
 
         if (!isIOS || !isSafari || !isIOS26) return;
 
-        // Force header to be visible on iOS 26
+        // Force header to be visible on iOS 26 immediately
         const forceVisible = () => {
             const rect = headerEl.getBoundingClientRect();
             const isVisible = rect.top >= 0 && rect.top < window.innerHeight;
             
-            if (!isVisible) {
-                this.logger.debug('HEADER', 'iOS 26 header not visible, forcing visibility', {
-                    rectTop: rect.top,
-                    windowHeight: window.innerHeight,
-                    isVisible
-                });
-                
-                // Reset any problematic transforms
-                headerEl.style.transform = '';
-                headerEl.style.position = 'fixed';
-                headerEl.style.top = '0';
-                headerEl.style.left = '0';
-                headerEl.style.right = '0';
-                headerEl.style.zIndex = '9998';
-            }
+            // Always force visibility on iOS 26, regardless of current state
+            this.logger.debug('HEADER', 'iOS 26 header visibility check', {
+                rectTop: rect.top,
+                windowHeight: window.innerHeight,
+                isVisible,
+                hasVisibleClass: headerEl.classList.contains('visible')
+            });
+            
+            // Reset any problematic transforms and force visibility
+            headerEl.style.transform = 'translateY(0)';
+            headerEl.style.position = 'fixed';
+            headerEl.style.top = '0';
+            headerEl.style.left = '0';
+            headerEl.style.right = '0';
+            headerEl.style.zIndex = '9998';
+            headerEl.style.opacity = '1';
+            
+            // Add visible class to ensure CSS animations work
+            headerEl.classList.add('visible');
         };
 
-        // Check immediately and after delays
+        // Check immediately and after delays - more aggressive timing for iOS 26
         forceVisible();
+        setTimeout(forceVisible, 10);
+        setTimeout(forceVisible, 25);
         setTimeout(forceVisible, 50);
+        setTimeout(forceVisible, 100);
         setTimeout(forceVisible, 200);
         setTimeout(forceVisible, 500);
         
-        // Also check on window resize
+        // Also check on window resize and load
         window.addEventListener('resize', forceVisible, { passive: true });
+        window.addEventListener('load', forceVisible, { once: true });
         
-        this.logger.info('HEADER', 'iOS 26 header visibility check enabled', {
+        this.logger.info('HEADER', 'iOS 26 header visibility check enabled (aggressive mode)', {
             iosVersion,
             isIOS26
         });

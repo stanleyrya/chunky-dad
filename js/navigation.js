@@ -96,6 +96,9 @@ class NavigationManager {
 
         logger.componentInit('NAV', 'Setting up dynamic header for index page');
         
+        // iOS 26 specific: Ensure header is immediately visible to prevent loading delay
+        this.ensureIOS26HeaderVisibility();
+        
         let lastScrollY = window.scrollY;
         let ticking = false;
 
@@ -136,6 +139,60 @@ class NavigationManager {
 
         window.addEventListener('scroll', requestTick, { passive: true });
         logger.componentLoad('NAV', 'Dynamic header scroll listener attached');
+    }
+
+    // iOS 26 specific: Ensure header is immediately visible to prevent loading delay
+    ensureIOS26HeaderVisibility() {
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        const isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+        const iosVersion = this.getIOSVersion(ua);
+        const isIOS26 = iosVersion >= 18;
+
+        if (!isIOS || !isSafari || !isIOS26) return;
+
+        logger.info('NAV', 'iOS 26 detected - ensuring immediate header visibility', {
+            iosVersion,
+            isIOS26,
+            userAgent: ua.substring(0, 50) + '...'
+        });
+
+        // Force header to be visible immediately on iOS 26
+        const forceHeaderVisible = () => {
+            if (this.header) {
+                // Remove any problematic transforms that might hide the header
+                this.header.style.transform = '';
+                this.header.style.position = 'fixed';
+                this.header.style.top = '0';
+                this.header.style.left = '0';
+                this.header.style.right = '0';
+                this.header.style.zIndex = '9999';
+                this.header.style.opacity = '1';
+                
+                // Add visible class immediately
+                this.header.classList.add('visible');
+                
+                logger.debug('NAV', 'iOS 26 header forced visible', {
+                    hasVisibleClass: this.header.classList.contains('visible'),
+                    computedStyle: window.getComputedStyle(this.header).opacity
+                });
+            }
+        };
+
+        // Apply immediately and with multiple attempts to ensure it sticks
+        forceHeaderVisible();
+        setTimeout(forceHeaderVisible, 10);
+        setTimeout(forceHeaderVisible, 50);
+        setTimeout(forceHeaderVisible, 100);
+        
+        // Also check on window load to ensure it's still visible
+        window.addEventListener('load', forceHeaderVisible, { once: true });
+    }
+
+    // Helper method to extract iOS version from user agent
+    getIOSVersion(userAgent) {
+        const match = userAgent.match(/OS (\d+)_/);
+        return match ? parseInt(match[1], 10) : 0;
     }
 }
 
