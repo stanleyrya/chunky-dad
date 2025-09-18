@@ -511,14 +511,26 @@ class HeaderManager {
 }
 
 function initHeaderWhenReady() {
+  const logger = window.logger || console;
+  logger.info('SYSTEM', '🚀 DOM ready event fired - initializing header manager', {
+    readyState: document.readyState,
+    timestamp: new Date().toISOString()
+  });
+  
   requestAnimationFrame(() => {
+    logger.componentInit('SYSTEM', 'Header manager instantiation starting');
     window.headerManager = new HeaderManager();
+    logger.componentLoad('SYSTEM', 'Header manager successfully instantiated and ready');
   });
 }
 
 if (document.readyState === "loading") {
+  const logger = window.logger || console;
+  logger.debug('SYSTEM', 'Document still loading - waiting for DOMContentLoaded event');
   document.addEventListener("DOMContentLoaded", initHeaderWhenReady);
 } else {
+  const logger = window.logger || console;
+  logger.debug('SYSTEM', 'Document already loaded - initializing header manager immediately');
   initHeaderWhenReady();
 }
 
