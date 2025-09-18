@@ -19,11 +19,19 @@ class NavigationManager {
 
     setupMobileMenu() {
         if (this.hamburger && this.navMenu) {
-            logger.componentInit('NAV', 'Mobile navigation setup');
+            logger.componentInit('NAV', 'Mobile navigation setup (main page)');
             
             this.hamburger.addEventListener('click', () => {
                 logger.userInteraction('NAV', 'Mobile menu toggle clicked');
                 this.toggleMobileMenu();
+            });
+        } else if (this.hamburger) {
+            logger.componentInit('NAV', 'Mobile navigation setup (city page - hamburger only)');
+            
+            this.hamburger.addEventListener('click', () => {
+                logger.userInteraction('NAV', 'Hamburger menu clicked (city page)');
+                // For city pages, we might want to add city switcher functionality here
+                // For now, just log the interaction
             });
         } else {
             logger.warn('NAV', 'Mobile navigation elements not found');
@@ -32,32 +40,41 @@ class NavigationManager {
 
     toggleMobileMenu() {
         this.hamburger.classList.toggle('active');
-        this.navMenu.classList.toggle('active');
+        
+        if (this.navMenu) {
+            this.navMenu.classList.toggle('active');
+        }
         
         const isActive = this.hamburger.classList.contains('active');
         logger.debug('NAV', `Mobile menu ${isActive ? 'opened' : 'closed'}`);
     }
 
     closeMobileMenu() {
-        if (this.hamburger && this.navMenu) {
+        if (this.hamburger) {
             this.hamburger.classList.remove('active');
-            this.navMenu.classList.remove('active');
+            if (this.navMenu) {
+                this.navMenu.classList.remove('active');
+            }
             logger.debug('NAV', 'Mobile menu closed');
         }
     }
 
     setupNavLinks() {
         const navLinks = document.querySelectorAll('.nav-menu a');
-        navLinks.forEach((link, index) => {
-            link.addEventListener('click', () => {
-                logger.userInteraction('NAV', `Navigation link clicked: ${link.textContent}`);
-                this.closeMobileMenu();
+        if (navLinks.length > 0) {
+            navLinks.forEach((link, index) => {
+                link.addEventListener('click', () => {
+                    logger.userInteraction('NAV', `Navigation link clicked: ${link.textContent}`);
+                    this.closeMobileMenu();
+                });
             });
-        });
 
-        logger.componentLoad('NAV', 'Navigation links setup complete', {
-            linkCount: navLinks.length
-        });
+            logger.componentLoad('NAV', 'Navigation links setup complete', {
+                linkCount: navLinks.length
+            });
+        } else {
+            logger.debug('NAV', 'No navigation links found (city page structure)');
+        }
     }
 
     setupSmoothScrolling() {
