@@ -129,11 +129,11 @@ class PageEffectsManager {
     initializeMainPageEffects() {
         logger.componentInit('PAGE', 'Main page initialization');
         
-        // Immediately show the cities section which is critical
+        // Cities section is now visible by default in CSS
         const citiesSection = document.querySelector('#cities');
         if (citiesSection) {
             citiesSection.classList.add('fade-in');
-            logger.debug('PAGE', 'Cities section made visible immediately');
+            logger.debug('PAGE', 'Cities section ready');
         }
         
         // Add typing effect for hero title
@@ -143,7 +143,7 @@ class PageEffectsManager {
             logger.debug('PAGE', 'Starting hero title animation');
             setTimeout(() => {
                 this.typeWriter(heroTitle, originalText, 60);
-            }, 300);
+            }, 50);
         }
 
         // Setup scroll animations
@@ -195,9 +195,7 @@ class PageEffectsManager {
         };
 
         // Initial call to show visible sections immediately
-        setTimeout(() => {
-            fadeInOnScroll();
-        }, 100);
+        fadeInOnScroll();
 
         window.addEventListener('scroll', fadeInOnScroll);
         logger.componentLoad('PAGE', 'Main page scroll animations enabled');
