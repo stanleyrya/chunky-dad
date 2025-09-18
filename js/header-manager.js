@@ -50,38 +50,12 @@ class HeaderManager {
 
         if (!isIOS || !isSafari || !isIOS26) return;
 
-        // Force header to be visible on iOS 26
-        const forceVisible = () => {
-            const rect = headerEl.getBoundingClientRect();
-            const isVisible = rect.top >= 0 && rect.top < window.innerHeight;
-            
-            if (!isVisible) {
-                this.logger.debug('HEADER', 'iOS 26 header not visible, forcing visibility', {
-                    rectTop: rect.top,
-                    windowHeight: window.innerHeight,
-                    isVisible
-                });
-                
-                // Reset any problematic transforms
-                headerEl.style.transform = '';
-                headerEl.style.position = 'fixed';
-                headerEl.style.top = '0';
-                headerEl.style.left = '0';
-                headerEl.style.right = '0';
-                headerEl.style.zIndex = '9998';
-            }
-        };
-
-        // Check immediately and after delays
-        forceVisible();
-        setTimeout(forceVisible, 50);
-        setTimeout(forceVisible, 200);
-        setTimeout(forceVisible, 500);
+        // Simple iOS 26 fix: just make header visible
+        headerEl.style.opacity = '1';
+        headerEl.style.transform = 'translateY(0)';
+        headerEl.classList.add('visible');
         
-        // Also check on window resize
-        window.addEventListener('resize', forceVisible, { passive: true });
-        
-        this.logger.info('HEADER', 'iOS 26 header visibility check enabled', {
+        this.logger.info('HEADER', 'iOS 26 header made visible', {
             iosVersion,
             isIOS26
         });
