@@ -37,12 +37,12 @@ function generateCityHeader(html, cityKey, cityConfig) {
     .filter(([, cfg]) => cfg && cfg.visible !== false)
     .map(([key, cfg]) => ({ key, ...cfg }));
 
-  // Build city dropdown options HTML
+  // Build city dropdown options HTML with direct links
   const cityOptions = availableCities.map(city => `
-                            <div class="city-option">
+                            <a href="../${city.key}/" class="city-option">
                                 <span class="city-option-emoji">${city.emoji}</span>
                                 <span class="city-option-name">${city.name}</span>
-                            </div>`).join('');
+                            </a>`).join('');
 
   // Create complete header HTML with pre-populated city selector
   const headerHtml = `    <header>
@@ -52,14 +52,15 @@ function generateCityHeader(html, cityKey, cityConfig) {
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
                 </div>
                 
-                <!-- Pre-generated city selector -->
+                <!-- Pure HTML/CSS city selector -->
                 <div class="city-switcher">
-                    <button class="city-switcher-btn" id="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
-                        <span class="city-emoji" id="current-city-emoji">${cityConfig.emoji}</span>
-                        <span class="city-name" id="current-city-name">${cityConfig.name}</span>
+                    <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                    <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
+                        <span class="city-emoji">${cityConfig.emoji}</span>
+                        <span class="city-name">${cityConfig.name}</span>
                         <span class="city-carrot">▼</span>
-                    </button>
-                    <div class="city-dropdown" id="city-dropdown">${cityOptions}
+                    </label>
+                    <div class="city-dropdown">${cityOptions}
                     </div>
                 </div>
                 
