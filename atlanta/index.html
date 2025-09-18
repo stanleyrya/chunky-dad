@@ -44,14 +44,56 @@
         }
       })();
     </script>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YKQBFFQR5E"></script>
+    <!-- Google Analytics 4 - Image-based tracking -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-YKQBFFQR5E');
+      // Initialize Google Analytics 4 with Image-based tracking
+      (function() {
+        try {
+          // Create a unique client ID if not exists
+          let clientId = localStorage.getItem('ga_client_id');
+          if (!clientId) {
+            clientId = 'GA1.2.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
+            localStorage.setItem('ga_client_id', clientId);
+          }
+          
+          // Send page view
+          const pageUrl = window.location.href;
+          const pageTitle = document.title || 'Atlanta - chunky.dad Bear Guide';
+          const referrer = document.referrer || '';
+          
+          // Build analytics URL
+          const analyticsUrl = 'https://www.google-analytics.com/g/collect?' + 
+            'v=2&' +
+            'tid=G-YKQBFFQR5E&' +
+            'cid=' + encodeURIComponent(clientId) + '&' +
+            't=pageview&' +
+            'dl=' + encodeURIComponent(pageUrl) + '&' +
+            'dt=' + encodeURIComponent(pageTitle) + '&' +
+            'dr=' + encodeURIComponent(referrer) + '&' +
+            'ul=en-us&' +
+            'de=UTF-8&' +
+            'sd=24-bit&' +
+            'sr=1920x1080&' +
+            'vp=1920x1080&' +
+            'je=0&' +
+            'uip=' + encodeURIComponent(window.location.hostname) + '&' +
+            'uua=' + encodeURIComponent(navigator.userAgent) + '&' +
+            'z=' + Math.floor(Math.random() * 2147483647);
+          
+          // Send via Image request
+          new Image().src = analyticsUrl;
+          
+          // Log success for debugging
+          if (window.logger) {
+            logger.debug('SYSTEM', 'Analytics pageview sent', { url: analyticsUrl });
+          }
+        } catch (error) {
+          // Log error but don't break the page
+          if (window.logger) {
+            logger.error('SYSTEM', 'Analytics tracking failed', error);
+          }
+        }
+      })();
     </script>
     
     <link rel="stylesheet" href="../styles.css">
