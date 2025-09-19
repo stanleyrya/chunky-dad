@@ -9,10 +9,9 @@ on:
       - 'tools/generate-city-pages.js'
       - 'tools/generate-sitemap.js'
       - '.github/workflows/generate-city-pages.yml'
-    paths-ignore:
-      - 'data/calendars/**'
-      - 'testing/**'
-      - 'scripts/**'
+      - '!data/calendars/**'
+      - '!testing/**'
+      - '!scripts/**'
   workflow_dispatch:
 
 jobs:
