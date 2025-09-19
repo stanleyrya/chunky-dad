@@ -9,7 +9,7 @@ on:
       - 'tools/generate-city-pages.js'
       - 'tools/generate-sitemap.js'
       - '.github/workflows/generate-city-pages.yml'
-      - '!data/calendars/**'
+      - 'data/calendars/**'
       - '!testing/**'
       - '!scripts/**'
   workflow_dispatch:
