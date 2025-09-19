@@ -3024,20 +3024,53 @@ calculatedData: {
         };
         
         // Listen to window resize events
-        window.addEventListener('resize', () => handleLayoutChange('resize'));
+        window.addEventListener('resize', () => {
+            // Only trigger if this is a real resize, not just a scroll-triggered event
+            const currentWidth = window.innerWidth;
+            const widthChanged = Math.abs(currentWidth - this.lastScreenWidth) > 1; // 1px threshold
+            
+            if (widthChanged) {
+                handleLayoutChange('resize');
+            } else {
+                logger.debug('CALENDAR', `🔍 LAYOUT_CHANGE: Window resize ignored - no width change`, {
+                    eventType: 'resize',
+                    currentWidth,
+                    lastWidth: this.lastScreenWidth,
+                    widthChange: currentWidth - this.lastScreenWidth
+                });
+            }
+        });
         
         // Listen to orientation changes (important for mobile/tablet)
         window.addEventListener('orientationchange', () => handleLayoutChange('orientationchange'));
         
         // Listen for visual viewport changes (crucial for iPad split screen)
         if (window.visualViewport) {
+            // Track previous visual viewport width to detect actual width changes
+            let lastVisualViewportWidth = window.visualViewport.width;
+            
             // Use a separate timeout for visual viewport to handle rapid changes during split screen transitions
             let visualViewportTimeout;
             window.visualViewport.addEventListener('resize', () => {
-                clearTimeout(visualViewportTimeout);
-                visualViewportTimeout = setTimeout(() => {
-                    handleLayoutChange('visualViewport.resize');
-                }, 100); // Slightly shorter debounce for visual viewport to be more responsive
+                const currentWidth = window.visualViewport.width;
+                const widthChanged = Math.abs(currentWidth - lastVisualViewportWidth) > 1; // 1px threshold for visual viewport
+                
+                // Only trigger layout change if width actually changed
+                if (widthChanged) {
+                    lastVisualViewportWidth = currentWidth;
+                    
+                    clearTimeout(visualViewportTimeout);
+                    visualViewportTimeout = setTimeout(() => {
+                        handleLayoutChange('visualViewport.resize');
+                    }, 100); // Slightly shorter debounce for visual viewport to be more responsive
+                } else {
+                    logger.debug('CALENDAR', `🔍 LAYOUT_CHANGE: Visual viewport resize ignored - no width change`, {
+                        eventType: 'visualViewport.resize',
+                        currentWidth,
+                        lastWidth: lastVisualViewportWidth,
+                        widthChange: currentWidth - lastVisualViewportWidth
+                    });
+                }
             });
             // Note: We don't listen to visualViewport scroll as that's just scrolling, not layout change
         }
