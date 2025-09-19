@@ -1052,35 +1052,34 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Create marker icon with favicon or three letters
     createMarkerIcon(event) {
-        // TEMPORARILY DISABLED: Skip favicon fetching for testing
-        // if (event.website) {
-        //     try {
-        //         // Ensure URL has protocol
-        //         let url = event.website;
-        //         if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        //             url = 'https://' + url;
-        //         }
-        //         
-        //         const hostname = new URL(url).hostname;
-        //         const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-        //         const textFallback = this.getMarkerText(event);
-        //         
-        //         return L.divIcon({
-        //             className: 'favicon-marker',
-        //             html: `
-        //                 <div class="favicon-marker-container">
-        //                     <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
-        //                          onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
-        //                 </div>
-        //             `,
-        //             iconSize: [32, 32],
-        //             iconAnchor: [16, 16],
-        //             popupAnchor: [0, -16]
-        //         });
-        //     } catch (error) {
-        //         logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
-        //     }
-        // }
+        if (event.website) {
+            try {
+                // Ensure URL has protocol
+                let url = event.website;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                
+                const hostname = new URL(url).hostname;
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                const textFallback = this.getMarkerText(event);
+                
+                return L.divIcon({
+                    className: 'favicon-marker',
+                    html: `
+                        <div class="favicon-marker-container">
+                            <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
+                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
+                        </div>
+                    `,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -16]
+                });
+            } catch (error) {
+                logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
+            }
+        }
         
         // Use text from shorter field or shortName or name
         const markerText = this.getMarkerText(event);
