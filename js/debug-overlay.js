@@ -4,6 +4,13 @@
 
 class DebugOverlay {
     constructor() {
+        // Safe localStorage wrapper for private mode compatibility
+        this.safeStorage = {
+            getItem: (key) => { try { return localStorage.getItem(key); } catch { return null; } },
+            setItem: (key, value) => { try { localStorage.setItem(key, value); } catch { /* ignore */ } },
+            removeItem: (key) => { try { localStorage.removeItem(key); } catch { /* ignore */ } }
+        };
+        
         this.isVisible = this.shouldShowDebug();
         this.overlay = null;
         this.isDragging = false;
@@ -13,7 +20,7 @@ class DebugOverlay {
         this.lastUpdateData = {};
         
         // Enhanced view state management
-        this.viewState = localStorage.getItem('debug-view-state') || 'compact';
+        this.viewState = this.safeStorage.getItem('debug-view-state') || 'compact';
         this.isMobile = window.innerWidth <= 480;
         
         // Enhanced breakpoint definitions
@@ -44,7 +51,7 @@ class DebugOverlay {
     
     shouldShowDebug() {
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.has('debug') || localStorage.getItem('debug-enabled') === 'true';
+        return urlParams.has('debug') || this.safeStorage.getItem('debug-enabled') === 'true';
     }
     
     init() {
@@ -331,7 +338,7 @@ class DebugOverlay {
         this.viewState = states[(currentIndex + 1) % states.length];
         
         this.overlay.className = `debug-overlay debug-${this.viewState}`;
-        localStorage.setItem('debug-view-state', this.viewState);
+        this.safeStorage.setItem('debug-view-state', this.viewState);
         
         // Ensure the toggle button is always visible and clickable
         const toggleBtn = this.overlay.querySelector('.debug-toggle');
@@ -346,7 +353,7 @@ class DebugOverlay {
     minimize() {
         this.viewState = 'minimized';
         this.overlay.className = `debug-overlay debug-${this.viewState}`;
-        localStorage.setItem('debug-view-state', this.viewState);
+        this.safeStorage.setItem('debug-view-state', this.viewState);
         
         // Ensure the toggle button is always visible and clickable when minimized
         const toggleBtn = this.overlay.querySelector('.debug-toggle');
@@ -360,7 +367,7 @@ class DebugOverlay {
     expand() {
         this.viewState = 'compact';
         this.overlay.className = `debug-overlay debug-${this.viewState}`;
-        localStorage.setItem('debug-view-state', this.viewState);
+        this.safeStorage.setItem('debug-view-state', this.viewState);
         logger.userInteraction('SYSTEM', 'Debug overlay expanded from minimized state');
     }
     
@@ -372,7 +379,7 @@ class DebugOverlay {
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
         }
-        localStorage.removeItem('debug-enabled');
+        this.safeStorage.removeItem('debug-enabled');
     }
     
     show() {
@@ -486,12 +493,12 @@ class DebugOverlay {
     }
     
     togglePersistence() {
-        const isEnabled = localStorage.getItem('debug-enabled') === 'true';
+        const isEnabled = this.safeStorage.getItem('debug-enabled') === 'true';
         if (isEnabled) {
-            localStorage.removeItem('debug-enabled');
+            this.safeStorage.removeItem('debug-enabled');
             logger.info('SYSTEM', 'Debug persistence disabled');
         } else {
-            localStorage.setItem('debug-enabled', 'true');
+            this.safeStorage.setItem('debug-enabled', 'true');
             logger.info('SYSTEM', 'Debug persistence enabled');
         }
     }
@@ -515,18 +522,18 @@ class DebugOverlay {
     }
     
     savePosition() {
-        localStorage.setItem('debug-position', JSON.stringify(this.position));
+        this.safeStorage.setItem('debug-position', JSON.stringify(this.position));
     }
     
     loadPosition() {
-        const saved = localStorage.getItem('debug-position');
+        const saved = this.safeStorage.getItem('debug-position');
         return saved ? JSON.parse(saved) : null;
     }
     
     // Utility method to reset debug overlay state
     resetState() {
-        localStorage.removeItem('debug-view-state');
-        localStorage.removeItem('debug-position');
+        this.safeStorage.removeItem('debug-view-state');
+        this.safeStorage.removeItem('debug-position');
         this.viewState = 'compact';
         this.position = { x: 20, y: 20 };
         if (this.overlay) {
