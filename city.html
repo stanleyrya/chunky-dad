@@ -113,97 +113,6 @@
       })();
     </script>
     
-    <!-- Critical CSS for immediate header rendering -->
-    <style>
-      /* Critical header styles - inline for immediate rendering */
-      :root {
-        --primary-color: #667eea;
-        --accent-color: #764ba2;
-        --text-inverse: #ffffff;
-        --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-      }
-      
-      body {
-        margin: 0;
-        padding: 0;
-        padding-top: 80px;
-        font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      }
-      
-      header {
-        background: var(--gradient-primary);
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 9998;
-        height: 80px;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      
-      .nav-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem 2rem;
-        max-width: 1200px;
-        margin: 0 auto;
-        height: 100%;
-        box-sizing: border-box;
-      }
-      
-      .logo h1 {
-        color: var(--text-inverse);
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin: 0;
-      }
-      
-      .logo a {
-        color: var(--text-inverse);
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-      
-      .logo-img {
-        height: 1.5em;
-        width: auto;
-        vertical-align: middle;
-        display: inline-block;
-      }
-      
-      .hamburger {
-        display: none;
-        flex-direction: column;
-        cursor: pointer;
-      }
-      
-      .hamburger span {
-        width: 25px;
-        height: 3px;
-        background: var(--text-inverse);
-        margin: 3px 0;
-        transition: 0.3s;
-      }
-      
-      /* Hide nav menu on city pages */
-      .city-page-nav {
-        display: none !important;
-      }
-      
-      /* Mobile responsiveness */
-      @media (max-width: 768px) {
-        body { padding-top: 60px; }
-        header { height: 60px; }
-        .nav-container { padding: 0.5rem 1rem; }
-        .logo h1 { font-size: 1.4rem; }
-        .hamburger { display: block; }
-      }
-    </style>
-    
-    <!-- Full stylesheet loads after critical rendering -->
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap Icons (for recognizable iconography) -->
@@ -307,26 +216,21 @@
         </div>
     </footer>
 
-    <!-- Critical Scripts - Load immediately for basic functionality -->
+    <!-- Scripts -->
     <script src="js/logger.js"></script>
-    <script src="js/city-config.js"></script>
+<script src="js/debug-overlay.js"></script>
+<script src="js/city-config.js"></script>
     <script src="js/components.js"></script>
-    
-    <!-- Enhanced Scripts - Load after basic page is rendered -->
-    <script defer src="js/debug-overlay.js"></script>
-    <script defer src="js/page-effects.js"></script>
-    <script defer src="js/forms.js"></script>
-    <script defer src="js/calendar-core.js"></script>
-    
-    <!-- Heavy External Dependencies - Load asynchronously -->
-    <script async src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+    <script src="js/calendar-core.js"></script>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
             crossorigin="anonymous"
             onerror="if(window.logger){logger.error('SYSTEM', 'Failed to load Leaflet.js', {url: this.src, integrity: this.integrity});}else{console.error('Failed to load Leaflet.js from', this.src);}"></script>
-    
-    <!-- Calendar and App - Load last since they depend on other modules -->
-    <script defer src="js/dynamic-calendar-loader.js"></script>
-    <script defer src="js/app.js"></script>
+    <script src="js/page-effects.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/dynamic-calendar-loader.js"></script>
+    <script src="js/app.js"></script>
     
     <!-- Testing functionality for breakpoint-test.html -->
     <script>
