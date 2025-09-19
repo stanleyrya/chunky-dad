@@ -19,14 +19,25 @@
     
     <!-- Google Analytics 4 - Image-based tracking -->
     <script>
-      // Initialize Google Analytics 4 with Image-based tracking
+      // Initialize Google Analytics 4 with private mode support
       (function() {
         try {
-          // Create a unique client ID if not exists
-          let clientId = localStorage.getItem('ga_client_id');
-          if (!clientId) {
-            clientId = 'GA1.2.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
-            localStorage.setItem('ga_client_id', clientId);
+          // Test localStorage availability
+          let clientId, storageAvailable = false;
+          try {
+            localStorage.setItem('test', 'test');
+            localStorage.removeItem('test');
+            storageAvailable = true;
+          } catch (e) { storageAvailable = false; }
+          
+          if (storageAvailable) {
+            clientId = localStorage.getItem('ga_client_id');
+            if (!clientId) {
+              clientId = 'GA1.2.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
+              localStorage.setItem('ga_client_id', clientId);
+            }
+          } else {
+            clientId = 'GA1.2.private.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
           }
           
           // Send page view
@@ -56,15 +67,8 @@
           // Send via Image request
           new Image().src = analyticsUrl;
           
-          // Log success for debugging
-          if (window.logger) {
-            logger.debug('SYSTEM', 'Analytics pageview sent', { url: analyticsUrl });
-          }
         } catch (error) {
-          // Log error but don't break the page
-          if (window.logger) {
-            logger.error('SYSTEM', 'Analytics tracking failed', error);
-          }
+          // Silently fail - analytics not critical
         }
       })();
     </script>
