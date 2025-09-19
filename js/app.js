@@ -334,14 +334,6 @@ class ChunkyDadApp {
         logger.info('SYSTEM', `Initializing ${pageType} modules`);
         
         try {
-            // For city pages, update header immediately before any other initialization
-            if (this.isCityPage || this.isTestPage) {
-                const citySlug = this.getCitySlugFromPath();
-                if (citySlug) {
-                    logger.info('SYSTEM', `Fast header update for city: ${citySlug}`);
-                    this.updateHeaderForCity(citySlug);
-                }
-            }
             
             // Calendar functionality needed on city pages and main page (for today events)
             if (window.DynamicCalendarLoader) {
@@ -430,14 +422,6 @@ class ChunkyDadApp {
 
 
 
-    // Update header when city changes (for city pages)
-    updateHeaderForCity(cityKey) {
-        if (window.headerManager) {
-            window.headerManager.updateForCity(cityKey);
-        } else {
-            logger.warn('SYSTEM', 'Header manager not available for city update');
-        }
-    }
 }
 
 // Initialize the app when DOM is ready
