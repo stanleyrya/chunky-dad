@@ -485,6 +485,8 @@ class DynamicCalendarLoader extends CalendarCore {
         this.selectedEventDateISO = null;
         if (hadSelection) {
             logger.userInteraction('EVENT', 'Event selection cleared');
+            // Update visual selection state across all views
+            this.updateSelectionVisualState();
         }
     }
     
@@ -510,8 +512,68 @@ class DynamicCalendarLoader extends CalendarCore {
                 bringMarkerToFront(eventSlug);
             }
         }
+        
+        // Update visual selection state across all views
+        this.updateSelectionVisualState();
+        
         // Reflect selection in URL
         this.syncUrl(true);
+    }
+
+    // Update visual selection state across all views (calendar, list, map)
+    updateSelectionVisualState() {
+        // Clear all previous selections
+        document.querySelectorAll('.event-card.selected, .event-item.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Remove selection mode from events list
+        const eventsList = document.querySelector('.events-list');
+        if (eventsList) {
+            eventsList.classList.remove('selection-mode');
+        }
+        
+        // Show/hide clear selection button
+        const clearBtn = document.getElementById('clear-selection-btn');
+        
+        if (this.selectedEventSlug) {
+            // Mark selected event card in list view
+            const selectedCard = document.querySelector(`.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+                
+                // Enter selection mode to hide other events
+                if (eventsList) {
+                    eventsList.classList.add('selection-mode');
+                }
+            }
+            
+            // Mark selected event items in calendar views
+            document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`).forEach(item => {
+                item.classList.add('selected');
+            });
+            
+            // Bring map marker to front
+            if (typeof bringMarkerToFront === 'function') {
+                bringMarkerToFront(this.selectedEventSlug);
+            }
+            
+            // Show clear selection button
+            if (clearBtn) {
+                clearBtn.style.display = 'inline-block';
+            }
+            
+            logger.debug('EVENT', 'Updated selection visual state', { 
+                selectedSlug: this.selectedEventSlug,
+                cardFound: !!selectedCard,
+                calendarItemsFound: document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`).length
+            });
+        } else {
+            // Hide clear selection button
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+        }
     }
 
     // Helper: detect slug from first path segment, similar to app-level logic
@@ -2494,6 +2556,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 logger.debug('CALENDAR', 'Attaching calendar interactions');
                 this.attachCalendarInteractions();
+                
+                // Update visual selection state after calendar is rendered
+                this.updateSelectionVisualState();
             } else {
                 logger.warn('CALENDAR', 'Calendar grid element not found');
             }
@@ -2586,24 +2651,19 @@ class DynamicCalendarLoader extends CalendarCore {
                     eventsList.innerHTML = '<div class="loading-message">Error displaying events. Please refresh the page.</div>';
                 }
 
-                // Deep-link: highlight event from ?event=<slug> or #<slug>
+                // Deep-link: handle event selection from URL parameters
                 try {
                     const url = new URL(window.location.href);
                     const eventParam = url.searchParams.get('event') || (window.location.hash ? window.location.hash.replace('#','') : '');
-                    if (eventParam) {
+                    if (eventParam && this.selectedEventSlug === eventParam) {
+                        // Event is already selected from parseStateFromUrl, just scroll to it and give brief highlight
                         const selector = `.event-card[data-event-slug="${CSS && CSS.escape ? CSS.escape(eventParam) : eventParam}"]`;
                         const target = document.querySelector(selector);
                         if (target) {
                             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             target.classList.add('highlight');
-                            setTimeout(() => target.classList.remove('highlight'), 2000);
-                            logger.debug('EVENT', `Deep-linked event highlighted: ${eventParam}`);
-                            // Maintain selection state based on URL
-                            const dateParam = url.searchParams.get('date');
-                            if (dateParam) {
-                                this.selectedEventSlug = eventParam;
-                                this.selectedEventDateISO = dateParam;
-                            }
+                            setTimeout(() => target.classList.remove('highlight'), 1000);
+                            logger.debug('EVENT', `Deep-linked event scrolled to: ${eventParam}`);
                         } else {
                             logger.debug('EVENT', `Deep-linked event not found in current render: ${eventParam}`);
                         }
@@ -2615,6 +2675,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 // Add card click handlers for selection toggle and URL sync
                 this.attachEventCardSelectionHandlers();
+                
+                // Update visual selection state after rendering
+                this.updateSelectionVisualState();
             } else {
                 eventsList.innerHTML = '<div class="loading-message">No events found for this period. Try switching Week/Month or check back soon.</div>';
                 logger.info('CALENDAR', 'No events to display for current period', {
@@ -2709,6 +2772,16 @@ class DynamicCalendarLoader extends CalendarCore {
             todayBtn.addEventListener('click', () => {
                 logger.userInteraction('CALENDAR', 'Today button clicked');
                 this.goToToday();
+            });
+        }
+        
+        // Clear selection button
+        const clearSelectionBtn = document.getElementById('clear-selection-btn');
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', () => {
+                logger.userInteraction('EVENT', 'Clear selection button clicked');
+                this.clearEventSelection();
+                this.syncUrl(true);
             });
         }
         
@@ -2828,7 +2901,7 @@ class DynamicCalendarLoader extends CalendarCore {
                             if (eventCard) {
                                 eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 eventCard.classList.add('highlight');
-                                setTimeout(() => eventCard.classList.remove('highlight'), 2000);
+                                setTimeout(() => eventCard.classList.remove('highlight'), 1000);
                                 logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
                             } else {
                                 logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
@@ -2970,9 +3043,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 const dayISO = this.selectedEventSlug === slug && this.selectedEventDateISO ? this.selectedEventDateISO : this.formatDateToISO(this.currentDate);
                 logger.userInteraction('EVENT', 'Event card clicked', { slug, date: dayISO });
                 this.toggleEventSelection(slug, dayISO);
-                // Visual feedback
+                
+                // Brief highlight animation for user feedback, but selection state is persistent
                 card.classList.add('highlight');
-                setTimeout(() => card.classList.remove('highlight'), 2000);
+                setTimeout(() => card.classList.remove('highlight'), 1000);
             });
         });
         logger.debug('EVENT', `Attached selection handlers to ${cards.length} event cards`);

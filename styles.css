@@ -1831,6 +1831,26 @@ body.index-page main {
     box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
+.clear-selection-btn {
+    background: var(--color-away);
+    border: none;
+    color: white;
+    padding: 0.7rem 1.2rem;
+    border-radius: 12px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.9rem;
+    margin-left: 8px;
+}
+
+.clear-selection-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 165, 0, 0.4);
+    background: #d97706;
+}
+
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -3448,7 +3468,7 @@ footer {
         min-width: 100px;
     }
 
-    .today-btn {
+    .today-btn, .clear-selection-btn {
         padding: 0.5rem 0.8rem;
         font-size: 0.8rem;
     }
@@ -3636,7 +3656,7 @@ footer {
         padding: 0;
     }
     
-    .today-btn {
+    .today-btn, .clear-selection-btn {
         padding: 0.5rem 0.8rem;
         font-size: 0.7rem;
         flex-shrink: 0;
@@ -3692,7 +3712,7 @@ footer {
         min-width: 70px;
     }
     
-    .today-btn {
+    .today-btn, .clear-selection-btn {
         padding: 0.3rem 0.5rem;
         font-size: 0.65rem;
     }
@@ -3794,7 +3814,7 @@ footer {
         min-width: 60px;
     }
     
-    .today-btn {
+    .today-btn, .clear-selection-btn {
         padding: 0.25rem 0.4rem;
         font-size: 0.6rem;
     }
@@ -3948,6 +3968,26 @@ footer {
 .event-card.highlight {
     animation: highlightPulse 2s ease-in-out;
     border: 2px solid var(--primary-color);
+}
+
+/* Event Card Selected State (persistent) */
+.event-card.selected {
+    border: 2px solid var(--primary-color);
+    background: linear-gradient(135deg, var(--card-background) 0%, rgba(255, 165, 0, 0.1) 100%);
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+}
+
+/* Calendar Event Item Selected State */
+.event-item.selected {
+    background: var(--primary-color) !important;
+    color: white !important;
+    font-weight: bold;
+    border-radius: 4px;
+}
+
+/* Hide non-selected events when in selection mode */
+.events-list.selection-mode .event-card:not(.selected) {
+    display: none;
 }
 
 @keyframes highlightPulse {
