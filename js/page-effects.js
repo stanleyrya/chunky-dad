@@ -105,6 +105,7 @@ class PageEffectsManager {
         window.addEventListener('load', () => {
             logger.performance('PAGE', 'Page load complete - adding loaded class');
             document.body.classList.add('loaded');
+            this.makeStickyHeader();
         });
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -217,6 +218,19 @@ class PageEffectsManager {
         };
         
         type();
+    }
+
+    makeStickyHeader() {
+        // Make header sticky after page loads to prevent initial visibility issues
+        // Skip this for index pages as they have their own dynamic header behavior
+        if (this.header && !this.isMainPage) {
+            logger.debug('PAGE', 'Making header sticky after page load');
+            this.header.classList.add('sticky');
+            document.body.classList.add('header-sticky');
+            logger.componentLoad('PAGE', 'Header made sticky after page load');
+        } else if (this.isMainPage) {
+            logger.debug('PAGE', 'Skipping sticky header for index page (has dynamic behavior)');
+        }
     }
 
 }
