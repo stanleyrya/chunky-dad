@@ -611,14 +611,26 @@ class EventbriteParser {
                 }
             }
             
-            // Determine timezone: prefer original Eventbrite timezone, fallback to city-based timezone
-            let eventTimezone = originalTimezone;
-            if (!eventTimezone && city) {
+            // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
+            // This fixes cases where Eventbrite has incorrect timezone but parser correctly detects city
+            let eventTimezone = null;
+            if (city) {
                 eventTimezone = this.getTimezoneForCity(city, cityConfig);
-                console.log(`🎫 Eventbrite: Using city-based timezone for "${title}": ${eventTimezone}`);
-            } else if (eventTimezone) {
+                if (eventTimezone) {
+                    console.log(`🎫 Eventbrite: Using city-based timezone for "${title}": ${eventTimezone}`);
+                    if (originalTimezone && originalTimezone !== eventTimezone) {
+                        console.log(`🎫 Eventbrite: Overriding Eventbrite timezone "${originalTimezone}" with city-based timezone "${eventTimezone}" for "${title}"`);
+                    }
+                }
+            }
+            
+            // Fallback to original Eventbrite timezone if no city-based timezone found
+            if (!eventTimezone && originalTimezone) {
+                eventTimezone = originalTimezone;
                 console.log(`🎫 Eventbrite: Using original Eventbrite timezone for "${title}": ${eventTimezone}`);
-            } else {
+            }
+            
+            if (!eventTimezone) {
                 console.log(`🎫 Eventbrite: No timezone found for "${title}"`);
             }
             
