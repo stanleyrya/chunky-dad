@@ -1083,8 +1083,8 @@ class DynamicCalendarLoader extends CalendarCore {
                                  onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
                         </div>
                     `,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16],
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20],
                     popupAnchor: [0, -16]
                 });
             } catch (error) {
@@ -1101,8 +1101,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     <span class="marker-text">${markerText}</span>
                 </div>
             `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
             popupAnchor: [0, -16]
         });
     }
@@ -1110,7 +1110,7 @@ class DynamicCalendarLoader extends CalendarCore {
     // Get marker text from event data
     getMarkerText(event) {
         // Priority: shorter → shortName → name
-        return event.shorter || event.shortName || event.name || 'Event';
+        return event.shorter || this.insertSoftHyphens(event.shortName, true) || event.name || 'Event';
     }
 
     getCurrentPeriodBounds() {
