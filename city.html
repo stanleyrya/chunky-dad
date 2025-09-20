@@ -40,6 +40,9 @@
           }
         } catch (e) {
           // Silently ignore normalization errors
+          if (typeof window !== 'undefined' && window.logger) {
+            window.logger.warn('SYSTEM', 'URL normalization failed', { error: e.message });
+          }
         }
       })();
     </script>
@@ -59,6 +62,9 @@
           } catch (e) {
             // Private mode or localStorage disabled
             storageAvailable = false;
+            if (typeof window !== 'undefined' && window.logger) {
+              window.logger.debug('SYSTEM', 'localStorage not available (private mode)', { error: e.message });
+            }
           }
           
           if (storageAvailable) {
@@ -109,6 +115,9 @@
         } catch (error) {
           // Silently fail - don't break the page or log errors
           // Analytics is not critical for site functionality
+          if (typeof window !== 'undefined' && window.logger) {
+            window.logger.warn('SYSTEM', 'Analytics initialization failed', { error: error.message });
+          }
         }
       })();
     </script>
@@ -224,57 +233,5 @@
     <script src="js/forms.js"></script>
     <script src="js/dynamic-calendar-loader.js"></script>
     <script src="js/app.js"></script>
-    
-    <!-- Testing functionality for breakpoint-test.html -->
-    <script>
-        // Handle messages from parent window (for testing iframe functionality)
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type) {
-                switch (event.data.type) {
-                    case 'updateCharacterLimits':
-                        if (window.calendarLoader && window.calendarLoader.updateCharacterLimits) {
-                            window.calendarLoader.updateCharacterLimits(event.data.data);
-                        }
-                        break;
-                    case 'addTestEvent':
-                        if (window.calendarLoader && window.calendarLoader.addTestEvent) {
-                            window.calendarLoader.addTestEvent(event.data.data);
-                        }
-                        break;
-                    case 'setFakeViewport':
-                        // Inject CSS to fake viewport size
-                        const fakeViewportStyle = document.getElementById('fake-viewport-style') || document.createElement('style');
-                        fakeViewportStyle.id = 'fake-viewport-style';
-                        fakeViewportStyle.textContent = `
-                            @media (max-width: 99999px) {
-                                .event-name-xs { display: ${event.data.data.width < 375 ? 'block' : 'none'}; }
-                                .event-name-sm { display: ${event.data.data.width >= 375 && event.data.data.width < 768 ? 'block' : 'none'}; }
-                                .event-name-md { display: ${event.data.data.width >= 768 && event.data.data.width < 1024 ? 'block' : 'none'}; }
-                                .event-name-lg { display: ${event.data.data.width >= 1024 ? 'block' : 'none'}; }
-                            }
-                        `;
-                        document.head.appendChild(fakeViewportStyle);
-                        break;
-                    case 'clearFakeViewport':
-                        const existingFakeStyle = document.getElementById('fake-viewport-style');
-                        if (existingFakeStyle) {
-                            existingFakeStyle.remove();
-                        }
-                        break;
-                }
-            }
-        });
-        
-        // Notify parent window when iframe is ready
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                try {
-                    window.parent.postMessage({ type: 'iframeReady' }, '*');
-                } catch (e) {
-                    // Ignore cross-origin errors
-                }
-            }, 500);
-        });
-    </script>
 </body>
 </html>
