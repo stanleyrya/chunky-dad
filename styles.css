@@ -3216,9 +3216,19 @@ footer {
         margin-left: 0.1rem;
     }
 
-    /* Hide navigation menu on city pages */
+    /* Hide navigation menu and hamburger on city pages */
     .city-page-nav {
         display: none !important;
+    }
+    
+    /* Hide hamburger menu on city pages */
+    .city-page .hamburger {
+        display: none !important;
+    }
+    
+    /* Ensure city switcher is visible on city pages */
+    .city-page .city-switcher {
+        display: block !important;
     }
 
     .city-dropdown {

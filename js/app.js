@@ -240,6 +240,11 @@ class ChunkyDadApp {
             logger.debug('SYSTEM', 'Skipping navigation manager for city pages (using city switcher instead)');
         }
         
+        // Initialize city switcher for city pages
+        if (this.isCityPage) {
+            this.citySwitcher = new CitySwitcher();
+        }
+        
         // Page effects are needed on all pages
         this.pageEffectsManager = new PageEffectsManager();
         
@@ -424,6 +429,10 @@ class ChunkyDadApp {
 
     getPathUtils() {
         return this.pathUtils;
+    }
+
+    getCitySwitcher() {
+        return this.citySwitcher;
     }
 
 
