@@ -1054,6 +1054,11 @@ class DynamicCalendarLoader extends CalendarCore {
     createMarkerIcon(event) {
         if (event.website) {
             try {
+                logger.debug('MAP', 'Creating favicon marker', {
+                    eventName: event.name,
+                    website: event.website
+                });
+                
                 // Ensure URL has protocol
                 let url = event.website;
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -1063,6 +1068,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 const hostname = new URL(url).hostname;
                 const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                 const textFallback = this.getMarkerText(event);
+                
+                logger.debug('MAP', 'Favicon URL generated', {
+                    hostname,
+                    faviconUrl,
+                    textFallback
+                });
                 
                 return L.divIcon({
                     className: 'favicon-marker',
@@ -2224,10 +2235,24 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Initialize map
     initializeMap(cityConfig, events) {
+        logger.debug('MAP', 'Starting map initialization', {
+            cityName: cityConfig?.name,
+            eventCount: events?.length,
+            mapContainerExists: !!document.querySelector('#events-map'),
+            leafletAvailable: typeof L !== 'undefined'
+        });
+
         const mapContainer = document.querySelector('#events-map');
-        if (!mapContainer || typeof L === 'undefined') return;
+        if (!mapContainer || typeof L === 'undefined') {
+            logger.warn('MAP', 'Map initialization skipped - missing container or Leaflet', {
+                mapContainerExists: !!mapContainer,
+                leafletAvailable: typeof L !== 'undefined'
+            });
+            return;
+        }
 
         try {
+            logger.debug('MAP', 'Removing existing map if present');
             // Remove existing map if it exists
             if (window.eventsMap) {
                 window.eventsMap.remove();
@@ -2254,10 +2279,12 @@ class DynamicCalendarLoader extends CalendarCore {
             }).setView(mapCenter, mapZoom);
 
             // Use clean US-based OpenStreetMap tiles
+            logger.debug('MAP', 'Loading OpenStreetMap tile layer');
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 18
             }).addTo(map);
+            logger.debug('MAP', 'Tile layer added successfully');
 
 
 
@@ -2304,28 +2331,48 @@ class DynamicCalendarLoader extends CalendarCore {
             let markersAdded = 0;
             const markers = []; // Store markers for fit all function
             
-            events.forEach(event => {
+            logger.debug('MAP', 'Starting marker creation', {
+                totalEvents: events.length,
+                eventsWithCoords: eventsWithCoords.length
+            });
+            
+            events.forEach((event, index) => {
                 if (event.coordinates?.lat && event.coordinates?.lng && 
                     !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
                     
-                    // Create custom marker icon with favicon or fallback
-                    const markerIcon = this.createMarkerIcon(event);
-                    
-                    const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
-                        icon: markerIcon
-                    })
-                        .addTo(map)
-                        .bindPopup(`
-                            <div class="map-popup">
-                                <h4>${event.shorterName || event.shortName || event.name}</h4>
-                                <p><strong>📍 ${event.bar || 'Location'}</strong></p>
-                                <p>📅 ${event.day} ${event.time}</p>
-                                ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<p>💰 ${event.cover}</p>` : ''}
-                                ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
-                            </div>
-                        `);
-                    markers.push(marker);
-                    markersAdded++;
+                    try {
+                        logger.debug('MAP', `Creating marker ${index + 1}/${events.length}`, {
+                            eventName: event.name,
+                            coordinates: event.coordinates,
+                            hasWebsite: !!event.website
+                        });
+                        
+                        // Create custom marker icon with favicon or fallback
+                        const markerIcon = this.createMarkerIcon(event);
+                        
+                        const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
+                            icon: markerIcon
+                        })
+                            .addTo(map)
+                            .bindPopup(`
+                                <div class="map-popup">
+                                    <h4>${event.shorterName || event.shortName || event.name}</h4>
+                                    <p><strong>📍 ${event.bar || 'Location'}</strong></p>
+                                    <p>📅 ${event.day} ${event.time}</p>
+                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<p>💰 ${event.cover}</p>` : ''}
+                                    ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
+                                </div>
+                            `);
+                        markers.push(marker);
+                        markersAdded++;
+                        
+                        logger.debug('MAP', `Marker ${index + 1} created successfully`);
+                    } catch (markerError) {
+                        logger.warn('MAP', `Failed to create marker for event: ${event.name}`, {
+                            error: markerError.message,
+                            eventIndex: index
+                        });
+                    }
                 }
             });
 
@@ -2375,67 +2422,98 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         // Update calendar title
-        const calendarTitle = document.getElementById('calendar-title');
-        if (calendarTitle) {
-            calendarTitle.textContent = `What's the vibe?`;
+        try {
+            const calendarTitle = document.getElementById('calendar-title');
+            if (calendarTitle) {
+                calendarTitle.textContent = `What's the vibe?`;
+                logger.debug('CALENDAR', 'Calendar title updated successfully');
+            } else {
+                logger.warn('CALENDAR', 'Calendar title element not found');
+            }
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to update calendar title', { error: error.message });
         }
         
         // Update date range
-        const dateRange = document.getElementById('date-range');
-        if (dateRange) {
-            const { start, end } = this.getCurrentPeriodBounds();
-            dateRange.textContent = this.formatDateRange(start, end);
+        try {
+            const dateRange = document.getElementById('date-range');
+            if (dateRange) {
+                const { start, end } = this.getCurrentPeriodBounds();
+                dateRange.textContent = this.formatDateRange(start, end);
+                logger.debug('CALENDAR', 'Date range updated successfully', { start, end });
+            } else {
+                logger.warn('CALENDAR', 'Date range element not found');
+            }
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to update date range', { error: error.message });
         }
         
         // Update calendar grid
-        const calendarGrid = document.querySelector('.calendar-grid');
-        if (calendarGrid) {
-            calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
-            
-            // For measurement mode, make the grid invisible to users but keep same layout constraints
-            if (hideEvents) {
-                // Keep the element in its normal position but hide it behind background
-                calendarGrid.style.position = 'relative';
-                calendarGrid.style.zIndex = '-999'; // Behind everything else
-                calendarGrid.style.opacity = '0'; // Invisible to users
-                calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
-                calendarGrid.style.visibility = 'visible'; // Still measurable by JS
+        try {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                logger.debug('CALENDAR', 'Updating calendar grid HTML');
+                calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
+                
+                // For measurement mode, make the grid invisible to users but keep same layout constraints
+                if (hideEvents) {
+                    // Keep the element in its normal position but hide it behind background
+                    calendarGrid.style.position = 'relative';
+                    calendarGrid.style.zIndex = '-999'; // Behind everything else
+                    calendarGrid.style.opacity = '0'; // Invisible to users
+                    calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
+                    calendarGrid.style.visibility = 'visible'; // Still measurable by JS
+                    logger.debug('CALENDAR', 'Calendar grid set to measurement mode (hidden)');
+                } else {
+                    // Reset to normal visibility
+                    calendarGrid.style.position = '';
+                    calendarGrid.style.zIndex = '';
+                    calendarGrid.style.opacity = '1';
+                    calendarGrid.style.pointerEvents = '';
+                    calendarGrid.style.visibility = 'visible';
+                    logger.debug('CALENDAR', 'Calendar grid set to display mode (visible)');
+                }
+                
+                logger.debug('CALENDAR', 'Attaching calendar interactions');
+                this.attachCalendarInteractions();
             } else {
-                // Reset to normal visibility
-                calendarGrid.style.position = '';
-                calendarGrid.style.zIndex = '';
-                calendarGrid.style.opacity = '1';
-                calendarGrid.style.pointerEvents = '';
-                calendarGrid.style.visibility = 'visible';
+                logger.warn('CALENDAR', 'Calendar grid element not found');
             }
-            
-            this.attachCalendarInteractions();
-            
-            // Update grid layout based on view
-            if (this.currentView === 'month') {
-                calendarGrid.className = 'calendar-grid month-view-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                
-                // Calculate the optimal number of rows based on the actual content
-                const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
-                const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
-                const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
-                const totalRows = headerRows + dayRows;
-                
-                calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
-                
-                logger.debug('CALENDAR', `Updated month view grid layout`, {
-                    totalElements: dayElements.length,
-                    headerRows: headerRows,
-                    dayRows: dayRows,
-                    totalRows: totalRows
-                });
-            } else {
-                calendarGrid.className = 'calendar-grid week-view-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                calendarGrid.style.gridTemplateRows = 'auto';
-                calendarGrid.style.minHeight = 'auto';
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to update calendar grid', { error: error.message });
+        }
+        
+        // Update grid layout based on view (outside try-catch since calendarGrid might not be defined)
+        try {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                if (this.currentView === 'month') {
+                    calendarGrid.className = 'calendar-grid month-view-grid';
+                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                    
+                    // Calculate the optimal number of rows based on the actual content
+                    const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
+                    const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
+                    const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
+                    const totalRows = headerRows + dayRows;
+                    
+                    calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
+                    
+                    logger.debug('CALENDAR', `Updated month view grid layout`, {
+                        totalElements: dayElements.length,
+                        headerRows: headerRows,
+                        dayRows: dayRows,
+                        totalRows: totalRows
+                    });
+                } else {
+                    calendarGrid.className = 'calendar-grid week-view-grid';
+                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                    calendarGrid.style.gridTemplateRows = 'auto';
+                    calendarGrid.style.minHeight = 'auto';
+                }
             }
+        } catch (layoutError) {
+            logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
         }
         
         // Update events list (show for both week and month views)
@@ -2529,10 +2607,21 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         // Update map (show for both week and month views)
-        const mapSection = document.querySelector('.events-map-section');
-        if (mapSection && !hideEvents) {
-            mapSection.style.display = 'block';
-            this.initializeMap(this.currentCityConfig, filteredEvents);
+        // Initialize map if not in hideEvents mode
+        try {
+            const mapSection = document.querySelector('.events-map-section');
+            if (mapSection && !hideEvents) {
+                logger.debug('CALENDAR', 'Initializing map for events display');
+                mapSection.style.display = 'block';
+                this.initializeMap(this.currentCityConfig, filteredEvents);
+                logger.debug('CALENDAR', 'Map initialization completed');
+            } else if (hideEvents) {
+                logger.debug('CALENDAR', 'Skipping map initialization (hideEvents mode)');
+            } else {
+                logger.warn('CALENDAR', 'Map section not found');
+            }
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to initialize map', { error: error.message });
         }
         
         logger.timeEnd('CALENDAR', 'Calendar display update');
@@ -2695,35 +2784,50 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Attach calendar interactions
     attachCalendarInteractions() {
-        const eventItems = document.querySelectorAll('.event-item');
-        
-        eventItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                const eventSlug = item.dataset.eventSlug;
-                // Determine the date for this event from the closest day element
-                const dayEl = item.closest('[data-date]');
-                const dayISO = dayEl ? dayEl.getAttribute('data-date') : this.formatDateToISO(this.currentDate);
-                logger.userInteraction('EVENT', `Calendar event clicked: ${eventSlug}`, {
-                    eventSlug,
-                    city: this.currentCity
-                });
-                
-                // Toggle selection and sync URL
-                this.toggleEventSelection(eventSlug, dayISO);
-                
-                const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
-                if (eventCard) {
-                    eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    eventCard.classList.add('highlight');
-                    setTimeout(() => eventCard.classList.remove('highlight'), 2000);
-                    logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
-                } else {
-                    logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
+        try {
+            logger.debug('CALENDAR', 'Starting to attach calendar interactions');
+            const eventItems = document.querySelectorAll('.event-item');
+            
+            logger.debug('CALENDAR', `Found ${eventItems.length} event items to attach interactions to`);
+            
+            eventItems.forEach((item, index) => {
+                try {
+                    item.addEventListener('click', (e) => {
+                        try {
+                            const eventSlug = item.dataset.eventSlug;
+                            // Determine the date for this event from the closest day element
+                            const dayEl = item.closest('[data-date]');
+                            const dayISO = dayEl ? dayEl.getAttribute('data-date') : this.formatDateToISO(this.currentDate);
+                            logger.userInteraction('EVENT', `Calendar event clicked: ${eventSlug}`, {
+                                eventSlug,
+                                city: this.currentCity
+                            });
+                            
+                            // Toggle selection and sync URL
+                            this.toggleEventSelection(eventSlug, dayISO);
+                            
+                            const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
+                            if (eventCard) {
+                                eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                eventCard.classList.add('highlight');
+                                setTimeout(() => eventCard.classList.remove('highlight'), 2000);
+                                logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
+                            } else {
+                                logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
+                            }
+                        } catch (clickError) {
+                            logger.warn('EVENT', `Error handling event click`, { error: clickError.message, eventSlug: item.dataset.eventSlug });
+                        }
+                    });
+                } catch (addEventListenerError) {
+                    logger.warn('CALENDAR', `Failed to add event listener to item ${index}`, { error: addEventListenerError.message });
                 }
             });
-        });
-        
-        logger.debug('CALENDAR', `Attached interactions to ${eventItems.length} calendar items`);
+            
+            logger.debug('CALENDAR', `Successfully attached interactions to ${eventItems.length} calendar items`);
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to attach calendar interactions', { error: error.message });
+        }
     }
 
     // Reusable HTML generation methods for event details
