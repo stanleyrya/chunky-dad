@@ -2482,32 +2482,38 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to update calendar grid', { error: error.message });
         }
-            
-            // Update grid layout based on view
-            if (this.currentView === 'month') {
-                calendarGrid.className = 'calendar-grid month-view-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                
-                // Calculate the optimal number of rows based on the actual content
-                const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
-                const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
-                const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
-                const totalRows = headerRows + dayRows;
-                
-                calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
-                
-                logger.debug('CALENDAR', `Updated month view grid layout`, {
-                    totalElements: dayElements.length,
-                    headerRows: headerRows,
-                    dayRows: dayRows,
-                    totalRows: totalRows
-                });
-            } else {
-                calendarGrid.className = 'calendar-grid week-view-grid';
-                calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                calendarGrid.style.gridTemplateRows = 'auto';
-                calendarGrid.style.minHeight = 'auto';
+        
+        // Update grid layout based on view (outside try-catch since calendarGrid might not be defined)
+        try {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                if (this.currentView === 'month') {
+                    calendarGrid.className = 'calendar-grid month-view-grid';
+                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                    
+                    // Calculate the optimal number of rows based on the actual content
+                    const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
+                    const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
+                    const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
+                    const totalRows = headerRows + dayRows;
+                    
+                    calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
+                    
+                    logger.debug('CALENDAR', `Updated month view grid layout`, {
+                        totalElements: dayElements.length,
+                        headerRows: headerRows,
+                        dayRows: dayRows,
+                        totalRows: totalRows
+                    });
+                } else {
+                    calendarGrid.className = 'calendar-grid week-view-grid';
+                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+                    calendarGrid.style.gridTemplateRows = 'auto';
+                    calendarGrid.style.minHeight = 'auto';
+                }
             }
+        } catch (layoutError) {
+            logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
         }
         
         // Update events list (show for both week and month views)
