@@ -1339,13 +1339,26 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             
             // Fallback 1: try via CORS proxy providers
-            const proxyResult = await this.loadCalendarDataViaProxy(cityKey, cityConfig);
-            if (proxyResult) {
-                return proxyResult;
+            try {
+                const proxyResult = await this.loadCalendarDataViaProxy(cityKey, cityConfig);
+                if (proxyResult) {
+                    return proxyResult;
+                }
+            } catch (proxyError) {
+                logger.warn('CALENDAR', 'Proxy loading failed', {
+                    cityKey,
+                    cityName: cityConfig.name,
+                    error: proxyError.message
+                });
             }
             
             // Fallback 2: try to load directly from Google (will likely fail due to CORS, but worth trying)
-            return this.loadCalendarDataFallback(cityKey, cityConfig);
+            try {
+                return await this.loadCalendarDataFallback(cityKey, cityConfig);
+            } catch (fallbackError) {
+                logger.componentError('CALENDAR', 'All fallback methods failed', fallbackError);
+                return null;
+            }
         }
     }
     
@@ -3109,7 +3122,9 @@ calculatedData: {
             logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
         } catch (error) {
             logger.componentError('CALENDAR', 'Calendar initialization failed', error);
-            throw error;
+            // Don't re-throw the error to prevent unhandled promise rejection
+            // The error has already been logged and the calendar will show an error message
+            this.showCalendarError();
         } finally {
             this.isInitializing = false;
         }

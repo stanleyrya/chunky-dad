@@ -207,6 +207,8 @@ class ChunkyDadApp {
                 // Initialize city page modules asynchronously to prevent blocking
                 this.initializeCityPageModules().catch(error => {
                     logger.componentError('SYSTEM', 'City page module initialization failed', error);
+                    // Ensure error is not re-thrown to prevent unhandled promise rejection
+                    return null;
                 });
             }
             
@@ -214,6 +216,8 @@ class ChunkyDadApp {
                 // Don't await directory page modules to prevent hanging
                 this.initializeDirectoryPageModules().catch(error => {
                     logger.componentError('SYSTEM', 'Directory page module initialization failed', error);
+                    // Ensure error is not re-thrown to prevent unhandled promise rejection
+                    return null;
                 });
             }
             
@@ -347,6 +351,8 @@ class ChunkyDadApp {
                     // Don't await - let calendar load in background
                     this.calendarLoader.init().catch(error => {
                         logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
+                        // Ensure error is not re-thrown to prevent unhandled promise rejection
+                        return null;
                     });
                 }
             } else {
