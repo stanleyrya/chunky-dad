@@ -9,9 +9,12 @@ class PageEffectsManager {
     }
 
     checkIfMainPage() {
-        return window.location.pathname.endsWith('index.html') || 
-               window.location.pathname === '/' || 
-               window.location.pathname === '';
+        // Only the root index page should be considered the main page
+        // City pages like /city-name/index.html should NOT be main pages
+        const pathname = window.location.pathname;
+        return pathname === '/' || 
+               pathname === '' || 
+               pathname === '/index.html';
     }
 
     checkIfCityPage() {
