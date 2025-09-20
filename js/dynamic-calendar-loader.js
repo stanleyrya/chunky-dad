@@ -1323,7 +1323,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 calendarTimezone: this.calendarTimezone,
                 hasTimezoneData: !!this.timezoneData,
                 method: 'cached_data_final_success',
-                source: 'github_actions_cache'
+                source: 'github_actions_cache',
+                eventsDataStructure: {
+                    hasCityConfig: !!this.eventsData.cityConfig,
+                    hasEvents: !!this.eventsData.events,
+                    eventsLength: this.eventsData.events?.length || 0,
+                    cityConfigName: this.eventsData.cityConfig?.name || 'no name'
+                }
             });
             
             return this.eventsData;
@@ -1540,19 +1546,29 @@ class DynamicCalendarLoader extends CalendarCore {
              
              // Clear fake event from allEvents to prevent it from showing
              this.allEvents = [];
-             this.showCalendarError();
-             return null;
+            this.showCalendarError('loadCalendarDataFallback');
+            return null;
          }
      }
  
     // Show calendar error - only in the events container for cleaner display
-    showCalendarError() {
+    showCalendarError(errorSource = 'unknown') {
+        logger.error('CALENDAR', `🚨 SHOWING CALENDAR ERROR from source: ${errorSource}`, {
+            currentCity: this.currentCity,
+            currentCityConfig: this.currentCityConfig?.name || 'no config',
+            allEventsLength: this.allEvents?.length || 0,
+            isInitialized: this.isInitialized,
+            isInitializing: this.isInitializing,
+            stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n') || 'no stack'
+        });
+        
         const errorMessage = `
             <div class="error-message">
                 <h3>📅 Calendar Temporarily Unavailable</h3>
                 <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
                 <p><strong>What's happening:</strong> Our calendar data is updated automatically every 2 hours. The latest update may not be available yet.</p>
                 <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for the latest updates.</p>
+                <!-- Debug: Error source: ${errorSource} -->
             </div>
         `;
         
@@ -1569,9 +1585,16 @@ class DynamicCalendarLoader extends CalendarCore {
         if (eventsContainer) {
             const existingError = eventsContainer.querySelector('.error-message');
             if (existingError) {
-                logger.info('CALENDAR', 'Clearing calendar error message');
+                logger.info('CALENDAR', '✅ Clearing calendar error message', {
+                    errorContent: existingError.innerHTML.substring(0, 100) + '...',
+                    currentAllEventsLength: this.allEvents?.length || 0
+                });
                 existingError.remove();
+            } else {
+                logger.debug('CALENDAR', 'No existing error message to clear');
             }
+        } else {
+            logger.warn('CALENDAR', 'Events container not found when trying to clear error');
         }
     }
  
@@ -2403,6 +2426,17 @@ class DynamicCalendarLoader extends CalendarCore {
         const eventsSection = document.querySelector('.events');
         if (eventsList && eventsSection) {
             eventsSection.style.display = 'block';
+            
+            logger.debug('CALENDAR', '🔍 UPDATE_DISPLAY: Events list update logic', {
+                hideEvents,
+                filteredEventsLength: filteredEvents?.length || 0,
+                hasFilteredEvents: filteredEvents?.length > 0,
+                allEventsLength: this.allEvents?.length || 0,
+                currentExistingContent: eventsList.innerHTML.substring(0, 100) + '...',
+                hasExistingError: !!eventsList.querySelector('.error-message'),
+                hasExistingLoading: !!eventsList.querySelector('.loading-message')
+            });
+            
             if (hideEvents) {
                 // Keep existing loading message when hideEvents is true
                 if (!eventsList.querySelector('.loading-message')) {
@@ -2414,8 +2448,30 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (existingError) {
                     logger.info('CALENDAR', 'Clearing previous error message - calendar loaded successfully');
                 }
-                // Events are already sorted by upcoming time in getFilteredEvents()
-                eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
+                
+                try {
+                    // Events are already sorted by upcoming time in getFilteredEvents()
+                    logger.debug('CALENDAR', '🔍 UPDATE_DISPLAY: Generating event cards', {
+                        eventCount: filteredEvents.length,
+                        sampleEvent: filteredEvents[0] ? {
+                            name: filteredEvents[0].name,
+                            hasLinks: !!filteredEvents[0].links,
+                            hasTea: !!filteredEvents[0].tea,
+                            hasBar: !!filteredEvents[0].bar
+                        } : 'no events'
+                    });
+                    
+                    const eventCardsHtml = filteredEvents.map(event => this.generateEventCard(event)).join('');
+                    eventsList.innerHTML = eventCardsHtml;
+                    
+                    logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
+                        htmlLength: eventCardsHtml.length,
+                        eventCount: filteredEvents.length
+                    });
+                } catch (cardError) {
+                    logger.componentError('CALENDAR', 'Failed to generate event cards', cardError);
+                    eventsList.innerHTML = '<div class="loading-message">Error displaying events. Please refresh the page.</div>';
+                }
 
                 // Deep-link: highlight event from ?event=<slug> or #<slug>
                 try {
@@ -2890,18 +2946,32 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             const data = await this.loadCalendarData(this.currentCity);
             
+            logger.debug('CALENDAR', '🔍 RENDER: Calendar data loaded, checking structure', {
+                dataExists: !!data,
+                dataType: typeof data,
+                dataKeys: data ? Object.keys(data) : 'no data',
+                hasEvents: data && !!data.events,
+                eventsLength: data && data.events ? data.events.length : 0,
+                hasCityConfig: data && !!data.cityConfig,
+                cityConfigName: data && data.cityConfig ? data.cityConfig.name : 'no name',
+                allEventsLength: this.allEvents.length
+            });
+            
             if (!data || !data.events || !data.cityConfig) {
                 logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing error message', {
                     dataIsNull: data === null,
                     dataIsUndefined: data === undefined,
                     hasEvents: data && !!data.events,
                     hasCityConfig: data && !!data.cityConfig,
-                    dataType: typeof data
+                    dataType: typeof data,
+                    dataKeys: data ? Object.keys(data) : 'no data',
+                    eventDataType: data && data.events ? typeof data.events : 'no events',
+                    cityConfigType: data && data.cityConfig ? typeof data.cityConfig : 'no cityConfig'
                 });
                 // Clear fake event from allEvents to prevent it from showing
                 this.allEvents = [];
                 // Show error message instead of empty calendar
-                this.showCalendarError();
+                this.showCalendarError('renderCityPage_dataValidation');
                 return;
             }
             
@@ -2913,8 +2983,14 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             
             // Clear any existing error messages before showing successful content
+            logger.debug('CALENDAR', '🔍 RENDER: Clearing any existing error messages');
             this.clearCalendarError();
             
+            logger.debug('CALENDAR', '🔍 RENDER: Updating page content with real events', {
+                cityConfig: data.cityConfig.name,
+                eventCount: data.events.length,
+                hideEvents: false
+            });
             this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
             
             // Ensure URL reflects initial state after first render
@@ -2925,7 +3001,7 @@ class DynamicCalendarLoader extends CalendarCore {
             // Clear fake event from allEvents to prevent it from showing
             this.allEvents = [];
             // Show error message instead of empty calendar
-            this.showCalendarError();
+            this.showCalendarError('renderCityPage_exception');
             return;
         }
         
@@ -3143,7 +3219,7 @@ calculatedData: {
             logger.componentError('CALENDAR', 'Calendar initialization failed', error);
             // Don't re-throw the error to prevent unhandled promise rejection
             // The error has already been logged and the calendar will show an error message
-            this.showCalendarError();
+            this.showCalendarError('init_timeout_or_exception');
         } finally {
             this.isInitializing = false;
         }

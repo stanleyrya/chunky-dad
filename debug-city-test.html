@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug City Calendar Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    <style>
+        .debug-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 10000;
+        }
+        .debug-info h4 { margin: 0 0 5px 0; color: #4CAF50; }
+        .debug-info div { margin: 2px 0; }
+        .debug-status { color: #2196F3; }
+        .debug-error { color: #f44336; }
+        .debug-success { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <div class="debug-info" id="debug-info">
+        <h4>Debug Info</h4>
+        <div>Status: <span id="debug-status" class="debug-status">Loading...</span></div>
+        <div>City: <span id="debug-city">-</span></div>
+        <div>Events: <span id="debug-events">-</span></div>
+        <div>Calendar Grid: <span id="debug-calendar">-</span></div>
+        <div>Map: <span id="debug-map">-</span></div>
+        <div>Error Source: <span id="debug-error-source">-</span></div>
+    </div>
+
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="index.html"><img src="Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad</a></h1>
+                </div>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="city-page">
+        <section class="weekly-calendar">
+            <div class="container">
+                <div class="calendar-header">
+                    <h2 id="calendar-title">Debug Test Calendar</h2>
+                    <div class="calendar-controls">
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="week">📅 Week</button>
+                            <button class="view-btn" data-view="month">📊 Month</button>
+                        </div>
+                        <div class="date-navigation">
+                            <button class="nav-btn" id="prev-period">←</button>
+                            <span class="date-range" id="date-range">Loading...</span>
+                            <button class="nav-btn" id="next-period">→</button>
+                        </div>
+                        <button class="today-btn" id="today-btn">Today</button>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    <div style="padding: 20px; text-align: center;">Calendar grid will load here...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="events">
+            <div class="container">
+                <div class="events-list">
+                    <div class="loading-message">📅 Debug test loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="events-map-section">
+            <div class="container">
+                <div class="map-container">
+                    <div id="events-map" style="height: 400px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                        Map will load here...
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/logger.js"></script>
+    <script src="js/debug-overlay.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin="anonymous"></script>
+    <script src="js/page-effects.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/dynamic-calendar-loader.js"></script>
+    <script src="js/app.js"></script>
+    
+    <script>
+        // Debug monitoring
+        let debugInfo = {
+            status: 'initializing',
+            city: 'new-york',
+            events: 0,
+            calendarGrid: false,
+            map: false,
+            errorSource: null
+        };
+
+        function updateDebugInfo() {
+            document.getElementById('debug-status').textContent = debugInfo.status;
+            document.getElementById('debug-city').textContent = debugInfo.city;
+            document.getElementById('debug-events').textContent = debugInfo.events;
+            document.getElementById('debug-calendar').textContent = debugInfo.calendarGrid ? '✅ Working' : '❌ Not loaded';
+            document.getElementById('debug-map').textContent = debugInfo.map ? '✅ Working' : '❌ Not loaded';
+            document.getElementById('debug-error-source').textContent = debugInfo.errorSource || '-';
+        }
+
+        // Override console.log to capture debug info
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('🚨 SHOWING CALENDAR ERROR from source:')) {
+                const match = message.match(/source: (\w+)/);
+                if (match) {
+                    debugInfo.errorSource = match[1];
+                    debugInfo.status = 'error';
+                    updateDebugInfo();
+                }
+            }
+            originalConsoleError.apply(console, args);
+        };
+
+        // Monitor for successful calendar loading
+        setInterval(() => {
+            // Check if calendar grid has content
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid && calendarGrid.innerHTML.includes('calendar-day')) {
+                debugInfo.calendarGrid = true;
+            }
+
+            // Check if map is initialized  
+            if (window.eventsMap) {
+                debugInfo.map = true;
+            }
+
+            // Check events count
+            if (window.calendarLoader && window.calendarLoader.allEvents) {
+                debugInfo.events = window.calendarLoader.allEvents.length;
+                if (debugInfo.events > 0 && debugInfo.status !== 'error') {
+                    debugInfo.status = 'loaded';
+                }
+            }
+
+            updateDebugInfo();
+        }, 1000);
+
+        // Initial update
+        updateDebugInfo();
+
+        // Force URL to test New York
+        if (!window.location.search && !window.location.hash) {
+            window.location.hash = '#new-york';
+        }
+    </script>
+</body>
+</html>
