@@ -109,13 +109,8 @@ body {
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
-    padding-top: 0; /* No padding initially since header starts as relative */
-    overflow-x: hidden; /* Prevent horizontal scroll */
-}
-
-/* Add padding when header becomes sticky */
-body.header-sticky {
     padding-top: 80px; /* Account for fixed header */
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* Index page specific styles - no top padding for hero */
@@ -129,8 +124,8 @@ html {
 
 /* Prevent all elements from overflowing on small screens */
 @media (max-width: 768px) {
-    body.header-sticky {
-        padding-top: 60px; /* Reduced header height when sticky */
+    body {
+        padding-top: 60px; /* Reduced header height */
     }
     
     * {
@@ -154,7 +149,7 @@ html {
 header {
     background: var(--gradient-primary);
     box-shadow: 0 2px 10px var(--shadow-light);
-    position: relative; /* Start as relative, will be changed to fixed by JS after load */
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
@@ -163,15 +158,9 @@ header {
     overflow: visible;
 }
 
-/* Header becomes sticky after page loads */
-header.sticky {
-    position: fixed;
-}
-
 
 /* Dynamic header behavior for index page */
 body.index-page header {
-    position: fixed; /* Index page header should always be fixed */
     transform: translateY(-100%);
     opacity: 0;
     z-index: 9999; /* Higher z-index to appear above hero */
