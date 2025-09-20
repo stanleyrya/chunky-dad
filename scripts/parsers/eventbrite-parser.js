@@ -634,6 +634,35 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: No timezone found for "${title}"`);
             }
             
+            // DURO time correction: Fix known timing issue where DURO events show 1pm instead of 10pm
+            // DURO events should always be at 10pm local LA time but Eventbrite has wrong UTC times
+            if (/d>u>r>o/i.test(title)) {
+                console.log(`🎫 Eventbrite: Applying DURO time correction for "${title}"`);
+                console.log(`🎫 Eventbrite: Original times - start: ${startDate}, end: ${endDate}`);
+                
+                if (startDate) {
+                    // Parse the original date to get the date part
+                    const originalStart = new Date(startDate);
+                    const originalEnd = endDate ? new Date(endDate) : null;
+                    
+                    // Create new date at 10pm LA time (22:00 local)
+                    // For LA timezone (UTC-8 PST or UTC-7 PDT), 10pm local = 6am or 5am UTC next day
+                    const correctedStart = new Date(originalStart);
+                    correctedStart.setUTCHours(5, 0, 0, 0); // 5am UTC = 10pm PDT (during DST)
+                    correctedStart.setUTCDate(correctedStart.getUTCDate() + 1); // Next day in UTC
+                    
+                    // Set end time 5 hours later (3am LA time = 10am UTC)
+                    const correctedEnd = new Date(correctedStart);
+                    correctedEnd.setUTCHours(10, 0, 0, 0); // 10am UTC = 3am PDT next day
+                    
+                    startDate = correctedStart.toISOString();
+                    endDate = correctedEnd.toISOString();
+                    
+                    console.log(`🎫 Eventbrite: DURO time corrected - start: ${startDate}, end: ${endDate}`);
+                    console.log(`🎫 Eventbrite: This should display as 10:00 PM - 3:00 AM LA time`);
+                }
+            }
+            
             const event = {
                 title: title,
                 description: description,
