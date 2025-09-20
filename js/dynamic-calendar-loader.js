@@ -3051,7 +3051,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 screenHeight: window.innerHeight,
                 visualZoom: ((window.visualViewport && window.visualViewport.scale) || 1).toFixed(2)
             },
-calculatedData: {
+            calculatedData: {
                 viewport: `${window.innerWidth} × ${window.innerHeight}`,
                 charsPerLine: this.cachedEventTextWidth && this.charsPerPixel ? Math.floor(this.cachedEventTextWidth * this.charsPerPixel) : 'not calculated',
                 charsPerPixel: this.charsPerPixel ? this.charsPerPixel.toFixed(4) : 'not calculated',
