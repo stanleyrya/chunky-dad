@@ -1,4 +1,4 @@
-// Page Effects and Navigation Module - Handles animations, scroll effects, visual enhancements, and navigation
+// Page Effects Module - Handles animations, scroll effects, visual enhancements, and header behavior
 class PageEffectsManager {
     constructor() {
         this.isMainPage = this.checkIfMainPage();
@@ -6,10 +6,6 @@ class PageEffectsManager {
         this.header = document.querySelector('header');
         this.heroImage = document.querySelector('.hero-image');
         
-        // Navigation elements (merged from NavigationManager)
-        this.hamburger = document.querySelector('.hamburger');
-        this.navMenu = document.querySelector('.nav-menu');
-        this.isIndexPage = document.body.classList.contains('index-page');
         
         this.init();
     }
@@ -51,12 +47,9 @@ class PageEffectsManager {
     }
 
     init() {
-        logger.componentInit('PAGE', 'Page effects and navigation manager initializing');
+        logger.componentInit('PAGE', 'Page effects manager initializing');
         
-        // Navigation setup (merged from NavigationManager)
-        this.setupMobileMenu();
-        this.setupSmoothScrolling();
-        this.setupNavLinks();
+        // Setup dynamic header for index pages
         this.setupDynamicHeader();
         
         // Page effects setup
@@ -64,88 +57,18 @@ class PageEffectsManager {
         this.setupInteractiveElements();
         this.setupPageLoadEffects();
         
-        logger.componentLoad('PAGE', 'Page effects and navigation manager initialized');
+        logger.componentLoad('PAGE', 'Page effects manager initialized');
     }
 
-    // Navigation methods (merged from NavigationManager)
-    setupMobileMenu() {
-        if (this.hamburger && this.navMenu) {
-            logger.componentInit('NAV', 'Mobile navigation setup');
-            
-            this.hamburger.addEventListener('click', () => {
-                logger.userInteraction('NAV', 'Mobile menu toggle clicked');
-                this.toggleMobileMenu();
-            });
-        } else {
-            logger.warn('NAV', 'Mobile navigation elements not found');
-        }
-    }
-
-    toggleMobileMenu() {
-        this.hamburger.classList.toggle('active');
-        this.navMenu.classList.toggle('active');
-        
-        const isActive = this.hamburger.classList.contains('active');
-        logger.debug('NAV', `Mobile menu ${isActive ? 'opened' : 'closed'}`);
-    }
-
-    closeMobileMenu() {
-        if (this.hamburger && this.navMenu) {
-            this.hamburger.classList.remove('active');
-            this.navMenu.classList.remove('active');
-            logger.debug('NAV', 'Mobile menu closed');
-        }
-    }
-
-    setupNavLinks() {
-        const navLinks = document.querySelectorAll('.nav-menu a');
-        navLinks.forEach((link, index) => {
-            link.addEventListener('click', () => {
-                logger.userInteraction('NAV', `Navigation link clicked: ${link.textContent}`);
-                this.closeMobileMenu();
-            });
-        });
-
-        logger.componentLoad('NAV', 'Navigation links setup complete', {
-            linkCount: navLinks.length
-        });
-    }
-
-    setupSmoothScrolling() {
-        // Add smooth scrolling to all anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = anchor.getAttribute('href').substring(1);
-                this.scrollToSection(targetId);
-            });
-        });
-
-        logger.componentLoad('NAV', 'Smooth scrolling setup complete');
-    }
-
-    scrollToSection(sectionId) {
-        logger.userInteraction('NAV', `Scrolling to section: ${sectionId}`);
-        const element = document.getElementById(sectionId);
-        
-        if (element) {
-            element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-            logger.debug('NAV', `Successfully scrolled to ${sectionId}`);
-        } else {
-            logger.warn('NAV', `Section not found: ${sectionId}`);
-        }
-    }
 
     setupDynamicHeader() {
-        if (!this.isIndexPage || !this.header) {
-            logger.debug('NAV', 'Dynamic header not needed for this page');
+        const isIndexPage = document.body.classList.contains('index-page');
+        if (!isIndexPage || !this.header) {
+            logger.debug('PAGE', 'Dynamic header not needed for this page');
             return;
         }
 
-        logger.componentInit('NAV', 'Setting up dynamic header for index page');
+        logger.componentInit('PAGE', 'Setting up dynamic header for index page');
         
         let lastScrollY = window.scrollY;
         let ticking = false;
@@ -159,13 +82,13 @@ class PageEffectsManager {
                 if (!this.header.classList.contains('visible')) {
                     this.header.classList.add('visible');
                     this.showHeader(true, 'index page scroll reveal');
-                    logger.debug('NAV', 'Header shown on scroll');
+                    logger.debug('PAGE', 'Header shown on scroll');
                 }
             } else {
                 if (this.header.classList.contains('visible')) {
                     this.header.classList.remove('visible');
                     this.hideHeader(true, 'index page scroll hide');
-                    logger.debug('NAV', 'Header hidden on scroll up');
+                    logger.debug('PAGE', 'Header hidden on scroll up');
                 }
             }
             
@@ -188,7 +111,7 @@ class PageEffectsManager {
         };
 
         window.addEventListener('scroll', requestTick, { passive: true });
-        logger.componentLoad('NAV', 'Dynamic header scroll listener attached');
+        logger.componentLoad('PAGE', 'Dynamic header scroll listener attached');
     }
 
 

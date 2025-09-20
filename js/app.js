@@ -235,7 +235,7 @@ class ChunkyDadApp {
         // Components manager injects common UI elements
         this.componentsManager = new ComponentsManager();
         
-        // Page effects and navigation manager - needed on all pages
+        // Page effects manager - needed on all pages
         this.pageEffectsManager = new PageEffectsManager();
         
         // Make page effects globally accessible for other modules to use header animations
@@ -386,11 +386,6 @@ class ChunkyDadApp {
     // Public methods for manual module access
     getPageEffectsManager() {
         return this.pageEffectsManager;
-    }
-
-    // Legacy method for backward compatibility
-    getNavigationManager() {
-        return this.pageEffectsManager; // Navigation is now part of PageEffectsManager
     }
 
     getFormsManager() {
