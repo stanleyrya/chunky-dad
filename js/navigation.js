@@ -108,11 +108,19 @@ class NavigationManager {
             if (scrollY > heroHeight) {
                 if (!this.header.classList.contains('visible')) {
                     this.header.classList.add('visible');
+                    // Use shared header animation if available
+                    if (window.pageEffectsManager) {
+                        window.pageEffectsManager.showHeader(true, 'index page scroll reveal');
+                    }
                     logger.debug('NAV', 'Header shown on scroll');
                 }
             } else {
                 if (this.header.classList.contains('visible')) {
                     this.header.classList.remove('visible');
+                    // Use shared header animation if available
+                    if (window.pageEffectsManager) {
+                        window.pageEffectsManager.hideHeader(true, 'index page scroll hide');
+                    }
                     logger.debug('NAV', 'Header hidden on scroll up');
                 }
             }

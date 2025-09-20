@@ -246,6 +246,9 @@ class ChunkyDadApp {
         // Page effects are needed on all pages
         this.pageEffectsManager = new PageEffectsManager();
         
+        // Make page effects globally accessible for other modules to use header animations
+        window.pageEffectsManager = this.pageEffectsManager;
+        
         // Forms are needed on pages that have forms
         this.formsManager = new FormsManager();
         

@@ -223,6 +223,43 @@ class PageEffectsManager {
         type();
     }
 
+    // Reusable header animation methods
+    showHeader(animated = true, reason = 'unknown') {
+        if (!this.header) return;
+        
+        if (animated) {
+            logger.debug('PAGE', `Showing header with animation: ${reason}`);
+            this.header.style.transform = 'translateY(0)';
+            this.header.style.opacity = '1';
+        } else {
+            logger.debug('PAGE', `Showing header instantly: ${reason}`);
+            this.header.style.transform = 'translateY(0)';
+            this.header.style.opacity = '1';
+        }
+    }
+
+    hideHeader(animated = true, reason = 'unknown') {
+        if (!this.header) return;
+        
+        if (animated) {
+            logger.debug('PAGE', `Hiding header with animation: ${reason}`);
+            this.header.style.transform = 'translateY(-100%)';
+            this.header.style.opacity = '0';
+        } else {
+            logger.debug('PAGE', `Hiding header instantly: ${reason}`);
+            this.header.style.transform = 'translateY(-100%)';
+            this.header.style.opacity = '0';
+        }
+    }
+
+    setHeaderVisible(visible, animated = true, reason = 'unknown') {
+        if (visible) {
+            this.showHeader(animated, reason);
+        } else {
+            this.hideHeader(animated, reason);
+        }
+    }
+
     makeStickyHeader() {
         // Make header sticky after page loads to prevent initial visibility issues
         // Skip this for index pages as they have their own dynamic header behavior
@@ -236,9 +273,8 @@ class PageEffectsManager {
             });
             
             if (shouldAnimate) {
-                // Start header hidden above viewport for slide-down animation
-                this.header.style.transform = 'translateY(-100%)';
-                this.header.style.opacity = '0';
+                // Start header hidden for slide-down animation
+                this.hideHeader(false, 'preparing for sticky animation');
             }
             
             // Apply sticky positioning
@@ -249,9 +285,7 @@ class PageEffectsManager {
                 // Trigger slide-down animation after a brief delay
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        this.header.style.transform = 'translateY(0)';
-                        this.header.style.opacity = '1';
-                        logger.debug('PAGE', 'Header slide-down animation triggered');
+                        this.showHeader(true, 'sticky header slide-down');
                     });
                 });
             }
