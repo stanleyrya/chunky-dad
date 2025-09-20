@@ -1831,23 +1831,31 @@ body.index-page main {
     box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
-.clear-selection-btn {
+.floating-clear-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
     background: var(--color-away);
     border: none;
     color: white;
-    padding: 0.7rem 1.2rem;
-    border-radius: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     font-family: 'Poppins', sans-serif;
-    font-weight: 500;
+    font-weight: bold;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.9rem;
-    margin-left: 8px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 10;
 }
 
-.clear-selection-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 165, 0, 0.4);
+.floating-clear-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
     background: #d97706;
 }
 
@@ -2196,11 +2204,7 @@ body.index-page main {
     box-shadow: 0 10px 30px var(--shadow-medium);
 }
 
-.event-card.detailed.highlight {
-    background: var(--solid-warning);
-    border: 2px solid var(--color-away);
-    transform: scale(1.02);
-}
+/* Removed detailed highlight - using persistent selection only */
 
 .event-card.detailed .event-header {
     position: relative;
@@ -3468,7 +3472,7 @@ footer {
         min-width: 100px;
     }
 
-    .today-btn, .clear-selection-btn {
+    .today-btn {
         padding: 0.5rem 0.8rem;
         font-size: 0.8rem;
     }
@@ -3656,7 +3660,7 @@ footer {
         padding: 0;
     }
     
-    .today-btn, .clear-selection-btn {
+    .today-btn {
         padding: 0.5rem 0.8rem;
         font-size: 0.7rem;
         flex-shrink: 0;
@@ -3712,7 +3716,7 @@ footer {
         min-width: 70px;
     }
     
-    .today-btn, .clear-selection-btn {
+    .today-btn {
         padding: 0.3rem 0.5rem;
         font-size: 0.65rem;
     }
@@ -3814,7 +3818,7 @@ footer {
         min-width: 60px;
     }
     
-    .today-btn, .clear-selection-btn {
+    .today-btn {
         padding: 0.25rem 0.4rem;
         font-size: 0.6rem;
     }
@@ -3964,11 +3968,7 @@ footer {
     margin-bottom: 15px;
 }
 
-/* Event Card Highlight Animation */
-.event-card.highlight {
-    animation: highlightPulse 2s ease-in-out;
-    border: 2px solid var(--primary-color);
-}
+/* Removed temporary highlight animation - using persistent selection only */
 
 /* Event Card Selected State (persistent) */
 .event-card.selected {
@@ -3990,10 +3990,7 @@ footer {
     display: none;
 }
 
-@keyframes highlightPulse {
-    0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    50% { box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3); }
-}
+/* Removed highlightPulse animation - using persistent selection only */
 
 /* Enhanced Week View Styles */
 /* Week view uses same base styling as month view */
