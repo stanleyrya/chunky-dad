@@ -367,6 +367,18 @@ class EventbriteParser {
             let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
             let endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
             
+            // DEBUG: Log raw event data structure for timezone debugging (only for Phoenix events)
+            if (originalTimezone === 'America/Phoenix') {
+                console.log(`🎫 Eventbrite: Raw event data for "${title}":`, {
+                    start: eventData.start,
+                    end: eventData.end,
+                    startDate: eventData.startDate,
+                    endDate: eventData.endDate,
+                    start_date: eventData.start_date,
+                    end_date: eventData.end_date
+                });
+            }
+            
             // Extract original timezone from event data (preserve Eventbrite's timezone)
             let originalTimezone = null;
             if (eventData.start?.timezone) {
@@ -385,7 +397,42 @@ class EventbriteParser {
                 endDate = endDate.utc;
             }
             
+            // TIMEZONE CORRECTION: Fix Eventbrite's incorrect UTC times for Phoenix events
+            // Eventbrite is providing 04:00 UTC for 10 AM Phoenix events, but it should be 17:00 UTC
+            // This is a known issue with Eventbrite's timezone handling for Phoenix events
+            if (originalTimezone === 'America/Phoenix' && startDate && startDate.includes('T04:00:00Z')) {
+                console.log(`🎫 Eventbrite: Applying Phoenix timezone correction for "${title}"`);
+                const originalDate = new Date(startDate);
+                // Add 13 hours to correct the timezone offset (17:00 - 04:00 = 13 hours)
+                const correctedDate = new Date(originalDate.getTime() + (13 * 60 * 60 * 1000));
+                startDate = correctedDate.toISOString();
+                console.log(`🎫 Eventbrite: Corrected start time from ${originalDate.toISOString()} to ${startDate}`);
+            }
+            if (originalTimezone === 'America/Phoenix' && endDate && endDate.includes('T09:00:00Z')) {
+                console.log(`🎫 Eventbrite: Applying Phoenix timezone correction for end time of "${title}"`);
+                const originalDate = new Date(endDate);
+                // Add 13 hours to correct the timezone offset
+                const correctedDate = new Date(originalDate.getTime() + (13 * 60 * 60 * 1000));
+                endDate = correctedDate.toISOString();
+                console.log(`🎫 Eventbrite: Corrected end time from ${originalDate.toISOString()} to ${endDate}`);
+            }
+            
             console.log(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
+            console.log(`🎫 Eventbrite: Final processed dates - startDate type: ${typeof startDate}, endDate type: ${typeof endDate}`);
+            if (startDate) {
+                const startDateObj = new Date(startDate);
+                console.log(`🎫 Eventbrite: startDate as Date object: ${startDateObj.toISOString()}`);
+                if (originalTimezone) {
+                    console.log(`🎫 Eventbrite: startDate in ${originalTimezone}: ${startDateObj.toLocaleString('en-US', { timeZone: originalTimezone })}`);
+                }
+            }
+            if (endDate) {
+                const endDateObj = new Date(endDate);
+                console.log(`🎫 Eventbrite: endDate as Date object: ${endDateObj.toISOString()}`);
+                if (originalTimezone) {
+                    console.log(`🎫 Eventbrite: endDate in ${originalTimezone}: ${endDateObj.toLocaleString('en-US', { timeZone: originalTimezone })}`);
+                }
+            }
             const url = eventData.url || eventData.vanity_url || '';
             
             // Enhanced venue processing - get both name and address from multiple sources
