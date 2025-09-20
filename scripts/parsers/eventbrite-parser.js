@@ -377,17 +377,6 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found original timezone in end data: ${originalTimezone}`);
             }
             
-            // DEBUG: Log raw event data structure for timezone debugging (only for Phoenix events)
-            if (originalTimezone === 'America/Phoenix') {
-                console.log(`🎫 Eventbrite: Raw event data for "${title}":`, {
-                    start: eventData.start,
-                    end: eventData.end,
-                    startDate: eventData.startDate,
-                    endDate: eventData.endDate,
-                    start_date: eventData.start_date,
-                    end_date: eventData.end_date
-                });
-            }
             
             // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
             if (typeof startDate === 'object' && startDate.utc) {
@@ -397,46 +386,6 @@ class EventbriteParser {
                 endDate = endDate.utc;
             }
             
-            // TIMEZONE CORRECTION: Fix Eventbrite's incorrect UTC times for Phoenix events
-            // Eventbrite is providing 04:00 UTC for 10 AM Phoenix events, but it should be 17:00 UTC
-            // This is a known issue with Eventbrite's timezone handling for Phoenix events
-            if (originalTimezone === 'America/Phoenix' && startDate && startDate.includes('T04:00:00Z')) {
-                console.log(`🎫 Eventbrite: Applying Phoenix timezone correction for "${title}"`);
-                const originalDate = new Date(startDate);
-                // Add 13 hours to correct the timezone offset (17:00 - 04:00 = 13 hours)
-                const correctedDate = new Date(originalDate.getTime() + (13 * 60 * 60 * 1000));
-                startDate = correctedDate.toISOString();
-                console.log(`🎫 Eventbrite: Corrected start time from ${originalDate.toISOString()} to ${startDate}`);
-            }
-            if (originalTimezone === 'America/Phoenix' && endDate && endDate.includes('T09:00:00Z')) {
-                console.log(`🎫 Eventbrite: Applying Phoenix timezone correction for end time of "${title}"`);
-                const originalDate = new Date(endDate);
-                // Add 13 hours to correct the timezone offset
-                const correctedDate = new Date(originalDate.getTime() + (13 * 60 * 60 * 1000));
-                endDate = correctedDate.toISOString();
-                console.log(`🎫 Eventbrite: Corrected end time from ${originalDate.toISOString()} to ${endDate}`);
-            }
-            
-            // TIMEZONE CORRECTION: Fix Eventbrite's incorrect UTC times for Rome events
-            // Eventbrite is providing 20:00 UTC for 10 AM events, but it should be 17:00 UTC for LA time
-            // This is a known issue with Eventbrite's timezone handling for Rome events that are actually LA events
-            if (originalTimezone === 'Europe/Rome' && startDate && startDate.includes('T20:00:00Z')) {
-                console.log(`🎫 Eventbrite: Applying Rome timezone correction for "${title}"`);
-                const originalDate = new Date(startDate);
-                // Subtract 3 hours to correct the timezone offset (17:00 - 20:00 = -3 hours)
-                // This converts from 10 AM Rome time to 10 AM LA time
-                const correctedDate = new Date(originalDate.getTime() - (3 * 60 * 60 * 1000));
-                startDate = correctedDate.toISOString();
-                console.log(`🎫 Eventbrite: Corrected start time from ${originalDate.toISOString()} to ${startDate}`);
-            }
-            if (originalTimezone === 'Europe/Rome' && endDate && endDate.includes('T03:00:00Z')) {
-                console.log(`🎫 Eventbrite: Applying Rome timezone correction for end time of "${title}"`);
-                const originalDate = new Date(endDate);
-                // Subtract 3 hours to correct the timezone offset
-                const correctedDate = new Date(originalDate.getTime() - (3 * 60 * 60 * 1000));
-                endDate = correctedDate.toISOString();
-                console.log(`🎫 Eventbrite: Corrected end time from ${originalDate.toISOString()} to ${endDate}`);
-            }
             
             console.log(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
             console.log(`🎫 Eventbrite: Final processed dates - startDate type: ${typeof startDate}, endDate type: ${typeof endDate}`);
