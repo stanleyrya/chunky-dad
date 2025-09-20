@@ -111,7 +111,6 @@ class ChunkyDadApp {
         
         // Initialize modules
         this.componentsManager = null;
-        this.navigationManager = null;
         this.pageEffectsManager = null;
         this.formsManager = null;
         this.calendarLoader = null;
@@ -236,14 +235,7 @@ class ChunkyDadApp {
         // Components manager injects common UI elements
         this.componentsManager = new ComponentsManager();
         
-        // Navigation is only needed on main page and directory page, not city pages
-        if (this.isMainPage || this.isDirectoryPage) {
-            this.navigationManager = new NavigationManager();
-        } else {
-            logger.debug('SYSTEM', 'Skipping navigation manager for city pages (using city switcher instead)');
-        }
-        
-        // Page effects are needed on all pages
+        // Page effects and navigation manager - needed on all pages
         this.pageEffectsManager = new PageEffectsManager();
         
         // Make page effects globally accessible for other modules to use header animations
@@ -392,12 +384,13 @@ class ChunkyDadApp {
     }
 
     // Public methods for manual module access
-    getNavigationManager() {
-        return this.navigationManager;
-    }
-
     getPageEffectsManager() {
         return this.pageEffectsManager;
+    }
+
+    // Legacy method for backward compatibility
+    getNavigationManager() {
+        return this.pageEffectsManager; // Navigation is now part of PageEffectsManager
     }
 
     getFormsManager() {
