@@ -504,6 +504,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.currentDate = parsed;
             }
             logger.userInteraction('EVENT', 'Event selected', { eventSlug, date: normalizedDateISO });
+            
+            // Bring corresponding marker to front on map
+            if (typeof bringMarkerToFront === 'function') {
+                bringMarkerToFront(eventSlug);
+            }
         }
         // Reflect selection in URL
         this.syncUrl(true);
@@ -2351,18 +2356,22 @@ class DynamicCalendarLoader extends CalendarCore {
                         const markerIcon = this.createMarkerIcon(event);
                         
                         const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
-                            icon: markerIcon
+                            icon: markerIcon,
+                            eventSlug: event.slug
                         })
                             .addTo(map)
-                            .bindPopup(`
-                                <div class="map-popup">
-                                    <h4>${event.shorterName || event.shortName || event.name}</h4>
-                                    <p><strong>📍 ${event.bar || 'Location'}</strong></p>
-                                    <p>📅 ${event.day} ${event.time}</p>
-                                    ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<p>💰 ${event.cover}</p>` : ''}
-                                    ${event.recurring ? `<p>🔄 ${event.eventType}</p>` : ''}
-                                </div>
-                            `);
+                            .on('click', () => {
+                                // Scroll to event in list instead of showing popup
+                                const eventCard = document.querySelector(`.event-card[data-event-slug="${event.slug}"]`);
+                                if (eventCard) {
+                                    eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    eventCard.classList.add('highlight');
+                                    setTimeout(() => eventCard.classList.remove('highlight'), 2000);
+                                    logger.userInteraction('MAP', 'Marker clicked, scrolled to event', { eventSlug: event.slug });
+                                } else {
+                                    logger.warn('MAP', 'Event card not found for marker click', { eventSlug: event.slug });
+                                }
+                            });
                         markers.push(marker);
                         markersAdded++;
                         
@@ -2394,6 +2403,15 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             window.eventsMap = map;
             window.eventsMapMarkers = markers; // Store markers globally for controls
+            
+            // Store marker references by event slug for easy access
+            window.eventsMapMarkersBySlug = {};
+            markers.forEach(marker => {
+                const eventSlug = marker.options.eventSlug;
+                if (eventSlug) {
+                    window.eventsMapMarkersBySlug[eventSlug] = marker;
+                }
+            });
 
             // Favicons now load directly in marker creation
         } catch (error) {
@@ -3416,6 +3434,17 @@ function fitAllMarkers() {
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
+    }
+}
+
+// Bring marker to front by event slug
+function bringMarkerToFront(eventSlug) {
+    if (window.eventsMap && window.eventsMapMarkersBySlug && window.eventsMapMarkersBySlug[eventSlug]) {
+        const marker = window.eventsMapMarkersBySlug[eventSlug];
+        // Remove and re-add marker to bring it to front
+        window.eventsMap.removeLayer(marker);
+        window.eventsMap.addLayer(marker);
+        logger.userInteraction('MAP', 'Marker brought to front', { eventSlug });
     }
 }
 
