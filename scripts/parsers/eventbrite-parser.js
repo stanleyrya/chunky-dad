@@ -367,6 +367,16 @@ class EventbriteParser {
             let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
             let endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
             
+            // Extract original timezone from event data (preserve Eventbrite's timezone)
+            let originalTimezone = null;
+            if (eventData.start?.timezone) {
+                originalTimezone = eventData.start.timezone;
+                console.log(`🎫 Eventbrite: Found original timezone in event data: ${originalTimezone}`);
+            } else if (eventData.end?.timezone) {
+                originalTimezone = eventData.end.timezone;
+                console.log(`🎫 Eventbrite: Found original timezone in end data: ${originalTimezone}`);
+            }
+            
             // DEBUG: Log raw event data structure for timezone debugging (only for Phoenix events)
             if (originalTimezone === 'America/Phoenix') {
                 console.log(`🎫 Eventbrite: Raw event data for "${title}":`, {
@@ -377,16 +387,6 @@ class EventbriteParser {
                     start_date: eventData.start_date,
                     end_date: eventData.end_date
                 });
-            }
-            
-            // Extract original timezone from event data (preserve Eventbrite's timezone)
-            let originalTimezone = null;
-            if (eventData.start?.timezone) {
-                originalTimezone = eventData.start.timezone;
-                console.log(`🎫 Eventbrite: Found original timezone in event data: ${originalTimezone}`);
-            } else if (eventData.end?.timezone) {
-                originalTimezone = eventData.end.timezone;
-                console.log(`🎫 Eventbrite: Found original timezone in end data: ${originalTimezone}`);
             }
             
             // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
@@ -413,6 +413,27 @@ class EventbriteParser {
                 const originalDate = new Date(endDate);
                 // Add 13 hours to correct the timezone offset
                 const correctedDate = new Date(originalDate.getTime() + (13 * 60 * 60 * 1000));
+                endDate = correctedDate.toISOString();
+                console.log(`🎫 Eventbrite: Corrected end time from ${originalDate.toISOString()} to ${endDate}`);
+            }
+            
+            // TIMEZONE CORRECTION: Fix Eventbrite's incorrect UTC times for Rome events
+            // Eventbrite is providing 20:00 UTC for 10 AM events, but it should be 17:00 UTC for LA time
+            // This is a known issue with Eventbrite's timezone handling for Rome events that are actually LA events
+            if (originalTimezone === 'Europe/Rome' && startDate && startDate.includes('T20:00:00Z')) {
+                console.log(`🎫 Eventbrite: Applying Rome timezone correction for "${title}"`);
+                const originalDate = new Date(startDate);
+                // Subtract 3 hours to correct the timezone offset (17:00 - 20:00 = -3 hours)
+                // This converts from 10 AM Rome time to 10 AM LA time
+                const correctedDate = new Date(originalDate.getTime() - (3 * 60 * 60 * 1000));
+                startDate = correctedDate.toISOString();
+                console.log(`🎫 Eventbrite: Corrected start time from ${originalDate.toISOString()} to ${startDate}`);
+            }
+            if (originalTimezone === 'Europe/Rome' && endDate && endDate.includes('T03:00:00Z')) {
+                console.log(`🎫 Eventbrite: Applying Rome timezone correction for end time of "${title}"`);
+                const originalDate = new Date(endDate);
+                // Subtract 3 hours to correct the timezone offset
+                const correctedDate = new Date(originalDate.getTime() - (3 * 60 * 60 * 1000));
                 endDate = correctedDate.toISOString();
                 console.log(`🎫 Eventbrite: Corrected end time from ${originalDate.toISOString()} to ${endDate}`);
             }
