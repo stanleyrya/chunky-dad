@@ -1234,6 +1234,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Load calendar data for specific city (uses cached data from GitHub Actions)
     async loadCalendarData(cityKey) {
+        // Check if getCityConfig function is available
+        if (typeof getCityConfig !== 'function') {
+            logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded yet');
+            return null;
+        }
+        
         const cityConfig = getCityConfig(cityKey);
         if (!cityConfig) {
             logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
@@ -2796,6 +2802,14 @@ class DynamicCalendarLoader extends CalendarCore {
     // Main render function
     async renderCityPage() {
         this.currentCity = this.getCityFromURL();
+        
+        // Check if getCityConfig function is available
+        if (typeof getCityConfig !== 'function') {
+            logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded yet');
+            this.showCalendarError();
+            return;
+        }
+        
         this.currentCityConfig = getCityConfig(this.currentCity);
         
         // Parse initial state (view/date/event) from URL before rendering
@@ -2813,6 +2827,13 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!this.currentCityConfig) {
             logger.componentError('CITY', `City configuration not found: ${this.currentCity}`);
             this.showCityNotFound();
+            return;
+        }
+        
+        // Check if hasCityCalendar function is available
+        if (typeof hasCityCalendar !== 'function') {
+            logger.componentError('CALENDAR', 'hasCityCalendar function not available - city-config.js may not be loaded yet');
+            this.showCalendarError();
             return;
         }
         

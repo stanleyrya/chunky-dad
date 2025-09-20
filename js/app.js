@@ -349,12 +349,14 @@ class ChunkyDadApp {
                 // Only initialize full calendar on city/test pages, not main page
                 // Run calendar initialization asynchronously to not block other page elements
                 if (this.isCityPage || this.isTestPage) {
-                    // Initialize immediately - calendar has fallback auto-init if this fails
-                    this.calendarLoader.init().catch(error => {
-                        logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
-                        // Ensure error is not re-thrown to prevent unhandled promise rejection
-                        return null;
-                    });
+                    // Add small delay to ensure city-config.js functions are available
+                    setTimeout(() => {
+                        this.calendarLoader.init().catch(error => {
+                            logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
+                            // Ensure error is not re-thrown to prevent unhandled promise rejection
+                            return null;
+                        });
+                    }, 50); // Small delay to ensure script execution order
                 }
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
