@@ -3216,10 +3216,6 @@ footer {
         margin-left: 0.1rem;
     }
 
-    /* Hide navigation menu on city pages */
-    .city-page-nav {
-        display: none !important;
-    }
 
     .city-dropdown {
         right: -10px;
