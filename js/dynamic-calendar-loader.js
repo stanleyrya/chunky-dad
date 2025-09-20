@@ -541,13 +541,19 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Populate available cities list for error page
         if (availableCitiesList) {
-            availableCitiesList.innerHTML = getAvailableCities()
-                .filter(city => hasCityCalendar(city.key))
+            // Check if functions are available before using them
+            if (typeof getAvailableCities === 'function' && typeof hasCityCalendar === 'function') {
+                availableCitiesList.innerHTML = getAvailableCities()
+                    .filter(city => hasCityCalendar(city.key))
                 .map(city => `
                     <a href="${city.key}/" class="city-link">
                         ${city.emoji} ${city.name}
                     </a>
                 `).join('');
+            } else {
+                logger.warn('CALENDAR', 'City config functions not available for error page setup');
+                availableCitiesList.innerHTML = '<p>City information not available</p>';
+            }
         }
     }
 
@@ -1234,6 +1240,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Load calendar data for specific city (uses cached data from GitHub Actions)
     async loadCalendarData(cityKey) {
+        // Check if getCityConfig is available
+        if (typeof getCityConfig !== 'function') {
+            logger.componentError('CALENDAR', 'getCityConfig function not available during calendar data loading');
+            return null;
+        }
+        
         const cityConfig = getCityConfig(cityKey);
         if (!cityConfig) {
             logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
@@ -2796,6 +2808,13 @@ class DynamicCalendarLoader extends CalendarCore {
     // Main render function
     async renderCityPage() {
         this.currentCity = this.getCityFromURL();
+        
+        // Check if getCityConfig is available
+        if (typeof getCityConfig !== 'function') {
+            logger.componentError('CALENDAR', 'getCityConfig function not available - city-config.js may not be loaded yet');
+            throw new Error('getCityConfig function not available');
+        }
+        
         this.currentCityConfig = getCityConfig(this.currentCity);
         
         // Parse initial state (view/date/event) from URL before rendering
@@ -2814,6 +2833,12 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.componentError('CITY', `City configuration not found: ${this.currentCity}`);
             this.showCityNotFound();
             return;
+        }
+        
+        // Check if hasCityCalendar is available
+        if (typeof hasCityCalendar !== 'function') {
+            logger.componentError('CALENDAR', 'hasCityCalendar function not available during city page rendering');
+            throw new Error('hasCityCalendar function not available');
         }
         
         if (!hasCityCalendar(this.currentCity)) {
@@ -3118,6 +3143,30 @@ calculatedData: {
         this.updateCalendarDisplay();
     }
 
+    // Wait for dependencies to be available
+    async waitForDependencies(maxWait = 5000) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < maxWait) {
+            if (typeof getCityConfig === 'function' && 
+                typeof getAvailableCities === 'function' && 
+                typeof hasCityCalendar === 'function') {
+                logger.info('CALENDAR', 'All city-config dependencies are available');
+                return true;
+            }
+            
+            // Wait 50ms before checking again
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        logger.warn('CALENDAR', 'Timeout waiting for city-config dependencies', {
+            getCityConfigAvailable: typeof getCityConfig === 'function',
+            getAvailableCitiesAvailable: typeof getAvailableCities === 'function',
+            hasCityCalendarAvailable: typeof hasCityCalendar === 'function'
+        });
+        return false;
+    }
+
     // Initialize
     async init() {
         // Prevent multiple initializations
@@ -3130,6 +3179,12 @@ calculatedData: {
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         
         try {
+            // Wait for dependencies to be available
+            const dependenciesReady = await this.waitForDependencies();
+            if (!dependenciesReady) {
+                throw new Error('Required city-config dependencies not available');
+            }
+            
             // Add timeout to prevent hanging initialization - 30s to account for delays + timeouts + slow networks
             const initPromise = this.renderCityPage();
             const timeoutPromise = new Promise((_, reject) => {

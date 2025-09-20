@@ -57,7 +57,7 @@ class CompactCardRenderer {
 
     getItems() {
         if (this.type === 'city') {
-            return window.getAvailableCities ? getAvailableCities() : null;
+            return (typeof getAvailableCities === 'function') ? getAvailableCities() : null;
         } else if (this.type === 'event') {
             return window.getAvailableBearEvents ? getAvailableBearEvents() : null;
         }
