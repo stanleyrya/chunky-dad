@@ -1545,24 +1545,35 @@ class DynamicCalendarLoader extends CalendarCore {
          }
      }
  
-     // Show calendar error - only in the events container for cleaner display
-     showCalendarError() {
-         const errorMessage = `
-             <div class="error-message">
-                 <h3>📅 Calendar Temporarily Unavailable</h3>
-                 <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
-                 <p><strong>What's happening:</strong> Our calendar data is updated automatically every 2 hours. The latest update may not be available yet.</p>
-                 <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for the latest updates.</p>
-             </div>
-         `;
-         
-         // Only show error in the events container to avoid duplication
-         const eventsContainer = document.querySelector('.events-list');
-         if (eventsContainer) {
-             eventsContainer.innerHTML = errorMessage;
-         }
- 
-     }
+    // Show calendar error - only in the events container for cleaner display
+    showCalendarError() {
+        const errorMessage = `
+            <div class="error-message">
+                <h3>📅 Calendar Temporarily Unavailable</h3>
+                <p>We're having trouble loading the latest events for ${this.currentCityConfig?.name || 'this city'}.</p>
+                <p><strong>What's happening:</strong> Our calendar data is updated automatically every 2 hours. The latest update may not be available yet.</p>
+                <p><strong>Try:</strong> Refreshing the page in a few minutes, or check our social media for the latest updates.</p>
+            </div>
+        `;
+        
+        // Only show error in the events container to avoid duplication
+        const eventsContainer = document.querySelector('.events-list');
+        if (eventsContainer) {
+            eventsContainer.innerHTML = errorMessage;
+        }
+    }
+
+    // Clear calendar error message
+    clearCalendarError() {
+        const eventsContainer = document.querySelector('.events-list');
+        if (eventsContainer) {
+            const existingError = eventsContainer.querySelector('.error-message');
+            if (existingError) {
+                logger.info('CALENDAR', 'Clearing calendar error message');
+                existingError.remove();
+            }
+        }
+    }
  
      // Update loading message with method information
      updateLoadingMessage(attemptNumber, method) {
@@ -2398,6 +2409,11 @@ class DynamicCalendarLoader extends CalendarCore {
                     eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
                 }
             } else if (filteredEvents?.length > 0) {
+                // Clear any existing error messages when successfully loading events
+                const existingError = eventsList.querySelector('.error-message');
+                if (existingError) {
+                    logger.info('CALENDAR', 'Clearing previous error message - calendar loaded successfully');
+                }
                 // Events are already sorted by upcoming time in getFilteredEvents()
                 eventsList.innerHTML = filteredEvents.map(event => this.generateEventCard(event)).join('');
 
@@ -2896,6 +2912,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
             });
             
+            // Clear any existing error messages before showing successful content
+            this.clearCalendarError();
+            
             this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
             
             // Ensure URL reflects initial state after first render
@@ -3111,10 +3130,10 @@ calculatedData: {
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         
         try {
-            // Add timeout to prevent hanging initialization - 15s to account for delays + timeouts (0 + 1s + 3s delays + 1s + 3s + 5s timeouts + overhead)
+            // Add timeout to prevent hanging initialization - 30s to account for delays + timeouts + slow networks
             const initPromise = this.renderCityPage();
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Calendar initialization timeout after 15 seconds')), 15000);
+                setTimeout(() => reject(new Error('Calendar initialization timeout after 30 seconds')), 30000);
             });
             
             await Promise.race([initPromise, timeoutPromise]);
