@@ -3251,7 +3251,34 @@ function showMyLocation() {
     }
 }
 
-// Export class for use in app.js - no auto-initialization
+// Export class for use in app.js
 if (typeof window !== 'undefined') {
     window.DynamicCalendarLoader = DynamicCalendarLoader;
+    
+    // Auto-initialize if we're on a city page and app.js hasn't taken control
+    function autoInitCalendar() {
+        // Check if we're on a city page
+        const isCityPage = window.location.pathname.includes('city.html') || 
+                          (window.CITY_CONFIG && Object.keys(window.CITY_CONFIG).some(city => 
+                              window.location.pathname.includes(`/${city}/`)));
+        
+        // Only auto-init if app.js hasn't already created a calendar loader
+        if (isCityPage && !window.calendarLoader && !window.chunkyApp) {
+            logger.info('CALENDAR', 'Auto-initializing calendar (app.js not detected)');
+            const loader = new DynamicCalendarLoader();
+            window.calendarLoader = loader;
+            loader.init().catch(error => {
+                logger.componentError('CALENDAR', 'Auto-initialization failed', error);
+            });
+        }
+    }
+    
+    // Try to auto-init after a short delay to let app.js load first
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(autoInitCalendar, 50);
+        });
+    } else {
+        setTimeout(autoInitCalendar, 50);
+    }
 }
