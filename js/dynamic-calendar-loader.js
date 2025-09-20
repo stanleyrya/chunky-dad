@@ -1553,6 +1553,24 @@ class DynamicCalendarLoader extends CalendarCore {
  
     // Show calendar error - only in the events container for cleaner display
     showCalendarError(errorSource = 'unknown') {
+        // Check if events are already successfully displayed - don't overwrite them
+        const eventsContainer = document.querySelector('.events-list');
+        if (eventsContainer) {
+            const hasEventCards = eventsContainer.querySelector('.event-card');
+            const hasLoadingMessage = eventsContainer.querySelector('.loading-message');
+            
+            if (hasEventCards) {
+                logger.warn('CALENDAR', `🚨 PREVENTED CALENDAR ERROR from overwriting successful events (source: ${errorSource})`, {
+                    currentCity: this.currentCity,
+                    currentCityConfig: this.currentCityConfig?.name || 'no config',
+                    allEventsLength: this.allEvents?.length || 0,
+                    hasEventCards: true,
+                    eventCardCount: eventsContainer.querySelectorAll('.event-card').length
+                });
+                return; // Don't show error if events are already displayed
+            }
+        }
+        
         logger.error('CALENDAR', `🚨 SHOWING CALENDAR ERROR from source: ${errorSource}`, {
             currentCity: this.currentCity,
             currentCityConfig: this.currentCityConfig?.name || 'no config',
@@ -1573,7 +1591,6 @@ class DynamicCalendarLoader extends CalendarCore {
         `;
         
         // Only show error in the events container to avoid duplication
-        const eventsContainer = document.querySelector('.events-list');
         if (eventsContainer) {
             eventsContainer.innerHTML = errorMessage;
         }
@@ -2998,10 +3015,28 @@ class DynamicCalendarLoader extends CalendarCore {
             
         } catch (error) {
             logger.componentError('CALENDAR', '🔍 RENDER: Calendar loading failed with error', error);
-            // Clear fake event from allEvents to prevent it from showing
-            this.allEvents = [];
-            // Show error message instead of empty calendar
-            this.showCalendarError('renderCityPage_exception');
+            
+            // Only show error and clear events if this is a critical failure
+            // Check if the error occurred before we loaded any data
+            if (!this.allEvents || this.allEvents.length === 0) {
+                logger.warn('CALENDAR', '🔍 RENDER: Critical failure - no events loaded, showing error');
+                // Clear fake event from allEvents to prevent it from showing
+                this.allEvents = [];
+                // Show error message instead of empty calendar
+                this.showCalendarError('renderCityPage_exception');
+            } else {
+                logger.info('CALENDAR', '🔍 RENDER: Non-critical error - events already loaded, continuing with display', {
+                    eventsCount: this.allEvents.length,
+                    errorMessage: error.message
+                });
+                // Try to continue with the events we have
+                try {
+                    this.updateCalendarDisplay(false);
+                } catch (displayError) {
+                    logger.componentError('CALENDAR', 'Failed to update display after error recovery', displayError);
+                    this.showCalendarError('renderCityPage_display_recovery_failed');
+                }
+            }
             return;
         }
         
@@ -3217,9 +3252,18 @@ calculatedData: {
             logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
         } catch (error) {
             logger.componentError('CALENDAR', 'Calendar initialization failed', error);
+            // Only show error message if the calendar data actually failed to load
+            // Check if we have events data - if so, the error might be from a non-critical part
+            if (!this.allEvents || this.allEvents.length === 0) {
+                logger.warn('CALENDAR', 'No events loaded, showing error message');
+                this.showCalendarError('init_timeout_or_exception');
+            } else {
+                logger.info('CALENDAR', 'Events loaded successfully despite initialization error, not showing error message', {
+                    eventsCount: this.allEvents.length,
+                    errorMessage: error.message
+                });
+            }
             // Don't re-throw the error to prevent unhandled promise rejection
-            // The error has already been logged and the calendar will show an error message
-            this.showCalendarError('init_timeout_or_exception');
         } finally {
             this.isInitializing = false;
         }
