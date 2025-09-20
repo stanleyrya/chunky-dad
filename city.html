@@ -210,6 +210,13 @@
 
     <!-- Scripts -->
     <script src="js/logger.js"></script>
+    <script>
+        // Log script loading performance
+        if (window.logger) {
+            logger.time('SYSTEM', 'Script loading');
+            logger.componentInit('SYSTEM', 'Starting city page script initialization');
+        }
+    </script>
 <script src="js/debug-overlay.js"></script>
 <script src="js/city-config.js"></script>
     <script src="js/components.js"></script>
@@ -225,56 +232,27 @@
     <script src="js/dynamic-calendar-loader.js"></script>
     <script src="js/app.js"></script>
     
-    <!-- Testing functionality for breakpoint-test.html -->
     <script>
-        // Handle messages from parent window (for testing iframe functionality)
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type) {
-                switch (event.data.type) {
-                    case 'updateCharacterLimits':
-                        if (window.calendarLoader && window.calendarLoader.updateCharacterLimits) {
-                            window.calendarLoader.updateCharacterLimits(event.data.data);
-                        }
-                        break;
-                    case 'addTestEvent':
-                        if (window.calendarLoader && window.calendarLoader.addTestEvent) {
-                            window.calendarLoader.addTestEvent(event.data.data);
-                        }
-                        break;
-                    case 'setFakeViewport':
-                        // Inject CSS to fake viewport size
-                        const fakeViewportStyle = document.getElementById('fake-viewport-style') || document.createElement('style');
-                        fakeViewportStyle.id = 'fake-viewport-style';
-                        fakeViewportStyle.textContent = `
-                            @media (max-width: 99999px) {
-                                .event-name-xs { display: ${event.data.data.width < 375 ? 'block' : 'none'}; }
-                                .event-name-sm { display: ${event.data.data.width >= 375 && event.data.data.width < 768 ? 'block' : 'none'}; }
-                                .event-name-md { display: ${event.data.data.width >= 768 && event.data.data.width < 1024 ? 'block' : 'none'}; }
-                                .event-name-lg { display: ${event.data.data.width >= 1024 ? 'block' : 'none'}; }
-                            }
-                        `;
-                        document.head.appendChild(fakeViewportStyle);
-                        break;
-                    case 'clearFakeViewport':
-                        const existingFakeStyle = document.getElementById('fake-viewport-style');
-                        if (existingFakeStyle) {
-                            existingFakeStyle.remove();
-                        }
-                        break;
-                }
-            }
-        });
-        
-        // Notify parent window when iframe is ready
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                try {
-                    window.parent.postMessage({ type: 'iframeReady' }, '*');
-                } catch (e) {
-                    // Ignore cross-origin errors
-                }
-            }, 500);
-        });
+        // Log script loading completion and page readiness
+        if (window.logger) {
+            logger.timeEnd('SYSTEM', 'Script loading');
+            logger.componentLoad('SYSTEM', 'All scripts loaded successfully');
+            
+            // Log when DOM is fully ready
+            document.addEventListener('DOMContentLoaded', () => {
+                logger.componentInit('SYSTEM', 'DOM content loaded');
+            });
+            
+            // Log when page is fully loaded
+            window.addEventListener('load', () => {
+                logger.componentLoad('SYSTEM', 'Page fully loaded');
+                logger.debug('SYSTEM', 'Navigation section should be visible', {
+                    navContainer: !!document.querySelector('.nav-container'),
+                    citySwitcher: !!document.querySelector('.city-switcher'),
+                    header: !!document.querySelector('header')
+                });
+            });
+        }
     </script>
 </body>
 </html>
