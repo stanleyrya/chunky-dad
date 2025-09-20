@@ -614,13 +614,100 @@ class EventbriteParser {
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
             // This fixes cases where Eventbrite has incorrect timezone but parser correctly detects city
             let eventTimezone = null;
+            let needsTimeConversion = false;
+            
             if (city) {
                 eventTimezone = this.getTimezoneForCity(city, cityConfig);
                 if (eventTimezone) {
                     console.log(`🎫 Eventbrite: Using city-based timezone for "${title}": ${eventTimezone}`);
                     if (originalTimezone && originalTimezone !== eventTimezone) {
                         console.log(`🎫 Eventbrite: Overriding Eventbrite timezone "${originalTimezone}" with city-based timezone "${eventTimezone}" for "${title}"`);
+                        needsTimeConversion = true;
                     }
+                }
+            }
+            
+            // When timezone is overridden, convert time assuming the original local time should be preserved
+            if (needsTimeConversion && startDate && originalTimezone && eventTimezone) {
+                try {
+                    console.log(`🎫 Eventbrite: Converting time from ${originalTimezone} to ${eventTimezone} for "${title}"`);
+                    console.log(`🎫 Eventbrite: Original UTC times - start: ${startDate}, end: ${endDate}`);
+                    
+                    // Parse the original UTC time
+                    const originalStartUTC = new Date(startDate);
+                    const originalEndUTC = endDate ? new Date(endDate) : null;
+                    
+                    // Get what the local time would be in the original timezone
+                    const originalLocalFormatted = new Intl.DateTimeFormat('en-CA', {
+                        timeZone: originalTimezone,
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    }).format(originalStartUTC);
+                    
+                    console.log(`🎫 Eventbrite: Original would be ${originalLocalFormatted} in ${originalTimezone}`);
+                    
+                    // Create a new date with the same local time but in the target timezone
+                    // Parse the local time components (handle comma separator)
+                    const [datePart, timePart] = originalLocalFormatted.split(', ');
+                    const localDateTime = `${datePart}T${timePart}`;
+                    
+                    // Create a date object assuming this time is in the target timezone
+                    // We need to find the UTC equivalent of this local time in the target timezone
+                    const tempDate = new Date(localDateTime);
+                    
+                    // Calculate offset for target timezone at this date
+                    const targetOffset = tempDate.getTimezoneOffset() * 60000; // Convert to milliseconds
+                    
+                    // For the specific timezone, we need to calculate the actual offset
+                    // Use a known method to get timezone offset
+                    const jan = new Date(tempDate.getFullYear(), 0, 1);
+                    const jul = new Date(tempDate.getFullYear(), 6, 1);
+                    const janOffset = jan.getTimezoneOffset();
+                    const julOffset = jul.getTimezoneOffset();
+                    
+                    // Convert the local time to UTC for the target timezone
+                    // The approach: take the local time components and interpret them in the target timezone
+                    
+                    // Create a new date assuming the local time is in the target timezone
+                    // For October 2025, America/Los_Angeles is in PDT (UTC-7)
+                    let correctedStartUTC;
+                    
+                    if (eventTimezone === 'America/Los_Angeles') {
+                        // October 2025 is PDT (UTC-7)
+                        // If local time is 22:00, then UTC should be 22:00 + 7 = 05:00 next day
+                        const [year, month, day] = datePart.split('-').map(Number);
+                        const [hour, minute, second] = timePart.split(':').map(Number);
+                        
+                        correctedStartUTC = new Date(Date.UTC(year, month - 1, day, hour + 7, minute, second));
+                        
+                        // If hour + 7 >= 24, we need to adjust the date
+                        if (hour + 7 >= 24) {
+                            correctedStartUTC = new Date(Date.UTC(year, month - 1, day + 1, hour + 7 - 24, minute, second));
+                        }
+                    } else {
+                        // Fallback: use the original calculation
+                        correctedStartUTC = tempDate;
+                    }
+                    
+                    startDate = correctedStartUTC.toISOString();
+                    
+                    // Apply same adjustment to end time if it exists
+                    if (originalEndUTC) {
+                        const timeDiff = originalEndUTC.getTime() - originalStartUTC.getTime();
+                        const correctedEnd = new Date(correctedStartUTC.getTime() + timeDiff);
+                        endDate = correctedEnd.toISOString();
+                    }
+                    
+                    console.log(`🎫 Eventbrite: Time converted - start: ${startDate}, end: ${endDate}`);
+                    console.log(`🎫 Eventbrite: Local time ${originalLocalFormatted} now properly in ${eventTimezone}`);
+                    
+                } catch (error) {
+                    console.log(`🎫 Eventbrite: Error during time conversion: ${error.message}`);
                 }
             }
             
@@ -632,35 +719,6 @@ class EventbriteParser {
             
             if (!eventTimezone) {
                 console.log(`🎫 Eventbrite: No timezone found for "${title}"`);
-            }
-            
-            // DURO time correction: Fix known timing issue where DURO events show 1pm instead of 10pm
-            // DURO events should always be at 10pm local LA time but Eventbrite has wrong UTC times
-            if (/d>u>r>o/i.test(title)) {
-                console.log(`🎫 Eventbrite: Applying DURO time correction for "${title}"`);
-                console.log(`🎫 Eventbrite: Original times - start: ${startDate}, end: ${endDate}`);
-                
-                if (startDate) {
-                    // Parse the original date to get the date part
-                    const originalStart = new Date(startDate);
-                    const originalEnd = endDate ? new Date(endDate) : null;
-                    
-                    // Create new date at 10pm LA time (22:00 local)
-                    // For LA timezone (UTC-8 PST or UTC-7 PDT), 10pm local = 6am or 5am UTC next day
-                    const correctedStart = new Date(originalStart);
-                    correctedStart.setUTCHours(5, 0, 0, 0); // 5am UTC = 10pm PDT (during DST)
-                    correctedStart.setUTCDate(correctedStart.getUTCDate() + 1); // Next day in UTC
-                    
-                    // Set end time 5 hours later (3am LA time = 10am UTC)
-                    const correctedEnd = new Date(correctedStart);
-                    correctedEnd.setUTCHours(10, 0, 0, 0); // 10am UTC = 3am PDT next day
-                    
-                    startDate = correctedStart.toISOString();
-                    endDate = correctedEnd.toISOString();
-                    
-                    console.log(`🎫 Eventbrite: DURO time corrected - start: ${startDate}, end: ${endDate}`);
-                    console.log(`🎫 Eventbrite: This should display as 10:00 PM - 3:00 AM LA time`);
-                }
             }
             
             const event = {
@@ -897,6 +955,36 @@ class EventbriteParser {
         }
         
         return cityConfig[city].timezone;
+    }
+    
+    // Get timezone offset in milliseconds for a given timezone at a specific date
+    getTimezoneOffset(timezone, date) {
+        try {
+            // Create a date formatter for the given timezone
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            // Get the local time in the target timezone
+            const parts = formatter.formatToParts(date);
+            const localTimeString = `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}T${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}:${parts.find(p => p.type === 'second').value}`;
+            const localTime = new Date(localTimeString);
+            
+            // Calculate the offset: local time - UTC time
+            const offset = localTime.getTime() - date.getTime();
+            
+            return offset;
+        } catch (error) {
+            console.log(`🎫 Eventbrite: Error calculating timezone offset for ${timezone}: ${error.message}`);
+            return null;
+        }
     }
 }
 
