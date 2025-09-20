@@ -227,10 +227,36 @@ class PageEffectsManager {
         // Make header sticky after page loads to prevent initial visibility issues
         // Skip this for index pages as they have their own dynamic header behavior
         if (this.header && !this.isMainPage) {
-            logger.debug('PAGE', 'Making header sticky after page load');
+            const scrollY = window.scrollY;
+            const shouldAnimate = scrollY > 100; // Only animate if user has scrolled away from top (more than header height)
+            
+            logger.debug('PAGE', 'Making header sticky after page load', { 
+                scrollY, 
+                shouldAnimate 
+            });
+            
+            if (shouldAnimate) {
+                // Start header hidden above viewport for slide-down animation
+                this.header.style.transform = 'translateY(-100%)';
+                this.header.style.opacity = '0';
+            }
+            
+            // Apply sticky positioning
             this.header.classList.add('sticky');
             document.body.classList.add('header-sticky');
-            logger.componentLoad('PAGE', 'Header made sticky after page load');
+            
+            if (shouldAnimate) {
+                // Trigger slide-down animation after a brief delay
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        this.header.style.transform = 'translateY(0)';
+                        this.header.style.opacity = '1';
+                        logger.debug('PAGE', 'Header slide-down animation triggered');
+                    });
+                });
+            }
+            
+            logger.componentLoad('PAGE', 'Header made sticky after page load', { animated: shouldAnimate });
         } else if (this.isMainPage) {
             logger.debug('PAGE', 'Skipping sticky header for index page (has dynamic behavior)');
         }
