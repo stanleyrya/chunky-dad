@@ -1111,10 +1111,10 @@ class DynamicCalendarLoader extends CalendarCore {
     getMarkerText(event) {
         // Priority: shorter → shortName → name
         const text = event.shorter || event.shortName || event.name || 'Event';
-        const isShortName = !!(event.shorter || event.shortName);
+        const isShortName = !!event.shortName;
         
         // Apply soft hyphenation for better text wrapping in map markers
-        // Only apply soft hyphens to shortName/shortened text, not full names
+        // Only apply soft hyphens to shortName field specifically
         return this.insertSoftHyphens(text, isShortName);
     }
 
