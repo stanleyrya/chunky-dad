@@ -1,22 +1,17 @@
-// Page Effects Module - Handles animations, scroll effects, visual enhancements, and header behavior
+// Page Effects Module - Handles animations, scroll effects, visual enhancements
 class PageEffectsManager {
     constructor() {
         this.isMainPage = this.checkIfMainPage();
         this.isCityPage = this.checkIfCityPage();
         this.header = document.querySelector('header');
         this.heroImage = document.querySelector('.hero-image');
-        
-        
         this.init();
     }
 
     checkIfMainPage() {
-        // Only the root index page should be considered the main page
-        // City pages like /city-name/index.html should NOT be main pages
-        const pathname = window.location.pathname;
-        return pathname === '/' || 
-               pathname === '' || 
-               pathname === '/index.html';
+        return window.location.pathname.endsWith('index.html') || 
+               window.location.pathname === '/' || 
+               window.location.pathname === '';
     }
 
     checkIfCityPage() {
@@ -48,70 +43,10 @@ class PageEffectsManager {
 
     init() {
         logger.componentInit('PAGE', 'Page effects manager initializing');
-        
-        // Setup dynamic header for index pages
-        this.setupDynamicHeader();
-        
-        // Page effects setup
         this.setupIntersectionObserver();
         this.setupInteractiveElements();
         this.setupPageLoadEffects();
-        
         logger.componentLoad('PAGE', 'Page effects manager initialized');
-    }
-
-
-    setupDynamicHeader() {
-        const isIndexPage = document.body.classList.contains('index-page');
-        if (!isIndexPage || !this.header) {
-            logger.debug('PAGE', 'Dynamic header not needed for this page');
-            return;
-        }
-
-        logger.componentInit('PAGE', 'Setting up dynamic header for index page');
-        
-        let lastScrollY = window.scrollY;
-        let ticking = false;
-
-        const updateHeader = () => {
-            const scrollY = window.scrollY;
-            const heroHeight = window.innerHeight * 0.6; // Show header after scrolling 60% of viewport
-            const scrollHint = document.querySelector('.hero-scroll-hint');
-            
-            if (scrollY > heroHeight) {
-                if (!this.header.classList.contains('visible')) {
-                    this.header.classList.add('visible');
-                    this.showHeader(true, 'index page scroll reveal');
-                    logger.debug('PAGE', 'Header shown on scroll');
-                }
-            } else {
-                if (this.header.classList.contains('visible')) {
-                    this.header.classList.remove('visible');
-                    this.hideHeader(true, 'index page scroll hide');
-                    logger.debug('PAGE', 'Header hidden on scroll up');
-                }
-            }
-            
-            // Hide scroll hint when user starts scrolling
-            if (scrollHint && scrollY > 50) {
-                scrollHint.style.opacity = '0';
-            } else if (scrollHint && scrollY <= 50) {
-                scrollHint.style.opacity = '0.7';
-            }
-            
-            lastScrollY = scrollY;
-            ticking = false;
-        };
-
-        const requestTick = () => {
-            if (!ticking) {
-                requestAnimationFrame(updateHeader);
-                ticking = true;
-            }
-        };
-
-        window.addEventListener('scroll', requestTick, { passive: true });
-        logger.componentLoad('PAGE', 'Dynamic header scroll listener attached');
     }
 
 
@@ -170,7 +105,6 @@ class PageEffectsManager {
         window.addEventListener('load', () => {
             logger.performance('PAGE', 'Page load complete - adding loaded class');
             document.body.classList.add('loaded');
-            this.makeStickyHeader();
         });
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -283,79 +217,6 @@ class PageEffectsManager {
         };
         
         type();
-    }
-
-    // Reusable header animation methods
-    showHeader(animated = true, reason = 'unknown') {
-        if (!this.header) return;
-        
-        if (animated) {
-            logger.debug('PAGE', `Showing header with animation: ${reason}`);
-            this.header.style.transform = 'translateY(0)';
-            this.header.style.opacity = '1';
-        } else {
-            logger.debug('PAGE', `Showing header instantly: ${reason}`);
-            this.header.style.transform = 'translateY(0)';
-            this.header.style.opacity = '1';
-        }
-    }
-
-    hideHeader(animated = true, reason = 'unknown') {
-        if (!this.header) return;
-        
-        if (animated) {
-            logger.debug('PAGE', `Hiding header with animation: ${reason}`);
-            this.header.style.transform = 'translateY(-100%)';
-            this.header.style.opacity = '0';
-        } else {
-            logger.debug('PAGE', `Hiding header instantly: ${reason}`);
-            this.header.style.transform = 'translateY(-100%)';
-            this.header.style.opacity = '0';
-        }
-    }
-
-    setHeaderVisible(visible, animated = true, reason = 'unknown') {
-        if (visible) {
-            this.showHeader(animated, reason);
-        } else {
-            this.hideHeader(animated, reason);
-        }
-    }
-
-    makeStickyHeader() {
-        // Make header sticky after page loads to prevent initial visibility issues
-        // Skip this for index pages as they have their own dynamic header behavior
-        if (this.header && !this.isMainPage) {
-            const scrollY = window.scrollY;
-            const shouldAnimate = scrollY > 100; // Only animate if user has scrolled away from top (more than header height)
-            
-            logger.debug('PAGE', 'Making header sticky after page load', { 
-                scrollY, 
-                shouldAnimate 
-            });
-            
-            if (shouldAnimate) {
-                // Start header hidden for slide-down animation
-                this.hideHeader(false, 'preparing for sticky animation');
-            }
-            
-            // Apply sticky positioning
-            this.header.classList.add('sticky');
-            document.body.classList.add('header-sticky');
-            
-            if (shouldAnimate) {
-                // Trigger slide-down animation after a brief delay
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        this.showHeader(true, 'sticky header slide-down');
-                    });
-                });
-            }
-            
-            logger.componentLoad('PAGE', 'Header made sticky after page load', { animated: shouldAnimate });
-        } else if (this.isMainPage) {
-            logger.debug('PAGE', 'Skipping sticky header for index page (has dynamic behavior)');
-        }
     }
 
 }
