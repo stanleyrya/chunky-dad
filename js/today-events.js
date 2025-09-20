@@ -16,13 +16,7 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
         return;
       }
 
-      // Check if city-config functions are available
-      if (typeof getAvailableCities !== 'function' || typeof hasCityCalendar !== 'function') {
-        logger.warn('CALENDAR', 'City config functions not available for today events aggregation');
-        return;
-      }
-      
-      const cities = getAvailableCities().filter(c => hasCityCalendar(c.key));
+      const cities = (window.getAvailableCities ? getAvailableCities() : []).filter(c => hasCityCalendar(c.key));
       const selectedCities = cities.slice(0, this.maxCities);
 
       logger.info('CALENDAR', 'Loading cached ICS for today aggregation', { 
@@ -255,7 +249,7 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
     cityValue.className = 'value';
     
     // Get city emoji from config
-    const cityConfig = (typeof getCityConfig === 'function') ? getCityConfig(ev.cityKey) : null;
+    const cityConfig = getCityConfig(ev.cityKey);
     const cityEmoji = cityConfig ? cityConfig.emoji : '';
     const cityDisplayText = cityEmoji ? `${cityEmoji} ${ev.cityName || ''}` : (ev.cityName || '');
     cityValue.textContent = cityDisplayText;

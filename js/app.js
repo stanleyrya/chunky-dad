@@ -331,29 +331,6 @@ class ChunkyDadApp {
         }
     }
 
-    // Wait for city-config dependencies and then initialize calendar
-    async waitForCityConfigAndInitCalendar() {
-        const maxWait = 5000; // 5 seconds max wait
-        const startTime = Date.now();
-        
-        logger.info('SYSTEM', 'Waiting for city-config dependencies before calendar initialization');
-        
-        while (Date.now() - startTime < maxWait) {
-            if (typeof getCityConfig === 'function' && 
-                typeof getAvailableCities === 'function' && 
-                typeof hasCityCalendar === 'function') {
-                logger.info('SYSTEM', 'City-config dependencies available, initializing calendar');
-                await this.calendarLoader.init();
-                return;
-            }
-            
-            // Wait 50ms before checking again
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-        
-        logger.warn('SYSTEM', 'Timeout waiting for city-config dependencies, attempting calendar init anyway');
-        await this.calendarLoader.init();
-    }
 
 
 
@@ -372,12 +349,14 @@ class ChunkyDadApp {
                 // Only initialize full calendar on city/test pages, not main page
                 // Run calendar initialization asynchronously to not block other page elements
                 if (this.isCityPage || this.isTestPage) {
-                    // Wait for city-config dependencies and then initialize calendar
-                    this.waitForCityConfigAndInitCalendar().catch(error => {
-                        logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
-                        // Ensure error is not re-thrown to prevent unhandled promise rejection
-                        return null;
-                    });
+                    // Add a tiny delay to ensure all scripts are fully loaded and functions are available
+                    setTimeout(() => {
+                        this.calendarLoader.init().catch(error => {
+                            logger.componentError('SYSTEM', 'Calendar initialization failed (non-blocking)', error);
+                            // Ensure error is not re-thrown to prevent unhandled promise rejection
+                            return null;
+                        });
+                    }, 10); // Very small delay just to ensure script execution order
                 }
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
