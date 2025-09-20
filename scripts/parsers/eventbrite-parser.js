@@ -358,7 +358,7 @@ class EventbriteParser {
             
             // Get description from multiple sources, including detail page components
             let description = eventData.description || eventData.summary || '';
-            if (!description && serverData?.components?.eventDescription?.summary) {
+            if (!description && serverData && serverData.components && serverData.components.eventDescription && serverData.components.eventDescription.summary) {
                 description = serverData.components.eventDescription.summary;
             }
             
@@ -366,6 +366,16 @@ class EventbriteParser {
             // Detail pages may have start/end as timezone objects with utc field
             let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
             let endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
+            
+            // Extract original timezone from event data (preserve Eventbrite's timezone)
+            let originalTimezone = null;
+            if (eventData.start?.timezone) {
+                originalTimezone = eventData.start.timezone;
+                console.log(`🎫 Eventbrite: Found original timezone in event data: ${originalTimezone}`);
+            } else if (eventData.end?.timezone) {
+                originalTimezone = eventData.end.timezone;
+                console.log(`🎫 Eventbrite: Found original timezone in end data: ${originalTimezone}`);
+            }
             
             // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
             if (typeof startDate === 'object' && startDate.utc) {
@@ -384,7 +394,7 @@ class EventbriteParser {
             let coordinates = null;
             
             // First try detail page venue data (from serverData.components.eventMap)
-            if (serverData?.components?.eventMap) {
+            if (serverData && serverData.components && serverData.components.eventMap) {
                 const eventMap = serverData.components.eventMap;
                 venue = eventMap.venueName || venue;
                 address = eventMap.venueAddress || address;
@@ -442,10 +452,10 @@ class EventbriteParser {
             console.log(`🎫 Eventbrite:   - eventData.is_free: ${eventData.is_free}`);
             console.log(`🎫 Eventbrite:   - eventData.price_range: ${eventData.price_range}`);
             console.log(`🎫 Eventbrite:   - serverData exists: ${!!serverData}`);
-            console.log(`🎫 Eventbrite:   - event_listing_response exists: ${!!serverData?.event_listing_response}`);
-            console.log(`🎫 Eventbrite:   - tickets exists: ${!!serverData?.event_listing_response?.tickets}`);
-            console.log(`🎫 Eventbrite:   - ticketClasses exists: ${!!serverData?.event_listing_response?.tickets?.ticketClasses}`);
-            if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+            console.log(`🎫 Eventbrite:   - event_listing_response exists: ${!!(serverData && serverData.event_listing_response)}`);
+            console.log(`🎫 Eventbrite:   - tickets exists: ${!!(serverData && serverData.event_listing_response && serverData.event_listing_response.tickets)}`);
+            console.log(`🎫 Eventbrite:   - ticketClasses exists: ${!!(serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses)}`);
+            if (serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses) {
                 console.log(`🎫 Eventbrite:   - ticketClasses length: ${serverData.event_listing_response.tickets.ticketClasses.length}`);
             }
             
@@ -463,7 +473,7 @@ class EventbriteParser {
                     const day = now.getDate();
                     price += ` (as of ${month}/${day})`;
                 }
-            } else if (serverData?.event_listing_response?.tickets?.ticketClasses) {
+            } else if (serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses) {
                 console.log(`🎫 Eventbrite: Taking ticketClasses path for "${title}"`);
                 // Detail pages have pricing in tickets.ticketClasses - extract price range
                 const ticketClasses = serverData.event_listing_response.tickets.ticketClasses;
@@ -515,7 +525,7 @@ class EventbriteParser {
             let image = eventData.logo?.url || eventData.image?.url;
             
             // NEW: Try to get image from eventHero if not found in eventData
-            if (!image && serverData.event_listing_response?.eventHero?.items?.[0]) {
+            if (!image && serverData && serverData.event_listing_response && serverData.event_listing_response.eventHero && serverData.event_listing_response.eventHero.items && serverData.event_listing_response.eventHero.items[0]) {
                 const heroItem = serverData.event_listing_response.eventHero.items[0];
                 image = heroItem.croppedLogoUrl600 || heroItem.croppedLogoUrl480 || heroItem.croppedLogoUrl940;
                 console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
@@ -550,9 +560,11 @@ class EventbriteParser {
                 
                 // Fallback: Check for "D>U>R>O" pattern and map to LA if no other city found
                 // This handles megawoof events that use this pattern but may expand to other cities later
+                // NOTE: This is only for city detection - timezone will be preserved from Eventbrite data
                 if (!city && /d>u>r>o/i.test(title)) {
                     city = 'la';
                     console.log(`🎫 Eventbrite: Found D>U>R>O pattern in title, mapping to LA as fallback: "${title}"`);
+                    console.log(`🎫 Eventbrite: Note - timezone will be preserved from Eventbrite data, not overridden by city mapping`);
                 }
                 
                 if (city) {
@@ -574,7 +586,7 @@ class EventbriteParser {
             let finalPlaceId = eventData.venue?.google_place_id || null;
             
             // Check components.eventMap for venue data
-            if (serverData.components?.eventMap) {
+            if (serverData && serverData.components && serverData.components.eventMap) {
                 const mapData = serverData.components.eventMap;
                 if (!finalVenue && mapData.venueName) {
                     finalVenue = mapData.venueName;
@@ -591,12 +603,23 @@ class EventbriteParser {
             }
             
             // Check components.eventDetails.location for additional venue data
-            if (serverData.components?.eventDetails?.location) {
+            if (serverData && serverData.components && serverData.components.eventDetails && serverData.components.eventDetails.location) {
                 const detailsLocation = serverData.components.eventDetails.location;
                 if (detailsLocation.localityPlaceId && !finalPlaceId) {
                     finalPlaceId = detailsLocation.localityPlaceId;
                     console.log(`🎫 Eventbrite: Found place_id in components.eventDetails.location: "${finalPlaceId}"`);
                 }
+            }
+            
+            // Determine timezone: prefer original Eventbrite timezone, fallback to city-based timezone
+            let eventTimezone = originalTimezone;
+            if (!eventTimezone && city) {
+                eventTimezone = this.getTimezoneForCity(city, cityConfig);
+                console.log(`🎫 Eventbrite: Using city-based timezone for "${title}": ${eventTimezone}`);
+            } else if (eventTimezone) {
+                console.log(`🎫 Eventbrite: Using original Eventbrite timezone for "${title}": ${eventTimezone}`);
+            } else {
+                console.log(`🎫 Eventbrite: No timezone found for "${title}"`);
             }
             
             const event = {
@@ -608,7 +631,7 @@ class EventbriteParser {
                 location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
                 address: finalAddress,
                 city: city,
-                timezone: this.getTimezoneForCity(city, cityConfig),
+                timezone: eventTimezone,
                 url: url, // Use consistent 'url' field name across all parsers
                 ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
                 cover: price, // Use 'cover' field name that calendar-core.js expects
