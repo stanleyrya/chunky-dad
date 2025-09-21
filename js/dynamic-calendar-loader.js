@@ -3334,7 +3334,7 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
-            eventCount: data.events.length,
+            eventCount: this.allEvents ? this.allEvents.length : 0,
             measurementWidth: measurementWidth
         });
     }
