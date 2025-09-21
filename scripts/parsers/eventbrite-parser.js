@@ -377,6 +377,7 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found original timezone in end data: ${originalTimezone}`);
             }
             
+            
             // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
             if (typeof startDate === 'object' && startDate.utc) {
                 startDate = startDate.utc;
@@ -385,7 +386,23 @@ class EventbriteParser {
                 endDate = endDate.utc;
             }
             
+            
             console.log(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
+            console.log(`🎫 Eventbrite: Final processed dates - startDate type: ${typeof startDate}, endDate type: ${typeof endDate}`);
+            if (startDate) {
+                const startDateObj = new Date(startDate);
+                console.log(`🎫 Eventbrite: startDate as Date object: ${startDateObj.toISOString()}`);
+                if (originalTimezone) {
+                    console.log(`🎫 Eventbrite: startDate in ${originalTimezone}: ${startDateObj.toLocaleString('en-US', { timeZone: originalTimezone })}`);
+                }
+            }
+            if (endDate) {
+                const endDateObj = new Date(endDate);
+                console.log(`🎫 Eventbrite: endDate as Date object: ${endDateObj.toISOString()}`);
+                if (originalTimezone) {
+                    console.log(`🎫 Eventbrite: endDate in ${originalTimezone}: ${endDateObj.toLocaleString('en-US', { timeZone: originalTimezone })}`);
+                }
+            }
             const url = eventData.url || eventData.vanity_url || '';
             
             // Enhanced venue processing - get both name and address from multiple sources
