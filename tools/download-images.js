@@ -65,14 +65,40 @@ function downloadFile(url, outputPath, timeout = 30000) {
 // Generate filename from URL
 function generateFilename(url) {
   try {
+    // Handle Eventbrite URLs specially - they have nested URL encoding
+    if (url.includes('evbuc.com') && (url.includes('images/') || url.includes('images%2F'))) {
+      // Extract the nested URL from the pathname
+      const parsedUrl = new URL(url);
+      const nestedUrl = decodeURIComponent(parsedUrl.pathname.substring(1)); // Remove leading slash
+      
+      // Parse the nested URL to get the actual image path
+      const nestedParsedUrl = new URL(nestedUrl);
+      const imageMatch = nestedParsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
+      
+      if (imageMatch) {
+        const [, id1, id2, id3, filename] = imageMatch;
+        const ext = path.extname(filename) || '.jpg';
+        const basename = `evb-${id1}-${id2}-${id3}-${path.basename(filename, ext)}`;
+        
+        // Sanitize filename
+        const sanitized = basename
+          .replace(/[^a-zA-Z0-9._-]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+        
+        return sanitized + ext;
+      }
+    }
+    
+    // Handle regular URLs
     const parsedUrl = new URL(url);
     const pathname = parsedUrl.pathname;
     const ext = path.extname(pathname) || '.jpg';
-    const basename = path.basename(pathname, ext) || 'image';
+    let basename = path.basename(pathname, ext) || 'image';
     
-    // Sanitize filename
+    // Sanitize filename - be more conservative with special characters
     const sanitized = basename
-      .replace(/[^a-zA-Z0-9-_]/g, '-')
+      .replace(/[^a-zA-Z0-9._-]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     
@@ -232,8 +258,60 @@ function extractImageUrls() {
     }
     
     // Extract website URLs for favicons (embedded in description)
-    // For now, skip favicon extraction as it's complex and not critical
-    // TODO: Implement proper favicon URL extraction
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes('website:')) {
+        // Find the start of the URL after "website:"
+        const websiteIndex = line.indexOf('website:');
+        let url = line.substring(websiteIndex + 8).trim();
+        
+        // Continue on next lines until we hit another field or end of content
+        let j = i + 1;
+        while (j < lines.length) {
+          const nextLine = lines[j].trim();
+          // Stop if we hit another field (starts with a letter followed by colon)
+          if (nextLine.match(/^[a-zA-Z][a-zA-Z0-9]*:/)) {
+            break;
+          }
+          // In iCal, continuation lines start with a space
+          if (nextLine.startsWith(' ')) {
+            url += nextLine.substring(1); // Remove leading space
+          } else {
+            url += nextLine;
+          }
+          j++;
+        }
+        
+        // Clean up the URL - extract only the actual URL part
+        const urlMatch = url.match(/https?:\/\/[^\s\n]+/);
+        if (urlMatch) {
+          let cleanUrl = urlMatch[0];
+          // Remove any trailing characters that aren't part of the URL
+          cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
+          cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
+          
+          // Additional cleanup: remove any remaining \n characters
+          cleanUrl = cleanUrl.replace(/\\n/g, '');
+          
+          if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+            // Generate favicon URL - try common favicon locations
+            try {
+              const domain = new URL(cleanUrl).hostname;
+              const faviconUrls = [
+                `https://${domain}/favicon.ico`,
+                `https://${domain}/favicon.png`,
+                `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+              ];
+              
+              // Add the first favicon URL (most common)
+              imageUrls.favicons.add(faviconUrls[0]);
+            } catch (error) {
+              console.warn(`⚠️  Could not extract domain from website URL: ${cleanUrl}`);
+            }
+          }
+        }
+      }
+    }
   }
   
   console.log(`🔍 Found ${imageUrls.events.size} event images and ${imageUrls.favicons.size} favicon URLs`);
