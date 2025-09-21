@@ -590,7 +590,19 @@ class DynamicCalendarLoader extends CalendarCore {
             selectedMarker._icon.style.filter = 'drop-shadow(0 4px 8px rgba(255, 165, 0, 0.6))';
         }
         
-        logger.userInteraction('MAP', 'Marker highlighted', { eventSlug });
+        // Bring marker to front in DOM layer order (safely)
+        if (window.eventsMap && selectedMarker) {
+            try {
+                // Remove and re-add to bring to front, but preserve the reference
+                window.eventsMap.removeLayer(selectedMarker);
+                window.eventsMap.addLayer(selectedMarker);
+                logger.debug('MAP', 'Marker brought to front in DOM layer order', { eventSlug });
+            } catch (error) {
+                logger.warn('MAP', 'Failed to bring marker to front in DOM', { eventSlug, error: error.message });
+            }
+        }
+        
+        logger.userInteraction('MAP', 'Marker highlighted and brought to front', { eventSlug });
     }
 
     // Helper method to reset all map markers to normal appearance
