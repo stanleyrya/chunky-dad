@@ -489,6 +489,26 @@ class DynamicCalendarLoader extends CalendarCore {
             this.updateSelectionVisualState();
         }
     }
+
+    // Clear map and reset map state
+    clearMap() {
+        if (window.eventsMap) {
+            // Remove all markers
+            if (window.eventsMapMarkersBySlug) {
+                Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
+                    window.eventsMap.removeLayer(marker);
+                });
+                window.eventsMapMarkersBySlug = {};
+            }
+            window.eventsMapMarkers = [];
+            
+            // Remove the map instance
+            window.eventsMap.remove();
+            window.eventsMap = null;
+            
+            logger.debug('MAP', 'Map cleared and reset');
+        }
+    }
     
     // Toggle/select event for URL/state
     toggleEventSelection(eventSlug, eventDateISO) {
@@ -2311,6 +2331,98 @@ class DynamicCalendarLoader extends CalendarCore {
         return headerHtml + daysHtml;
     }
 
+    // Update existing map markers without reinitializing the map
+    updateMapMarkers(events) {
+        if (!window.eventsMap || !window.eventsMapMarkersBySlug) {
+            logger.warn('MAP', 'Cannot update markers - map not initialized');
+            return;
+        }
+
+        logger.debug('MAP', 'Updating map markers', {
+            eventCount: events.length,
+            existingMarkers: Object.keys(window.eventsMapMarkersBySlug).length
+        });
+
+        // Get events with coordinates
+        const eventsWithCoords = events.filter(event => 
+            event.coordinates?.lat && event.coordinates?.lng && 
+            !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
+        );
+
+        // Create a set of current event slugs for efficient lookup
+        const currentEventSlugs = new Set(eventsWithCoords.map(event => event.slug));
+
+        // Remove markers for events that are no longer in the filtered list
+        Object.keys(window.eventsMapMarkersBySlug).forEach(slug => {
+            if (!currentEventSlugs.has(slug)) {
+                const marker = window.eventsMapMarkersBySlug[slug];
+                if (marker) {
+                    window.eventsMap.removeLayer(marker);
+                    delete window.eventsMapMarkersBySlug[slug];
+                    logger.debug('MAP', 'Removed marker for event', { slug });
+                }
+            }
+        });
+
+        // Add markers for new events
+        eventsWithCoords.forEach(event => {
+            if (!window.eventsMapMarkersBySlug[event.slug]) {
+                try {
+                    const markerIcon = this.createMarkerIcon(event);
+                    const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
+                        icon: markerIcon,
+                        eventSlug: event.slug
+                    })
+                        .addTo(window.eventsMap)
+                        .on('click', () => {
+                            // Select the event and scroll to it
+                            const eventDateISO = event.date || this.formatDateToISO(this.currentDate);
+                            this.toggleEventSelection(event.slug, eventDateISO);
+                            
+                            const eventCard = document.querySelector(`.event-card[data-event-slug="${event.slug}"]`);
+                            if (eventCard) {
+                                eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                logger.userInteraction('MAP', 'Marker clicked, event selected and scrolled to', { eventSlug: event.slug });
+                            } else {
+                                logger.warn('MAP', 'Event card not found for marker click', { eventSlug: event.slug });
+                            }
+                        });
+                    
+                    window.eventsMapMarkersBySlug[event.slug] = marker;
+                    logger.debug('MAP', 'Added new marker for event', { slug: event.slug });
+                } catch (error) {
+                    logger.warn('MAP', 'Failed to create marker for event', { 
+                        eventName: event.name, 
+                        error: error.message 
+                    });
+                }
+            }
+        });
+
+        // Update the global markers array
+        window.eventsMapMarkers = Object.values(window.eventsMapMarkersBySlug);
+
+        // Restore selection state if there was a selected event
+        if (this.selectedEventSlug && window.eventsMapMarkersBySlug[this.selectedEventSlug]) {
+            if (typeof bringMarkerToFront === 'function') {
+                bringMarkerToFront(this.selectedEventSlug);
+                logger.debug('MAP', 'Restored selection state for marker', { 
+                    selectedSlug: this.selectedEventSlug 
+                });
+            }
+        } else if (this.selectedEventSlug) {
+            logger.warn('MAP', 'Selected event marker not found after update', { 
+                selectedSlug: this.selectedEventSlug,
+                availableMarkers: Object.keys(window.eventsMapMarkersBySlug)
+            });
+        }
+
+        logger.componentLoad('MAP', 'Map markers updated successfully', {
+            markersAdded: eventsWithCoords.length,
+            markersRemoved: Object.keys(window.eventsMapMarkersBySlug).length - eventsWithCoords.length
+        });
+    }
+
     // Initialize map
     initializeMap(cityConfig, events) {
         logger.debug('MAP', 'Starting map initialization', {
@@ -2702,10 +2814,18 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             const mapSection = document.querySelector('.events-map-section');
             if (mapSection && !hideEvents) {
-                logger.debug('CALENDAR', 'Initializing map for events display');
                 mapSection.style.display = 'block';
-                this.initializeMap(this.currentCityConfig, filteredEvents);
-                logger.debug('CALENDAR', 'Map initialization completed');
+                
+                // Only initialize map if it doesn't exist yet
+                if (!window.eventsMap) {
+                    logger.debug('CALENDAR', 'Initializing map for events display');
+                    this.initializeMap(this.currentCityConfig, filteredEvents);
+                    logger.debug('CALENDAR', 'Map initialization completed');
+                } else {
+                    logger.debug('CALENDAR', 'Updating existing map markers');
+                    this.updateMapMarkers(filteredEvents);
+                    logger.debug('CALENDAR', 'Map markers updated');
+                }
             } else if (hideEvents) {
                 logger.debug('CALENDAR', 'Skipping map initialization (hideEvents mode)');
             } else {
@@ -3072,6 +3192,9 @@ class DynamicCalendarLoader extends CalendarCore {
     async renderCityPage() {
         this.currentCity = this.getCityFromURL();
         this.currentCityConfig = getCityConfig(this.currentCity);
+        
+        // Clear existing map when switching cities
+        this.clearMap();
         
         // Parse initial state (view/date/event) from URL before rendering
         this.parseStateFromUrl();
