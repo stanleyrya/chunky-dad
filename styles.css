@@ -1832,9 +1832,9 @@ body.index-page main {
 }
 
 .floating-clear-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
+    position: sticky;
+    bottom: 20px;
+    left: 20px;
     background: var(--color-away);
     border: none;
     color: white;
@@ -1851,6 +1851,8 @@ body.index-page main {
     justify-content: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     z-index: 10;
+    float: left;
+    margin-top: auto;
 }
 
 .floating-clear-btn:hover {
