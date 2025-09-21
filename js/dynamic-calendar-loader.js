@@ -2450,13 +2450,17 @@ class DynamicCalendarLoader extends CalendarCore {
             myLocationControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-my-location');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="showMyLocation()" title="Show My Location">
-                        📍
+                    <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
+                        <span id="location-icon">📍</span>
+                        <span id="location-status" class="location-status"></span>
                     </button>
                 `;
                 return div;
             };
             myLocationControl.addTo(map);
+            
+            // Initialize location status
+            updateLocationStatus();
 
             // Enable scroll wheel zoom only when Ctrl is pressed
             map.on('wheel', function(e) {
@@ -3586,57 +3590,164 @@ function fitAllMarkers() {
 
 
 
-function showMyLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                
-                if (window.eventsMap) {
-                    // Remove existing location circle
-                    if (window.myLocationCircle) {
-                        window.eventsMap.removeLayer(window.myLocationCircle);
-                    }
-                    
-                    // Add location circle instead of marker
-                    window.myLocationCircle = L.circle([lat, lng], {
-                        color: '#4285f4',
-                        fillColor: '#4285f4',
-                        fillOpacity: 0.2,
-                        radius: 500,
-                        weight: 3
-                    }).addTo(window.eventsMap).bindPopup('📍 Your Location');
-                    
-                    // Calculate bounds that include both user location and all event markers
-                    const bounds = L.latLngBounds([[lat, lng]]);
-                    
-                    // Add all event markers to bounds
-                    if (window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
-                        window.eventsMapMarkers.forEach(marker => {
-                            bounds.extend(marker.getLatLng());
-                        });
-                        
-                        // Fit map to show both user location and all events
-                        window.eventsMap.fitBounds(bounds, {
-                            padding: [50, 50],
-                            maxZoom: 14
-                        });
-                    } else {
-                        // If no event markers, just center on user location
-                        window.eventsMap.setView([lat, lng], 14);
-                    }
-                    
-                    logger.userInteraction('MAP', 'My location shown with events visible', { lat, lng });
-                }
-            },
-            (error) => {
-                console.warn('Location access denied or unavailable:', error);
-                alert('Location access denied or unavailable. Please enable location services to use this feature.');
+async function showMyLocation() {
+    try {
+        // Update button to show loading state
+        updateLocationButtonStatus('loading');
+        
+        // Initialize LocationManager if not already available
+        if (!window.locationManager) {
+            window.locationManager = new LocationManager();
+        }
+
+        // Get location with caching and permission awareness
+        const location = await window.locationManager.getLocationForMap(true);
+        
+        if (window.eventsMap) {
+            // Remove existing location circle
+            if (window.myLocationCircle) {
+                window.eventsMap.removeLayer(window.myLocationCircle);
             }
-        );
-    } else {
-        alert('Geolocation is not supported by this browser.');
+            
+            // Create popup text with accuracy info
+            let popupText = '📍 Your Location';
+            if (location.accuracy) {
+                const accuracyMeters = Math.round(location.accuracy);
+                popupText += ` (±${accuracyMeters}m)`;
+            }
+            if (location.stale) {
+                popupText += ' (cached)';
+            }
+            
+            // Add location circle instead of marker
+            window.myLocationCircle = L.circle([location.lat, location.lng], {
+                color: '#4285f4',
+                fillColor: '#4285f4',
+                fillOpacity: 0.2,
+                radius: 500,
+                weight: 3
+            }).addTo(window.eventsMap).bindPopup(popupText);
+            
+            // Calculate bounds that include both user location and all event markers
+            const bounds = L.latLngBounds([[location.lat, location.lng]]);
+            
+            // Add all event markers to bounds
+            if (window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
+                window.eventsMapMarkers.forEach(marker => {
+                    bounds.extend(marker.getLatLng());
+                });
+                
+                // Fit map to show both user location and all events
+                window.eventsMap.fitBounds(bounds, {
+                    padding: [50, 50],
+                    maxZoom: 14
+                });
+            } else {
+                // If no event markers, just center on user location
+                window.eventsMap.setView([location.lat, location.lng], 14);
+            }
+            
+            // Update button to show success state
+            updateLocationButtonStatus('success', location.stale ? 'cached' : 'fresh');
+            
+            logger.userInteraction('MAP', 'My location shown with events visible', { 
+                lat: location.lat, 
+                lng: location.lng,
+                accuracy: location.accuracy,
+                source: location.source,
+                stale: location.stale
+            });
+        }
+    } catch (error) {
+        logger.error('MAP', 'Location request failed', { error: error.message });
+        
+        // Update button to show error state
+        updateLocationButtonStatus('error');
+        
+        // Show user-friendly error message
+        const errorMessage = error.message || 'Unable to get your location. Please try again.';
+        
+        // Create a temporary error message instead of alert
+        if (window.eventsMap) {
+            // Remove any existing error popup
+            if (window.locationErrorPopup) {
+                window.eventsMap.removeLayer(window.locationErrorPopup);
+            }
+            
+            // Show error as map popup
+            const center = window.eventsMap.getCenter();
+            window.locationErrorPopup = L.popup()
+                .setLatLng(center)
+                .setContent(`<div style="text-align: center; color: #d32f2f; font-weight: 500;">${errorMessage}</div>`)
+                .openOn(window.eventsMap);
+            
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+                if (window.locationErrorPopup) {
+                    window.eventsMap.closePopup(window.locationErrorPopup);
+                    window.locationErrorPopup = null;
+                }
+            }, 5000);
+        } else {
+            // Fallback to alert if no map
+            alert(errorMessage);
+        }
+    }
+}
+
+// Update location button status indicator
+function updateLocationButtonStatus(status, detail = '') {
+    const statusEl = document.getElementById('location-status');
+    const iconEl = document.getElementById('location-icon');
+    const btnEl = document.getElementById('location-btn');
+    
+    if (!statusEl || !iconEl || !btnEl) return;
+    
+    // Remove existing status classes
+    btnEl.classList.remove('location-loading', 'location-success', 'location-error');
+    statusEl.textContent = '';
+    
+    switch (status) {
+        case 'loading':
+            btnEl.classList.add('location-loading');
+            iconEl.textContent = '⏳';
+            statusEl.textContent = '...';
+            break;
+        case 'success':
+            btnEl.classList.add('location-success');
+            iconEl.textContent = '📍';
+            statusEl.textContent = detail === 'cached' ? '💾' : '✓';
+            break;
+        case 'error':
+            btnEl.classList.add('location-error');
+            iconEl.textContent = '❌';
+            statusEl.textContent = '!';
+            break;
+        default:
+            iconEl.textContent = '📍';
+            statusEl.textContent = '';
+    }
+}
+
+// Check and update location status on page load
+async function updateLocationStatus() {
+    try {
+        if (!window.locationManager) {
+            window.locationManager = new LocationManager();
+        }
+        
+        const status = await window.locationManager.getLocationStatus();
+        
+        if (status.supported && status.permissionState === 'granted' && status.hasCachedLocation) {
+            updateLocationButtonStatus('success', 'cached');
+        } else if (status.supported && status.permissionState === 'denied') {
+            updateLocationButtonStatus('error');
+        } else {
+            updateLocationButtonStatus('default');
+        }
+    } catch (error) {
+        logger.debug('MAP', 'Location status check failed', { error: error.message });
+        updateLocationButtonStatus('default');
     }
 }
 
