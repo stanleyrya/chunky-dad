@@ -720,6 +720,25 @@ class DynamicCalendarLoader extends CalendarCore {
             if (!eventData.shortName) {
                 eventData.shortName = this.generateShortName(eventData.bar, eventData.name);
             }
+            
+            // Convert image URLs based on data source
+            if (eventData.image && this.dataSource === 'cached') {
+                const originalImageUrl = eventData.image;
+                eventData.image = this.convertImageUrlToLocal(originalImageUrl);
+                
+                logger.debug('CALENDAR', 'Converted image URL for cached data', {
+                    eventName: eventData.name,
+                    originalUrl: originalImageUrl,
+                    localPath: eventData.image,
+                    dataSource: this.dataSource
+                });
+            } else if (eventData.image && (this.dataSource === 'proxy' || this.dataSource === 'fallback')) {
+                logger.debug('CALENDAR', 'Using external image URL for external data', {
+                    eventName: eventData.name,
+                    imageUrl: eventData.image,
+                    dataSource: this.dataSource
+                });
+            }
         }
         return eventData;
     }
@@ -1399,13 +1418,18 @@ class DynamicCalendarLoader extends CalendarCore {
         const urlParams = new URLSearchParams(window.location.search);
         const useProxy = urlParams.has('proxy');
         
+        // Track data source for image URL conversion
+        this.dataSource = 'cached'; // Default to cached, will be updated based on actual source used
+        
         logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
         
         // If proxy parameter is set, skip cached data and go directly to proxy
         if (useProxy) {
             logger.info('CALENDAR', 'Proxy parameter detected - using proxy for calendar data');
+            this.dataSource = 'proxy';
             const proxyResult = await this.loadCalendarDataViaProxy(cityKey, cityConfig);
             if (proxyResult) return proxyResult;
+            this.dataSource = 'fallback';
             return this.loadCalendarDataFallback(cityKey, cityConfig);
         }
         
@@ -1501,6 +1525,7 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Fallback 1: try via CORS proxy providers
             try {
+                this.dataSource = 'proxy';
                 const proxyResult = await this.loadCalendarDataViaProxy(cityKey, cityConfig);
                 if (proxyResult) {
                     return proxyResult;
@@ -1515,6 +1540,7 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Fallback 2: try to load directly from Google (will likely fail due to CORS, but worth trying)
             try {
+                this.dataSource = 'fallback';
                 return await this.loadCalendarDataFallback(cityKey, cityConfig);
             } catch (fallbackError) {
                 logger.componentError('CALENDAR', 'All fallback methods failed', fallbackError);
@@ -1523,6 +1549,42 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
     
+    // Convert external image URL to local path for cached data
+    convertImageUrlToLocal(imageUrl) {
+        if (!imageUrl || !imageUrl.startsWith('http')) {
+            return imageUrl; // Return as-is if not a valid external URL
+        }
+        
+        try {
+            // Generate filename from URL (similar to download-images.js logic)
+            const url = new URL(imageUrl);
+            const pathname = url.pathname;
+            
+            // Extract file extension
+            const lastDot = pathname.lastIndexOf('.');
+            const ext = lastDot > -1 ? pathname.substring(lastDot) : '.jpg';
+            
+            // Extract basename
+            const lastSlash = pathname.lastIndexOf('/');
+            const basename = lastSlash > -1 ? pathname.substring(lastSlash + 1, lastDot > -1 ? lastDot : pathname.length) : 'image';
+            
+            // Sanitize filename
+            const sanitized = basename
+                .replace(/[^a-zA-Z0-9-_]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            
+            const filename = sanitized + ext;
+            return `img/events/${filename}`;
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to convert image URL to local path', {
+                imageUrl,
+                error: error.message
+            });
+            return imageUrl; // Return original URL as fallback
+        }
+    }
+
     // Resolve correct local calendar URL depending on current page location
     buildLocalCalendarUrl(cityKey) {
         try {
