@@ -506,11 +506,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.currentDate = parsed;
             }
             logger.userInteraction('EVENT', 'Event selected', { eventSlug, date: normalizedDateISO });
-            
-            // Bring corresponding marker to front on map
-            if (typeof bringMarkerToFront === 'function') {
-                bringMarkerToFront(eventSlug);
-            }
         }
         
         // Update visual selection state across all views
@@ -553,10 +548,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 item.classList.add('selected');
             });
             
-            // Bring map marker to front
-            if (typeof bringMarkerToFront === 'function') {
-                bringMarkerToFront(this.selectedEventSlug);
-            }
+            // Highlight map marker
+            this.highlightMapMarker(this.selectedEventSlug);
             
             // Show clear selection button
             if (clearBtn) {
@@ -575,15 +568,54 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             // Reset all markers to normal appearance
-            if (window.eventsMapMarkersBySlug) {
-                Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
-                    if (marker._icon) {
-                        marker._icon.style.transform = 'translate(-20px, -20px)';
-                        marker._icon.style.zIndex = '1000';
-                        marker._icon.style.filter = 'none';
-                    }
-                });
+            this.resetAllMapMarkers();
+        }
+    }
+
+    // Helper method to highlight a specific map marker
+    highlightMapMarker(eventSlug) {
+        if (!window.eventsMap || !window.eventsMapMarkersBySlug || !window.eventsMapMarkersBySlug[eventSlug]) {
+            return;
+        }
+        
+        const selectedMarker = window.eventsMapMarkersBySlug[eventSlug];
+        
+        // First reset all markers to normal appearance
+        this.resetAllMapMarkers();
+        
+        // Then highlight the selected marker
+        if (selectedMarker._icon) {
+            selectedMarker._icon.style.transform = 'translate(-20px, -20px) scale(1.3)';
+            selectedMarker._icon.style.zIndex = '1010';
+            selectedMarker._icon.style.filter = 'drop-shadow(0 4px 8px rgba(255, 165, 0, 0.6))';
+        }
+        
+        // Bring marker to front in DOM layer order (safely)
+        if (window.eventsMap && selectedMarker) {
+            try {
+                // Remove and re-add to bring to front, but preserve the reference
+                window.eventsMap.removeLayer(selectedMarker);
+                window.eventsMap.addLayer(selectedMarker);
+                logger.debug('MAP', 'Marker brought to front in DOM layer order', { eventSlug });
+            } catch (error) {
+                logger.warn('MAP', 'Failed to bring marker to front in DOM', { eventSlug, error: error.message });
             }
+        }
+        
+        logger.userInteraction('MAP', 'Marker highlighted and brought to front', { eventSlug });
+    }
+
+    // Helper method to reset all map markers to normal appearance
+    resetAllMapMarkers() {
+        if (window.eventsMapMarkersBySlug) {
+            Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
+                if (marker._icon) {
+                    marker._icon.style.transform = 'translate(-20px, -20px)';
+                    marker._icon.style.zIndex = '1000';
+                    marker._icon.style.filter = 'none';
+                }
+            });
+            logger.debug('MAP', 'All markers reset to normal appearance');
         }
     }
 
@@ -3517,33 +3549,6 @@ function fitAllMarkers() {
     }
 }
 
-// Bring marker to front by event slug and make it visually distinct
-function bringMarkerToFront(eventSlug) {
-    if (window.eventsMap && window.eventsMapMarkersBySlug && window.eventsMapMarkersBySlug[eventSlug]) {
-        const marker = window.eventsMapMarkersBySlug[eventSlug];
-        
-        // First, reset all markers to normal size
-        Object.values(window.eventsMapMarkersBySlug).forEach(m => {
-            if (m._icon) {
-                m._icon.style.transform = 'translate(-20px, -20px)';
-                m._icon.style.zIndex = '1000';
-                m._icon.style.filter = 'none';
-            }
-        });
-        
-        // Then highlight the selected marker
-        if (marker._icon) {
-            marker._icon.style.transform = 'translate(-20px, -20px) scale(1.3)';
-            marker._icon.style.zIndex = '1010';
-            marker._icon.style.filter = 'drop-shadow(0 4px 8px rgba(255, 165, 0, 0.6))';
-        }
-        
-        // Remove and re-add marker to bring it to front
-        window.eventsMap.removeLayer(marker);
-        window.eventsMap.addLayer(marker);
-        logger.userInteraction('MAP', 'Marker brought to front and highlighted', { eventSlug });
-    }
-}
 
 
 
