@@ -213,7 +213,18 @@ function extractImageUrls() {
           cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
           cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
           
+          // Additional cleanup: remove any remaining \n characters and fix escaped commas
+          cleanUrl = cleanUrl.replace(/\\n/g, '');
+          cleanUrl = cleanUrl.replace(/\\,/g, ',');
+          
+          // Fix specific issue where 'fac' gets appended to URLs (from 'facebook')
+          cleanUrl = cleanUrl.replace(/\.jpgfac$/, '.jpg');
+          
           if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+            // Debug: Print Wix URLs for investigation
+            if (cleanUrl.includes('wixstatic.com')) {
+              console.log(`🔍 WIX URL: ${cleanUrl}`);
+            }
             imageUrls.events.add(cleanUrl);
           }
         }
