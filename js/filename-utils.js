@@ -89,6 +89,41 @@ function cleanImageUrl(imageUrl) {
 }
 
 /**
+ * Generate a filename for favicon URLs with domain-based naming
+ * @param {string} faviconUrl - The favicon URL
+ * @returns {string} - The generated filename
+ */
+function generateFaviconFilename(faviconUrl) {
+    try {
+        const parsedUrl = new URL(faviconUrl);
+        const domain = parsedUrl.hostname;
+        
+        // Clean domain name for filename
+        const cleanDomain = domain
+            .replace(/^www\./, '') // Remove www prefix
+            .replace(/[^a-zA-Z0-9.-]/g, '-') // Replace invalid chars with dashes
+            .replace(/-+/g, '-') // Collapse multiple dashes
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+        
+        // Determine file extension based on URL path or default to .ico
+        let ext = '.ico';
+        if (faviconUrl.includes('.png')) {
+            ext = '.png';
+        } else if (faviconUrl.includes('.jpg') || faviconUrl.includes('.jpeg')) {
+            ext = '.jpg';
+        } else if (faviconUrl.includes('.svg')) {
+            ext = '.svg';
+        }
+        
+        return `favicon-${cleanDomain}${ext}`;
+    } catch (error) {
+        // Fallback to hash-based filename
+        const hash = simpleHash(faviconUrl);
+        return `favicon-${hash}.ico`;
+    }
+}
+
+/**
  * Convert an image URL to a local path
  * @param {string} imageUrl - The image URL
  * @param {string} basePath - The base path (e.g., 'img/events')
@@ -105,6 +140,25 @@ function convertImageUrlToLocalPath(imageUrl, basePath = 'img/events') {
         return `${basePath}/${filename}`;
     } catch (error) {
         return imageUrl; // Return original URL as fallback
+    }
+}
+
+/**
+ * Convert a favicon URL to a local path
+ * @param {string} faviconUrl - The favicon URL
+ * @param {string} basePath - The base path (e.g., 'img/favicons')
+ * @returns {string} - The local file path
+ */
+function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
+    if (!faviconUrl || !faviconUrl.startsWith('http')) {
+        return faviconUrl;
+    }
+    
+    try {
+        const filename = generateFaviconFilename(faviconUrl);
+        return `${basePath}/${filename}`;
+    } catch (error) {
+        return faviconUrl; // Return original URL as fallback
     }
 }
 
@@ -127,8 +181,10 @@ function simpleHash(str) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         generateFilenameFromUrl,
+        generateFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
+        convertFaviconUrlToLocalPath,
         simpleHash
     };
 }
@@ -137,8 +193,10 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
     window.FilenameUtils = {
         generateFilenameFromUrl,
+        generateFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
+        convertFaviconUrlToLocalPath,
         simpleHash
     };
 }
