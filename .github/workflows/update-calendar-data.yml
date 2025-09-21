@@ -250,6 +250,20 @@ jobs:
         run: |
           npm install --no-audit --no-fund --prefer-offline
 
+      - name: Download event images and favicons
+        run: |
+          node tools/download-images.js
+          git add -A img/favicons/ img/events/ 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "No image changes to commit"
+            echo "IMAGES_CHANGED=false" >> $GITHUB_ENV
+          else
+            git commit -m "🖼️ Download/update event images and favicons"
+            git push
+            echo "✓ Event images and favicons updated and committed"
+            echo "IMAGES_CHANGED=true" >> $GITHUB_ENV
+          fi
+
       - name: Generate OG images for events
         run: |
           node tools/generate-og-images.js
