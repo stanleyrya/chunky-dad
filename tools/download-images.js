@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
@@ -10,8 +9,22 @@ const { URL } = require('url');
 // Import shared filename utilities
 const { generateFilenameFromUrl, generateFaviconFilename, cleanImageUrl } = require('../js/filename-utils.js');
 
-// Import shared URL parsing utilities
-const { parseICalEvents } = require('../js/url-parser.js');
+// Mock logger for Node.js environment
+global.logger = {
+  componentInit: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
+  componentLoad: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
+  componentError: (component, message, data) => console.error(`[${component}] ERROR: ${message}`, data || ''),
+  info: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
+  debug: (component, message, data) => console.log(`[${component}] DEBUG: ${message}`, data || ''),
+  warn: (component, message, data) => console.warn(`[${component}] WARN: ${message}`, data || ''),
+  error: (component, message, data) => console.error(`[${component}] ERROR: ${message}`, data || ''),
+  time: (component, label) => console.time(`[${component}] ${label}`),
+  timeEnd: (component, label) => console.timeEnd(`[${component}] ${label}`),
+  apiCall: (component, message, data) => console.log(`[${component}] API: ${message}`, data || '')
+};
+
+// Import calendar core for parsing
+const CalendarCore = require('../js/calendar-core.js');
 
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
@@ -148,7 +161,7 @@ async function downloadImage(imageUrl, type = 'event') {
   }
 }
 
-// Extract image URLs from calendar data using shared parsing logic
+// Extract image URLs from calendar data using calendar loader
 function extractImageUrls() {
   const imageUrls = {
     events: new Set(),
@@ -164,12 +177,19 @@ function extractImageUrls() {
   
   const calendarFiles = fs.readdirSync(calendarsDir).filter(file => file.endsWith('.ics'));
   
+  // Create a calendar core instance for parsing
+  const calendarCore = new CalendarCore();
+  
   for (const file of calendarFiles) {
     const filePath = path.join(calendarsDir, file);
     const content = fs.readFileSync(filePath, 'utf8');
     
-    // Parse iCal content to extract individual events with proper URL parsing
-    const events = parseICalEvents(content);
+    console.log(`📅 Processing calendar file: ${file}`);
+    
+    // Use calendar core to parse the iCal data
+    const events = calendarCore.parseICalData(content);
+    
+    console.log(`   Found ${events.length} events`);
     
     for (const event of events) {
       // Extract event images from parsed data
