@@ -2796,6 +2796,36 @@ body.index-page main {
     box-shadow: none;
 }
 
+/* Location Button Status Styles */
+#location-btn {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+#location-btn .location-status {
+    font-size: 0.7em;
+    margin-left: 2px;
+    opacity: 0.8;
+}
+
+#location-btn.location-loading {
+    opacity: 0.7;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+#location-btn.location-success {
+    color: #4caf50;
+}
+
+#location-btn.location-error {
+    color: #f44336;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
 /* My Location Circle */
 
 
