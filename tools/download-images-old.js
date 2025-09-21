@@ -168,39 +168,153 @@ function extractImageUrls() {
     const filePath = path.join(calendarsDir, file);
     const content = fs.readFileSync(filePath, 'utf8');
     
-    // Parse iCal content to extract individual events with proper URL parsing
+    // Parse iCal content to extract individual events
     const events = parseICalEvents(content);
     
     for (const event of events) {
-      // Extract event images from parsed data
-      if (event.image) {
-        const cleanUrl = cleanImageUrl(event.image);
-        if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
-          // Debug: Print Wix URLs for investigation
-          if (cleanUrl.includes('wixstatic.com')) {
-            console.log(`🔍 WIX URL: ${cleanUrl}`);
+      // Extract event images from DESCRIPTION
+      if (event.description && event.description.includes('image:')) {
+        // Find the start of the URL after "image:"
+        const imageIndex = event.description.indexOf('image:');
+        let url = event.description.substring(imageIndex + 6).trim();
+        
+        // Clean up the URL - extract only the actual URL part
+        // Look for the first complete URL that ends with a file extension or query parameter
+        const urlMatch = url.match(/https?:\/\/[^\s\n]+/);
+        if (urlMatch) {
+          const cleanUrl = cleanImageUrl(urlMatch[0]);
+          
+          if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+            // Debug: Print Wix URLs for investigation
+            if (cleanUrl.includes('wixstatic.com')) {
+              console.log(`🔍 WIX URL: ${cleanUrl}`);
+            }
+            imageUrls.events.add(cleanUrl);
           }
-          imageUrls.events.add(cleanUrl);
-          console.log(`📸 Found event image: ${cleanUrl}`);
         }
       }
       
       // Extract website URLs for favicons
-      if (event.website) {
-        try {
-          const domain = new URL(event.website).hostname;
-          const faviconUrls = [
-            `https://${domain}/favicon.ico`,
-            `https://${domain}/favicon.png`,
-            `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-          ];
-          
-          // Add the first favicon URL (most common)
-          imageUrls.favicons.add(faviconUrls[0]);
-          
-          console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrls[0]}`);
-        } catch (error) {
-          console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
+      if (event.description && event.description.includes('website:')) {
+        // Find the start of the URL after "website:"
+        const websiteIndex = event.description.indexOf('website:');
+        let url = event.description.substring(websiteIndex + 8).trim();
+        
+        console.log(`🔍 Raw website URL: "${url}"`);
+        
+        // Clean up the URL - extract only the actual URL part
+        // Look for complete URLs that may span multiple lines
+        // The URL might be split across lines, so we need to find the complete URL
+        let cleanUrl = url;
+        
+        // Remove any trailing characters that aren't part of the URL
+        // Stop at \n followed by another field (like \nGoogle Maps:)
+        cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
+        cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
+        
+        // Additional cleanup: remove any remaining \n characters
+        cleanUrl = cleanUrl.replace(/\\n/g, '');
+        
+        console.log(`🔍 Cleaned URL: "${cleanUrl}"`);
+        
+        // Extract just the URL part if there are other fields after it
+        // Look for a complete URL that ends with a domain (has a dot)
+        // Stop at \n followed by another field or at whitespace followed by another field
+        const urlMatch = cleanUrl.match(/https?:\/\/[^\s\n]+/);
+        if (urlMatch) {
+          cleanUrl = urlMatch[0];
+          console.log(`🔍 Extracted URL: "${cleanUrl}"`);
+        }
+        
+        // If the URL is still incomplete, try to find a complete domain
+        if (cleanUrl.includes('http') && !cleanUrl.includes('.')) {
+          // Look for the complete URL by finding the domain part
+          const domainMatch = cleanUrl.match(/https?:\/\/[^\/\s\n]+/);
+          if (domainMatch) {
+            cleanUrl = domainMatch[0];
+            console.log(`🔍 Domain-only URL: "${cleanUrl}"`);
+          }
+        }
+        
+        // If we still have an incomplete URL, try to extract just the domain
+        if (cleanUrl.includes('http') && !cleanUrl.includes('.')) {
+          // Look for the domain part after the protocol
+          const protocolMatch = cleanUrl.match(/https?:\/\/([^\/\s\n]+)/);
+          if (protocolMatch) {
+            cleanUrl = `https://${protocolMatch[1]}`;
+            console.log(`🔍 Protocol + domain URL: "${cleanUrl}"`);
+          }
+        }
+        
+        // If we still have an incomplete URL, try to find a complete domain by looking for the pattern
+        if (cleanUrl.includes('http') && !cleanUrl.includes('.')) {
+          // Look for the domain part after the protocol, stopping at the next field
+          const domainMatch = cleanUrl.match(/https?:\/\/([^\/\s\n]+)/);
+          if (domainMatch) {
+            cleanUrl = `https://${domainMatch[1]}`;
+            console.log(`🔍 Final domain URL: "${cleanUrl}"`);
+          }
+        }
+        
+        // If we still have an incomplete URL, try to find a complete domain by looking for the pattern
+        if (cleanUrl.includes('http') && !cleanUrl.includes('.')) {
+          // Look for the domain part after the protocol, stopping at the next field
+          const domainMatch = cleanUrl.match(/https?:\/\/([^\/\s\n]+)/);
+          if (domainMatch) {
+            cleanUrl = `https://${domainMatch[1]}`;
+            console.log(`🔍 Final domain URL: "${cleanUrl}"`);
+          }
+        }
+        
+        // If we still have an incomplete URL, try to find a complete domain by looking for the pattern
+        if (cleanUrl.includes('http') && !cleanUrl.includes('.')) {
+          // Look for the domain part after the protocol, stopping at the next field
+          const domainMatch = cleanUrl.match(/https?:\/\/([^\/\s\n]+)/);
+          if (domainMatch) {
+            cleanUrl = `https://${domainMatch[1]}`;
+            console.log(`🔍 Final domain URL: "${cleanUrl}"`);
+          }
+        }
+        
+        // If we still have an incomplete URL, try to find a complete domain by looking for the pattern
+        if (cleanUrl.includes('http') && !cleanUrl.includes('.')) {
+          // Look for the domain part after the protocol, stopping at the next field
+          const domainMatch = cleanUrl.match(/https?:\/\/([^\/\s\n]+)/);
+          if (domainMatch) {
+            cleanUrl = `https://${domainMatch[1]}`;
+            console.log(`🔍 Final domain URL: "${cleanUrl}"`);
+          }
+        }
+        
+        // If we still have an incomplete URL, try to find a complete domain by looking for the pattern
+        if (cleanUrl.includes('http') && !cleanUrl.includes('.')) {
+          // Look for the domain part after the protocol, stopping at the next field
+          const domainMatch = cleanUrl.match(/https?:\/\/([^\/\s\n]+)/);
+          if (domainMatch) {
+            cleanUrl = `https://${domainMatch[1]}`;
+            console.log(`🔍 Final domain URL: "${cleanUrl}"`);
+          }
+        }
+        
+        if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+          // Generate favicon URL - try common favicon locations
+          try {
+            const domain = new URL(cleanUrl).hostname;
+            const faviconUrls = [
+              `https://${domain}/favicon.ico`,
+              `https://${domain}/favicon.png`,
+              `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+            ];
+            
+            // Add the first favicon URL (most common)
+            imageUrls.favicons.add(faviconUrls[0]);
+            
+            console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrls[0]}`);
+          } catch (error) {
+            console.warn(`⚠️  Could not extract domain from website URL: ${cleanUrl}`, error.message);
+          }
+        } else {
+          console.log(`⚠️  Invalid URL format: "${cleanUrl}"`);
         }
       }
     }
@@ -209,6 +323,7 @@ function extractImageUrls() {
   console.log(`🔍 Found ${imageUrls.events.size} event images and ${imageUrls.favicons.size} favicon URLs`);
   return imageUrls;
 }
+
 
 // Main function
 async function main() {
