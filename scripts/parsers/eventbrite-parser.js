@@ -614,13 +614,114 @@ class EventbriteParser {
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
             // This fixes cases where Eventbrite has incorrect timezone but parser correctly detects city
             let eventTimezone = null;
+            let needsTimeConversion = false;
+            
             if (city) {
                 eventTimezone = this.getTimezoneForCity(city, cityConfig);
                 if (eventTimezone) {
                     console.log(`🎫 Eventbrite: Using city-based timezone for "${title}": ${eventTimezone}`);
                     if (originalTimezone && originalTimezone !== eventTimezone) {
                         console.log(`🎫 Eventbrite: Overriding Eventbrite timezone "${originalTimezone}" with city-based timezone "${eventTimezone}" for "${title}"`);
+                        needsTimeConversion = true;
                     }
+                }
+            }
+            
+            // When timezone is overridden, convert time assuming the original local time should be preserved
+            if (needsTimeConversion && startDate && originalTimezone && eventTimezone) {
+                try {
+                    console.log(`🎫 Eventbrite: Converting time from ${originalTimezone} to ${eventTimezone} for "${title}"`);
+                    console.log(`🎫 Eventbrite: Original UTC times - start: ${startDate}, end: ${endDate}`);
+                    
+                    // Parse the original UTC time
+                    const originalStartUTC = new Date(startDate);
+                    const originalEndUTC = endDate ? new Date(endDate) : null;
+                    
+                    // Get what the local time would be in the original timezone
+                    const originalLocalFormatted = new Intl.DateTimeFormat('en-CA', {
+                        timeZone: originalTimezone,
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    }).format(originalStartUTC);
+                    
+                    console.log(`🎫 Eventbrite: Original would be ${originalLocalFormatted} in ${originalTimezone}`);
+                    
+                    // Create a new date with the same local time but in the target timezone
+                    // Parse the local time components (handle comma separator)
+                    const [datePart, timePart] = originalLocalFormatted.split(', ');
+                    const localDateTime = `${datePart}T${timePart}`;
+                    
+                    // Use proper timezone conversion without hardcoded offsets
+                    // The goal: interpret the local time string as if it were in the target timezone
+                    
+                    // Method: Use the Intl.DateTimeFormat to reverse-engineer the UTC time
+                    // that would produce the desired local time in the target timezone
+                    
+                    const [year, month, day] = datePart.split('-').map(Number);
+                    const [hour, minute, second] = timePart.split(':').map(Number);
+                    
+                    // Create a test date and iteratively find the UTC time that gives us the desired local time
+                    let testUTC = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+                    let iterations = 0;
+                    const maxIterations = 24; // Should converge quickly
+                    let correctedStartUTC;
+                    
+                    while (iterations < maxIterations) {
+                        // Check what local time this UTC time produces in the target timezone
+                        const testLocalFormatted = new Intl.DateTimeFormat('en-CA', {
+                            timeZone: eventTimezone,
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        }).format(testUTC);
+                        
+                        // If it matches our desired local time, we're done
+                        if (testLocalFormatted === originalLocalFormatted) {
+                            correctedStartUTC = testUTC;
+                            break;
+                        }
+                        
+                        // Calculate the difference and adjust
+                        const [testDatePart, testTimePart] = testLocalFormatted.split(', ');
+                        const testDate = new Date(`${testDatePart}T${testTimePart}`);
+                        const targetDate = new Date(`${datePart}T${timePart}`);
+                        const diff = targetDate.getTime() - testDate.getTime();
+                        
+                        testUTC = new Date(testUTC.getTime() + diff);
+                        iterations++;
+                    }
+                    
+                    if (iterations >= maxIterations) {
+                        console.log(`🎫 Eventbrite: Could not converge on timezone conversion after ${maxIterations} iterations`);
+                        // Fallback to original time
+                        correctedStartUTC = originalStartUTC;
+                    } else {
+                        console.log(`🎫 Eventbrite: Converged after ${iterations} iterations`);
+                    }
+                    
+                    startDate = correctedStartUTC.toISOString();
+                    
+                    // Apply same adjustment to end time if it exists
+                    if (originalEndUTC) {
+                        const timeDiff = originalEndUTC.getTime() - originalStartUTC.getTime();
+                        const correctedEnd = new Date(correctedStartUTC.getTime() + timeDiff);
+                        endDate = correctedEnd.toISOString();
+                    }
+                    
+                    console.log(`🎫 Eventbrite: Time converted - start: ${startDate}, end: ${endDate}`);
+                    console.log(`🎫 Eventbrite: Local time ${originalLocalFormatted} now properly in ${eventTimezone}`);
+                    
+                } catch (error) {
+                    console.log(`🎫 Eventbrite: Error during time conversion: ${error.message}`);
                 }
             }
             
