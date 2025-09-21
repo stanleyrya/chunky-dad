@@ -7,6 +7,9 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 
+// Import shared filename utilities
+const { generateFilenameFromUrl, cleanImageUrl } = require('../js/filename-utils.js');
+
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(ROOT, 'img');
@@ -62,52 +65,9 @@ function downloadFile(url, outputPath, timeout = 30000) {
   });
 }
 
-// Generate filename from URL
+// Generate filename from URL using shared utility
 function generateFilename(url) {
-  try {
-    // Handle Eventbrite URLs specially - they have nested URL encoding
-    if (url.includes('evbuc.com') && (url.includes('images/') || url.includes('images%2F'))) {
-      // Extract the nested URL from the pathname
-      const parsedUrl = new URL(url);
-      const nestedUrl = decodeURIComponent(parsedUrl.pathname.substring(1)); // Remove leading slash
-      
-      // Parse the nested URL to get the actual image path
-      const nestedParsedUrl = new URL(nestedUrl);
-      const imageMatch = nestedParsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
-      
-      if (imageMatch) {
-        const [, id1, id2, id3, filename] = imageMatch;
-        const ext = path.extname(filename) || '.jpg';
-        const basename = `evb-${id1}-${id2}-${id3}-${path.basename(filename, ext)}`;
-        
-        // Sanitize filename
-        const sanitized = basename
-          .replace(/[^a-zA-Z0-9._-]/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '');
-        
-        return sanitized + ext;
-      }
-    }
-    
-    // Handle regular URLs
-    const parsedUrl = new URL(url);
-    const pathname = parsedUrl.pathname;
-    const ext = path.extname(pathname) || '.jpg';
-    let basename = path.basename(pathname, ext) || 'image';
-    
-    // Sanitize filename - be more conservative with special characters
-    const sanitized = basename
-      .replace(/[^a-zA-Z0-9._-]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    
-    return sanitized + ext;
-  } catch (error) {
-    // Fallback to hash-based filename
-    const hash = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
-    return `image-${hash}.jpg`;
-  }
+    return generateFilenameFromUrl(url);
 }
 
 // Check if we should download the image
@@ -233,18 +193,7 @@ function extractImageUrls() {
         // Look for the first complete URL that ends with a file extension or query parameter
         const urlMatch = url.match(/https?:\/\/[^\s\n]+/);
         if (urlMatch) {
-          let cleanUrl = urlMatch[0];
-          // Remove any trailing characters that aren't part of the URL
-          // Stop at field separators like \n followed by field names
-          cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
-          cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
-          
-          // Additional cleanup: remove any remaining \n characters and fix escaped commas
-          cleanUrl = cleanUrl.replace(/\\n/g, '');
-          cleanUrl = cleanUrl.replace(/\\,/g, ',');
-          
-          // Fix specific issue where 'fac' gets appended to URLs (from 'facebook')
-          cleanUrl = cleanUrl.replace(/\.jpgfac$/, '.jpg');
+          const cleanUrl = cleanImageUrl(urlMatch[0]);
           
           if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
             // Debug: Print Wix URLs for investigation
