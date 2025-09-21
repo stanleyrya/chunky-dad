@@ -522,13 +522,8 @@ class DynamicCalendarLoader extends CalendarCore {
             el.classList.remove('selected');
         });
         
-        // Remove selection mode from events list
+        // Get events list and clear selection button
         const eventsList = document.querySelector('.events-list');
-        if (eventsList) {
-            eventsList.classList.remove('selection-mode');
-        }
-        
-        // Show/hide clear selection button
         const clearBtn = document.getElementById('clear-selection-btn');
         
         if (this.selectedEventSlug) {
@@ -537,9 +532,9 @@ class DynamicCalendarLoader extends CalendarCore {
             if (selectedCard) {
                 selectedCard.classList.add('selected');
                 
-                // Enter selection mode to hide other events
+                // Smoothly transition to selection mode
                 if (eventsList) {
-                    eventsList.classList.add('selection-mode');
+                    this.transitionToSelectionMode(eventsList, selectedCard);
                 }
             }
             
@@ -562,6 +557,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 calendarItemsFound: document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`).length
             });
         } else {
+            // Smoothly transition out of selection mode
+            if (eventsList) {
+                this.transitionOutOfSelectionMode(eventsList);
+            }
+            
             // Hide clear selection button
             if (clearBtn) {
                 clearBtn.style.display = 'none';
@@ -570,6 +570,40 @@ class DynamicCalendarLoader extends CalendarCore {
             // Reset all markers to normal appearance
             this.resetAllMapMarkers();
         }
+    }
+
+    // Smoothly transition to selection mode
+    transitionToSelectionMode(eventsList, selectedCard) {
+        // Add transition class for smooth animation
+        eventsList.classList.add('transitioning');
+        
+        // Use requestAnimationFrame to ensure the transition class is applied
+        requestAnimationFrame(() => {
+            // Add selection mode class
+            eventsList.classList.add('selection-mode');
+            
+            // Remove transition class after animation completes
+            setTimeout(() => {
+                eventsList.classList.remove('transitioning');
+            }, 300); // Match CSS transition duration
+        });
+    }
+
+    // Smoothly transition out of selection mode
+    transitionOutOfSelectionMode(eventsList) {
+        // Add transition class for smooth animation
+        eventsList.classList.add('transitioning');
+        
+        // Use requestAnimationFrame to ensure the transition class is applied
+        requestAnimationFrame(() => {
+            // Remove selection mode class
+            eventsList.classList.remove('selection-mode');
+            
+            // Remove transition class after animation completes
+            setTimeout(() => {
+                eventsList.classList.remove('transitioning');
+            }, 300); // Match CSS transition duration
+        });
     }
 
     // Helper method to highlight a specific map marker
