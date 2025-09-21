@@ -1556,22 +1556,9 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         try {
-            // Apply the same URL cleaning logic as download-images.js
-            let cleanUrl = imageUrl;
+            // Use shared utility for URL cleaning and filename generation
+            const cleanUrl = window.FilenameUtils.cleanImageUrl(imageUrl);
             
-            // Remove any trailing characters that aren't part of the URL
-            // Stop at field separators like \n followed by field names
-            cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
-            cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
-            
-            // Additional cleanup: remove any remaining \n characters and fix escaped commas
-            cleanUrl = cleanUrl.replace(/\\n/g, '');
-            cleanUrl = cleanUrl.replace(/\\,/g, ',');
-            
-            // Fix specific issue where 'fac' gets appended to URLs (from 'facebook')
-            cleanUrl = cleanUrl.replace(/\.jpgfac$/, '.jpg');
-            
-            // Validate the cleaned URL
             if (!cleanUrl.startsWith('http') || !cleanUrl.includes('.')) {
                 logger.warn('CALENDAR', 'Cleaned URL is invalid, using original', {
                     originalUrl: imageUrl,
@@ -1580,25 +1567,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 return imageUrl;
             }
             
-            // Generate filename from cleaned URL (similar to download-images.js logic)
-            const url = new URL(cleanUrl);
-            const pathname = url.pathname;
-            
-            // Extract file extension
-            const lastDot = pathname.lastIndexOf('.');
-            const ext = lastDot > -1 ? pathname.substring(lastDot) : '.jpg';
-            
-            // Extract basename
-            const lastSlash = pathname.lastIndexOf('/');
-            const basename = lastSlash > -1 ? pathname.substring(lastSlash + 1, lastDot > -1 ? lastDot : pathname.length) : 'image';
-            
-            // Sanitize filename
-            const sanitized = basename
-                .replace(/[^a-zA-Z0-9-_]/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-            
-            const filename = sanitized + ext;
+            // Generate filename using shared utility
+            const filename = window.FilenameUtils.generateFilenameFromUrl(cleanUrl);
             return `img/events/${filename}`;
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to convert image URL to local path', {

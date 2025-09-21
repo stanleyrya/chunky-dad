@@ -7,6 +7,9 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 
+// Import shared filename utilities
+const { generateFilenameFromUrl, cleanImageUrl } = require('../js/filename-utils.js');
+
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(ROOT, 'img');
@@ -62,26 +65,9 @@ function downloadFile(url, outputPath, timeout = 30000) {
   });
 }
 
-// Generate filename from URL
+// Generate filename from URL using shared utility
 function generateFilename(url) {
-  try {
-    const parsedUrl = new URL(url);
-    const pathname = parsedUrl.pathname;
-    const ext = path.extname(pathname) || '.jpg';
-    const basename = path.basename(pathname, ext) || 'image';
-    
-    // Sanitize filename
-    const sanitized = basename
-      .replace(/[^a-zA-Z0-9-_]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    
-    return sanitized + ext;
-  } catch (error) {
-    // Fallback to hash-based filename
-    const hash = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
-    return `image-${hash}.jpg`;
-  }
+    return generateFilenameFromUrl(url);
 }
 
 // Check if we should download the image
@@ -207,18 +193,7 @@ function extractImageUrls() {
         // Look for the first complete URL that ends with a file extension or query parameter
         const urlMatch = url.match(/https?:\/\/[^\s\n]+/);
         if (urlMatch) {
-          let cleanUrl = urlMatch[0];
-          // Remove any trailing characters that aren't part of the URL
-          // Stop at field separators like \n followed by field names
-          cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
-          cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
-          
-          // Additional cleanup: remove any remaining \n characters and fix escaped commas
-          cleanUrl = cleanUrl.replace(/\\n/g, '');
-          cleanUrl = cleanUrl.replace(/\\,/g, ',');
-          
-          // Fix specific issue where 'fac' gets appended to URLs (from 'facebook')
-          cleanUrl = cleanUrl.replace(/\.jpgfac$/, '.jpg');
+          const cleanUrl = cleanImageUrl(urlMatch[0]);
           
           if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
             // Debug: Print Wix URLs for investigation
@@ -232,8 +207,60 @@ function extractImageUrls() {
     }
     
     // Extract website URLs for favicons (embedded in description)
-    // For now, skip favicon extraction as it's complex and not critical
-    // TODO: Implement proper favicon URL extraction
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes('website:')) {
+        // Find the start of the URL after "website:"
+        const websiteIndex = line.indexOf('website:');
+        let url = line.substring(websiteIndex + 8).trim();
+        
+        // Continue on next lines until we hit another field or end of content
+        let j = i + 1;
+        while (j < lines.length) {
+          const nextLine = lines[j].trim();
+          // Stop if we hit another field (starts with a letter followed by colon)
+          if (nextLine.match(/^[a-zA-Z][a-zA-Z0-9]*:/)) {
+            break;
+          }
+          // In iCal, continuation lines start with a space
+          if (nextLine.startsWith(' ')) {
+            url += nextLine.substring(1); // Remove leading space
+          } else {
+            url += nextLine;
+          }
+          j++;
+        }
+        
+        // Clean up the URL - extract only the actual URL part
+        const urlMatch = url.match(/https?:\/\/[^\s\n]+/);
+        if (urlMatch) {
+          let cleanUrl = urlMatch[0];
+          // Remove any trailing characters that aren't part of the URL
+          cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
+          cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
+          
+          // Additional cleanup: remove any remaining \n characters
+          cleanUrl = cleanUrl.replace(/\\n/g, '');
+          
+          if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+            // Generate favicon URL - try common favicon locations
+            try {
+              const domain = new URL(cleanUrl).hostname;
+              const faviconUrls = [
+                `https://${domain}/favicon.ico`,
+                `https://${domain}/favicon.png`,
+                `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+              ];
+              
+              // Add the first favicon URL (most common)
+              imageUrls.favicons.add(faviconUrls[0]);
+            } catch (error) {
+              console.warn(`⚠️  Could not extract domain from website URL: ${cleanUrl}`);
+            }
+          }
+        }
+      }
+    }
   }
   
   console.log(`🔍 Found ${imageUrls.events.size} event images and ${imageUrls.favicons.size} favicon URLs`);
