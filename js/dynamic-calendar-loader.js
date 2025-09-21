@@ -1580,25 +1580,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 return imageUrl;
             }
             
-            // Generate filename from cleaned URL (similar to download-images.js logic)
-            const url = new URL(cleanUrl);
-            const pathname = url.pathname;
-            
-            // Extract file extension
-            const lastDot = pathname.lastIndexOf('.');
-            const ext = lastDot > -1 ? pathname.substring(lastDot) : '.jpg';
-            
-            // Extract basename
-            const lastSlash = pathname.lastIndexOf('/');
-            const basename = lastSlash > -1 ? pathname.substring(lastSlash + 1, lastDot > -1 ? lastDot : pathname.length) : 'image';
-            
-            // Sanitize filename
-            const sanitized = basename
-                .replace(/[^a-zA-Z0-9-_]/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-            
-            const filename = sanitized + ext;
+            // Generate filename using the SAME logic as download-images.js
+            const filename = this.generateFilenameFromUrl(cleanUrl);
             return `img/events/${filename}`;
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to convert image URL to local path', {
@@ -1607,6 +1590,65 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return imageUrl; // Return original URL as fallback
         }
+    }
+
+    // Generate filename from URL using the same logic as download-images.js
+    generateFilenameFromUrl(url) {
+        try {
+            // Handle Eventbrite URLs specially - they have nested URL encoding
+            if (url.includes('evbuc.com') && (url.includes('images/') || url.includes('images%2F'))) {
+                // Extract the nested URL from the pathname
+                const parsedUrl = new URL(url);
+                const nestedUrl = decodeURIComponent(parsedUrl.pathname.substring(1)); // Remove leading slash
+                
+                // Parse the nested URL to get the actual image path
+                const nestedParsedUrl = new URL(nestedUrl);
+                const imageMatch = nestedParsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
+                
+                if (imageMatch) {
+                    const [, id1, id2, id3, filename] = imageMatch;
+                    const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
+                    const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
+                    
+                    // Sanitize filename
+                    const sanitized = basename
+                        .replace(/[^a-zA-Z0-9._-]/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-|-$/g, '');
+                    
+                    return sanitized + ext;
+                }
+            }
+            
+            // Handle regular URLs
+            const parsedUrl = new URL(url);
+            const pathname = parsedUrl.pathname;
+            const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+            let basename = pathname.substring(pathname.lastIndexOf('/') + 1).replace(ext, '') || 'image';
+            
+            // Sanitize filename - be more conservative with special characters
+            const sanitized = basename
+                .replace(/[^a-zA-Z0-9._-]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            
+            return sanitized + ext;
+        } catch (error) {
+            // Fallback to hash-based filename
+            const hash = this.simpleHash(url);
+            return `image-${hash}.jpg`;
+        }
+    }
+
+    // Simple hash function for fallback filenames
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash).toString(16).substring(0, 8);
     }
 
     // Resolve correct local calendar URL depending on current page location
