@@ -635,19 +635,10 @@ class DynamicCalendarLoader extends CalendarCore {
             });
         }
         
-        // Bring marker to front in DOM layer order (safely)
-        if (window.eventsMap && selectedMarker) {
-            try {
-                // Remove and re-add to bring to front, but preserve the reference
-                window.eventsMap.removeLayer(selectedMarker);
-                window.eventsMap.addLayer(selectedMarker);
-                logger.debug('MAP', 'Selected marker brought to front and highlighted, unselected markers dimmed', { eventSlug });
-            } catch (error) {
-                logger.warn('MAP', 'Failed to bring marker to front in DOM', { eventSlug, error: error.message });
-            }
-        }
+        // Selected marker is already brought to front via higher zIndex
+        logger.debug('MAP', 'Selected marker highlighted, unselected markers dimmed', { eventSlug });
         
-        logger.userInteraction('MAP', 'Marker highlighted and brought to front', { eventSlug });
+        logger.userInteraction('MAP', 'Marker highlighted and unselected markers dimmed', { eventSlug });
     }
 
     // Helper method to reset all map markers to normal appearance
