@@ -96,7 +96,21 @@ function cleanImageUrl(imageUrl) {
 function generateFaviconFilename(faviconUrl) {
     try {
         const parsedUrl = new URL(faviconUrl);
-        const domain = parsedUrl.hostname;
+        
+        // For Google favicon service, extract the target domain from query parameter
+        let domain;
+        if (parsedUrl.hostname === 'www.google.com' && parsedUrl.pathname === '/s2/favicons') {
+            const domainParam = parsedUrl.searchParams.get('domain');
+            if (domainParam) {
+                domain = domainParam;
+            } else {
+                // Fallback to hostname if no domain param
+                domain = parsedUrl.hostname;
+            }
+        } else {
+            // For other favicon services, use hostname
+            domain = parsedUrl.hostname;
+        }
         
         // Clean domain name for filename
         const cleanDomain = domain
