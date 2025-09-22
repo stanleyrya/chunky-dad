@@ -56,24 +56,23 @@ function generateCityHeader(html, cityKey, cityConfig) {
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
                 </div>
                 
-                <!-- Native Select City Switcher (EXPERIMENTAL) -->
-                <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
-                        ${nativeSelectOptions}
-                    </select>
-                </div>
-                
-                <!-- Custom HTML/CSS city selector (COMMENTED OUT FOR TESTING) -->
-                <!--
+                <!-- Custom HTML/CSS city selector with emoji-only button -->
                 <div class="city-switcher">
                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
                         <span class="city-emoji">${cityConfig.emoji}</span>
-                        <span class="city-name">${cityConfig.name}</span>
                         <span class="city-carrot">▼</span>
                     </label>
                     <div class="city-dropdown">${cityOptions}
                     </div>
+                </div>
+                
+                <!-- Native Select City Switcher (COMMENTED OUT) -->
+                <!--
+                <div class="city-switcher-native">
+                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
+                        ${nativeSelectOptions}
+                    </select>
                 </div>
                 -->
                 
