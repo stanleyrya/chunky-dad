@@ -2,13 +2,29 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, cleanImageUrl } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, cleanImageUrl } = require('../js/filename-utils.js');
+
+// Mock logger for Node.js environment
+global.logger = {
+  componentInit: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
+  componentLoad: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
+  componentError: (component, message, data) => console.error(`[${component}] ERROR: ${message}`, data || ''),
+  info: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
+  debug: (component, message, data) => console.log(`[${component}] DEBUG: ${message}`, data || ''),
+  warn: (component, message, data) => console.warn(`[${component}] WARN: ${message}`, data || ''),
+  error: (component, message, data) => console.error(`[${component}] ERROR: ${message}`, data || ''),
+  time: (component, label) => console.time(`[${component}] ${label}`),
+  timeEnd: (component, label) => console.timeEnd(`[${component}] ${label}`),
+  apiCall: (component, message, data) => console.log(`[${component}] API: ${message}`, data || '')
+};
+
+// Import calendar core for parsing
+const CalendarCore = require('../js/calendar-core.js');
 
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
@@ -66,7 +82,10 @@ function downloadFile(url, outputPath, timeout = 30000) {
 }
 
 // Generate filename from URL using shared utility
-function generateFilename(url) {
+function generateFilename(url, type = 'event') {
+    if (type === 'favicon') {
+        return generateFaviconFilename(url);
+    }
     return generateFilenameFromUrl(url);
 }
 
@@ -104,7 +123,7 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
 // Download a single image
 async function downloadImage(imageUrl, type = 'event') {
   try {
-    const filename = generateFilename(imageUrl);
+    const filename = generateFilename(imageUrl, type);
     const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';
@@ -142,7 +161,7 @@ async function downloadImage(imageUrl, type = 'event') {
   }
 }
 
-// Extract image URLs from calendar data
+// Extract image URLs from calendar data using calendar loader
 function extractImageUrls() {
   const imageUrls = {
     events: new Set(),
@@ -158,106 +177,50 @@ function extractImageUrls() {
   
   const calendarFiles = fs.readdirSync(calendarsDir).filter(file => file.endsWith('.ics'));
   
+  // Create a calendar core instance for parsing
+  const calendarCore = new CalendarCore();
+  
   for (const file of calendarFiles) {
     const filePath = path.join(calendarsDir, file);
     const content = fs.readFileSync(filePath, 'utf8');
     
-    // Extract event images from DESCRIPTION lines (embedded in description)
-    // Handle multi-line URLs in iCal format by looking for image: followed by URL
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes('image:')) {
-        // Find the start of the URL after "image:"
-        const imageIndex = line.indexOf('image:');
-        let url = line.substring(imageIndex + 6).trim();
-        
-        // Continue on next lines until we hit another field or end of content
-        let j = i + 1;
-        while (j < lines.length) {
-          const nextLine = lines[j].trim();
-          // Stop if we hit another field (starts with a letter followed by colon)
-          if (nextLine.match(/^[a-zA-Z][a-zA-Z0-9]*:/)) {
-            break;
+    console.log(`📅 Processing calendar file: ${file}`);
+    
+    // Use calendar core to parse the iCal data
+    const events = calendarCore.parseICalData(content);
+    
+    console.log(`   Found ${events.length} events`);
+    
+    for (const event of events) {
+      // Extract event images from parsed data
+      if (event.image) {
+        const cleanUrl = cleanImageUrl(event.image);
+        if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+          // Debug: Print Wix URLs for investigation
+          if (cleanUrl.includes('wixstatic.com')) {
+            console.log(`🔍 WIX URL: ${cleanUrl}`);
           }
-          // In iCal, continuation lines start with a space
-          if (nextLine.startsWith(' ')) {
-            url += nextLine.substring(1); // Remove leading space
-          } else {
-            url += nextLine;
-          }
-          j++;
-        }
-        
-        // Clean up the URL - extract only the actual URL part
-        // Look for the first complete URL that ends with a file extension or query parameter
-        const urlMatch = url.match(/https?:\/\/[^\s\n]+/);
-        if (urlMatch) {
-          const cleanUrl = cleanImageUrl(urlMatch[0]);
-          
-          if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
-            // Debug: Print Wix URLs for investigation
-            if (cleanUrl.includes('wixstatic.com')) {
-              console.log(`🔍 WIX URL: ${cleanUrl}`);
-            }
-            imageUrls.events.add(cleanUrl);
-          }
+          imageUrls.events.add(cleanUrl);
+          console.log(`📸 Found event image: ${cleanUrl}`);
         }
       }
-    }
-    
-    // Extract website URLs for favicons (embedded in description)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes('website:')) {
-        // Find the start of the URL after "website:"
-        const websiteIndex = line.indexOf('website:');
-        let url = line.substring(websiteIndex + 8).trim();
-        
-        // Continue on next lines until we hit another field or end of content
-        let j = i + 1;
-        while (j < lines.length) {
-          const nextLine = lines[j].trim();
-          // Stop if we hit another field (starts with a letter followed by colon)
-          if (nextLine.match(/^[a-zA-Z][a-zA-Z0-9]*:/)) {
-            break;
-          }
-          // In iCal, continuation lines start with a space
-          if (nextLine.startsWith(' ')) {
-            url += nextLine.substring(1); // Remove leading space
-          } else {
-            url += nextLine;
-          }
-          j++;
-        }
-        
-        // Clean up the URL - extract only the actual URL part
-        const urlMatch = url.match(/https?:\/\/[^\s\n]+/);
-        if (urlMatch) {
-          let cleanUrl = urlMatch[0];
-          // Remove any trailing characters that aren't part of the URL
-          cleanUrl = cleanUrl.replace(/\\n[a-zA-Z][a-zA-Z0-9]*:.*$/, '');
-          cleanUrl = cleanUrl.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]+$/, '');
+      
+      // Extract website URLs for favicons
+      if (event.website) {
+        try {
+          const domain = new URL(event.website).hostname;
+          const faviconUrls = [
+            `https://${domain}/favicon.ico`,
+            `https://${domain}/favicon.png`,
+            `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+          ];
           
-          // Additional cleanup: remove any remaining \n characters
-          cleanUrl = cleanUrl.replace(/\\n/g, '');
+          // Add the first favicon URL (most common)
+          imageUrls.favicons.add(faviconUrls[0]);
           
-          if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
-            // Generate favicon URL - try common favicon locations
-            try {
-              const domain = new URL(cleanUrl).hostname;
-              const faviconUrls = [
-                `https://${domain}/favicon.ico`,
-                `https://${domain}/favicon.png`,
-                `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-              ];
-              
-              // Add the first favicon URL (most common)
-              imageUrls.favicons.add(faviconUrls[0]);
-            } catch (error) {
-              console.warn(`⚠️  Could not extract domain from website URL: ${cleanUrl}`);
-            }
-          }
+          console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrls[0]}`);
+        } catch (error) {
+          console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
         }
       }
     }
