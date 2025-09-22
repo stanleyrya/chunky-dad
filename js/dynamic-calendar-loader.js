@@ -614,15 +614,25 @@ class DynamicCalendarLoader extends CalendarCore {
         
         const selectedMarker = window.eventsMapMarkersBySlug[eventSlug];
         
-        // Reset all markers to unselected state (lighter appearance)
-        this.resetAllMapMarkers();
-        
-        // Highlight the selected marker to make it prominent
-        if (selectedMarker._icon) {
-            selectedMarker._icon.style.transform = 'translate(-20px, -20px) scale(1.4)';
-            selectedMarker._icon.style.zIndex = '1010';
-            selectedMarker._icon.style.filter = 'drop-shadow(0 6px 12px rgba(255, 165, 0, 0.8)) brightness(1.2)';
-            selectedMarker._icon.style.opacity = '1';
+        // Dim all unselected markers and highlight the selected one
+        if (window.eventsMapMarkersBySlug) {
+            Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
+                if (marker._icon) {
+                    if (slug === eventSlug) {
+                        // Highlight the selected marker
+                        marker._icon.style.transform = 'translate(-20px, -20px) scale(1.4)';
+                        marker._icon.style.zIndex = '1010';
+                        marker._icon.style.filter = 'drop-shadow(0 6px 12px rgba(255, 165, 0, 0.8)) brightness(1.2)';
+                        marker._icon.style.opacity = '1';
+                    } else {
+                        // Dim unselected markers
+                        marker._icon.style.transform = 'translate(-20px, -20px)';
+                        marker._icon.style.zIndex = '1000';
+                        marker._icon.style.filter = 'brightness(0.7)';
+                        marker._icon.style.opacity = '0.8';
+                    }
+                }
+            });
         }
         
         // Bring marker to front in DOM layer order (safely)
@@ -631,7 +641,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Remove and re-add to bring to front, but preserve the reference
                 window.eventsMap.removeLayer(selectedMarker);
                 window.eventsMap.addLayer(selectedMarker);
-                logger.debug('MAP', 'Selected marker brought to front and highlighted', { eventSlug });
+                logger.debug('MAP', 'Selected marker brought to front and highlighted, unselected markers dimmed', { eventSlug });
             } catch (error) {
                 logger.warn('MAP', 'Failed to bring marker to front in DOM', { eventSlug, error: error.message });
             }
@@ -640,18 +650,18 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.userInteraction('MAP', 'Marker highlighted and brought to front', { eventSlug });
     }
 
-    // Helper method to reset all map markers to unselected state (lighter appearance)
+    // Helper method to reset all map markers to normal appearance
     resetAllMapMarkers() {
         if (window.eventsMapMarkersBySlug) {
             Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
                 if (marker._icon) {
                     marker._icon.style.transform = 'translate(-20px, -20px)';
                     marker._icon.style.zIndex = '1000';
-                    marker._icon.style.filter = 'brightness(0.7)';
-                    marker._icon.style.opacity = '0.8';
+                    marker._icon.style.filter = 'none';
+                    marker._icon.style.opacity = '1';
                 }
             });
-            logger.debug('MAP', 'All markers reset to unselected state (lighter appearance)');
+            logger.debug('MAP', 'All markers reset to normal appearance');
         }
     }
 
