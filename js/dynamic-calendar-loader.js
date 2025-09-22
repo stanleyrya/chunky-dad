@@ -1219,7 +1219,8 @@ class DynamicCalendarLoader extends CalendarCore {
             try {
                 logger.debug('MAP', 'Creating favicon marker', {
                     eventName: event.name,
-                    website: event.website
+                    website: event.website,
+                    dataSource: this.dataSource
                 });
                 
                 // Ensure URL has protocol
@@ -1229,13 +1230,28 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
                 
                 const hostname = new URL(url).hostname;
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                let faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                
+                // Convert to local favicon URL if using cached data
+                if (this.dataSource === 'cached') {
+                    const originalFaviconUrl = faviconUrl;
+                    faviconUrl = this.convertFaviconUrlToLocal(faviconUrl);
+                    
+                    logger.debug('MAP', 'Using local favicon for cached data', {
+                        hostname,
+                        originalUrl: originalFaviconUrl,
+                        localPath: faviconUrl,
+                        dataSource: this.dataSource
+                    });
+                }
+                
                 const textFallback = this.getMarkerText(event);
                 
                 logger.debug('MAP', 'Favicon URL generated', {
                     hostname,
                     faviconUrl,
-                    textFallback
+                    textFallback,
+                    dataSource: this.dataSource
                 });
                 
                 return L.divIcon({
@@ -1576,6 +1592,25 @@ class DynamicCalendarLoader extends CalendarCore {
                 error: error.message
             });
             return imageUrl; // Return original URL as fallback
+        }
+    }
+
+    // Convert external favicon URL to local path for cached data
+    convertFaviconUrlToLocal(faviconUrl) {
+        if (!faviconUrl || !faviconUrl.startsWith('http')) {
+            return faviconUrl; // Return as-is if not a valid external URL
+        }
+        
+        try {
+            // Use shared utility for favicon filename generation
+            const filename = window.FilenameUtils.generateFaviconFilename(faviconUrl);
+            return `img/favicons/${filename}`;
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to convert favicon URL to local path', {
+                faviconUrl,
+                error: error.message
+            });
+            return faviconUrl; // Return original URL as fallback
         }
     }
 
