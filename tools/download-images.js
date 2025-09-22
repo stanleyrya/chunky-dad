@@ -209,16 +209,12 @@ function extractImageUrls() {
       if (event.website) {
         try {
           const domain = new URL(event.website).hostname;
-          const faviconUrls = [
-            `https://${domain}/favicon.ico`,
-            `https://${domain}/favicon.png`,
-            `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-          ];
+          // Use Google's favicon service (same as dynamic calendar loader)
+          const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
           
-          // Add the first favicon URL (most common)
-          imageUrls.favicons.add(faviconUrls[0]);
+          imageUrls.favicons.add(faviconUrl);
           
-          console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrls[0]}`);
+          console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrl}`);
         } catch (error) {
           console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
         }
