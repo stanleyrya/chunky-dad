@@ -42,42 +42,59 @@ function ensureDir(dir) {
   }
 }
 
-// Download file with timeout
-function downloadFile(url, outputPath, timeout = 30000) {
+// Download file with timeout and redirect handling
+function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url);
-    const client = parsedUrl.protocol === 'https:' ? https : http;
-    
-    const request = client.get(url, {
-      timeout: timeout,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad-image-downloader/1.0)',
-        'Accept': 'image/*,*/*;q=0.8'
+    const downloadWithRedirects = (currentUrl, redirectCount = 0) => {
+      if (redirectCount > maxRedirects) {
+        reject(new Error(`Too many redirects (max: ${maxRedirects})`));
+        return;
       }
-    }, (response) => {
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        const fileStream = fs.createWriteStream(outputPath);
-        response.pipe(fileStream);
+      
+      const parsedUrl = new URL(currentUrl);
+      const client = parsedUrl.protocol === 'https:' ? https : http;
+      
+      const request = client.get(currentUrl, {
+        timeout: timeout,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad-image-downloader/1.0)',
+          'Accept': 'image/*,*/*;q=0.8'
+        }
+      }, (response) => {
+        // Handle redirects (301, 302, 303, 307, 308)
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          const redirectUrl = new URL(response.headers.location, currentUrl).href;
+          console.log(`🔄 Following redirect ${redirectCount + 1}/${maxRedirects}: ${currentUrl} -> ${redirectUrl}`);
+          downloadWithRedirects(redirectUrl, redirectCount + 1);
+          return;
+        }
         
-        fileStream.on('finish', () => {
-          fileStream.close();
-          resolve();
-        });
-        
-        fileStream.on('error', (err) => {
-          fs.unlink(outputPath, () => {}); // Delete partial file
-          reject(err);
-        });
-      } else {
-        reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
-      }
-    });
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          const fileStream = fs.createWriteStream(outputPath);
+          response.pipe(fileStream);
+          
+          fileStream.on('finish', () => {
+            fileStream.close();
+            resolve();
+          });
+          
+          fileStream.on('error', (err) => {
+            fs.unlink(outputPath, () => {}); // Delete partial file
+            reject(err);
+          });
+        } else {
+          reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
+        }
+      });
+      
+      request.on('error', reject);
+      request.on('timeout', () => {
+        request.destroy();
+        reject(new Error('Request timeout'));
+      });
+    };
     
-    request.on('error', reject);
-    request.on('timeout', () => {
-      request.destroy();
-      reject(new Error('Request timeout'));
-    });
+    downloadWithRedirects(url);
   });
 }
 
