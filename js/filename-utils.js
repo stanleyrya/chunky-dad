@@ -177,6 +177,15 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
 }
 
 /**
+ * Convert external favicon URL to local path for cached data
+ * @param {string} faviconUrl - The favicon URL
+ * @returns {string} - The local file path
+ */
+function convertFaviconUrlToLocal(faviconUrl) {
+    return convertFaviconUrlToLocalPath(faviconUrl, 'img/favicons');
+}
+
+/**
  * Simple hash function for fallback filenames
  * @param {string} str - The string to hash
  * @returns {string} - The hash as a hex string
@@ -200,6 +209,7 @@ if (typeof module !== 'undefined' && module.exports) {
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
+        convertFaviconUrlToLocal,
         simpleHash
     };
 }
@@ -212,6 +222,7 @@ if (typeof window !== 'undefined') {
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
+        convertFaviconUrlToLocal,
         simpleHash
     };
 }

@@ -718,7 +718,7 @@ class DynamicCalendarLoader extends CalendarCore {
             // Only generate short-name if not provided by user
             // This prevents double-trimming when user has already provided a shortName
             if (!eventData.shortName) {
-                eventData.shortName = this.generateShortName(eventData.bar, eventData.name);
+                eventData.shortName = eventData.name || eventData.bar || '';
             }
             
             // Convert image URLs based on data source
@@ -743,17 +743,6 @@ class DynamicCalendarLoader extends CalendarCore {
         return eventData;
     }
 
-    // Generate short name from bar name or event name
-    generateShortName(barName, eventName) {
-        // Simple: prefer event name, otherwise use bar name
-        return eventName || barName || '';
-    }
-    
-    // Add intelligent hyphenation points to long single words
-    addIntelligentHyphens(word) {
-        // Simple: just return the word as-is
-        return word || '';
-    }
 
     // ========== SOFT HYPHENATION METHODS ==========
     
@@ -1173,7 +1162,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Convert to local favicon URL if using cached data
                 if (this.dataSource === 'cached') {
                     const originalFaviconUrl = faviconUrl;
-                    faviconUrl = this.convertFaviconUrlToLocal(faviconUrl);
+                    faviconUrl = window.FilenameUtils.convertFaviconUrlToLocal(faviconUrl);
                     
                     logger.debug('MAP', 'Using local favicon for cached data', {
                         hostname,
@@ -1533,24 +1522,6 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Convert external favicon URL to local path for cached data
-    convertFaviconUrlToLocal(faviconUrl) {
-        if (!faviconUrl || !faviconUrl.startsWith('http')) {
-            return faviconUrl; // Return as-is if not a valid external URL
-        }
-        
-        try {
-            // Use shared utility for favicon filename generation
-            const filename = window.FilenameUtils.generateFaviconFilename(faviconUrl);
-            return `img/favicons/${filename}`;
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to convert favicon URL to local path', {
-                faviconUrl,
-                error: error.message
-            });
-            return faviconUrl; // Return original URL as fallback
-        }
-    }
 
     // Resolve correct local calendar URL depending on current page location
     buildLocalCalendarUrl(cityKey) {
