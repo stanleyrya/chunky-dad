@@ -143,6 +143,14 @@
   <meta property="og:description" content="Complete gay bear guide to Toronto - events, bars, and the hottest bear scene">
   <meta property="og:url" content="https://chunky.dad/toronto/">
   <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png?v=842100d3">
+  
+    <script>
+      function updateCityEmoji(select) {
+        const selectedOption = select.options[select.selectedIndex];
+        const emoji = selectedOption.textContent.split(' ')[0]; // Get emoji part
+        select.setAttribute('data-emoji', emoji);
+      }
+    </script>
 </head>
 <body>
         <header>
@@ -152,11 +160,35 @@
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/toronto</a></h1>
                 </div>
                 
-                <!-- Custom HTML/CSS city selector with emoji-only button -->
+                <!-- Native Select City Switcher with emoji-only display -->
+                <div class="city-switcher-native">
+                    <select id="city-switcher-select" class="city-switcher-select" onchange="updateCityEmoji(this); window.location.href=this.value" data-emoji="🍁">
+                        
+                            <option value="../new-york/" >🗽 New York</option>
+                            <option value="../seattle/" >🌲 Seattle</option>
+                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+                            <option value="../toronto/" selected>🍁 Toronto</option>
+                            <option value="../london/" >🇬🇧 London</option>
+                            <option value="../chicago/" >🏙️ Chicago</option>
+                            <option value="../berlin/" >🇩🇪 Berlin</option>
+                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+                            <option value="../denver/" >🏔️ Denver</option>
+                            <option value="../vegas/" >🎰 Las Vegas</option>
+                            <option value="../atlanta/" >🍑 Atlanta</option>
+                            <option value="../new-orleans/" >🎷 New Orleans</option>
+                            <option value="../sf/" >🌉 San Francisco</option>
+                            <option value="../portland/" >🌲 Portland</option>
+                            <option value="../sitges/" >🏖️ Sitges</option>
+                    </select>
+                </div>
+                
+                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+                <!--
                 <div class="city-switcher">
                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Toronto">
                         <span class="city-emoji">🍁</span>
+                        <span class="city-name">Toronto</span>
                         <span class="city-carrot">▼</span>
                     </label>
                     <div class="city-dropdown">
@@ -221,29 +253,6 @@
                                 <span class="city-option-name">Sitges</span>
                             </a>
                     </div>
-                </div>
-                
-                <!-- Native Select City Switcher (COMMENTED OUT) -->
-                <!--
-                <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
-                        
-                            <option value="../new-york/" >🗽 New York</option>
-                            <option value="../seattle/" >🌲 Seattle</option>
-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
-                            <option value="../toronto/" selected>🍁 Toronto</option>
-                            <option value="../london/" >🇬🇧 London</option>
-                            <option value="../chicago/" >🏙️ Chicago</option>
-                            <option value="../berlin/" >🇩🇪 Berlin</option>
-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
-                            <option value="../denver/" >🏔️ Denver</option>
-                            <option value="../vegas/" >🎰 Las Vegas</option>
-                            <option value="../atlanta/" >🍑 Atlanta</option>
-                            <option value="../new-orleans/" >🎷 New Orleans</option>
-                            <option value="../sf/" >🌉 San Francisco</option>
-                            <option value="../portland/" >🌲 Portland</option>
-                            <option value="../sitges/" >🏖️ Sitges</option>
-                    </select>
                 </div>
                 -->
                 

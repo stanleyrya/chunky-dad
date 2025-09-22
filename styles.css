@@ -201,6 +201,21 @@ body.index-page header.visible {
     background-position: right 0.5rem center;
     background-size: 0.8rem;
     padding-right: 1.8rem;
+    /* Hide text content, show only emoji by pushing text out of view */
+    text-indent: -9999px;
+    overflow: hidden;
+    /* Use a pseudo-element to show only the emoji */
+    position: relative;
+}
+
+.city-switcher-select::before {
+    content: attr(data-emoji);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-indent: 0;
+    font-size: 1.8rem;
 }
 
 .city-switcher-select:hover {

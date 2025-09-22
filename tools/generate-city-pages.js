@@ -44,7 +44,7 @@ function generateCityHeader(html, cityKey, cityConfig) {
                                 <span class="city-option-name">${city.name}</span>
                             </a>`).join('');
 
-  // Build native select options HTML
+  // Build native select options HTML - full names for dropdown, but CSS will hide text in button
   const nativeSelectOptions = availableCities.map(city => `
                             <option value="../${city.key}/" ${city.key === cityKey ? 'selected' : ''}>${city.emoji} ${city.name}</option>`).join('');
 
@@ -56,23 +56,24 @@ function generateCityHeader(html, cityKey, cityConfig) {
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
                 </div>
                 
-                <!-- Custom HTML/CSS city selector with emoji-only button -->
+                <!-- Native Select City Switcher with emoji-only display -->
+                <div class="city-switcher-native">
+                    <select id="city-switcher-select" class="city-switcher-select" onchange="updateCityEmoji(this); window.location.href=this.value" data-emoji="${cityConfig.emoji}">
+                        ${nativeSelectOptions}
+                    </select>
+                </div>
+                
+                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+                <!--
                 <div class="city-switcher">
                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
                         <span class="city-emoji">${cityConfig.emoji}</span>
+                        <span class="city-name">${cityConfig.name}</span>
                         <span class="city-carrot">▼</span>
                     </label>
                     <div class="city-dropdown">${cityOptions}
                     </div>
-                </div>
-                
-                <!-- Native Select City Switcher (COMMENTED OUT) -->
-                <!--
-                <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
-                        ${nativeSelectOptions}
-                    </select>
                 </div>
                 -->
                 
@@ -155,6 +156,19 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
       html = html.replace('</head>', `  <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">\n</head>`);
     }
   }
+
+  // Add JavaScript for emoji updating
+  const emojiUpdateScript = `
+    <script>
+      function updateCityEmoji(select) {
+        const selectedOption = select.options[select.selectedIndex];
+        const emoji = selectedOption.textContent.split(' ')[0]; // Get emoji part
+        select.setAttribute('data-emoji', emoji);
+      }
+    </script>`;
+
+  // Inject the script before the closing head tag
+  html = html.replace('</head>', `  ${emojiUpdateScript}\n</head>`);
 
   // Rewrite asset and link paths for subdirectory depth
   html = html.replace(/href="(styles\.css)"/g, 'href="../$1"');
