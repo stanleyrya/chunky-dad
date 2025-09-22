@@ -58,7 +58,7 @@ function generateCityHeader(html, cityKey, cityConfig) {
                 
                 <!-- Native Select City Switcher with emoji-only display -->
                 <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="updateCityEmoji(this); window.location.href=this.value" data-emoji="${cityConfig.emoji}">
+                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="${cityConfig.emoji}">
                         ${nativeSelectOptions}
                     </select>
                 </div>
@@ -157,18 +157,7 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
     }
   }
 
-  // Add JavaScript for emoji updating
-  const emojiUpdateScript = `
-    <script>
-      function updateCityEmoji(select) {
-        const selectedOption = select.options[select.selectedIndex];
-        const emoji = selectedOption.textContent.split(' ')[0]; // Get emoji part
-        select.setAttribute('data-emoji', emoji);
-      }
-    </script>`;
-
-  // Inject the script before the closing head tag
-  html = html.replace('</head>', `  ${emojiUpdateScript}\n</head>`);
+  // No longer need emoji update script - emoji is set by data-emoji attribute
 
   // Rewrite asset and link paths for subdirectory depth
   html = html.replace(/href="(styles\.css)"/g, 'href="../$1"');

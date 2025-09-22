@@ -143,14 +143,6 @@
   <meta property="og:description" content="Complete gay bear guide to Sitges - events, bars, and the hottest bear scene">
   <meta property="og:url" content="https://chunky.dad/sitges/">
   <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png?v=640b21d7">
-  
-    <script>
-      function updateCityEmoji(select) {
-        const selectedOption = select.options[select.selectedIndex];
-        const emoji = selectedOption.textContent.split(' ')[0]; // Get emoji part
-        select.setAttribute('data-emoji', emoji);
-      }
-    </script>
 </head>
 <body>
         <header>
@@ -162,7 +154,7 @@
                 
                 <!-- Native Select City Switcher with emoji-only display -->
                 <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="updateCityEmoji(this); window.location.href=this.value" data-emoji="🏖️">
+                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🏖️">
                         
                             <option value="../new-york/" >🗽 New York</option>
                             <option value="../seattle/" >🌲 Seattle</option>
