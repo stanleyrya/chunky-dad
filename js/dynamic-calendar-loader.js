@@ -747,14 +747,14 @@ class DynamicCalendarLoader extends CalendarCore {
     // The purpose of shortName is to provide BETTER BREAKPOINTS for word wrapping,
     // not necessarily to be shorter in character count (e.g., "MEGA-WOOF" vs "MEGAWOOF")
     generateShortName(barName, eventName) {
-        // Use centralized name mapping configuration
-        return window.NameMappingConfig.generateShortName(barName, eventName);
+        // Use centralized name mapping from filename-utils
+        return window.FilenameUtils.generateShortName(barName, eventName);
     }
     
     // Add intelligent hyphenation points to long single words
     addIntelligentHyphens(word) {
-        // Use centralized name mapping configuration
-        return window.NameMappingConfig.addIntelligentHyphens(word);
+        // Use centralized name mapping from filename-utils
+        return window.FilenameUtils.addIntelligentHyphens(word);
     }
 
     // ========== SOFT HYPHENATION METHODS ==========
