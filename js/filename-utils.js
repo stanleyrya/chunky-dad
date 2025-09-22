@@ -176,6 +176,7 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
     }
 }
 
+
 /**
  * Simple hash function for fallback filenames
  * @param {string} str - The string to hash
@@ -190,6 +191,7 @@ function simpleHash(str) {
     }
     return Math.abs(hash).toString(16).substring(0, 8);
 }
+
 
 // Export for Node.js (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {

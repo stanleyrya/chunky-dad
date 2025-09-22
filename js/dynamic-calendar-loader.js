@@ -718,7 +718,7 @@ class DynamicCalendarLoader extends CalendarCore {
             // Only generate short-name if not provided by user
             // This prevents double-trimming when user has already provided a shortName
             if (!eventData.shortName) {
-                eventData.shortName = this.generateShortName(eventData.bar, eventData.name);
+                eventData.shortName = eventData.name || eventData.bar || '';
             }
             
             // Convert image URLs based on data source
@@ -743,79 +743,6 @@ class DynamicCalendarLoader extends CalendarCore {
         return eventData;
     }
 
-    // Generate short name from bar name or event name
-    // The purpose of shortName is to provide BETTER BREAKPOINTS for word wrapping,
-    // not necessarily to be shorter in character count (e.g., "MEGA-WOOF" vs "MEGAWOOF")
-    generateShortName(barName, eventName) {
-        // Prefer event name if available, otherwise use bar name
-        const sourceName = eventName || barName;
-        if (!sourceName) return '';
-        
-        // Remove common words while preserving original casing
-        // Focus on creating natural breakpoints rather than just shortening
-        const stopWords = ['the', 'and', 'or', 'at', 'in', 'on', 'with', 'for', 'of', 'to', 'a', 'an'];
-        const words = sourceName.split(' ');
-        const filteredWords = words.filter(word => !stopWords.includes(word.toLowerCase()));
-        
-        // If we filtered out all words (e.g., "The"), use the original
-        if (filteredWords.length === 0) {
-            return sourceName;
-        }
-        
-        let result = filteredWords.join(' ');
-        
-        // For single long words, add intelligent hyphenation points for better breaking
-        if (filteredWords.length === 1 && filteredWords[0].length > 8) {
-            result = this.addIntelligentHyphens(filteredWords[0]);
-        }
-        
-        // Return the filtered name - CSS word-wrap will handle the display
-        // The key is that this version should have better breakpoints than the original
-        return result;
-    }
-    
-    // Add intelligent hyphenation points to long single words
-    addIntelligentHyphens(word) {
-        if (!word || word.length <= 8) return word;
-        
-        // Common patterns for hyphenation in event names
-        const patterns = [
-            // Bear community specific terms
-            { pattern: /^(Rock)(strap)$/i, replacement: '$1-$2' },
-            { pattern: /^(Under)(wear)$/i, replacement: '$1-$2' },
-            { pattern: /^(Leather)(daddy|bear|night)$/i, replacement: '$1-$2' },
-            { pattern: /^(Bear)(night|party|weekend)$/i, replacement: '$1-$2' },
-            { pattern: /^(Happy)(hour)$/i, replacement: '$1-$2' },
-            { pattern: /^(After)(party|hours)$/i, replacement: '$1-$2' },
-            { pattern: /^(Pre)(game|party)$/i, replacement: '$1-$2' },
-            { pattern: /^(Post)(game|party|work)$/i, replacement: '$1-$2' },
-            { pattern: /^(Mid)(week|night)$/i, replacement: '$1-$2' },
-            { pattern: /^(Week)(end|night)$/i, replacement: '$1-$2' },
-            
-            // General compound word patterns
-            { pattern: /^(.{4,6})(night|party|fest|event)$/i, replacement: '$1-$2' },
-            { pattern: /^(night|party|bear)(.{4,})$/i, replacement: '$1-$2' },
-        ];
-        
-        // Try each pattern
-        for (const { pattern, replacement } of patterns) {
-            if (pattern.test(word)) {
-                const result = word.replace(pattern, replacement);
-                logger.debug('CALENDAR', `🔍 HYPHEN: Added intelligent hyphen to "${word}" → "${result}"`);
-                return result;
-            }
-        }
-        
-        // Fallback: add hyphen after 4-6 characters if no pattern matches
-        if (word.length > 8) {
-            const breakPoint = Math.min(6, Math.floor(word.length / 2));
-            const result = word.slice(0, breakPoint) + '-' + word.slice(breakPoint);
-            logger.debug('CALENDAR', `🔍 HYPHEN: Added fallback hyphen to "${word}" → "${result}"`);
-            return result;
-        }
-        
-        return word;
-    }
 
     // ========== SOFT HYPHENATION METHODS ==========
     
@@ -1219,7 +1146,8 @@ class DynamicCalendarLoader extends CalendarCore {
             try {
                 logger.debug('MAP', 'Creating favicon marker', {
                     eventName: event.name,
-                    website: event.website
+                    website: event.website,
+                    dataSource: this.dataSource
                 });
                 
                 // Ensure URL has protocol
@@ -1229,13 +1157,28 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
                 
                 const hostname = new URL(url).hostname;
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                let faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                
+                // Convert to local favicon URL if using cached data
+                if (this.dataSource === 'cached') {
+                    const originalFaviconUrl = faviconUrl;
+                    faviconUrl = window.FilenameUtils.convertFaviconUrlToLocalPath(faviconUrl, 'img/favicons');
+                    
+                    logger.debug('MAP', 'Using local favicon for cached data', {
+                        hostname,
+                        originalUrl: originalFaviconUrl,
+                        localPath: faviconUrl,
+                        dataSource: this.dataSource
+                    });
+                }
+                
                 const textFallback = this.getMarkerText(event);
                 
                 logger.debug('MAP', 'Favicon URL generated', {
                     hostname,
                     faviconUrl,
-                    textFallback
+                    textFallback,
+                    dataSource: this.dataSource
                 });
                 
                 return L.divIcon({
@@ -1578,6 +1521,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return imageUrl; // Return original URL as fallback
         }
     }
+
 
     // Resolve correct local calendar URL depending on current page location
     buildLocalCalendarUrl(cityKey) {
