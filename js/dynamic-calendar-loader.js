@@ -42,6 +42,10 @@ class DynamicCalendarLoader extends CalendarCore {
         this.lastScreenWidth = window.innerWidth;
         this.currentBreakpoint = this.getCurrentBreakpoint();
         
+        // Location features
+        this.userLocation = null;
+        this.locationFeaturesEnabled = false;
+        
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
         
@@ -1855,6 +1859,10 @@ class DynamicCalendarLoader extends CalendarCore {
         const notCheckedBadge = event.notChecked ? 
             `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
 
+        // Add distance badge if location features are enabled and distance is available
+        const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ? 
+            `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${event.distanceFromUser} mi</span>` : '';
+
         return `
             <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
@@ -1864,6 +1872,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         ${recurringBadge}
                         ${dateBadge}
                         ${notCheckedBadge}
+                        ${distanceBadge}
                     </div>
                 </div>
                 <div class="event-details">
@@ -2440,8 +2449,8 @@ class DynamicCalendarLoader extends CalendarCore {
             fitMarkersControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="fitAllMarkers()" title="Show All Events">
-                        🎯
+                    <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
+                        <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
                     </button>
                 `;
                 return div;
@@ -2454,7 +2463,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const div = L.DomUtil.create('div', 'leaflet-control-my-location');
                 div.innerHTML = `
                     <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
-                        <span id="location-icon">📍</span>
+                        <i class="bi bi-crosshair" id="location-icon"></i>
                         <span id="location-status" class="location-status"></span>
                     </button>
                 `;
@@ -2779,6 +2788,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 mapSection.style.display = 'block';
                 this.initializeMap(this.currentCityConfig, filteredEvents);
                 logger.debug('CALENDAR', 'Map initialization completed');
+                
+                // Initialize location features after map is ready
+                this.initializeLocationFeatures();
             } else if (hideEvents) {
                 logger.debug('CALENDAR', 'Skipping map initialization (hideEvents mode)');
             } else {
@@ -3504,6 +3516,117 @@ class DynamicCalendarLoader extends CalendarCore {
         this.updateCalendarDisplay();
     }
 
+    // Initialize location features during calendar loading
+    async initializeLocationFeatures() {
+        try {
+            logger.debug('CALENDAR', 'Initializing location features');
+            
+            // Use existing updateLocationStatus but store result
+            await updateLocationStatus();
+            
+            // If we got location, enable distance features
+            if (window.userLocation) {
+                this.userLocation = window.userLocation;
+                this.enableLocationFeatures();
+                logger.info('CALENDAR', 'Location features enabled', { 
+                    lat: this.userLocation.lat, 
+                    lng: this.userLocation.lng,
+                    source: this.userLocation.source 
+                });
+            } else {
+                logger.debug('CALENDAR', 'No user location available for features');
+            }
+        } catch (error) {
+            logger.debug('CALENDAR', 'Location features initialization failed', { error: error.message });
+        }
+    }
+
+    // Enable location-based features
+    enableLocationFeatures() {
+        this.locationFeaturesEnabled = true;
+        
+        // Calculate distances for all events
+        this.calculateEventDistances();
+        
+        // Show user location on map if not already visible
+        this.showUserLocationIfAvailable();
+        
+        logger.info('CALENDAR', 'Location features enabled', { 
+            eventsWithDistance: this.allEvents.filter(e => e.distanceFromUser !== undefined).length 
+        });
+    }
+
+    // Calculate distances from user location to all events
+    calculateEventDistances() {
+        if (!this.userLocation || !this.allEvents) return;
+        
+        this.allEvents.forEach(event => {
+            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                const distance = this.calculateDistance(
+                    this.userLocation.lat, 
+                    this.userLocation.lng,
+                    event.coordinates.lat, 
+                    event.coordinates.lng
+                );
+                event.distanceFromUser = distance;
+            }
+        });
+        
+        logger.debug('CALENDAR', 'Event distances calculated', {
+            totalEvents: this.allEvents.length,
+            eventsWithDistance: this.allEvents.filter(e => e.distanceFromUser !== undefined).length
+        });
+    }
+
+    // Calculate distance between two coordinates using Haversine formula
+    calculateDistance(lat1, lng1, lat2, lng2) {
+        const R = 3959; // Earth's radius in miles
+        const dLat = this.toRadians(lat2 - lat1);
+        const dLng = this.toRadians(lng2 - lng1);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
+                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(R * c * 10) / 10; // Round to 1 decimal place
+    }
+
+    // Convert degrees to radians
+    toRadians(degrees) {
+        return degrees * (Math.PI / 180);
+    }
+
+    // Show user location on map if available
+    showUserLocationIfAvailable() {
+        if (!this.userLocation || !window.eventsMap) return;
+        
+        try {
+            // Remove existing location circle if any
+            if (window.myLocationCircle) {
+                window.eventsMap.removeLayer(window.myLocationCircle);
+            }
+            
+            // Add location circle
+            window.myLocationCircle = L.circle([this.userLocation.lat, this.userLocation.lng], {
+                color: '#4285f4',
+                fillColor: '#4285f4',
+                fillOpacity: 0.2,
+                radius: this.userLocation.accuracy || 50
+            }).addTo(window.eventsMap);
+            
+            // Update button status
+            updateLocationButtonStatus('success', this.userLocation.stale ? 'cached' : 'fresh');
+            
+            logger.info('MAP', 'User location displayed on map', {
+                lat: this.userLocation.lat,
+                lng: this.userLocation.lng,
+                accuracy: this.userLocation.accuracy,
+                source: this.userLocation.source
+            });
+        } catch (error) {
+            logger.warn('MAP', 'Failed to show user location on map', { error: error.message });
+        }
+    }
+
     // Initialize
     async init() {
         // Prevent multiple initializations
@@ -3713,21 +3836,21 @@ function updateLocationButtonStatus(status, detail = '') {
     switch (status) {
         case 'loading':
             btnEl.classList.add('location-loading');
-            iconEl.textContent = '⏳';
+            iconEl.className = 'bi bi-hourglass-split';
             statusEl.textContent = '...';
             break;
         case 'success':
             btnEl.classList.add('location-success');
-            iconEl.textContent = '📍';
+            iconEl.className = 'bi bi-crosshair2';
             statusEl.textContent = detail === 'cached' ? '💾' : '✓';
             break;
         case 'error':
             btnEl.classList.add('location-error');
-            iconEl.textContent = '❌';
+            iconEl.className = 'bi bi-x-circle';
             statusEl.textContent = '!';
             break;
         default:
-            iconEl.textContent = '📍';
+            iconEl.className = 'bi bi-crosshair';
             statusEl.textContent = '';
     }
 }
@@ -3743,6 +3866,36 @@ async function updateLocationStatus() {
         
         if (status.supported && status.permissionState === 'granted' && status.hasCachedLocation) {
             updateLocationButtonStatus('success', 'cached');
+            
+            // Store cached location for features
+            const cached = window.locationManager.getCachedLocation();
+            if (cached) {
+                window.userLocation = cached;
+                logger.debug('MAP', 'Cached location stored for features', { 
+                    lat: cached.lat, 
+                    lng: cached.lng,
+                    stale: cached.stale 
+                });
+            }
+        } else if (status.supported && status.permissionState === 'granted' && !status.hasCachedLocation) {
+            // We have permission but no cached location - request silently
+            updateLocationButtonStatus('loading', 'checking');
+            
+            try {
+                const location = await window.locationManager.getCurrentLocation({}, false);
+                window.userLocation = location;
+                updateLocationButtonStatus('success', 'fresh');
+                
+                logger.debug('MAP', 'Fresh location obtained silently', { 
+                    lat: location.lat, 
+                    lng: location.lng,
+                    source: location.source 
+                });
+            } catch (error) {
+                // Silent fail - user can still use manual button
+                updateLocationButtonStatus('default');
+                logger.debug('MAP', 'Silent location request failed', { error: error.message });
+            }
         } else if (status.supported && status.permissionState === 'denied') {
             updateLocationButtonStatus('error');
         } else {
