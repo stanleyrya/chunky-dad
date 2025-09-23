@@ -205,18 +205,21 @@ body.index-page header.visible {
     background-position: right 0.5rem center;
     background-size: 0.8rem;
     padding-right: 1.8rem;
-    /* Show emoji and text properly */
-    text-align: center;
-    font-size: 1.2rem;
-    line-height: 1;
+    /* Hide text content, show only emoji by pushing text out of view */
+    text-indent: -9999px;
+    overflow: hidden;
 }
 
-/* Style the selected option text to show emoji prominently */
-.city-switcher-select option {
-    background: var(--dropdown-bg);
-    color: var(--text-primary);
-    padding: 0.5rem;
-    font-size: 1rem;
+.city-switcher-select::before {
+    content: attr(data-emoji);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-indent: 0;
+    font-size: 1.8rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    transition: transform 0.3s ease;
 }
 
 .city-switcher-select:hover {
@@ -224,6 +227,10 @@ body.index-page header.visible {
     border-color: rgba(255, 255, 255, 0.6);
     transform: translateY(-2px);
     box-shadow: 0 8px 30px var(--shadow-heavy);
+}
+
+.city-switcher-select:hover::before {
+    transform: translate(-50%, -50%) scale(1.1);
 }
 
 .city-switcher-select:active {
