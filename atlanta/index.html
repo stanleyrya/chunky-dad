@@ -143,14 +143,6 @@
   <meta property="og:description" content="Complete gay bear guide to Atlanta - events, bars, and the hottest bear scene">
   <meta property="og:url" content="https://chunky.dad/atlanta/">
   <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png?v=397ff69b">
-  
-    <script>
-      function updateCityEmoji(select) {
-        const selectedOption = select.options[select.selectedIndex];
-        const emoji = selectedOption.textContent.split(' ')[0]; // Get emoji part
-        select.setAttribute('data-emoji', emoji);
-      }
-    </script>
 </head>
 <body>
         <header>
@@ -160,9 +152,9 @@
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/atlanta</a></h1>
                 </div>
                 
-                <!-- Native Select City Switcher with emoji-only display -->
+                <!-- Native Select City Switcher (EXPERIMENTAL) -->
                 <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="updateCityEmoji(this); window.location.href=this.value" data-emoji="🍑">
+                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
                         
                             <option value="../new-york/" >🗽 New York</option>
                             <option value="../seattle/" >🌲 Seattle</option>
@@ -182,7 +174,7 @@
                     </select>
                 </div>
                 
-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+                <!-- Custom HTML/CSS city selector (COMMENTED OUT FOR TESTING) -->
                 <!--
                 <div class="city-switcher">
                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
