@@ -323,6 +323,187 @@ class LocationManager {
             isPrivateMode: this.isPrivateMode
         };
     }
+
+    /**
+     * Check if user location is available for features (no popup)
+     * Returns location if available, null if not
+     */
+    async getLocationForFeatures() {
+        try {
+            const status = await this.getLocationStatus();
+            
+            // If we have cached location, use it
+            if (status.hasCachedLocation) {
+                const cached = this.getCachedLocation();
+                this.logger.debug('LOCATION', 'Using cached location for features', { 
+                    lat: cached.lat, 
+                    lng: cached.lng,
+                    stale: cached.stale 
+                });
+                return cached;
+            }
+            
+            // If we have permission but no cache, request silently
+            if (status.supported && status.permissionState === 'granted') {
+                this.logger.debug('LOCATION', 'Requesting fresh location for features');
+                const location = await this.getCurrentLocation({}, false);
+                return location;
+            }
+            
+            // No permission or not supported
+            this.logger.debug('LOCATION', 'Location not available for features', { 
+                supported: status.supported, 
+                permissionState: status.permissionState 
+            });
+            return null;
+        } catch (error) {
+            this.logger.debug('LOCATION', 'Location request for features failed', { error: error.message });
+            return null;
+        }
+    }
+
+    /**
+     * Calculate distance between two coordinates using Haversine formula
+     * @param {number} lat1 - First latitude
+     * @param {number} lng1 - First longitude  
+     * @param {number} lat2 - Second latitude
+     * @param {number} lng2 - Second longitude
+     * @returns {number} Distance in miles
+     */
+    calculateDistance(lat1, lng1, lat2, lng2) {
+        const R = 3959; // Earth's radius in miles
+        const dLat = this.toRadians(lat2 - lat1);
+        const dLng = this.toRadians(lng2 - lng1);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
+                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(R * c * 10) / 10; // Round to 1 decimal place
+    }
+
+    /**
+     * Convert degrees to radians
+     * @param {number} degrees - Degrees to convert
+     * @returns {number} Radians
+     */
+    toRadians(degrees) {
+        return degrees * (Math.PI / 180);
+    }
+
+    /**
+     * Calculate distances from user location to events
+     * @param {Array} events - Array of events with coordinates
+     * @param {Object} userLocation - User location with lat/lng
+     * @returns {Array} Events with distanceFromUser property added
+     */
+    calculateEventDistances(events, userLocation) {
+        if (!userLocation || !events) return events;
+        
+        return events.map(event => {
+            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
+                const distance = this.calculateDistance(
+                    userLocation.lat, 
+                    userLocation.lng,
+                    event.coordinates.lat, 
+                    event.coordinates.lng
+                );
+                return { ...event, distanceFromUser: distance };
+            }
+            return event;
+        });
+    }
+
+    /**
+     * Initialize location features - check availability and return location if available
+     * @returns {Object|null} Location data if available, null otherwise
+     */
+    async initializeLocationFeatures() {
+        try {
+            this.logger.debug('LOCATION', 'Initializing location features');
+            
+            const location = await this.getLocationForFeatures();
+            
+            if (location) {
+                this.logger.info('LOCATION', 'Location features initialized successfully', { 
+                    lat: location.lat, 
+                    lng: location.lng,
+                    source: location.source,
+                    stale: location.stale
+                });
+            } else {
+                this.logger.debug('LOCATION', 'Location features not available');
+            }
+            
+            return location;
+        } catch (error) {
+            this.logger.debug('LOCATION', 'Location features initialization failed', { error: error.message });
+            return null;
+        }
+    }
+
+    /**
+     * Update location status and store in global variable for UI access
+     * This handles the complete location status flow including UI updates
+     * @param {Function} updateButtonStatus - Callback to update UI button status
+     * @returns {Object|null} Location data if available, null otherwise
+     */
+    async updateLocationStatus(updateButtonStatus) {
+        try {
+            const status = await this.getLocationStatus();
+            
+            if (status.supported && status.permissionState === 'granted' && status.hasCachedLocation) {
+                updateButtonStatus('success', 'cached');
+                
+                // Store cached location for features
+                const cached = this.getCachedLocation();
+                if (cached) {
+                    window.userLocation = cached;
+                    this.logger.debug('LOCATION', 'Cached location stored for features', { 
+                        lat: cached.lat, 
+                        lng: cached.lng,
+                        stale: cached.stale 
+                    });
+                    return cached;
+                }
+            } else if (status.supported && status.permissionState === 'granted' && !status.hasCachedLocation) {
+                // We have permission but no cached location - request silently
+                updateButtonStatus('loading', 'checking');
+                
+                try {
+                    const location = await this.getLocationForFeatures();
+                    if (location) {
+                        window.userLocation = location;
+                        updateButtonStatus('success', 'fresh');
+                        
+                        this.logger.debug('LOCATION', 'Fresh location obtained silently', { 
+                            lat: location.lat, 
+                            lng: location.lng,
+                            source: location.source 
+                        });
+                        return location;
+                    } else {
+                        updateButtonStatus('default');
+                        return null;
+                    }
+                } catch (error) {
+                    // Silent fail - user can still use manual button
+                    updateButtonStatus('default');
+                    this.logger.debug('LOCATION', 'Silent location request failed', { error: error.message });
+                    return null;
+                }
+            } else if (status.supported && status.permissionState === 'denied') {
+                updateButtonStatus('error');
+                return null;
+            } else {
+                updateButtonStatus('default');
+                return null;
+            }
+        } catch (error) {
+            this.logger.debug('LOCATION', 'Location status check failed', { error: error.message });
+            updateButtonStatus('default');
+            return null;
+        }
+    }
 }
 
 // Export for use in other modules

@@ -42,6 +42,10 @@ class DynamicCalendarLoader extends CalendarCore {
         this.lastScreenWidth = window.innerWidth;
         this.currentBreakpoint = this.getCurrentBreakpoint();
         
+        // Location features
+        this.userLocation = null;
+        this.locationFeaturesEnabled = false;
+        
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
         
@@ -343,12 +347,12 @@ class DynamicCalendarLoader extends CalendarCore {
             calendarGrid.style.opacity = '0.7';
             
             // After animation completes, update content and animate new content in
-            setTimeout(() => {
+            setTimeout(async () => {
                 // Update the calendar content (skip immediate display update)
                 this.navigatePeriod(direction, false);
                 
                 // Update the display to get new content
-                this.updateCalendarDisplay();
+                await this.updateCalendarDisplay();
                 
                 // Prepare new content to slide in from opposite direction
                 const newCalendarGrid = document.querySelector('.calendar-grid');
@@ -1280,7 +1284,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Switch to week view for a specific date
-    switchToWeekView(dateString) {
+    async switchToWeekView(dateString) {
         this.currentDate = new Date(dateString);
         this.currentView = 'week';
         
@@ -1293,11 +1297,11 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Clear current selection when jumping views
         this.clearEventSelection();
-        this.updateCalendarDisplay();
+        await this.updateCalendarDisplay();
         this.syncUrl(true);
     }
 
-    navigatePeriod(direction, skipAnimation = false) {
+    async navigatePeriod(direction, skipAnimation = false) {
         const delta = direction === 'next' ? 1 : -1;
         
         logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
@@ -1327,14 +1331,14 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Only update display immediately if not part of a swipe animation
         if (skipAnimation) {
-            this.updateCalendarDisplay();
+            await this.updateCalendarDisplay();
         }
     }
 
-    goToToday() {
+    async goToToday() {
         this.currentDate = new Date();
         this.clearEventSelection();
-        this.updateCalendarDisplay();
+        await this.updateCalendarDisplay();
         this.syncUrl(true);
     }
 
@@ -1855,6 +1859,10 @@ class DynamicCalendarLoader extends CalendarCore {
         const notCheckedBadge = event.notChecked ? 
             `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
 
+        // Add distance badge if location features are enabled and distance is available
+        const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ? 
+            `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${event.distanceFromUser} mi</span>` : '';
+
         return `
             <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
@@ -1864,6 +1872,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         ${recurringBadge}
                         ${dateBadge}
                         ${notCheckedBadge}
+                        ${distanceBadge}
                     </div>
                 </div>
                 <div class="event-details">
@@ -2440,8 +2449,8 @@ class DynamicCalendarLoader extends CalendarCore {
             fitMarkersControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
                 div.innerHTML = `
-                    <button class="map-control-btn" onclick="fitAllMarkers()" title="Show All Events">
-                        🎯
+                    <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
+                        <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
                     </button>
                 `;
                 return div;
@@ -2454,7 +2463,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const div = L.DomUtil.create('div', 'leaflet-control-my-location');
                 div.innerHTML = `
                     <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
-                        <span id="location-icon">📍</span>
+                        <i class="bi bi-crosshair" id="location-icon"></i>
                         <span id="location-status" class="location-status"></span>
                     </button>
                 `;
@@ -2569,7 +2578,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
     // Update calendar display with filtered events
-    updateCalendarDisplay(hideEvents = false) {
+    async updateCalendarDisplay(hideEvents = false) {
         logger.time('CALENDAR', 'Calendar display update');
         const filteredEvents = this.getFilteredEvents();
         
@@ -2779,6 +2788,37 @@ class DynamicCalendarLoader extends CalendarCore {
                 mapSection.style.display = 'block';
                 this.initializeMap(this.currentCityConfig, filteredEvents);
                 logger.debug('CALENDAR', 'Map initialization completed');
+                
+                // Initialize location features after map is ready
+                try {
+                    if (!window.locationManager) {
+                        window.locationManager = new LocationManager();
+                    }
+                    
+                    const location = await window.locationManager.getLocationForFeatures();
+                    
+                    if (location) {
+                        this.userLocation = location;
+                        window.userLocation = location;
+                        this.locationFeaturesEnabled = true;
+                        
+                        // Calculate distances for all events
+                        this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);
+                        
+                        // Show user location on map
+                        showMyLocation();
+                        
+                        logger.info('CALENDAR', 'Location features enabled', { 
+                            lat: location.lat, 
+                            lng: location.lng,
+                            source: location.source 
+                        });
+                    } else {
+                        logger.debug('CALENDAR', 'No user location available for features');
+                    }
+                } catch (error) {
+                    logger.debug('CALENDAR', 'Location features initialization failed', { error: error.message });
+                }
             } else if (hideEvents) {
                 logger.debug('CALENDAR', 'Skipping map initialization (hideEvents mode)');
             } else {
@@ -3504,6 +3544,7 @@ class DynamicCalendarLoader extends CalendarCore {
         this.updateCalendarDisplay();
     }
 
+
     // Initialize
     async init() {
         // Prevent multiple initializations
@@ -3713,43 +3754,46 @@ function updateLocationButtonStatus(status, detail = '') {
     switch (status) {
         case 'loading':
             btnEl.classList.add('location-loading');
-            iconEl.textContent = '⏳';
+            iconEl.className = 'bi bi-hourglass-split';
             statusEl.textContent = '...';
             break;
         case 'success':
             btnEl.classList.add('location-success');
-            iconEl.textContent = '📍';
+            iconEl.className = 'bi bi-crosshair2';
             statusEl.textContent = detail === 'cached' ? '💾' : '✓';
             break;
         case 'error':
             btnEl.classList.add('location-error');
-            iconEl.textContent = '❌';
+            iconEl.className = 'bi bi-x-circle';
             statusEl.textContent = '!';
             break;
         default:
-            iconEl.textContent = '📍';
+            iconEl.className = 'bi bi-crosshair';
             statusEl.textContent = '';
     }
 }
 
-// Check and update location status on page load
+// Check and update location status on page load (UI only - location logic moved to LocationManager)
 async function updateLocationStatus() {
     try {
         if (!window.locationManager) {
             window.locationManager = new LocationManager();
         }
         
-        const status = await window.locationManager.getLocationStatus();
+        // Let LocationManager handle all location logic and UI updates
+        const location = await window.locationManager.updateLocationStatus(updateLocationButtonStatus);
         
-        if (status.supported && status.permissionState === 'granted' && status.hasCachedLocation) {
-            updateLocationButtonStatus('success', 'cached');
-        } else if (status.supported && status.permissionState === 'denied') {
-            updateLocationButtonStatus('error');
+        if (location) {
+            logger.debug('MAP', 'Location status updated successfully', { 
+                lat: location.lat, 
+                lng: location.lng,
+                source: location.source 
+            });
         } else {
-            updateLocationButtonStatus('default');
+            logger.debug('MAP', 'No location available');
         }
     } catch (error) {
-        logger.debug('MAP', 'Location status check failed', { error: error.message });
+        logger.debug('MAP', 'Location status update failed', { error: error.message });
         updateLocationButtonStatus('default');
     }
 }
