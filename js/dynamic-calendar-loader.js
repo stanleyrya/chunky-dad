@@ -683,8 +683,7 @@ class DynamicCalendarLoader extends CalendarCore {
     // Set up city selector and populate with available cities
     setupCitySelector() {
         const availableCitiesList = document.getElementById('available-cities-list');
-        
-
+        const citySwitcherSelect = document.getElementById('city-switcher-select');
 
         // Populate available cities list for error page
         if (availableCitiesList) {
@@ -695,6 +694,21 @@ class DynamicCalendarLoader extends CalendarCore {
                         ${city.emoji} ${city.name}
                     </a>
                 `).join('');
+        }
+
+        // Populate city switcher dropdown
+        if (citySwitcherSelect) {
+            const availableCities = getAvailableCities().filter(city => hasCityCalendar(city.key));
+            
+            citySwitcherSelect.innerHTML = availableCities.map(city => {
+                const isSelected = city.key === this.currentCity ? 'selected' : '';
+                return `<option value="${city.key}/" ${isSelected}>${city.emoji} ${city.name}</option>`;
+            }).join('');
+
+            // Set the data-emoji attribute to the current city's emoji
+            if (this.currentCityConfig) {
+                citySwitcherSelect.setAttribute('data-emoji', this.currentCityConfig.emoji);
+            }
         }
     }
 
