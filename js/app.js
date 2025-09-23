@@ -237,7 +237,7 @@ class ChunkyDadApp {
         if (this.isMainPage || this.isDirectoryPage) {
             this.navigationManager = new NavigationManager();
         } else {
-            logger.debug('SYSTEM', 'Skipping navigation manager for city pages (using city switcher instead)');
+            logger.debug('SYSTEM', 'Skipping navigation manager for city pages');
         }
         
         // Page effects are needed on all pages
