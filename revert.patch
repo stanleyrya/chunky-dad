@@ -1,0 +1,1155 @@
+diff --git a/atlanta/index.html b/atlanta/index.html
+index b86f772..1aa32e6 100644
+--- a/atlanta/index.html
++++ b/atlanta/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/atlanta</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🍑">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" selected>🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Atlanta">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Atlanta</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/berlin/index.html b/berlin/index.html
+index 24e09e2..672581e 100644
+--- a/berlin/index.html
++++ b/berlin/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/berlin</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🇩🇪">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" selected>🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Berlin">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Berlin</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/chicago/index.html b/chicago/index.html
+index 3ec9444..a2c392c 100644
+--- a/chicago/index.html
++++ b/chicago/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/chicago</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🏙️">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" selected>🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Chicago">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Chicago</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/denver/index.html b/denver/index.html
+index 9c226e7..776a332 100644
+--- a/denver/index.html
++++ b/denver/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/denver</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🏔️">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" selected>🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Denver">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Denver</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/london/index.html b/london/index.html
+index bc65be9..df44e88 100644
+--- a/london/index.html
++++ b/london/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/london</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🇬🇧">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" selected>🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently London">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">London</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/los-angeles/index.html b/los-angeles/index.html
+index 7ed7e10..0d8412c 100644
+--- a/los-angeles/index.html
++++ b/los-angeles/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/los-angeles</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🌴">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" selected>🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Los Angeles">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Los Angeles</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/new-orleans/index.html b/new-orleans/index.html
+index 39ec31d..624626a 100644
+--- a/new-orleans/index.html
++++ b/new-orleans/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/new-orleans</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🎷">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" selected>🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently New Orleans">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">New Orleans</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/new-york/index.html b/new-york/index.html
+index a035075..14b7c8b 100644
+--- a/new-york/index.html
++++ b/new-york/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/new-york</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🗽">
+-                        
+-                            <option value="../new-york/" selected>🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently New York">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">New York</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/palm-springs/index.html b/palm-springs/index.html
+index 2599668..513bab7 100644
+--- a/palm-springs/index.html
++++ b/palm-springs/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/palm-springs</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🌴">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" selected>🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Palm Springs">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Palm Springs</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/portland/index.html b/portland/index.html
+index 0cc3f7e..d927949 100644
+--- a/portland/index.html
++++ b/portland/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/portland</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🌲">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" selected>🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Portland">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Portland</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/seattle/index.html b/seattle/index.html
+index d2a321a..080238b 100644
+--- a/seattle/index.html
++++ b/seattle/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/seattle</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🌲">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" selected>🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Seattle">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Seattle</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/sf/index.html b/sf/index.html
+index 5bc114f..df4cb08 100644
+--- a/sf/index.html
++++ b/sf/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/sf</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🌉">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" selected>🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently San Francisco">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">San Francisco</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/sitemap.xml b/sitemap.xml
+index 6cb9f20..a85b733 100644
+--- a/sitemap.xml
++++ b/sitemap.xml
+@@ -2,103 +2,103 @@
+ <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   <url>
+     <loc>https://chunky.dad/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>1.0</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/atlanta/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/berlin/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/chicago/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/denver/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/london/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/los-angeles/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/new-orleans/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/new-york/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/palm-springs/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/portland/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/seattle/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/sf/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/sitges/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/toronto/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/vegas/</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>weekly</changefreq>
+     <priority>0.9</priority>
+   </url>
+   <url>
+     <loc>https://chunky.dad/bear-directory.html</loc>
+-    <lastmod>2025-09-22</lastmod>
++    <lastmod>2025-09-21</lastmod>
+     <changefreq>monthly</changefreq>
+     <priority>0.8</priority>
+   </url>
+diff --git a/sitges/index.html b/sitges/index.html
+index ae7de6b..03ced3c 100644
+--- a/sitges/index.html
++++ b/sitges/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/sitges</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🏖️">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" selected>🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Sitges">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Sitges</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/styles.css b/styles.css
+index bec18bb..3fda1d1 100644
+--- a/styles.css
++++ b/styles.css
+@@ -171,79 +171,7 @@ body.index-page header.visible {
+     opacity: 1;
+ }
+ 
+-/* City Switcher - Native Select with Custom Button Styling */
+-.city-switcher-native {
+-    position: relative;
+-    margin-left: auto;
+-    margin-right: 1rem;
+-    z-index: 10001;
+-}
+-
+-.city-switcher-select {
+-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%);
+-    border: 2px solid rgba(255, 255, 255, 0.3);
+-    border-radius: 12px;
+-    min-width: 60px;
+-    width: 60px;
+-    height: 44px;
+-    min-height: 44px;
+-    display: flex;
+-    align-items: center;
+-    justify-content: center;
+-    padding: 0.5rem;
+-    cursor: pointer;
+-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+-    backdrop-filter: blur(15px);
+-    color: var(--text-inverse);
+-    font-family: inherit;
+-    box-shadow: 0 4px 20px var(--shadow-medium);
+-    position: relative;
+-    overflow: hidden;
+-    appearance: none;
+-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+-    background-repeat: no-repeat;
+-    background-position: right 0.5rem center;
+-    background-size: 0.8rem;
+-    padding-right: 1.8rem;
+-    /* Show emoji and text properly */
+-    text-align: center;
+-    font-size: 1.2rem;
+-    line-height: 1;
+-}
+-
+-/* Style the selected option text to show emoji prominently */
+-.city-switcher-select option {
+-    background: var(--dropdown-bg);
+-    color: var(--text-primary);
+-    padding: 0.5rem;
+-    font-size: 1rem;
+-}
+-
+-.city-switcher-select:hover {
+-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 100%);
+-    border-color: rgba(255, 255, 255, 0.6);
+-    transform: translateY(-2px);
+-    box-shadow: 0 8px 30px var(--shadow-heavy);
+-}
+-
+-.city-switcher-select:active {
+-    transform: translateY(0) scale(0.98);
+-    box-shadow: 0 4px 15px var(--shadow-medium);
+-}
+-
+-.city-switcher-select:focus {
+-    outline: none;
+-    border-color: rgba(255, 255, 255, 0.8);
+-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+-}
+-
+-.city-switcher-select option {
+-    background: var(--dropdown-bg);
+-    color: var(--text-primary);
+-    padding: 0.5rem;
+-}
+-
+-/* City Switcher - Custom (COMMENTED OUT FOR TESTING) */
++/* City Switcher */
+ .city-switcher {
+     position: relative;
+     margin-left: auto;
+@@ -262,15 +190,14 @@ body.index-page header.visible {
+     background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%);
+     border: 2px solid rgba(255, 255, 255, 0.3);
+     border-radius: 12px;
+-    min-width: 60px;
+-    width: 60px;
++    min-width: auto;
+     height: 44px;
+     min-height: 44px;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+-    gap: 0.3rem;
+-    padding: 0.5rem;
++    gap: 0.5rem;
++    padding: 0.5rem 1rem;
+     cursor: pointer;
+     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+     backdrop-filter: blur(15px);
+@@ -295,7 +222,7 @@ body.index-page header.visible {
+ }
+ 
+ .city-emoji {
+-    font-size: 1.8rem;
++    font-size: 1.6rem;
+     flex-shrink: 0;
+     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+     transition: transform 0.3s ease;
+@@ -312,7 +239,7 @@ body.index-page header.visible {
+ }
+ 
+ .city-carrot {
+-    font-size: 0.7rem;
++    font-size: 0.8rem;
+     margin-left: 0.1rem;
+     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+     opacity: 0.9;
+@@ -3321,21 +3248,6 @@ footer {
+     }
+ 
+     /* Mobile header adjustments */
+-    .city-switcher-native {
+-        margin-right: 0.5rem;
+-    }
+-
+-    .city-switcher-select {
+-        min-width: 50px;
+-        width: 50px;
+-        font-size: 0.8rem;
+-        padding: 0.3rem 0.6rem;
+-        padding-right: 1.8rem;
+-        min-height: 36px;
+-        height: 36px;
+-        border-radius: 8px;
+-    }
+-
+     .city-switcher {
+         margin-right: 0.5rem;
+     }
+@@ -3408,17 +3320,6 @@ footer {
+         font-size: 1.2rem;
+     }
+     
+-    .city-switcher-select {
+-        min-width: 45px;
+-        width: 45px;
+-        font-size: 0.75rem;
+-        padding: 0.2rem 0.5rem;
+-        padding-right: 1.5rem;
+-        min-height: 32px;
+-        height: 32px;
+-        border-radius: 6px;
+-    }
+-    
+     .city-switcher-btn {
+         min-height: 32px;
+         height: 32px;
+@@ -4677,9 +4578,9 @@ footer {
+         gap: 0.2rem;
+     }
+ 
+-    /* Keep city name hidden even on larger screens - emoji-only button */
++    /* Show city name on larger screens */
+     .city-name {
+-        display: none !important;
++        display: inline-block !important;
+     }
+ 
+     /* Ensure carrot is always visible */
+diff --git a/tools/generate-city-pages.js b/tools/generate-city-pages.js
+index b7e3fd1..416237f 100644
+--- a/tools/generate-city-pages.js
++++ b/tools/generate-city-pages.js
+@@ -37,17 +37,13 @@ function generateCityHeader(html, cityKey, cityConfig) {
+     .filter(([, cfg]) => cfg && cfg.visible !== false)
+     .map(([key, cfg]) => ({ key, ...cfg }));
+ 
+-  // Build city dropdown options HTML with direct links (for custom dropdown)
++  // Build city dropdown options HTML with direct links
+   const cityOptions = availableCities.map(city => `
+                             <a href="../${city.key}/" class="city-option">
+                                 <span class="city-option-emoji">${city.emoji}</span>
+                                 <span class="city-option-name">${city.name}</span>
+                             </a>`).join('');
+ 
+-  // Build native select options HTML - full names for dropdown, but CSS will hide text in button
+-  const nativeSelectOptions = availableCities.map(city => `
+-                            <option value="../${city.key}/" ${city.key === cityKey ? 'selected' : ''}>${city.emoji} ${city.name}</option>`).join('');
+-
+   // Create complete header HTML with pre-populated city selector
+   const headerHtml = `    <header>
+         <nav>
+@@ -56,15 +52,7 @@ function generateCityHeader(html, cityKey, cityConfig) {
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="${cityConfig.emoji}">
+-                        ${nativeSelectOptions}
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
+@@ -72,10 +60,9 @@ function generateCityHeader(html, cityKey, cityConfig) {
+                         <span class="city-name">${cityConfig.name}</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">${cityOptions}
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">${cityOptions}
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+@@ -157,8 +144,6 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
+     }
+   }
+ 
+-  // No longer need emoji update script - emoji is set by data-emoji attribute
+-
+   // Rewrite asset and link paths for subdirectory depth
+   html = html.replace(/href="(styles\.css)"/g, 'href="../$1"');
+   html = html.replace(/src="js\//g, 'src="../js/');
+diff --git a/toronto/index.html b/toronto/index.html
+index 48e31ac..a31fdeb 100644
+--- a/toronto/index.html
++++ b/toronto/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/toronto</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🍁">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" selected>🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" >🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Toronto">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Toronto</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
+diff --git a/vegas/index.html b/vegas/index.html
+index 2738b3f..2bae2ec 100644
+--- a/vegas/index.html
++++ b/vegas/index.html
+@@ -152,30 +152,7 @@
+                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/vegas</a></h1>
+                 </div>
+                 
+-                <!-- Native Select City Switcher with emoji-only display -->
+-                <div class="city-switcher-native">
+-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="🎰">
+-                        
+-                            <option value="../new-york/" >🗽 New York</option>
+-                            <option value="../seattle/" >🌲 Seattle</option>
+-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
+-                            <option value="../toronto/" >🍁 Toronto</option>
+-                            <option value="../london/" >🇬🇧 London</option>
+-                            <option value="../chicago/" >🏙️ Chicago</option>
+-                            <option value="../berlin/" >🇩🇪 Berlin</option>
+-                            <option value="../palm-springs/" >🌴 Palm Springs</option>
+-                            <option value="../denver/" >🏔️ Denver</option>
+-                            <option value="../vegas/" selected>🎰 Las Vegas</option>
+-                            <option value="../atlanta/" >🍑 Atlanta</option>
+-                            <option value="../new-orleans/" >🎷 New Orleans</option>
+-                            <option value="../sf/" >🌉 San Francisco</option>
+-                            <option value="../portland/" >🌲 Portland</option>
+-                            <option value="../sitges/" >🏖️ Sitges</option>
+-                    </select>
+-                </div>
+-                
+-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+-                <!--
++                <!-- Pure HTML/CSS city selector -->
+                 <div class="city-switcher">
+                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Las Vegas">
+@@ -183,7 +160,7 @@
+                         <span class="city-name">Las Vegas</span>
+                         <span class="city-carrot">▼</span>
+                     </label>
+-                    <div class="city-dropdown">
++                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
+                             <a href="../new-york/" class="city-option">
+                                 <span class="city-option-emoji">🗽</span>
+                                 <span class="city-option-name">New York</span>
+@@ -246,7 +223,6 @@
+                             </a>
+                     </div>
+                 </div>
+-                -->
+                 
+                 <div class="hamburger">
+                     <span></span>
