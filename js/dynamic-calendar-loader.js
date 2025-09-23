@@ -2510,6 +2510,14 @@ class DynamicCalendarLoader extends CalendarCore {
                         // Create custom marker icon with favicon or fallback
                         const markerIcon = this.createMarkerIcon(event);
                         
+                        logger.debug('MAP', 'Creating marker', {
+                            eventName: event.name,
+                            coordinates: event.coordinates,
+                            iconSize: markerIcon.options.iconSize,
+                            iconAnchor: markerIcon.options.iconAnchor,
+                            popupAnchor: markerIcon.options.popupAnchor
+                        });
+                        
                         const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
                             icon: markerIcon,
                             eventSlug: event.slug
