@@ -444,7 +444,7 @@ class CalendarCore {
             .replace(/\\\\/g, '\\');   // Unescape backslashes (\\ -> \)
     }
     
-    // Check if a key is valid for metadata (single word, reasonable length)
+    // Check if a key is valid for metadata (words with spaces allowed, reasonable length)
     isValidMetadataKey(key) {
         if (!key || typeof key !== 'string') {
             return false;
@@ -452,10 +452,10 @@ class CalendarCore {
         
         const trimmedKey = key.trim();
         
-        // Must be a single word (no spaces) and reasonable length
-        return /^[a-zA-Z][a-zA-Z0-9]*$/.test(trimmedKey) && 
+        // Must be words (spaces allowed between words) and reasonable length
+        return /^[a-zA-Z][a-zA-Z0-9\s]*[a-zA-Z0-9]$/.test(trimmedKey) && 
                trimmedKey.length >= 2 && 
-               trimmedKey.length <= 20;
+               trimmedKey.length <= 30;
     }
 
     // Parse description for key-value pairs
