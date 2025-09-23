@@ -3526,10 +3526,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 window.locationManager = new LocationManager();
             }
             
-            const location = await window.locationManager.initializeLocationFeatures();
+            // Use the same method that updateLocationStatus uses, but without UI updates
+            const location = await window.locationManager.getLocationForFeatures();
             
             if (location) {
                 this.userLocation = location;
+                window.userLocation = location; // Store globally for consistency
                 this.enableLocationFeatures();
                 logger.info('CALENDAR', 'Location features enabled', { 
                     lat: this.userLocation.lat, 
@@ -3802,58 +3804,27 @@ function updateLocationButtonStatus(status, detail = '') {
     }
 }
 
-// Check and update location status on page load
+// Check and update location status on page load (UI only - location logic moved to LocationManager)
 async function updateLocationStatus() {
     try {
         if (!window.locationManager) {
             window.locationManager = new LocationManager();
         }
         
-        const status = await window.locationManager.getLocationStatus();
+        // Let LocationManager handle all location logic and UI updates
+        const location = await window.locationManager.updateLocationStatus(updateLocationButtonStatus);
         
-        if (status.supported && status.permissionState === 'granted' && status.hasCachedLocation) {
-            updateLocationButtonStatus('success', 'cached');
-            
-            // Store cached location for features
-            const cached = window.locationManager.getCachedLocation();
-            if (cached) {
-                window.userLocation = cached;
-                logger.debug('MAP', 'Cached location stored for features', { 
-                    lat: cached.lat, 
-                    lng: cached.lng,
-                    stale: cached.stale 
-                });
-            }
-        } else if (status.supported && status.permissionState === 'granted' && !status.hasCachedLocation) {
-            // We have permission but no cached location - request silently
-            updateLocationButtonStatus('loading', 'checking');
-            
-            try {
-                const location = await window.locationManager.getLocationForFeatures();
-                if (location) {
-                    window.userLocation = location;
-                    updateLocationButtonStatus('success', 'fresh');
-                    
-                    logger.debug('MAP', 'Fresh location obtained silently', { 
-                        lat: location.lat, 
-                        lng: location.lng,
-                        source: location.source 
-                    });
-                } else {
-                    updateLocationButtonStatus('default');
-                }
-            } catch (error) {
-                // Silent fail - user can still use manual button
-                updateLocationButtonStatus('default');
-                logger.debug('MAP', 'Silent location request failed', { error: error.message });
-            }
-        } else if (status.supported && status.permissionState === 'denied') {
-            updateLocationButtonStatus('error');
+        if (location) {
+            logger.debug('MAP', 'Location status updated successfully', { 
+                lat: location.lat, 
+                lng: location.lng,
+                source: location.source 
+            });
         } else {
-            updateLocationButtonStatus('default');
+            logger.debug('MAP', 'No location available');
         }
     } catch (error) {
-        logger.debug('MAP', 'Location status check failed', { error: error.message });
+        logger.debug('MAP', 'Location status update failed', { error: error.message });
         updateLocationButtonStatus('default');
     }
 }

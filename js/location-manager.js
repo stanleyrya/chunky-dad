@@ -440,6 +440,70 @@ class LocationManager {
             return null;
         }
     }
+
+    /**
+     * Update location status and store in global variable for UI access
+     * This handles the complete location status flow including UI updates
+     * @param {Function} updateButtonStatus - Callback to update UI button status
+     * @returns {Object|null} Location data if available, null otherwise
+     */
+    async updateLocationStatus(updateButtonStatus) {
+        try {
+            const status = await this.getLocationStatus();
+            
+            if (status.supported && status.permissionState === 'granted' && status.hasCachedLocation) {
+                updateButtonStatus('success', 'cached');
+                
+                // Store cached location for features
+                const cached = this.getCachedLocation();
+                if (cached) {
+                    window.userLocation = cached;
+                    this.logger.debug('LOCATION', 'Cached location stored for features', { 
+                        lat: cached.lat, 
+                        lng: cached.lng,
+                        stale: cached.stale 
+                    });
+                    return cached;
+                }
+            } else if (status.supported && status.permissionState === 'granted' && !status.hasCachedLocation) {
+                // We have permission but no cached location - request silently
+                updateButtonStatus('loading', 'checking');
+                
+                try {
+                    const location = await this.getLocationForFeatures();
+                    if (location) {
+                        window.userLocation = location;
+                        updateButtonStatus('success', 'fresh');
+                        
+                        this.logger.debug('LOCATION', 'Fresh location obtained silently', { 
+                            lat: location.lat, 
+                            lng: location.lng,
+                            source: location.source 
+                        });
+                        return location;
+                    } else {
+                        updateButtonStatus('default');
+                        return null;
+                    }
+                } catch (error) {
+                    // Silent fail - user can still use manual button
+                    updateButtonStatus('default');
+                    this.logger.debug('LOCATION', 'Silent location request failed', { error: error.message });
+                    return null;
+                }
+            } else if (status.supported && status.permissionState === 'denied') {
+                updateButtonStatus('error');
+                return null;
+            } else {
+                updateButtonStatus('default');
+                return null;
+            }
+        } catch (error) {
+            this.logger.debug('LOCATION', 'Location status check failed', { error: error.message });
+            updateButtonStatus('default');
+            return null;
+        }
+    }
 }
 
 // Export for use in other modules
