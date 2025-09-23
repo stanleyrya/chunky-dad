@@ -3521,7 +3521,7 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             logger.debug('CALENDAR', 'Initializing location features');
             
-            // Use existing updateLocationStatus but store result
+            // Use existing updateLocationStatus (it already stores location in window.userLocation)
             await updateLocationStatus();
             
             // If we got location, enable distance features
@@ -3595,36 +3595,19 @@ class DynamicCalendarLoader extends CalendarCore {
         return degrees * (Math.PI / 180);
     }
 
-    // Show user location on map if available
+    // Show user location on map if available (reuse existing showMyLocation function)
     showUserLocationIfAvailable() {
         if (!this.userLocation || !window.eventsMap) return;
         
-        try {
-            // Remove existing location circle if any
-            if (window.myLocationCircle) {
-                window.eventsMap.removeLayer(window.myLocationCircle);
-            }
-            
-            // Add location circle
-            window.myLocationCircle = L.circle([this.userLocation.lat, this.userLocation.lng], {
-                color: '#4285f4',
-                fillColor: '#4285f4',
-                fillOpacity: 0.2,
-                radius: this.userLocation.accuracy || 50
-            }).addTo(window.eventsMap);
-            
-            // Update button status
-            updateLocationButtonStatus('success', this.userLocation.stale ? 'cached' : 'fresh');
-            
-            logger.info('MAP', 'User location displayed on map', {
-                lat: this.userLocation.lat,
-                lng: this.userLocation.lng,
-                accuracy: this.userLocation.accuracy,
-                source: this.userLocation.source
-            });
-        } catch (error) {
-            logger.warn('MAP', 'Failed to show user location on map', { error: error.message });
-        }
+        // Simply call the existing showMyLocation function since it already handles everything
+        // The function will use the cached location if available, or request a new one
+        showMyLocation();
+        
+        logger.info('MAP', 'User location display triggered', {
+            hasLocation: !!this.userLocation,
+            lat: this.userLocation?.lat,
+            lng: this.userLocation?.lng
+        });
     }
 
     // Initialize
