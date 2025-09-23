@@ -171,7 +171,7 @@ body.index-page header.visible {
     opacity: 1;
 }
 
-/* City Switcher - Native Select with Custom Button Styling */
+/* City Switcher - Native Select (EXPERIMENTAL) */
 .city-switcher-native {
     position: relative;
     margin-left: auto;
@@ -183,40 +183,22 @@ body.index-page header.visible {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
-    min-width: 60px;
-    width: 60px;
-    height: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
+    padding: 0.5rem 1rem;
+    color: var(--text-inverse);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(15px);
-    color: var(--text-inverse);
-    font-family: inherit;
     box-shadow: 0 4px 20px var(--shadow-medium);
-    position: relative;
-    overflow: hidden;
+    min-width: 200px;
     appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 0.8rem;
-    padding-right: 1.8rem;
-    /* Show emoji and text properly */
-    text-align: center;
-    font-size: 1.2rem;
-    line-height: 1;
-}
-
-/* Style the selected option text to show emoji prominently */
-.city-switcher-select option {
-    background: var(--dropdown-bg);
-    color: var(--text-primary);
-    padding: 0.5rem;
-    font-size: 1rem;
+    background-position: right 0.7rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
 }
 
 .city-switcher-select:hover {
@@ -224,11 +206,6 @@ body.index-page header.visible {
     border-color: rgba(255, 255, 255, 0.6);
     transform: translateY(-2px);
     box-shadow: 0 8px 30px var(--shadow-heavy);
-}
-
-.city-switcher-select:active {
-    transform: translateY(0) scale(0.98);
-    box-shadow: 0 4px 15px var(--shadow-medium);
 }
 
 .city-switcher-select:focus {
@@ -262,15 +239,14 @@ body.index-page header.visible {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
-    min-width: 60px;
-    width: 60px;
+    min-width: auto;
     height: 44px;
     min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
-    padding: 0.5rem;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(15px);
@@ -295,7 +271,7 @@ body.index-page header.visible {
 }
 
 .city-emoji {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     flex-shrink: 0;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
     transition: transform 0.3s ease;
@@ -312,7 +288,7 @@ body.index-page header.visible {
 }
 
 .city-carrot {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     margin-left: 0.1rem;
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0.9;
@@ -3326,8 +3302,7 @@ footer {
     }
 
     .city-switcher-select {
-        min-width: 50px;
-        width: 50px;
+        min-width: 140px;
         font-size: 0.8rem;
         padding: 0.3rem 0.6rem;
         padding-right: 1.8rem;
@@ -3409,8 +3384,7 @@ footer {
     }
     
     .city-switcher-select {
-        min-width: 45px;
-        width: 45px;
+        min-width: 120px;
         font-size: 0.75rem;
         padding: 0.2rem 0.5rem;
         padding-right: 1.5rem;
@@ -4677,9 +4651,9 @@ footer {
         gap: 0.2rem;
     }
 
-    /* Keep city name hidden even on larger screens - emoji-only button */
+    /* Show city name on larger screens */
     .city-name {
-        display: none !important;
+        display: inline-block !important;
     }
 
     /* Ensure carrot is always visible */

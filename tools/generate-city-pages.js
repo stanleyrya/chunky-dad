@@ -44,7 +44,7 @@ function generateCityHeader(html, cityKey, cityConfig) {
                                 <span class="city-option-name">${city.name}</span>
                             </a>`).join('');
 
-  // Build native select options HTML - full names for dropdown, but CSS will hide text in button
+  // Build native select options HTML
   const nativeSelectOptions = availableCities.map(city => `
                             <option value="../${city.key}/" ${city.key === cityKey ? 'selected' : ''}>${city.emoji} ${city.name}</option>`).join('');
 
@@ -56,14 +56,14 @@ function generateCityHeader(html, cityKey, cityConfig) {
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
                 </div>
                 
-                <!-- Native Select City Switcher with emoji-only display -->
+                <!-- Native Select City Switcher (EXPERIMENTAL) -->
                 <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value" data-emoji="${cityConfig.emoji}">
+                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
                         ${nativeSelectOptions}
                     </select>
                 </div>
                 
-                <!-- Custom HTML/CSS city selector (COMMENTED OUT) -->
+                <!-- Custom HTML/CSS city selector (COMMENTED OUT FOR TESTING) -->
                 <!--
                 <div class="city-switcher">
                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
@@ -156,8 +156,6 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
       html = html.replace('</head>', `  <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">\n</head>`);
     }
   }
-
-  // No longer need emoji update script - emoji is set by data-emoji attribute
 
   // Rewrite asset and link paths for subdirectory depth
   html = html.replace(/href="(styles\.css)"/g, 'href="../$1"');
