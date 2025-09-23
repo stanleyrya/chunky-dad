@@ -152,30 +152,7 @@
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/palm-springs</a></h1>
                 </div>
                 
-                <!-- Native Select City Switcher (EXPERIMENTAL) -->
-                <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
-                        
-                            <option value="../new-york/" >🗽 New York</option>
-                            <option value="../seattle/" >🌲 Seattle</option>
-                            <option value="../los-angeles/" >🌴 Los Angeles</option>
-                            <option value="../toronto/" >🍁 Toronto</option>
-                            <option value="../london/" >🇬🇧 London</option>
-                            <option value="../chicago/" >🏙️ Chicago</option>
-                            <option value="../berlin/" >🇩🇪 Berlin</option>
-                            <option value="../palm-springs/" selected>🌴 Palm Springs</option>
-                            <option value="../denver/" >🏔️ Denver</option>
-                            <option value="../vegas/" >🎰 Las Vegas</option>
-                            <option value="../atlanta/" >🍑 Atlanta</option>
-                            <option value="../new-orleans/" >🎷 New Orleans</option>
-                            <option value="../sf/" >🌉 San Francisco</option>
-                            <option value="../portland/" >🌲 Portland</option>
-                            <option value="../sitges/" >🏖️ Sitges</option>
-                    </select>
-                </div>
-                
-                <!-- Custom HTML/CSS city selector (COMMENTED OUT FOR TESTING) -->
-                <!--
+                <!-- Pure HTML/CSS city selector -->
                 <div class="city-switcher">
                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently Palm Springs">
@@ -183,7 +160,7 @@
                         <span class="city-name">Palm Springs</span>
                         <span class="city-carrot">▼</span>
                     </label>
-                    <div class="city-dropdown">
+                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">
                             <a href="../new-york/" class="city-option">
                                 <span class="city-option-emoji">🗽</span>
                                 <span class="city-option-name">New York</span>
@@ -246,7 +223,6 @@
                             </a>
                     </div>
                 </div>
-                -->
                 
                 <div class="hamburger">
                     <span></span>

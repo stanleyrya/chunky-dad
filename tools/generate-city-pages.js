@@ -37,16 +37,12 @@ function generateCityHeader(html, cityKey, cityConfig) {
     .filter(([, cfg]) => cfg && cfg.visible !== false)
     .map(([key, cfg]) => ({ key, ...cfg }));
 
-  // Build city dropdown options HTML with direct links (for custom dropdown)
+  // Build city dropdown options HTML with direct links
   const cityOptions = availableCities.map(city => `
                             <a href="../${city.key}/" class="city-option">
                                 <span class="city-option-emoji">${city.emoji}</span>
                                 <span class="city-option-name">${city.name}</span>
                             </a>`).join('');
-
-  // Build native select options HTML
-  const nativeSelectOptions = availableCities.map(city => `
-                            <option value="../${city.key}/" ${city.key === cityKey ? 'selected' : ''}>${city.emoji} ${city.name}</option>`).join('');
 
   // Create complete header HTML with pre-populated city selector
   const headerHtml = `    <header>
@@ -56,15 +52,7 @@ function generateCityHeader(html, cityKey, cityConfig) {
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
                 </div>
                 
-                <!-- Native Select City Switcher (EXPERIMENTAL) -->
-                <div class="city-switcher-native">
-                    <select id="city-switcher-select" class="city-switcher-select" onchange="window.location.href=this.value">
-                        ${nativeSelectOptions}
-                    </select>
-                </div>
-                
-                <!-- Custom HTML/CSS city selector (COMMENTED OUT FOR TESTING) -->
-                <!--
+                <!-- Pure HTML/CSS city selector -->
                 <div class="city-switcher">
                     <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
                     <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
@@ -72,10 +60,9 @@ function generateCityHeader(html, cityKey, cityConfig) {
                         <span class="city-name">${cityConfig.name}</span>
                         <span class="city-carrot">▼</span>
                     </label>
-                    <div class="city-dropdown">${cityOptions}
+                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">${cityOptions}
                     </div>
                 </div>
-                -->
                 
                 <div class="hamburger">
                     <span></span>
