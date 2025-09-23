@@ -60,7 +60,7 @@ function generateCityHeader(html, cityKey, cityConfig) {
                         <span class="city-name">${cityConfig.name}</span>
                         <span class="city-carrot">▼</span>
                     </label>
-                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">${cityOptions}
+                    <div class="city-dropdown">${cityOptions}
                     </div>
                 </div>
                 
