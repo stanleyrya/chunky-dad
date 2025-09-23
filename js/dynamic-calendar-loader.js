@@ -347,12 +347,12 @@ class DynamicCalendarLoader extends CalendarCore {
             calendarGrid.style.opacity = '0.7';
             
             // After animation completes, update content and animate new content in
-            setTimeout(() => {
+            setTimeout(async () => {
                 // Update the calendar content (skip immediate display update)
                 this.navigatePeriod(direction, false);
                 
                 // Update the display to get new content
-                this.updateCalendarDisplay();
+                await this.updateCalendarDisplay();
                 
                 // Prepare new content to slide in from opposite direction
                 const newCalendarGrid = document.querySelector('.calendar-grid');
@@ -1284,7 +1284,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Switch to week view for a specific date
-    switchToWeekView(dateString) {
+    async switchToWeekView(dateString) {
         this.currentDate = new Date(dateString);
         this.currentView = 'week';
         
@@ -1297,11 +1297,11 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Clear current selection when jumping views
         this.clearEventSelection();
-        this.updateCalendarDisplay();
+        await this.updateCalendarDisplay();
         this.syncUrl(true);
     }
 
-    navigatePeriod(direction, skipAnimation = false) {
+    async navigatePeriod(direction, skipAnimation = false) {
         const delta = direction === 'next' ? 1 : -1;
         
         logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
@@ -1331,14 +1331,14 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Only update display immediately if not part of a swipe animation
         if (skipAnimation) {
-            this.updateCalendarDisplay();
+            await this.updateCalendarDisplay();
         }
     }
 
-    goToToday() {
+    async goToToday() {
         this.currentDate = new Date();
         this.clearEventSelection();
-        this.updateCalendarDisplay();
+        await this.updateCalendarDisplay();
         this.syncUrl(true);
     }
 
@@ -2578,7 +2578,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
     // Update calendar display with filtered events
-    updateCalendarDisplay(hideEvents = false) {
+    async updateCalendarDisplay(hideEvents = false) {
         logger.time('CALENDAR', 'Calendar display update');
         const filteredEvents = this.getFilteredEvents();
         
@@ -2790,7 +2790,35 @@ class DynamicCalendarLoader extends CalendarCore {
                 logger.debug('CALENDAR', 'Map initialization completed');
                 
                 // Initialize location features after map is ready
-                this.initializeLocationFeatures();
+                try {
+                    if (!window.locationManager) {
+                        window.locationManager = new LocationManager();
+                    }
+                    
+                    const location = await window.locationManager.getLocationForFeatures();
+                    
+                    if (location) {
+                        this.userLocation = location;
+                        window.userLocation = location;
+                        this.locationFeaturesEnabled = true;
+                        
+                        // Calculate distances for all events
+                        this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);
+                        
+                        // Show user location on map
+                        showMyLocation();
+                        
+                        logger.info('CALENDAR', 'Location features enabled', { 
+                            lat: location.lat, 
+                            lng: location.lng,
+                            source: location.source 
+                        });
+                    } else {
+                        logger.debug('CALENDAR', 'No user location available for features');
+                    }
+                } catch (error) {
+                    logger.debug('CALENDAR', 'Location features initialization failed', { error: error.message });
+                }
             } else if (hideEvents) {
                 logger.debug('CALENDAR', 'Skipping map initialization (hideEvents mode)');
             } else {
@@ -3516,65 +3544,6 @@ class DynamicCalendarLoader extends CalendarCore {
         this.updateCalendarDisplay();
     }
 
-    // Initialize location features during calendar loading
-    async initializeLocationFeatures() {
-        try {
-            logger.debug('CALENDAR', 'Initializing location features');
-            
-            // Use LocationManager to handle all location logic
-            if (!window.locationManager) {
-                window.locationManager = new LocationManager();
-            }
-            
-            // Use the same method that updateLocationStatus uses, but without UI updates
-            const location = await window.locationManager.getLocationForFeatures();
-            
-            if (location) {
-                this.userLocation = location;
-                window.userLocation = location; // Store globally for consistency
-                this.enableLocationFeatures();
-                logger.info('CALENDAR', 'Location features enabled', { 
-                    lat: this.userLocation.lat, 
-                    lng: this.userLocation.lng,
-                    source: this.userLocation.source 
-                });
-            } else {
-                logger.debug('CALENDAR', 'No user location available for features');
-            }
-        } catch (error) {
-            logger.debug('CALENDAR', 'Location features initialization failed', { error: error.message });
-        }
-    }
-
-    // Enable location-based features
-    enableLocationFeatures() {
-        this.locationFeaturesEnabled = true;
-        
-        // Use LocationManager to calculate distances
-        this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, this.userLocation);
-        
-        // Show user location on map if not already visible
-        this.showUserLocationIfAvailable();
-        
-        logger.info('CALENDAR', 'Location features enabled', { 
-            eventsWithDistance: this.allEvents.filter(e => e.distanceFromUser !== undefined).length 
-        });
-    }
-
-    // Show user location on map if available (reuse existing showMyLocation function)
-    showUserLocationIfAvailable() {
-        if (!this.userLocation || !window.eventsMap) return;
-        
-        // Simply call the existing showMyLocation function since it already handles everything
-        // The function will use the cached location if available, or request a new one
-        showMyLocation();
-        
-        logger.info('MAP', 'User location display triggered', {
-            hasLocation: !!this.userLocation,
-            lat: this.userLocation?.lat,
-            lng: this.userLocation?.lng
-        });
-    }
 
     // Initialize
     async init() {
