@@ -30,38 +30,15 @@ function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
 }
 
-// Generate pre-populated header with city selector
+// Generate pre-populated header without city selector
 function generateCityHeader(html, cityKey, cityConfig) {
-  // Get all available cities for the dropdown
-  const availableCities = Object.entries(CITY_CONFIG)
-    .filter(([, cfg]) => cfg && cfg.visible !== false)
-    .map(([key, cfg]) => ({ key, ...cfg }));
 
-  // Build city dropdown options HTML with direct links
-  const cityOptions = availableCities.map(city => `
-                            <a href="../${city.key}/" class="city-option">
-                                <span class="city-option-emoji">${city.emoji}</span>
-                                <span class="city-option-name">${city.name}</span>
-                            </a>`).join('');
-
-  // Create complete header HTML with pre-populated city selector
+  // Create complete header HTML without city selector
   const headerHtml = `    <header>
         <nav>
             <div class="nav-container">
                 <div class="logo">
                     <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${cityKey}</a></h1>
-                </div>
-                
-                <!-- Pure HTML/CSS city selector -->
-                <div class="city-switcher">
-                    <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
-                    <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently ${cityConfig.name}">
-                        <span class="city-emoji">${cityConfig.emoji}</span>
-                        <span class="city-name">${cityConfig.name}</span>
-                        <span class="city-carrot">▼</span>
-                    </label>
-                    <div class="city-dropdown" style="opacity: 0; visibility: hidden;">${cityOptions}
-                    </div>
                 </div>
                 
                 <div class="hamburger">
