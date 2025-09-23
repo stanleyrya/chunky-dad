@@ -2706,6 +2706,34 @@ body.index-page main {
 .favicon-marker {
     background: none;
     border: none;
+    position: relative;
+}
+
+/* Ensure Leaflet divIcon positioning works correctly */
+.leaflet-div-icon {
+    background: none !important;
+    border: none !important;
+    position: absolute !important;
+    /* Ensure proper positioning */
+    margin: 0 !important;
+    padding: 0 !important;
+    /* Reset any potential CSS interference */
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+}
+
+.leaflet-marker-icon {
+    position: absolute !important;
+    /* Ensure proper positioning */
+    margin: 0 !important;
+    padding: 0 !important;
+    /* Reset any potential CSS interference */
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
 }
 
 .favicon-marker-container {
@@ -2721,6 +2749,14 @@ body.index-page main {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transition: all 0.2s ease;
     overflow: hidden;
+    /* Ensure proper positioning within Leaflet */
+    margin: 0;
+    padding: 0;
+    /* Prevent positioning conflicts with Leaflet */
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
 }
 
 .favicon-marker-container:hover {
