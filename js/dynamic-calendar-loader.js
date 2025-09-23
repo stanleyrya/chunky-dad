@@ -3521,12 +3521,15 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             logger.debug('CALENDAR', 'Initializing location features');
             
-            // Use existing updateLocationStatus (it already stores location in window.userLocation)
-            await updateLocationStatus();
+            // Use LocationManager to handle all location logic
+            if (!window.locationManager) {
+                window.locationManager = new LocationManager();
+            }
             
-            // If we got location, enable distance features
-            if (window.userLocation) {
-                this.userLocation = window.userLocation;
+            const location = await window.locationManager.initializeLocationFeatures();
+            
+            if (location) {
+                this.userLocation = location;
                 this.enableLocationFeatures();
                 logger.info('CALENDAR', 'Location features enabled', { 
                     lat: this.userLocation.lat, 
@@ -3545,8 +3548,8 @@ class DynamicCalendarLoader extends CalendarCore {
     enableLocationFeatures() {
         this.locationFeaturesEnabled = true;
         
-        // Calculate distances for all events
-        this.calculateEventDistances();
+        // Use LocationManager to calculate distances
+        this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, this.userLocation);
         
         // Show user location on map if not already visible
         this.showUserLocationIfAvailable();
@@ -3554,45 +3557,6 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.info('CALENDAR', 'Location features enabled', { 
             eventsWithDistance: this.allEvents.filter(e => e.distanceFromUser !== undefined).length 
         });
-    }
-
-    // Calculate distances from user location to all events
-    calculateEventDistances() {
-        if (!this.userLocation || !this.allEvents) return;
-        
-        this.allEvents.forEach(event => {
-            if (event.coordinates && event.coordinates.lat && event.coordinates.lng) {
-                const distance = this.calculateDistance(
-                    this.userLocation.lat, 
-                    this.userLocation.lng,
-                    event.coordinates.lat, 
-                    event.coordinates.lng
-                );
-                event.distanceFromUser = distance;
-            }
-        });
-        
-        logger.debug('CALENDAR', 'Event distances calculated', {
-            totalEvents: this.allEvents.length,
-            eventsWithDistance: this.allEvents.filter(e => e.distanceFromUser !== undefined).length
-        });
-    }
-
-    // Calculate distance between two coordinates using Haversine formula
-    calculateDistance(lat1, lng1, lat2, lng2) {
-        const R = 3959; // Earth's radius in miles
-        const dLat = this.toRadians(lat2 - lat1);
-        const dLng = this.toRadians(lng2 - lng1);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
-                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return Math.round(R * c * 10) / 10; // Round to 1 decimal place
-    }
-
-    // Convert degrees to radians
-    toRadians(degrees) {
-        return degrees * (Math.PI / 180);
     }
 
     // Show user location on map if available (reuse existing showMyLocation function)
@@ -3865,15 +3829,19 @@ async function updateLocationStatus() {
             updateLocationButtonStatus('loading', 'checking');
             
             try {
-                const location = await window.locationManager.getCurrentLocation({}, false);
-                window.userLocation = location;
-                updateLocationButtonStatus('success', 'fresh');
-                
-                logger.debug('MAP', 'Fresh location obtained silently', { 
-                    lat: location.lat, 
-                    lng: location.lng,
-                    source: location.source 
-                });
+                const location = await window.locationManager.getLocationForFeatures();
+                if (location) {
+                    window.userLocation = location;
+                    updateLocationButtonStatus('success', 'fresh');
+                    
+                    logger.debug('MAP', 'Fresh location obtained silently', { 
+                        lat: location.lat, 
+                        lng: location.lng,
+                        source: location.source 
+                    });
+                } else {
+                    updateLocationButtonStatus('default');
+                }
             } catch (error) {
                 // Silent fail - user can still use manual button
                 updateLocationButtonStatus('default');
