@@ -624,13 +624,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (marker._icon) {
                     if (slug === eventSlug) {
                         // Highlight the selected marker
-                        marker._icon.style.transform = 'translate(-20px, -20px) scale(1.4)';
+                        marker._icon.style.transform = 'scale(1.4)';
                         marker._icon.style.zIndex = '1010';
                         marker._icon.style.filter = 'drop-shadow(0 6px 12px rgba(255, 165, 0, 0.8)) brightness(1.2)';
                         marker._icon.style.opacity = '1';
                     } else {
                         // Dim unselected markers
-                        marker._icon.style.transform = 'translate(-20px, -20px)';
+                        marker._icon.style.transform = 'scale(1)';
                         marker._icon.style.zIndex = '1000';
                         marker._icon.style.filter = 'brightness(0.7)';
                         marker._icon.style.opacity = '0.8';
@@ -650,7 +650,7 @@ class DynamicCalendarLoader extends CalendarCore {
         if (window.eventsMapMarkersBySlug) {
             Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
                 if (marker._icon) {
-                    marker._icon.style.transform = 'translate(-20px, -20px)';
+                    marker._icon.style.transform = 'scale(1)';
                     marker._icon.style.zIndex = '1000';
                     marker._icon.style.filter = 'none';
                     marker._icon.style.opacity = '1';
