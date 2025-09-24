@@ -2820,6 +2820,31 @@ body.index-page main {
     transition: all 0.2s ease;
 }
 
+/* Fit Markers Button Icon State Management */
+#zoom-to-fit-btn {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+#zoom-to-fit-btn:not(.active) #zoom-to-fit-icon {
+    /* Default state: unfilled icon */
+}
+
+#zoom-to-fit-btn.active #zoom-to-fit-icon {
+    /* Active state: filled icon */
+}
+
+#zoom-to-fit-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+#zoom-to-fit-btn.active:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected {
     border: 2px solid var(--primary-color) !important;
@@ -2833,9 +2858,20 @@ body.index-page main {
 }
 
 #location-btn .location-status {
-    font-size: 0.7em;
-    margin-left: 2px;
-    opacity: 0.8;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 0.6em;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+    font-weight: bold;
 }
 
 #location-btn.location-loading {

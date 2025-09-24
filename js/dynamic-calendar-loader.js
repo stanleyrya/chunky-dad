@@ -2441,7 +2441,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
                 div.innerHTML = `
                     <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
-                        <i class="bi bi-pin-map-fill" id="zoom-to-fit-icon"></i>
+                        <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
                     </button>
                 `;
                 return div;
@@ -3618,6 +3618,20 @@ function fitAllMarkers() {
             padding: [20, 20],
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
+        
+        // Set active state and change icon to filled
+        const fitBtn = document.getElementById('zoom-to-fit-btn');
+        const fitIcon = document.getElementById('zoom-to-fit-icon');
+        if (fitBtn && fitIcon) {
+            fitBtn.classList.add('active');
+            fitIcon.className = 'bi bi-pin-map-fill';
+            
+            // Auto-unselect after 2 seconds
+            setTimeout(() => {
+                fitBtn.classList.remove('active');
+                fitIcon.className = 'bi bi-pin-map';
+            }, 2000);
+        }
         
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     } else {
