@@ -623,19 +623,24 @@ class DynamicCalendarLoader extends CalendarCore {
             Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
                 if (marker._icon) {
                     if (slug === eventSlug) {
-                        // Highlight the selected marker - bring to front without scaling
+                        // Highlight the selected marker - use border and box-shadow instead of filters
                         marker._icon.style.zIndex = '1010';
-                        marker._icon.style.filter = 'drop-shadow(0 6px 12px rgba(255, 165, 0, 0.8)) brightness(1.2)';
+                        marker._icon.style.filter = 'none'; // Remove problematic filters
                         marker._icon.style.opacity = '1';
-                        // Remove any transform to prevent positioning issues
                         marker._icon.style.transform = 'none';
+                        // Add border highlight instead of filter effects to avoid positioning issues
+                        marker._icon.style.border = '3px solid #FFA500';
+                        marker._icon.style.borderRadius = '50%';
+                        marker._icon.style.boxShadow = '0 0 15px rgba(255, 165, 0, 0.8)';
                     } else {
                         // Dim unselected markers
                         marker._icon.style.zIndex = '1000';
-                        marker._icon.style.filter = 'brightness(0.7)';
-                        marker._icon.style.opacity = '0.8';
-                        // Remove any transform to prevent positioning issues
+                        marker._icon.style.filter = 'none'; // Remove problematic filters
+                        marker._icon.style.opacity = '0.6'; // Use opacity instead of brightness filter
                         marker._icon.style.transform = 'none';
+                        // Remove any highlight styling
+                        marker._icon.style.border = 'none';
+                        marker._icon.style.boxShadow = 'none';
                     }
                 }
             });
@@ -655,8 +660,10 @@ class DynamicCalendarLoader extends CalendarCore {
                     marker._icon.style.zIndex = '1000';
                     marker._icon.style.filter = 'none';
                     marker._icon.style.opacity = '1';
-                    // Remove any transform to prevent positioning issues
                     marker._icon.style.transform = 'none';
+                    // Reset highlight styling
+                    marker._icon.style.border = 'none';
+                    marker._icon.style.boxShadow = 'none';
                 }
             });
             logger.debug('MAP', 'All markers reset to normal appearance');
