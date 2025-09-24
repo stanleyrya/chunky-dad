@@ -2706,6 +2706,7 @@ body.index-page main {
 .favicon-marker {
     background: none;
     border: none;
+    transform-origin: center center;
 }
 
 .favicon-marker-container {
