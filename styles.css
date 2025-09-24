@@ -2820,6 +2820,18 @@ body.index-page main {
     transition: all 0.2s ease;
 }
 
+/* Map Marker Selection States */
+.leaflet-marker-icon.marker-selected {
+    border: 2px solid var(--primary-color) !important;
+    border-radius: 50% !important;
+    z-index: 1010 !important;
+}
+
+.leaflet-marker-icon.marker-dimmed {
+    opacity: 0.6 !important;
+    z-index: 1000 !important;
+}
+
 #location-btn .location-status {
     font-size: 0.7em;
     margin-left: 2px;
