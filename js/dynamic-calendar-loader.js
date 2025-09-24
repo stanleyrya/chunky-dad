@@ -3619,19 +3619,19 @@ function fitAllMarkers() {
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
         
-        // Set active state and change icon to filled
+        // Toggle button state and icon
         const fitBtn = document.getElementById('zoom-to-fit-btn');
         const fitIcon = document.getElementById('zoom-to-fit-icon');
         if (fitBtn && fitIcon) {
-            // Use existing CSS classes for the color surrounding effect
-            fitBtn.classList.add('active');
-            fitIcon.className = 'bi bi-pin-map-fill';
+            // Toggle active state
+            fitBtn.classList.toggle('active');
             
-            // Auto-unselect after 2 seconds
-            setTimeout(() => {
-                fitBtn.classList.remove('active');
+            // Show filled icon when active, unfilled when not
+            if (fitBtn.classList.contains('active')) {
+                fitIcon.className = 'bi bi-pin-map-fill';
+            } else {
                 fitIcon.className = 'bi bi-pin-map';
-            }, 2000);
+            }
         }
         
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
