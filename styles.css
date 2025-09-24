@@ -2780,7 +2780,7 @@ body.index-page main {
 
 /* Map Controls */
 .map-control-btn {
-    background: rgba(255, 255, 255, 1);
+    background: var(--background-primary);
     border: 2px solid var(--border-light);
     border-radius: 8px;
     width: 34px;
@@ -2797,7 +2797,7 @@ body.index-page main {
 }
 
 .map-control-btn:hover {
-    background: rgba(248, 250, 252, 1);
+    background: var(--background-light);
     border-color: var(--primary-color);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px var(--shadow-primary);
@@ -2831,23 +2831,23 @@ body.index-page main {
 }
 
 #location-btn.location-success {
-    color: #4caf50;
-    background: rgba(255, 255, 255, 0.95);
-    border-color: #4caf50;
+    color: var(--color-success-light);
+    background: var(--background-primary);
+    border-color: var(--color-success-light);
     backdrop-filter: blur(10px);
 }
 
 #location-btn.location-error {
-    color: #f44336;
-    background: rgba(255, 255, 255, 0.95);
-    border-color: #f44336;
+    color: var(--error-color);
+    background: var(--background-primary);
+    border-color: var(--error-color);
     backdrop-filter: blur(10px);
 }
 
 
 @keyframes pulse {
     0%, 100% { 
-        background: var(--white);
+        background: var(--background-primary);
         border-color: var(--border-light);
     }
     50% { 
