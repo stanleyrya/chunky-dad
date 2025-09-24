@@ -2775,12 +2775,12 @@ body.index-page main {
 
 .event-card[data-lat]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 8px 25px var(--shadow-primary);
 }
 
 /* Map Controls */
 .map-control-btn {
-    background: var(--white);
+    background: var(--background-primary);
     border: 2px solid var(--border-light);
     border-radius: 8px;
     width: 34px;
@@ -2793,6 +2793,7 @@ body.index-page main {
     transition: all 0.3s ease;
     box-shadow: 0 2px 6px var(--shadow-light);
     margin-bottom: 4px;
+    backdrop-filter: blur(10px);
 }
 
 .map-control-btn:hover {
@@ -2819,6 +2820,18 @@ body.index-page main {
     transition: all 0.2s ease;
 }
 
+/* Map Marker Selection States */
+.leaflet-marker-icon.marker-selected {
+    border: 2px solid var(--primary-color) !important;
+    border-radius: 50% !important;
+    z-index: 1010 !important;
+}
+
+.leaflet-marker-icon.marker-dimmed {
+    opacity: 0.6 !important;
+    z-index: 1000 !important;
+}
+
 #location-btn .location-status {
     font-size: 0.7em;
     margin-left: 2px;
@@ -2830,21 +2843,23 @@ body.index-page main {
 }
 
 #location-btn.location-success {
-    color: #4caf50;
-    background: rgba(76, 175, 80, 0.1);
-    border-color: #4caf50;
+    color: var(--color-success-light);
+    background: var(--background-primary);
+    border-color: var(--color-success-light);
+    backdrop-filter: blur(10px);
 }
 
 #location-btn.location-error {
-    color: #f44336;
-    background: rgba(244, 67, 54, 0.1);
-    border-color: #f44336;
+    color: var(--error-color);
+    background: var(--background-primary);
+    border-color: var(--error-color);
+    backdrop-filter: blur(10px);
 }
 
 
 @keyframes pulse {
     0%, 100% { 
-        background: var(--white);
+        background: var(--background-primary);
         border-color: var(--border-light);
     }
     50% { 
@@ -4040,8 +4055,8 @@ footer {
 /* Event Card Selected State (persistent) */
 .event-card.selected {
     border: 2px solid var(--primary-color);
-    background: linear-gradient(135deg, var(--card-background) 0%, rgba(255, 165, 0, 0.1) 100%);
-    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+    background: var(--background-primary);
+    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 /* Calendar Event Item Selected State */

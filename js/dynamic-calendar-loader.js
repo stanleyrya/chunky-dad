@@ -616,39 +616,25 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        const selectedMarker = window.eventsMapMarkersBySlug[eventSlug];
-        
-        // Dim all unselected markers and highlight the selected one
+        // Use CSS classes instead of inline styles
         if (window.eventsMapMarkersBySlug) {
             Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
                 if (marker._icon) {
+                    // Remove all marker state classes
+                    marker._icon.classList.remove('marker-selected', 'marker-dimmed');
+                    
                     if (slug === eventSlug) {
-                        // Highlight the selected marker - use border and box-shadow instead of filters
-                        marker._icon.style.zIndex = '1010';
-                        marker._icon.style.filter = 'none'; // Remove problematic filters
-                        marker._icon.style.opacity = '1';
-                        // NEVER remove transform - Leaflet needs it for positioning
-                        // Add border highlight instead of filter effects to avoid positioning issues
-                        marker._icon.style.border = '3px solid #FFA500';
-                        marker._icon.style.borderRadius = '50%';
-                        marker._icon.style.boxShadow = '0 0 15px rgba(255, 165, 0, 0.8)';
+                        // Highlight the selected marker
+                        marker._icon.classList.add('marker-selected');
                     } else {
                         // Dim unselected markers
-                        marker._icon.style.zIndex = '1000';
-                        marker._icon.style.filter = 'none'; // Remove problematic filters
-                        marker._icon.style.opacity = '0.6'; // Use opacity instead of brightness filter
-                        // NEVER remove transform - Leaflet needs it for positioning
-                        // Remove any highlight styling
-                        marker._icon.style.border = 'none';
-                        marker._icon.style.boxShadow = 'none';
+                        marker._icon.classList.add('marker-dimmed');
                     }
                 }
             });
         }
         
-        // Selected marker is already brought to front via higher zIndex
         logger.debug('MAP', 'Selected marker highlighted, unselected markers dimmed', { eventSlug });
-        
         logger.userInteraction('MAP', 'Marker highlighted and unselected markers dimmed', { eventSlug });
     }
 
@@ -657,13 +643,8 @@ class DynamicCalendarLoader extends CalendarCore {
         if (window.eventsMapMarkersBySlug) {
             Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
                 if (marker._icon) {
-                    marker._icon.style.zIndex = '1000';
-                    marker._icon.style.filter = 'none';
-                    marker._icon.style.opacity = '1';
-                    // NEVER remove transform - Leaflet needs it for positioning
-                    // Reset highlight styling
-                    marker._icon.style.border = 'none';
-                    marker._icon.style.boxShadow = 'none';
+                    // Remove all marker state classes
+                    marker._icon.classList.remove('marker-selected', 'marker-dimmed');
                 }
             });
             logger.debug('MAP', 'All markers reset to normal appearance');
