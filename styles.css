@@ -2826,7 +2826,6 @@ body.index-page main {
 }
 
 #location-btn.location-loading {
-    opacity: 0.7;
     animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -2842,9 +2841,32 @@ body.index-page main {
     border-color: #f44336;
 }
 
+/* Fit Markers Button Status Styles */
+#zoom-to-fit-btn.fit-markers-loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+#zoom-to-fit-btn.fit-markers-success {
+    color: #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+    border-color: #4caf50;
+}
+
+#zoom-to-fit-btn.fit-markers-error {
+    color: #f44336;
+    background: rgba(244, 67, 54, 0.1);
+    border-color: #f44336;
+}
+
 @keyframes pulse {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
+    0%, 100% { 
+        background: var(--white);
+        border-color: var(--border-light);
+    }
+    50% { 
+        background: var(--background-light);
+        border-color: var(--primary-color);
+    }
 }
 
 /* My Location Circle */
