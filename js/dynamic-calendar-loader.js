@@ -618,6 +618,13 @@ class DynamicCalendarLoader extends CalendarCore {
         
         const selectedMarker = window.eventsMapMarkersBySlug[eventSlug];
         
+        // Get CSS variables from computed styles
+        const computedStyles = getComputedStyle(document.documentElement);
+        const primaryColor = computedStyles.getPropertyValue('--primary-color').trim();
+        
+        // Create shadow using primary color with transparency
+        const primaryShadow = `0 2px 8px ${primaryColor}33`; // 33 is 20% opacity in hex
+        
         // Dim all unselected markers and highlight the selected one
         if (window.eventsMapMarkersBySlug) {
             Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
@@ -629,9 +636,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         marker._icon.style.opacity = '1';
                         // NEVER remove transform - Leaflet needs it for positioning
                         // Clean border highlight using brand colors
-                        marker._icon.style.border = '2px solid #667eea';
+                        marker._icon.style.border = `2px solid ${primaryColor}`;
                         marker._icon.style.borderRadius = '50%';
-                        marker._icon.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+                        marker._icon.style.boxShadow = primaryShadow;
                     } else {
                         // Dim unselected markers
                         marker._icon.style.zIndex = '1000';
@@ -3677,9 +3684,12 @@ async function showMyLocation() {
             }
             
             // Add location circle instead of marker
+            const computedStyles = getComputedStyle(document.documentElement);
+            const primaryColor = computedStyles.getPropertyValue('--primary-color').trim();
+            
             window.myLocationCircle = L.circle([location.lat, location.lng], {
-                color: '#4285f4',
-                fillColor: '#4285f4',
+                color: primaryColor,
+                fillColor: primaryColor,
                 fillOpacity: 0.2,
                 radius: 500,
                 weight: 3

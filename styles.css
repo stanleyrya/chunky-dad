@@ -2775,7 +2775,7 @@ body.index-page main {
 
 .event-card[data-lat]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 8px 25px var(--shadow-primary);
 }
 
 /* Map Controls */
@@ -4044,7 +4044,7 @@ footer {
 .event-card.selected {
     border: 2px solid var(--primary-color);
     background: var(--background-primary);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 /* Calendar Event Item Selected State */
