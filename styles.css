@@ -2894,6 +2894,9 @@ body.index-page main {
 }
 
 /* My Location Circle */
+.leaflet-interactive[stroke="#4285f4"] {
+    z-index: 1000 !important;
+}
 
 
 
