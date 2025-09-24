@@ -2843,27 +2843,6 @@ body.index-page main {
     z-index: 1000 !important;
 }
 
-#location-btn .location-status {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    font-size: 0.6em;
-    background: var(--primary-color);
-    color: white;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.9;
-    font-weight: bold;
-}
-
-/* Hide status circle when empty */
-#location-btn .location-status:empty {
-    display: none;
-}
 
 #location-btn.location-loading {
     animation: pulse 1.5s ease-in-out infinite;

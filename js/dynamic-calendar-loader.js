@@ -2455,7 +2455,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 div.innerHTML = `
                     <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
                         <i class="bi bi-crosshair2" id="location-icon"></i>
-                        <span id="location-status" class="location-status"></span>
                     </button>
                 `;
                 return div;
@@ -3752,35 +3751,29 @@ async function showMyLocation() {
 
 // Update location button status indicator
 function updateLocationButtonStatus(status, detail = '') {
-    const statusEl = document.getElementById('location-status');
     const iconEl = document.getElementById('location-icon');
     const btnEl = document.getElementById('location-btn');
     
-    if (!statusEl || !iconEl || !btnEl) return;
+    if (!iconEl || !btnEl) return;
     
     // Remove existing status classes
     btnEl.classList.remove('location-loading', 'location-success', 'location-error');
-    statusEl.textContent = '';
     
     switch (status) {
         case 'loading':
             btnEl.classList.add('location-loading');
             iconEl.className = 'bi bi-hourglass-split';
-            statusEl.textContent = '';
             break;
         case 'success':
             btnEl.classList.add('location-success');
             iconEl.className = 'bi bi-crosshair2';
-            statusEl.textContent = '';
             break;
         case 'error':
             btnEl.classList.add('location-error');
             iconEl.className = 'bi bi-crosshair2';
-            statusEl.textContent = '';
             break;
         default:
             iconEl.className = 'bi bi-crosshair';
-            statusEl.textContent = '';
     }
 }
 
