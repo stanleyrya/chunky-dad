@@ -2826,7 +2826,7 @@ body.index-page main {
 }
 
 #location-btn.location-loading {
-    opacity: 0.7;
+    opacity: 0.9;
     animation: pulse 1.5s ease-in-out infinite;
 }
 
