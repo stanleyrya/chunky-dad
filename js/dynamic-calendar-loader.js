@@ -623,19 +623,19 @@ class DynamicCalendarLoader extends CalendarCore {
             Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
                 if (marker._icon) {
                     if (slug === eventSlug) {
-                        // Highlight the selected marker
-                        marker._icon.style.transformOrigin = 'center center';
-                        marker._icon.style.transform = 'scale(1.4)';
+                        // Highlight the selected marker - bring to front without scaling
                         marker._icon.style.zIndex = '1010';
                         marker._icon.style.filter = 'drop-shadow(0 6px 12px rgba(255, 165, 0, 0.8)) brightness(1.2)';
                         marker._icon.style.opacity = '1';
+                        // Remove any transform to prevent positioning issues
+                        marker._icon.style.transform = 'none';
                     } else {
                         // Dim unselected markers
-                        marker._icon.style.transformOrigin = 'center center';
-                        marker._icon.style.transform = 'scale(1)';
                         marker._icon.style.zIndex = '1000';
                         marker._icon.style.filter = 'brightness(0.7)';
                         marker._icon.style.opacity = '0.8';
+                        // Remove any transform to prevent positioning issues
+                        marker._icon.style.transform = 'none';
                     }
                 }
             });
@@ -652,11 +652,11 @@ class DynamicCalendarLoader extends CalendarCore {
         if (window.eventsMapMarkersBySlug) {
             Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
                 if (marker._icon) {
-                    marker._icon.style.transformOrigin = 'center center';
-                    marker._icon.style.transform = 'scale(1)';
                     marker._icon.style.zIndex = '1000';
                     marker._icon.style.filter = 'none';
                     marker._icon.style.opacity = '1';
+                    // Remove any transform to prevent positioning issues
+                    marker._icon.style.transform = 'none';
                 }
             });
             logger.debug('MAP', 'All markers reset to normal appearance');
