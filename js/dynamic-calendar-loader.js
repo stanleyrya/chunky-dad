@@ -521,6 +521,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Update visual selection state across all views (calendar, list, map)
     updateSelectionVisualState() {
+        logger.debug('EVENT', 'Updating visual selection state', {
+            selectedEventSlug: this.selectedEventSlug,
+            mapExists: !!window.eventsMap,
+            markersBySlugExists: !!window.eventsMapMarkersBySlug
+        });
+        
         // Clear all previous selections
         document.querySelectorAll('.event-card.selected, .event-item.selected').forEach(el => {
             el.classList.remove('selected');
@@ -613,6 +619,12 @@ class DynamicCalendarLoader extends CalendarCore {
     // Helper method to highlight a specific map marker
     highlightMapMarker(eventSlug) {
         if (!window.eventsMap || !window.eventsMapMarkersBySlug || !window.eventsMapMarkersBySlug[eventSlug]) {
+            logger.debug('MAP', 'Cannot highlight map marker - map or markers not ready', {
+                eventSlug,
+                mapExists: !!window.eventsMap,
+                markersBySlugExists: !!window.eventsMapMarkersBySlug,
+                markerExists: !!(window.eventsMapMarkersBySlug && window.eventsMapMarkersBySlug[eventSlug])
+            });
             return;
         }
         
@@ -2558,6 +2570,13 @@ class DynamicCalendarLoader extends CalendarCore {
                     window.eventsMapMarkersBySlug[eventSlug] = marker;
                 }
             });
+            
+            logger.debug('MAP', 'Map markers created and stored by slug', {
+                totalMarkers: markers.length,
+                markersBySlugCount: Object.keys(window.eventsMapMarkersBySlug).length,
+                selectedEventSlug: this.selectedEventSlug,
+                hasSelectedMarker: !!(this.selectedEventSlug && window.eventsMapMarkersBySlug[this.selectedEventSlug])
+            });
 
             // Favicons now load directly in marker creation
         } catch (error) {
@@ -2778,6 +2797,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 mapSection.style.display = 'block';
                 this.initializeMap(this.currentCityConfig, filteredEvents);
                 logger.debug('CALENDAR', 'Map initialization completed');
+                
+                // Update visual selection state again after map is initialized
+                // This ensures map markers are properly highlighted for auto-loaded slugs
+                logger.debug('MAP', 'Calling updateSelectionVisualState after map initialization', {
+                    selectedEventSlug: this.selectedEventSlug,
+                    markersBySlugCount: window.eventsMapMarkersBySlug ? Object.keys(window.eventsMapMarkersBySlug).length : 0
+                });
+                this.updateSelectionVisualState();
                 
                 // Initialize location features after map is ready
                 try {
