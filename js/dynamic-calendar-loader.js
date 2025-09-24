@@ -3772,13 +3772,13 @@ function updateLocationButtonStatus(status, detail = '') {
             break;
         case 'success':
             btnEl.classList.add('location-success');
-            iconEl.className = 'bi bi-crosshair2';
-            statusEl.textContent = detail === 'cached' ? '💾' : '✓';
+            iconEl.className = 'bi bi-geo-alt-fill';
+            statusEl.textContent = '';
             break;
         case 'error':
             btnEl.classList.add('location-error');
-            iconEl.className = 'bi bi-x-circle';
-            statusEl.textContent = '!';
+            iconEl.className = 'bi bi-geo-alt-fill';
+            statusEl.textContent = '';
             break;
         default:
             iconEl.className = 'bi bi-crosshair';
