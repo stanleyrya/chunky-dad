@@ -2860,6 +2860,11 @@ body.index-page main {
     font-weight: bold;
 }
 
+/* Hide status circle when empty */
+#location-btn .location-status:empty {
+    display: none;
+}
+
 #location-btn.location-loading {
     animation: pulse 1.5s ease-in-out infinite;
 }
