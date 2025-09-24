@@ -2831,7 +2831,6 @@ body.index-page main {
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected {
     border: 2px solid var(--primary-color) !important;
-    border-radius: 50% !important;
     z-index: 1010 !important;
 }
 
