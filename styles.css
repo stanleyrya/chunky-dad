@@ -2832,10 +2832,14 @@ body.index-page main {
 
 #location-btn.location-success {
     color: #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+    border-color: #4caf50;
 }
 
 #location-btn.location-error {
     color: #f44336;
+    background: rgba(244, 67, 54, 0.1);
+    border-color: #f44336;
 }
 
 @keyframes pulse {
