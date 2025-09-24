@@ -2841,22 +2841,6 @@ body.index-page main {
     border-color: #f44336;
 }
 
-/* Fit Markers Button Status Styles */
-#zoom-to-fit-btn.fit-markers-loading {
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-#zoom-to-fit-btn.fit-markers-success {
-    color: #4caf50;
-    background: rgba(76, 175, 80, 0.1);
-    border-color: #4caf50;
-}
-
-#zoom-to-fit-btn.fit-markers-error {
-    color: #f44336;
-    background: rgba(244, 67, 54, 0.1);
-    border-color: #f44336;
-}
 
 @keyframes pulse {
     0%, 100% { 

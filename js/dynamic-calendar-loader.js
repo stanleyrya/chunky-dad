@@ -2460,7 +2460,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
                 div.innerHTML = `
                     <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
-                        <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
+                        <i class="bi bi-pin-map-fill" id="zoom-to-fit-icon"></i>
                     </button>
                 `;
                 return div;
@@ -2473,7 +2473,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const div = L.DomUtil.create('div', 'leaflet-control-my-location');
                 div.innerHTML = `
                     <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
-                        <i class="bi bi-crosshair" id="location-icon"></i>
+                        <i class="bi bi-crosshair2" id="location-icon"></i>
                         <span id="location-status" class="location-status"></span>
                     </button>
                 `;
@@ -3631,8 +3631,6 @@ function showOnMap(lat, lng, eventName, barName) {
 // Map control functions
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
-        updateFitMarkersStatus('loading');
-        
         const group = new L.featureGroup(window.eventsMapMarkers);
         const isMobile = window.innerWidth <= 768;
         window.eventsMap.fitBounds(group.getBounds(), {
@@ -3640,22 +3638,8 @@ function fitAllMarkers() {
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
         
-        // Set success status after a brief delay to show the loading state
-        setTimeout(() => {
-            updateFitMarkersStatus('success');
-            // Reset to default after showing success
-            setTimeout(() => {
-                updateFitMarkersStatus('default');
-            }, 1000);
-        }, 300);
-        
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     } else {
-        updateFitMarkersStatus('error');
-        // Reset to default after showing error
-        setTimeout(() => {
-            updateFitMarkersStatus('default');
-        }, 2000);
         logger.warn('MAP', 'No markers to fit');
     }
 }
@@ -3802,33 +3786,6 @@ function updateLocationButtonStatus(status, detail = '') {
     }
 }
 
-// Update fit markers button status indicator
-function updateFitMarkersStatus(status) {
-    const iconEl = document.getElementById('zoom-to-fit-icon');
-    const btnEl = document.getElementById('zoom-to-fit-btn');
-    
-    if (!iconEl || !btnEl) return;
-    
-    // Remove existing status classes
-    btnEl.classList.remove('fit-markers-loading', 'fit-markers-success', 'fit-markers-error');
-    
-    switch (status) {
-        case 'loading':
-            btnEl.classList.add('fit-markers-loading');
-            iconEl.className = 'bi bi-hourglass-split';
-            break;
-        case 'success':
-            btnEl.classList.add('fit-markers-success');
-            iconEl.className = 'bi bi-pin-map-fill';
-            break;
-        case 'error':
-            btnEl.classList.add('fit-markers-error');
-            iconEl.className = 'bi bi-pin-map-fill';
-            break;
-        default:
-            iconEl.className = 'bi bi-pin-map';
-    }
-}
 
 // Check and update location status on page load (UI only - location logic moved to LocationManager)
 async function updateLocationStatus() {
