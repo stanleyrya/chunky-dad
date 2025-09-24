@@ -3623,6 +3623,7 @@ function fitAllMarkers() {
         const fitBtn = document.getElementById('zoom-to-fit-btn');
         const fitIcon = document.getElementById('zoom-to-fit-icon');
         if (fitBtn && fitIcon) {
+            // Use existing CSS classes for the color surrounding effect
             fitBtn.classList.add('active');
             fitIcon.className = 'bi bi-pin-map-fill';
             

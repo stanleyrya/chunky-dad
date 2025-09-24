@@ -2807,6 +2807,13 @@ body.index-page main {
     transform: translateY(0);
 }
 
+.map-control-btn.active {
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px var(--shadow-primary);
+}
+
 .leaflet-control-fit-markers,
 .leaflet-control-my-location {
     background: none;
@@ -2820,30 +2827,6 @@ body.index-page main {
     transition: all 0.2s ease;
 }
 
-/* Fit Markers Button Icon State Management */
-#zoom-to-fit-btn {
-    position: relative;
-    transition: all 0.2s ease;
-}
-
-#zoom-to-fit-btn:not(.active) #zoom-to-fit-icon {
-    /* Default state: unfilled icon */
-}
-
-#zoom-to-fit-btn.active #zoom-to-fit-icon {
-    /* Active state: filled icon */
-}
-
-#zoom-to-fit-btn.active {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
-}
-
-#zoom-to-fit-btn.active:hover {
-    background: var(--primary-dark);
-    border-color: var(--primary-dark);
-}
 
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected {
