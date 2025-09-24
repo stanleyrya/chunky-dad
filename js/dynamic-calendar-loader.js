@@ -627,7 +627,8 @@ class DynamicCalendarLoader extends CalendarCore {
                         marker._icon.style.zIndex = '1010';
                         marker._icon.style.filter = 'none'; // Remove problematic filters
                         marker._icon.style.opacity = '1';
-                        marker._icon.style.transform = 'none';
+                        // CRITICAL FIX: Don't override transform - let Leaflet manage positioning
+                        marker._icon.style.removeProperty('transform');
                         // Add border highlight instead of filter effects to avoid positioning issues
                         marker._icon.style.border = '3px solid #FFA500';
                         marker._icon.style.borderRadius = '50%';
@@ -637,7 +638,8 @@ class DynamicCalendarLoader extends CalendarCore {
                         marker._icon.style.zIndex = '1000';
                         marker._icon.style.filter = 'none'; // Remove problematic filters
                         marker._icon.style.opacity = '0.6'; // Use opacity instead of brightness filter
-                        marker._icon.style.transform = 'none';
+                        // CRITICAL FIX: Don't override transform - let Leaflet manage positioning
+                        marker._icon.style.removeProperty('transform');
                         // Remove any highlight styling
                         marker._icon.style.border = 'none';
                         marker._icon.style.boxShadow = 'none';
@@ -660,7 +662,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     marker._icon.style.zIndex = '1000';
                     marker._icon.style.filter = 'none';
                     marker._icon.style.opacity = '1';
-                    marker._icon.style.transform = 'none';
+                    // CRITICAL FIX: Don't override transform - let Leaflet manage positioning
+                    marker._icon.style.removeProperty('transform');
                     // Reset highlight styling
                     marker._icon.style.border = 'none';
                     marker._icon.style.boxShadow = 'none';
