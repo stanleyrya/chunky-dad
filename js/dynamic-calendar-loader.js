@@ -3609,6 +3609,20 @@ function showOnMap(lat, lng, eventName, barName) {
     }
 }
 
+// Update fit markers icon based on current state
+function updateFitMarkersIcon() {
+    const fitBtn = document.getElementById('zoom-to-fit-btn');
+    const fitIcon = document.getElementById('zoom-to-fit-icon');
+    if (fitBtn && fitIcon) {
+        // Show filled icon when active, unfilled when not
+        if (fitBtn.classList.contains('active')) {
+            fitIcon.className = 'bi bi-pin-map-fill';
+        } else {
+            fitIcon.className = 'bi bi-pin-map';
+        }
+    }
+}
+
 // Map control functions
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
@@ -3619,20 +3633,8 @@ function fitAllMarkers() {
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
         
-        // Toggle button state and icon
-        const fitBtn = document.getElementById('zoom-to-fit-btn');
-        const fitIcon = document.getElementById('zoom-to-fit-icon');
-        if (fitBtn && fitIcon) {
-            // Toggle active state
-            fitBtn.classList.toggle('active');
-            
-            // Show filled icon when active, unfilled when not
-            if (fitBtn.classList.contains('active')) {
-                fitIcon.className = 'bi bi-pin-map-fill';
-            } else {
-                fitIcon.className = 'bi bi-pin-map';
-            }
-        }
+        // Update icon based on current state
+        updateFitMarkersIcon();
         
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     } else {
