@@ -2826,7 +2826,6 @@ body.index-page main {
 }
 
 #location-btn.location-loading {
-    opacity: 0.9;
     animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -2843,8 +2842,14 @@ body.index-page main {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
+    0%, 100% { 
+        background: var(--white);
+        border-color: var(--border-light);
+    }
+    50% { 
+        background: var(--background-light);
+        border-color: var(--primary-color);
+    }
 }
 
 /* My Location Circle */

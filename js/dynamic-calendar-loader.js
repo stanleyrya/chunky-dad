@@ -3772,7 +3772,7 @@ function updateLocationButtonStatus(status, detail = '') {
             break;
         case 'success':
             btnEl.classList.add('location-success');
-            iconEl.className = 'bi bi-bullseye';
+            iconEl.className = 'bi bi-crosshair2';
             statusEl.textContent = '';
             break;
         case 'error':
