@@ -3658,10 +3658,9 @@ async function showMyLocation() {
             }
             
             // Add location circle instead of marker
-            const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
             window.myLocationCircle = L.circle([location.lat, location.lng], {
-                color: primaryColor,
-                fillColor: primaryColor,
+                color: '#4285f4',
+                fillColor: '#4285f4',
                 fillOpacity: 0.2,
                 radius: 500,
                 weight: 3
