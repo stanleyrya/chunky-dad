@@ -3634,13 +3634,32 @@ function showOnMap(lat, lng, eventName, barName) {
 // Map control functions
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
+        updateFitMarkersStatus('loading');
+        
         const group = new L.featureGroup(window.eventsMapMarkers);
         const isMobile = window.innerWidth <= 768;
         window.eventsMap.fitBounds(group.getBounds(), {
             padding: [20, 20],
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
+        
+        // Set success status after a brief delay to show the loading state
+        setTimeout(() => {
+            updateFitMarkersStatus('success');
+            // Reset to default after showing success
+            setTimeout(() => {
+                updateFitMarkersStatus('default');
+            }, 1000);
+        }, 300);
+        
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
+    } else {
+        updateFitMarkersStatus('error');
+        // Reset to default after showing error
+        setTimeout(() => {
+            updateFitMarkersStatus('default');
+        }, 2000);
+        logger.warn('MAP', 'No markers to fit');
     }
 }
 
@@ -3783,6 +3802,34 @@ function updateLocationButtonStatus(status, detail = '') {
         default:
             iconEl.className = 'bi bi-crosshair';
             statusEl.textContent = '';
+    }
+}
+
+// Update fit markers button status indicator
+function updateFitMarkersStatus(status) {
+    const iconEl = document.getElementById('zoom-to-fit-icon');
+    const btnEl = document.getElementById('zoom-to-fit-btn');
+    
+    if (!iconEl || !btnEl) return;
+    
+    // Remove existing status classes
+    btnEl.classList.remove('fit-markers-loading', 'fit-markers-success', 'fit-markers-error');
+    
+    switch (status) {
+        case 'loading':
+            btnEl.classList.add('fit-markers-loading');
+            iconEl.className = 'bi bi-hourglass-split';
+            break;
+        case 'success':
+            btnEl.classList.add('fit-markers-success');
+            iconEl.className = 'bi bi-pin-map-fill';
+            break;
+        case 'error':
+            btnEl.classList.add('fit-markers-error');
+            iconEl.className = 'bi bi-pin-map-fill';
+            break;
+        default:
+            iconEl.className = 'bi bi-pin-map';
     }
 }
 
