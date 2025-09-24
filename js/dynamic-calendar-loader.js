@@ -623,15 +623,15 @@ class DynamicCalendarLoader extends CalendarCore {
             Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
                 if (marker._icon) {
                     if (slug === eventSlug) {
-                        // Highlight the selected marker - use border and box-shadow instead of filters
+                        // Highlight the selected marker - clean and simple styling
                         marker._icon.style.zIndex = '1010';
-                        marker._icon.style.filter = 'none'; // Remove problematic filters
+                        marker._icon.style.filter = 'none';
                         marker._icon.style.opacity = '1';
                         // NEVER remove transform - Leaflet needs it for positioning
-                        // Add border highlight instead of filter effects to avoid positioning issues
-                        marker._icon.style.border = '3px solid #FFA500';
+                        // Clean border highlight using brand colors
+                        marker._icon.style.border = '2px solid #667eea';
                         marker._icon.style.borderRadius = '50%';
-                        marker._icon.style.boxShadow = '0 0 15px rgba(255, 165, 0, 0.8)';
+                        marker._icon.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
                     } else {
                         // Dim unselected markers
                         marker._icon.style.zIndex = '1000';
