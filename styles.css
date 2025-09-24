@@ -2807,6 +2807,13 @@ body.index-page main {
     transform: translateY(0);
 }
 
+.map-control-btn.active {
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px var(--shadow-primary);
+}
+
 .leaflet-control-fit-markers,
 .leaflet-control-my-location {
     background: none;
@@ -2819,6 +2826,7 @@ body.index-page main {
     position: relative;
     transition: all 0.2s ease;
 }
+
 
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected {
@@ -2833,9 +2841,20 @@ body.index-page main {
 }
 
 #location-btn .location-status {
-    font-size: 0.7em;
-    margin-left: 2px;
-    opacity: 0.8;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 0.6em;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+    font-weight: bold;
 }
 
 #location-btn.location-loading {

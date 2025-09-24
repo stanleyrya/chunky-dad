@@ -2441,7 +2441,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
                 div.innerHTML = `
                     <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
-                        <i class="bi bi-pin-map-fill" id="zoom-to-fit-icon"></i>
+                        <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
                     </button>
                 `;
                 return div;
@@ -3609,6 +3609,20 @@ function showOnMap(lat, lng, eventName, barName) {
     }
 }
 
+// Update fit markers icon based on current state
+function updateFitMarkersIcon() {
+    const fitBtn = document.getElementById('zoom-to-fit-btn');
+    const fitIcon = document.getElementById('zoom-to-fit-icon');
+    if (fitBtn && fitIcon) {
+        // Show filled icon when active, unfilled when not
+        if (fitBtn.classList.contains('active')) {
+            fitIcon.className = 'bi bi-pin-map-fill';
+        } else {
+            fitIcon.className = 'bi bi-pin-map';
+        }
+    }
+}
+
 // Map control functions
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
@@ -3618,6 +3632,9 @@ function fitAllMarkers() {
             padding: [20, 20],
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
+        
+        // Update icon based on current state
+        updateFitMarkersIcon();
         
         logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
     } else {
