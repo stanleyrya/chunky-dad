@@ -3768,7 +3768,7 @@ function updateLocationButtonStatus(status, detail = '') {
         case 'loading':
             btnEl.classList.add('location-loading');
             iconEl.className = 'bi bi-hourglass-split';
-            statusEl.textContent = '...';
+            statusEl.textContent = '';
             break;
         case 'success':
             btnEl.classList.add('location-success');
@@ -3777,7 +3777,7 @@ function updateLocationButtonStatus(status, detail = '') {
             break;
         case 'error':
             btnEl.classList.add('location-error');
-            iconEl.className = 'bi bi-crosshair';
+            iconEl.className = 'bi bi-crosshair2';
             statusEl.textContent = '';
             break;
         default:
