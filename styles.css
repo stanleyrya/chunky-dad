@@ -2829,8 +2829,12 @@ body.index-page main {
 
 
 /* Map Marker Selection States */
-.leaflet-marker-icon.marker-selected {
+.leaflet-marker-icon.marker-selected .favicon-marker-container {
     border: 2px solid var(--primary-color) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+}
+
+.leaflet-marker-icon.marker-selected {
     z-index: 1010 !important;
 }
 
