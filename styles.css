@@ -2362,7 +2362,7 @@ body.index-page main {
     width: 32px;
     height: 32px;
     padding: 0;
-    border-radius: 50%;
+    border-radius: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2376,7 +2376,7 @@ body.index-page main {
     align-items: center;
     justify-content: center;
     position: relative;
-    top: 0px; /* Center icon properly in circle */
+    top: 0px; /* Center icon properly */
 }
 
 .event-links a {
@@ -2831,7 +2831,7 @@ body.index-page main {
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected {
     border: 2px solid var(--primary-color) !important;
-    border-radius: 50% !important;
+    border-radius: 8px !important;
     z-index: 1010 !important;
 }
 
@@ -2847,7 +2847,7 @@ body.index-page main {
     font-size: 0.6em;
     background: var(--primary-color);
     color: white;
-    border-radius: 50%;
+    border-radius: 4px;
     width: 16px;
     height: 16px;
     display: flex;
