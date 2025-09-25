@@ -2843,6 +2843,12 @@ body.index-page main {
     z-index: 1000 !important;
 }
 
+.leaflet-marker-icon.marker-deselected .favicon-marker-container {
+    border: 2px solid #ccc !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+    opacity: 0.8 !important;
+}
+
 
 #location-btn.location-loading {
     animation: pulse 1.5s ease-in-out infinite;
