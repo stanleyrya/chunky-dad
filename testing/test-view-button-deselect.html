@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Button Deselect Test - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: 'Poppins', sans-serif;
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        .test-description {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        .test-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .test-result {
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            background: var(--background-light);
+            border: 1px solid var(--border-light);
+        }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>View Button Deselect Test</h1>
+    <p>This test verifies that the week/month view buttons can be properly deselected when clicked while active.</p>
+
+    <div class="test-section">
+        <div class="test-title">Test 1: View Button Toggle Behavior</div>
+        <div class="test-description">
+            Click the buttons below to test the select/deselect behavior. The active button should have a different color.
+            Clicking an active button should deselect it (remove the active styling).
+        </div>
+        
+        <div class="test-controls">
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="week">📅 Week</button>
+                <button class="view-btn" data-view="month">📊 Month</button>
+            </div>
+            <button id="reset-test">Reset Test</button>
+        </div>
+        
+        <div class="test-result" id="test-results">
+            Test results will appear here...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Test 2: Filter Button Toggle Behavior</div>
+        <div class="test-description">
+            Test the bear directory filter buttons to ensure they also support deselection.
+        </div>
+        
+        <div class="test-controls">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="bars">Bars</button>
+            <button class="filter-btn" data-filter="events">Events</button>
+        </div>
+        
+        <div class="test-result" id="filter-results">
+            Filter test results will appear here...
+        </div>
+    </div>
+
+    <!-- Load the logger and calendar loader -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+    <script src="../js/bear-directory.js"></script>
+
+    <script>
+        // Test results tracking
+        let testResults = [];
+        let filterResults = [];
+
+        function logTestResult(message, type = 'info') {
+            testResults.push({ message, type, timestamp: new Date().toLocaleTimeString() });
+            updateTestDisplay();
+        }
+
+        function logFilterResult(message, type = 'info') {
+            filterResults.push({ message, type, timestamp: new Date().toLocaleTimeString() });
+            updateFilterDisplay();
+        }
+
+        function updateTestDisplay() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = testResults.map(result => 
+                `<div class="${result.type}">[${result.timestamp}] ${result.message}</div>`
+            ).join('');
+        }
+
+        function updateFilterDisplay() {
+            const container = document.getElementById('filter-results');
+            container.innerHTML = filterResults.map(result => 
+                `<div class="${result.type}">[${result.timestamp}] ${result.message}</div>`
+            ).join('');
+        }
+
+        // Test view buttons
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const newView = e.target.dataset.view;
+                const wasActive = e.target.classList.contains('active');
+                
+                if (newView !== 'week' && newView !== 'month') {
+                    // This is a different view
+                    logTestResult(`View changed to: ${newView}`, 'success');
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                } else if (wasActive) {
+                    // Clicking on the currently active button - deselect it
+                    logTestResult(`Deselecting current view: ${newView}`, 'success');
+                    e.target.classList.remove('active');
+                } else {
+                    // Clicking on an inactive button of the current view - select it
+                    logTestResult(`Selecting view: ${newView}`, 'success');
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                }
+            });
+        });
+
+        // Test filter buttons
+        document.querySelectorAll('.filter-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const filter = e.target.dataset.filter;
+                const wasActive = e.target.classList.contains('active');
+                
+                if (wasActive) {
+                    // Clicking on the currently active button - deselect it
+                    logFilterResult(`Deselecting filter: ${filter}`, 'success');
+                    e.target.classList.remove('active');
+                } else {
+                    // Clicking on an inactive button - select it
+                    logFilterResult(`Selecting filter: ${filter}`, 'success');
+                    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                }
+            });
+        });
+
+        // Reset test
+        document.getElementById('reset-test').addEventListener('click', () => {
+            testResults = [];
+            filterResults = [];
+            updateTestDisplay();
+            updateFilterDisplay();
+            
+            // Reset button states
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.view-btn[data-view="week"]').classList.add('active');
+            
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+            
+            logTestResult('Test reset - all buttons returned to initial state', 'info');
+        });
+
+        // Initial test message
+        logTestResult('View button deselect test initialized. Click buttons to test behavior.', 'info');
+        logFilterResult('Filter button deselect test initialized. Click buttons to test behavior.', 'info');
+    </script>
+</body>
+</html>

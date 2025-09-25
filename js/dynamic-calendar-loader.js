@@ -2891,7 +2891,10 @@ class DynamicCalendarLoader extends CalendarCore {
         document.querySelectorAll('.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const newView = e.target.dataset.view;
+                const wasActive = e.target.classList.contains('active');
+                
                 if (newView !== this.currentView) {
+                    // Switching to a different view
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
                     this.currentView = newView;
                     
@@ -2902,6 +2905,23 @@ class DynamicCalendarLoader extends CalendarCore {
                     // View change clears selection and syncs URL
                     this.clearEventSelection();
                     this.updateCalendarDisplay();
+                    this.syncUrl(true);
+                } else if (wasActive) {
+                    // Clicking on the currently active button - deselect it
+                    logger.userInteraction('CALENDAR', `Deselecting current view: ${newView}`);
+                    e.target.classList.remove('active');
+                    
+                    // Clear selection and sync URL
+                    this.clearEventSelection();
+                    this.syncUrl(true);
+                } else {
+                    // Clicking on an inactive button of the current view - select it
+                    logger.userInteraction('CALENDAR', `Selecting view: ${newView}`);
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    // Clear selection and sync URL
+                    this.clearEventSelection();
                     this.syncUrl(true);
                 }
             });
@@ -3214,10 +3234,16 @@ class DynamicCalendarLoader extends CalendarCore {
     // Ensure view toggle buttons reflect current view
     updateViewToggleActive() {
         try {
-            const active = this.currentView === 'month' ? 'month' : 'week';
-            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.querySelector(`.view-btn[data-view="${active}"]`);
-            if (btn) btn.classList.add('active');
+            // Only set active state if we have a current view
+            if (this.currentView) {
+                const active = this.currentView === 'month' ? 'month' : 'week';
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                const btn = document.querySelector(`.view-btn[data-view="${active}"]`);
+                if (btn) btn.classList.add('active');
+            } else {
+                // No current view - remove all active states
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            }
         } catch (_) {}
     }
 
