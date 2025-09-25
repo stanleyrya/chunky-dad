@@ -627,10 +627,17 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // If the selected event doesn't have a map marker, reset all markers to normal
+        // If the selected event doesn't have a map marker, dim all markers (selection is still active)
         if (!window.eventsMapMarkersBySlug[eventSlug]) {
-            logger.debug('MAP', 'Selected event has no map marker, resetting all markers to normal', { eventSlug });
-            this.resetAllMapMarkers();
+            logger.debug('MAP', 'Selected event has no map marker, dimming all markers', { eventSlug });
+            // Dim all markers since selection is active but no marker is selected
+            Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
+                if (marker._icon) {
+                    marker._icon.classList.remove('marker-selected');
+                    marker._icon.classList.add('marker-dimmed');
+                }
+            });
+            logger.userInteraction('MAP', 'All markers dimmed (selection active but no marker selected)', { eventSlug });
             return;
         }
         
@@ -670,6 +677,7 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.userInteraction('MAP', 'All map markers reset to normal appearance', { markerCount });
         }
     }
+
 
     // Helper: detect slug from first path segment, similar to app-level logic
     getCitySlugFromPath() {
