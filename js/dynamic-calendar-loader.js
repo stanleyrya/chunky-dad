@@ -624,6 +624,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 mapExists: !!window.eventsMap,
                 markersBySlugExists: !!window.eventsMapMarkersBySlug
             });
+            // Even if map isn't ready, reset any existing markers to ensure clean state
+            logger.debug('MAP', 'Map not ready, resetting any existing markers to ensure clean state', { eventSlug });
+            this.resetAllMapMarkers();
             return;
         }
         
