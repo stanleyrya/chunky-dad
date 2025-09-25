@@ -581,6 +581,14 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Reset all markers to normal appearance
             this.resetAllMapMarkers();
+            
+            // Explicitly ensure all calendar event items are unselected
+            // This is important to handle cases where the calendar is re-rendered
+            document.querySelectorAll('.event-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
     }
 
