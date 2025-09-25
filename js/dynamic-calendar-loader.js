@@ -618,13 +618,19 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Helper method to highlight a specific map marker
     highlightMapMarker(eventSlug) {
-        if (!window.eventsMap || !window.eventsMapMarkersBySlug || !window.eventsMapMarkersBySlug[eventSlug]) {
+        if (!window.eventsMap || !window.eventsMapMarkersBySlug) {
             logger.debug('MAP', 'Cannot highlight map marker - map or markers not ready', {
                 eventSlug,
                 mapExists: !!window.eventsMap,
-                markersBySlugExists: !!window.eventsMapMarkersBySlug,
-                markerExists: !!(window.eventsMapMarkersBySlug && window.eventsMapMarkersBySlug[eventSlug])
+                markersBySlugExists: !!window.eventsMapMarkersBySlug
             });
+            return;
+        }
+        
+        // If the selected event doesn't have a map marker, reset all markers to normal
+        if (!window.eventsMapMarkersBySlug[eventSlug]) {
+            logger.debug('MAP', 'Selected event has no map marker, resetting all markers to normal', { eventSlug });
+            this.resetAllMapMarkers();
             return;
         }
         
@@ -653,13 +659,15 @@ class DynamicCalendarLoader extends CalendarCore {
     // Helper method to reset all map markers to normal appearance
     resetAllMapMarkers() {
         if (window.eventsMapMarkersBySlug) {
+            const markerCount = Object.keys(window.eventsMapMarkersBySlug).length;
             Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
                 if (marker._icon) {
                     // Remove all marker state classes
                     marker._icon.classList.remove('marker-selected', 'marker-dimmed');
                 }
             });
-            logger.debug('MAP', 'All markers reset to normal appearance');
+            logger.debug('MAP', 'All markers reset to normal appearance', { markerCount });
+            logger.userInteraction('MAP', 'All map markers reset to normal appearance', { markerCount });
         }
     }
 
