@@ -498,7 +498,9 @@ class DynamicCalendarLoader extends CalendarCore {
     toggleEventSelection(eventSlug, eventDateISO) {
         if (!eventSlug) return;
         const normalizedDateISO = eventDateISO && /^\d{4}-\d{2}-\d{2}$/.test(eventDateISO) ? eventDateISO : this.formatDateToISO(this.currentDate);
+        
         if (this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO) {
+            logger.userInteraction('EVENT', 'Deselecting event (same slug and date)', { eventSlug, date: normalizedDateISO });
             this.clearEventSelection();
         } else {
             this.selectedEventSlug = eventSlug;
@@ -3044,9 +3046,14 @@ class DynamicCalendarLoader extends CalendarCore {
                             const eventSlug = item.dataset.eventSlug;
                             // Determine the date for this event from the closest day element
                             const dayEl = item.closest('[data-date]');
-                            const dayISO = dayEl ? dayEl.getAttribute('data-date') : this.formatDateToISO(this.currentDate);
+                            const dayFromElement = dayEl ? dayEl.getAttribute('data-date') : this.formatDateToISO(this.currentDate);
+                            // Prefer the date from selectedEventDateISO if it matches slug, else use date from day element
+                            const dayISO = this.selectedEventSlug === eventSlug && this.selectedEventDateISO ? this.selectedEventDateISO : dayFromElement;
                             logger.userInteraction('EVENT', `Calendar event clicked: ${eventSlug}`, {
                                 eventSlug,
+                                dayFromElement,
+                                dayISO,
+                                selectedEventDateISO: this.selectedEventDateISO,
                                 city: this.currentCity
                             });
                             
