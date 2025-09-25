@@ -363,11 +363,23 @@ class BearDirectory {
         // Filter buttons
         this.elements.filterButtons.forEach(button => {
             button.addEventListener('click', (e) => {
-                this.handleFilter(e.target.dataset.filter);
+                const filter = e.target.dataset.filter;
+                const wasActive = e.target.classList.contains('active');
                 
-                // Update active state
-                this.elements.filterButtons.forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
+                if (wasActive) {
+                    // Clicking on the currently active button - deselect it
+                    logger.userInteraction('DIRECTORY', `Deselecting filter: ${filter}`);
+                    e.target.classList.remove('active');
+                    this.handleFilter('all'); // Reset to show all
+                } else {
+                    // Clicking on an inactive button - select it
+                    logger.userInteraction('DIRECTORY', `Selecting filter: ${filter}`);
+                    this.handleFilter(filter);
+                    
+                    // Update active state
+                    this.elements.filterButtons.forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                }
             });
         });
         

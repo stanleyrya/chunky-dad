@@ -530,8 +530,17 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         // Clear all previous selections
-        document.querySelectorAll('.event-card.selected, .event-item.selected').forEach(el => {
+        const elementsToDeselect = document.querySelectorAll('.event-card.selected, .event-item.selected');
+        logger.debug('EVENT', `Clearing selection from ${elementsToDeselect.length} elements`);
+        elementsToDeselect.forEach(el => {
+            logger.debug('EVENT', `Removing 'selected' class from element:`, {
+                tagName: el.tagName,
+                className: el.className,
+                eventSlug: el.dataset.eventSlug
+            });
             el.classList.remove('selected');
+            // Force a reflow to ensure the class removal is processed
+            el.offsetHeight;
         });
         
         // Get events list and clear selection button
@@ -551,7 +560,14 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             // Mark selected event items in calendar views
-            document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`).forEach(item => {
+            const calendarItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            logger.debug('EVENT', `Adding 'selected' class to ${calendarItems.length} calendar items`);
+            calendarItems.forEach(item => {
+                logger.debug('EVENT', `Adding 'selected' class to calendar item:`, {
+                    tagName: item.tagName,
+                    className: item.className,
+                    eventSlug: item.dataset.eventSlug
+                });
                 item.classList.add('selected');
             });
             
@@ -2891,7 +2907,10 @@ class DynamicCalendarLoader extends CalendarCore {
         document.querySelectorAll('.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const newView = e.target.dataset.view;
+                const wasActive = e.target.classList.contains('active');
+                
                 if (newView !== this.currentView) {
+                    // Switching to a different view
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
                     this.currentView = newView;
                     
@@ -2902,6 +2921,23 @@ class DynamicCalendarLoader extends CalendarCore {
                     // View change clears selection and syncs URL
                     this.clearEventSelection();
                     this.updateCalendarDisplay();
+                    this.syncUrl(true);
+                } else if (wasActive) {
+                    // Clicking on the currently active button - deselect it
+                    logger.userInteraction('CALENDAR', `Deselecting current view: ${newView}`);
+                    e.target.classList.remove('active');
+                    
+                    // Clear selection and sync URL
+                    this.clearEventSelection();
+                    this.syncUrl(true);
+                } else {
+                    // Clicking on an inactive button of the current view - select it
+                    logger.userInteraction('CALENDAR', `Selecting view: ${newView}`);
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    // Clear selection and sync URL
+                    this.clearEventSelection();
                     this.syncUrl(true);
                 }
             });
@@ -3214,10 +3250,16 @@ class DynamicCalendarLoader extends CalendarCore {
     // Ensure view toggle buttons reflect current view
     updateViewToggleActive() {
         try {
-            const active = this.currentView === 'month' ? 'month' : 'week';
-            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.querySelector(`.view-btn[data-view="${active}"]`);
-            if (btn) btn.classList.add('active');
+            // Only set active state if we have a current view
+            if (this.currentView) {
+                const active = this.currentView === 'month' ? 'month' : 'week';
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                const btn = document.querySelector(`.view-btn[data-view="${active}"]`);
+                if (btn) btn.classList.add('active');
+            } else {
+                // No current view - remove all active states
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            }
         } catch (_) {}
     }
 

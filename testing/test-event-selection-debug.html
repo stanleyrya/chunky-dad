@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Selection Debug Test - chunky.dad</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: 'Poppins', sans-serif;
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .event-item {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white;
+        }
+        .event-item.selected {
+            background: var(--primary-color) !important;
+            color: white !important;
+            font-weight: bold;
+        }
+        .event-card {
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            background: white;
+        }
+        .event-card.selected {
+            border: 2px solid var(--primary-color);
+            background: var(--background-primary);
+            box-shadow: 0 4px 12px var(--shadow-primary);
+        }
+    </style>
+</head>
+<body>
+    <h1>Event Selection Debug Test</h1>
+    <p>This test helps debug the event selection/deselection issue.</p>
+
+    <div class="test-section">
+        <div class="test-title">Test Events</div>
+        <p>Click on events below to test selection/deselection behavior. Check the debug info to see what's happening.</p>
+        
+        <!-- Calendar Event Items -->
+        <h3>Calendar Event Items</h3>
+        <div class="event-item" data-event-slug="test-event-1">Test Event 1 (Calendar)</div>
+        <div class="event-item" data-event-slug="test-event-2">Test Event 2 (Calendar)</div>
+        <div class="event-item" data-event-slug="test-event-3">Test Event 3 (Calendar)</div>
+        
+        <!-- Event Cards -->
+        <h3>Event Cards</h3>
+        <div class="event-card detailed" data-event-slug="test-event-1">Test Event 1 (Card)</div>
+        <div class="event-card detailed" data-event-slug="test-event-2">Test Event 2 (Card)</div>
+        <div class="event-card detailed" data-event-slug="test-event-3">Test Event 3 (Card)</div>
+        
+        <button id="clear-selection-btn" style="display: none;">Clear Selection</button>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Debug Information</div>
+        <div class="debug-info" id="debug-info">
+            Debug information will appear here...
+        </div>
+    </div>
+
+    <!-- Load the logger -->
+    <script src="../js/logger.js"></script>
+
+    <script>
+        // Mock calendar loader for testing
+        class MockCalendarLoader {
+            constructor() {
+                this.selectedEventSlug = null;
+                this.selectedEventDateISO = null;
+                this.currentDate = new Date();
+                this.debugInfo = document.getElementById('debug-info');
+                this.clearBtn = document.getElementById('clear-selection-btn');
+            }
+
+            formatDateToISO(date) {
+                return date.toISOString().split('T')[0];
+            }
+
+            toggleEventSelection(eventSlug, eventDateISO) {
+                this.logDebug(`toggleEventSelection called: ${eventSlug}, ${eventDateISO}`);
+                
+                if (!eventSlug) return;
+                const normalizedDateISO = eventDateISO && /^\d{4}-\d{2}-\d{2}$/.test(eventDateISO) ? eventDateISO : this.formatDateToISO(this.currentDate);
+                
+                if (this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO) {
+                    this.logDebug(`Deselecting event (same slug and date): ${eventSlug}`);
+                    this.clearEventSelection();
+                } else {
+                    this.selectedEventSlug = eventSlug;
+                    this.selectedEventDateISO = normalizedDateISO;
+                    this.logDebug(`Event selected: ${eventSlug}, date: ${normalizedDateISO}`);
+                }
+                
+                this.updateSelectionVisualState();
+            }
+
+            clearEventSelection() {
+                const hadSelection = !!this.selectedEventSlug;
+                this.logDebug(`clearEventSelection called, hadSelection: ${hadSelection}`);
+                this.selectedEventSlug = null;
+                this.selectedEventDateISO = null;
+                if (hadSelection) {
+                    this.logDebug('Selection cleared, updating visual state');
+                    this.updateSelectionVisualState();
+                }
+            }
+
+            updateSelectionVisualState() {
+                this.logDebug(`updateSelectionVisualState called, selectedEventSlug: ${this.selectedEventSlug}`);
+                
+                // Clear all previous selections
+                const allSelected = document.querySelectorAll('.event-card.selected, .event-item.selected');
+                this.logDebug(`Found ${allSelected.length} elements with 'selected' class`);
+                allSelected.forEach(el => {
+                    this.logDebug(`Removing 'selected' class from: ${el.tagName} with slug: ${el.dataset.eventSlug}`);
+                    el.classList.remove('selected');
+                });
+                
+                if (this.selectedEventSlug) {
+                    // Mark selected event card in list view
+                    const selectedCard = document.querySelector(`.event-card[data-event-slug="${this.selectedEventSlug}"]`);
+                    if (selectedCard) {
+                        this.logDebug(`Adding 'selected' class to card: ${this.selectedEventSlug}`);
+                        selectedCard.classList.add('selected');
+                    } else {
+                        this.logDebug(`Card not found for slug: ${this.selectedEventSlug}`);
+                    }
+                    
+                    // Mark selected event items in calendar views
+                    const selectedItems = document.querySelectorAll(`.event-item[data-event-slug="${this.selectedEventSlug}"]`);
+                    this.logDebug(`Found ${selectedItems.length} calendar items for slug: ${this.selectedEventSlug}`);
+                    selectedItems.forEach(item => {
+                        this.logDebug(`Adding 'selected' class to calendar item: ${this.selectedEventSlug}`);
+                        item.classList.add('selected');
+                    });
+                    
+                    // Show clear selection button
+                    this.clearBtn.style.display = 'inline-block';
+                } else {
+                    // Hide clear selection button
+                    this.clearBtn.style.display = 'none';
+                }
+            }
+
+            logDebug(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] ${message}`;
+                console.log(logEntry);
+                this.debugInfo.innerHTML += logEntry + '<br>';
+                this.debugInfo.scrollTop = this.debugInfo.scrollHeight;
+            }
+        }
+
+        // Initialize mock calendar loader
+        const mockLoader = new MockCalendarLoader();
+
+        // Add click handlers to event items
+        document.querySelectorAll('.event-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const eventSlug = item.dataset.eventSlug;
+                const dayISO = mockLoader.formatDateToISO(mockLoader.currentDate);
+                mockLoader.logDebug(`Calendar event clicked: ${eventSlug}`);
+                mockLoader.toggleEventSelection(eventSlug, dayISO);
+            });
+        });
+
+        // Add click handlers to event cards
+        document.querySelectorAll('.event-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const slug = card.getAttribute('data-event-slug');
+                const dayISO = mockLoader.formatDateToISO(mockLoader.currentDate);
+                mockLoader.logDebug(`Event card clicked: ${slug}`);
+                mockLoader.toggleEventSelection(slug, dayISO);
+            });
+        });
+
+        // Clear selection button
+        document.getElementById('clear-selection-btn').addEventListener('click', () => {
+            mockLoader.logDebug('Clear selection button clicked');
+            mockLoader.clearEventSelection();
+        });
+
+        // Initial debug message
+        mockLoader.logDebug('Event selection debug test initialized. Click events to test behavior.');
+    </script>
+</body>
+</html>
