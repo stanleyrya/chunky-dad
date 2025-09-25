@@ -633,7 +633,14 @@ class DynamicCalendarLoader extends CalendarCore {
         // If the selected event doesn't have a map marker, dim all markers (selection is still active)
         if (!window.eventsMapMarkersBySlug[eventSlug]) {
             logger.debug('MAP', 'Selected event has no map marker, dimming all markers', { eventSlug });
-            this.dimAllMapMarkers();
+            // Dim all markers since selection is active but no marker is selected
+            Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
+                if (marker._icon) {
+                    marker._icon.classList.remove('marker-selected');
+                    marker._icon.classList.add('marker-dimmed');
+                }
+            });
+            logger.userInteraction('MAP', 'All markers dimmed (selection active but no marker selected)', { eventSlug });
             return;
         }
         
@@ -674,21 +681,6 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Helper method to dim all map markers (when selection exists but no marker is selected)
-    dimAllMapMarkers() {
-        if (window.eventsMapMarkersBySlug) {
-            const markerCount = Object.keys(window.eventsMapMarkersBySlug).length;
-            Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
-                if (marker._icon) {
-                    // Remove selection classes and add dimmed class
-                    marker._icon.classList.remove('marker-selected');
-                    marker._icon.classList.add('marker-dimmed');
-                }
-            });
-            logger.debug('MAP', 'All markers dimmed (selection active but no marker selected)', { markerCount });
-            logger.userInteraction('MAP', 'All map markers dimmed (selection active but no marker selected)', { markerCount });
-        }
-    }
 
     // Helper: detect slug from first path segment, similar to app-level logic
     getCitySlugFromPath() {
