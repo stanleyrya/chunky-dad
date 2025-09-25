@@ -630,10 +630,10 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // If the selected event doesn't have a map marker, reset all markers to normal
+        // If the selected event doesn't have a map marker, dim all markers (selection is still active)
         if (!window.eventsMapMarkersBySlug[eventSlug]) {
-            logger.debug('MAP', 'Selected event has no map marker, resetting all markers to normal', { eventSlug });
-            this.resetAllMapMarkers();
+            logger.debug('MAP', 'Selected event has no map marker, dimming all markers', { eventSlug });
+            this.dimAllMapMarkers();
             return;
         }
         
@@ -671,6 +671,22 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             logger.debug('MAP', 'All markers reset to normal appearance', { markerCount });
             logger.userInteraction('MAP', 'All map markers reset to normal appearance', { markerCount });
+        }
+    }
+
+    // Helper method to dim all map markers (when selection exists but no marker is selected)
+    dimAllMapMarkers() {
+        if (window.eventsMapMarkersBySlug) {
+            const markerCount = Object.keys(window.eventsMapMarkersBySlug).length;
+            Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
+                if (marker._icon) {
+                    // Remove selection classes and add dimmed class
+                    marker._icon.classList.remove('marker-selected');
+                    marker._icon.classList.add('marker-dimmed');
+                }
+            });
+            logger.debug('MAP', 'All markers dimmed (selection active but no marker selected)', { markerCount });
+            logger.userInteraction('MAP', 'All map markers dimmed (selection active but no marker selected)', { markerCount });
         }
     }
 
