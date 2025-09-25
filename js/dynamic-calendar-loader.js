@@ -491,6 +491,11 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.userInteraction('EVENT', 'Event selection cleared');
             // Update visual selection state across all views
             this.updateSelectionVisualState();
+            
+            // Also ensure selection is cleared after a small delay to handle any DOM updates
+            setTimeout(() => {
+                this.updateSelectionVisualState();
+            }, 10);
         }
     }
     
@@ -529,7 +534,7 @@ class DynamicCalendarLoader extends CalendarCore {
             markersBySlugExists: !!window.eventsMapMarkersBySlug
         });
         
-        // Clear all previous selections
+        // Always clear all previous selections first - this is critical for deselection
         document.querySelectorAll('.event-card.selected, .event-item.selected').forEach(el => {
             el.classList.remove('selected');
         });
@@ -584,11 +589,20 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Explicitly ensure all calendar event items are unselected
             // This is important to handle cases where the calendar is re-rendered
+            // Use a more aggressive approach to ensure all selections are cleared
             document.querySelectorAll('.event-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
-            logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
+            // Also clear any event cards that might still be selected
+            document.querySelectorAll('.event-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected', {
+                eventItemsCleared: document.querySelectorAll('.event-item').length,
+                eventCardsCleared: document.querySelectorAll('.event-card').length
+            });
         }
     }
 
