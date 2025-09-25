@@ -530,8 +530,17 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         // Clear all previous selections
-        document.querySelectorAll('.event-card.selected, .event-item.selected').forEach(el => {
+        const elementsToDeselect = document.querySelectorAll('.event-card.selected, .event-item.selected');
+        logger.debug('EVENT', `Clearing selection from ${elementsToDeselect.length} elements`);
+        elementsToDeselect.forEach(el => {
+            logger.debug('EVENT', `Removing 'selected' class from element:`, {
+                tagName: el.tagName,
+                className: el.className,
+                eventSlug: el.dataset.eventSlug
+            });
             el.classList.remove('selected');
+            // Force a reflow to ensure the class removal is processed
+            el.offsetHeight;
         });
         
         // Get events list and clear selection button
@@ -551,7 +560,14 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             // Mark selected event items in calendar views
-            document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`).forEach(item => {
+            const calendarItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            logger.debug('EVENT', `Adding 'selected' class to ${calendarItems.length} calendar items`);
+            calendarItems.forEach(item => {
+                logger.debug('EVENT', `Adding 'selected' class to calendar item:`, {
+                    tagName: item.tagName,
+                    className: item.className,
+                    eventSlug: item.dataset.eventSlug
+                });
                 item.classList.add('selected');
             });
             

@@ -4073,6 +4073,20 @@ footer {
     border-radius: 4px;
 }
 
+/* Ensure selected state overrides hover state */
+.event-item.selected:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    transform: none !important;
+}
+
+/* Ensure selected state overrides current day styling */
+.calendar-day.current .event-item.selected {
+    background: var(--primary-color) !important;
+    color: white !important;
+    border: 1px solid var(--primary-color) !important;
+}
+
 /* Hide non-selected events when in selection mode */
 .events-list.selection-mode .event-card:not(.selected) {
     display: none;
