@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Deselection Test</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .test-section {
+            background: #1a1a1a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 2px solid #333;
+        }
+
+        .test-title {
+            color: #FFA500;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .test-description {
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .test-button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .test-button:hover {
+            background: #444;
+            border-color: #FFA500;
+        }
+
+        .test-button.active {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+        }
+
+        .calendar-container {
+            background: #0d0d0d;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            margin: 20px 0;
+        }
+
+        .event-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .event-item:hover {
+            background: #333;
+            border-color: #FFA500;
+        }
+
+        .event-item.selected {
+            background: #FFA500;
+            color: #000;
+            border-color: #FFA500;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            border: 1px solid #2ecc71;
+        }
+
+        .status.error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+        }
+
+        .status.info {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+            border: 1px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="test-container">
+            <h1>🧪 Calendar Event Deselection Test</h1>
+            <p style="color: #ccc; margin-bottom: 30px;">Test the fix for calendar event deselection CSS visual state issue.</p>
+
+            <div class="test-section">
+                <h2 class="test-title">📋 Test Instructions</h2>
+                <div class="test-description">
+                    <ol>
+                        <li>Load a city with calendar events (e.g., <a href="city.html?city=berlin" target="_blank">Berlin</a>)</li>
+                        <li>Click on an event in the calendar view to select it (should highlight in orange)</li>
+                        <li>Click on the same event again to deselect it (should remove orange highlight)</li>
+                        <li>Check that the CSS visual state is properly cleared</li>
+                        <li>Verify URL, event list, and map are also properly updated</li>
+                    </ol>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <button class="test-button" onclick="window.open('city.html?city=berlin', '_blank')">Test Berlin City Page</button>
+                    <button class="test-button" onclick="window.open('city.html?city=london', '_blank')">Test London City Page</button>
+                    <button class="test-button" onclick="window.open('city.html?city=amsterdam', '_blank')">Test Amsterdam City Page</button>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2 class="test-title">🔍 Manual Test Steps</h2>
+                <div class="test-description">
+                    <strong>For Week View:</strong>
+                    <ul>
+                        <li>Switch to Week view</li>
+                        <li>Click on an event in the calendar grid</li>
+                        <li>Verify it gets selected (orange background)</li>
+                        <li>Click the same event again</li>
+                        <li>Verify the orange background is removed</li>
+                    </ul>
+
+                    <strong>For Month View:</strong>
+                    <ul>
+                        <li>Switch to Month view</li>
+                        <li>Click on an event in the calendar grid</li>
+                        <li>Verify it gets selected (orange background)</li>
+                        <li>Click the same event again</li>
+                        <li>Verify the orange background is removed</li>
+                    </ul>
+
+                    <strong>Expected Behavior:</strong>
+                    <ul>
+                        <li>✅ Event should be visually deselected (no orange background)</li>
+                        <li>✅ URL should be updated (event parameter removed)</li>
+                        <li>✅ Event list should be updated (no event highlighted)</li>
+                        <li>✅ Map markers should be updated (no marker highlighted)</li>
+                        <li>✅ Clear selection button should be hidden</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2 class="test-title">🐛 Bug Report Status</h2>
+                <div class="test-description">
+                    <p><strong>Issue:</strong> When clicking on a selected calendar event to deselect it, the CSS visual state (orange background) was not being cleared, even though the underlying state (URL, event list, map) was properly updated.</p>
+
+                    <p><strong>Root Cause:</strong> The calendar re-rendering triggered by scroll operations or resize observers was creating new DOM elements that didn't have the updated deselection state applied.</p>
+
+                    <p><strong>Fix Applied:</strong></p>
+                    <ul>
+                        <li>Added <code>requestAnimationFrame</code> to ensure visual state updates happen after DOM is stable</li>
+                        <li>Added additional safety check with setTimeout to catch any DOM updates that might happen after initial visual state update</li>
+                        <li>Improved timing of scroll operations to prevent interference with visual state updates</li>
+                    </ul>
+                </div>
+
+                <div id="test-status" class="status info" style="margin-top: 20px;">
+                    Test the fix by opening a city page and following the test instructions above.
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2 class="test-title">📊 Test Results</h2>
+                <div id="test-results">
+                    <p style="color: #999;">Run the manual tests above and report results here.</p>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button class="test-button" onclick="document.getElementById('test-results').innerHTML = '<p style=\"color: #2ecc71;\">✅ Manual test completed successfully - deselection working properly</p>'">Mark Test Passed</button>
+                    <button class="test-button" onclick="document.getElementById('test-results').innerHTML = '<p style=\"color: #e74c3c;\">❌ Manual test failed - deselection still not working</p>'">Mark Test Failed</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
