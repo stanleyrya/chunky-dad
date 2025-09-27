@@ -2058,8 +2058,24 @@ class DynamicCalendarLoader extends CalendarCore {
         
         const { start, end } = this.getCurrentPeriodBounds();
         
+        logger.debug('CALENDAR', '🔍 FILTER: Starting event filtering', {
+            totalEvents: this.allEvents.length,
+            periodStart: start.toISOString(),
+            periodEnd: end.toISOString(),
+            currentView: this.currentView
+        });
+        
         const filtered = this.allEvents.filter(event => {
-            if (!event.startDate) return false;
+            // Special case: Always include measurement test events
+            if (event.slug === 'measurement-test') {
+                logger.debug('CALENDAR', `🔍 FILTER: Measurement test event ${event.name}: INCLUDED (special case)`);
+                return true;
+            }
+            
+            if (!event.startDate) {
+                logger.debug('CALENDAR', `🔍 FILTER: Event has no startDate: ${event.name}`);
+                return false;
+            }
             
             // Filter out events marked as notChecked if configured to hide them
             if (event.notChecked && this.config?.hideUncheckedEvents) {
@@ -2069,11 +2085,19 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // For recurring events, check if they occur in this period
             if (event.recurring) {
-                return this.isRecurringEventInPeriod(event, start, end);
+                const isInPeriod = this.isRecurringEventInPeriod(event, start, end);
+                logger.debug('CALENDAR', `🔍 FILTER: Recurring event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`);
+                return isInPeriod;
             }
             
             // For one-time events, check if they fall within the period
-            return this.isEventInPeriod(event.startDate, start, end);
+            const isInPeriod = this.isEventInPeriod(event.startDate, start, end);
+            logger.debug('CALENDAR', `🔍 FILTER: One-time event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
+                eventDate: new Date(event.startDate).toISOString(),
+                periodStart: start.toISOString(),
+                periodEnd: end.toISOString()
+            });
+            return isInPeriod;
         });
         
         // Sort events by upcoming time (earliest first)
@@ -2088,6 +2112,12 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Otherwise sort by date
             return dateA.getTime() - dateB.getTime();
+        });
+        
+        logger.debug('CALENDAR', '🔍 FILTER: Event filtering complete', {
+            totalEvents: this.allEvents.length,
+            filteredEvents: filtered.length,
+            filteredEventNames: filtered.map(e => e.name)
         });
         
         return filtered;
@@ -3262,13 +3292,18 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.info('CALENDAR', 'Starting calendar initialization with proper order of operations');
         
         // STEP 1: Create a fake event for accurate width measurement
+        // Use the current date but ensure it falls within the current period bounds
+        const { start, end } = this.getCurrentPeriodBounds();
+        const fakeEventDate = new Date(this.currentDate);
+        fakeEventDate.setHours(12, 0, 0, 0); // Set to noon to ensure it's within the period
+        
         const fakeEvent = {
             name: 'Sample Event Name For Width Measurement Testing',
             shortName: 'Sample Event', // Shorter than full name to trigger smart name logic
             bar: 'Sample Venue Name',
             time: '8:00 PM',
             day: 'Today',
-            startDate: new Date(),
+            startDate: fakeEventDate,
             slug: 'measurement-test',
             recurring: false
         };
@@ -3282,6 +3317,19 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Set the fake event as allEvents for measurement
         this.allEvents = [fakeEvent];
+        
+        // Debug: Check what the period bounds are and if fake event will be included
+        const fakeEventDate = new Date(fakeEvent.startDate);
+        const isInPeriod = fakeEventDate >= start && fakeEventDate <= end;
+        
+        logger.info('CALENDAR', '🔍 DEBUG: Fake event filtering check', {
+            fakeEventDate: fakeEventDate.toISOString(),
+            periodStart: start.toISOString(),
+            periodEnd: end.toISOString(),
+            isInPeriod,
+            currentDate: this.currentDate.toISOString(),
+            currentView: this.currentView
+        });
         
         // Show calendar structure with fake event but hidden for measurements
         this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true
