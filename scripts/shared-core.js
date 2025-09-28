@@ -76,6 +76,7 @@ class SharedCore {
             }
         }
         
+        console.log(`🗺️ SharedCore: Created city mappings:`, cityMappings);
         return cityMappings;
     }
 
@@ -1421,6 +1422,17 @@ class SharedCore {
         if (!event.timezone && event.city && this.cities[event.city]) {
             event.timezone = this.cities[event.city].timezone;
             console.log(`🗺️ SharedCore: Applied timezone ${event.timezone} for city ${event.city}`);
+        } else if (!event.timezone && event.city && !this.cities[event.city]) {
+            console.log(`🚨 ERROR: No timezone configuration found for city: ${event.city}`);
+            console.log(`🚨 EVENT DETAILS:`);
+            console.log(`   Title: "${event.title}"`);
+            console.log(`   Address: "${event.address}"`);
+            console.log(`   Venue: "${event.bar}"`);
+            console.log(`   URL: "${event.url}"`);
+            console.log(`   Source: "${event.source}"`);
+            console.log(`   City extracted from: ${event.city ? 'event.city field' : 'address parsing'}`);
+            console.log(`🚨 Available cities:`, Object.keys(this.cities || {}));
+            console.log(`🚨 This error is coming from SharedCore`);
         }
         
         // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
@@ -1642,8 +1654,10 @@ class SharedCore {
         
         // Try to extract city name from address components
         const addressParts = address.split(',').map(part => part.trim());
+        console.log(`🗺️ SharedCore: Address parts for "${address}":`, addressParts);
         if (addressParts.length >= 2) {
             const cityName = addressParts[1].toLowerCase(); // Usually city is second component
+            console.log(`🗺️ SharedCore: Extracted city name from address: "${cityName}"`);
             
             // Check if the extracted city matches our mappings
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
@@ -1652,13 +1666,19 @@ class SharedCore {
                     // Use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
+                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in extracted city name "${cityName}", returning: "${city}"`);
                         return city;
                     }
                 }
             }
             
             // Return normalized city name if no mapping found
-            return this.normalizeCityName(cityName);
+            console.log(`🗺️ SharedCore: No pattern matched for extracted city name "${cityName}", normalizing...`);
+            const normalizedCity = this.normalizeCityName(cityName);
+            if (normalizedCity && !this.cities[normalizedCity]) {
+                console.log(`⚠️  WARNING: Extracted city "${normalizedCity}" from address "${address}" has no timezone configuration`);
+            }
+            return normalizedCity;
         }
         
         return null;
@@ -1689,17 +1709,20 @@ class SharedCore {
     extractCityFromEvent(event) {
         // Try city field first
         if (event.city) {
+            console.log(`🗺️ SharedCore: Using city from event.city: "${event.city}" for event: "${event.title}"`);
             return String(event.city);
         }
         
         // Try to extract from title
         const title = String(event.title || '').toLowerCase();
+        console.log(`🗺️ SharedCore: Extracting city from title: "${title}"`);
         
         // Check for city names in title
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const cityPatterns = patterns.split('|');
             for (const pattern of cityPatterns) {
                 if (title.includes(pattern)) {
+                    console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in title, returning city: "${city}"`);
                     return city;
                 }
             }
@@ -1748,16 +1771,19 @@ class SharedCore {
         if (!cityName || typeof cityName !== 'string') return null;
         
         const normalized = cityName.toLowerCase().trim();
+        console.log(`🗺️ SharedCore: Normalizing city name "${cityName}" to "${normalized}"`);
         
         // Check if normalized name matches any of our mappings
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const patternList = patterns.split('|');
             if (patternList.includes(normalized)) {
+                console.log(`🗺️ SharedCore: Found mapping for "${normalized}" -> "${city}"`);
                 return city;
             }
         }
         
         // Return as-is if no mapping found
+        console.log(`🗺️ SharedCore: No mapping found for "${normalized}", returning as-is`);
         return normalized;
     }
     
