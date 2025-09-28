@@ -1666,7 +1666,12 @@ class SharedCore {
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
                 const patternList = patterns.split('|');
                 for (const pattern of patternList) {
-                    // Use word boundaries to avoid substring matches
+                    // Try exact match first (simpler and more reliable)
+                    if (cityName === pattern) {
+                        console.log(`🗺️ SharedCore: Found exact city pattern match "${pattern}" in address part "${cityName}", returning: "${city}"`);
+                        return city;
+                    }
+                    // Then use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
                         console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in address part "${cityName}", returning: "${city}"`);
