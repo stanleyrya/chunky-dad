@@ -40,10 +40,10 @@ class FurballParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
 
-            // Extract events from repeated H2 blocks that include a DATE line
-            const blocks = this.extractEventBlocks(html);
-            for (const block of blocks) {
-                const event = this.parseEventBlock(block, htmlData.url);
+            // Extract event sections from the HTML
+            const eventSections = this.extractEventSections(html);
+            for (const section of eventSections) {
+                const event = this.parseEventSection(section, htmlData.url);
                 if (event) {
                     // Enforce endDate since system does not support missing end dates
                     if (!event.endDate && event.startDate) {
@@ -52,8 +52,8 @@ class FurballParser {
                     events.push(event);
                 }
 
-                // Collect nearby vendor ticket links for optional discovery
-                const links = this.extractNearbyTicketLinks(block);
+                // Collect ticket links from the section
+                const links = this.extractTicketLinks(section);
                 for (const link of links) {
                     if (!additionalLinks.includes(link)) {
                         additionalLinks.push(link);
@@ -75,43 +75,78 @@ class FurballParser {
         }
     }
 
-    // Extract candidate H2 blocks that contain the date + title + venue lines
-    extractEventBlocks(html) {
-        const blocks = [];
+    // Extract event sections from HTML - look for sections containing date patterns
+    extractEventSections(html) {
+        const sections = [];
         try {
-            // Grab <h2 ...> ... </h2> content chunks (non-greedy)
-            const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
-            let match;
-            while ((match = h2Regex.exec(html)) !== null) {
-                const content = match[1];
-                // Must contain a full month-date-year in uppercase or regular case
-                if (/(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{1,2},\s*\d{4}/i.test(content)) {
-                    // Capture a neighborhood around this block to find nearby ticket links
-                    const startIdx = Math.max(0, match.index - 1500);
-                    const endIdx = Math.min(html.length, h2Regex.lastIndex + 1500);
-                    const neighborhood = html.slice(startIdx, endIdx);
-                    blocks.push({ raw: content, neighborhood });
+            // Look for the main content section that contains all events
+            const mainSectionMatch = html.match(/<section[^>]*id="comp-l6nopnaw"[^>]*>([\s\S]*?)<\/section>/i);
+            if (mainSectionMatch) {
+                const mainSection = mainSectionMatch[1];
+                // Split by date patterns to get individual events
+                const eventBlocks = this.splitByEventDate(mainSection);
+                sections.push(...eventBlocks);
+            } else {
+                // Fallback: look for any sections with date patterns
+                const sectionRegex = /<section[^>]*>([\s\S]*?)<\/section>/gi;
+                let match;
+                while ((match = sectionRegex.exec(html)) !== null) {
+                    const sectionContent = match[1];
+                    if (this.containsEventDate(sectionContent)) {
+                        sections.push(sectionContent);
+                    }
                 }
             }
         } catch (error) {
-            console.warn(`🐻‍❄️ Furball: Failed to extract event blocks: ${error}`);
+            console.warn(`🐻‍❄️ Furball: Failed to extract event sections: ${error}`);
         }
-        return blocks;
+        return sections;
     }
 
-    // Parse a single H2 block into an event object
-    parseEventBlock(block, sourceUrl) {
-        try {
-            const content = block.raw
-                .replace(/\r/g, ' ')
-                .replace(/\n/g, ' ')
-                .replace(/<br[^>]*\/?>/gi, '\n')
-                .replace(/<[^>]+>/g, '')
-                .replace(/[ \t]+/g, ' ')
-                .trim();
+    // Split content by event dates to get individual event blocks
+    splitByEventDate(content) {
+        const events = [];
+        const datePattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}/gi;
+        
+        // Find all date matches with their positions
+        const dateMatches = [];
+        let match;
+        while ((match = datePattern.exec(content)) !== null) {
+            dateMatches.push({
+                date: match[0],
+                index: match.index
+            });
+        }
+        
+        // Create event blocks for each date
+        for (let i = 0; i < dateMatches.length; i++) {
+            const currentDate = dateMatches[i];
+            const nextDate = dateMatches[i + 1];
+            
+            const startIndex = currentDate.index;
+            const endIndex = nextDate ? nextDate.index : content.length;
+            
+            const eventBlock = content.substring(startIndex, endIndex);
+            events.push(eventBlock);
+        }
+        
+        return events;
+    }
 
-            // The first line should be a date like "AUGUST 30, 2025"
-            const dateMatch = content.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}/i);
+    // Check if section content contains an event date
+    containsEventDate(content) {
+        const datePatterns = [
+            /(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{1,2},\s*\d{4}/i,
+            /(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+\d{1,2},\s*\d{4}/i
+        ];
+        return datePatterns.some(pattern => pattern.test(content));
+    }
+
+    // Parse a single event section into an event object
+    parseEventSection(section, sourceUrl) {
+        try {
+            // Extract date from the section
+            const dateMatch = section.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}/i);
             if (!dateMatch) {
                 return null;
             }
@@ -120,31 +155,49 @@ class FurballParser {
                 return null;
             }
 
-            // Split lines based on our injected newlines from <br>
-            const lines = content.split('\n').map(s => s.trim()).filter(Boolean);
-
-            // Find the venue line that contains " - " (e.g., "Heretic - Atlanta, GA")
-            let venueLine = lines.find(l => /\s-\s/.test(l));
+            // Extract event title and venue from text content
+            const textContent = this.extractTextContent(section);
+            const lines = textContent.split('\n').map(s => s.trim()).filter(Boolean);
+            
+            // Find the event title and venue information
+            let title = '';
             let bar = '';
             let address = '';
-            if (venueLine) {
-                const parts = venueLine.split(/\s-\s/);
-                bar = (parts[0] || '').trim();
-                address = (parts[1] || '').trim();
-                // Clean up address - remove HTML entities and extra spaces
-                address = address.replace(/&nbsp;/g, '').replace(/\s+/g, ' ').trim();
+            
+            // Look for FURBALL event title (should contain FURBALL and event name)
+            for (const line of lines) {
+                if (line.includes('FURBALL') && (line.includes('Party') || line.includes('Disco'))) {
+                    // Clean up the title by removing extra text
+                    title = line.replace(/OCTOBER \d{1,2}, \d{4}/i, '').trim();
+                    title = title.replace(/NYC Eagle.*$/, '').trim();
+                    title = title.replace(/Legacy.*$/, '').trim();
+                    break;
+                }
+            }
+            
+            // Look for venue information (should contain venue name and location)
+            for (const line of lines) {
+                if (line.includes('Eagle') || line.includes('Legacy')) {
+                    if (line.includes('NYC Eagle')) {
+                        bar = 'NYC Eagle';
+                        address = 'NYC';
+                    } else if (line.includes('Legacy')) {
+                        bar = 'Legacy';
+                        address = 'Boston, MA';
+                    } else if (line.includes(' - ')) {
+                        const parts = line.split(' - ');
+                        bar = parts[0].trim();
+                        address = parts[1].trim();
+                    }
+                    break;
+                }
             }
 
-            // Build title from non-date, non-venue lines
-            // Example: "FURBALL Atlanta" + "CAMP: Underwear + Gear Party"
-            const titleParts = lines.filter(l => l !== dateMatch[0] && l !== venueLine);
-            let title = titleParts.join(' ').trim();
-            // Clean up HTML entities
-            title = title.replace(/&nbsp;/g, '').replace(/\s+/g, ' ').trim();
+            // Extract images from this section
+            const images = this.extractImagesFromSection(section);
 
-            // Ticket URL: pick anchor hrefs by label/text only
-            const ticketUrls = this.extractNearbyTicketLinks(block);
-            const ticketUrl = ticketUrls.length > 0 ? ticketUrls[0] : '';
+            // Extract ticket URL
+            const ticketUrl = this.extractTicketUrl(section);
 
             // FURBALL events always run 10 PM - 2 AM (next day)
             const startDateTime = new Date(startDate);
@@ -162,41 +215,147 @@ class FurballParser {
                 address,
                 url: sourceUrl,
                 ticketUrl,
-                source: this.config.source
+                source: this.config.source,
+                images: images
             };
 
             return event;
         } catch (error) {
-            console.warn(`🐻‍❄️ Furball: Failed to parse event block: ${error}`);
+            console.warn(`🐻‍❄️ Furball: Failed to parse event section: ${error}`);
             return null;
         }
     }
 
-    // Find nearby ticket links relying solely on anchor label/text
-    extractNearbyTicketLinks(block) {
+    // Extract text content from HTML, removing tags
+    extractTextContent(html) {
+        return html
+            .replace(/<br[^>]*\/?>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    // Extract images from a specific section
+    extractImagesFromSection(section) {
+        const images = [];
+        try {
+            // Match img tags with src attributes
+            const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/gi;
+            let match;
+            while ((match = imgRegex.exec(section)) !== null) {
+                const src = match[1];
+                const altMatch = match[0].match(/alt="([^"]*)"/i);
+                const alt = altMatch ? altMatch[1] : '';
+                
+                // Filter out common non-content images (logos, icons, etc.)
+                if (this.isContentImage(src, alt)) {
+                    images.push({
+                        src: src,
+                        alt: alt,
+                        type: this.getImageType(src, alt)
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn(`🐻‍❄️ Furball: Failed to extract images from section: ${error}`);
+        }
+        return images;
+    }
+
+    // Determine if an image is likely content (not just logos/icons)
+    isContentImage(src, alt) {
+        // Skip common non-content images
+        const skipPatterns = [
+            /logo/i,
+            /icon/i,
+            /favicon/i,
+            /button/i,
+            /arrow/i,
+            /social/i,
+            /facebook/i,
+            /twitter/i,
+            /instagram/i,
+            /youtube/i,
+            /linkedin/i,
+            /\.svg$/i,
+            /placeholder/i,
+            /loading/i,
+            /spinner/i
+        ];
+        
+        const combinedText = `${src} ${alt}`.toLowerCase();
+        return !skipPatterns.some(pattern => pattern.test(combinedText));
+    }
+
+    // Determine image type based on src and alt
+    getImageType(src, alt) {
+        const combinedText = `${src} ${alt}`.toLowerCase();
+        
+        if (combinedText.includes('poster') || combinedText.includes('flyer')) {
+            return 'poster';
+        } else if (combinedText.includes('photo') || combinedText.includes('image')) {
+            return 'photo';
+        } else if (combinedText.includes('banner') || combinedText.includes('header')) {
+            return 'banner';
+        } else {
+            return 'image';
+        }
+    }
+
+    // Extract ticket URL from section
+    extractTicketUrl(section) {
+        try {
+            // Look for ticket links
+            const linkRegex = /<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+            let match;
+            while ((match = linkRegex.exec(section)) !== null) {
+                const href = match[1];
+                const text = match[2].replace(/<[^>]+>/g, '').trim();
+                if (this.isLikelyTicketLink(text, href)) {
+                    return href;
+                }
+            }
+        } catch (error) {
+            console.warn(`🐻‍❄️ Furball: Failed to extract ticket URL: ${error}`);
+        }
+        return '';
+    }
+
+    // Check if a link is likely a ticket link
+    isLikelyTicketLink(text, href) {
+        const ticketKeywords = ['ticket', 'buy', 'purchase', 'eventbrite', 'ticketweb', 'tickets'];
+        const textLower = text.toLowerCase();
+        const hrefLower = href.toLowerCase();
+        
+        return ticketKeywords.some(keyword => 
+            textLower.includes(keyword) || hrefLower.includes(keyword)
+        );
+    }
+
+    // Extract ticket links from section
+    extractTicketLinks(section) {
         const links = [];
         try {
-            const html = block.neighborhood || '';
-            // Match anchor tags
-            const anchorRegex = /<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
-            let m;
-            while ((m = anchorRegex.exec(html)) !== null) {
-                const href = (m[1] || '').trim();
-                const text = (m[2] || '').replace(/<[^>]+>/g, ' ').trim();
-                if (this.isLikelyTicketByText(text)) {
+            const linkRegex = /<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+            let match;
+            while ((match = linkRegex.exec(section)) !== null) {
+                const href = match[1];
+                const text = match[2].replace(/<[^>]+>/g, '').trim();
+                if (this.isLikelyTicketLink(text, href)) {
                     links.push(href);
                 }
             }
-        } catch (_) { /* no-op */ }
-        return Array.from(new Set(links));
+        } catch (error) {
+            console.warn(`🐻‍❄️ Furball: Failed to extract ticket links: ${error}`);
+        }
+        return links;
     }
 
-    isLikelyTicketByText(text) {
-        if (!text) return false;
-        return /ticket|admission|rsvp|buy now|get tickets|purchase/i.test(text);
-    }
-
-    // Parse date string into a Date object (simplified as requested)
+    // Parse date string into a Date object
     parseDate(dateString) {
         if (!dateString) return null;
         const date = new Date(dateString);
@@ -210,4 +369,3 @@ if (typeof module !== 'undefined' && module.exports) {
 } else if (typeof window !== 'undefined') {
     window.FurballParser = FurballParser;
 }
-
