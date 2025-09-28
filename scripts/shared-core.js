@@ -20,9 +20,9 @@
 // ============================================================================
 
 class SharedCore {
-    constructor(cities) {
-        if (!cities || typeof cities !== 'object') {
-            throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-input.js');
+    constructor(config) {
+        if (!config || typeof config !== 'object') {
+            throw new Error('SharedCore requires configuration object - pass config from scraper-input.js');
         }
 
         this.visitedUrls = new Set();
@@ -33,10 +33,13 @@ class SharedCore {
         ];
         
         // Store cities config for timezone assignment
-        this.cities = cities;
+        this.cities = config.cities || {};
+        
+        // Store city corrections for misspelling fixes
+        this.cityCorrections = config.cityCorrections || {};
         
         // Initialize city mappings from centralized cities config
-        this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
+        this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -1655,17 +1658,19 @@ class SharedCore {
         // Try to extract city name from address components
         const addressParts = address.split(',').map(part => part.trim());
         console.log(`🗺️ SharedCore: Address parts for "${address}":`, addressParts);
-        if (addressParts.length >= 2) {
-            const cityName = addressParts[0].toLowerCase(); // City is first component, state is second
-            console.log(`🗺️ SharedCore: Extracted city name from address: "${cityName}"`);
+        
+        // Check each address part for city matches
+        for (const part of addressParts) {
+            const cityName = part.toLowerCase();
+            console.log(`🗺️ SharedCore: Checking address part: "${cityName}"`);
             
-            // Apply common misspelling corrections
-            const correctedCityName = this.correctCityMisspellings(cityName);
+            // Apply misspelling corrections from configuration
+            const correctedCityName = this.cityCorrections[cityName] || cityName;
             if (correctedCityName !== cityName) {
                 console.log(`🗺️ SharedCore: Corrected city name from "${cityName}" to "${correctedCityName}"`);
             }
             
-            // Check if the extracted city matches our mappings
+            // Check if the corrected city matches our mappings
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
                 const patternList = patterns.split('|');
                 for (const pattern of patternList) {
@@ -1677,10 +1682,14 @@ class SharedCore {
                     }
                 }
             }
-            
-            // Return normalized city name if no mapping found
-            console.log(`🗺️ SharedCore: No pattern matched for corrected city name "${correctedCityName}", normalizing...`);
-            const normalizedCity = this.normalizeCityName(correctedCityName);
+        }
+        
+        // If no city found in any part, try normalizing the first part
+        if (addressParts.length > 0) {
+            const firstPart = addressParts[0].toLowerCase();
+            const correctedFirstPart = this.cityCorrections[firstPart] || firstPart;
+            console.log(`🗺️ SharedCore: No pattern matched for any address part, normalizing first part "${correctedFirstPart}"`);
+            const normalizedCity = this.normalizeCityName(correctedFirstPart);
             if (normalizedCity && !this.cities[normalizedCity]) {
                 console.log(`⚠️  WARNING: Extracted city "${normalizedCity}" from address "${address}" has no timezone configuration`);
             }
@@ -1770,42 +1779,6 @@ class SharedCore {
         }
         
         return 'unknown';
-    }
-    
-    // Correct common city name misspellings
-    correctCityMisspellings(cityName) {
-        if (!cityName || typeof cityName !== 'string') return cityName;
-        
-        const misspellings = {
-            'boton': 'boston',
-            'bostom': 'boston',
-            'bostun': 'boston',
-            'bostan': 'boston',
-            'newyork': 'new york',
-            'new york city': 'new york',
-            'losangeles': 'los angeles',
-            'sanfrancisco': 'san francisco',
-            'lasvegas': 'las vegas',
-            'palmsprings': 'palm springs',
-            'neworleans': 'new orleans',
-            'westhollywood': 'west hollywood',
-            'southbeach': 'south beach',
-            'miamibeach': 'miami beach',
-            'fortlauderdale': 'fort lauderdale',
-            'keywest': 'key west',
-            'downtownlosangeles': 'downtown los angeles',
-            'santamonica': 'santa monica',
-            'longbeach': 'long beach'
-        };
-        
-        const lowerCityName = cityName.toLowerCase().trim();
-        const corrected = misspellings[lowerCityName] || lowerCityName;
-        
-        if (corrected !== lowerCityName) {
-            console.log(`🗺️ SharedCore: Corrected misspelling "${lowerCityName}" to "${corrected}"`);
-        }
-        
-        return corrected;
     }
     
     // Normalize city name to lowercase, handle common variations

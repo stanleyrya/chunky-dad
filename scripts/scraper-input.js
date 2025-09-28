@@ -188,6 +188,29 @@ const scraperConfig = {
       }
     }
   ],
+  // City misspelling corrections
+  cityCorrections: {
+    'boton': 'boston',
+    'bostom': 'boston',
+    'bostun': 'boston',
+    'bostan': 'boston',
+    'newyork': 'new york',
+    'new york city': 'new york',
+    'losangeles': 'los angeles',
+    'sanfrancisco': 'san francisco',
+    'lasvegas': 'las vegas',
+    'palmsprings': 'palm springs',
+    'neworleans': 'new orleans',
+    'westhollywood': 'west hollywood',
+    'southbeach': 'south beach',
+    'miamibeach': 'miami beach',
+    'fortlauderdale': 'fort lauderdale',
+    'keywest': 'key west',
+    'downtownlosangeles': 'downtown los angeles',
+    'santamonica': 'santa monica',
+    'longbeach': 'long beach'
+  },
+
   // Centralized city configuration
   cities: {
     "nyc": {
