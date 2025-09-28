@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boston Calendar Name Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .fail { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Boston Calendar Name Fix Test</h1>
+    <p>Testing that city normalization works correctly for calendar name generation.</p>
+    
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Import the shared-core module
+        import { SharedCore } from '../scripts/shared-core.js';
+        
+        const testResults = document.getElementById('test-results');
+        
+        function addTestResult(testName, passed, details) {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            div.innerHTML = `
+                <strong>${testName}:</strong> ${passed ? 'PASS' : 'FAIL'}<br>
+                <pre>${details}</pre>
+            `;
+            testResults.appendChild(div);
+        }
+        
+        async function runTests() {
+            console.log('🧪 Starting Boston Calendar Name Fix Tests...');
+            
+            // Initialize SharedCore with cities config
+            const citiesConfig = {
+                "boston": {
+                    calendar: "chunky-dad-boston",
+                    timezone: "America/New_York",
+                    patterns: ["boston", "boton", "bostom", "bostun", "bostan"]
+                }
+            };
+            
+            const sharedCore = new SharedCore(citiesConfig);
+            
+            // Test 1: City normalization
+            console.log('🧪 Test 1: City normalization');
+            const testCases = [
+                { input: 'boton', expected: 'boston' },
+                { input: 'bostom', expected: 'boston' },
+                { input: 'bostun', expected: 'boston' },
+                { input: 'bostan', expected: 'boston' },
+                { input: 'boston', expected: 'boston' }
+            ];
+            
+            let normalizationPassed = true;
+            let normalizationDetails = '';
+            
+            for (const testCase of testCases) {
+                const result = sharedCore.normalizeCityName(testCase.input);
+                const passed = result === testCase.expected;
+                normalizationPassed = normalizationPassed && passed;
+                normalizationDetails += `${testCase.input} -> ${result} (expected: ${testCase.expected}) ${passed ? '✓' : '✗'}\n`;
+            }
+            
+            addTestResult('City Normalization', normalizationPassed, normalizationDetails);
+            
+            // Test 2: Event city extraction with normalization
+            console.log('🧪 Test 2: Event city extraction with normalization');
+            const eventTestCases = [
+                { event: { city: 'boton', title: 'Test Event' }, expected: 'boston' },
+                { event: { city: 'bostom', title: 'Test Event' }, expected: 'boston' },
+                { event: { city: 'boston', title: 'Test Event' }, expected: 'boston' },
+                { event: { title: 'Boston Bear Night' }, expected: 'boston' },
+                { event: { title: 'Boton Bear Night' }, expected: 'boston' }
+            ];
+            
+            let extractionPassed = true;
+            let extractionDetails = '';
+            
+            for (const testCase of eventTestCases) {
+                const result = sharedCore.extractCityFromEvent(testCase.event);
+                const passed = result === testCase.expected;
+                extractionPassed = extractionPassed && passed;
+                extractionDetails += `Event: ${JSON.stringify(testCase.event)}\n`;
+                extractionDetails += `Extracted: ${result} (expected: ${testCase.expected}) ${passed ? '✓' : '✗'}\n\n`;
+            }
+            
+            addTestResult('Event City Extraction with Normalization', extractionPassed, extractionDetails);
+            
+            // Test 3: Calendar name generation (simulate adapter behavior)
+            console.log('🧪 Test 3: Calendar name generation');
+            const calendarTestCases = [
+                { city: 'boton', expected: 'chunky-dad-boston' },
+                { city: 'bostom', expected: 'chunky-dad-boston' },
+                { city: 'boston', expected: 'chunky-dad-boston' }
+            ];
+            
+            let calendarPassed = true;
+            let calendarDetails = '';
+            
+            for (const testCase of calendarTestCases) {
+                // Simulate the adapter's getCalendarName logic
+                const normalizedCity = sharedCore.normalizeCityName(testCase.city);
+                const calendarName = citiesConfig[normalizedCity]?.calendar || `chunky-dad-${normalizedCity}`;
+                const passed = calendarName === testCase.expected;
+                calendarPassed = calendarPassed && passed;
+                calendarDetails += `Input: ${testCase.city} -> Normalized: ${normalizedCity} -> Calendar: ${calendarName} (expected: ${testCase.expected}) ${passed ? '✓' : '✗'}\n`;
+            }
+            
+            addTestResult('Calendar Name Generation', calendarPassed, calendarDetails);
+            
+            // Test 4: End-to-end test with mock event
+            console.log('🧪 Test 4: End-to-end test');
+            const mockEvent = {
+                city: 'boton',
+                title: 'Boston Bear Night',
+                startDate: new Date('2025-01-15T20:00:00'),
+                endDate: new Date('2025-01-15T23:00:00'),
+                venue: 'The Eagle',
+                address: 'Boston, MA'
+            };
+            
+            // Process the event through shared-core
+            const processedEvent = sharedCore.processEvent(mockEvent, {}, {});
+            const finalCity = processedEvent.city;
+            const expectedCalendarName = citiesConfig[finalCity]?.calendar || `chunky-dad-${finalCity}`;
+            
+            const endToEndPassed = finalCity === 'boston' && expectedCalendarName === 'chunky-dad-boston';
+            const endToEndDetails = `Mock Event: ${JSON.stringify(mockEvent)}\n`;
+            endToEndDetails += `Processed City: ${finalCity} (expected: boston) ${finalCity === 'boston' ? '✓' : '✗'}\n`;
+            endToEndDetails += `Calendar Name: ${expectedCalendarName} (expected: chunky-dad-boston) ${expectedCalendarName === 'chunky-dad-boston' ? '✓' : '✗'}\n`;
+            
+            addTestResult('End-to-End Processing', endToEndPassed, endToEndDetails);
+            
+            console.log('🧪 All tests completed!');
+        }
+        
+        // Run tests when page loads
+        runTests().catch(error => {
+            console.error('Test error:', error);
+            addTestResult('Test Execution', false, `Error running tests: ${error.message}`);
+        });
+    </script>
+</body>
+</html>
