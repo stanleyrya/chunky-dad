@@ -1715,7 +1715,10 @@ class SharedCore {
         // Try city field first
         if (event.city) {
             console.log(`🗺️ SharedCore: Using city from event.city: "${event.city}" for event: "${event.title}"`);
-            return String(event.city);
+            // Normalize the city name to handle misspellings like "boton" -> "boston"
+            const normalizedCity = this.normalizeCityName(String(event.city));
+            console.log(`🗺️ SharedCore: Normalized city "${event.city}" to "${normalizedCity}"`);
+            return normalizedCity;
         }
         
         // Try to extract from title
