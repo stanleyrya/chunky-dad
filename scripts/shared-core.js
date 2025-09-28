@@ -76,7 +76,7 @@ class SharedCore {
             }
         }
         
-        console.log(`🗺️ SharedCore: Created city mappings:`, cityMappings);
+        console.log(`🗺️ SharedCore: Created city mappings: ${JSON.stringify(cityMappings)}`);
         return cityMappings;
     }
 
@@ -1412,9 +1412,10 @@ class SharedCore {
         const hadUrlBefore = 'url' in event;
         const urlValueBefore = event.url;
         
-        // Extract city if not already present (parser may have set it for venue-specific logic)
-        if (!event.city) {
-            event.city = this.extractCityFromEvent(event);
+        // Extract and normalize city (parser may have set it for venue-specific logic, but we need to normalize it)
+        const extractedCity = this.extractCityFromEvent(event);
+        if (extractedCity) {
+            event.city = extractedCity;
         }
         
         // Apply timezone from city configuration if not already set
@@ -1431,7 +1432,7 @@ class SharedCore {
             console.log(`   URL: "${event.url}"`);
             console.log(`   Source: "${event.source}"`);
             console.log(`   City extracted from: ${event.city ? 'event.city field' : 'address parsing'}`);
-            console.log(`🚨 Available cities:`, Object.keys(this.cities || {}));
+            console.log(`🚨 Available cities: ${JSON.stringify(Object.keys(this.cities || {}))}`);
             console.log(`🚨 This error is coming from SharedCore`);
         }
         
@@ -1654,7 +1655,7 @@ class SharedCore {
         
         // Try to extract city name from address components
         const addressParts = address.split(',').map(part => part.trim());
-        console.log(`🗺️ SharedCore: Address parts for "${address}":`, addressParts);
+        console.log(`🗺️ SharedCore: Address parts for "${address}": ${JSON.stringify(addressParts)}`);
         
         // Check each address part for city matches
         for (const part of addressParts) {
