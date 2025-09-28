@@ -20,9 +20,9 @@
 // ============================================================================
 
 class SharedCore {
-    constructor(config) {
-        if (!config || typeof config !== 'object') {
-            throw new Error('SharedCore requires configuration object - pass config from scraper-input.js');
+    constructor(cities) {
+        if (!cities || typeof cities !== 'object') {
+            throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-input.js');
         }
 
         this.visitedUrls = new Set();
@@ -33,10 +33,7 @@ class SharedCore {
         ];
         
         // Store cities config for timezone assignment
-        this.cities = config.cities || {};
-        
-        // Store city corrections for misspelling fixes
-        this.cityCorrections = config.cityCorrections || {};
+        this.cities = cities;
         
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
@@ -1664,20 +1661,14 @@ class SharedCore {
             const cityName = part.toLowerCase();
             console.log(`🗺️ SharedCore: Checking address part: "${cityName}"`);
             
-            // Apply misspelling corrections from configuration
-            const correctedCityName = this.cityCorrections[cityName] || cityName;
-            if (correctedCityName !== cityName) {
-                console.log(`🗺️ SharedCore: Corrected city name from "${cityName}" to "${correctedCityName}"`);
-            }
-            
-            // Check if the corrected city matches our mappings
+            // Check if the city matches our mappings (includes misspellings in patterns)
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
                 const patternList = patterns.split('|');
                 for (const pattern of patternList) {
                     // Use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                    if (regex.test(correctedCityName)) {
-                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in corrected city name "${correctedCityName}", returning: "${city}"`);
+                    if (regex.test(cityName)) {
+                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in address part "${cityName}", returning: "${city}"`);
                         return city;
                     }
                 }
@@ -1687,9 +1678,8 @@ class SharedCore {
         // If no city found in any part, try normalizing the first part
         if (addressParts.length > 0) {
             const firstPart = addressParts[0].toLowerCase();
-            const correctedFirstPart = this.cityCorrections[firstPart] || firstPart;
-            console.log(`🗺️ SharedCore: No pattern matched for any address part, normalizing first part "${correctedFirstPart}"`);
-            const normalizedCity = this.normalizeCityName(correctedFirstPart);
+            console.log(`🗺️ SharedCore: No pattern matched for any address part, normalizing first part "${firstPart}"`);
+            const normalizedCity = this.normalizeCityName(firstPart);
             if (normalizedCity && !this.cities[normalizedCity]) {
                 console.log(`⚠️  WARNING: Extracted city "${normalizedCity}" from address "${address}" has no timezone configuration`);
             }

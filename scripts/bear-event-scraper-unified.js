@@ -182,8 +182,8 @@ class BearEventScraperOrchestrator {
             // Load configuration early so we can pass cities config to SharedCore
             const config = await adapter.loadConfiguration();
             
-            // Create shared core instance with full configuration
-            const sharedCore = new this.modules.SharedCore(config);
+            // Create shared core instance with cities configuration
+            const sharedCore = new this.modules.SharedCore(config.cities);
             
             // Create adapter with cities configuration
             let finalAdapter = adapter;
