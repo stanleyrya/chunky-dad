@@ -63,7 +63,6 @@ const scraperConfig = {
         cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
-        shortName: { value: "Coach After Dark" },
         instagram: { value: "https://www.instagram.com/coachafterdark" }
       }
     },
