@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20250924T140332Z
+DTSTAMP:20250928T040400Z
 UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
 CREATED:20250823T205551Z
 DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
@@ -37,7 +37,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251102T040000Z
 DTEND:20251102T110000Z
-DTSTAMP:20250924T140332Z
+DTSTAMP:20250928T040400Z
 UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
 CREATED:20250830T012218Z
 DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
@@ -46,7 +46,7 @@ DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL
  les\nurl: https://www.eventbrite.com/e/megawoof-10-year-us-anniversary-inte
  rnational-hallowoof-las-vegas-tickets-1636556246789\nticketUrl: https://www
  .eventbrite.com/e/megawoof-10-year-us-anniversary-international-hallowoof-l
- as-vegas-tickets-1636556246789\ncover: $14.73 - $32.63 (as of 9/24)\nimage:
+ as-vegas-tickets-1636556246789\ncover: $14.73 - $32.63 (as of 9/27)\nimage:
   https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1119746233%2F
  185013722403%2F1%2Foriginal.20250910-090426?crop=focalpoint&fit=crop&h=230&
  w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.00562374813779&fp-y=0.003
@@ -54,7 +54,7 @@ DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL
  gram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google
  .com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJx
  fTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-11-02|dust las vegas|eventbrite
-LAST-MODIFIED:20250924T130757Z
+LAST-MODIFIED:20250928T034650Z
 LOCATION:36.1214368\, -115.144945
 SEQUENCE:0
 STATUS:CONFIRMED
