@@ -3292,9 +3292,11 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.info('CALENDAR', 'Starting calendar initialization with proper order of operations');
         
         // STEP 1: Create a fake event for accurate width measurement
-        // Use the current date but ensure it falls within the current period bounds
+        // Ensure the fake event date falls within the current period bounds
         const { start, end } = this.getCurrentPeriodBounds();
-        const fakeEventDate = new Date(this.currentDate);
+        
+        // Use the start of the period as the base date to ensure it's always within bounds
+        const fakeEventDate = new Date(start);
         fakeEventDate.setHours(12, 0, 0, 0); // Set to noon to ensure it's within the period
         
         const fakeEvent = {
@@ -3328,7 +3330,8 @@ class DynamicCalendarLoader extends CalendarCore {
             periodEnd: end.toISOString(),
             isInPeriod,
             currentDate: this.currentDate.toISOString(),
-            currentView: this.currentView
+            currentView: this.currentView,
+            fakeEventBasedOn: 'period start (guaranteed to be in bounds)'
         });
         
         // Show calendar structure with fake event but hidden for measurements
