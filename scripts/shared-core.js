@@ -1422,6 +1422,16 @@ class SharedCore {
         if (!event.timezone && event.city && this.cities[event.city]) {
             event.timezone = this.cities[event.city].timezone;
             console.log(`🗺️ SharedCore: Applied timezone ${event.timezone} for city ${event.city}`);
+        } else if (!event.timezone && event.city && !this.cities[event.city]) {
+            console.log(`🚨 ERROR: No timezone configuration found for city: ${event.city}`);
+            console.log(`🚨 EVENT DETAILS:`);
+            console.log(`   Title: "${event.title}"`);
+            console.log(`   Address: "${event.address}"`);
+            console.log(`   Venue: "${event.bar}"`);
+            console.log(`   URL: "${event.url}"`);
+            console.log(`   Source: "${event.source}"`);
+            console.log(`🚨 Available cities:`, Object.keys(this.cities || {}));
+            console.log(`🚨 This error is coming from SharedCore`);
         }
         
         // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
@@ -1663,6 +1673,10 @@ class SharedCore {
             
             // Return normalized city name if no mapping found
             console.log(`🗺️ SharedCore: No pattern matched for extracted city name "${cityName}", normalizing...`);
+            if (cityName === 'ma' || cityName.includes('ma')) {
+                console.log(`🚨 POTENTIAL ISSUE: Extracted city name "${cityName}" from address "${address}"`);
+                console.log(`🚨 Address parts were:`, addressParts);
+            }
             return this.normalizeCityName(cityName);
         }
         
@@ -1694,7 +1708,7 @@ class SharedCore {
     extractCityFromEvent(event) {
         // Try city field first
         if (event.city) {
-            console.log(`🗺️ SharedCore: Using city from event.city: "${event.city}"`);
+            console.log(`🗺️ SharedCore: Using city from event.city: "${event.city}" for event: "${event.title}"`);
             return String(event.city);
         }
         

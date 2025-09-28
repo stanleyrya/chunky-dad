@@ -965,6 +965,8 @@ class EventbriteParser {
         // City config must be provided - no fallbacks
         if (!cityConfig || !cityConfig[city]) {
             console.log(`🎫 Eventbrite: No timezone configuration found for city: ${city}`);
+            console.log(`🎫 Eventbrite: Available cities in config:`, Object.keys(cityConfig || {}));
+            console.log(`🎫 Eventbrite: This error is coming from Eventbrite parser`);
             return null;
         }
         
