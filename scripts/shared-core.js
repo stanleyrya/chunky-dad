@@ -1645,15 +1645,9 @@ class SharedCore {
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const patternList = patterns.split('|');
             for (const pattern of patternList) {
-                // First try exact match for single words
-                if (lowerAddress === pattern) {
-                    console.log(`🗺️ SharedCore: Found exact address match "${pattern}", returning: "${city}"`);
-                    return city;
-                }
-                // Then use word boundaries to avoid substring matches (e.g., "la" in "Atlanta")
+                // Use word boundaries to avoid substring matches (e.g., "la" in "Atlanta")
                 const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                 if (regex.test(lowerAddress)) {
-                    console.log(`🗺️ SharedCore: Found address pattern "${pattern}", returning: "${city}"`);
                     return city;
                 }
             }
@@ -1672,12 +1666,12 @@ class SharedCore {
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
                 const patternList = patterns.split('|');
                 for (const pattern of patternList) {
-                    // First try exact match (most reliable for single words)
+                    // Try exact match first (simpler and more reliable)
                     if (cityName === pattern) {
                         console.log(`🗺️ SharedCore: Found exact city pattern match "${pattern}" in address part "${cityName}", returning: "${city}"`);
                         return city;
                     }
-                    // Then try word boundaries for multi-word patterns
+                    // Then use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
                         console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in address part "${cityName}", returning: "${city}"`);
