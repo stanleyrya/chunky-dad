@@ -1430,6 +1430,7 @@ class SharedCore {
             console.log(`   Venue: "${event.bar}"`);
             console.log(`   URL: "${event.url}"`);
             console.log(`   Source: "${event.source}"`);
+            console.log(`   City extracted from: ${event.city ? 'event.city field' : 'address parsing'}`);
             console.log(`🚨 Available cities:`, Object.keys(this.cities || {}));
             console.log(`🚨 This error is coming from SharedCore`);
         }
@@ -1673,11 +1674,11 @@ class SharedCore {
             
             // Return normalized city name if no mapping found
             console.log(`🗺️ SharedCore: No pattern matched for extracted city name "${cityName}", normalizing...`);
-            if (cityName === 'ma' || cityName.includes('ma')) {
-                console.log(`🚨 POTENTIAL ISSUE: Extracted city name "${cityName}" from address "${address}"`);
-                console.log(`🚨 Address parts were:`, addressParts);
+            const normalizedCity = this.normalizeCityName(cityName);
+            if (normalizedCity && !this.cities[normalizedCity]) {
+                console.log(`⚠️  WARNING: Extracted city "${normalizedCity}" from address "${address}" has no timezone configuration`);
             }
-            return this.normalizeCityName(cityName);
+            return normalizedCity;
         }
         
         return null;
