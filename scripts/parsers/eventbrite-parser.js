@@ -735,24 +735,8 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: No timezone found for "${title}"`);
             }
             
-            // Extract shortName from title - remove common prefixes and suffixes
-            let shortName = title;
-            if (title) {
-                // Remove common event prefixes
-                shortName = title.replace(/^(Bear Happy Hour|Coach After Dark|Megawoof|Bearracuda|Furball|Chunk|Furball)\s*[-:]\s*/i, '');
-                // Remove common suffixes
-                shortName = shortName.replace(/\s*[-:]\s*(NYC|LA|SF|Chicago|Miami|Denver|Vegas|Atlanta|Boston|Philadelphia|Austin|Dallas|Houston|Phoenix|Seattle|Portland|Orlando|Tampa|DC|Washington|New Orleans|Toronto|London|Berlin|Sitges|Palm Springs|Sacramento|San Diego|Long Beach|Santa Monica|West Hollywood|WeHo|DTLA|Downtown Los Angeles|Hollywood|Castro|San Jose|Oakland|Key West|Fort Lauderdale|Miami Beach|South Beach|Bostom|Bostun|Bostan|Boton|Philly|Chi|ATL|SF|NYC|LA|DC|MIA|DEN|VEG|CHI|BOS|PHL|AUS|DAL|HOU|PHX|SEA|PDX|ORL|TPA|NOLA|TOR|LON|BER|SIT|PS|SAC|SD|LB|SM|WH|DTLA|DTLA|HOLLY|CASTRO|SJ|OAK|KW|FTL|MB|SB|BOS|PHL|CHI|ATL|SF|NYC|LA|DC|MIA|DEN|VEG|CHI|BOS|PHL|AUS|DAL|HOU|PHX|SEA|PDX|ORL|TPA|NOLA|TOR|LON|BER|SIT|PS|SAC|SD|LB|SM|WH|DTLA|DTLA|HOLLY|CASTRO|SJ|OAK|KW|FTL|MB|SB)$/i, '');
-                // Clean up extra spaces
-                shortName = shortName.trim();
-                // If nothing left, use original title
-                if (!shortName) {
-                    shortName = title;
-                }
-            }
-
             const event = {
                 title: title,
-                shortName: shortName,
                 description: description,
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
