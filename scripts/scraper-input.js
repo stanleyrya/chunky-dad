@@ -50,7 +50,7 @@ const scraperConfig = {
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
+        shortName: { priority: ["eventbrite"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["eventbrite"], merge: "clobber" },
         bar: { priority: ["eventbrite"], merge: "clobber" },
@@ -63,7 +63,6 @@ const scraperConfig = {
         cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
-        shortName: { value: "Coach After Dark" },
         instagram: { value: "https://www.instagram.com/coachafterdark" }
       }
     },
