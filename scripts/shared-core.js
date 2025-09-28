@@ -36,7 +36,7 @@ class SharedCore {
         this.cities = cities;
         
         // Initialize city mappings from centralized cities config
-        this.cityMappings = this.convertCitiesConfigToCityMappings(cities);
+        this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -1655,26 +1655,31 @@ class SharedCore {
         // Try to extract city name from address components
         const addressParts = address.split(',').map(part => part.trim());
         console.log(`🗺️ SharedCore: Address parts for "${address}":`, addressParts);
-        if (addressParts.length >= 2) {
-            const cityName = addressParts[1].toLowerCase(); // Usually city is second component
-            console.log(`🗺️ SharedCore: Extracted city name from address: "${cityName}"`);
+        
+        // Check each address part for city matches
+        for (const part of addressParts) {
+            const cityName = part.toLowerCase();
+            console.log(`🗺️ SharedCore: Checking address part: "${cityName}"`);
             
-            // Check if the extracted city matches our mappings
+            // Check if the city matches our mappings (includes misspellings in patterns)
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
                 const patternList = patterns.split('|');
                 for (const pattern of patternList) {
                     // Use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
-                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in extracted city name "${cityName}", returning: "${city}"`);
+                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in address part "${cityName}", returning: "${city}"`);
                         return city;
                     }
                 }
             }
-            
-            // Return normalized city name if no mapping found
-            console.log(`🗺️ SharedCore: No pattern matched for extracted city name "${cityName}", normalizing...`);
-            const normalizedCity = this.normalizeCityName(cityName);
+        }
+        
+        // If no city found in any part, try normalizing the first part
+        if (addressParts.length > 0) {
+            const firstPart = addressParts[0].toLowerCase();
+            console.log(`🗺️ SharedCore: No pattern matched for any address part, normalizing first part "${firstPart}"`);
+            const normalizedCity = this.normalizeCityName(firstPart);
             if (normalizedCity && !this.cities[normalizedCity]) {
                 console.log(`⚠️  WARNING: Extracted city "${normalizedCity}" from address "${address}" has no timezone configuration`);
             }
