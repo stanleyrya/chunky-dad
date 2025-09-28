@@ -76,6 +76,7 @@ class SharedCore {
             }
         }
         
+        console.log(`🗺️ SharedCore: Created city mappings:`, cityMappings);
         return cityMappings;
     }
 
@@ -1689,17 +1690,20 @@ class SharedCore {
     extractCityFromEvent(event) {
         // Try city field first
         if (event.city) {
+            console.log(`🗺️ SharedCore: Using city from event.city: "${event.city}"`);
             return String(event.city);
         }
         
         // Try to extract from title
         const title = String(event.title || '').toLowerCase();
+        console.log(`🗺️ SharedCore: Extracting city from title: "${title}"`);
         
         // Check for city names in title
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const cityPatterns = patterns.split('|');
             for (const pattern of cityPatterns) {
                 if (title.includes(pattern)) {
+                    console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in title, returning city: "${city}"`);
                     return city;
                 }
             }
@@ -1748,16 +1752,19 @@ class SharedCore {
         if (!cityName || typeof cityName !== 'string') return null;
         
         const normalized = cityName.toLowerCase().trim();
+        console.log(`🗺️ SharedCore: Normalizing city name "${cityName}" to "${normalized}"`);
         
         // Check if normalized name matches any of our mappings
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const patternList = patterns.split('|');
             if (patternList.includes(normalized)) {
+                console.log(`🗺️ SharedCore: Found mapping for "${normalized}" -> "${city}"`);
                 return city;
             }
         }
         
         // Return as-is if no mapping found
+        console.log(`🗺️ SharedCore: No mapping found for "${normalized}", returning as-is`);
         return normalized;
     }
     
