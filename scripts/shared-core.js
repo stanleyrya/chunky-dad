@@ -1643,8 +1643,10 @@ class SharedCore {
         
         // Try to extract city name from address components
         const addressParts = address.split(',').map(part => part.trim());
+        console.log(`🗺️ SharedCore: Address parts for "${address}":`, addressParts);
         if (addressParts.length >= 2) {
             const cityName = addressParts[1].toLowerCase(); // Usually city is second component
+            console.log(`🗺️ SharedCore: Extracted city name from address: "${cityName}"`);
             
             // Check if the extracted city matches our mappings
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
@@ -1653,12 +1655,14 @@ class SharedCore {
                     // Use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
+                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in extracted city name "${cityName}", returning: "${city}"`);
                         return city;
                     }
                 }
             }
             
             // Return normalized city name if no mapping found
+            console.log(`🗺️ SharedCore: No pattern matched for extracted city name "${cityName}", normalizing...`);
             return this.normalizeCityName(cityName);
         }
         
