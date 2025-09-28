@@ -900,7 +900,11 @@ class EventbriteParser {
              'manhattan': 'nyc',
              'los angeles': 'la',
              'san francisco': 'sf',
-             'las vegas': 'vegas'
+             'las vegas': 'vegas',
+             'boton': 'boston',
+             'bostom': 'boston',
+             'bostun': 'boston',
+             'bostan': 'boston'
          };
          
          const lower = cityName.toLowerCase();
