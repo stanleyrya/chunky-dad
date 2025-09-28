@@ -3321,11 +3321,11 @@ class DynamicCalendarLoader extends CalendarCore {
         this.allEvents = [fakeEvent];
         
         // Debug: Check what the period bounds are and if fake event will be included
-        const fakeEventDate = new Date(fakeEvent.startDate);
-        const isInPeriod = fakeEventDate >= start && fakeEventDate <= end;
+        const fakeEventDateForCheck = new Date(fakeEvent.startDate);
+        const isInPeriod = fakeEventDateForCheck >= start && fakeEventDateForCheck <= end;
         
         logger.info('CALENDAR', '🔍 DEBUG: Fake event filtering check', {
-            fakeEventDate: fakeEventDate.toISOString(),
+            fakeEventDate: fakeEventDateForCheck.toISOString(),
             periodStart: start.toISOString(),
             periodEnd: end.toISOString(),
             isInPeriod,
