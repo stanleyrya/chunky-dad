@@ -164,33 +164,34 @@ class FurballParser {
             let bar = '';
             let address = '';
             
-            // Look for FURBALL event title (should contain FURBALL and event name)
-            for (const line of lines) {
-                if (line.includes('FURBALL') && (line.includes('Party') || line.includes('Disco'))) {
-                    // Clean up the title by removing extra text
-                    title = line.replace(/OCTOBER \d{1,2}, \d{4}/i, '').trim();
-                    title = title.replace(/NYC Eagle.*$/, '').trim();
-                    title = title.replace(/Legacy.*$/, '').trim();
-                    break;
-                }
+            // Process the text content to extract title, venue, and address
+            // The text is usually in one line with format: "DATE FURBALL EVENT_NAME VENUE - LOCATION BUTTON_TEXT"
+            const fullText = lines.join(' ');
+            
+            // Extract title (everything between FURBALL and venue)
+            const titleMatch = fullText.match(/FURBALL\s+([^-]+?)(?:\s+(?:Eagle|Legacy|Bar|Club|Theater|Hall|Center|Lounge))/i);
+            if (titleMatch) {
+                title = titleMatch[1].trim();
+                // Clean up the title
+                title = title.replace(/More Info Here!.*$/, '').trim();
+                title = title.replace(/FOXY Tickets Here!.*$/, '').trim();
+                title = title.replace(/Tickets Here!.*$/, '').trim();
+                title = title.replace(/Buy Tickets.*$/, '').trim();
+                title = title.replace(/Purchase.*$/, '').trim();
+                title = title.replace(/&nbsp;/g, ' ').trim();
             }
             
-            // Look for venue information (should contain venue name and location)
-            for (const line of lines) {
-                if (line.includes('Eagle') || line.includes('Legacy')) {
-                    if (line.includes('NYC Eagle')) {
-                        bar = 'NYC Eagle';
-                        address = 'NYC';
-                    } else if (line.includes('Legacy')) {
-                        bar = 'Legacy';
-                        address = 'Boston, MA';
-                    } else if (line.includes(' - ')) {
-                        const parts = line.split(' - ');
-                        bar = parts[0].trim();
-                        address = parts[1].trim();
-                    }
-                    break;
-                }
+            // Extract venue and address (look for "VENUE - LOCATION" pattern)
+            const venueMatch = fullText.match(/(Eagle|Legacy|Bar|Club|Theater|Hall|Center|Lounge)[^a-zA-Z]*?-\s*([^!]+)/i);
+            if (venueMatch) {
+                bar = venueMatch[1].trim();
+                address = venueMatch[2].trim();
+                // Clean up address
+                address = address.replace(/More Info Here!.*$/, '').trim();
+                address = address.replace(/FOXY Tickets Here!.*$/, '').trim();
+                address = address.replace(/Tickets Here!.*$/, '').trim();
+                address = address.replace(/Buy Tickets.*$/, '').trim();
+                address = address.replace(/Purchase.*$/, '').trim();
             }
 
             // Extract images from this section
@@ -353,6 +354,45 @@ class FurballParser {
             console.warn(`🐻‍❄️ Furball: Failed to extract ticket links: ${error}`);
         }
         return links;
+    }
+
+    // Extract location from venue text
+    extractLocationFromVenue(venueText) {
+        // Look for common location patterns
+        const locationPatterns = [
+            /(NYC|New York)/i,
+            /(Boston|MA|Massachusetts)/i,
+            /(Chicago|IL|Illinois)/i,
+            /(Los Angeles|LA|CA|California)/i,
+            /(San Francisco|SF|CA|California)/i,
+            /(Miami|FL|Florida)/i,
+            /(Atlanta|GA|Georgia)/i,
+            /(Seattle|WA|Washington)/i,
+            /(Portland|OR|Oregon)/i,
+            /(Denver|CO|Colorado)/i,
+            /(Austin|TX|Texas)/i,
+            /(Dallas|TX|Texas)/i,
+            /(Houston|TX|Texas)/i,
+            /(Phoenix|AZ|Arizona)/i,
+            /(Las Vegas|NV|Nevada)/i
+        ];
+        
+        for (const pattern of locationPatterns) {
+            const match = venueText.match(pattern);
+            if (match) {
+                return match[0];
+            }
+        }
+        
+        // Look for state abbreviations or common city patterns
+        const statePattern = /\b([A-Z]{2})\b/;
+        const stateMatch = venueText.match(statePattern);
+        if (stateMatch) {
+            return stateMatch[0];
+        }
+        
+        // If no location found, return empty string
+        return '';
     }
 
     // Parse date string into a Date object
