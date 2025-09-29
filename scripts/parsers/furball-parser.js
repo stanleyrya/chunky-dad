@@ -40,10 +40,10 @@ class FurballParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
 
-            // Extract event sections from the HTML
-            const eventSections = this.extractEventSections(html);
-            for (const section of eventSections) {
-                const event = this.parseEventSection(section, htmlData.url);
+            // Extract event blocks from the HTML using component structure
+            const eventBlocks = this.extractEventBlocks(html);
+            for (const block of eventBlocks) {
+                const event = this.parseEventBlock(block, htmlData.url);
                 if (event) {
                     // Enforce endDate since system does not support missing end dates
                     if (!event.endDate && event.startDate) {
@@ -52,8 +52,8 @@ class FurballParser {
                     events.push(event);
                 }
 
-                // Collect ticket links from the section
-                const links = this.extractTicketLinks(section);
+                // Collect ticket links from the block
+                const links = this.extractTicketLinks(block.textContent);
                 for (const link of links) {
                     if (!additionalLinks.includes(link)) {
                         additionalLinks.push(link);
@@ -103,34 +103,60 @@ class FurballParser {
         return sections;
     }
 
-    // Split content by event dates to get individual event blocks
-    splitByEventDate(content) {
+    // Extract individual event blocks using HTML component structure
+    extractEventBlocks(content) {
         const events = [];
-        const datePattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}/gi;
-        
-        // Find all date matches with their positions
-        const dateMatches = [];
-        let match;
-        while ((match = datePattern.exec(content)) !== null) {
-            dateMatches.push({
-                date: match[0],
-                index: match.index
-            });
-        }
-        
-        // Create event blocks for each date
-        for (let i = 0; i < dateMatches.length; i++) {
-            const currentDate = dateMatches[i];
-            const nextDate = dateMatches[i + 1];
+        try {
+            // Look for rich text components that contain event data
+            // Pattern: <div id="comp-XXXXX" class="...wixui-rich-text"...>...DATE...FURBALL...VENUE...</div>
+            const richTextRegex = /<div[^>]*class="[^"]*wixui-rich-text[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+            let match;
             
-            const startIndex = currentDate.index;
-            const endIndex = nextDate ? nextDate.index : content.length;
-            
-            const eventBlock = content.substring(startIndex, endIndex);
-            events.push(eventBlock);
+            while ((match = richTextRegex.exec(content)) !== null) {
+                const richTextContent = match[1];
+                // Check if this rich text contains a date and FURBALL
+                if (this.containsEventDate(richTextContent) && richTextContent.includes('FURBALL')) {
+                    // Find the corresponding image component that follows this rich text
+                    const imageComponent = this.findFollowingImageComponent(content, match.index);
+                    
+                    // Create event block with both text and image data
+                    const eventBlock = {
+                        textContent: richTextContent,
+                        imageComponent: imageComponent
+                    };
+                    events.push(eventBlock);
+                }
+            }
+        } catch (error) {
+            console.warn(`🐻‍❄️ Furball: Failed to extract event blocks: ${error}`);
         }
-        
         return events;
+    }
+
+    // Find the image component that follows a rich text component
+    findFollowingImageComponent(content, richTextIndex) {
+        try {
+            // Look for image components after the rich text
+            const imageRegex = /<div[^>]*class="[^"]*wixui-image[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+            let match;
+            let closestImage = null;
+            let closestDistance = Infinity;
+            
+            while ((match = imageRegex.exec(content)) !== null) {
+                if (match.index > richTextIndex) {
+                    const distance = match.index - richTextIndex;
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestImage = match[1];
+                    }
+                }
+            }
+            
+            return closestImage;
+        } catch (error) {
+            console.warn(`🐻‍❄️ Furball: Failed to find following image component: ${error}`);
+            return null;
+        }
     }
 
     // Check if section content contains an event date
@@ -142,11 +168,11 @@ class FurballParser {
         return datePatterns.some(pattern => pattern.test(content));
     }
 
-    // Parse a single event section into an event object
-    parseEventSection(section, sourceUrl) {
+    // Parse a single event block into an event object
+    parseEventBlock(block, sourceUrl) {
         try {
-            // Extract date from the section
-            const dateMatch = section.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}/i);
+            // Extract date from the text content
+            const dateMatch = block.textContent.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}/i);
             if (!dateMatch) {
                 return null;
             }
@@ -156,7 +182,7 @@ class FurballParser {
             }
 
             // Extract event title and venue from text content
-            const textContent = this.extractTextContent(section);
+            const textContent = this.extractTextContent(block.textContent);
             const lines = textContent.split('\n').map(s => s.trim()).filter(Boolean);
             
             // Find the event title and venue information
@@ -168,24 +194,30 @@ class FurballParser {
             // The text is usually in one line with format: "DATE FURBALL EVENT_NAME VENUE - LOCATION BUTTON_TEXT"
             const fullText = lines.join(' ');
             
-            // Extract title (everything between FURBALL and venue)
-            const titleMatch = fullText.match(/FURBALL\s+([^-]+?)(?:\s+(?:Eagle|Legacy|Bar|Club|Theater|Hall|Center|Lounge))/i);
-            if (titleMatch) {
-                title = titleMatch[1].trim();
-                // Clean up the title
+            // Extract title and venue using a more precise approach
+            // Look for the pattern: FURBALL [TITLE] [VENUE] - [LOCATION]
+            // The venue is usually the last word before " - "
+            const eventMatch = fullText.match(/FURBALL\s+([^-]+?)\s+([A-Z][a-zA-Z\s]+?)\s*-\s*([A-Z][^!]+)/i);
+            if (eventMatch) {
+                const rawTitle = eventMatch[1].trim();
+                const rawVenue = eventMatch[2].trim();
+                address = eventMatch[3].trim();
+                
+                // Extract venue (last word in the venue string)
+                const venueWords = rawVenue.split(/\s+/);
+                bar = venueWords[venueWords.length - 1]; // Last word is the venue name
+                
+                // Title is everything except the venue name
+                title = rawTitle + ' ' + venueWords.slice(0, -1).join(' ');
+                
+                // Clean up title
                 title = title.replace(/More Info Here!.*$/, '').trim();
                 title = title.replace(/FOXY Tickets Here!.*$/, '').trim();
                 title = title.replace(/Tickets Here!.*$/, '').trim();
                 title = title.replace(/Buy Tickets.*$/, '').trim();
                 title = title.replace(/Purchase.*$/, '').trim();
                 title = title.replace(/&nbsp;/g, ' ').trim();
-            }
-            
-            // Extract venue and address (look for "VENUE - LOCATION" pattern)
-            const venueMatch = fullText.match(/(Eagle|Legacy|Bar|Club|Theater|Hall|Center|Lounge)[^a-zA-Z]*?-\s*([^!]+)/i);
-            if (venueMatch) {
-                bar = venueMatch[1].trim();
-                address = venueMatch[2].trim();
+                
                 // Clean up address
                 address = address.replace(/More Info Here!.*$/, '').trim();
                 address = address.replace(/FOXY Tickets Here!.*$/, '').trim();
@@ -194,11 +226,11 @@ class FurballParser {
                 address = address.replace(/Purchase.*$/, '').trim();
             }
 
-            // Extract images from this section
-            const images = this.extractImagesFromSection(section);
+            // Extract images from the image component
+            const images = this.extractImagesFromImageComponent(block.imageComponent);
 
             // Extract ticket URL
-            const ticketUrl = this.extractTicketUrl(section);
+            const ticketUrl = this.extractTicketUrl(block.textContent);
 
             // FURBALL events always run 10 PM - 2 AM (next day)
             const startDateTime = new Date(startDate);
@@ -222,7 +254,7 @@ class FurballParser {
 
             return event;
         } catch (error) {
-            console.warn(`🐻‍❄️ Furball: Failed to parse event section: ${error}`);
+            console.warn(`🐻‍❄️ Furball: Failed to parse event block: ${error}`);
             return null;
         }
     }
@@ -240,14 +272,18 @@ class FurballParser {
             .trim();
     }
 
-    // Extract images from a specific section
-    extractImagesFromSection(section) {
+    // Extract images from an image component
+    extractImagesFromImageComponent(imageComponent) {
         const images = [];
+        if (!imageComponent) {
+            return images;
+        }
+        
         try {
             // Match img tags with src attributes
             const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/gi;
             let match;
-            while ((match = imgRegex.exec(section)) !== null) {
+            while ((match = imgRegex.exec(imageComponent)) !== null) {
                 const src = match[1];
                 const altMatch = match[0].match(/alt="([^"]*)"/i);
                 const alt = altMatch ? altMatch[1] : '';
@@ -262,7 +298,7 @@ class FurballParser {
                 }
             }
         } catch (error) {
-            console.warn(`🐻‍❄️ Furball: Failed to extract images from section: ${error}`);
+            console.warn(`🐻‍❄️ Furball: Failed to extract images from image component: ${error}`);
         }
         return images;
     }
@@ -282,13 +318,32 @@ class FurballParser {
             /instagram/i,
             /youtube/i,
             /linkedin/i,
+            /pinterest/i,
+            /mixcloud/i,
             /\.svg$/i,
             /placeholder/i,
             /loading/i,
-            /spinner/i
+            /spinner/i,
+            /screen shot/i,
+            /screenshot/i,
+            /footer/i,
+            /header/i,
+            /nav/i,
+            /menu/i
         ];
         
         const combinedText = `${src} ${alt}`.toLowerCase();
+        
+        // Also skip very small images (likely icons)
+        const sizeMatch = src.match(/w_(\d+),h_(\d+)/);
+        if (sizeMatch) {
+            const width = parseInt(sizeMatch[1]);
+            const height = parseInt(sizeMatch[2]);
+            if (width < 100 || height < 100) {
+                return false;
+            }
+        }
+        
         return !skipPatterns.some(pattern => pattern.test(combinedText));
     }
 
