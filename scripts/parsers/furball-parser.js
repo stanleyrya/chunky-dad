@@ -40,10 +40,13 @@ class FurballParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
 
+            // Extract images from the page
+            const images = this.extractImages(html);
+
             // Extract events from repeated H2 blocks that include a DATE line
             const blocks = this.extractEventBlocks(html);
             for (const block of blocks) {
-                const event = this.parseEventBlock(block, htmlData.url);
+                const event = this.parseEventBlock(block, htmlData.url, images);
                 if (event) {
                     // Enforce endDate since system does not support missing end dates
                     if (!event.endDate && event.startDate) {
@@ -61,7 +64,7 @@ class FurballParser {
                 }
             }
 
-            console.log(`🐻‍❄️ Furball: Found ${events.length} events, ${additionalLinks.length} additional links`);
+            console.log(`🐻‍❄️ Furball: Found ${events.length} events, ${additionalLinks.length} additional links, ${images.length} images`);
 
             return {
                 events,
@@ -99,8 +102,75 @@ class FurballParser {
         return blocks;
     }
 
+    // Extract images from HTML content
+    extractImages(html) {
+        const images = [];
+        try {
+            // Match img tags with src attributes
+            const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/gi;
+            let match;
+            while ((match = imgRegex.exec(html)) !== null) {
+                const src = match[1];
+                const altMatch = match[0].match(/alt="([^"]*)"/i);
+                const alt = altMatch ? altMatch[1] : '';
+                
+                // Filter out common non-content images (logos, icons, etc.)
+                if (this.isContentImage(src, alt)) {
+                    images.push({
+                        src: src,
+                        alt: alt,
+                        type: this.getImageType(src, alt)
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn(`🐻‍❄️ Furball: Failed to extract images: ${error}`);
+        }
+        return images;
+    }
+
+    // Determine if an image is likely content (not just logos/icons)
+    isContentImage(src, alt) {
+        // Skip common non-content images
+        const skipPatterns = [
+            /logo/i,
+            /icon/i,
+            /favicon/i,
+            /button/i,
+            /arrow/i,
+            /social/i,
+            /facebook/i,
+            /twitter/i,
+            /instagram/i,
+            /youtube/i,
+            /linkedin/i,
+            /\.svg$/i,
+            /placeholder/i,
+            /loading/i,
+            /spinner/i
+        ];
+        
+        const combinedText = `${src} ${alt}`.toLowerCase();
+        return !skipPatterns.some(pattern => pattern.test(combinedText));
+    }
+
+    // Determine image type based on src and alt
+    getImageType(src, alt) {
+        const combinedText = `${src} ${alt}`.toLowerCase();
+        
+        if (combinedText.includes('poster') || combinedText.includes('flyer')) {
+            return 'poster';
+        } else if (combinedText.includes('photo') || combinedText.includes('image')) {
+            return 'photo';
+        } else if (combinedText.includes('banner') || combinedText.includes('header')) {
+            return 'banner';
+        } else {
+            return 'image';
+        }
+    }
+
     // Parse a single H2 block into an event object
-    parseEventBlock(block, sourceUrl) {
+    parseEventBlock(block, sourceUrl, images = []) {
         try {
             const content = block.raw
                 .replace(/\r/g, ' ')
@@ -154,6 +224,9 @@ class FurballParser {
             endDateTime.setHours(2, 0, 0, 0); // 2 AM next day
             endDateTime.setDate(endDateTime.getDate() + 1); // Move to next day
 
+            // Find relevant images for this event
+            const eventImages = this.findRelevantImages(images, title, bar);
+
             const event = {
                 title,
                 startDate: startDateTime,
@@ -162,7 +235,8 @@ class FurballParser {
                 address,
                 url: sourceUrl,
                 ticketUrl,
-                source: this.config.source
+                source: this.config.source,
+                images: eventImages
             };
 
             return event;
@@ -194,6 +268,69 @@ class FurballParser {
     isLikelyTicketByText(text) {
         if (!text) return false;
         return /ticket|admission|rsvp|buy now|get tickets|purchase/i.test(text);
+    }
+
+    // Find images relevant to a specific event
+    findRelevantImages(images, title, bar) {
+        const relevantImages = [];
+        
+        try {
+            for (const image of images) {
+                const imageText = `${image.src} ${image.alt}`.toLowerCase();
+                const eventText = `${title} ${bar}`.toLowerCase();
+                
+                // Check if image is relevant to this event
+                if (this.isImageRelevantToEvent(imageText, eventText, image)) {
+                    relevantImages.push(image);
+                }
+            }
+        } catch (error) {
+            console.warn(`🐻‍❄️ Furball: Failed to find relevant images: ${error}`);
+        }
+        
+        return relevantImages;
+    }
+
+    // Determine if an image is relevant to a specific event
+    isImageRelevantToEvent(imageText, eventText, image) {
+        // If it's a poster or flyer, it's likely relevant
+        if (image.type === 'poster' || image.type === 'flyer') {
+            return true;
+        }
+        
+        // Check for common event-related keywords
+        const eventKeywords = [
+            'furball',
+            'party',
+            'event',
+            'dance',
+            'club',
+            'night',
+            'october',
+            'november',
+            'december',
+            'january',
+            'february',
+            'march',
+            'april',
+            'may',
+            'june',
+            'july',
+            'august',
+            'september'
+        ];
+        
+        // Check if image contains event-related keywords
+        const hasEventKeywords = eventKeywords.some(keyword => 
+            imageText.includes(keyword.toLowerCase())
+        );
+        
+        // Check if image alt text or src contains venue name
+        const hasVenueMatch = eventText.split(' ').some(word => 
+            word.length > 3 && imageText.includes(word)
+        );
+        
+        return hasEventKeywords || hasVenueMatch;
     }
 
     // Parse date string into a Date object (simplified as requested)
