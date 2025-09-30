@@ -1,39 +1,20 @@
-// ============================================================================
-// FURBALL PARSER - PURE PARSING LOGIC
-// ============================================================================
-// ⚠️  AI ASSISTANT WARNING: This file contains PURE parsing logic only
-//
-// ✅ THIS FILE SHOULD CONTAIN:
-// ✅ Pure JavaScript parsing functions (HTML processing)
-// ✅ Venue-specific extraction logic for furball.nyc ticket page
-// ✅ Date/time parsing and formatting
-// ✅ Event object creation and validation
-//
-// ❌ NEVER ADD THESE TO THIS FILE:
-// ❌ Environment detection (typeof importModule, typeof window, typeof DOMParser)
-// ❌ HTTP requests (receive HTML data, don't fetch it)
-// ❌ Calendar operations (return event objects, don't save them)
-// ❌ Scriptable APIs (Request, Calendar, FileManager, Alert)
-// ❌ DOM APIs that don't work in all environments
-//
-// 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
-// ============================================================================
+// Furball parser for extracting events from Furball NYC ticket information page
+// Generic parser that works with any FURBALL events using HTML structure
 
 class FurballParser {
     constructor(config = {}) {
         this.config = {
             source: 'furball',
-            maxAdditionalUrls: 10,
             ...config
         };
     }
 
-    // Main parsing method - receives HTML data and returns events + additional links
+    // Main parsing method
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
+            const { html } = htmlData;
             const events = [];
             const additionalLinks = [];
-            const html = htmlData && htmlData.html ? htmlData.html : '';
 
             if (!html) {
                 console.warn('🐻‍❄️ Furball: No HTML content to parse');
@@ -65,7 +46,7 @@ class FurballParser {
 
             return {
                 events,
-                additionalLinks: parserConfig.urlDiscoveryDepth > 0 ? additionalLinks : [],
+                additionalLinks,
                 source: this.config.source,
                 url: htmlData.url
             };
@@ -415,7 +396,6 @@ class FurballParser {
         return links;
     }
 
-
     // Parse date string into a Date object
     parseDate(dateString) {
         if (!dateString) return null;
@@ -424,9 +404,4 @@ class FurballParser {
     }
 }
 
-// Export for both environments
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { FurballParser };
-} else if (typeof window !== 'undefined') {
-    window.FurballParser = FurballParser;
-}
+module.exports = { FurballParser };
