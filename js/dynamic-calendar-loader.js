@@ -1861,13 +1861,18 @@ class DynamicCalendarLoader extends CalendarCore {
             else if (labelLower.includes('instagram')) { iconClass = 'bi-instagram'; aria = 'Instagram'; }
             else if (labelLower.includes('twitter') || labelLower.includes('x ' ) || labelLower === 'x') { iconClass = 'bi-twitter-x'; aria = 'Twitter/X'; }
             else if (labelLower.includes('website') || labelLower.includes('site')) { iconClass = 'bi-globe2'; aria = 'Website'; }
-            else if (labelLower.includes('tickets') || labelLower.includes('ticket')) { iconClass = 'bi-ticket-perforated'; aria = 'Tickets'; }
+            else if (labelLower.includes('tickets') || labelLower.includes('ticket')) { 
+                // Skip ticket links if we already have a direct ticketUrl button to avoid duplication
+                if (event.ticketUrl) return '';
+                iconClass = 'bi-ticket-perforated'; 
+                aria = 'Tickets'; 
+            }
             else if (labelLower.includes('rsvp')) { iconClass = 'bi-check2-circle'; aria = 'RSVP'; }
             else if (labelLower.includes('map')) { iconClass = 'bi-geo-alt'; aria = 'Map'; }
             else if (labelLower.includes('more info') || labelLower.includes('info')) { iconClass = 'bi-info-circle'; aria = 'More info'; }
 
             return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="${aria}" title="${aria}"><i class="bi ${iconClass}"></i></a>`;
-        }).join(' ') : '';
+        }).filter(html => html !== '').join(' ') : '';
 
         const teaHtml = this.generateTeaHtml(event);
         const locationHtml = this.generateLocationHtml(event);
