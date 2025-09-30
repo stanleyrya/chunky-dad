@@ -103,13 +103,6 @@ function generateFaviconFilename(faviconUrl) {
             const domainParam = parsedUrl.searchParams.get('domain');
             if (domainParam) {
                 domain = domainParam;
-                
-                // Special handling for Linktree domains - use the actual profile picture filename
-                if (domain === 'linktr.ee' || domain === 'www.linktr.ee') {
-                    // For Linktree, we need to generate the filename that matches what we download
-                    // The actual profile picture is hosted on ugc.production.linktr.ee
-                    domain = 'ugc.production.linktr.ee';
-                }
             } else {
                 // Fallback to hostname if no domain param
                 domain = parsedUrl.hostname;
@@ -183,6 +176,42 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
     }
 }
 
+/**
+ * Convert a website URL to a local favicon path, handling Linktree URLs specially
+ * @param {string} websiteUrl - The website URL
+ * @param {string} basePath - The base path (e.g., 'img/favicons')
+ * @returns {string} - The local file path
+ */
+function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
+    if (!websiteUrl || !websiteUrl.startsWith('http')) {
+        return websiteUrl;
+    }
+    
+    try {
+        const parsedUrl = new URL(websiteUrl);
+        
+        // Check if it's a Linktree URL
+        if (parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee') {
+            // Generate Linktree-specific filename
+            const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+            const cleanPath = pathname
+                .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+                .replace(/-+/g, '-') // Collapse multiple dashes
+                .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+            
+            const filename = `favicon-linktr.ee-${cleanPath}.ico`;
+            return `${basePath}/${filename}`;
+        } else {
+            // Use regular favicon logic for other domains
+            const hostname = parsedUrl.hostname;
+            const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+            return convertFaviconUrlToLocalPath(googleFaviconUrl, basePath);
+        }
+    } catch (error) {
+        return websiteUrl; // Return original URL as fallback
+    }
+}
+
 
 /**
  * Simple hash function for fallback filenames
@@ -208,6 +237,7 @@ if (typeof module !== 'undefined' && module.exports) {
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
+        convertWebsiteUrlToFaviconPath,
         simpleHash
     };
 }
@@ -220,6 +250,7 @@ if (typeof window !== 'undefined') {
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
+        convertWebsiteUrlToFaviconPath,
         simpleHash
     };
 }

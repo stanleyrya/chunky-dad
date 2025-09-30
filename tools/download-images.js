@@ -249,6 +249,102 @@ function generateFilename(url, type = 'event') {
     return generateFilenameFromUrl(url);
 }
 
+// Generate a unique filename for Linktree profile pictures based on the Linktree URL
+function generateLinktreeFaviconFilename(linktreeUrl) {
+    try {
+        const parsedUrl = new URL(linktreeUrl);
+        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+        const cleanPath = pathname
+            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+            .replace(/-+/g, '-') // Collapse multiple dashes
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+        
+        return `favicon-linktr.ee-${cleanPath}.ico`;
+    } catch (error) {
+        // Fallback to hash-based filename
+        const hash = simpleHash(linktreeUrl);
+        return `favicon-linktr.ee-${hash}.ico`;
+    }
+}
+
+// Download image with a custom filename
+async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 'event', isLinktreeProfile = false) {
+  try {
+    const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+    const localPath = path.join(dir, customFilename);
+    const metadataPath = localPath + '.meta';
+    
+    // Check if we should download
+    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
+    
+    if (!shouldDownload) {
+      console.log(`⏭️  Skipping ${type} image: ${customFilename} (${reason})`);
+      return { success: true, skipped: true, filename: customFilename, reason };
+    }
+    
+    console.log(`📥 Downloading ${type} image: ${customFilename} (${reason})`);
+    console.log(`   URL: ${imageUrl}`);
+    
+    // Download the image
+    await downloadFile(imageUrl, localPath);
+    
+    // Process Linktree profile pictures with optimization
+    if (isLinktreeProfile && type === 'favicon') {
+      const tempPath = localPath + '.temp';
+      const optimizedPath = localPath + '.optimized';
+      
+      try {
+        // Move original to temp location
+        fs.renameSync(localPath, tempPath);
+        
+        // Process and optimize the image
+        const processed = await processProfilePicture(tempPath, optimizedPath);
+        
+        if (processed) {
+          // Replace original with optimized version
+          fs.renameSync(optimizedPath, localPath);
+          console.log(`🎨 Applied optimization to Linktree profile picture`);
+        } else {
+          // Fallback: restore original if processing failed
+          fs.renameSync(tempPath, localPath);
+        }
+        
+        // Clean up temp file
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+        if (fs.existsSync(optimizedPath)) {
+          fs.unlinkSync(optimizedPath);
+        }
+      } catch (processError) {
+        console.warn(`⚠️  Image processing failed, using original: ${processError.message}`);
+        // Restore original if it was moved
+        if (fs.existsSync(tempPath) && !fs.existsSync(localPath)) {
+          fs.renameSync(tempPath, localPath);
+        }
+      }
+    }
+    
+    // Save metadata
+    const metadata = {
+      originalUrl: imageUrl,
+      downloadedAt: new Date().toISOString(),
+      type: type,
+      filename: customFilename,
+      isLinktreeProfile: isLinktreeProfile
+    };
+    
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    
+    console.log(`✅ Downloaded ${type} image: ${customFilename}`);
+    return { success: true, skipped: false, filename: customFilename, localPath };
+    
+  } catch (error) {
+    console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+    return { success: false, error: error.message, url: imageUrl };
+  }
+}
+
 // Check if we should download the image
 function shouldDownloadImage(imageUrl, localPath, metadataPath) {
   // 1. Check if file exists
@@ -487,8 +583,11 @@ async function main() {
         const profilePictureUrl = await extractLinktreeProfilePicture(linktreeUrl);
         
         if (profilePictureUrl) {
-          // Download the profile picture as a favicon with Linktree optimization
-          const result = await downloadImage(profilePictureUrl, 'favicon', true);
+          // Generate a unique filename based on the Linktree URL, not the profile picture URL
+          const linktreeFilename = generateLinktreeFaviconFilename(linktreeUrl);
+          
+          // Download the profile picture with the custom filename
+          const result = await downloadImageWithCustomFilename(profilePictureUrl, linktreeFilename, 'favicon', true);
           if (result.success) {
             if (result.skipped) {
               totalSkipped++;
@@ -532,4 +631,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent };
+module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename };

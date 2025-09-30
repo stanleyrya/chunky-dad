@@ -1192,26 +1192,27 @@ class DynamicCalendarLoader extends CalendarCore {
                     url = 'https://' + url;
                 }
                 
-                const hostname = new URL(url).hostname;
-                let faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                let faviconUrl;
                 
                 // Convert to local favicon URL if using cached data
                 if (this.dataSource === 'cached') {
-                    const originalFaviconUrl = faviconUrl;
-                    faviconUrl = window.FilenameUtils.convertFaviconUrlToLocalPath(faviconUrl, '/img/favicons');
+                    faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
                     
                     logger.debug('MAP', 'Using local favicon for cached data', {
-                        hostname,
-                        originalUrl: originalFaviconUrl,
+                        website: url,
                         localPath: faviconUrl,
                         dataSource: this.dataSource
                     });
+                } else {
+                    // For live data, use Google favicon service
+                    const hostname = new URL(url).hostname;
+                    faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                 }
                 
                 const textFallback = this.getMarkerText(event);
                 
                 logger.debug('MAP', 'Favicon URL generated', {
-                    hostname,
+                    website: url,
                     faviconUrl,
                     textFallback,
                     dataSource: this.dataSource
