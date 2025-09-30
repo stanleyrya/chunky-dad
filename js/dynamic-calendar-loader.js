@@ -1849,10 +1849,6 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate event card
     generateEventCard(event) {
-        // Generate ticket button if ticketUrl exists (first button)
-        const ticketButtonHtml = event.ticketUrl ? 
-            `<a href="${event.ticketUrl}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="Tickets" title="Tickets"><i class="bi bi-ticket-perforated"></i></a>` : '';
-
         const linksHtml = event.links ? event.links.map(link => {
             const labelLower = (link.label || '').toLowerCase();
             let iconClass = 'bi-link-45deg';
@@ -1913,7 +1909,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     ${coverHtml}
                     ${teaHtml}
                     <div class="event-links">
-                        ${ticketButtonHtml}
                         ${linksHtml}
                         <button class="share-event-btn icon-only" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event" aria-label="Share this event">
                             <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
