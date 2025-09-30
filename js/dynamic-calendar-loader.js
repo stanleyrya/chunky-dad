@@ -1852,14 +1852,6 @@ class DynamicCalendarLoader extends CalendarCore {
         // Generate ticket button if ticketUrl exists (first button)
         const ticketButtonHtml = event.ticketUrl ? 
             `<a href="${event.ticketUrl}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="Tickets" title="Tickets"><i class="bi bi-ticket-perforated"></i></a>` : '';
-        
-        // Log ticket button generation for debugging
-        if (event.ticketUrl) {
-            logger.debug('EVENT', 'Generated ticket button for event', { 
-                eventName: event.name, 
-                ticketUrl: event.ticketUrl 
-            });
-        }
 
         const linksHtml = event.links ? event.links.map(link => {
             const labelLower = (link.label || '').toLowerCase();
