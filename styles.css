@@ -147,6 +147,7 @@ html {
 
 /* Header and Navigation */
 header {
+    background: #667eea; /* Explicit primary purple background for Safari 26 theme-color compatibility */
     background: var(--gradient-primary);
     box-shadow: 0 2px 10px var(--shadow-light);
     position: fixed;
