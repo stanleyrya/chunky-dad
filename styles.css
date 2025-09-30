@@ -105,7 +105,8 @@ body {
     font-family: 'Poppins', sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
-    background-color: var(--background-primary);
+    background-color: #ffffff; /* Explicit white background for Safari 26 theme-color compatibility */
+    background-color: var(--background-primary); /* CSS custom property fallback */
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
