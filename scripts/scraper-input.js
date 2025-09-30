@@ -185,6 +185,40 @@ const scraperConfig = {
       metadata: {
         instagram: { value: "https://www.instagram.com/bearssitges" }
       }
+    },
+    {
+      name: "Cubhouse",
+      enabled: true,
+      urls: ["https://linktr.ee/cubhouse"],
+      // parser: "linktree",    // Auto-detected from URL pattern
+      alwaysBear: true,        // Cubhouse events are always bear events
+      urlDiscoveryDepth: 2,    // Depth 2 to follow ticket links and their detail pages
+      maxAdditionalUrls: 10,   // Limit additional URLs discovered
+      dryRun: false,           // Override global dryRun if needed
+      
+      // Field priorities for merging data from different sources
+      // Eventbrite takes priority for most fields since that's where the actual event data comes from
+      fieldPriorities: {
+        title: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        bar: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        address: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        startDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        endDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        url: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        image: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        cover: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        ticketUrl: { priority: ["eventbrite", "linktree"], merge: "clobber" }
+      },
+      
+      // Static metadata to add to all Cubhouse events
+      metadata: {
+        shortName: { value: "CUB-HOUSE" },
+        instagram: { value: "https://www.instagram.com/cubhouse.philly" }
+      }
     }
   ],
   // Centralized city configuration
