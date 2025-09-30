@@ -134,6 +134,42 @@ const CITY_CONFIG = {
         coordinates: { lat: 41.2379, lng: 1.8057 },
         mapZoom: 10,
         visible: true
+    },
+    'boston': {
+        name: 'Boston',
+        emoji: '🦞',
+        tagline: 'Beantown bears',
+        calendarId: '88700f4c5744ed3c069399d8e3e8dbcae27bb7034049171718c0bcba2e4d5f09@group.calendar.google.com',
+        coordinates: { lat: 42.3601, lng: -71.0589 },
+        mapZoom: 10,
+        visible: true
+    },
+    'phoenix': {
+        name: 'Phoenix',
+        emoji: '🌵',
+        tagline: 'Desert bear heat',
+        calendarId: '7293db43546e6b7dd38620d8d078258480694866435de62f28272ea0527e922e@group.calendar.google.com',
+        coordinates: { lat: 33.4484, lng: -112.0740 },
+        mapZoom: 10,
+        visible: true
+    },
+    'provincetown': {
+        name: 'Provincetown',
+        emoji: '🏖️',
+        tagline: 'Cape Cod bear paradise',
+        calendarId: '3b7c4ed1606370c70125e378cb3435fe8ab168161593b0f7dd3112ae56bc4db9@group.calendar.google.com',
+        coordinates: { lat: 42.0526, lng: -70.1865 },
+        mapZoom: 12,
+        visible: true
+    },
+    'san-diego': {
+        name: 'San Diego',
+        emoji: '🌊',
+        tagline: 'SoCal bear vibes',
+        calendarId: '49674e3c4b41bb7164b4455db26b589e7b6dfaf66cf5bc32650a3deae1055237@group.calendar.google.com',
+        coordinates: { lat: 32.7157, lng: -117.1611 },
+        mapZoom: 10,
+        visible: true
     }
 };
 
