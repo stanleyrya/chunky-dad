@@ -415,44 +415,6 @@ class FurballParser {
         return links;
     }
 
-    // Extract location from venue text
-    extractLocationFromVenue(venueText) {
-        // Look for common location patterns
-        const locationPatterns = [
-            /(NYC|New York)/i,
-            /(Boston|MA|Massachusetts)/i,
-            /(Chicago|IL|Illinois)/i,
-            /(Los Angeles|LA|CA|California)/i,
-            /(San Francisco|SF|CA|California)/i,
-            /(Miami|FL|Florida)/i,
-            /(Atlanta|GA|Georgia)/i,
-            /(Seattle|WA|Washington)/i,
-            /(Portland|OR|Oregon)/i,
-            /(Denver|CO|Colorado)/i,
-            /(Austin|TX|Texas)/i,
-            /(Dallas|TX|Texas)/i,
-            /(Houston|TX|Texas)/i,
-            /(Phoenix|AZ|Arizona)/i,
-            /(Las Vegas|NV|Nevada)/i
-        ];
-        
-        for (const pattern of locationPatterns) {
-            const match = venueText.match(pattern);
-            if (match) {
-                return match[0];
-            }
-        }
-        
-        // Look for state abbreviations or common city patterns
-        const statePattern = /\b([A-Z]{2})\b/;
-        const stateMatch = venueText.match(statePattern);
-        if (stateMatch) {
-            return stateMatch[0];
-        }
-        
-        // If no location found, return empty string
-        return '';
-    }
 
     // Parse date string into a Date object
     parseDate(dateString) {
