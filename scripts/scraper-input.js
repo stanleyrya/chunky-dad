@@ -38,7 +38,8 @@ const scraperConfig = {
       metadata: {
         title: { value: "MEGAWOOF" },
         shortName: { value: "MEGA-WOOF" },
-        instagram: { value: "https://www.instagram.com/megawoof_america" }
+        instagram: { value: "https://www.instagram.com/megawoof_america" },
+        url: { value: "https://linktr.ee/megawoof_america" }
       }
     },
     {
