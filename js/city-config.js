@@ -137,7 +137,7 @@ const CITY_CONFIG = {
     },
     'boston': {
         name: 'Boston',
-        emoji: '🦞',
+        emoji: '🎓',
         tagline: 'Beantown bears',
         calendarId: '88700f4c5744ed3c069399d8e3e8dbcae27bb7034049171718c0bcba2e4d5f09@group.calendar.google.com',
         coordinates: { lat: 42.3601, lng: -71.0589 },
