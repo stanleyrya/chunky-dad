@@ -79,22 +79,13 @@ class FurballParser {
     extractEventSections(html) {
         const sections = [];
         try {
-            // Look for the main content section that contains all events
-            const mainSectionMatch = html.match(/<section[^>]*id="comp-l6nopnaw"[^>]*>([\s\S]*?)<\/section>/i);
-            if (mainSectionMatch) {
-                const mainSection = mainSectionMatch[1];
-                // Split by date patterns to get individual events
-                const eventBlocks = this.splitByEventDate(mainSection);
-                sections.push(...eventBlocks);
-            } else {
-                // Fallback: look for any sections with date patterns
-                const sectionRegex = /<section[^>]*>([\s\S]*?)<\/section>/gi;
-                let match;
-                while ((match = sectionRegex.exec(html)) !== null) {
-                    const sectionContent = match[1];
-                    if (this.containsEventDate(sectionContent)) {
-                        sections.push(sectionContent);
-                    }
+            // Look for any sections containing event data (date patterns)
+            const sectionRegex = /<section[^>]*>([\s\S]*?)<\/section>/gi;
+            let match;
+            while ((match = sectionRegex.exec(html)) !== null) {
+                const sectionContent = match[1];
+                if (this.containsEventDate(sectionContent)) {
+                    sections.push(sectionContent);
                 }
             }
         } catch (error) {
