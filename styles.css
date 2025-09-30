@@ -105,7 +105,7 @@ body {
     font-family: 'Poppins', sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
-    background-color: #667eea; /* Explicit primary purple background for Safari 26 theme-color compatibility */
+    background-color: var(--background-primary);
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
@@ -147,6 +147,7 @@ html {
 
 /* Header and Navigation */
 header {
+    background: #667eea; /* Explicit primary purple background for Safari 26 theme-color compatibility */
     background: var(--gradient-primary);
     box-shadow: 0 2px 10px var(--shadow-light);
     position: fixed;
@@ -834,7 +835,6 @@ body.index-page header.visible {
 main {
     position: relative;
     z-index: 1;
-    background-color: var(--background-primary); /* Ensure main content has white background */
 }
 
 /* Index page main content - no top padding since hero provides spacing */
