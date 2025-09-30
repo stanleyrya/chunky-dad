@@ -26,12 +26,6 @@ class LinktreeParser {
             maxAdditionalUrls: 15,
             ...config
         };
-        
-        // Keywords that indicate ticket/event links
-        this.ticketKeywords = [
-            'tickets', 'ticket', 'buy tickets', 'get tickets', 'purchase',
-            'eventbrite', 'event', 'party', 'show', 'concert', 'festival'
-        ];
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
@@ -112,49 +106,17 @@ class LinktreeParser {
         return ticketLinks;
     }
 
-    // Check if a link is a ticket/event link based on its content and URL
+    // Check if a link is a ticket link - super simple: just look for "ticket" in the text
     isTicketLink(linkHtml, url) {
         try {
-            // Extract the text content from the link
             const linkText = this.extractLinkTitle(linkHtml).toLowerCase();
-            
-            // Check if the link text contains ticket keywords
-            const hasTicketKeyword = this.ticketKeywords.some(keyword => 
-                linkText.includes(keyword.toLowerCase())
-            );
-            
-            // Check if the URL is from a known event platform
-            const isEventPlatform = this.isEventPlatformUrl(url);
-            
-            // A link is considered a ticket link if it has ticket keywords OR is from an event platform
-            return hasTicketKeyword || isEventPlatform;
-            
+            return linkText.includes('ticket');
         } catch (error) {
             console.warn(`🔗 Linktree: Error checking if link is ticket link: ${error}`);
             return false;
         }
     }
 
-    // Check if URL is from a known event platform
-    isEventPlatformUrl(url) {
-        if (!url) return false;
-        
-        const eventPlatforms = [
-            'eventbrite.com',
-            'ticketmaster.com',
-            'stubhub.com',
-            'seatgeek.com',
-            'axs.com',
-            'tickets.com',
-            'ticketfly.com',
-            'brownpapertickets.com',
-            'universe.com',
-            'eventful.com',
-            'meetup.com'
-        ];
-        
-        return eventPlatforms.some(platform => url.toLowerCase().includes(platform));
-    }
 
     // Extract the title/text from a link HTML element
     extractLinkTitle(linkHtml) {
@@ -292,98 +254,27 @@ class LinktreeParser {
         }
     }
 
-    // Extract city from URL (e.g., linktr.ee/cubhouse -> philadelphia)
+    // Extract city from URL - simple mapping
     extractCityFromUrl(url) {
         if (!url) return null;
         
-        const cityMappings = {
-            'cubhouse': 'philadelphia',
-            'nyc': 'nyc',
-            'la': 'la',
-            'sf': 'sf',
-            'chicago': 'chicago',
-            'miami': 'miami',
-            'atlanta': 'atlanta',
-            'denver': 'denver',
-            'vegas': 'vegas',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix',
-            'boston': 'boston',
-            'philadelphia': 'philadelphia'
-        };
-        
-        for (const [key, city] of Object.entries(cityMappings)) {
-            if (url.toLowerCase().includes(key)) {
-                return city;
-            }
-        }
-        
+        if (url.includes('cubhouse')) return 'philadelphia';
         return null;
     }
 
-    // Extract city from title text
+    // Extract city from title - simple check
     extractCityFromTitle(title) {
         if (!title) return null;
         
-        const cityPatterns = {
-            'philly': 'philadelphia',
-            'philadelphia': 'philadelphia',
-            'new york': 'nyc',
-            'nyc': 'nyc',
-            'los angeles': 'la',
-            'la': 'la',
-            'san francisco': 'sf',
-            'sf': 'sf',
-            'chicago': 'chicago',
-            'miami': 'miami',
-            'atlanta': 'atlanta',
-            'denver': 'denver',
-            'vegas': 'vegas',
-            'seattle': 'seattle',
-            'portland': 'portland',
-            'austin': 'austin',
-            'dallas': 'dallas',
-            'houston': 'houston',
-            'phoenix': 'phoenix',
-            'boston': 'boston'
-        };
-        
         const lowerTitle = title.toLowerCase();
-        for (const [pattern, city] of Object.entries(cityPatterns)) {
-            if (lowerTitle.includes(pattern)) {
-                return city;
-            }
-        }
-        
+        if (lowerTitle.includes('philly') || lowerTitle.includes('philadelphia')) return 'philadelphia';
         return null;
     }
 
-    // Get timezone for a city
+    // Get timezone for a city - simple mapping
     getTimezoneForCity(city) {
-        const timezoneMappings = {
-            'philadelphia': 'America/New_York',
-            'nyc': 'America/New_York',
-            'la': 'America/Los_Angeles',
-            'sf': 'America/Los_Angeles',
-            'chicago': 'America/Chicago',
-            'miami': 'America/New_York',
-            'atlanta': 'America/New_York',
-            'denver': 'America/Denver',
-            'vegas': 'America/Los_Angeles',
-            'seattle': 'America/Los_Angeles',
-            'portland': 'America/Los_Angeles',
-            'austin': 'America/Chicago',
-            'dallas': 'America/Chicago',
-            'houston': 'America/Chicago',
-            'phoenix': 'America/Phoenix',
-            'boston': 'America/New_York'
-        };
-        
-        return timezoneMappings[city] || null;
+        if (city === 'philadelphia') return 'America/New_York';
+        return null;
     }
 
 
