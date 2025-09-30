@@ -190,6 +190,7 @@ const scraperConfig = {
       name: "Cubhouse",
       enabled: true,
       urls: ["https://linktr.ee/cubhouse"],
+      // parser: "linktree",    // Auto-detected from URL pattern
       alwaysBear: true,        // Cubhouse events are always bear events
       urlDiscoveryDepth: 2,    // Depth 2 to follow ticket links and their detail pages
       maxAdditionalUrls: 10,   // Limit additional URLs discovered

@@ -59,6 +59,10 @@ class SharedCore {
             {
                 pattern: /bearssitges\.org/i,
                 parser: 'bears-sitges'
+            },
+            {
+                pattern: /linktr\.ee/i,
+                parser: 'linktree'
             }
             // Generic parser will be used as fallback if no pattern matches
         ];
