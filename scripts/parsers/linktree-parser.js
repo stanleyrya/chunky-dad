@@ -27,13 +27,6 @@ class LinktreeParser {
             ...config
         };
         
-        this.bearKeywords = [
-            'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
-            'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
-            'furball', 'leather bears', 'bear night', 'bear party', 'queer',
-            'dance party', 'cubhouse', 'philly', 'philadelphia'
-        ];
-        
         // Keywords that indicate ticket/event links
         this.ticketKeywords = [
             'tickets', 'ticket', 'buy tickets', 'get tickets', 'purchase',
@@ -133,14 +126,8 @@ class LinktreeParser {
             // Check if the URL is from a known event platform
             const isEventPlatform = this.isEventPlatformUrl(url);
             
-            // Check if the link text suggests it's an event (not just social media)
-            const isEventRelated = this.isEventRelatedText(linkText);
-            
-            // A link is considered a ticket link if:
-            // 1. It has ticket keywords in the text, OR
-            // 2. It's from an event platform, OR  
-            // 3. It has event-related text and isn't obviously social media
-            return hasTicketKeyword || isEventPlatform || isEventRelated;
+            // A link is considered a ticket link if it has ticket keywords OR is from an event platform
+            return hasTicketKeyword || isEventPlatform;
             
         } catch (error) {
             console.warn(`🔗 Linktree: Error checking if link is ticket link: ${error}`);
@@ -167,31 +154,6 @@ class LinktreeParser {
         ];
         
         return eventPlatforms.some(platform => url.toLowerCase().includes(platform));
-    }
-
-    // Check if link text suggests it's event-related (not social media)
-    isEventRelatedText(text) {
-        const eventIndicators = [
-            'event', 'party', 'show', 'concert', 'festival', 'gala',
-            'dance', 'night', 'celebration', 'gathering', 'meetup',
-            'conference', 'workshop', 'seminar', 'exhibition'
-        ];
-        
-        const socialMediaIndicators = [
-            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube',
-            'snapchat', 'linkedin', 'pinterest', 'follow', 'like',
-            'subscribe', 'share', 'photos', 'videos', 'stories'
-        ];
-        
-        const hasEventIndicators = eventIndicators.some(indicator => 
-            text.includes(indicator.toLowerCase())
-        );
-        
-        const hasSocialMediaIndicators = socialMediaIndicators.some(indicator => 
-            text.includes(indicator.toLowerCase())
-        );
-        
-        return hasEventIndicators && !hasSocialMediaIndicators;
     }
 
     // Extract the title/text from a link HTML element
@@ -234,18 +196,6 @@ class LinktreeParser {
         try {
             const { url, title } = ticketLink;
             
-            // Try to extract basic info from the URL if possible
-            const urlParts = url.split('/');
-            const eventId = urlParts[urlParts.length - 1];
-            
-            // Determine if this is likely a bear event based on the source URL and title
-            const isBearEvent = this.isBearEvent({
-                title: title,
-                description: '',
-                venue: '',
-                url: url
-            }) || this.isBearEventFromUrl(sourceUrl);
-            
             // Try to extract city from the source URL or title
             const city = this.extractCityFromUrl(sourceUrl) || this.extractCityFromTitle(title);
             
@@ -265,7 +215,7 @@ class LinktreeParser {
                 cover: '', // Will be filled by other parsers
                 image: '', // Will be filled by other parsers
                 source: this.config.source,
-                isBearEvent: isBearEvent,
+                isBearEvent: false, // Will be determined by other parsers
                 // Add metadata to indicate this needs further processing
                 _needsFurtherProcessing: true,
                 _originalLinkTitle: title
@@ -436,38 +386,6 @@ class LinktreeParser {
         return timezoneMappings[city] || null;
     }
 
-    // Check if an event is a bear event based on keywords
-    isBearEvent(event) {
-        const title = event.title || '';
-        const description = event.description || '';
-        const venue = event.venue || '';
-        const url = event.url || '';
-
-        // Check if the title, description, venue, or URL contains bear keywords
-        if (this.bearKeywords.some(keyword => 
-            title.toLowerCase().includes(keyword) || 
-            description.toLowerCase().includes(keyword) || 
-            venue.toLowerCase().includes(keyword) || 
-            url.toLowerCase().includes(keyword)
-        )) {
-            return true;
-        }
-
-        return false;
-    }
-
-    // Check if the source URL suggests this is a bear event
-    isBearEventFromUrl(url) {
-        if (!url) return false;
-        
-        const bearUrlPatterns = [
-            'cubhouse', 'bear', 'woof', 'furry', 'leather'
-        ];
-        
-        return bearUrlPatterns.some(pattern => 
-            url.toLowerCase().includes(pattern)
-        );
-    }
 
     // Normalize URLs
     normalizeUrl(url, baseUrl) {
