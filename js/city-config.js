@@ -155,7 +155,7 @@ const CITY_CONFIG = {
     },
     'provincetown': {
         name: 'Provincetown',
-        emoji: '🏖️',
+        emoji: '🗼',
         tagline: 'Cape Cod bear paradise',
         calendarId: '3b7c4ed1606370c70125e378cb3435fe8ab168161593b0f7dd3112ae56bc4db9@group.calendar.google.com',
         coordinates: { lat: 42.0526, lng: -70.1865 },
