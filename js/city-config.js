@@ -170,6 +170,15 @@ const CITY_CONFIG = {
         coordinates: { lat: 32.7157, lng: -117.1611 },
         mapZoom: 10,
         visible: true
+    },
+    'philadelphia': {
+        name: 'Philadelphia',
+        emoji: '🔔',
+        tagline: 'City of Brotherly Love bears',
+        calendarId: '63b74fff1a9f872730ed4d49bbd60bba3e1faa73778636944687f5949d8a435d@group.calendar.google.com',
+        coordinates: { lat: 39.9526, lng: -75.1652 },
+        mapZoom: 10,
+        visible: true
     }
 };
 
