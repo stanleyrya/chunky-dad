@@ -107,8 +107,8 @@ class FurballParser {
                 const richTextContent = match[1];
                 // Check if this rich text contains a date and FURBALL
                 if (this.containsEventDate(richTextContent) && richTextContent.includes('FURBALL')) {
-                    // Find the next image component after this rich text
-                    const imageComponent = this.findNextImageComponent(content, match.index);
+                    // Find the closest image component in the same section
+                    const imageComponent = this.findImageComponentsInSection(content, match.index);
                     
                     // Create event block with both text and image data
                     const eventBlock = {
@@ -124,26 +124,41 @@ class FurballParser {
         return events;
     }
 
-    // Find the next image component after a rich text component
-    findNextImageComponent(content, richTextIndex) {
+    // Find all image components in the same section as the rich text
+    findImageComponentsInSection(content, richTextIndex) {
         try {
-            // Look for the next image component after the rich text
+            // Look for all image components in the content
             const imageRegex = /<div[^>]*class="[^"]*wixui-image[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
             let match;
-            
-            // Reset regex to start from the rich text position
-            imageRegex.lastIndex = richTextIndex;
+            const imageComponents = [];
             
             while ((match = imageRegex.exec(content)) !== null) {
-                if (match.index > richTextIndex) {
-                    // Found the next image component
-                    return match[1];
+                imageComponents.push({
+                    content: match[1],
+                    index: match.index
+                });
+            }
+            
+            // Return the closest image component (before or after the rich text)
+            if (imageComponents.length === 0) {
+                return null;
+            }
+            
+            // Find the closest image component to the rich text
+            let closestImage = null;
+            let closestDistance = Infinity;
+            
+            for (const image of imageComponents) {
+                const distance = Math.abs(image.index - richTextIndex);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestImage = image.content;
                 }
             }
             
-            return null; // No image component found
+            return closestImage;
         } catch (error) {
-            console.warn(`🐻‍❄️ Furball: Failed to find next image component: ${error}`);
+            console.warn(`🐻‍❄️ Furball: Failed to find image components in section: ${error}`);
             return null;
         }
     }
