@@ -745,7 +745,7 @@ class EventbriteParser {
                 address: finalAddress,
                 city: city,
                 timezone: eventTimezone,
-                url: url, // Use consistent 'url' field name across all parsers
+                url: null, // Don't put Eventbrite URL in url field - only use ticketUrl
                 ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
                 cover: price, // Use 'cover' field name that calendar-core.js expects
                 ...(image && { image: image }), // Only include image if we found one

@@ -207,7 +207,7 @@ const scraperConfig = {
         address: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         startDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         endDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
-        url: { priority: ["eventbrite", "linktree"], merge: "clobber" },
+        url: { priority: ["linktree", "eventbrite"], merge: "clobber" }, // Prefer linktree URL over eventbrite
         gmaps: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         image: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         cover: { priority: ["eventbrite", "linktree"], merge: "clobber" },
