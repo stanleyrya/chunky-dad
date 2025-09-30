@@ -352,6 +352,7 @@ class CalendarCore {
                     eventData.instagram = additionalData.instagram;
                     eventData.facebook = additionalData.facebook;
                     eventData.gmaps = additionalData.gmaps;
+                    eventData.ticketUrl = additionalData.ticketUrl;
                     eventData.shortName = additionalData.shortName;
                     eventData.shorterName = additionalData.shorterName;
                     eventData.links = this.parseLinks(additionalData);
@@ -466,6 +467,7 @@ class CalendarCore {
             'cover': 'cover', 'cost': 'cover', 'price': 'cover',
             'tea': 'tea', 'info': 'tea', 'description': 'tea',
             'website': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
+            'ticketurl': 'ticketUrl', 'ticket url': 'ticketUrl', 'tickets': 'ticketUrl', 'ticket': 'ticketUrl',
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
             'gmaps': 'gmaps', 'google maps': 'gmaps',
             'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
@@ -547,7 +549,7 @@ class CalendarCore {
                     const mappedKey = keyMap[key] || key;
                     
                     // Additional validation for URLs
-                    if (['website', 'instagram', 'facebook', 'gmaps', 'image'].includes(mappedKey)) {
+                    if (['website', 'instagram', 'facebook', 'gmaps', 'image', 'ticketUrl'].includes(mappedKey)) {
                         // Ensure we have a valid URL
                         if (value.startsWith('http://') || value.startsWith('https://')) {
                             data[mappedKey] = value;
@@ -574,7 +576,8 @@ class CalendarCore {
             hasWebsite: !!data.website,
             hasInstagram: !!data.instagram,
             hasFacebook: !!data.facebook,
-            hasGmaps: !!data.gmaps
+            hasGmaps: !!data.gmaps,
+            hasTicketUrl: !!data.ticketUrl
         });
         
         return Object.keys(data).length > 0 ? data : null;
@@ -595,6 +598,9 @@ class CalendarCore {
         }
         if (data.gmaps) {
             links.push({ type: 'gmaps', url: data.gmaps, label: '🗺️ Google Maps' });
+        }
+        if (data.ticketUrl) {
+            links.push({ type: 'tickets', url: data.ticketUrl, label: '🎫 Tickets' });
         }
         
         return links.length > 0 ? links : null;
