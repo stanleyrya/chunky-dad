@@ -103,6 +103,13 @@ function generateFaviconFilename(faviconUrl) {
             const domainParam = parsedUrl.searchParams.get('domain');
             if (domainParam) {
                 domain = domainParam;
+                
+                // Special handling for Linktree domains - use the actual profile picture filename
+                if (domain === 'linktr.ee' || domain === 'www.linktr.ee') {
+                    // For Linktree, we need to generate the filename that matches what we download
+                    // The actual profile picture is hosted on ugc.production.linktr.ee
+                    domain = 'ugc.production.linktr.ee';
+                }
             } else {
                 // Fallback to hostname if no domain param
                 domain = parsedUrl.hostname;
