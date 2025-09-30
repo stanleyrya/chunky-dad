@@ -215,7 +215,7 @@ const scraperConfig = {
       
       // Static metadata to add to all Cubhouse events
       metadata: {
-        shortName: { value: "CUBHOUSE" },
+        shortName: { value: "CUB-HOUSE" },
         instagram: { value: "https://www.instagram.com/cubhouse.philly" }
       }
     }
