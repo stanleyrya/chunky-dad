@@ -119,7 +119,7 @@ const CITY_CONFIG = {
     },
     'portland': {
         name: 'Portland',
-        emoji: '🌲',
+        emoji: '🌹',
         tagline: 'Keep Portland beary',
         calendarId: '53033822a075eb914e2958dfa7aea363aac4084d29043bc5490761cbf8bf08dd@group.calendar.google.com',
         coordinates: { lat: 45.5152, lng: -122.6784 },
