@@ -185,6 +185,39 @@ const scraperConfig = {
       metadata: {
         instagram: { value: "https://www.instagram.com/bearssitges" }
       }
+    },
+    {
+      name: "Cubhouse",
+      enabled: true,
+      urls: ["https://linktr.ee/cubhouse"],
+      alwaysBear: true,        // Cubhouse events are always bear events
+      urlDiscoveryDepth: 2,    // Depth 2 to follow Eventbrite links and their detail pages
+      maxAdditionalUrls: 10,   // Limit additional URLs discovered
+      dryRun: false,           // Override global dryRun if needed
+      
+      // Field priorities for merging data from different sources
+      // Eventbrite takes priority for most fields since that's where the actual event data comes from
+      fieldPriorities: {
+        title: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        bar: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        address: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        startDate: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        endDate: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        url: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        image: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        cover: { priority: ["eventbrite", "cubhouse"], merge: "clobber" },
+        ticketUrl: { priority: ["eventbrite", "cubhouse"], merge: "clobber" }
+      },
+      
+      // Static metadata to add to all Cubhouse events
+      metadata: {
+        shortName: { value: "CUBHOUSE" },
+        instagram: { value: "https://www.instagram.com/cubhouse.philly" }
+      }
     }
   ],
   // Centralized city configuration
