@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250928T050000Z
 DTEND:20250928T110000Z
-DTSTAMP:20250920T220331Z
+DTSTAMP:20250930T022813Z
 UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
 CREATED:20250901T054018Z
 DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
@@ -36,7 +36,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250927T040000Z
 DTEND:20250927T100000Z
-DTSTAMP:20250920T220331Z
+DTSTAMP:20250930T022813Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
 DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
@@ -57,5 +57,33 @@ STATUS:CONFIRMED
 SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251019T040000Z
+DTEND:20251019T090000Z
+DTSTAMP:20250930T022813Z
+UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
+CREATED:20250930T014036Z
+DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
+ ison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ Naught
+ yBoyy.\nbar: The Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 941
+ 03\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite.com/e/beefwi
+ tch-tickets-1728182092159\nticketUrl: https://www.eventbrite.com/e/beefwitc
+ h-tickets-1728182092159\ncover: $12.51 - $17.85 (as of 9/29)\nimage: https:
+ //img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2F2198683
+ 436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=230&w=460&
+ auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e194843ee64060
+ 7400ec97184904\nshortName: Coach After Dark\ninstagram: https://www.instagr
+ am.com/coachafterdark\ngmaps: https://www.google.com/maps/search/?api=1&que
+ ry=37.7761825%2C-122.4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs\nke
+ y: beefwitch|2025-10-19|the stud|eventbrite
+LAST-MODIFIED:20250930T014036Z
+LOCATION:37.7761825\, -122.4083567
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFWITCH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR
