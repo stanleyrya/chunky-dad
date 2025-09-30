@@ -158,9 +158,6 @@ class LinktreeParser {
         try {
             const { url, title } = ticketLink;
             
-            // Try to extract city from the source URL or title
-            const city = this.extractCityFromUrl(sourceUrl) || this.extractCityFromTitle(title);
-            
             // Create a basic event object that will be enriched by other parsers
             const event = {
                 title: title,
@@ -170,8 +167,8 @@ class LinktreeParser {
                 bar: null, // Will be filled by other parsers
                 location: null, // Will be filled by other parsers
                 address: null, // Will be filled by other parsers
-                city: city,
-                timezone: city ? this.getTimezoneForCity(city) : null,
+                city: null, // Will be filled by other parsers
+                timezone: null, // Will be filled by other parsers
                 url: url, // The ticket/event URL
                 ticketUrl: url, // Same as URL for most cases
                 cover: '', // Will be filled by other parsers
@@ -254,28 +251,6 @@ class LinktreeParser {
         }
     }
 
-    // Extract city from URL - simple mapping
-    extractCityFromUrl(url) {
-        if (!url) return null;
-        
-        if (url.includes('cubhouse')) return 'philadelphia';
-        return null;
-    }
-
-    // Extract city from title - simple check
-    extractCityFromTitle(title) {
-        if (!title) return null;
-        
-        const lowerTitle = title.toLowerCase();
-        if (lowerTitle.includes('philly') || lowerTitle.includes('philadelphia')) return 'philadelphia';
-        return null;
-    }
-
-    // Get timezone for a city - simple mapping
-    getTimezoneForCity(city) {
-        if (city === 'philadelphia') return 'America/New_York';
-        return null;
-    }
 
 
     // Normalize URLs
