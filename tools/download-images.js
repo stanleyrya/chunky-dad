@@ -5,6 +5,7 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
+const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
 const { generateFilenameFromUrl, generateFaviconFilename, cleanImageUrl } = require('../js/filename-utils.js');
@@ -39,6 +40,148 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+// Check if a URL is a Linktree
+function isLinktreeUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee';
+  } catch (error) {
+    return false;
+  }
+}
+
+// Extract profile picture URL from Linktree page
+async function extractLinktreeProfilePicture(linktreeUrl) {
+  try {
+    console.log(`🔍 Extracting profile picture from Linktree: ${linktreeUrl}`);
+    
+    // Fetch the Linktree page HTML
+    const html = await fetchPageContent(linktreeUrl);
+    
+    // Parse HTML with JSDOM
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    
+    // Look for the profile picture element
+    const profilePictureDiv = document.querySelector('#profile-picture');
+    if (!profilePictureDiv) {
+      console.log('⚠️  No profile picture div found on Linktree page');
+      return null;
+    }
+    
+    const img = profilePictureDiv.querySelector('img');
+    if (!img || !img.src) {
+      console.log('⚠️  No profile picture image found in profile-picture div');
+      return null;
+    }
+    
+    const profilePictureUrl = img.src;
+    console.log(`✅ Found profile picture URL: ${profilePictureUrl}`);
+    
+    return profilePictureUrl;
+    
+  } catch (error) {
+    console.error(`❌ Failed to extract profile picture from Linktree:`, error.message);
+    return null;
+  }
+}
+
+// Fetch page content with proper headers
+async function fetchPageContent(url) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const client = parsedUrl.protocol === 'https:' ? https : http;
+    const zlib = require('zlib');
+    
+    const request = client.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad-image-downloader/1.0)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      }
+    }, (response) => {
+      let stream = response;
+      
+      // Handle gzip/deflate decompression
+      if (response.headers['content-encoding'] === 'gzip') {
+        stream = response.pipe(zlib.createGunzip());
+      } else if (response.headers['content-encoding'] === 'deflate') {
+        stream = response.pipe(zlib.createInflate());
+      }
+      
+      let data = '';
+      
+      stream.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      stream.on('end', () => {
+        resolve(data);
+      });
+      
+      stream.on('error', (err) => {
+        reject(err);
+      });
+    });
+    
+    request.on('error', reject);
+    request.setTimeout(30000, () => {
+      request.destroy();
+      reject(new Error('Request timeout'));
+    });
+  });
+}
+
+// Process and optimize image (resize to 96x96 and compress)
+async function processProfilePicture(inputPath, outputPath) {
+  try {
+    const sharp = require('sharp');
+    
+    // Get image metadata
+    const metadata = await sharp(inputPath).metadata();
+    console.log(`📏 Original image: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
+    
+    // Process the image: resize to 96x96, maintain aspect ratio, optimize
+    await sharp(inputPath)
+      .resize(96, 96, {
+        fit: 'cover',
+        position: 'center'
+      })
+      .jpeg({
+        quality: 85,
+        progressive: true,
+        mozjpeg: true
+      })
+      .toFile(outputPath);
+    
+    // Get optimized image metadata
+    const optimizedMetadata = await sharp(outputPath).metadata();
+    const inputSize = fs.statSync(inputPath).size;
+    const outputSize = fs.statSync(outputPath).size;
+    const compressionRatio = ((inputSize - outputSize) / inputSize * 100).toFixed(1);
+    
+    console.log(`✅ Processed profile picture: ${outputPath}`);
+    console.log(`📏 Optimized image: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+    console.log(`📦 Size reduction: ${inputSize} bytes → ${outputSize} bytes (${compressionRatio}% smaller)`);
+    
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to process profile picture:`, error.message);
+    // Fallback to simple copy if sharp fails
+    try {
+      fs.copyFileSync(inputPath, outputPath);
+      console.log(`⚠️  Fallback: copied original image to ${outputPath}`);
+      return true;
+    } catch (copyError) {
+      console.error(`❌ Fallback copy also failed:`, copyError.message);
+      return false;
+    }
   }
 }
 
@@ -138,7 +281,7 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
 }
 
 // Download a single image
-async function downloadImage(imageUrl, type = 'event') {
+async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false) {
   try {
     const filename = generateFilename(imageUrl, type);
     const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
@@ -159,12 +302,50 @@ async function downloadImage(imageUrl, type = 'event') {
     // Download the image
     await downloadFile(imageUrl, localPath);
     
+    // Process Linktree profile pictures with optimization
+    if (isLinktreeProfile && type === 'favicon') {
+      const tempPath = localPath + '.temp';
+      const optimizedPath = localPath + '.optimized';
+      
+      try {
+        // Move original to temp location
+        fs.renameSync(localPath, tempPath);
+        
+        // Process and optimize the image
+        const processed = await processProfilePicture(tempPath, optimizedPath);
+        
+        if (processed) {
+          // Replace original with optimized version
+          fs.renameSync(optimizedPath, localPath);
+          console.log(`🎨 Applied optimization to Linktree profile picture`);
+        } else {
+          // Fallback: restore original if processing failed
+          fs.renameSync(tempPath, localPath);
+        }
+        
+        // Clean up temp file
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+        if (fs.existsSync(optimizedPath)) {
+          fs.unlinkSync(optimizedPath);
+        }
+      } catch (processError) {
+        console.warn(`⚠️  Image processing failed, using original: ${processError.message}`);
+        // Restore original if it was moved
+        if (fs.existsSync(tempPath) && !fs.existsSync(localPath)) {
+          fs.renameSync(tempPath, localPath);
+        }
+      }
+    }
+    
     // Save metadata
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
       type: type,
-      filename: filename
+      filename: filename,
+      isLinktreeProfile: isLinktreeProfile
     };
     
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
@@ -226,12 +407,19 @@ function extractImageUrls() {
       if (event.website) {
         try {
           const domain = new URL(event.website).hostname;
-          // Use Google's favicon service (same as dynamic calendar loader)
-          const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
           
-          imageUrls.favicons.add(faviconUrl);
-          
-          console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrl}`);
+          // Check if it's a Linktree URL
+          if (isLinktreeUrl(event.website)) {
+            console.log(`🔗 Found Linktree URL: ${event.website}`);
+            // Store the Linktree URL for special processing
+            imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
+            imageUrls.linktreeUrls.add(event.website);
+          } else {
+            // Use Google's favicon service for regular domains
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+            imageUrls.favicons.add(faviconUrl);
+            console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrl}`);
+          }
         } catch (error) {
           console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
         }
@@ -239,7 +427,8 @@ function extractImageUrls() {
     }
   }
   
-  console.log(`🔍 Found ${imageUrls.events.size} event images and ${imageUrls.favicons.size} favicon URLs`);
+  const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
+  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons.size} favicon URLs, and ${linktreeCount} Linktree URLs`);
   return imageUrls;
 }
 
@@ -289,6 +478,37 @@ async function main() {
     }
   }
   
+  // Process Linktree profile pictures
+  if (imageUrls.linktreeUrls && imageUrls.linktreeUrls.size > 0) {
+    console.log('\n🔗 Processing Linktree profile pictures...');
+    for (const linktreeUrl of imageUrls.linktreeUrls) {
+      try {
+        // Extract profile picture URL from Linktree page
+        const profilePictureUrl = await extractLinktreeProfilePicture(linktreeUrl);
+        
+        if (profilePictureUrl) {
+          // Download the profile picture as a favicon with Linktree optimization
+          const result = await downloadImage(profilePictureUrl, 'favicon', true);
+          if (result.success) {
+            if (result.skipped) {
+              totalSkipped++;
+            } else {
+              totalDownloaded++;
+            }
+          } else {
+            totalFailed++;
+          }
+        } else {
+          console.log(`⚠️  Could not extract profile picture from ${linktreeUrl}`);
+          totalFailed++;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to process Linktree ${linktreeUrl}:`, error.message);
+        totalFailed++;
+      }
+    }
+  }
+  
   // Summary
   console.log('\n📊 Download Summary:');
   console.log(`✅ Downloaded: ${totalDownloaded}`);
@@ -312,4 +532,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, extractImageUrls };
+module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent };
