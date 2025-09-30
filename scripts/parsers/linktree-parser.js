@@ -169,8 +169,8 @@ class LinktreeParser {
                 address: null, // Will be filled by other parsers
                 city: null, // Will be filled by other parsers
                 timezone: null, // Will be filled by other parsers
-                url: url, // The ticket/event URL
-                ticketUrl: url, // Same as URL for most cases
+                url: sourceUrl, // The linktree URL goes in url field
+                ticketUrl: url, // The ticket/event URL goes in ticketUrl field
                 cover: '', // Will be filled by other parsers
                 image: '', // Will be filled by other parsers
                 source: this.config.source,
