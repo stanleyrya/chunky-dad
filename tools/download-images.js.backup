@@ -638,4 +638,3 @@ if (require.main === module) {
   });
 }
 module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, downloadImageWithCustomFilename, shouldDownloadImage };
-
