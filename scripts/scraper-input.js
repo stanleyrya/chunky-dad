@@ -69,7 +69,7 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Events",
-      enabled: false,
+      enabled: true,
       urls: [
         "https://bearracuda.com/",
         //"https://www.eventbrite.com/o/bearracuda-21867032189"
