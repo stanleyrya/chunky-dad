@@ -387,6 +387,13 @@ class ScriptableAdapter {
                             targetEvent.notes = event.notes;
                             targetEvent.url = event.url;
                             
+                            // Log coordinate handling
+                            if (event.location) {
+                                console.log(`📱 Scriptable: Setting coordinates for merge event "${event.title}": ${event.location}`);
+                            } else {
+                                console.log(`📱 Scriptable: No coordinates to set for merge event "${event.title}"`);
+                            }
+                            
                             await targetEvent.save();
                             processedCount++;
                             break;
@@ -407,6 +414,7 @@ class ScriptableAdapter {
                             }
                             if (updateTarget.location !== event.location) {
                                 updateChanges.push('location (replaced)');
+                                console.log(`📱 Scriptable: Updating coordinates for "${event.title}": "${updateTarget.location}" → "${event.location}"`);
                                 updateTarget.location = event.location;
                             }
                             if (updateTarget.url !== event.url && event.url) {
@@ -433,6 +441,13 @@ class ScriptableAdapter {
                             calendarEvent.location = event.location;
                             calendarEvent.notes = event.notes;
                             calendarEvent.calendar = calendar;
+                            
+                            // Log coordinate handling
+                            if (event.location) {
+                                console.log(`📱 Scriptable: Setting coordinates for new event "${event.title}": ${event.location}`);
+                            } else {
+                                console.log(`📱 Scriptable: No coordinates to set for new event "${event.title}"`);
+                            }
                             
                             // Detect all-day events at save-time
                             if (this.isAllDayEvent(event)) {
@@ -2555,6 +2570,18 @@ class ScriptableAdapter {
                     <div class="event-detail">
                         <span>📍</span>
                         <span>${this.escapeHtml(event.venue || event.bar)}</span>
+                    </div>
+                ` : ''}
+                ${event.address ? `
+                    <div class="event-detail">
+                        <span>🏠</span>
+                        <span>${this.escapeHtml(event.address)}</span>
+                    </div>
+                ` : ''}
+                ${event.location ? `
+                    <div class="event-detail coordinates">
+                        <span>🌐</span>
+                        <span>Coordinates: ${this.escapeHtml(event.location)}</span>
                     </div>
                 ` : ''}
                 <div class="event-detail">

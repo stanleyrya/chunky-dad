@@ -783,6 +783,13 @@ class SharedCore {
             console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedEvent.title || 'event'}": ${clobberedFields.join(', ')}`);
         }
         
+        // Log coordinate handling specifically
+        if (mergedEvent.location) {
+            console.log(`🗺️ MERGE: Coordinates preserved for "${mergedEvent.title || 'event'}": ${mergedEvent.location}`);
+        } else if (newEvent.location) {
+            console.log(`🗺️ MERGE: Coordinates missing in merged event for "${mergedEvent.title || 'event'}" (original had: ${newEvent.location})`);
+        }
+        
         // Add any existing fields that weren't in scraped data
         // BUT respect merge strategies - don't override clobber results
         Object.keys(existingFields).forEach(fieldName => {
@@ -901,6 +908,15 @@ class SharedCore {
         // Log summary of clobbered fields
         if (clobberedFields.length > 0) {
             console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedObject.title || 'event'}": ${clobberedFields.join(', ')}`);
+        }
+        
+        // Log coordinate handling specifically
+        if (mergedObject.location) {
+            console.log(`🗺️ FINAL: Coordinates in final event for "${mergedObject.title || 'event'}": ${mergedObject.location}`);
+        } else if (newEvent.location) {
+            console.log(`🗺️ FINAL: Coordinates missing in final event for "${mergedObject.title || 'event'}" (scraper had: ${newEvent.location})`);
+        } else if (calendarObject.location) {
+            console.log(`🗺️ FINAL: Coordinates missing in final event for "${mergedObject.title || 'event'}" (calendar had: ${calendarObject.location})`);
         }
         
         // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
