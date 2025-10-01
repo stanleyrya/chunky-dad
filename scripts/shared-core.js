@@ -1474,6 +1474,14 @@ class SharedCore {
                 }
             }
             
+            // If no coordinates found and this is a Bearracuda event with Eventbrite URL, try to extract coordinates
+            if (!coordinates && event.source === 'bearracuda' && event.ticketUrl && event.ticketUrl.includes('eventbrite.com')) {
+                console.log(`🗺️ SharedCore: Bearracuda event with Eventbrite URL found, attempting coordinate extraction: ${event.ticketUrl}`);
+                // Note: This would require HTTP adapter access, which is not available in this pure business logic method
+                // The actual coordinate extraction will be handled by the orchestrator when processing additional links
+                console.log(`🗺️ SharedCore: Coordinate extraction from Eventbrite URLs requires HTTP adapter - skipping for now`);
+            }
+            
             // Use available data to generate iOS-compatible URL
             const urlData = {
                 coordinates: coordinates,
