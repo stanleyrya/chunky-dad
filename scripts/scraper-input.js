@@ -88,6 +88,7 @@ const scraperConfig = {
         startDate: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         endDate: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         url: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
+        location: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         gmaps: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
         image: { priority: ["bearracuda", "eventbrite"], merge: "clobber" },
         cover: { priority: ["eventbrite", "bearracuda"], merge: "clobber" },
