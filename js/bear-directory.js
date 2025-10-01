@@ -26,6 +26,10 @@ class BearDirectory {
         // Instagram embed configuration
         this.instagramEmbedScript = null;
         
+        // Instagram profile picture utilities
+        this.instagramProfileUtils = null;
+        this.instagramProfileCache = new Map();
+        
         logger.componentInit('DIRECTORY', 'BearDirectory initialized');
     }
     
@@ -51,6 +55,9 @@ class BearDirectory {
         
         // Load Instagram embed script
         this.loadInstagramEmbed();
+        
+        // Initialize Instagram profile picture utilities
+        this.initializeInstagramProfileUtils();
         
         logger.timeEnd('DIRECTORY', 'initialization');
     }
@@ -274,30 +281,132 @@ class BearDirectory {
     
     createInstagramContent(item) {
         // Create Instagram embed or placeholder
-        const instagramContent = item.instagram ? 
-            `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
-                <div class="instagram-loading">
-                    <div class="loading-spinner"></div>
-                    <p>Loading @${item.instagram}</p>
-                </div>
-                <blockquote class="instagram-media" 
-                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
-                    data-instgrm-version="14"
-                    style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
-                    <div style="padding:16px;">
-                        <a href="https://www.instagram.com/${item.instagram}/" 
-                           style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
-                           target="_blank">
-                            View on Instagram
-                        </a>
-                    </div>
-                </blockquote>
-            </div>` :
-            `<div class="tile-placeholder">
+        if (!item.instagram) {
+            return `<div class="tile-placeholder">
                 <div class="bear-icon"><img src="${window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png'}" alt="chunky.dad" class="bear-directory-icon"></div>
             </div>`;
+        }
+
+        // Check if we have Instagram profile utils available and try to load profile picture
+        if (this.instagramProfileUtils) {
+            this.loadInstagramProfilePicture(item.instagram, item);
+        }
+
+        const instagramContent = `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
+            <div class="instagram-loading">
+                <div class="loading-spinner"></div>
+                <p>Loading @${item.instagram}</p>
+            </div>
+            <blockquote class="instagram-media" 
+                data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
+                data-instgrm-version="14"
+                style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
+                <div style="padding:16px;">
+                    <a href="https://www.instagram.com/${item.instagram}/" 
+                       style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
+                       target="_blank">
+                        View on Instagram
+                    </a>
+                </div>
+            </blockquote>
+        </div>`;
             
         return instagramContent;
+    }
+
+    async loadInstagramProfilePicture(username, item) {
+        try {
+            // Check cache first
+            if (this.instagramProfileCache.has(username)) {
+                const cachedData = this.instagramProfileCache.get(username);
+                this.updateTileWithProfilePicture(item, cachedData);
+                return;
+            }
+
+            logger.apiCall('DIRECTORY', 'Loading Instagram profile picture', { username });
+
+            // Extract profile picture using Instagram utils
+            const profileData = await this.instagramProfileUtils.getProfilePicture(username);
+            
+            if (profileData && profileData.url) {
+                // Cache the result
+                this.instagramProfileCache.set(username, profileData);
+                
+                // Update the tile with profile picture
+                this.updateTileWithProfilePicture(item, profileData);
+                
+                logger.componentLoad('DIRECTORY', 'Instagram profile picture loaded', {
+                    username,
+                    method: profileData.method
+                });
+            }
+        } catch (error) {
+            logger.componentError('DIRECTORY', 'Failed to load Instagram profile picture', {
+                username,
+                error: error.message
+            });
+        }
+    }
+
+    updateTileWithProfilePicture(item, profileData) {
+        try {
+            // Find the tile for this item
+            const tiles = document.querySelectorAll('.directory-tile');
+            let targetTile = null;
+            
+            for (const tile of tiles) {
+                const tileName = tile.querySelector('.tile-name');
+                if (tileName && tileName.textContent.trim() === item.name) {
+                    targetTile = tile;
+                    break;
+                }
+            }
+
+            if (!targetTile) {
+                logger.warn('DIRECTORY', 'Could not find tile to update with profile picture', { itemName: item.name });
+                return;
+            }
+
+            // Find the Instagram embed container
+            const embedContainer = targetTile.querySelector('.instagram-embed-container');
+            if (!embedContainer) {
+                logger.warn('DIRECTORY', 'Could not find Instagram embed container', { itemName: item.name });
+                return;
+            }
+
+            // Create profile picture element
+            const profilePicElement = document.createElement('div');
+            profilePicElement.className = 'instagram-profile-picture';
+            profilePicElement.innerHTML = `
+                <img src="${profileData.url}" 
+                     alt="${profileData.fullName || username}'s profile picture" 
+                     class="instagram-profile-image"
+                     onerror="this.style.display='none'">
+                <div class="instagram-profile-info">
+                    ${profileData.fullName ? `<h4>${profileData.fullName}</h4>` : ''}
+                    <p>@${profileData.username}${profileData.isVerified ? ' ✓' : ''}</p>
+                </div>
+            `;
+
+            // Insert profile picture before the loading spinner
+            const loadingElement = embedContainer.querySelector('.instagram-loading');
+            if (loadingElement) {
+                embedContainer.insertBefore(profilePicElement, loadingElement);
+            } else {
+                embedContainer.appendChild(profilePicElement);
+            }
+
+            logger.debug('DIRECTORY', 'Updated tile with Instagram profile picture', {
+                itemName: item.name,
+                username: profileData.username
+            });
+
+        } catch (error) {
+            logger.componentError('DIRECTORY', 'Failed to update tile with profile picture', {
+                itemName: item.name,
+                error: error.message
+            });
+        }
     }
     
     getTypeIcon(type) {
@@ -426,6 +535,19 @@ class BearDirectory {
         
         this.displayDirectory();
         this.updateMap();
+    }
+    
+    initializeInstagramProfileUtils() {
+        try {
+            if (window.InstagramProfileUtils) {
+                this.instagramProfileUtils = new window.InstagramProfileUtils();
+                logger.componentInit('DIRECTORY', 'Instagram profile utils initialized');
+            } else {
+                logger.warn('DIRECTORY', 'InstagramProfileUtils not available - profile pictures will not be processed');
+            }
+        } catch (error) {
+            logger.componentError('DIRECTORY', 'Failed to initialize Instagram profile utils', error);
+        }
     }
     
     loadInstagramEmbed() {

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Profile Picture Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .profile-pic { max-width: 200px; border-radius: 50%; margin: 10px; }
+        .error { color: red; }
+        .success { color: green; }
+        .loading { color: blue; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Instagram Profile Picture Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Instagram Profile Picture Extraction</h2>
+            <input type="text" id="usernameInput" placeholder="Enter Instagram username (e.g., bearhappyhourchi)" value="bearhappyhourchi">
+            <button onclick="testInstagramProfile()">Test Profile Picture</button>
+            <div id="profileResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Image Compression</h2>
+            <input type="file" id="imageInput" accept="image/*">
+            <button onclick="testImageCompression()">Test Compression</button>
+            <div id="compressionResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Linktree-style Integration</h2>
+            <button onclick="testLinktreeIntegration()">Test Linktree Integration</button>
+            <div id="linktreeResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Instagram Profile Picture Extractor
+        class InstagramProfileExtractor {
+            constructor() {
+                this.cache = new Map();
+            }
+
+            async getProfilePicture(username) {
+                try {
+                    // Remove @ symbol if present
+                    const cleanUsername = username.replace('@', '');
+                    
+                    // Check cache first
+                    if (this.cache.has(cleanUsername)) {
+                        return this.cache.get(cleanUsername);
+                    }
+
+                    // Try multiple methods to get profile picture
+                    const methods = [
+                        () => this.method1_DirectAPI(cleanUsername),
+                        () => this.method2_WebScraping(cleanUsername),
+                        () => this.method3_AlternativeAPI(cleanUsername)
+                    ];
+
+                    for (const method of methods) {
+                        try {
+                            const result = await method();
+                            if (result) {
+                                this.cache.set(cleanUsername, result);
+                                return result;
+                            }
+                        } catch (error) {
+                            console.warn('Method failed:', error.message);
+                        }
+                    }
+
+                    throw new Error('All methods failed to extract profile picture');
+                } catch (error) {
+                    console.error('Error getting profile picture:', error);
+                    throw error;
+                }
+            }
+
+            async method1_DirectAPI(username) {
+                // Method 1: Try direct Instagram API (may not work due to CORS)
+                const url = `https://www.instagram.com/${username}/?__a=1&__d=dis`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.graphql && data.graphql.user && data.graphql.user.profile_pic_url_hd) {
+                    return {
+                        url: data.graphql.user.profile_pic_url_hd,
+                        method: 'Direct API',
+                        username: data.graphql.user.username,
+                        fullName: data.graphql.user.full_name
+                    };
+                }
+
+                throw new Error('Profile picture not found in API response');
+            }
+
+            async method2_WebScraping(username) {
+                // Method 2: Try to scrape the profile page
+                const url = `https://www.instagram.com/${username}/`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const html = await response.text();
+                
+                // Look for profile picture in meta tags
+                const metaMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+                if (metaMatch) {
+                    return {
+                        url: metaMatch[1],
+                        method: 'Web Scraping',
+                        username: username
+                    };
+                }
+
+                // Look for profile picture in script tags
+                const scriptMatch = html.match(/"profile_pic_url_hd":"([^"]+)"/);
+                if (scriptMatch) {
+                    return {
+                        url: scriptMatch[1].replace(/\\u0026/g, '&'),
+                        method: 'Script Parsing',
+                        username: username
+                    };
+                }
+
+                throw new Error('Profile picture not found in HTML');
+            }
+
+            async method3_AlternativeAPI(username) {
+                // Method 3: Try alternative approach using Instagram's public data
+                const url = `https://www.instagram.com/api/v1/users/web_profile_info/?username=${username}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.data && data.data.user && data.data.user.profile_pic_url_hd) {
+                    return {
+                        url: data.data.user.profile_pic_url_hd,
+                        method: 'Alternative API',
+                        username: data.data.user.username,
+                        fullName: data.data.user.full_name
+                    };
+                }
+
+                throw new Error('Profile picture not found in alternative API');
+            }
+        }
+
+        // Image Compressor
+        class ImageCompressor {
+            constructor() {
+                this.maxWidth = 200;
+                this.maxHeight = 200;
+                this.quality = 0.8;
+            }
+
+            async compressImage(file, options = {}) {
+                return new Promise((resolve, reject) => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+
+                    img.onload = () => {
+                        try {
+                            // Calculate new dimensions
+                            let { width, height } = this.calculateDimensions(
+                                img.width, 
+                                img.height, 
+                                options.maxWidth || this.maxWidth,
+                                options.maxHeight || this.maxHeight
+                            );
+
+                            canvas.width = width;
+                            canvas.height = height;
+
+                            // Draw and compress
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            const quality = options.quality || this.quality;
+                            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                            
+                            // Convert to blob
+                            canvas.toBlob((blob) => {
+                                resolve({
+                                    blob,
+                                    dataUrl: compressedDataUrl,
+                                    originalSize: file.size,
+                                    compressedSize: blob.size,
+                                    compressionRatio: ((file.size - blob.size) / file.size * 100).toFixed(2)
+                                });
+                            }, 'image/jpeg', quality);
+
+                        } catch (error) {
+                            reject(error);
+                        }
+                    };
+
+                    img.onerror = () => reject(new Error('Failed to load image'));
+                    img.src = URL.createObjectURL(file);
+                });
+            }
+
+            calculateDimensions(originalWidth, originalHeight, maxWidth, maxHeight) {
+                let width = originalWidth;
+                let height = originalHeight;
+
+                // Calculate aspect ratio
+                const aspectRatio = originalWidth / originalHeight;
+
+                if (width > maxWidth) {
+                    width = maxWidth;
+                    height = width / aspectRatio;
+                }
+
+                if (height > maxHeight) {
+                    height = maxHeight;
+                    width = height * aspectRatio;
+                }
+
+                return { width: Math.round(width), height: Math.round(height) };
+            }
+        }
+
+        // Initialize classes
+        const profileExtractor = new InstagramProfileExtractor();
+        const imageCompressor = new ImageCompressor();
+
+        // Test functions
+        async function testInstagramProfile() {
+            const username = document.getElementById('usernameInput').value.trim();
+            const resultDiv = document.getElementById('profileResult');
+            
+            if (!username) {
+                resultDiv.innerHTML = '<div class="error">Please enter a username</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="loading">Testing Instagram profile picture extraction...</div>';
+
+            try {
+                const result = await profileExtractor.getProfilePicture(username);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Profile picture found!</div>
+                    <div><strong>Method:</strong> ${result.method}</div>
+                    <div><strong>Username:</strong> ${result.username}</div>
+                    ${result.fullName ? `<div><strong>Full Name:</strong> ${result.fullName}</div>` : ''}
+                    <div><strong>URL:</strong> <a href="${result.url}" target="_blank">${result.url}</a></div>
+                    <div><strong>Preview:</strong></div>
+                    <img src="${result.url}" alt="Profile Picture" class="profile-pic" onerror="this.style.display='none'">
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Failed to extract profile picture</div>
+                    <div><strong>Error:</strong> ${error.message}</div>
+                    <div><strong>Note:</strong> This might be due to CORS restrictions. In a real implementation, you would need a backend proxy or use a service that handles Instagram data extraction.</div>
+                `;
+            }
+        }
+
+        async function testImageCompression() {
+            const fileInput = document.getElementById('imageInput');
+            const resultDiv = document.getElementById('compressionResult');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">Please select an image file</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="loading">Compressing image...</div>';
+
+            try {
+                const result = await imageCompressor.compressImage(fileInput.files[0]);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Image compressed successfully!</div>
+                    <div><strong>Original Size:</strong> ${(result.originalSize / 1024).toFixed(2)} KB</div>
+                    <div><strong>Compressed Size:</strong> ${(result.compressedSize / 1024).toFixed(2)} KB</div>
+                    <div><strong>Compression Ratio:</strong> ${result.compressionRatio}% reduction</div>
+                    <div><strong>Preview:</strong></div>
+                    <img src="${result.dataUrl}" alt="Compressed Image" class="profile-pic">
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Failed to compress image</div>
+                    <div><strong>Error:</strong> ${error.message}</div>
+                `;
+            }
+        }
+
+        async function testLinktreeIntegration() {
+            const resultDiv = document.getElementById('linktreeResult');
+            
+            resultDiv.innerHTML = '<div class="loading">Testing Linktree-style integration...</div>';
+
+            try {
+                // Simulate how this would work with the existing linktree system
+                const mockInstagramData = {
+                    username: 'bearhappyhourchi',
+                    profilePicUrl: 'https://example.com/profile-pic.jpg',
+                    displayName: 'Bear Happy Hour Chicago',
+                    type: 'instagram'
+                };
+
+                // Simulate the linktree-style display
+                const linktreeCard = `
+                    <div style="border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 8px; text-align: center;">
+                        <img src="${mockInstagramData.profilePicUrl}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 10px;">
+                        <h3>${mockInstagramData.displayName}</h3>
+                        <p>@${mockInstagramData.username}</p>
+                        <a href="https://instagram.com/${mockInstagramData.username}" target="_blank" style="display: inline-block; padding: 10px 20px; background: #E4405F; color: white; text-decoration: none; border-radius: 4px; margin: 5px;">
+                            📷 View on Instagram
+                        </a>
+                    </div>
+                `;
+
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Linktree-style integration ready!</div>
+                    <div><strong>Mock Implementation:</strong></div>
+                    ${linktreeCard}
+                    <div style="margin-top: 20px;">
+                        <strong>Integration Points:</strong>
+                        <ul>
+                            <li>Profile picture extraction from Instagram</li>
+                            <li>Image compression for performance</li>
+                            <li>Consistent styling with existing linktree cards</li>
+                            <li>Fallback handling for failed extractions</li>
+                        </ul>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Integration test failed</div>
+                    <div><strong>Error:</strong> ${error.message}</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
