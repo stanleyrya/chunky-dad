@@ -466,7 +466,7 @@ class CalendarCore {
             'bar': 'bar', 'location': 'bar', 'host': 'bar',
             'cover': 'cover', 'cost': 'cover', 'price': 'cover',
             'tea': 'tea', 'info': 'tea', 'description': 'tea',
-            'website': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
+            'website': 'website', 'url': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
             'ticketurl': 'ticketUrl', 'ticket url': 'ticketUrl', 'tickets': 'ticketUrl', 'ticket': 'ticketUrl',
             'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
             'gmaps': 'gmaps', 'google maps': 'gmaps',
