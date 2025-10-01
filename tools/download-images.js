@@ -8,7 +8,15 @@ const { URL } = require('url');
 const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, cleanImageUrl } = require('../js/filename-utils.js');
+const { 
+    generateFilenameFromUrl, 
+    generateFaviconFilename, 
+    cleanImageUrl,
+    isInstagramUrl,
+    extractInstagramUsername,
+    convertInstagramProfileToLocalPath,
+    convertWebsiteUrlToFaviconPath
+} = require('../js/filename-utils.js');
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -56,30 +64,6 @@ function isLinktreeUrl(url) {
   }
 }
 
-// Check if a URL is an Instagram profile
-function isInstagramUrl(url) {
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.hostname === 'instagram.com' || parsedUrl.hostname === 'www.instagram.com';
-  } catch (error) {
-    return false;
-  }
-}
-
-// Extract username from Instagram URL
-function extractInstagramUsername(url) {
-  try {
-    const parsedUrl = new URL(url);
-    if (isInstagramUrl(url)) {
-      const pathname = parsedUrl.pathname;
-      const match = pathname.match(/^\/([^\/\?]+)/);
-      return match ? match[1] : null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 // Extract profile picture URL from Instagram profile
 async function extractInstagramProfilePicture(instagramUrl) {
@@ -363,23 +347,6 @@ function generateFilename(url, type = 'event') {
     return generateFilenameFromUrl(url);
 }
 
-// Generate a unique filename for Linktree profile pictures based on the Linktree URL
-function generateLinktreeFaviconFilename(linktreeUrl) {
-    try {
-        const parsedUrl = new URL(linktreeUrl);
-        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
-        const cleanPath = pathname
-            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
-            .replace(/-+/g, '-') // Collapse multiple dashes
-            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-        
-        return `favicon-linktr.ee-${cleanPath}.ico`;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(linktreeUrl);
-        return `favicon-linktr.ee-${hash}.ico`;
-    }
-}
 
 // Download image with a custom filename
 async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 'event', isLinktreeProfile = false) {
@@ -730,8 +697,8 @@ async function main() {
         const profilePictureUrl = await extractLinktreeProfilePicture(linktreeUrl);
         
         if (profilePictureUrl) {
-          // Generate a unique filename based on the Linktree URL, not the profile picture URL
-          const linktreeFilename = generateLinktreeFaviconFilename(linktreeUrl);
+          // Generate a unique filename using the shared function
+          const linktreeFilename = convertWebsiteUrlToFaviconPath(linktreeUrl, 'img/favicons').split('/').pop();
           
           // Download the profile picture with the custom filename
           const result = await downloadImageWithCustomFilename(profilePictureUrl, linktreeFilename, 'favicon', true);
@@ -764,9 +731,8 @@ async function main() {
         const profilePictureUrl = await extractInstagramProfilePicture(instagramUrl);
         
         if (profilePictureUrl) {
-          // Generate a unique filename based on the Instagram username
-          const username = extractInstagramUsername(instagramUrl);
-          const instagramFilename = `favicon-instagram-${username}.ico`;
+          // Generate a unique filename using the shared function
+          const instagramFilename = convertWebsiteUrlToFaviconPath(instagramUrl, 'img/favicons').split('/').pop();
           
           // Download the profile picture as a favicon
           const result = await downloadImageWithCustomFilename(profilePictureUrl, instagramFilename, 'favicon', true);
@@ -813,4 +779,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, downloadImageWithCustomFilename, shouldDownloadImage };
