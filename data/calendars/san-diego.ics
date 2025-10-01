@@ -5,4 +5,32 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-san-diego
 X-WR-TIMEZONE:America/Los_Angeles
+BEGIN:VEVENT
+DTSTART:20251101T040000Z
+DTEND:20251101T110000Z
+DTSTAMP:20251001T001220Z
+UID:192064B4-BCA8-491B-97A9-36BDF7A5A725
+CREATED:20251001T001000Z
+DESCRIPTION:description: MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTE
+ RNATIONAL HALLOWOOF\nbar: The Rail\naddress: 3796 Fifth Avenue\, San Diego\
+ , CA 92103\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_
+ america\nticketUrl: https://www.eventbrite.com/e/megawoof-america-10-year-s
+ an-diego-debut-international-hallowoof-tickets-1692702351299\ncover: $16.84
+  - $22.10 (as of 9/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbu
+ c.com%2Fimages%2F1123525053%2F185013722403%2F1%2Foriginal.20250914-145257?c
+ rop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp
+ -x=5e-17&fp-y=5e-17&s=74a16cfb724650fcf4bf026281197f19\nshortName: MEGA-WOO
+ F\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://ww
+ w.google.com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place
+ _id=ChIJwdJrt9pU2YARYuac9G61qQE\nkey: megawoof|2025-11-01|the rail|eventbri
+ te
+LAST-MODIFIED:20251001T001000Z
+LOCATION:32.7468303\, -117.1607394
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR
