@@ -32,7 +32,6 @@ const ROOT = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
-const INSTAGRAM_DIR = path.join(IMAGES_DIR, 'instagram');
 
 // Cache duration: 14 days (2 weeks) in milliseconds
 const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
@@ -385,9 +384,7 @@ function generateLinktreeFaviconFilename(linktreeUrl) {
 // Download image with a custom filename
 async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 'event', isLinktreeProfile = false) {
   try {
-    const dir = type === 'favicon' ? FAVICONS_DIR : 
-                type === 'instagram' ? INSTAGRAM_DIR : 
-                EVENTS_DIR;
+    const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
     const localPath = path.join(dir, customFilename);
     const metadataPath = localPath + '.meta';
     
@@ -406,7 +403,7 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     await downloadFile(imageUrl, localPath);
     
     // Process Linktree and Instagram profile pictures with optimization
-    if ((isLinktreeProfile && type === 'favicon') || type === 'instagram') {
+    if ((isLinktreeProfile && type === 'favicon') || (type === 'favicon' && customFilename.includes('instagram'))) {
       const tempPath = localPath + '.temp';
       const optimizedPath = localPath + '.optimized';
       
@@ -420,7 +417,7 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
         if (processed) {
           // Replace original with optimized version
           fs.renameSync(optimizedPath, localPath);
-          const profileType = type === 'instagram' ? 'Instagram' : 'Linktree';
+          const profileType = customFilename.includes('instagram') ? 'Instagram' : 'Linktree';
           console.log(`🎨 Applied optimization to ${profileType} profile picture`);
         } else {
           // Fallback: restore original if processing failed
@@ -530,7 +527,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     await downloadFile(imageUrl, localPath);
     
     // Process Linktree and Instagram profile pictures with optimization
-    if ((isLinktreeProfile && type === 'favicon') || type === 'instagram') {
+    if ((isLinktreeProfile && type === 'favicon') || (type === 'favicon' && customFilename.includes('instagram'))) {
       const tempPath = localPath + '.temp';
       const optimizedPath = localPath + '.optimized';
       
@@ -544,7 +541,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
         if (processed) {
           // Replace original with optimized version
           fs.renameSync(optimizedPath, localPath);
-          const profileType = type === 'instagram' ? 'Instagram' : 'Linktree';
+          const profileType = customFilename.includes('instagram') ? 'Instagram' : 'Linktree';
           console.log(`🎨 Applied optimization to ${profileType} profile picture`);
         } else {
           // Fallback: restore original if processing failed
@@ -656,14 +653,12 @@ function extractImageUrls() {
         } catch (error) {
           console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
         }
-      }
-
-      // Also check Instagram field specifically
-      if (event.instagram) {
+      } else if (event.instagram) {
+        // If no website but has Instagram, use Instagram as favicon source
         try {
           const instagramUrl = event.instagram.startsWith('http') ? event.instagram : `https://instagram.com/${event.instagram}`;
           if (isInstagramUrl(instagramUrl)) {
-            console.log(`📷 Found Instagram field: ${instagramUrl}`);
+            console.log(`📷 Found Instagram field (no website): ${instagramUrl}`);
             imageUrls.instagramUrls = imageUrls.instagramUrls || new Set();
             imageUrls.instagramUrls.add(instagramUrl);
           }
@@ -688,7 +683,6 @@ async function main() {
   ensureDir(IMAGES_DIR);
   ensureDir(FAVICONS_DIR);
   ensureDir(EVENTS_DIR);
-  ensureDir(INSTAGRAM_DIR);
   
   // Extract image URLs from calendar data
   const imageUrls = extractImageUrls();
@@ -761,9 +755,9 @@ async function main() {
     }
   }
   
-  // Process Instagram profile pictures
+  // Process Instagram profile pictures as favicons
   if (imageUrls.instagramUrls && imageUrls.instagramUrls.size > 0) {
-    console.log('\n📷 Processing Instagram profile pictures...');
+    console.log('\n📷 Processing Instagram profile pictures as favicons...');
     for (const instagramUrl of imageUrls.instagramUrls) {
       try {
         // Extract profile picture URL from Instagram profile
@@ -772,10 +766,10 @@ async function main() {
         if (profilePictureUrl) {
           // Generate a unique filename based on the Instagram username
           const username = extractInstagramUsername(instagramUrl);
-          const instagramFilename = `instagram-${username}.jpg`;
+          const instagramFilename = `favicon-instagram-${username}.ico`;
           
-          // Download the profile picture with the custom filename
-          const result = await downloadImageWithCustomFilename(profilePictureUrl, instagramFilename, 'instagram', true);
+          // Download the profile picture as a favicon
+          const result = await downloadImageWithCustomFilename(profilePictureUrl, instagramFilename, 'favicon', true);
           if (result.success) {
             if (result.skipped) {
               totalSkipped++;

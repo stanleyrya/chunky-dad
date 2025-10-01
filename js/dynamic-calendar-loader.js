@@ -1233,6 +1233,56 @@ class DynamicCalendarLoader extends CalendarCore {
             } catch (error) {
                 logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
             }
+        } else if (event.instagram) {
+            // If no website but has Instagram, try to use Instagram favicon
+            try {
+                logger.debug('MAP', 'Creating Instagram favicon marker', {
+                    eventName: event.name,
+                    instagram: event.instagram,
+                    dataSource: this.dataSource
+                });
+                
+                let faviconUrl;
+                
+                // Convert to local favicon URL if using cached data
+                if (this.dataSource === 'cached') {
+                    const instagramUrl = event.instagram.startsWith('http') ? event.instagram : `https://instagram.com/${event.instagram}`;
+                    faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(instagramUrl, '/img/favicons');
+                    
+                    logger.debug('MAP', 'Using local Instagram favicon for cached data', {
+                        instagram: event.instagram,
+                        localPath: faviconUrl,
+                        dataSource: this.dataSource
+                    });
+                } else {
+                    // For live data, use Google favicon service for Instagram
+                    faviconUrl = `https://www.google.com/s2/favicons?domain=instagram.com&sz=32`;
+                }
+                
+                const textFallback = this.getMarkerText(event);
+                
+                logger.debug('MAP', 'Instagram favicon URL generated', {
+                    instagram: event.instagram,
+                    faviconUrl,
+                    textFallback,
+                    dataSource: this.dataSource
+                });
+                
+                return L.divIcon({
+                    className: 'favicon-marker',
+                    html: `
+                        <div class="favicon-marker-container">
+                            <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
+                                 onerror="this.parentNode.innerHTML='<span class=\\"marker-text\\">${textFallback}</span>'">
+                        </div>
+                    `,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20],
+                    popupAnchor: [0, -16]
+                });
+            } catch (error) {
+                logger.warn('MAP', 'Failed to create Instagram favicon marker', { instagram: event.instagram, error: error.message });
+            }
         }
         
         // Use text from shorter field or shortName or name

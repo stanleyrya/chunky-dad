@@ -274,67 +274,32 @@ class BearDirectory {
     
     createInstagramContent(item) {
         // Create Instagram embed or placeholder
-        if (!item.instagram) {
-            return `<div class="tile-placeholder">
+        const instagramContent = item.instagram ? 
+            `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
+                <div class="instagram-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading @${item.instagram}</p>
+                </div>
+                <blockquote class="instagram-media" 
+                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
+                    data-instgrm-version="14"
+                    style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
+                    <div style="padding:16px;">
+                        <a href="https://www.instagram.com/${item.instagram}/" 
+                           style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
+                           target="_blank">
+                            View on Instagram
+                        </a>
+                    </div>
+                </blockquote>
+            </div>` :
+            `<div class="tile-placeholder">
                 <div class="bear-icon"><img src="${window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png'}" alt="chunky.dad" class="bear-directory-icon"></div>
             </div>`;
-        }
-
-        // Try to get the downloaded Instagram profile picture
-        const profilePicPath = this.getInstagramProfilePicturePath(item.instagram);
-        
-        const instagramContent = `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
-            ${profilePicPath ? this.createInstagramProfilePictureCard(item.instagram, profilePicPath) : ''}
-            <div class="instagram-loading">
-                <div class="loading-spinner"></div>
-                <p>Loading @${item.instagram}</p>
-            </div>
-            <blockquote class="instagram-media" 
-                data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
-                data-instgrm-version="14"
-                style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
-                <div style="padding:16px;">
-                    <a href="https://www.instagram.com/${item.instagram}/" 
-                       style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
-                       target="_blank">
-                        View on Instagram
-                    </a>
-                </div>
-            </blockquote>
-        </div>`;
             
         return instagramContent;
     }
 
-    getInstagramProfilePicturePath(username) {
-        try {
-            // Use filename utils to get the local path for Instagram profile picture
-            if (window.FilenameUtils && window.FilenameUtils.convertInstagramProfileToLocalPath) {
-                return window.FilenameUtils.convertInstagramProfileToLocalPath(username, 'img/instagram');
-            }
-            return null;
-        } catch (error) {
-            logger.warn('DIRECTORY', 'Failed to get Instagram profile picture path', {
-                username,
-                error: error.message
-            });
-            return null;
-        }
-    }
-
-    createInstagramProfilePictureCard(username, imagePath) {
-        return `
-            <div class="instagram-profile-picture">
-                <img src="${imagePath}" 
-                     alt="@${username}'s profile picture" 
-                     class="instagram-profile-image"
-                     onerror="this.style.display='none'">
-                <div class="instagram-profile-info">
-                    <h4>@${username}</h4>
-                </div>
-            </div>
-        `;
-    }
 
     getTypeIcon(type) {
         const icons = {
