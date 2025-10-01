@@ -405,6 +405,7 @@ class EventbriteParser {
                         lat: eventMap.location.latitude,
                         lng: eventMap.location.longitude
                     };
+                    console.log(`🎫 Eventbrite: Found coordinates in detail page eventMap for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
                 }
                 
                 if (venue || address) {
@@ -432,6 +433,7 @@ class EventbriteParser {
                             lat: eventData.venue.address.latitude,
                             lng: eventData.venue.address.longitude
                         };
+                        console.log(`🎫 Eventbrite: Found coordinates in venue.address for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
                     }
                     
                     // Also check venue-level coordinates (sometimes more accurate)
@@ -440,6 +442,7 @@ class EventbriteParser {
                             lat: parseFloat(eventData.venue.latitude),
                             lng: parseFloat(eventData.venue.longitude)
                         };
+                        console.log(`🎫 Eventbrite: Found coordinates in venue root for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
                     }
                 }
             }
@@ -597,8 +600,11 @@ class EventbriteParser {
                     console.log(`🎫 Eventbrite: Found venue address in components.eventMap: "${finalAddress}"`);
                 }
                 if (!finalCoordinates && mapData.location) {
-                    finalCoordinates = mapData.location;
-                    console.log(`🎫 Eventbrite: Found coordinates in components.eventMap: ${finalCoordinates.latitude}, ${finalCoordinates.longitude}`);
+                    finalCoordinates = {
+                        lat: mapData.location.latitude,
+                        lng: mapData.location.longitude
+                    };
+                    console.log(`🎫 Eventbrite: Found coordinates in components.eventMap for "${title}": ${finalCoordinates.lat}, ${finalCoordinates.lng}`);
                 }
             }
             
@@ -741,7 +747,7 @@ class EventbriteParser {
                 startDate: startDate ? new Date(startDate) : null,
                 endDate: endDate ? new Date(endDate) : null,
                 bar: finalVenue, // Use 'bar' field name that calendar-core.js expects
-                location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat,lng" string in location field
+                location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat, lng" string in location field
                 address: finalAddress,
                 city: city,
                 timezone: eventTimezone,
