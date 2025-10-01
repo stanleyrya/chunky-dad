@@ -609,7 +609,21 @@ class SharedCore {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
-            if (!priorityConfig || !priorityConfig.priority) return; // No priority config, keep newEvent value
+            if (!priorityConfig || !priorityConfig.priority) {
+                // No priority config - use default behavior: clobber with latest non-null version
+                const existingValue = existingEvent[fieldName];
+                const newValue = newEvent[fieldName];
+                
+                // Choose the latest non-null value (prefer new value if both are non-null)
+                if (!isEmpty(newValue)) {
+                    mergedEvent[fieldName] = newValue;
+                } else if (!isEmpty(existingValue)) {
+                    mergedEvent[fieldName] = existingValue;
+                } else {
+                    mergedEvent[fieldName] = newValue; // Both are null/empty, keep new
+                }
+                return;
+            }
             
             const existingValue = existingEvent[fieldName];
             const newValue = newEvent[fieldName];
@@ -747,7 +761,7 @@ class SharedCore {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
-            const mergeStrategy = priorityConfig?.merge || 'upsert';
+            const mergeStrategy = priorityConfig?.merge || 'clobber';
             // Check event field first, then notes fields, but be explicit about undefined vs empty string
             const existingValue = existingEvent[fieldName] !== undefined ? existingEvent[fieldName] : existingFields[fieldName];
             const scrapedValue = finalScrapedValues[fieldName];
@@ -758,9 +772,16 @@ class SharedCore {
             
             switch (mergeStrategy) {
                 case 'clobber':
-                    mergedEvent[fieldName] = scrapedValue;
+                    // Choose the latest non-null value (prefer scraped value if both are non-null)
+                    if (scrapedValue !== null && scrapedValue !== undefined && scrapedValue !== '') {
+                        mergedEvent[fieldName] = scrapedValue;
+                    } else if (existingValue !== null && existingValue !== undefined && existingValue !== '') {
+                        mergedEvent[fieldName] = existingValue;
+                    } else {
+                        mergedEvent[fieldName] = scrapedValue; // Both are null/empty, keep scraped
+                    }
                     // Track when clobber actually changes a value
-                    if (scrapedValue !== existingValue) {
+                    if (mergedEvent[fieldName] !== existingValue) {
                         clobberedFields.push(fieldName);
                     }
                     break;

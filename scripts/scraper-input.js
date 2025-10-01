@@ -31,6 +31,7 @@ const scraperConfig = {
         startDate: { priority: ["eventbrite"], merge: "clobber" },
         endDate: { priority: ["eventbrite"], merge: "clobber" },
         url: { priority: ["static"], merge: "clobber" },
+        location: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
         cover: { priority: ["eventbrite"], merge: "clobber" }
@@ -59,6 +60,7 @@ const scraperConfig = {
         startDate: { priority: ["eventbrite"], merge: "clobber" },
         endDate: { priority: ["eventbrite"], merge: "clobber" },
         url: { priority: ["eventbrite"], merge: "clobber" },
+        location: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
         cover: { priority: ["eventbrite"], merge: "clobber" }
@@ -121,6 +123,7 @@ const scraperConfig = {
         startDate: { priority: ["chunk"], merge: "clobber" },
         endDate: { priority: ["chunk"], merge: "clobber" },
         url: { priority: ["chunk"], merge: "clobber" },
+        location: { priority: ["chunk"], merge: "clobber" },
         gmaps: { priority: ["chunk"], merge: "clobber" },
         image: { priority: ["chunk"], merge: "clobber" },
         cover: { priority: ["chunk"], merge: "clobber" },
@@ -151,6 +154,7 @@ const scraperConfig = {
         startDate: { priority: ["furball"], merge: "clobber" },
         endDate: { priority: ["furball"], merge: "clobber" },
         url: { priority: ["furball"], merge: "clobber" },
+        location: { priority: ["furball"], merge: "clobber" },
         ticketUrl: { priority: ["furball"], merge: "clobber" },
         gmaps: { priority: ["furball"], merge: "clobber" },
         image: { priority: ["furball"], merge: "clobber" },
@@ -180,6 +184,7 @@ const scraperConfig = {
         startDate: { priority: ["bears-sitges"], merge: "clobber" },
         endDate: { priority: ["bears-sitges"], merge: "clobber" },
         url: { priority: ["bears-sitges"], merge: "clobber" },
+        location: { priority: ["bears-sitges"], merge: "clobber" },
         gmaps: { priority: ["bears-sitges"], merge: "clobber" },
         image: { priority: ["bears-sitges"], merge: "clobber" },
         cover: { priority: ["bears-sitges"], merge: "clobber" }
@@ -210,6 +215,7 @@ const scraperConfig = {
         startDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         endDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         url: { priority: ["linktree", "eventbrite"], merge: "clobber" }, // Prefer linktree URL over eventbrite
+        location: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         gmaps: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         image: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         cover: { priority: ["eventbrite", "linktree"], merge: "clobber" },
