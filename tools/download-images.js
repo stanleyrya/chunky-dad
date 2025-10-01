@@ -33,8 +33,11 @@ const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
 
-// Cache duration: 7 days in milliseconds
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
+// Cache duration: 14 days (2 weeks) in milliseconds
+const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
+
+// Randomization factor: ±2 days to prevent all favicons from expiring simultaneously
+const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
 
 // Ensure directories exist
 function ensureDir(dir) {
@@ -352,10 +355,23 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
     return { shouldDownload: true, reason: 'File does not exist' };
   }
   
-  // 2. Check file age
+  // 2. Check file age with randomization
   const fileAge = Date.now() - fs.statSync(localPath).mtime.getTime();
-  if (fileAge > CACHE_DURATION) {
-    return { shouldDownload: true, reason: `File is ${Math.round(fileAge / (24 * 60 * 60 * 1000))} days old` };
+  
+  // Generate a consistent random offset based on the filename to ensure
+  // the same file always gets the same randomization
+  const filename = path.basename(localPath);
+  const hash = filename.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  const randomOffset = (Math.abs(hash) % (CACHE_RANDOMIZATION * 2)) - CACHE_RANDOMIZATION;
+  const effectiveCacheDuration = CACHE_DURATION + randomOffset;
+  
+  if (fileAge > effectiveCacheDuration) {
+    const daysOld = Math.round(fileAge / (24 * 60 * 60 * 1000));
+    const effectiveDays = Math.round(effectiveCacheDuration / (24 * 60 * 60 * 1000));
+    return { shouldDownload: true, reason: `File is ${daysOld} days old (expires after ${effectiveDays} days)` };
   }
   
   // 3. Check if URL changed
@@ -631,4 +647,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename };
+module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
