@@ -32,6 +32,7 @@ const ROOT = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
+const INSTAGRAM_DIR = path.join(IMAGES_DIR, 'instagram');
 
 // Cache duration: 14 days (2 weeks) in milliseconds
 const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
@@ -54,6 +55,117 @@ function isLinktreeUrl(url) {
   } catch (error) {
     return false;
   }
+}
+
+// Check if a URL is an Instagram profile
+function isInstagramUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname === 'instagram.com' || parsedUrl.hostname === 'www.instagram.com';
+  } catch (error) {
+    return false;
+  }
+}
+
+// Extract username from Instagram URL
+function extractInstagramUsername(url) {
+  try {
+    const parsedUrl = new URL(url);
+    if (isInstagramUrl(url)) {
+      const pathname = parsedUrl.pathname;
+      const match = pathname.match(/^\/([^\/\?]+)/);
+      return match ? match[1] : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Extract profile picture URL from Instagram profile
+async function extractInstagramProfilePicture(instagramUrl) {
+  try {
+    const username = extractInstagramUsername(instagramUrl);
+    if (!username) {
+      console.log('⚠️  Could not extract username from Instagram URL');
+      return null;
+    }
+
+    console.log(`📷 Extracting profile picture from Instagram: @${username}`);
+    
+    // Try multiple methods to get profile picture
+    const methods = [
+      () => extractInstagramProfilePictureMethod1(username),
+      () => extractInstagramProfilePictureMethod2(username),
+      () => extractInstagramProfilePictureMethod3(username)
+    ];
+
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        const result = await methods[i]();
+        if (result) {
+          console.log(`✅ Found Instagram profile picture using method ${i + 1}: ${result}`);
+          return result;
+        }
+      } catch (error) {
+        console.warn(`⚠️  Method ${i + 1} failed: ${error.message}`);
+      }
+    }
+
+    console.log('⚠️  All Instagram profile picture extraction methods failed');
+    return null;
+    
+  } catch (error) {
+    console.error(`❌ Failed to extract profile picture from Instagram:`, error.message);
+    return null;
+  }
+}
+
+// Method 1: Try Instagram's public API
+async function extractInstagramProfilePictureMethod1(username) {
+  const url = `https://www.instagram.com/${username}/?__a=1&__d=dis`;
+  
+  const response = await fetchPageContent(url);
+  const data = JSON.parse(response);
+  
+  if (data.graphql && data.graphql.user && data.graphql.user.profile_pic_url_hd) {
+    return data.graphql.user.profile_pic_url_hd;
+  }
+  
+  throw new Error('Profile picture not found in API response');
+}
+
+// Method 2: Web scraping approach
+async function extractInstagramProfilePictureMethod2(username) {
+  const url = `https://www.instagram.com/${username}/`;
+  const html = await fetchPageContent(url);
+  
+  // Look for profile picture in meta tags
+  const metaMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+  if (metaMatch) {
+    return metaMatch[1];
+  }
+
+  // Look for profile picture in script tags
+  const scriptMatch = html.match(/"profile_pic_url_hd":"([^"]+)"/);
+  if (scriptMatch) {
+    return scriptMatch[1].replace(/\\u0026/g, '&');
+  }
+
+  throw new Error('Profile picture not found in HTML');
+}
+
+// Method 3: Alternative API approach
+async function extractInstagramProfilePictureMethod3(username) {
+  const url = `https://www.instagram.com/api/v1/users/web_profile_info/?username=${username}`;
+  const response = await fetchPageContent(url);
+  const data = JSON.parse(response);
+  
+  if (data.data && data.data.user && data.data.user.profile_pic_url_hd) {
+    return data.data.user.profile_pic_url_hd;
+  }
+  
+  throw new Error('Profile picture not found in alternative API');
 }
 
 // Extract profile picture URL from Linktree page
@@ -273,7 +385,9 @@ function generateLinktreeFaviconFilename(linktreeUrl) {
 // Download image with a custom filename
 async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 'event', isLinktreeProfile = false) {
   try {
-    const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+    const dir = type === 'favicon' ? FAVICONS_DIR : 
+                type === 'instagram' ? INSTAGRAM_DIR : 
+                EVENTS_DIR;
     const localPath = path.join(dir, customFilename);
     const metadataPath = localPath + '.meta';
     
@@ -291,8 +405,8 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     // Download the image
     await downloadFile(imageUrl, localPath);
     
-    // Process Linktree profile pictures with optimization
-    if (isLinktreeProfile && type === 'favicon') {
+    // Process Linktree and Instagram profile pictures with optimization
+    if ((isLinktreeProfile && type === 'favicon') || type === 'instagram') {
       const tempPath = localPath + '.temp';
       const optimizedPath = localPath + '.optimized';
       
@@ -306,7 +420,8 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
         if (processed) {
           // Replace original with optimized version
           fs.renameSync(optimizedPath, localPath);
-          console.log(`🎨 Applied optimization to Linktree profile picture`);
+          const profileType = type === 'instagram' ? 'Instagram' : 'Linktree';
+          console.log(`🎨 Applied optimization to ${profileType} profile picture`);
         } else {
           // Fallback: restore original if processing failed
           fs.renameSync(tempPath, localPath);
@@ -414,8 +529,8 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     // Download the image
     await downloadFile(imageUrl, localPath);
     
-    // Process Linktree profile pictures with optimization
-    if (isLinktreeProfile && type === 'favicon') {
+    // Process Linktree and Instagram profile pictures with optimization
+    if ((isLinktreeProfile && type === 'favicon') || type === 'instagram') {
       const tempPath = localPath + '.temp';
       const optimizedPath = localPath + '.optimized';
       
@@ -429,7 +544,8 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
         if (processed) {
           // Replace original with optimized version
           fs.renameSync(optimizedPath, localPath);
-          console.log(`🎨 Applied optimization to Linktree profile picture`);
+          const profileType = type === 'instagram' ? 'Instagram' : 'Linktree';
+          console.log(`🎨 Applied optimization to ${profileType} profile picture`);
         } else {
           // Fallback: restore original if processing failed
           fs.renameSync(tempPath, localPath);
@@ -526,6 +642,11 @@ function extractImageUrls() {
             // Store the Linktree URL for special processing
             imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
             imageUrls.linktreeUrls.add(event.website);
+          } else if (isInstagramUrl(event.website)) {
+            console.log(`📷 Found Instagram URL: ${event.website}`);
+            // Store the Instagram URL for special processing
+            imageUrls.instagramUrls = imageUrls.instagramUrls || new Set();
+            imageUrls.instagramUrls.add(event.website);
           } else {
             // Use Google's favicon service for regular domains
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
@@ -536,11 +657,26 @@ function extractImageUrls() {
           console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
         }
       }
+
+      // Also check Instagram field specifically
+      if (event.instagram) {
+        try {
+          const instagramUrl = event.instagram.startsWith('http') ? event.instagram : `https://instagram.com/${event.instagram}`;
+          if (isInstagramUrl(instagramUrl)) {
+            console.log(`📷 Found Instagram field: ${instagramUrl}`);
+            imageUrls.instagramUrls = imageUrls.instagramUrls || new Set();
+            imageUrls.instagramUrls.add(instagramUrl);
+          }
+        } catch (error) {
+          console.warn(`⚠️  Could not process Instagram field: ${event.instagram}`, error.message);
+        }
+      }
     }
   }
   
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons.size} favicon URLs, and ${linktreeCount} Linktree URLs`);
+  const instagramCount = imageUrls.instagramUrls ? imageUrls.instagramUrls.size : 0;
+  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons.size} favicon URLs, ${linktreeCount} Linktree URLs, and ${instagramCount} Instagram URLs`);
   return imageUrls;
 }
 
@@ -552,6 +688,7 @@ async function main() {
   ensureDir(IMAGES_DIR);
   ensureDir(FAVICONS_DIR);
   ensureDir(EVENTS_DIR);
+  ensureDir(INSTAGRAM_DIR);
   
   // Extract image URLs from calendar data
   const imageUrls = extractImageUrls();
@@ -619,6 +756,41 @@ async function main() {
         }
       } catch (error) {
         console.error(`❌ Failed to process Linktree ${linktreeUrl}:`, error.message);
+        totalFailed++;
+      }
+    }
+  }
+  
+  // Process Instagram profile pictures
+  if (imageUrls.instagramUrls && imageUrls.instagramUrls.size > 0) {
+    console.log('\n📷 Processing Instagram profile pictures...');
+    for (const instagramUrl of imageUrls.instagramUrls) {
+      try {
+        // Extract profile picture URL from Instagram profile
+        const profilePictureUrl = await extractInstagramProfilePicture(instagramUrl);
+        
+        if (profilePictureUrl) {
+          // Generate a unique filename based on the Instagram username
+          const username = extractInstagramUsername(instagramUrl);
+          const instagramFilename = `instagram-${username}.jpg`;
+          
+          // Download the profile picture with the custom filename
+          const result = await downloadImageWithCustomFilename(profilePictureUrl, instagramFilename, 'instagram', true);
+          if (result.success) {
+            if (result.skipped) {
+              totalSkipped++;
+            } else {
+              totalDownloaded++;
+            }
+          } else {
+            totalFailed++;
+          }
+        } else {
+          console.log(`⚠️  Could not extract profile picture from ${instagramUrl}`);
+          totalFailed++;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to process Instagram ${instagramUrl}:`, error.message);
         totalFailed++;
       }
     }
