@@ -214,7 +214,7 @@ const scraperConfig = {
         address: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         startDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         endDate: { priority: ["eventbrite", "linktree"], merge: "clobber" },
-        url: { priority: ["linktree", "eventbrite"], merge: "clobber" }, // Prefer linktree URL over eventbrite
+        url: { priority: ["static"], merge: "clobber" }, // Always use static Linktree URL
         location: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         gmaps: { priority: ["eventbrite", "linktree"], merge: "clobber" },
         image: { priority: ["eventbrite", "linktree"], merge: "clobber" },
@@ -225,7 +225,8 @@ const scraperConfig = {
       // Static metadata to add to all Cubhouse events
       metadata: {
         shortName: { value: "CUB-HOUSE" },
-        instagram: { value: "https://www.instagram.com/cubhouse.philly" }
+        instagram: { value: "https://www.instagram.com/cubhouse.philly" },
+        url: { value: "https://linktr.ee/cubhouse" }
       }
     }
   ],
