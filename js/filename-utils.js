@@ -177,7 +177,7 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
 }
 
 /**
- * Convert a website URL to a local favicon path, handling Linktree URLs specially
+ * Convert a website URL to a local favicon path, handling Linktree and Instagram URLs specially
  * @param {string} websiteUrl - The website URL
  * @param {string} basePath - The base path (e.g., 'img/favicons')
  * @returns {string} - The local file path
@@ -201,6 +201,19 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
             
             const filename = `favicon-linktr.ee-${cleanPath}.ico`;
             return `${basePath}/${filename}`;
+        } 
+        // Check if it's an Instagram URL
+        else if (parsedUrl.hostname === 'instagram.com' || parsedUrl.hostname === 'www.instagram.com') {
+            // Generate Instagram-specific filename
+            const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+            const username = pathname.split('/')[0]; // Get username from path
+            const cleanUsername = username
+                .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+                .replace(/-+/g, '-') // Collapse multiple dashes
+                .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+            
+            const filename = `favicon-instagram-${cleanUsername}.ico`;
+            return `${basePath}/${filename}`;
         } else {
             // Use regular favicon logic for other domains
             const hostname = parsedUrl.hostname;
@@ -212,6 +225,63 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
     }
 }
 
+
+/**
+ * Check if a URL is an Instagram profile URL
+ * @param {string} url - URL to check
+ * @returns {boolean} - True if Instagram profile URL
+ */
+function isInstagramUrl(url) {
+    try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.hostname === 'instagram.com' || 
+               parsedUrl.hostname === 'www.instagram.com';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Extract username from Instagram URL
+ * @param {string} url - Instagram URL
+ * @returns {string|null} - Username or null if not valid
+ */
+function extractInstagramUsername(url) {
+    try {
+        const parsedUrl = new URL(url);
+        if (isInstagramUrl(url)) {
+            const pathname = parsedUrl.pathname;
+            const match = pathname.match(/^\/([^\/\?]+)/);
+            return match ? match[1] : null;
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Generate filename for Instagram profile picture
+ * @param {string} username - Instagram username
+ * @param {string} format - Image format (jpeg, png, etc.)
+ * @returns {string} - Generated filename
+ */
+function generateInstagramProfileFilename(username, format = 'jpeg') {
+    const cleanUsername = username.replace('@', '').replace(/[^a-zA-Z0-9._-]/g, '-');
+    const ext = format === 'jpeg' ? 'jpg' : format;
+    return `instagram-${cleanUsername}.${ext}`;
+}
+
+/**
+ * Convert Instagram profile picture URL to local path
+ * @param {string} username - Instagram username
+ * @param {string} basePath - Base path for images
+ * @returns {string} - Local file path
+ */
+function convertInstagramProfileToLocalPath(username, basePath = 'img/instagram') {
+    const filename = generateInstagramProfileFilename(username);
+    return `${basePath}/${filename}`;
+}
 
 /**
  * Simple hash function for fallback filenames
@@ -238,6 +308,10 @@ if (typeof module !== 'undefined' && module.exports) {
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        isInstagramUrl,
+        extractInstagramUsername,
+        generateInstagramProfileFilename,
+        convertInstagramProfileToLocalPath,
         simpleHash
     };
 }
@@ -251,6 +325,10 @@ if (typeof window !== 'undefined') {
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        isInstagramUrl,
+        extractInstagramUsername,
+        generateInstagramProfileFilename,
+        convertInstagramProfileToLocalPath,
         simpleHash
     };
 }
