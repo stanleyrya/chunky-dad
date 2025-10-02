@@ -2730,9 +2730,9 @@ body.index-page main {
 }
 
 .favicon-marker-icon {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
     border-radius: 2px;
 }
 
@@ -3643,8 +3643,8 @@ footer {
     }
 
     .favicon-marker-icon {
-        width: 22px;
-        height: 22px;
+        width: 36px;
+        height: 36px;
     }
 
     .marker-text {
