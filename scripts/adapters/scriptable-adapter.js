@@ -3346,6 +3346,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             // Contact/Social fields
             'website': 30,
+            'url': 38,             // main event URL (separate from website)
             'facebook': 31,
             'instagram': 32,
             'twitter': 33,
