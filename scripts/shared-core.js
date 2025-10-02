@@ -601,6 +601,10 @@ class SharedCore {
             ...Object.keys(newEvent)
         ]);
         
+        console.log(`🔄 MERGE DEBUG: All fields to process: ${Array.from(allFields).join(', ')}`);
+        console.log(`🔄 MERGE DEBUG: existingEvent has 'url': ${('url' in existingEvent)}, value: "${existingEvent.url}"`);
+        console.log(`🔄 MERGE DEBUG: newEvent has 'url': ${('url' in newEvent)}, value: "${newEvent.url}"`);
+        
         // Track merge decisions for important fields
         const mergeDecisions = [];
         
@@ -615,6 +619,14 @@ class SharedCore {
             const newValue = newEvent[fieldName];
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
+            
+            // Debug logging for url field
+            if (fieldName === 'url') {
+                console.log(`🔄 MERGE DEBUG: Processing 'url' field`);
+                console.log(`🔄 MERGE DEBUG: existingValue: "${existingValue}" (${existingSource})`);
+                console.log(`🔄 MERGE DEBUG: newValue: "${newValue}" (${newSource})`);
+                console.log(`🔄 MERGE DEBUG: priority: ${JSON.stringify(priorityConfig.priority)}`);
+            }
             
             // Find which source has higher priority
             const existingIndex = priorityConfig.priority.indexOf(existingSource);
@@ -662,6 +674,11 @@ class SharedCore {
             
             mergedEvent[fieldName] = chosenValue;
             
+            // Debug logging for url field
+            if (fieldName === 'url') {
+                console.log(`🔄 MERGE DEBUG: Chosen value: "${chosenValue}" (reason: ${reason})`);
+            }
+            
             // Log decisions when values differ
             if (existingValue !== newValue) {
                 mergeDecisions.push({
@@ -693,6 +710,8 @@ class SharedCore {
                 console.log(`🔄   ${decision.field}: ${existingStr} vs ${newStr} → ${chosenStr} (${decision.reason})`);
             });
         }
+        
+        console.log(`🔄 MERGE DEBUG: Final merged event has 'url': ${('url' in mergedEvent)}, value: "${mergedEvent.url}"`);
         
         return mergedEvent;
     }
