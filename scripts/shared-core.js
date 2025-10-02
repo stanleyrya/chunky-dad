@@ -602,8 +602,8 @@ class SharedCore {
         ]);
         
         console.log(`🔄 MERGE DEBUG: All fields to process: ${Array.from(allFields).join(', ')}`);
-        console.log(`🔄 MERGE DEBUG: existingEvent has 'url': ${('url' in existingEvent)}, value: "${existingEvent.url}"`);
-        console.log(`🔄 MERGE DEBUG: newEvent has 'url': ${('url' in newEvent)}, value: "${newEvent.url}"`);
+        console.log(`🔄 MERGE DEBUG: existingEvent fields: ${JSON.stringify(Object.keys(existingEvent))}`);
+        console.log(`🔄 MERGE DEBUG: newEvent fields: ${JSON.stringify(Object.keys(newEvent))}`);
         
         // Track merge decisions for important fields
         const mergeDecisions = [];
@@ -613,24 +613,26 @@ class SharedCore {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
-            if (!priorityConfig || !priorityConfig.priority) return; // No priority config, keep newEvent value
-            
             const existingValue = existingEvent[fieldName];
             const newValue = newEvent[fieldName];
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
             
-            // Debug logging for url field
-            if (fieldName === 'url') {
-                console.log(`🔄 MERGE DEBUG: Processing 'url' field`);
-                console.log(`🔄 MERGE DEBUG: existingValue: "${existingValue}" (${existingSource})`);
-                console.log(`🔄 MERGE DEBUG: newValue: "${newValue}" (${newSource})`);
-                console.log(`🔄 MERGE DEBUG: priority: ${JSON.stringify(priorityConfig.priority)}`);
+            console.log(`🔄 MERGE DEBUG: Processing field '${fieldName}'`);
+            console.log(`🔄 MERGE DEBUG:   existingValue: "${existingValue}" (${existingSource})`);
+            console.log(`🔄 MERGE DEBUG:   newValue: "${newValue}" (${newSource})`);
+            console.log(`🔄 MERGE DEBUG:   priorityConfig: ${priorityConfig ? JSON.stringify(priorityConfig) : 'NONE'}`);
+            
+            if (!priorityConfig || !priorityConfig.priority) {
+                console.log(`🔄 MERGE DEBUG:   NO PRIORITY CONFIG - skipping field`);
+                return; // No priority config, keep newEvent value
             }
             
             // Find which source has higher priority
             const existingIndex = priorityConfig.priority.indexOf(existingSource);
             const newIndex = priorityConfig.priority.indexOf(newSource);
+            
+            console.log(`🔄 MERGE DEBUG:   existingIndex: ${existingIndex}, newIndex: ${newIndex}`);
             
             let chosenValue = newValue; // Default
             let reason = 'default';
@@ -672,12 +674,9 @@ class SharedCore {
                 reason = `only ${newSource} in priority list`;
             }
             
-            mergedEvent[fieldName] = chosenValue;
+            console.log(`🔄 MERGE DEBUG:   CHOSEN: "${chosenValue}" (reason: ${reason})`);
             
-            // Debug logging for url field
-            if (fieldName === 'url') {
-                console.log(`🔄 MERGE DEBUG: Chosen value: "${chosenValue}" (reason: ${reason})`);
-            }
+            mergedEvent[fieldName] = chosenValue;
             
             // Log decisions when values differ
             if (existingValue !== newValue) {
@@ -711,7 +710,8 @@ class SharedCore {
             });
         }
         
-        console.log(`🔄 MERGE DEBUG: Final merged event has 'url': ${('url' in mergedEvent)}, value: "${mergedEvent.url}"`);
+        console.log(`🔄 MERGE DEBUG: Final merged event fields: ${JSON.stringify(Object.keys(mergedEvent))}`);
+        console.log(`🔄 MERGE DEBUG: Final merged event 'url': "${mergedEvent.url}"`);
         
         return mergedEvent;
     }
