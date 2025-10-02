@@ -202,6 +202,7 @@ const scraperConfig = {
       urlDiscoveryDepth: 2,    // Depth 2 to follow ticket links and their detail pages
       maxAdditionalUrls: 10,   // Limit additional URLs discovered
       dryRun: false,           // Override global dryRun if needed
+      keyTemplate: "cubhouse-${city}",  // Custom key to merge linktree + eventbrite events (same event, different sources)
       
       // Field priorities for merging data from different sources
       // Eventbrite takes priority for most fields since that's where the actual event data comes from

@@ -158,16 +158,38 @@ class LinktreeParser {
         try {
             const { url, title } = ticketLink;
             
+            // Try to extract basic date information from title to survive future events filter
+            let startDate = null;
+            let endDate = null;
+            
+            // Look for date patterns like "(10/31)" or "HALLOWEEN NIGHT (10/31)"
+            const datePattern = /\((\d{1,2})\/(\d{1,2})\)/;
+            const match = title.match(datePattern);
+            if (match) {
+                const month = parseInt(match[1]) - 1; // JavaScript months are 0-based
+                const day = parseInt(match[2]);
+                const currentYear = new Date().getFullYear();
+                
+                // Create a date for this year, or next year if the date has passed
+                let eventDate = new Date(currentYear, month, day);
+                if (eventDate < new Date()) {
+                    eventDate = new Date(currentYear + 1, month, day);
+                }
+                
+                startDate = eventDate;
+                endDate = new Date(eventDate.getTime() + (5 * 60 * 60 * 1000)); // Add 5 hours as default duration
+            }
+            
             // Create a basic event object that will be enriched by other parsers
             const event = {
                 title: title,
                 description: `Event from Linktree: ${title}`, // Will be overridden by other parsers
-                startDate: null, // Will be filled by other parsers
-                endDate: null, // Will be filled by other parsers
+                startDate: startDate, // Basic date extracted from title, will be refined by other parsers
+                endDate: endDate, // Basic date extracted from title, will be refined by other parsers
                 bar: null, // Will be filled by other parsers
                 location: null, // Will be filled by other parsers
                 address: null, // Will be filled by other parsers
-                city: null, // Will be filled by other parsers
+                city: this.extractCityFromUrl(sourceUrl) || null, // Try to extract city from source URL
                 timezone: null, // Will be filled by other parsers
                 url: sourceUrl, // The linktree URL goes in url field
                 ticketUrl: url, // The ticket/event URL goes in ticketUrl field
@@ -283,6 +305,24 @@ class LinktreeParser {
         }
         
         return url;
+    }
+    
+    // Extract city from source URL for known venues
+    extractCityFromUrl(sourceUrl) {
+        if (!sourceUrl) return null;
+        
+        // Known venue-to-city mappings
+        const urlCityMappings = {
+            'linktr.ee/cubhouse': 'philadelphia'
+        };
+        
+        for (const [urlPattern, city] of Object.entries(urlCityMappings)) {
+            if (sourceUrl.includes(urlPattern)) {
+                return city;
+            }
+        }
+        
+        return null;
     }
 }
 
