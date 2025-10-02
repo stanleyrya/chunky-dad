@@ -781,7 +781,7 @@ class EventbriteParser {
             }
             
             // Log event creation with URL for verification
-            console.log(`🎫 Eventbrite: Created event "${title}" with URL: ${url}`);
+            console.log(`🎫 Eventbrite: Created event "${title}" with ticketUrl: ${url}`);
             
             return event;
             
