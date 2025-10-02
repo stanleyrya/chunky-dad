@@ -8,14 +8,14 @@ X-WR-TIMEZONE:America/Phoenix
 BEGIN:VEVENT
 DTSTART:20251005T040000Z
 DTEND:20251005T090000Z
-DTSTAMP:20251001T001220Z
+DTSTAMP:20251002T022755Z
 UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
 CREATED:20251001T000958Z
 DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
  nbar: Kobalt\naddress: 3110 North Central Avenue\, Phoenix\, AZ 85012\ntime
  zone: America/Phoenix\nurl: https://linktr.ee/megawoof_america\nticketUrl: 
  https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-
- tickets-1675720327609\ncover: $11.58 - $22.10 (as of 9/30)\nimage: https://
+ tickets-1675720327609\ncover: $11.58 - $22.10 (as of 10/1)\nimage: https://
  img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722
  403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&aut
  o=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc5
@@ -23,7 +23,7 @@ DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
  awoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.48
  33086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM\nkey: megaw
  oof|2025-10-05|kobalt|eventbrite
-LAST-MODIFIED:20251001T000958Z
+LAST-MODIFIED:20251002T003853Z
 LOCATION:33.4833086\, -112.0754149
 SEQUENCE:0
 STATUS:CONFIRMED
