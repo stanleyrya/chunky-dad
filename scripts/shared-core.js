@@ -713,13 +713,13 @@ class SharedCore {
         // Step 2: Merge final scraped values with existing calendar using merge strategies
         // Only copy essential calendar properties, not Scriptable-specific methods/properties
         const mergedEvent = {
-            // Core calendar fields that need to be preserved
+            // Core calendar fields that need to be preserved initially
+            // These will be overridden by merge logic based on field priorities
             title: existingEvent.title,
             startDate: existingEvent.startDate,
             endDate: existingEvent.endDate,
             location: existingEvent.location,
             notes: existingEvent.notes,
-            url: existingEvent.url,
             // Metadata fields
             _fieldPriorities: fieldPriorities,
             _action: newEvent._action || 'merge',
