@@ -180,8 +180,6 @@ class LinktreeParser {
                 _originalLinkTitle: title
             };
             
-            console.log(`🔗 Linktree: Created event "${title}" with url: ${event.url}, ticketUrl: ${event.ticketUrl}`);
-            
             return event;
             
         } catch (error) {
