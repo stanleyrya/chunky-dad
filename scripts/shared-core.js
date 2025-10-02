@@ -609,10 +609,19 @@ class SharedCore {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
             
             const priorityConfig = fieldPriorities[fieldName];
-            if (!priorityConfig || !priorityConfig.priority) return; // No priority config, keep newEvent value
-            
             const existingValue = existingEvent[fieldName];
             const newValue = newEvent[fieldName];
+            
+            // If no priority config, keep newEvent value if it exists, otherwise use existing value
+            if (!priorityConfig || !priorityConfig.priority) {
+                if (newValue !== undefined && newValue !== null) {
+                    mergedEvent[fieldName] = newValue;
+                } else if (existingValue !== undefined && existingValue !== null) {
+                    mergedEvent[fieldName] = existingValue;
+                }
+                return;
+            }
+            
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
             
