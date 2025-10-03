@@ -510,6 +510,22 @@ body.index-page header.visible {
     transform: translateZ(0);
 }
 
+/* Large desktop displays - use higher resolution */
+@media (min-width: 1024px) {
+    .hero-logo-img {
+        width: 400px;
+        height: 400px;
+    }
+}
+
+/* Extra large displays - use maximum resolution */
+@media (min-width: 1440px) {
+    .hero-logo-img {
+        width: 512px;
+        height: 512px;
+    }
+}
+
 .hero-logo-img:hover {
     transform: scale(1.05);
 }
