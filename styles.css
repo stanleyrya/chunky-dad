@@ -2764,12 +2764,12 @@ body.index-page main {
 }
 
 .favicon-marker-container:hover .favicon-marker-icon {
-    transform: none;
+    transform: scale(1.05);
 }
 
 .favicon-marker-icon {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     object-fit: cover;
     object-position: center;
     border-radius: 4px;
@@ -2881,7 +2881,7 @@ body.index-page main {
 }
 
 .leaflet-marker-icon.marker-selected .favicon-marker-icon {
-    transform: none !important;
+    transform: scale(1.05) !important;
 }
 
 .leaflet-marker-icon.marker-selected {
