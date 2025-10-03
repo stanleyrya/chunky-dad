@@ -1226,9 +1226,9 @@ class DynamicCalendarLoader extends CalendarCore {
                                  onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
                         </div>
                     `,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 20],
-                    popupAnchor: [0, -16]
+                    iconSize: [48, 48],
+                    iconAnchor: [24, 24],
+                    popupAnchor: [0, -20]
                 });
             } catch (error) {
                 logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
@@ -1244,9 +1244,9 @@ class DynamicCalendarLoader extends CalendarCore {
                     <span class="marker-text">${markerText}</span>
                 </div>
             `,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-            popupAnchor: [0, -16]
+            iconSize: [48, 48],
+            iconAnchor: [24, 24],
+            popupAnchor: [0, -20]
         });
     }
 
