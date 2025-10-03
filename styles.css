@@ -2764,8 +2764,8 @@ body.index-page main {
 }
 
 .favicon-marker-icon {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     object-fit: cover;
     object-position: center;
     border-radius: 4px;
@@ -3685,8 +3685,8 @@ footer {
     }
 
     .favicon-marker-icon {
-        width: 28px;
-        height: 28px;
+        width: 34px;
+        height: 34px;
         object-fit: cover;
         object-position: center;
         flex-shrink: 0;
