@@ -249,9 +249,16 @@ function generateFilename(url, type = 'event', size = null) {
     if (type === 'favicon') {
         const baseFilename = generateFaviconFilename(url);
         if (size) {
-            // Add size suffix for higher quality favicons
+            // Check if filename already contains a size suffix to avoid double suffixes
             const ext = path.extname(baseFilename);
             const nameWithoutExt = path.basename(baseFilename, ext);
+            
+            // If the filename already contains a size suffix (like -64px), don't add another one
+            if (nameWithoutExt.includes('-64px') || nameWithoutExt.includes('-32px') || nameWithoutExt.includes('-256px')) {
+                return baseFilename;
+            }
+            
+            // Add size suffix for higher quality favicons
             return `${nameWithoutExt}-${size}px${ext}`;
         }
         return baseFilename;
