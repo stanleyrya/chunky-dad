@@ -2751,7 +2751,7 @@ body.index-page main {
     justify-content: center;
     background: white;
     border: 2px solid var(--primary-color);
-    border-radius: 12px;
+    border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     overflow: hidden;
@@ -2759,7 +2759,6 @@ body.index-page main {
 
 .favicon-marker-container:hover {
     transform: scale(1.05);
-    border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
@@ -2767,7 +2766,8 @@ body.index-page main {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 8px;
+    object-position: center;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -2817,7 +2817,7 @@ body.index-page main {
 .map-control-btn {
     background: var(--background-primary);
     border: 2px solid var(--border-light);
-    border-radius: 12px;
+    border-radius: 8px;
     width: 34px;
     height: 34px;
     display: flex;
@@ -2866,7 +2866,6 @@ body.index-page main {
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected .favicon-marker-container {
     border: 2px solid var(--primary-color) !important;
-    border-radius: 12px !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
     transform: scale(1.05) !important;
 }
@@ -3687,6 +3686,7 @@ footer {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: center;
     }
 
     .marker-text {
