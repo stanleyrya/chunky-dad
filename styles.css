@@ -2755,6 +2755,9 @@ body.index-page main {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transition: all 0.2s ease;
     overflow: hidden;
+    /* Ensure all images within favicon markers render smoothly */
+    image-rendering: auto;
+    image-rendering: smooth;
 }
 
 .favicon-marker-container:hover {
@@ -2768,6 +2771,9 @@ body.index-page main {
     object-fit: cover;
     border-radius: 4px;
     transition: all 0.2s ease;
+    /* Override global crisp-edges for smooth favicon rendering */
+    image-rendering: auto;
+    image-rendering: smooth;
 }
 
 /* Text marker styling */
@@ -2789,6 +2795,11 @@ body.index-page main {
     display: block;
     width: 100%;
     padding: 3px;
+    /* Ensure smooth text rendering */
+    image-rendering: auto;
+    image-rendering: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .map-link {
@@ -3685,12 +3696,20 @@ footer {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        /* Override global crisp-edges for smooth favicon rendering */
+        image-rendering: auto;
+        image-rendering: smooth;
     }
 
     .marker-text {
         font-size: 9px;
         letter-spacing: -0.1px;
         padding: 2px;
+        /* Ensure smooth text rendering */
+        image-rendering: auto;
+        image-rendering: smooth;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
 
