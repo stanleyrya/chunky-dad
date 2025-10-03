@@ -141,8 +141,8 @@ async function fetchPageContent(url) {
   });
 }
 
-// Process and optimize image (resize to 96x96 and compress)
-async function processProfilePicture(inputPath, outputPath) {
+// Process and optimize image for specific size
+async function processProfilePicture(inputPath, outputPath, targetSize = 96) {
   try {
     const sharp = require('sharp');
     
@@ -150,16 +150,16 @@ async function processProfilePicture(inputPath, outputPath) {
     const metadata = await sharp(inputPath).metadata();
     console.log(`📏 Original image: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
     
-    // Process the image: resize to 96x96, maintain aspect ratio, optimize
+    // Process the image: resize to target size, maintain aspect ratio, optimize
     await sharp(inputPath)
-      .resize(96, 96, {
+      .resize(targetSize, targetSize, {
         fit: 'cover',
         position: 'center'
       })
-      .jpeg({
-        quality: 85,
-        progressive: true,
-        mozjpeg: true
+      .png({
+        quality: 90,
+        compressionLevel: 6,
+        progressive: true
       })
       .toFile(outputPath);
     
@@ -245,15 +245,22 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
 }
 
 // Generate filename from URL using shared utility
-function generateFilename(url, type = 'event') {
+function generateFilename(url, type = 'event', size = null) {
     if (type === 'favicon') {
-        return generateFaviconFilename(url);
+        const baseFilename = generateFaviconFilename(url);
+        if (size) {
+            // Add size suffix for higher quality favicons
+            const ext = path.extname(baseFilename);
+            const nameWithoutExt = path.basename(baseFilename, ext);
+            return `${nameWithoutExt}-${size}px${ext}`;
+        }
+        return baseFilename;
     }
     return generateFilenameFromUrl(url);
 }
 
 // Generate a unique filename for Linktree profile pictures based on the Linktree URL
-function generateLinktreeFaviconFilename(linktreeUrl) {
+function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
     try {
         const parsedUrl = new URL(linktreeUrl);
         const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
@@ -262,16 +269,16 @@ function generateLinktreeFaviconFilename(linktreeUrl) {
             .replace(/-+/g, '-') // Collapse multiple dashes
             .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
         
-        return `favicon-linktr.ee-${cleanPath}.ico`;
+        return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
     } catch (error) {
         // Fallback to hash-based filename
         const hash = simpleHash(linktreeUrl);
-        return `favicon-linktr.ee-${hash}.ico`;
+        return `favicon-linktr.ee-${hash}-${size}px.png`;
     }
 }
 
 // Download image with a custom filename
-async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 'event', isLinktreeProfile = false) {
+async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 'event', isLinktreeProfile = false, targetSize = 96) {
   try {
     const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
     const localPath = path.join(dir, customFilename);
@@ -301,7 +308,7 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
         fs.renameSync(localPath, tempPath);
         
         // Process and optimize the image
-        const processed = await processProfilePicture(tempPath, optimizedPath);
+        const processed = await processProfilePicture(tempPath, optimizedPath, targetSize);
         
         if (processed) {
           // Replace original with optimized version
@@ -392,6 +399,48 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
   return { shouldDownload: false, reason: 'File is up to date' };
 }
 
+// Download a single image with size specification
+async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
+  try {
+    const filename = generateFilename(imageUrl, type, size);
+    const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+    const localPath = path.join(dir, filename);
+    const metadataPath = localPath + '.meta';
+    
+    // Check if we should download
+    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
+    
+    if (!shouldDownload) {
+      console.log(`⏭️  Skipping ${type} image: ${filename} (${reason})`);
+      return { success: true, skipped: true, filename, reason };
+    }
+    
+    console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
+    console.log(`   URL: ${imageUrl}`);
+    
+    // Download the image
+    await downloadFile(imageUrl, localPath);
+    
+    // Save metadata
+    const metadata = {
+      originalUrl: imageUrl,
+      downloadedAt: new Date().toISOString(),
+      type: type,
+      filename: filename,
+      size: size
+    };
+    
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    
+    console.log(`✅ Downloaded ${type} image: ${filename}`);
+    return { success: true, skipped: false, filename, localPath };
+    
+  } catch (error) {
+    console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+    return { success: false, error: error.message, url: imageUrl };
+  }
+}
+
 // Download a single image
 async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false) {
   try {
@@ -424,7 +473,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
         fs.renameSync(localPath, tempPath);
         
         // Process and optimize the image
-        const processed = await processProfilePicture(tempPath, optimizedPath);
+        const processed = await processProfilePicture(tempPath, optimizedPath, targetSize);
         
         if (processed) {
           // Replace original with optimized version
@@ -475,7 +524,9 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
 function extractImageUrls() {
   const imageUrls = {
     events: new Set(),
-    favicons: new Set()
+    favicons: new Set(),
+    favicons64: new Set(),  // Higher quality for map markers
+    favicons256: new Set()   // High quality for cards/OG
   };
   
   // Read all calendar files
@@ -527,10 +578,19 @@ function extractImageUrls() {
             imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
             imageUrls.linktreeUrls.add(event.website);
           } else {
-            // Use Google's favicon service for regular domains
-            const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-            imageUrls.favicons.add(faviconUrl);
-            console.log(`🌐 Found website for favicon: ${domain} -> ${faviconUrl}`);
+            // Use Google's favicon service for regular domains with multiple sizes
+            const faviconUrl32 = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+            const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+            const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+            
+            imageUrls.favicons.add(faviconUrl32);
+            imageUrls.favicons64.add(faviconUrl64);
+            imageUrls.favicons256.add(faviconUrl256);
+            
+            console.log(`🌐 Found website for favicons: ${domain}`);
+            console.log(`   📱 Map (32px): ${faviconUrl32}`);
+            console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
+            console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
           }
         } catch (error) {
           console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
@@ -540,7 +600,7 @@ function extractImageUrls() {
   }
   
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons.size} favicon URLs, and ${linktreeCount} Linktree URLs`);
+  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons.size} favicon URLs (32px), ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
   return imageUrls;
 }
 
@@ -575,8 +635,8 @@ async function main() {
     }
   }
   
-  // Download favicons
-  console.log('\n🌐 Downloading favicons...');
+  // Download favicons (32px for compatibility)
+  console.log('\n🌐 Downloading favicons (32px)...');
   for (const url of imageUrls.favicons) {
     const result = await downloadImage(url, 'favicon');
     if (result.success) {
@@ -590,28 +650,68 @@ async function main() {
     }
   }
   
-  // Process Linktree profile pictures
+  // Download high-quality favicons (64px for map markers)
+  console.log('\n🗺️  Downloading high-quality favicons (64px)...');
+  for (const url of imageUrls.favicons64) {
+    const result = await downloadImageWithSize(url, 'favicon', '64');
+    if (result.success) {
+      if (result.skipped) {
+        totalSkipped++;
+      } else {
+        totalDownloaded++;
+      }
+    } else {
+      totalFailed++;
+    }
+  }
+  
+  // Download ultra-high-quality favicons (256px for cards/OG)
+  console.log('\n🎨 Downloading ultra-high-quality favicons (256px)...');
+  for (const url of imageUrls.favicons256) {
+    const result = await downloadImageWithSize(url, 'favicon', '256');
+    if (result.success) {
+      if (result.skipped) {
+        totalSkipped++;
+      } else {
+        totalDownloaded++;
+      }
+    } else {
+      totalFailed++;
+    }
+  }
+  
+  // Process Linktree profile pictures with multiple sizes
   if (imageUrls.linktreeUrls && imageUrls.linktreeUrls.size > 0) {
-    console.log('\n🔗 Processing Linktree profile pictures...');
+    console.log('\n🔗 Processing Linktree profile pictures with multiple sizes...');
     for (const linktreeUrl of imageUrls.linktreeUrls) {
       try {
         // Extract profile picture URL from Linktree page
         const profilePictureUrl = await extractLinktreeProfilePicture(linktreeUrl);
         
         if (profilePictureUrl) {
-          // Generate a unique filename based on the Linktree URL, not the profile picture URL
-          const linktreeFilename = generateLinktreeFaviconFilename(linktreeUrl);
+          // Generate multiple sizes for Linktree profile pictures
+          const sizes = [
+            { size: '32', targetSize: 32, description: 'Map markers (32px)' },
+            { size: '64', targetSize: 64, description: 'High-res map markers (64px)' },
+            { size: '256', targetSize: 256, description: 'Cards/OG images (256px)' }
+          ];
           
-          // Download the profile picture with the custom filename
-          const result = await downloadImageWithCustomFilename(profilePictureUrl, linktreeFilename, 'favicon', true);
-          if (result.success) {
-            if (result.skipped) {
-              totalSkipped++;
+          for (const { size, targetSize, description } of sizes) {
+            const linktreeFilename = generateLinktreeFaviconFilename(linktreeUrl, size);
+            
+            console.log(`📥 Processing Linktree ${description}: ${linktreeFilename}`);
+            
+            // Download and process the profile picture with the custom filename
+            const result = await downloadImageWithCustomFilename(profilePictureUrl, linktreeFilename, 'favicon', true, targetSize);
+            if (result.success) {
+              if (result.skipped) {
+                totalSkipped++;
+              } else {
+                totalDownloaded++;
+              }
             } else {
-              totalDownloaded++;
+              totalFailed++;
             }
-          } else {
-            totalFailed++;
           }
         } else {
           console.log(`⚠️  Could not extract profile picture from ${linktreeUrl}`);
@@ -647,4 +747,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };

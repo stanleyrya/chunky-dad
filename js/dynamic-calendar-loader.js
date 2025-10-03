@@ -1204,9 +1204,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         dataSource: this.dataSource
                     });
                 } else {
-                    // For live data, use Google favicon service
+                    // For live data, use Google favicon service with higher quality
                     const hostname = new URL(url).hostname;
-                    faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                    faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
                 }
                 
                 const textFallback = this.getMarkerText(event);

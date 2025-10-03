@@ -250,7 +250,7 @@ jobs:
         run: |
           npm install --no-audit --no-fund --prefer-offline
 
-      - name: Download event images and favicons
+      - name: Download event images and high-quality favicons
         run: |
           node tools/download-images.js
           git add -A img/favicons/ img/events/ 2>/dev/null || true
@@ -258,9 +258,9 @@ jobs:
             echo "No image changes to commit"
             echo "IMAGES_CHANGED=false" >> $GITHUB_ENV
           else
-            git commit -m "🖼️ Download/update event images and favicons"
+            git commit -m "🖼️ Download/update event images and high-quality favicons (32px, 64px, 256px)"
             git push
-            echo "✓ Event images and favicons updated and committed"
+            echo "✓ Event images and high-quality favicons updated and committed"
             echo "IMAGES_CHANGED=true" >> $GITHUB_ENV
           fi
 

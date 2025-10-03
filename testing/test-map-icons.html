@@ -1215,7 +1215,7 @@
                 
                 try {
                     const url = new URL(websiteUrl);
-                    return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`;
+                    return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
                 } catch (error) {
                     logger.componentError('MAP', 'Invalid website URL for favicon', { url: websiteUrl, error });
                     return null;
