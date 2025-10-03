@@ -2744,8 +2744,8 @@ body.index-page main {
 
 .favicon-marker-container {
     position: relative;
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2763,8 +2763,8 @@ body.index-page main {
 }
 
 .favicon-marker-icon {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     object-fit: cover;
     border-radius: 2px;
 }
@@ -3671,13 +3671,13 @@ footer {
     }
 
     .favicon-marker-container {
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
     }
 
     .favicon-marker-icon {
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         object-fit: cover;
     }
 
