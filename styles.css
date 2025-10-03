@@ -3685,8 +3685,8 @@ footer {
     }
 
     .favicon-marker-icon {
-        width: 28px;
-        height: 28px;
+        width: 100%;
+        height: 100%;
         object-fit: cover;
         object-position: center;
         flex-shrink: 0;
@@ -3696,14 +3696,6 @@ footer {
         font-size: 9px;
         letter-spacing: -0.1px;
         padding: 2px;
-    }
-
-    /* Mobile: Make map icons fill the container box */
-    @media (max-width: 768px) {
-        .favicon-marker-icon {
-            width: 100%;
-            height: 100%;
-        }
     }
 
 
