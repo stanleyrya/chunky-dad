@@ -2763,10 +2763,11 @@ body.index-page main {
 }
 
 .favicon-marker-icon {
-    width: 36px;
-    height: 36px;
+    width: 90%;
+    height: 90%;
     object-fit: cover;
     border-radius: 2px;
+    transition: all 0.2s ease;
 }
 
 /* Text marker styling */
