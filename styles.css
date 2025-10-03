@@ -497,6 +497,9 @@ body.index-page header.visible {
     height: 320px;
     transition: transform 0.3s ease;
     animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+    /* High-quality image for retina displays */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 .hero-logo-img:hover {
