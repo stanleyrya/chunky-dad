@@ -639,20 +639,6 @@ async function main() {
     }
   }
   
-  // Download favicons (32px for compatibility)
-  console.log('\n🌐 Downloading favicons (32px)...');
-  for (const url of imageUrls.favicons) {
-    const result = await downloadImage(url, 'favicon');
-    if (result.success) {
-      if (result.skipped) {
-        totalSkipped++;
-      } else {
-        totalDownloaded++;
-      }
-    } else {
-      totalFailed++;
-    }
-  }
   
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
