@@ -2764,7 +2764,7 @@ body.index-page main {
 }
 
 .favicon-marker-container:hover .favicon-marker-icon {
-    transform: scale(1.05);
+    transform: none;
 }
 
 .favicon-marker-icon {
