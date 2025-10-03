@@ -202,9 +202,9 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
             const filename = `favicon-linktr.ee-${cleanPath}.ico`;
             return `${basePath}/${filename}`;
         } else {
-            // Use regular favicon logic for other domains
+            // Use regular favicon logic for other domains (prefer 64px for higher quality)
             const hostname = parsedUrl.hostname;
-            const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+            const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
             return convertFaviconUrlToLocalPath(googleFaviconUrl, basePath);
         }
     } catch (error) {
