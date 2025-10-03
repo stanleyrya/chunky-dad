@@ -421,6 +421,9 @@ body.index-page header.visible {
     width: auto;
     vertical-align: middle;
     display: inline-block;
+    /* Ensure crisp rendering on high-DPI displays */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 /* Section icon styles */
@@ -497,9 +500,30 @@ body.index-page header.visible {
     height: 320px;
     transition: transform 0.3s ease;
     animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
-    /* High-quality image for retina displays */
+    /* High-quality image rendering for crisp display on all devices */
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
+    /* Prevent image blur on high-DPI screens */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* Large desktop displays - use higher resolution */
+@media (min-width: 1024px) {
+    .hero-logo-img {
+        width: 400px;
+        height: 400px;
+    }
+}
+
+/* Extra large displays - use maximum resolution */
+@media (min-width: 1440px) {
+    .hero-logo-img {
+        width: 512px;
+        height: 512px;
+    }
 }
 
 .hero-logo-img:hover {
@@ -769,6 +793,9 @@ body.index-page header.visible {
     .hero-logo-img {
         width: 200px;
         height: 200px;
+        /* Ensure crisp rendering on mobile high-DPI displays */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
     }
     
     .hero-scroll-hint {
@@ -826,6 +853,9 @@ body.index-page header.visible {
     .hero-logo-img {
         width: 160px;
         height: 160px;
+        /* Ensure crisp rendering on small mobile high-DPI displays */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
     }
     
     .hero-scroll-hint {
