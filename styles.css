@@ -275,7 +275,7 @@ body.index-page header.visible {
     top: 100%;
     right: 0;
     background: var(--dropdown-bg);
-    border-radius: 20px;
+    border-radius: 12px;
     box-shadow: 0 15px 40px var(--shadow-heavy);
     padding: 0.8rem;
     margin-top: 0.8rem;
@@ -369,7 +369,7 @@ body.index-page header.visible {
     margin-left: 1rem;
     padding: 0.5rem 1rem;
     background: rgba(255, 193, 7, 0.2);
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 193, 7, 0.3);
     font-size: 0.8rem;
     font-family: 'Courier New', monospace;
@@ -628,7 +628,7 @@ body.index-page header.visible {
     background: var(--joke-bubble-background);
     color: var(--text-primary);
     padding: 20px 20px 50px 20px;
-    border-radius: 20px;
+    border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     font-size: 0.9rem;
     line-height: 1.4;
@@ -977,7 +977,7 @@ body.index-page main {
     padding: 15px 30px;
     font-size: 1.1rem;
     font-weight: 600;
-    border-radius: 50px;
+    border-radius: 25px;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
@@ -1315,7 +1315,7 @@ body.index-page main {
 
 .city-card {
     background: var(--background-primary);
-    border-radius: 20px;
+    border-radius: 12px;
     padding: 2rem;
     text-align: center;
     text-decoration: none;
@@ -1516,7 +1516,7 @@ body.index-page main {
     color: var(--text-inverse);
     text-decoration: none;
     padding: 1rem 2rem;
-    border-radius: 50px;
+    border-radius: 25px;
     font-weight: 600;
     font-size: 1.1rem;
     transition: all 0.3s ease;
@@ -1548,7 +1548,7 @@ body.index-page main {
 .contact-simple .contact-form {
     background: var(--background-primary);
     padding: 2rem;
-    border-radius: 20px;
+    border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
@@ -2270,7 +2270,7 @@ body.index-page main {
     background: var(--primary-color);
     color: var(--white);
     padding: 0.5rem 1rem;
-    border-radius: 20px;
+    border-radius: 12px;
     font-size: 0.9rem;
     font-weight: 600;
     white-space: nowrap;
@@ -2409,7 +2409,7 @@ body.index-page main {
     align-items: center;
     justify-content: center;
     position: relative;
-    top: 0px; /* Center icon properly in circle */
+    top: -1px; /* Center icon properly in circle */
 }
 
 .event-links a {
@@ -2417,7 +2417,7 @@ body.index-page main {
     color: var(--white);
     text-decoration: none;
     padding: 0.3rem 0.8rem;
-    border-radius: 20px;
+    border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 500;
     transition: transform 0.3s ease;
@@ -2473,7 +2473,7 @@ body.index-page main {
     background: var(--solid-primary);
     color: var(--text-inverse) !important;
     padding: 8px 16px;
-    border-radius: 25px;
+    border-radius: 15px;
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 600;
@@ -2685,7 +2685,7 @@ body.index-page main {
 #events-map {
     height: 500px;
     width: 100%;
-    border-radius: 20px;
+    border-radius: 12px;
     position: relative;
     z-index: 1;
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -4258,7 +4258,7 @@ footer {
 
 .modal-content {
     background: var(--background-primary);
-    border-radius: 20px;
+    border-radius: 12px;
     padding: 0;
     max-width: 500px;
     width: 90%;
@@ -4698,7 +4698,7 @@ footer {
         width: auto;
         padding: 0.6rem 1.2rem;
         gap: 0.6rem;
-        border-radius: 24px;
+        border-radius: 16px;
     }
 
     /* Improved slider layout for desktop */
@@ -5366,7 +5366,7 @@ footer {
     background: var(--primary-color);
     color: var(--white);
     text-decoration: none;
-    border-radius: 25px;
+    border-radius: 15px;
     font-weight: 500;
     font-size: 0.9rem;
     transition: all 0.3s ease;
@@ -5713,7 +5713,7 @@ footer {
     color: white;
     border: none;
     padding: 0.8rem 1.5rem;
-    border-radius: 25px;
+    border-radius: 15px;
     font-weight: 600;
     font-size: 0.9rem;
     cursor: pointer;
