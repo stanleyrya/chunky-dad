@@ -2740,6 +2740,9 @@ body.index-page main {
     background: none;
     border: none;
     transform-origin: center center;
+    /* Force smooth rendering for all favicon markers */
+    image-rendering: auto !important;
+    image-rendering: smooth !important;
 }
 
 .favicon-marker-container {
@@ -2753,11 +2756,11 @@ body.index-page main {
     border: 2px solid var(--primary-color);
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     overflow: hidden;
     /* Ensure all images within favicon markers render smoothly */
-    image-rendering: auto;
-    image-rendering: smooth;
+    image-rendering: auto !important;
+    image-rendering: smooth !important;
 }
 
 .favicon-marker-container:hover {
@@ -2770,10 +2773,10 @@ body.index-page main {
     height: 100%;
     object-fit: cover;
     border-radius: 4px;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, opacity 0.2s ease;
     /* Override global crisp-edges for smooth favicon rendering */
-    image-rendering: auto;
-    image-rendering: smooth;
+    image-rendering: auto !important;
+    image-rendering: smooth !important;
 }
 
 /* Text marker styling */
@@ -2796,10 +2799,10 @@ body.index-page main {
     width: 100%;
     padding: 3px;
     /* Ensure smooth text rendering */
-    image-rendering: auto;
-    image-rendering: smooth;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    image-rendering: auto !important;
+    image-rendering: smooth !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
 }
 
 .map-link {
@@ -3697,8 +3700,8 @@ footer {
         height: 100%;
         object-fit: cover;
         /* Override global crisp-edges for smooth favicon rendering */
-        image-rendering: auto;
-        image-rendering: smooth;
+        image-rendering: auto !important;
+        image-rendering: smooth !important;
     }
 
     .marker-text {
@@ -3706,10 +3709,10 @@ footer {
         letter-spacing: -0.1px;
         padding: 2px;
         /* Ensure smooth text rendering */
-        image-rendering: auto;
-        image-rendering: smooth;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+        image-rendering: auto !important;
+        image-rendering: smooth !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
     }
 
 
