@@ -129,11 +129,13 @@ function generateFaviconFilename(faviconUrl) {
             ext = '.svg';
         }
         
-        return `favicon-${cleanDomain}${ext}`;
+        // Add size suffix for px-sized favicons (prefer 64px for map markers)
+        const sizeSuffix = '-64px';
+        return `favicon-${cleanDomain}${sizeSuffix}${ext}`;
     } catch (error) {
         // Fallback to hash-based filename
         const hash = simpleHash(faviconUrl);
-        return `favicon-${hash}.ico`;
+        return `favicon-${hash}-64px.ico`;
     }
 }
 
@@ -199,7 +201,7 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
                 .replace(/-+/g, '-') // Collapse multiple dashes
                 .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
             
-            const filename = `favicon-linktr.ee-${cleanPath}.ico`;
+            const filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
             return `${basePath}/${filename}`;
         } else {
             // Use regular favicon logic for other domains (prefer 64px for higher quality)

@@ -249,9 +249,16 @@ function generateFilename(url, type = 'event', size = null) {
     if (type === 'favicon') {
         const baseFilename = generateFaviconFilename(url);
         if (size) {
-            // Add size suffix for higher quality favicons
+            // Check if filename already contains a size suffix to avoid double suffixes
             const ext = path.extname(baseFilename);
             const nameWithoutExt = path.basename(baseFilename, ext);
+            
+            // If the filename already contains a size suffix (like -64px), don't add another one
+            if (nameWithoutExt.includes('-64px') || nameWithoutExt.includes('-32px') || nameWithoutExt.includes('-256px')) {
+                return baseFilename;
+            }
+            
+            // Add size suffix for higher quality favicons
             return `${nameWithoutExt}-${size}px${ext}`;
         }
         return baseFilename;
@@ -579,16 +586,13 @@ function extractImageUrls() {
             imageUrls.linktreeUrls.add(event.website);
           } else {
             // Use Google's favicon service for regular domains with multiple sizes
-            const faviconUrl32 = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
             const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
             const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
             
-            imageUrls.favicons.add(faviconUrl32);
             imageUrls.favicons64.add(faviconUrl64);
             imageUrls.favicons256.add(faviconUrl256);
             
             console.log(`🌐 Found website for favicons: ${domain}`);
-            console.log(`   📱 Map (32px): ${faviconUrl32}`);
             console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
             console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
           }
@@ -600,7 +604,7 @@ function extractImageUrls() {
   }
   
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons.size} favicon URLs (32px), ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
+  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
   return imageUrls;
 }
 
@@ -635,20 +639,6 @@ async function main() {
     }
   }
   
-  // Download favicons (32px for compatibility)
-  console.log('\n🌐 Downloading favicons (32px)...');
-  for (const url of imageUrls.favicons) {
-    const result = await downloadImage(url, 'favicon');
-    if (result.success) {
-      if (result.skipped) {
-        totalSkipped++;
-      } else {
-        totalDownloaded++;
-      }
-    } else {
-      totalFailed++;
-    }
-  }
   
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
@@ -691,8 +681,7 @@ async function main() {
         if (profilePictureUrl) {
           // Generate multiple sizes for Linktree profile pictures
           const sizes = [
-            { size: '32', targetSize: 32, description: 'Map markers (32px)' },
-            { size: '64', targetSize: 64, description: 'High-res map markers (64px)' },
+            { size: '64', targetSize: 64, description: 'Map markers (64px)' },
             { size: '256', targetSize: 256, description: 'Cards/OG images (256px)' }
           ];
           
