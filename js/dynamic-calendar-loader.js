@@ -1223,7 +1223,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     html: `
                         <div class="favicon-marker-container">
                             <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
-                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\' style=\\'image-rendering: auto; image-rendering: smooth;\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
+                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
                         </div>
                     `,
                     iconSize: [40, 40],
