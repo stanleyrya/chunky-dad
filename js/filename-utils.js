@@ -21,7 +21,18 @@ function generateFilenameFromUrl(url) {
                 
                 if (imageMatch) {
                     const [, id1, id2, id3, filename] = imageMatch;
-                    const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
+                    // Check for valid image extensions
+                    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+                    let ext = '.jpg'; // default
+                    
+                    // Look for valid image extension at the end
+                    for (const validExt of validExtensions) {
+                        if (filename.toLowerCase().endsWith(validExt)) {
+                            ext = validExt;
+                            break;
+                        }
+                    }
+                    
                     const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
                     
                     // Sanitize filename
@@ -44,7 +55,18 @@ function generateFilenameFromUrl(url) {
                 
                 if (imageMatch) {
                     const [, id1, id2, id3, filename] = imageMatch;
-                    const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
+                    // Check for valid image extensions
+                    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+                    let ext = '.jpg'; // default
+                    
+                    // Look for valid image extension at the end
+                    for (const validExt of validExtensions) {
+                        if (filename.toLowerCase().endsWith(validExt)) {
+                            ext = validExt;
+                            break;
+                        }
+                    }
+                    
                     const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
                     
                     // Sanitize filename
