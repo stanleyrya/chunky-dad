@@ -500,11 +500,17 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!eventSlug) return;
         const normalizedDateISO = eventDateISO && /^\d{4}-\d{2}-\d{2}$/.test(eventDateISO) ? eventDateISO : this.formatDateToISO(this.currentDate);
         
-        if (this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO) {
-            logger.userInteraction('EVENT', 'Deselecting event (same slug and date)', { eventSlug, date: normalizedDateISO });
-            this.clearEventSelection();
-            // clearEventSelection() already calls updateSelectionVisualState(), so we don't need to call it again
-        } else {
+        // Check if this event is already selected
+        const wasAlreadySelected = this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO;
+        
+        // Always clear current selection first (but don't call updateSelectionVisualState yet)
+        const hadSelection = !!this.selectedEventSlug;
+        const previousSlug = this.selectedEventSlug;
+        this.selectedEventSlug = null;
+        this.selectedEventDateISO = null;
+        
+        // If the clicked event wasn't already selected, select it
+        if (!wasAlreadySelected) {
             this.selectedEventSlug = eventSlug;
             this.selectedEventDateISO = normalizedDateISO;
             // Align currentDate to selected date for consistency
@@ -514,10 +520,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.currentDate = parsed;
             }
             logger.userInteraction('EVENT', 'Event selected', { eventSlug, date: normalizedDateISO });
-            
-            // Update visual selection state across all views
-            this.updateSelectionVisualState();
+        } else {
+            logger.userInteraction('EVENT', 'Event deselected (was already selected)', { eventSlug, date: normalizedDateISO });
         }
+        
+        // Update visual selection state once (handles both selection and deselection)
+        this.updateSelectionVisualState();
         
         // Reflect selection in URL
         this.syncUrl(true);
