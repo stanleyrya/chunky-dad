@@ -2035,8 +2035,8 @@ body.index-page main {
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .event-item:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 3px 10px var(--shadow-primary);
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px var(--shadow-primary);
     }
 }
 
@@ -2051,8 +2051,8 @@ body.index-page main {
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .calendar-day.current .event-item:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 3px 10px var(--shadow-primary);
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px var(--shadow-primary);
     }
 }
 
@@ -2733,13 +2733,12 @@ body.index-page main {
     box-sizing: border-box;
 }
 
-.favicon-marker-container:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-.favicon-marker-container:hover .favicon-marker-icon {
-    transform: none;
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .favicon-marker-container:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
 }
 
 .favicon-marker-icon {
@@ -2812,11 +2811,12 @@ body.index-page main {
     backdrop-filter: blur(10px);
 }
 
-.map-control-btn:hover {
-    background: var(--background-light);
-    border-color: var(--primary-color);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .map-control-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px var(--shadow-primary);
+    }
 }
 
 .map-control-btn:active {
@@ -4589,7 +4589,8 @@ footer {
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .calendar-day.week-view.current .event-item.enhanced:hover {
-        transform: translateX(4px) translateY(-2px) scale(1.02);
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px var(--shadow-primary);
     }
 }
 
