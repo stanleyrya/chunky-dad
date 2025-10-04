@@ -546,27 +546,18 @@ class DynamicCalendarLoader extends CalendarCore {
             markersBySlugExists: !!window.eventsMapMarkersBySlug
         });
         
-        // Clear all previous selections - be more aggressive about clearing
+        // Clear all previous selections
         const selectedElements = document.querySelectorAll('.event-card.selected, .event-item.selected');
-        logger.debug('EVENT', 'Clearing previous selections', { count: selectedElements.length });
+        logger.debug('EVENT', 'Clearing previous selections', { 
+            count: selectedElements.length,
+            elements: Array.from(selectedElements).map(el => ({
+                tagName: el.tagName,
+                className: el.className,
+                dataSlug: el.getAttribute('data-event-slug')
+            }))
+        });
         selectedElements.forEach(el => {
             el.classList.remove('selected');
-        });
-        
-        // Also clear all event cards and items regardless of current state
-        // This ensures we catch any elements that might have been missed
-        const allCards = document.querySelectorAll('.event-card');
-        const allItems = document.querySelectorAll('.event-item');
-        logger.debug('EVENT', 'Clearing all event elements', { 
-            cardsCount: allCards.length, 
-            itemsCount: allItems.length 
-        });
-        
-        allCards.forEach(card => {
-            card.classList.remove('selected');
-        });
-        allItems.forEach(item => {
-            item.classList.remove('selected');
         });
         
         // Get events list
@@ -585,7 +576,8 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             // Mark selected event items in calendar views
-            document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`).forEach(item => {
+            const calendarItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            calendarItems.forEach(item => {
                 item.classList.add('selected');
             });
             
@@ -595,7 +587,12 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('EVENT', 'Updated selection visual state', { 
                 selectedSlug: this.selectedEventSlug,
                 cardFound: !!selectedCard,
-                calendarItemsFound: document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`).length
+                calendarItemsFound: calendarItems.length,
+                cardElement: selectedCard ? {
+                    tagName: selectedCard.tagName,
+                    className: selectedCard.className,
+                    dataSlug: selectedCard.getAttribute('data-event-slug')
+                } : null
             });
         } else {
             // Smoothly transition out of selection mode
@@ -605,6 +602,22 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Reset all markers to normal appearance
             this.resetAllMapMarkers();
+            
+            // Explicitly ensure all calendar event items are unselected
+            // This is important to handle cases where the calendar is re-rendered
+            const allCalendarItems = document.querySelectorAll('.event-item');
+            logger.debug('EVENT', 'Explicitly clearing all calendar items', { 
+                count: allCalendarItems.length,
+                items: Array.from(allCalendarItems).map(item => ({
+                    tagName: item.tagName,
+                    className: item.className,
+                    dataSlug: item.getAttribute('data-event-slug'),
+                    hasSelected: item.classList.contains('selected')
+                }))
+            });
+            allCalendarItems.forEach(item => {
+                item.classList.remove('selected');
+            });
             
             logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
