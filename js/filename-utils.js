@@ -13,26 +13,48 @@ function generateFilenameFromUrl(url) {
     try {
         // Handle Eventbrite URLs specially - they have nested URL encoding
         if (url.includes('evbuc.com') && (url.includes('images/') || url.includes('images%2F'))) {
-            // Extract the nested URL from the pathname
+            // Check if this is an optimized URL (cdn.evbuc.com) or original (img.evbuc.com)
             const parsedUrl = new URL(url);
-            const nestedUrl = decodeURIComponent(parsedUrl.pathname.substring(1)); // Remove leading slash
-            
-            // Parse the nested URL to get the actual image path
-            const nestedParsedUrl = new URL(nestedUrl);
-            const imageMatch = nestedParsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
-            
-            if (imageMatch) {
-                const [, id1, id2, id3, filename] = imageMatch;
-                const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
-                const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
+            if (parsedUrl.hostname === 'cdn.evbuc.com') {
+                // Optimized URL format: https://cdn.evbuc.com/images/1107233553/2544065821071/1/original.20250828-015122
+                const imageMatch = parsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
                 
-                // Sanitize filename
-                const sanitized = basename
-                    .replace(/[^a-zA-Z0-9._-]/g, '-')
-                    .replace(/-+/g, '-')
-                    .replace(/^-|-$/g, '');
+                if (imageMatch) {
+                    const [, id1, id2, id3, filename] = imageMatch;
+                    const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
+                    const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
+                    
+                    // Sanitize filename
+                    const sanitized = basename
+                        .replace(/[^a-zA-Z0-9._-]/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-|-$/g, '');
+                    
+                    return sanitized + ext;
+                }
+            } else {
+                // Original URL format: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F...
+                // Extract the nested URL from the pathname
+                const parsedUrl = new URL(url);
+                const nestedUrl = decodeURIComponent(parsedUrl.pathname.substring(1)); // Remove leading slash
                 
-                return sanitized + ext;
+                // Parse the nested URL to get the actual image path
+                const nestedParsedUrl = new URL(nestedUrl);
+                const imageMatch = nestedParsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
+                
+                if (imageMatch) {
+                    const [, id1, id2, id3, filename] = imageMatch;
+                    const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
+                    const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
+                    
+                    // Sanitize filename
+                    const sanitized = basename
+                        .replace(/[^a-zA-Z0-9._-]/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-|-$/g, '');
+                    
+                    return sanitized + ext;
+                }
             }
         }
         
