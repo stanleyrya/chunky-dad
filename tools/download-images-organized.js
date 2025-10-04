@@ -18,13 +18,9 @@ const {
     generateFaviconFilename, 
     cleanImageUrl,
     convertImageUrlToOrganizedPath,
-    generateEventId,
-    sanitizeId,
+    generateEventFolderPath,
     getImageExtension
 } = require('../js/filename-utils.js');
-
-// Import image manager
-const ImageManager = require('../js/image-manager.js');
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -55,8 +51,7 @@ const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
 // Randomization factor: ±2 days to prevent all favicons from expiring simultaneously
 const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
 
-// Initialize image manager
-const imageManager = new ImageManager();
+// No complex image manager needed - keep it simple
 
 // Ensure directories exist
 function ensureDir(dir) {
@@ -177,16 +172,17 @@ async function downloadEventImages(events) {
     if (!event.image) continue;
     
     try {
-      const eventId = generateEventId(event);
-      if (!eventId) {
-        console.warn(`⚠️  Could not generate event ID for event: ${event.name || 'Unknown'}`);
+      const folderPath = generateEventFolderPath(event);
+      if (!folderPath) {
+        console.warn(`⚠️  Could not generate folder path for event: ${event.name || 'Unknown'}`);
         continue;
       }
       
-      console.log(`   Processing event: ${eventId}`);
+      console.log(`   Processing event: ${event.name || 'Unknown'}`);
+      console.log(`   Folder: ${folderPath}`);
       
       // Create event directory
-      const eventDir = path.join(EVENTS_DIR, eventId);
+      const eventDir = path.join(ROOT, folderPath);
       ensureDir(eventDir);
       
       // Create gallery directory
@@ -194,7 +190,8 @@ async function downloadEventImages(events) {
       ensureDir(galleryDir);
       
       // Download primary image
-      const primaryPath = path.join(eventDir, 'primary.jpg');
+      const extension = getImageExtension(event.image);
+      const primaryPath = path.join(eventDir, `primary${extension}`);
       const primaryMetaPath = primaryPath + '.meta';
       
       const { shouldDownload, reason } = shouldDownloadImage(event.image, primaryPath, primaryMetaPath);
@@ -209,8 +206,8 @@ async function downloadEventImages(events) {
           downloadedAt: new Date().toISOString(),
           type: 'event',
           imageType: 'primary',
-          eventId: eventId,
-          eventName: event.name || 'Unknown Event'
+          eventName: event.name || 'Unknown Event',
+          eventDate: event.startDate || event.date
         };
         
         fs.writeFileSync(primaryMetaPath, JSON.stringify(metadata, null, 2));
@@ -220,11 +217,6 @@ async function downloadEventImages(events) {
         console.log(`     ⏭️  Skipping primary image (${reason})`);
         totalSkipped++;
       }
-      
-      // Create event metadata
-      const eventMetadata = imageManager.createEventMetadata(event, [event.image]);
-      const eventMetaPath = path.join(eventDir, 'metadata.json');
-      fs.writeFileSync(eventMetaPath, JSON.stringify(eventMetadata, null, 2));
       
     } catch (error) {
       console.error(`   ❌ Failed to process event ${event.name || 'Unknown'}:`, error.message);

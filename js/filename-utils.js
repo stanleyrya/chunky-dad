@@ -160,86 +160,70 @@ function convertImageUrlToLocalPath(imageUrl, basePath = 'img/events') {
 }
 
 /**
- * Convert an image URL to the new organized structure
- * @param {string} imageUrl - The image URL
+ * Generate organized folder structure for event images
  * @param {Object} eventData - Event data object
- * @param {string} imageType - Type of image ('primary' or 'gallery')
- * @param {number} galleryIndex - Index for gallery images
- * @returns {string} - The organized image path
+ * @returns {string} - Organized folder path
  */
-function convertImageUrlToOrganizedPath(imageUrl, eventData, imageType = 'primary', galleryIndex = 0) {
-    if (!imageUrl || !imageUrl.startsWith('http')) {
-        return imageUrl;
-    }
-
-    if (!eventData) {
-        console.warn('FilenameUtils: No event data provided for organized path conversion');
-        return convertImageUrlToLocalPath(imageUrl);
-    }
-
-    try {
-        // Generate event ID
-        const eventId = generateEventId(eventData);
-        if (!eventId) {
-            console.warn('FilenameUtils: Could not generate event ID, falling back to standard conversion');
-            return convertImageUrlToLocalPath(imageUrl);
-        }
-
-        const basePath = 'img/events';
-        const eventFolder = `${basePath}/${eventId}`;
-        
-        if (imageType === 'primary') {
-            return `${eventFolder}/primary.jpg`;
-        } else if (imageType === 'gallery') {
-            const extension = getImageExtension(imageUrl);
-            return `${eventFolder}/gallery/image-${galleryIndex + 1}${extension}`;
-        }
-
-        return convertImageUrlToLocalPath(imageUrl);
-    } catch (error) {
-        console.warn('FilenameUtils: Failed to convert to organized path, falling back to standard conversion', error);
-        return convertImageUrlToLocalPath(imageUrl);
-    }
-}
-
-/**
- * Generate a clean event ID from event data
- * @param {Object} eventData - Event data object
- * @returns {string} - Clean event ID
- */
-function generateEventId(eventData) {
+function generateEventFolderPath(eventData) {
     if (!eventData) return null;
     
-    // Try to use existing ID fields first
-    if (eventData.id) return sanitizeId(eventData.id);
-    if (eventData.uid) return sanitizeId(eventData.uid);
-    
-    // Generate from name and date
     const name = eventData.name || eventData.title || 'unknown-event';
     const date = eventData.startDate || eventData.date || new Date().toISOString().split('T')[0];
     
+    // Clean event name
     const cleanName = name
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
-        .substring(0, 30);
+        .substring(0, 40);
     
-    const cleanDate = date.replace(/[^0-9-]/g, '').substring(0, 10);
+    // Parse date for folder structure
+    const eventDate = new Date(date);
+    const year = eventDate.getFullYear();
+    const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+    const day = String(eventDate.getDate()).padStart(2, '0');
     
-    return `${cleanName}-${cleanDate}`;
+    // Check if it's a recurring event (has recurring pattern or is weekly/monthly)
+    const isRecurring = eventData.rrule || 
+                       eventData.recurrence || 
+                       name.toLowerCase().includes('weekly') ||
+                       name.toLowerCase().includes('monthly') ||
+                       name.toLowerCase().includes('every');
+    
+    if (isRecurring) {
+        // Recurring events: /recurring/event-name/
+        return `img/events/recurring/${cleanName}`;
+    } else {
+        // One-off events: /2025/01/15/event-name/
+        return `img/events/${year}/${month}/${day}/${cleanName}`;
+    }
 }
 
 /**
- * Sanitize an ID string for use in filenames
- * @param {string} id - Raw ID string
- * @returns {string} - Sanitized ID
+ * Convert image URL to organized path
+ * @param {string} imageUrl - Image URL
+ * @param {Object} eventData - Event data
+ * @param {string} imageType - 'primary' or 'gallery'
+ * @param {number} index - For gallery images
+ * @returns {string} - Organized image path
  */
-function sanitizeId(id) {
-    return String(id)
-        .replace(/[^a-zA-Z0-9._-]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .substring(0, 50);
+function convertImageUrlToOrganizedPath(imageUrl, eventData, imageType = 'primary', index = 0) {
+    if (!imageUrl || !imageUrl.startsWith('http')) {
+        return imageUrl;
+    }
+
+    const folderPath = generateEventFolderPath(eventData);
+    if (!folderPath) {
+        return convertImageUrlToLocalPath(imageUrl);
+    }
+
+    const extension = getImageExtension(imageUrl);
+    
+    if (imageType === 'primary') {
+        return `${folderPath}/primary${extension}`;
+    } else {
+        return `${folderPath}/gallery/image-${index + 1}${extension}`;
+    }
 }
 
 /**
@@ -251,8 +235,7 @@ function getImageExtension(imageUrl) {
     try {
         const url = new URL(imageUrl);
         const pathname = url.pathname;
-        const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
-        return ext;
+        return pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
     } catch (error) {
         return '.jpg';
     }
@@ -338,8 +321,7 @@ if (typeof module !== 'undefined' && module.exports) {
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertImageUrlToOrganizedPath,
-        generateEventId,
-        sanitizeId,
+        generateEventFolderPath,
         getImageExtension,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
@@ -355,8 +337,7 @@ if (typeof window !== 'undefined') {
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertImageUrlToOrganizedPath,
-        generateEventId,
-        sanitizeId,
+        generateEventFolderPath,
         getImageExtension,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,

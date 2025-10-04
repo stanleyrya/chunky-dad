@@ -12,10 +12,7 @@
     "setup-hooks": "bash .github/hooks/setup-hooks.sh",
     "postinstall": "npm run setup-hooks",
     "download-images": "node tools/download-images.js",
-    "download-images-organized": "node tools/download-images-organized.js",
-    "migrate-images": "node tools/migrate-images.js",
-    "cleanup-images": "node tools/cleanup-unused-images.js",
-    "cleanup-images-delete": "node tools/cleanup-unused-images.js --delete"
+    "download-images-organized": "node tools/download-images-organized.js"
   },
   "keywords": [
     "static",
