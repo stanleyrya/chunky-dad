@@ -485,10 +485,11 @@ class DynamicCalendarLoader extends CalendarCore {
     // Clear current event selection
     clearEventSelection() {
         const hadSelection = !!this.selectedEventSlug;
+        const previousSlug = this.selectedEventSlug;
         this.selectedEventSlug = null;
         this.selectedEventDateISO = null;
         if (hadSelection) {
-            logger.userInteraction('EVENT', 'Event selection cleared');
+            logger.userInteraction('EVENT', 'Event selection cleared', { previousSlug });
             // Update visual selection state across all views
             this.updateSelectionVisualState();
         }
@@ -502,6 +503,7 @@ class DynamicCalendarLoader extends CalendarCore {
         if (this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO) {
             logger.userInteraction('EVENT', 'Deselecting event (same slug and date)', { eventSlug, date: normalizedDateISO });
             this.clearEventSelection();
+            // clearEventSelection() already calls updateSelectionVisualState(), so we don't need to call it again
         } else {
             this.selectedEventSlug = eventSlug;
             this.selectedEventDateISO = normalizedDateISO;
@@ -512,10 +514,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.currentDate = parsed;
             }
             logger.userInteraction('EVENT', 'Event selected', { eventSlug, date: normalizedDateISO });
+            
+            // Update visual selection state across all views
+            this.updateSelectionVisualState();
         }
-        
-        // Update visual selection state across all views
-        this.updateSelectionVisualState();
         
         // Reflect selection in URL
         this.syncUrl(true);
@@ -530,7 +532,9 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         // Clear all previous selections
-        document.querySelectorAll('.event-card.selected, .event-item.selected').forEach(el => {
+        const selectedElements = document.querySelectorAll('.event-card.selected, .event-item.selected');
+        logger.debug('EVENT', 'Clearing previous selections', { count: selectedElements.length });
+        selectedElements.forEach(el => {
             el.classList.remove('selected');
         });
         
