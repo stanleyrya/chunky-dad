@@ -534,6 +534,9 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
             }
             
+            // Note: We keep the original image URL as-is for compatibility
+            // The download system will optimize Eventbrite URLs when downloading
+            
             // Extract city from event title for better event organization
             let city = null;
             
@@ -983,6 +986,7 @@ class EventbriteParser {
         
         return cityConfig[city].timezone;
     }
+    
 }
 
 // Export for both environments

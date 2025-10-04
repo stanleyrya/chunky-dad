@@ -188,6 +188,39 @@ async function processProfilePicture(inputPath, outputPath, targetSize = 96) {
   }
 }
 
+// Optimize Eventbrite image URLs by removing crop parameters
+function optimizeEventbriteImageUrl(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return imageUrl;
+  }
+  
+  // Check if this is an Eventbrite img.evbuc.com URL
+  if (!imageUrl.includes('img.evbuc.com')) {
+    return imageUrl;
+  }
+  
+  try {
+    // Parse the URL to separate base, encoded part, and query parameters
+    const parsedUrl = new URL(imageUrl);
+    
+    // Extract the encoded URL from the pathname (remove leading slash)
+    const encodedUrl = parsedUrl.pathname.substring(1);
+    
+    // Decode the URL
+    const decodedUrl = decodeURIComponent(encodedUrl);
+    
+    console.log(`🎫 Eventbrite: URL optimization - original: ${imageUrl}`);
+    console.log(`🎫 Eventbrite: URL optimization - optimized: ${decodedUrl}`);
+    
+    return decodedUrl;
+  } catch (error) {
+    console.warn(`🎫 Eventbrite: Failed to optimize image URL: ${error.message}`);
+  }
+  
+  // Return original URL if optimization fails
+  return imageUrl;
+}
+
 // Download file with timeout and redirect handling
 function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
@@ -299,11 +332,17 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
       return { success: true, skipped: true, filename: customFilename, reason };
     }
     
-    console.log(`📥 Downloading ${type} image: ${customFilename} (${reason})`);
-    console.log(`   URL: ${imageUrl}`);
+    // Optimize Eventbrite URLs for better quality (but keep original for filename)
+    const downloadUrl = optimizeEventbriteImageUrl(imageUrl);
     
-    // Download the image
-    await downloadFile(imageUrl, localPath);
+    console.log(`📥 Downloading ${type} image: ${customFilename} (${reason})`);
+    console.log(`   Original URL: ${imageUrl}`);
+    if (downloadUrl !== imageUrl) {
+      console.log(`   Optimized URL: ${downloadUrl}`);
+    }
+    
+    // Download the image using the optimized URL
+    await downloadFile(downloadUrl, localPath);
     
     // Process Linktree profile pictures with optimization
     if (isLinktreeProfile && type === 'favicon') {
@@ -422,11 +461,17 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
       return { success: true, skipped: true, filename, reason };
     }
     
-    console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
-    console.log(`   URL: ${imageUrl}`);
+    // Optimize Eventbrite URLs for better quality (but keep original for filename)
+    const downloadUrl = optimizeEventbriteImageUrl(imageUrl);
     
-    // Download the image
-    await downloadFile(imageUrl, localPath);
+    console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
+    console.log(`   Original URL: ${imageUrl}`);
+    if (downloadUrl !== imageUrl) {
+      console.log(`   Optimized URL: ${downloadUrl}`);
+    }
+    
+    // Download the image using the optimized URL
+    await downloadFile(downloadUrl, localPath);
     
     // Save metadata
     const metadata = {
@@ -464,11 +509,17 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
       return { success: true, skipped: true, filename, reason };
     }
     
-    console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
-    console.log(`   URL: ${imageUrl}`);
+    // Optimize Eventbrite URLs for better quality (but keep original for filename)
+    const downloadUrl = optimizeEventbriteImageUrl(imageUrl);
     
-    // Download the image
-    await downloadFile(imageUrl, localPath);
+    console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
+    console.log(`   Original URL: ${imageUrl}`);
+    if (downloadUrl !== imageUrl) {
+      console.log(`   Optimized URL: ${downloadUrl}`);
+    }
+    
+    // Download the image using the optimized URL
+    await downloadFile(downloadUrl, localPath);
     
     // Process Linktree profile pictures with optimization
     if (isLinktreeProfile && type === 'favicon') {
