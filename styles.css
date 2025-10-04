@@ -246,11 +246,11 @@ body.index-page header.visible {
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
-.city-switcher-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 100%);
-    border-color: rgba(255, 255, 255, 0.6);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px var(--shadow-heavy);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .city-switcher-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 .city-switcher-btn:hover::before {
@@ -334,10 +334,11 @@ body.index-page header.visible {
     pointer-events: none;
 }
 
-.city-option:hover {
-    color: var(--text-inverse);
-    transform: translateX(8px);
-    box-shadow: 0 4px 15px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .city-option:hover {
+        transform: scale(1.05);
+    }
 }
 
 .city-option:hover::before {
@@ -526,8 +527,11 @@ body.index-page header.visible {
     }
 }
 
-.hero-logo-img:hover {
-    transform: scale(1.05);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .hero-logo-img:hover {
+        transform: scale(1.05);
+    }
 }
 
 .hero-title {
@@ -725,9 +729,11 @@ body.index-page header.visible {
     white-space: nowrap;
 }
 
-.new-joke-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .new-joke-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 /* Hero Animations */
@@ -921,8 +927,11 @@ body.index-page main {
     transition: color 0.3s ease;
 }
 
-.nav-menu a:hover {
-    color: var(--warning-color);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .nav-menu a:hover {
+        transform: scale(1.05);
+    }
 }
 
 .hamburger {
@@ -1801,9 +1810,11 @@ body.index-page main {
     box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
-.view-btn:hover:not(.active) {
-    background: var(--background-light);
-    color: var(--text-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .view-btn:hover:not(.active) {
+        transform: scale(1.05);
+    }
 }
 
 .date-navigation {
@@ -1832,9 +1843,11 @@ body.index-page main {
     justify-content: center;
 }
 
-.nav-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .nav-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 .date-range {
@@ -2032,11 +2045,11 @@ body.index-page main {
     }
 }
 
-.event-item:hover {
-    background: var(--solid-primary);
-    color: var(--text-inverse);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .event-item:hover {
+        transform: scale(1.05);
+    }
 }
 
 
@@ -2047,9 +2060,11 @@ body.index-page main {
     color: var(--text-primary);
 }
 
-.calendar-day.current .event-item:hover {
-    background: var(--solid-primary);
-    color: var(--text-inverse);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .calendar-day.current .event-item:hover {
+        transform: scale(1.05);
+    }
 }
 
 .event-name {
@@ -2081,10 +2096,7 @@ body.index-page main {
     hyphens: manual;
 }
 
-.event-item:hover .event-time,
-.event-item:hover .event-venue {
-    color: rgba(255, 255, 255, 0.8);
-}
+/* Remove color changes on hover - keep original colors */
 
 .no-events {
     color: var(--text-muted);
@@ -2423,9 +2435,11 @@ body.index-page main {
     margin-left: auto;
 }
 
-.share-event-btn:hover {
-    background: var(--solid-primary);
-    transform: translateY(-2px);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .share-event-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 .share-event-btn:active {
@@ -2732,13 +2746,11 @@ body.index-page main {
     box-sizing: border-box;
 }
 
-.favicon-marker-container:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-.favicon-marker-container:hover .favicon-marker-icon {
-    transform: none;
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .favicon-marker-container:hover {
+        transform: scale(1.05);
+    }
 }
 
 .favicon-marker-icon {
@@ -2782,15 +2794,18 @@ body.index-page main {
     gap: 0.3rem;
 }
 
-.map-link:hover {
-    color: var(--accent-color);
-    text-decoration: underline;
-    transform: translateY(-1px);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .map-link:hover {
+        transform: scale(1.05);
+    }
 }
 
-.event-card[data-lat]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .event-card[data-lat]:hover {
+        transform: scale(1.05);
+    }
 }
 
 /* Map Controls */
@@ -2811,11 +2826,11 @@ body.index-page main {
     backdrop-filter: blur(10px);
 }
 
-.map-control-btn:hover {
-    background: var(--background-light);
-    border-color: var(--primary-color);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .map-control-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 .map-control-btn:active {
@@ -4102,6 +4117,7 @@ footer {
     border-radius: 4px;
 }
 
+
 /* Hide non-selected events when in selection mode */
 .events-list.selection-mode .event-card:not(.selected) {
     display: none;
@@ -4584,9 +4600,11 @@ footer {
     box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
 }
 
-.calendar-day.week-view.current .event-item.enhanced:hover {
-    background: rgba(255, 255, 255, 0.25) !important;
-    transform: translateX(4px) translateY(-2px) scale(1.02);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .calendar-day.week-view.current .event-item.enhanced:hover {
+        transform: scale(1.05);
+    }
 }
 
 .calendar-day.week-view.current .event-item.enhanced .event-name {
@@ -4836,9 +4854,11 @@ footer {
     font-size: 0.9rem;
 }
 
-.filter-btn:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .filter-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 .filter-btn.active {
@@ -5023,10 +5043,11 @@ footer {
     transition: all 0.3s ease;
 }
 
-.tile-link:hover {
-    background: var(--primary-color);
-    color: var(--text-inverse);
-    border-color: var(--primary-color);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .tile-link:hover {
+        transform: scale(1.05);
+    }
 }
 
 /* Directory Map */
