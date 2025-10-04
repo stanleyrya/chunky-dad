@@ -791,20 +791,13 @@ class DynamicCalendarLoader extends CalendarCore {
             // Convert image URLs based on data source
             if (eventData.image && this.dataSource === 'cached') {
                 const originalImageUrl = eventData.image;
+                eventData.image = this.convertImageUrlToOrganized(originalImageUrl, eventData);
                 
-                // Try organized structure first, fallback to flat structure
-                if (window.FilenameUtils && window.FilenameUtils.convertImageUrlToOrganizedPath) {
-                    eventData.image = this.convertImageUrlToOrganized(originalImageUrl, eventData);
-                } else {
-                    eventData.image = this.convertImageUrlToLocal(originalImageUrl);
-                }
-                
-                logger.debug('CALENDAR', 'Converted image URL for cached data', {
+                logger.debug('CALENDAR', 'Converted image URL to organized structure', {
                     eventName: eventData.name,
                     originalUrl: originalImageUrl,
                     localPath: eventData.image,
-                    dataSource: this.dataSource,
-                    structure: window.FilenameUtils && window.FilenameUtils.convertImageUrlToOrganizedPath ? 'organized' : 'flat'
+                    dataSource: this.dataSource
                 });
             } else if (eventData.image && (this.dataSource === 'proxy' || this.dataSource === 'fallback')) {
                 logger.debug('CALENDAR', 'Using external image URL for external data', {
@@ -1567,35 +1560,6 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
     
-    // Convert external image URL to local path for cached data
-    convertImageUrlToLocal(imageUrl) {
-        if (!imageUrl || !imageUrl.startsWith('http')) {
-            return imageUrl; // Return as-is if not a valid external URL
-        }
-        
-        try {
-            // Use shared utility for URL cleaning and filename generation
-            const cleanUrl = window.FilenameUtils.cleanImageUrl(imageUrl);
-            
-            if (!cleanUrl.startsWith('http') || !cleanUrl.includes('.')) {
-                logger.warn('CALENDAR', 'Cleaned URL is invalid, using original', {
-                    originalUrl: imageUrl,
-                    cleanedUrl: cleanUrl
-                });
-                return imageUrl;
-            }
-            
-            // Generate filename using shared utility
-            const filename = window.FilenameUtils.generateFilenameFromUrl(cleanUrl);
-            return `img/events/${filename}`;
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to convert image URL to local path', {
-                imageUrl,
-                error: error.message
-            });
-            return imageUrl; // Return original URL as fallback
-        }
-    }
 
     // Convert external image URL to organized structure for cached data
     convertImageUrlToOrganized(imageUrl, eventData) {
@@ -1612,8 +1576,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 eventData: eventData ? eventData.name : 'Unknown',
                 error: error.message
             });
-            // Fallback to standard conversion
-            return this.convertImageUrlToLocal(imageUrl);
+            // Return original URL if conversion fails
+            return imageUrl;
         }
     }
 
