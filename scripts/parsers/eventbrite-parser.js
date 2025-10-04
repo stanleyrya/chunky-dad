@@ -534,14 +534,8 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
             }
             
-            // Optimize Eventbrite image URLs - convert cropped URLs to uncropped versions
-            if (image) {
-                const optimizedImage = this.optimizeEventbriteImageUrl(image);
-                if (optimizedImage !== image) {
-                    console.log(`🎫 Eventbrite: Optimized image URL for "${title}": ${image} → ${optimizedImage}`);
-                    image = optimizedImage;
-                }
-            }
+            // Note: We keep the original image URL as-is for compatibility
+            // The download system will optimize Eventbrite URLs when downloading
             
             // Extract city from event title for better event organization
             let city = null;
@@ -993,40 +987,6 @@ class EventbriteParser {
         return cityConfig[city].timezone;
     }
     
-    // Optimize Eventbrite image URLs by removing crop parameters
-    // Note: We don't add file extensions here as the original URL should work
-    optimizeEventbriteImageUrl(imageUrl) {
-        if (!imageUrl || typeof imageUrl !== 'string') {
-            return imageUrl;
-        }
-        
-        // Check if this is an Eventbrite img.evbuc.com URL
-        if (!imageUrl.includes('img.evbuc.com')) {
-            return imageUrl;
-        }
-        
-        try {
-            // Extract the original URL from the encoded parameter
-            // Format: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F...
-            const urlMatch = imageUrl.match(/https:\/\/img\.evbuc\.com\/(https%3A%2F%2Fcdn\.evbuc\.com%2Fimages%2F[^?]+)/);
-            
-            if (urlMatch) {
-                // Decode the URL
-                const encodedUrl = urlMatch[1];
-                const decodedUrl = decodeURIComponent(encodedUrl);
-                
-                console.log(`🎫 Eventbrite: URL optimization - original: ${imageUrl}`);
-                console.log(`🎫 Eventbrite: URL optimization - optimized: ${decodedUrl}`);
-                
-                return decodedUrl;
-            }
-        } catch (error) {
-            console.warn(`🎫 Eventbrite: Failed to optimize image URL: ${error.message}`);
-        }
-        
-        // Return original URL if optimization fails
-        return imageUrl;
-    }
 }
 
 // Export for both environments
