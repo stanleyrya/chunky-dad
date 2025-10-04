@@ -791,13 +791,20 @@ class DynamicCalendarLoader extends CalendarCore {
             // Convert image URLs based on data source
             if (eventData.image && this.dataSource === 'cached') {
                 const originalImageUrl = eventData.image;
-                eventData.image = this.convertImageUrlToLocal(originalImageUrl);
+                
+                // Try organized structure first, fallback to flat structure
+                if (window.FilenameUtils && window.FilenameUtils.convertImageUrlToOrganizedPath) {
+                    eventData.image = this.convertImageUrlToOrganized(originalImageUrl, eventData);
+                } else {
+                    eventData.image = this.convertImageUrlToLocal(originalImageUrl);
+                }
                 
                 logger.debug('CALENDAR', 'Converted image URL for cached data', {
                     eventName: eventData.name,
                     originalUrl: originalImageUrl,
                     localPath: eventData.image,
-                    dataSource: this.dataSource
+                    dataSource: this.dataSource,
+                    structure: window.FilenameUtils && window.FilenameUtils.convertImageUrlToOrganizedPath ? 'organized' : 'flat'
                 });
             } else if (eventData.image && (this.dataSource === 'proxy' || this.dataSource === 'fallback')) {
                 logger.debug('CALENDAR', 'Using external image URL for external data', {
@@ -1587,6 +1594,26 @@ class DynamicCalendarLoader extends CalendarCore {
                 error: error.message
             });
             return imageUrl; // Return original URL as fallback
+        }
+    }
+
+    // Convert external image URL to organized structure for cached data
+    convertImageUrlToOrganized(imageUrl, eventData) {
+        if (!imageUrl || !imageUrl.startsWith('http')) {
+            return imageUrl; // Return as-is if not a valid external URL
+        }
+        
+        try {
+            // Use shared utility for organized path conversion
+            return window.FilenameUtils.convertImageUrlToOrganizedPath(imageUrl, eventData, 'primary');
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to convert image URL to organized path', {
+                imageUrl,
+                eventData: eventData ? eventData.name : 'Unknown',
+                error: error.message
+            });
+            // Fallback to standard conversion
+            return this.convertImageUrlToLocal(imageUrl);
         }
     }
 

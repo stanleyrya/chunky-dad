@@ -160,6 +160,105 @@ function convertImageUrlToLocalPath(imageUrl, basePath = 'img/events') {
 }
 
 /**
+ * Convert an image URL to the new organized structure
+ * @param {string} imageUrl - The image URL
+ * @param {Object} eventData - Event data object
+ * @param {string} imageType - Type of image ('primary' or 'gallery')
+ * @param {number} galleryIndex - Index for gallery images
+ * @returns {string} - The organized image path
+ */
+function convertImageUrlToOrganizedPath(imageUrl, eventData, imageType = 'primary', galleryIndex = 0) {
+    if (!imageUrl || !imageUrl.startsWith('http')) {
+        return imageUrl;
+    }
+
+    if (!eventData) {
+        console.warn('FilenameUtils: No event data provided for organized path conversion');
+        return convertImageUrlToLocalPath(imageUrl);
+    }
+
+    try {
+        // Generate event ID
+        const eventId = generateEventId(eventData);
+        if (!eventId) {
+            console.warn('FilenameUtils: Could not generate event ID, falling back to standard conversion');
+            return convertImageUrlToLocalPath(imageUrl);
+        }
+
+        const basePath = 'img/events';
+        const eventFolder = `${basePath}/${eventId}`;
+        
+        if (imageType === 'primary') {
+            return `${eventFolder}/primary.jpg`;
+        } else if (imageType === 'gallery') {
+            const extension = getImageExtension(imageUrl);
+            return `${eventFolder}/gallery/image-${galleryIndex + 1}${extension}`;
+        }
+
+        return convertImageUrlToLocalPath(imageUrl);
+    } catch (error) {
+        console.warn('FilenameUtils: Failed to convert to organized path, falling back to standard conversion', error);
+        return convertImageUrlToLocalPath(imageUrl);
+    }
+}
+
+/**
+ * Generate a clean event ID from event data
+ * @param {Object} eventData - Event data object
+ * @returns {string} - Clean event ID
+ */
+function generateEventId(eventData) {
+    if (!eventData) return null;
+    
+    // Try to use existing ID fields first
+    if (eventData.id) return sanitizeId(eventData.id);
+    if (eventData.uid) return sanitizeId(eventData.uid);
+    
+    // Generate from name and date
+    const name = eventData.name || eventData.title || 'unknown-event';
+    const date = eventData.startDate || eventData.date || new Date().toISOString().split('T')[0];
+    
+    const cleanName = name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 30);
+    
+    const cleanDate = date.replace(/[^0-9-]/g, '').substring(0, 10);
+    
+    return `${cleanName}-${cleanDate}`;
+}
+
+/**
+ * Sanitize an ID string for use in filenames
+ * @param {string} id - Raw ID string
+ * @returns {string} - Sanitized ID
+ */
+function sanitizeId(id) {
+    return String(id)
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 50);
+}
+
+/**
+ * Extract image extension from URL
+ * @param {string} imageUrl - Image URL
+ * @returns {string} - File extension
+ */
+function getImageExtension(imageUrl) {
+    try {
+        const url = new URL(imageUrl);
+        const pathname = url.pathname;
+        const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+        return ext;
+    } catch (error) {
+        return '.jpg';
+    }
+}
+
+/**
  * Convert a favicon URL to a local path
  * @param {string} faviconUrl - The favicon URL
  * @param {string} basePath - The base path (e.g., 'img/favicons')
@@ -238,6 +337,10 @@ if (typeof module !== 'undefined' && module.exports) {
         generateFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
+        convertImageUrlToOrganizedPath,
+        generateEventId,
+        sanitizeId,
+        getImageExtension,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
         simpleHash
@@ -251,6 +354,10 @@ if (typeof window !== 'undefined') {
         generateFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
+        convertImageUrlToOrganizedPath,
+        generateEventId,
+        sanitizeId,
+        getImageExtension,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
         simpleHash
