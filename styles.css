@@ -4102,6 +4102,30 @@ footer {
     border-radius: 4px;
 }
 
+/* Ensure selected state takes precedence over hover states */
+.event-item.selected:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Override current day hover states for selected events */
+.calendar-day.current .event-item.selected:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Override enhanced event hover states for selected events */
+.calendar-day.week-view.current .event-item.enhanced.selected:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* Hide non-selected events when in selection mode */
 .events-list.selection-mode .event-card:not(.selected) {
     display: none;
