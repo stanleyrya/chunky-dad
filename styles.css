@@ -2718,8 +2718,8 @@ body.index-page main {
 
 .favicon-marker-container {
     position: relative;
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2742,8 +2742,8 @@ body.index-page main {
 }
 
 .favicon-marker-icon {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     object-fit: cover;
     object-position: center;
     border-radius: 4px;
@@ -2846,14 +2846,14 @@ body.index-page main {
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected .favicon-marker-container {
     border-color: var(--primary-color) !important;
+    border-width: 3px !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-    transform: scale(1.05) !important;
     position: relative !important;
     overflow: hidden !important;
 }
 
 .leaflet-marker-icon.marker-selected .favicon-marker-container:hover {
-    transform: scale(1.05) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important;
 }
 
 .leaflet-marker-icon.marker-selected .favicon-marker-icon {
@@ -3666,13 +3666,13 @@ footer {
     }
 
     .favicon-marker-container {
-        width: 34px;
-        height: 34px;
+        width: 36px;
+        height: 36px;
     }
 
     .favicon-marker-icon {
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         object-fit: cover;
         object-position: center;
         flex-shrink: 0;
