@@ -160,6 +160,88 @@ function convertImageUrlToLocalPath(imageUrl, basePath = 'img/events') {
 }
 
 /**
+ * Generate organized folder structure for event images
+ * @param {Object} eventData - Event data object
+ * @returns {string} - Organized folder path
+ */
+function generateEventFolderPath(eventData) {
+    if (!eventData) return null;
+    
+    const name = eventData.name || eventData.title || 'unknown-event';
+    const date = eventData.startDate || eventData.date || new Date().toISOString().split('T')[0];
+    
+    // Clean event name
+    const cleanName = name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 40);
+    
+    // Parse date for folder structure
+    const eventDate = new Date(date);
+    const year = eventDate.getFullYear();
+    const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+    const day = String(eventDate.getDate()).padStart(2, '0');
+    
+    // Check if it's a recurring event (has recurring pattern or is weekly/monthly)
+    const isRecurring = eventData.rrule || 
+                       eventData.recurrence || 
+                       name.toLowerCase().includes('weekly') ||
+                       name.toLowerCase().includes('monthly') ||
+                       name.toLowerCase().includes('every');
+    
+    if (isRecurring) {
+        // Recurring events: /recurring/event-name/
+        return `img/events/recurring/${cleanName}`;
+    } else {
+        // One-off events: /2025/01/15/event-name/
+        return `img/events/${year}/${month}/${day}/${cleanName}`;
+    }
+}
+
+/**
+ * Convert image URL to organized path
+ * @param {string} imageUrl - Image URL
+ * @param {Object} eventData - Event data
+ * @param {string} imageType - 'primary' or 'gallery'
+ * @param {number} index - For gallery images
+ * @returns {string} - Organized image path
+ */
+function convertImageUrlToOrganizedPath(imageUrl, eventData, imageType = 'primary', index = 0) {
+    if (!imageUrl || !imageUrl.startsWith('http')) {
+        return imageUrl;
+    }
+
+    const folderPath = generateEventFolderPath(eventData);
+    if (!folderPath) {
+        return convertImageUrlToLocalPath(imageUrl);
+    }
+
+    const extension = getImageExtension(imageUrl);
+    
+    if (imageType === 'primary') {
+        return `${folderPath}/primary${extension}`;
+    } else {
+        return `${folderPath}/gallery/image-${index + 1}${extension}`;
+    }
+}
+
+/**
+ * Extract image extension from URL
+ * @param {string} imageUrl - Image URL
+ * @returns {string} - File extension
+ */
+function getImageExtension(imageUrl) {
+    try {
+        const url = new URL(imageUrl);
+        const pathname = url.pathname;
+        return pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+    } catch (error) {
+        return '.jpg';
+    }
+}
+
+/**
  * Convert a favicon URL to a local path
  * @param {string} faviconUrl - The favicon URL
  * @param {string} basePath - The base path (e.g., 'img/favicons')
@@ -238,6 +320,9 @@ if (typeof module !== 'undefined' && module.exports) {
         generateFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
+        convertImageUrlToOrganizedPath,
+        generateEventFolderPath,
+        getImageExtension,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
         simpleHash
@@ -251,6 +336,9 @@ if (typeof window !== 'undefined') {
         generateFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
+        convertImageUrlToOrganizedPath,
+        generateEventFolderPath,
+        getImageExtension,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
         simpleHash
