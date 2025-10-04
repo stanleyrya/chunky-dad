@@ -1864,33 +1864,7 @@ body.index-page main {
     box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
-.floating-clear-btn {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background: var(--color-away);
-    border: none;
-    color: white;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-family: 'Poppins', sans-serif;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-}
-
-.floating-clear-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
-    background: #d97706;
-}
+/* Floating clear button removed - was ugly and unnecessary */
 
 .calendar-grid {
     display: grid;
@@ -2871,7 +2845,7 @@ body.index-page main {
 
 /* Map Marker Selection States */
 .leaflet-marker-icon.marker-selected .favicon-marker-container {
-    border-color: var(--accent-color) !important;
+    border-color: var(--primary-color) !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
     transform: scale(1.05) !important;
     position: relative !important;
