@@ -503,6 +503,13 @@ class DynamicCalendarLoader extends CalendarCore {
         // Check if this event is already selected
         const wasAlreadySelected = this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO;
         
+        logger.debug('EVENT', 'Toggle event selection', {
+            eventSlug,
+            date: normalizedDateISO,
+            wasAlreadySelected,
+            currentSelection: this.selectedEventSlug
+        });
+        
         // Always clear current selection first (but don't call updateSelectionVisualState yet)
         const hadSelection = !!this.selectedEventSlug;
         const previousSlug = this.selectedEventSlug;
@@ -539,11 +546,27 @@ class DynamicCalendarLoader extends CalendarCore {
             markersBySlugExists: !!window.eventsMapMarkersBySlug
         });
         
-        // Clear all previous selections
+        // Clear all previous selections - be more aggressive about clearing
         const selectedElements = document.querySelectorAll('.event-card.selected, .event-item.selected');
         logger.debug('EVENT', 'Clearing previous selections', { count: selectedElements.length });
         selectedElements.forEach(el => {
             el.classList.remove('selected');
+        });
+        
+        // Also clear all event cards and items regardless of current state
+        // This ensures we catch any elements that might have been missed
+        const allCards = document.querySelectorAll('.event-card');
+        const allItems = document.querySelectorAll('.event-item');
+        logger.debug('EVENT', 'Clearing all event elements', { 
+            cardsCount: allCards.length, 
+            itemsCount: allItems.length 
+        });
+        
+        allCards.forEach(card => {
+            card.classList.remove('selected');
+        });
+        allItems.forEach(item => {
+            item.classList.remove('selected');
         });
         
         // Get events list
@@ -582,12 +605,6 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Reset all markers to normal appearance
             this.resetAllMapMarkers();
-            
-            // Explicitly ensure all calendar event items are unselected
-            // This is important to handle cases where the calendar is re-rendered
-            document.querySelectorAll('.event-item').forEach(item => {
-                item.classList.remove('selected');
-            });
             
             logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
