@@ -2032,11 +2032,12 @@ body.index-page main {
     }
 }
 
-.event-item:hover {
-    background: var(--solid-primary);
-    color: var(--text-inverse);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .event-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px var(--shadow-primary);
+    }
 }
 
 
@@ -2047,9 +2048,12 @@ body.index-page main {
     color: var(--text-primary);
 }
 
-.calendar-day.current .event-item:hover {
-    background: var(--solid-primary);
-    color: var(--text-inverse);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .calendar-day.current .event-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px var(--shadow-primary);
+    }
 }
 
 .event-name {
@@ -2081,10 +2085,7 @@ body.index-page main {
     hyphens: manual;
 }
 
-.event-item:hover .event-time,
-.event-item:hover .event-venue {
-    color: rgba(255, 255, 255, 0.8);
-}
+/* Remove color changes on hover - keep original colors */
 
 .no-events {
     color: var(--text-muted);
@@ -4102,29 +4103,6 @@ footer {
     border-radius: 4px;
 }
 
-/* Ensure selected state takes precedence over hover states */
-.event-item.selected:hover {
-    background: var(--primary-color) !important;
-    color: white !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-/* Override current day hover states for selected events */
-.calendar-day.current .event-item.selected:hover {
-    background: var(--primary-color) !important;
-    color: white !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-/* Override enhanced event hover states for selected events */
-.calendar-day.week-view.current .event-item.enhanced.selected:hover {
-    background: var(--primary-color) !important;
-    color: white !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
 
 /* Hide non-selected events when in selection mode */
 .events-list.selection-mode .event-card:not(.selected) {
@@ -4608,9 +4586,11 @@ footer {
     box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
 }
 
-.calendar-day.week-view.current .event-item.enhanced:hover {
-    background: rgba(255, 255, 255, 0.25) !important;
-    transform: translateX(4px) translateY(-2px) scale(1.02);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .calendar-day.week-view.current .event-item.enhanced:hover {
+        transform: translateX(4px) translateY(-2px) scale(1.02);
+    }
 }
 
 .calendar-day.week-view.current .event-item.enhanced .event-name {
