@@ -2727,14 +2727,14 @@ body.index-page main {
     border: 2px solid var(--primary-color);
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: border-color 0.3s ease, box-shadow 0.2s ease;
     overflow: hidden;
     box-sizing: border-box;
 }
 
 .favicon-marker-container:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .favicon-marker-container:hover .favicon-marker-icon {
