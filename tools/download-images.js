@@ -200,20 +200,19 @@ function optimizeEventbriteImageUrl(imageUrl) {
   }
   
   try {
-    // Extract the original URL from the encoded parameter
-    // Format: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F...
-    const urlMatch = imageUrl.match(/https:\/\/img\.evbuc\.com\/(https%3A%2F%2Fcdn\.evbuc\.com%2Fimages%2F[^?]+)/);
+    // Parse the URL to separate base, encoded part, and query parameters
+    const parsedUrl = new URL(imageUrl);
     
-    if (urlMatch) {
-      // Decode the URL
-      const encodedUrl = urlMatch[1];
-      const decodedUrl = decodeURIComponent(encodedUrl);
-      
-      console.log(`🎫 Eventbrite: URL optimization - original: ${imageUrl}`);
-      console.log(`🎫 Eventbrite: URL optimization - optimized: ${decodedUrl}`);
-      
-      return decodedUrl;
-    }
+    // Extract the encoded URL from the pathname (remove leading slash)
+    const encodedUrl = parsedUrl.pathname.substring(1);
+    
+    // Decode the URL
+    const decodedUrl = decodeURIComponent(encodedUrl);
+    
+    console.log(`🎫 Eventbrite: URL optimization - original: ${imageUrl}`);
+    console.log(`🎫 Eventbrite: URL optimization - optimized: ${decodedUrl}`);
+    
+    return decodedUrl;
   } catch (error) {
     console.warn(`🎫 Eventbrite: Failed to optimize image URL: ${error.message}`);
   }
