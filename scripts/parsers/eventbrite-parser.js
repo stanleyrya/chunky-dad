@@ -993,7 +993,8 @@ class EventbriteParser {
         return cityConfig[city].timezone;
     }
     
-    // Optimize Eventbrite image URLs by removing crop parameters and adding proper file extension
+    // Optimize Eventbrite image URLs by removing crop parameters
+    // Note: We don't add file extensions here as the original URL should work
     optimizeEventbriteImageUrl(imageUrl) {
         if (!imageUrl || typeof imageUrl !== 'string') {
             return imageUrl;
@@ -1014,16 +1015,10 @@ class EventbriteParser {
                 const encodedUrl = urlMatch[1];
                 const decodedUrl = decodeURIComponent(encodedUrl);
                 
-                // Add .jpg extension if not present
-                let optimizedUrl = decodedUrl;
-                if (!optimizedUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i)) {
-                    optimizedUrl += '.jpg';
-                }
-                
                 console.log(`🎫 Eventbrite: URL optimization - original: ${imageUrl}`);
-                console.log(`🎫 Eventbrite: URL optimization - optimized: ${optimizedUrl}`);
+                console.log(`🎫 Eventbrite: URL optimization - optimized: ${decodedUrl}`);
                 
-                return optimizedUrl;
+                return decodedUrl;
             }
         } catch (error) {
             console.warn(`🎫 Eventbrite: Failed to optimize image URL: ${error.message}`);
