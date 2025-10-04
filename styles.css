@@ -1846,7 +1846,7 @@ body.index-page main {
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .nav-btn:hover {
-        transform: scale(1.1);
+        transform: scale(1.05);
     }
 }
 
@@ -2749,7 +2749,7 @@ body.index-page main {
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .favicon-marker-container:hover {
-        transform: scale(1.1);
+        transform: scale(1.05);
     }
 }
 
@@ -2829,7 +2829,7 @@ body.index-page main {
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .map-control-btn:hover {
-        transform: scale(1.1);
+        transform: scale(1.05);
     }
 }
 
