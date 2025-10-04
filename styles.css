@@ -246,11 +246,12 @@ body.index-page header.visible {
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
-.city-switcher-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 100%);
-    border-color: rgba(255, 255, 255, 0.6);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px var(--shadow-heavy);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .city-switcher-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 30px var(--shadow-heavy);
+    }
 }
 
 .city-switcher-btn:hover::before {
@@ -334,10 +335,12 @@ body.index-page header.visible {
     pointer-events: none;
 }
 
-.city-option:hover {
-    color: var(--text-inverse);
-    transform: translateX(8px);
-    box-shadow: 0 4px 15px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .city-option:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px var(--shadow-primary);
+    }
 }
 
 .city-option:hover::before {
@@ -526,8 +529,11 @@ body.index-page header.visible {
     }
 }
 
-.hero-logo-img:hover {
-    transform: scale(1.05);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .hero-logo-img:hover {
+        transform: scale(1.05);
+    }
 }
 
 .hero-title {
@@ -725,9 +731,12 @@ body.index-page header.visible {
     white-space: nowrap;
 }
 
-.new-joke-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .new-joke-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
 }
 
 /* Hero Animations */
@@ -921,8 +930,11 @@ body.index-page main {
     transition: color 0.3s ease;
 }
 
-.nav-menu a:hover {
-    color: var(--warning-color);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .nav-menu a:hover {
+        transform: scale(1.05);
+    }
 }
 
 .hamburger {
@@ -1801,9 +1813,11 @@ body.index-page main {
     box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
-.view-btn:hover:not(.active) {
-    background: var(--background-light);
-    color: var(--text-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .view-btn:hover:not(.active) {
+        transform: scale(1.05);
+    }
 }
 
 .date-navigation {
@@ -1832,9 +1846,12 @@ body.index-page main {
     justify-content: center;
 }
 
-.nav-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .nav-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px var(--shadow-primary);
+    }
 }
 
 .date-range {
@@ -2424,9 +2441,11 @@ body.index-page main {
     margin-left: auto;
 }
 
-.share-event-btn:hover {
-    background: var(--solid-primary);
-    transform: translateY(-2px);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .share-event-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 .share-event-btn:active {
@@ -2782,15 +2801,19 @@ body.index-page main {
     gap: 0.3rem;
 }
 
-.map-link:hover {
-    color: var(--accent-color);
-    text-decoration: underline;
-    transform: translateY(-1px);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .map-link:hover {
+        transform: scale(1.05);
+    }
 }
 
-.event-card[data-lat]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px var(--shadow-primary);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .event-card[data-lat]:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 25px var(--shadow-primary);
+    }
 }
 
 /* Map Controls */
@@ -4841,9 +4864,11 @@ footer {
     font-size: 0.9rem;
 }
 
-.filter-btn:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .filter-btn:hover {
+        transform: scale(1.05);
+    }
 }
 
 .filter-btn.active {
@@ -5028,10 +5053,11 @@ footer {
     transition: all 0.3s ease;
 }
 
-.tile-link:hover {
-    background: var(--primary-color);
-    color: var(--text-inverse);
-    border-color: var(--primary-color);
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .tile-link:hover {
+        transform: scale(1.05);
+    }
 }
 
 /* Directory Map */
