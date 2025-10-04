@@ -534,9 +534,8 @@ class DynamicCalendarLoader extends CalendarCore {
             el.classList.remove('selected');
         });
         
-        // Get events list and clear selection button
+        // Get events list
         const eventsList = document.querySelector('.events-list');
-        const clearBtn = document.getElementById('clear-selection-btn');
         
         if (this.selectedEventSlug) {
             // Mark selected event card in list view
@@ -558,11 +557,6 @@ class DynamicCalendarLoader extends CalendarCore {
             // Highlight map marker
             this.highlightMapMarker(this.selectedEventSlug);
             
-            // Show clear selection button
-            if (clearBtn) {
-                clearBtn.style.display = 'inline-block';
-            }
-            
             logger.debug('EVENT', 'Updated selection visual state', { 
                 selectedSlug: this.selectedEventSlug,
                 cardFound: !!selectedCard,
@@ -572,11 +566,6 @@ class DynamicCalendarLoader extends CalendarCore {
             // Smoothly transition out of selection mode
             if (eventsList) {
                 this.transitionOutOfSelectionMode(eventsList);
-            }
-            
-            // Hide clear selection button
-            if (clearBtn) {
-                clearBtn.style.display = 'none';
             }
             
             // Reset all markers to normal appearance
@@ -2972,15 +2961,7 @@ class DynamicCalendarLoader extends CalendarCore {
             });
         }
         
-        // Clear selection button
-        const clearSelectionBtn = document.getElementById('clear-selection-btn');
-        if (clearSelectionBtn) {
-            clearSelectionBtn.addEventListener('click', () => {
-                logger.userInteraction('EVENT', 'Clear selection button clicked');
-                this.clearEventSelection();
-                this.syncUrl(true);
-            });
-        }
+        // Clear selection button removed - was ugly and unnecessary
         
         // Setup swipe handlers for mobile navigation
         this.setupSwipeHandlers();
