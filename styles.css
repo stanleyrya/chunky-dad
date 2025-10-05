@@ -52,10 +52,10 @@
     --event-name-line-height: 1.2;
     
     /* Section Background Gradients - Progressive Transitions */
-    --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 25%);
-    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%);
-    --gradient-directory: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 75%);
+    --gradient-hero: linear-gradient(135deg, var(--primary-color) 100%, var(--accent-color) 0%);
+    --gradient-cities: linear-gradient(135deg, var(--primary-color) 75%, var(--secondary-color) 0%);
+    --gradient-events: linear-gradient(135deg, var(--primary-color) 50%, var(--secondary-color) 0%);
+    --gradient-directory: linear-gradient(135deg, var(--primary-color) 25%, var(--secondary-color) 0%);
     
     /* Alias for backward compatibility */
     --gradient-primary: var(--gradient-hero);
@@ -100,9 +100,6 @@ body {
     line-height: 1.6;
     color: var(--text-primary);
     background-color: var(--background-primary);
-    background: var(--gradient-primary); /* Default gradient background */
-    background-attachment: fixed; /* Keep background fixed during scroll */
-    transition: background 0.1s ease; /* Smooth color transitions */
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;

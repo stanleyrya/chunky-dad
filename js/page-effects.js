@@ -149,9 +149,6 @@ class PageEffectsManager {
         // Setup scroll animations
         this.setupScrollAnimations();
         
-        // Setup scroll-based color transition
-        this.setupScrollColorTransition();
-        
         logger.componentLoad('PAGE', 'Main page initialization complete');
     }
 
@@ -204,83 +201,6 @@ class PageEffectsManager {
         logger.componentLoad('PAGE', 'Main page scroll animations enabled');
     }
 
-    setupScrollColorTransition() {
-        if (!this.isMainPage) return;
-
-        logger.componentInit('PAGE', 'Setting up scroll-based color transition');
-        
-        // Get the root element for CSS custom properties
-        const root = document.documentElement;
-        
-        // Define the color transition function
-        const updateScrollColors = () => {
-            const scrollPosition = window.scrollY;
-            const windowHeight = window.innerHeight;
-            const documentHeight = document.documentElement.scrollHeight;
-            
-            // Calculate scroll progress (0 to 1) with a more gradual transition
-            const scrollProgress = Math.min(scrollPosition / (documentHeight - windowHeight), 1);
-            
-            // Define the color values - start with pure primary color
-            const primaryColor = '#667eea'; // Blue (hero color)
-            const secondaryColor = '#ff6b6b'; // Red/Pink (secondary color)
-            
-            // Create a smooth transition that starts at 100% primary and moves to secondary
-            const interpolatedColor = this.interpolateColor(primaryColor, secondaryColor, scrollProgress);
-            
-            // Create a gradient that transitions from primary to the interpolated color
-            const gradientColor = `linear-gradient(135deg, ${primaryColor} 0%, ${interpolatedColor} 100%)`;
-            
-            // Update CSS custom property for the body background
-            root.style.setProperty('--scroll-bg-color', interpolatedColor);
-            
-            // Apply the gradient background to the body
-            document.body.style.background = gradientColor;
-            
-            logger.debug('PAGE', `Scroll color updated: ${scrollProgress.toFixed(3)} progress, gradient: ${gradientColor}`);
-        };
-
-        // Initial call to set the starting color
-        updateScrollColors();
-
-        // Add scroll event listener with throttling for performance
-        let ticking = false;
-        const handleScroll = () => {
-            if (!ticking) {
-                requestAnimationFrame(() => {
-                    updateScrollColors();
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        
-        logger.componentLoad('PAGE', 'Scroll-based color transition enabled');
-    }
-
-    interpolateColor(color1, color2, factor) {
-        // Convert hex colors to RGB
-        const hex1 = color1.replace('#', '');
-        const hex2 = color2.replace('#', '');
-        
-        const r1 = parseInt(hex1.substr(0, 2), 16);
-        const g1 = parseInt(hex1.substr(2, 2), 16);
-        const b1 = parseInt(hex1.substr(4, 2), 16);
-        
-        const r2 = parseInt(hex2.substr(0, 2), 16);
-        const g2 = parseInt(hex2.substr(2, 2), 16);
-        const b2 = parseInt(hex2.substr(4, 2), 16);
-        
-        // Interpolate each component
-        const r = Math.round(r1 + (r2 - r1) * factor);
-        const g = Math.round(g1 + (g2 - g1) * factor);
-        const b = Math.round(b1 + (b2 - b1) * factor);
-        
-        // Convert back to hex
-        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-    }
 
     typeWriter(element, text, speed = 100) {
         logger.debug('PAGE', `Starting typewriter effect for: ${text.substring(0, 20)}...`);
