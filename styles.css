@@ -65,8 +65,14 @@
     --solid-light: var(--background-light);
     --solid-error: var(--background-light);
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    /* Section Background Gradients - Progressive Transitions */
+    --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 25%);
+    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%);
+    --gradient-directory: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 75%);
+    
+    /* Legacy gradients for backward compatibility */
+    --gradient-primary: var(--gradient-hero);
     --gradient-secondary: linear-gradient(45deg, var(--color-danger), var(--color-danger-dark));
     --gradient-success: linear-gradient(45deg, var(--success-color), var(--primary-color) 100%);
     --gradient-warning: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
@@ -1118,7 +1124,7 @@ body.index-page main {
 /* Compact Cities Section */
 .cities-compact {
     padding: 60px 0 40px;
-    background: var(--solid-primary);
+    background: var(--gradient-cities);
     color: var(--text-inverse);
 }
 
@@ -1372,7 +1378,7 @@ body.index-page main {
 
 /* Bear Events Section */
 .bear-events-compact {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    background: var(--gradient-events);
     padding: 3rem 0;
     margin: 0;
     position: relative;
@@ -1487,7 +1493,8 @@ body.index-page main {
 /* Bear Art Section */
 .bear-art-section {
     padding: 80px 0;
-    background: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
+    background: var(--gradient-directory);
+    color: var(--text-inverse);
     text-align: center;
     position: relative;
 }
@@ -1515,7 +1522,7 @@ body.index-page main {
 .bear-art-content h2 {
     font-size: 2.5rem;
     margin-bottom: 2rem;
-    color: var(--text-primary);
+    color: var(--text-inverse);
     font-weight: 700;
 }
 
