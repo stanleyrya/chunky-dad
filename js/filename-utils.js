@@ -22,7 +22,14 @@ function generateFilenameFromUrl(url) {
         
         if (imageMatch) {
             const [, id1, id2, id3, filename] = imageMatch;
-            const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
+            let ext = '.jpg'; // Default extension
+            if (filename.includes('.')) {
+                const potentialExt = filename.substring(filename.lastIndexOf('.'));
+                // Only use the extension if it looks like a valid image extension
+                if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico'].includes(potentialExt.toLowerCase())) {
+                    ext = potentialExt;
+                }
+            }
             const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
             
             // Sanitize filename
@@ -38,7 +45,14 @@ function generateFilenameFromUrl(url) {
     // Handle regular URLs
     const parsedUrl = new URL(url);
     const pathname = parsedUrl.pathname;
-    const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+    let ext = '.jpg'; // Default extension
+    if (pathname.includes('.')) {
+        const potentialExt = pathname.substring(pathname.lastIndexOf('.'));
+        // Only use the extension if it looks like a valid image extension
+        if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico'].includes(potentialExt.toLowerCase())) {
+            ext = potentialExt;
+        }
+    }
     let basename = pathname.substring(pathname.lastIndexOf('/') + 1).replace(ext, '') || 'image';
     
     // Sanitize filename - be more conservative with special characters
@@ -106,14 +120,16 @@ function generateFaviconFilename(faviconUrl) {
         .replace(/-+/g, '-') // Collapse multiple dashes
         .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
     
-    // Determine file extension based on URL path or default to .ico
-    let ext = '.ico';
+    // Determine file extension based on URL path or default to .png for better compatibility
+    let ext = '.png'; // Default to PNG for better compatibility
     if (faviconUrl.includes('.png')) {
         ext = '.png';
     } else if (faviconUrl.includes('.jpg') || faviconUrl.includes('.jpeg')) {
         ext = '.jpg';
     } else if (faviconUrl.includes('.svg')) {
         ext = '.svg';
+    } else if (faviconUrl.includes('.ico')) {
+        ext = '.ico';
     }
     
     // Add size suffix for px-sized favicons (prefer 64px for map markers)
@@ -152,7 +168,17 @@ function slugify(text) {
 function generateEventFilename(imageUrl, eventInfo) {
     const cleanUrl = cleanImageUrl(imageUrl);
     const baseFilename = generateFilenameFromUrl(cleanUrl);
-    const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
+    
+    // Ensure we always have a proper file extension
+    let ext = '.jpg'; // Default extension
+    if (baseFilename.includes('.')) {
+        const lastDot = baseFilename.lastIndexOf('.');
+        const potentialExt = baseFilename.substring(lastDot);
+        // Only use the extension if it looks like a valid image extension
+        if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico'].includes(potentialExt.toLowerCase())) {
+            ext = potentialExt;
+        }
+    }
     
     // Build filename parts
     const parts = [];
@@ -185,6 +211,16 @@ function generateEventFilename(imageUrl, eventInfo) {
 function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
     const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
     const filename = generateEventFilename(imageUrl, eventInfo);
+    
+    // For one-time events, organize by year/month folders
+    if (!eventInfo.recurring && eventInfo.startDate) {
+        const date = eventInfo.startDate instanceof Date ? 
+            eventInfo.startDate : new Date(eventInfo.startDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
+        return `${basePath}/${subdirectory}/${year}/${month}/${filename}`;
+    }
+    
     return `${basePath}/${subdirectory}/${filename}`;
 }
 

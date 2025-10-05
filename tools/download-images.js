@@ -54,11 +54,23 @@ async function downloadEventImage(imageUrl, eventInfo) {
     // Generate filename using event information
     const filename = generateEventFilename(imageUrl, eventInfo);
     const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
-    const dir = path.join(EVENTS_DIR, subdirectory);
+    
+    // For one-time events, organize by year/month folders
+    let dir;
+    if (!eventInfo.recurring && eventInfo.startDate) {
+      const date = eventInfo.startDate instanceof Date ? 
+          eventInfo.startDate : new Date(eventInfo.startDate);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
+      dir = path.join(EVENTS_DIR, subdirectory, year.toString(), month);
+    } else {
+      dir = path.join(EVENTS_DIR, subdirectory);
+    }
+    
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';
     
-    // Ensure subdirectory exists
+    // Ensure directory exists (including year/month subdirectories)
     ensureDir(dir);
     
     // Check if we should download
