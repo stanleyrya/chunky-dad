@@ -201,6 +201,7 @@ class PageEffectsManager {
         logger.componentLoad('PAGE', 'Main page scroll animations enabled');
     }
 
+
     typeWriter(element, text, speed = 100) {
         logger.debug('PAGE', `Starting typewriter effect for: ${text.substring(0, 20)}...`);
         let i = 0;
