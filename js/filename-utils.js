@@ -116,8 +116,15 @@ function generateFaviconFilename(faviconUrl) {
         ext = '.svg';
     }
     
-    // Add size suffix for px-sized favicons (prefer 64px for map markers)
-    const sizeSuffix = '-64px';
+    // Extract size from URL and add size suffix
+    let sizeSuffix = '-64px'; // Default fallback
+    if (parsedUrl.hostname === 'www.google.com' && parsedUrl.pathname === '/s2/favicons') {
+        const size = parsedUrl.searchParams.get('sz');
+        if (size) {
+            sizeSuffix = `-${size}px`;
+        }
+    }
+    
     return `favicon-${cleanDomain}${sizeSuffix}${ext}`;
 }
 
