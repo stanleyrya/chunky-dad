@@ -38,7 +38,13 @@ function generateFilenameFromUrl(url) {
     // Handle regular URLs
     const parsedUrl = new URL(url);
     const pathname = parsedUrl.pathname;
-    const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+    let ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+    
+    // Validate extension - if it looks like a timestamp or is invalid, use .jpg
+    if (!ext.match(/^\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+        ext = '.jpg';
+    }
+    
     let basename = pathname.substring(pathname.lastIndexOf('/') + 1).replace(ext, '') || 'image';
     
     // Sanitize filename - be more conservative with special characters
@@ -152,7 +158,14 @@ function slugify(text) {
 function generateEventFilename(imageUrl, eventInfo) {
     const cleanUrl = cleanImageUrl(imageUrl);
     const baseFilename = generateFilenameFromUrl(cleanUrl);
-    const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
+    
+    // Ensure we have a proper extension - default to .jpg if none found
+    let ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
+    
+    // Validate extension - if it looks like a timestamp or is invalid, use .jpg
+    if (!ext.match(/^\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+        ext = '.jpg';
+    }
     
     // Build filename parts
     const parts = [];
@@ -183,9 +196,24 @@ function generateEventFilename(imageUrl, eventInfo) {
  * @returns {string} - The local file path
  */
 function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
-    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
     const filename = generateEventFilename(imageUrl, eventInfo);
-    return `${basePath}/${subdirectory}/${filename}`;
+    
+    if (eventInfo.recurring) {
+        // Recurring events go in the recurring folder
+        return `${basePath}/recurring/${filename}`;
+    } else {
+        // One-time events go in year/month folders (YYYY/MM format)
+        if (eventInfo.startDate) {
+            const date = eventInfo.startDate instanceof Date ? 
+                eventInfo.startDate : new Date(eventInfo.startDate);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
+            return `${basePath}/one-time/${year}/${month}/${filename}`;
+        } else {
+            // Fallback to one-time folder if no date
+            return `${basePath}/one-time/${filename}`;
+        }
+    }
 }
 
 /**
