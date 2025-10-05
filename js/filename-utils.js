@@ -163,12 +163,20 @@ function generateEventFilename(imageUrl, eventInfo) {
     
     // Extract extension from URL - default to .jpg if none found
     let ext = '.jpg';
+    
+    // Try to extract extension from the URL path
     const urlExtMatch = cleanUrl.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)(\?|$)/i);
     if (urlExtMatch) {
         ext = '.' + urlExtMatch[1].toLowerCase();
     }
     
-    // Validate extension - if it looks like a timestamp or is invalid, use .jpg
+    // Additional validation: check if the extension looks like a timestamp
+    // Timestamps often look like .20250814-194101 or similar patterns
+    if (ext.match(/^\.[0-9]{8}-[0-9]{6}$/) || ext.match(/^\.[0-9]{10,}$/)) {
+        ext = '.jpg';
+    }
+    
+    // Final validation - if it's not a valid image extension, use .jpg
     if (!ext.match(/^\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
         ext = '.jpg';
     }
@@ -307,6 +315,17 @@ function generateFilename(url, type = 'event', size = null) {
     if (urlExtMatch) {
         ext = '.' + urlExtMatch[1].toLowerCase();
         filename = filename.replace(/\.[^.]*$/, ''); // Remove existing extension
+    }
+    
+    // Additional validation: check if the extension looks like a timestamp
+    // Timestamps often look like .20250814-194101 or similar patterns
+    if (ext.match(/^\.[0-9]{8}-[0-9]{6}$/) || ext.match(/^\.[0-9]{10,}$/)) {
+        ext = '.jpg';
+    }
+    
+    // Final validation - if it's not a valid image extension, use .jpg
+    if (!ext.match(/^\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+        ext = '.jpg';
     }
     
     // Generate a hash for uniqueness
