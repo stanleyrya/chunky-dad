@@ -8,7 +8,7 @@ const { URL } = require('url');
 const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, convertImageUrlToLocalPath } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension } = require('../js/filename-utils.js');
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -32,8 +32,6 @@ const ROOT = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
-const EVENTS_ONETIME_DIR = path.join(EVENTS_DIR, 'one-time');
-const EVENTS_RECURRING_DIR = path.join(EVENTS_DIR, 'recurring');
 
 // Cache duration: 14 days (2 weeks) in milliseconds
 const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
@@ -51,15 +49,20 @@ function ensureDir(dir) {
 // Download event image with event information
 async function downloadEventImage(imageUrl, eventInfo) {
   try {
-    // Generate filename using event information
-    const filename = generateEventFilename(imageUrl, eventInfo);
-    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
-    const dir = path.join(EVENTS_DIR, subdirectory);
+    // Get the directory structure based on event type using shared utility
+    const dirPath = getEventDirectoryPath(eventInfo, 'img/events');
+    const dir = path.join(ROOT, dirPath);
+    
+    // Ensure directory exists
+    ensureDir(dir);
+    
+    // First, try to detect the file extension from URL
+    const detectedExtension = detectFileExtension(imageUrl);
+    
+    // Generate filename with detected extension
+    const filename = generateEventFilename(imageUrl, eventInfo, detectedExtension);
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';
-    
-    // Ensure subdirectory exists
-    ensureDir(dir);
     
     // Check if we should download
     const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
@@ -72,10 +75,59 @@ async function downloadEventImage(imageUrl, eventInfo) {
     console.log(`📥 Downloading event image: ${filename} (${reason})`);
     console.log(`   Event: ${eventInfo.name}`);
     console.log(`   Type: ${eventInfo.recurring ? 'recurring' : 'one-time'}`);
+    console.log(`   Path: ${path.relative(ROOT, localPath)}`);
     console.log(`   URL: ${imageUrl}`);
+    console.log(`   Detected extension: ${detectedExtension}`);
     
-    // Download the image
-    await downloadFile(imageUrl, localPath);
+    // Download the image and get content type
+    const downloadResult = await downloadFile(imageUrl, localPath);
+    
+    // If we got a different content type, regenerate filename with correct extension
+    if (downloadResult.contentType) {
+      const actualExtension = detectFileExtension(imageUrl, downloadResult.contentType);
+      
+      if (actualExtension !== detectedExtension) {
+        console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
+        
+        // Generate new filename with correct extension
+        const correctFilename = generateEventFilename(imageUrl, eventInfo, actualExtension);
+        const correctPath = path.join(dir, correctFilename);
+        const correctMetadataPath = correctPath + '.meta';
+        
+        // Move the file to the correct name
+        if (fs.existsSync(localPath)) {
+          fs.renameSync(localPath, correctPath);
+          if (fs.existsSync(metadataPath)) {
+            fs.renameSync(metadataPath, correctMetadataPath);
+          }
+        }
+        
+        // Update variables to use correct paths
+        const finalFilename = correctFilename;
+        const finalPath = correctPath;
+        const finalMetadataPath = correctMetadataPath;
+        
+        // Save metadata with event information
+        const metadata = {
+          originalUrl: imageUrl,
+          downloadedAt: new Date().toISOString(),
+          type: 'event',
+          filename: finalFilename,
+          contentType: downloadResult.contentType,
+          contentLength: downloadResult.contentLength,
+          eventInfo: {
+            name: eventInfo.name,
+            startDate: eventInfo.startDate,
+            recurring: eventInfo.recurring
+          }
+        };
+        
+        fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
+        
+        console.log(`✅ Downloaded event image: ${finalFilename} (${actualExtension})`);
+        return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
+      }
+    }
     
     // Save metadata with event information
     const metadata = {
@@ -83,6 +135,8 @@ async function downloadEventImage(imageUrl, eventInfo) {
       downloadedAt: new Date().toISOString(),
       type: 'event',
       filename: filename,
+      contentType: downloadResult.contentType,
+      contentLength: downloadResult.contentLength,
       eventInfo: {
         name: eventInfo.name,
         startDate: eventInfo.startDate,
@@ -92,7 +146,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
     
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
     
-    console.log(`✅ Downloaded event image: ${filename}`);
+    console.log(`✅ Downloaded event image: ${filename} (${detectedExtension})`);
     return { success: true, skipped: false, filename, localPath };
     
   } catch (error) {
@@ -276,7 +330,11 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
           
           fileStream.on('finish', () => {
             fileStream.close();
-            resolve();
+            // Return content type information
+            resolve({
+              contentType: response.headers['content-type'],
+              contentLength: response.headers['content-length']
+            });
           });
           
           fileStream.on('error', (err) => {
@@ -358,7 +416,7 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     console.log(`   URL: ${imageUrl}`);
     
     // Download the image
-    await downloadFile(imageUrl, localPath);
+    const downloadResult = await downloadFile(imageUrl, localPath);
     
     // Process Linktree profile pictures with optimization
     if (isLinktreeProfile && type === 'favicon') {
@@ -403,6 +461,8 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
       downloadedAt: new Date().toISOString(),
       type: type,
       filename: customFilename,
+      contentType: downloadResult.contentType,
+      contentLength: downloadResult.contentLength,
       isLinktreeProfile: isLinktreeProfile
     };
     
@@ -481,7 +541,7 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     console.log(`   URL: ${imageUrl}`);
     
     // Download the image
-    await downloadFile(imageUrl, localPath);
+    const downloadResult = await downloadFile(imageUrl, localPath);
     
     // Save metadata
     const metadata = {
@@ -489,7 +549,9 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
       downloadedAt: new Date().toISOString(),
       type: type,
       filename: filename,
-      size: size
+      size: size,
+      contentType: downloadResult.contentType,
+      contentLength: downloadResult.contentLength
     };
     
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
@@ -523,7 +585,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     console.log(`   URL: ${imageUrl}`);
     
     // Download the image
-    await downloadFile(imageUrl, localPath);
+    const downloadResult = await downloadFile(imageUrl, localPath);
     
     // Process Linktree profile pictures with optimization
     if (isLinktreeProfile && type === 'favicon') {
@@ -568,6 +630,8 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
       downloadedAt: new Date().toISOString(),
       type: type,
       filename: filename,
+      contentType: downloadResult.contentType,
+      contentLength: downloadResult.contentLength,
       isLinktreeProfile: isLinktreeProfile
     };
     
@@ -672,8 +736,17 @@ async function main() {
   ensureDir(IMAGES_DIR);
   ensureDir(FAVICONS_DIR);
   ensureDir(EVENTS_DIR);
-  ensureDir(EVENTS_ONETIME_DIR);
-  ensureDir(EVENTS_RECURRING_DIR);
+  
+  // Ensure event subdirectories exist using shared utility
+  // We'll create a few common directories to ensure the structure exists
+  const sampleRecurringDir = getEventDirectoryPath({ recurring: true }, 'img/events');
+  const sampleOneTimeDir = getEventDirectoryPath({ 
+    recurring: false, 
+    startDate: new Date() 
+  }, 'img/events');
+  
+  ensureDir(path.join(ROOT, sampleRecurringDir));
+  ensureDir(path.join(ROOT, sampleOneTimeDir));
   
   // Extract image URLs from calendar data
   const imageUrls = extractImageUrls();

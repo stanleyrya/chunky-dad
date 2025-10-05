@@ -116,8 +116,15 @@ function generateFaviconFilename(faviconUrl) {
         ext = '.svg';
     }
     
-    // Add size suffix for px-sized favicons (prefer 64px for map markers)
-    const sizeSuffix = '-64px';
+    // Extract size from URL and add size suffix
+    let sizeSuffix = '-64px'; // Default fallback
+    if (parsedUrl.hostname === 'www.google.com' && parsedUrl.pathname === '/s2/favicons') {
+        const size = parsedUrl.searchParams.get('sz');
+        if (size) {
+            sizeSuffix = `-${size}px`;
+        }
+    }
+    
     return `favicon-${cleanDomain}${sizeSuffix}${ext}`;
 }
 
@@ -147,13 +154,10 @@ function slugify(text) {
  * Generate an event-aware filename for better identification
  * @param {string} imageUrl - The image URL
  * @param {Object} eventInfo - Event information (name, date, recurring)
+ * @param {string} detectedExtension - The detected file extension (optional)
  * @returns {string} - The generated filename
  */
-function generateEventFilename(imageUrl, eventInfo) {
-    const cleanUrl = cleanImageUrl(imageUrl);
-    const baseFilename = generateFilenameFromUrl(cleanUrl);
-    const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
-    
+function generateEventFilename(imageUrl, eventInfo, detectedExtension = null) {
     // Build filename parts
     const parts = [];
     
@@ -168,11 +172,33 @@ function generateEventFilename(imageUrl, eventInfo) {
     // Add event name slug
     parts.push(slugify(eventInfo.name));
     
-    // Add original filename hash for uniqueness
-    const urlHash = simpleHash(cleanUrl).substring(0, 8);
+    // Add URL hash for uniqueness (based on original URL, not cleaned)
+    const urlHash = simpleHash(imageUrl).substring(0, 8);
     parts.push(urlHash);
     
-    return parts.join('_') + ext;
+    // Use detected extension or fall back to .jpg
+    const extension = detectedExtension || '.jpg';
+    return parts.join('_') + extension;
+}
+
+/**
+ * Get the directory path for an event based on its type and date
+ * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
+ * @param {string} basePath - The base path (e.g., 'img/events')
+ * @returns {string} - The directory path
+ */
+function getEventDirectoryPath(eventInfo, basePath = 'img/events') {
+    if (eventInfo.recurring) {
+        // Recurring events go in a simple recurring folder
+        return `${basePath}/recurring`;
+    } else {
+        // One-time events go in year/month folders
+        const date = eventInfo.startDate instanceof Date ? 
+            eventInfo.startDate : new Date(eventInfo.startDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // 01-12
+        return `${basePath}/one-time/${year}/${month}`;
+    }
 }
 
 /**
@@ -183,9 +209,9 @@ function generateEventFilename(imageUrl, eventInfo) {
  * @returns {string} - The local file path
  */
 function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
-    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
     const filename = generateEventFilename(imageUrl, eventInfo);
-    return `${basePath}/${subdirectory}/${filename}`;
+    const directoryPath = getEventDirectoryPath(eventInfo, basePath);
+    return `${directoryPath}/${filename}`;
 }
 
 /**
@@ -229,6 +255,49 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
 
 
 /**
+ * Detect file extension from URL and content type
+ * @param {string} url - The image URL
+ * @param {string} contentType - The content type from response headers (optional)
+ * @returns {string} - The detected file extension (with dot)
+ */
+function detectFileExtension(url, contentType = null) {
+    // First try to get extension from URL
+    try {
+        const parsedUrl = new URL(url);
+        const pathname = parsedUrl.pathname;
+        const urlExt = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : null;
+        
+        if (urlExt && /^\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(urlExt)) {
+            return urlExt.toLowerCase();
+        }
+    } catch (error) {
+        // URL parsing failed, continue to content type detection
+    }
+    
+    // Try to get extension from content type
+    if (contentType) {
+        const mimeToExt = {
+            'image/jpeg': '.jpg',
+            'image/jpg': '.jpg',
+            'image/png': '.png',
+            'image/gif': '.gif',
+            'image/webp': '.webp',
+            'image/svg+xml': '.svg',
+            'image/bmp': '.bmp',
+            'image/tiff': '.tiff'
+        };
+        
+        const detectedExt = mimeToExt[contentType.toLowerCase()];
+        if (detectedExt) {
+            return detectedExt;
+        }
+    }
+    
+    // Fall back to .jpg if nothing else works
+    return '.jpg';
+}
+
+/**
  * Simple hash function for filename uniqueness
  * @param {string} str - The string to hash
  * @returns {string} - The hash as a hex string
@@ -251,9 +320,11 @@ if (typeof module !== 'undefined' && module.exports) {
         generateFaviconFilename,
         generateEventFilename,
         cleanImageUrl,
+        getEventDirectoryPath,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        detectFileExtension,
         slugify,
         simpleHash
     };
@@ -266,9 +337,11 @@ if (typeof window !== 'undefined') {
         generateFaviconFilename,
         generateEventFilename,
         cleanImageUrl,
+        getEventDirectoryPath,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        detectFileExtension,
         slugify,
         simpleHash
     };
