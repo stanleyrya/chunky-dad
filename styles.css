@@ -51,28 +51,22 @@
     --event-name-font-weight: 600;
     --event-name-line-height: 1.2;
     
-    /* Additional Color Variables for Gradients */
-    --color-danger: #ff6b6b;
-    --color-danger-dark: #ee5a24;
-    --color-success-light: #10b981;
-    --color-success-dark: #059669;
+    /* Section Background Gradients - Progressive Transitions */
+    --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 25%);
+    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%);
+    --gradient-directory: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 75%);
     
-    /* Solid Color Alternatives for Gradients */
+    /* Alias for backward compatibility */
+    --gradient-primary: var(--gradient-hero);
+    
+    /* Solid Color Alternatives */
     --solid-primary: var(--primary-color);
     --solid-secondary: var(--secondary-color);
     --solid-success: var(--success-color);
     --solid-warning: var(--background-light);
     --solid-light: var(--background-light);
-    --solid-error: var(--background-light);
-    
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    --gradient-secondary: linear-gradient(45deg, var(--color-danger), var(--color-danger-dark));
-    --gradient-success: linear-gradient(45deg, var(--success-color), var(--primary-color) 100%);
-    --gradient-warning: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
-    --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
-    --gradient-success-alt: linear-gradient(45deg, var(--color-success-light), var(--color-success-dark));
-    --gradient-error: linear-gradient(135deg, var(--background-light) 0%, var(--background-light) 100%);
+    --solid-error: var(--error-color);
     
     /* Shadows */
     --shadow-light: none;
@@ -1118,7 +1112,7 @@ body.index-page main {
 /* Compact Cities Section */
 .cities-compact {
     padding: 60px 0 40px;
-    background: var(--solid-primary);
+    background: var(--gradient-cities);
     color: var(--text-inverse);
 }
 
@@ -1372,7 +1366,7 @@ body.index-page main {
 
 /* Bear Events Section */
 .bear-events-compact {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    background: var(--gradient-events);
     padding: 3rem 0;
     margin: 0;
     position: relative;
@@ -1487,7 +1481,8 @@ body.index-page main {
 /* Bear Art Section */
 .bear-art-section {
     padding: 80px 0;
-    background: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
+    background: var(--gradient-directory);
+    color: var(--text-inverse);
     text-align: center;
     position: relative;
 }
@@ -1515,7 +1510,7 @@ body.index-page main {
 .bear-art-content h2 {
     font-size: 2.5rem;
     margin-bottom: 2rem;
-    color: var(--text-primary);
+    color: var(--text-inverse);
     font-weight: 700;
 }
 
@@ -2890,9 +2885,9 @@ body.index-page main {
 }
 
 #location-btn.location-success {
-    color: var(--color-success-light);
+    color: var(--success-color);
     background: var(--background-primary);
-    border-color: var(--color-success-light);
+    border-color: var(--success-color);
     backdrop-filter: blur(10px);
 }
 
