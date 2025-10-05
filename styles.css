@@ -53,9 +53,10 @@
     
     /* Section Background Gradients - Progressive Transitions */
     --gradient-hero: var(--primary-color);
-    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    --gradient-events: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-color) 100%);
-    --gradient-directory: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-color) 100%);
+    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 75%);
+    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%);
+    --gradient-today-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 25%);
+    --gradient-directory: var(--secondary-color);
     
     /* Alias for backward compatibility */
     --gradient-primary: var(--gradient-hero);
@@ -1416,6 +1417,12 @@ body.index-page main {
 }
 
 /* Today Events Section - Updated for detailed cards */
+#today-events {
+    background: var(--gradient-today-events);
+    padding: 3rem 0;
+    margin: 0;
+}
+
 #today-events .event-scroll-container {
     overflow-x: visible; /* Allow vertical layout */
     overflow-y: visible;
