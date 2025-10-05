@@ -395,6 +395,12 @@ class ScriptableAdapter {
                             }
                             
                             await targetEvent.save();
+                            
+                            // Download event image if available
+                            if (event.image) {
+                                await this.downloadEventImage(event);
+                            }
+                            
                             processedCount++;
                             break;
                             
@@ -425,6 +431,12 @@ class ScriptableAdapter {
                             // Changes tracked in summary (removed verbose per-event logging)
                             
                             await updateTarget.save();
+                            
+                            // Download event image if available
+                            if (event.image) {
+                                await this.downloadEventImage(event);
+                            }
+                            
                             processedCount++;
                             break;
                             
@@ -459,6 +471,12 @@ class ScriptableAdapter {
                             }
                             
                             await calendarEvent.save();
+                            
+                            // Download event image if available
+                            if (event.image) {
+                                await this.downloadEventImage(event);
+                            }
+                            
                             processedCount++;
                             break;
                     }
@@ -4109,6 +4127,105 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
         } catch (e) {
             console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
+        }
+    }
+
+    // Download event image to organized folder structure
+    async downloadEventImage(event) {
+        try {
+            if (!event.image || !event.title || !event.startDate) {
+                console.log(`📱 Scriptable: Skipping image download - missing required data`);
+                return;
+            }
+
+            console.log(`📱 Scriptable: Downloading image for "${event.title}"`);
+            
+            // Generate filename based on event data
+            const filename = this.generateImageFilename(event);
+            
+            // Create year/month folder structure
+            const eventDate = new Date(event.startDate);
+            const year = eventDate.getFullYear();
+            const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+            const folderPath = `images/${year}/${month}`;
+            
+            // Ensure directory exists
+            const fm = this.getFileManager();
+            const fullFolderPath = this.getCurrentDir() + folderPath;
+            fm.createDirectory(fullFolderPath, true);
+            
+            // Download image
+            const request = new Request(event.image);
+            const image = await request.loadImage();
+            
+            if (!image) {
+                console.log(`📱 Scriptable: Failed to load image from URL: ${event.image}`);
+                return;
+            }
+            
+            // Save image with proper extension
+            const fullFilePath = fm.joinPath(fullFolderPath, filename);
+            fm.writeImage(fullFilePath, image);
+            
+            console.log(`📱 Scriptable: ✓ Downloaded image: ${folderPath}/${filename}`);
+            
+        } catch (error) {
+            console.log(`📱 Scriptable: ✗ Failed to download image for "${event.title}": ${error.message}`);
+        }
+    }
+
+    // Generate filename based on event data
+    generateImageFilename(event) {
+        // Clean title for filename
+        let cleanTitle = event.title
+            .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .toLowerCase()
+            .substring(0, 50); // Limit length
+        
+        // Add date for uniqueness
+        const eventDate = new Date(event.startDate);
+        const dateStr = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Determine file extension based on URL
+        let extension = '.jpg'; // Default
+        if (event.image) {
+            const url = event.image.toLowerCase();
+            if (url.includes('.png')) extension = '.png';
+            else if (url.includes('.gif')) extension = '.gif';
+            else if (url.includes('.webp')) extension = '.webp';
+            else if (url.includes('.jpeg')) extension = '.jpeg';
+        }
+        
+        return `${cleanTitle}-${dateStr}${extension}`;
+    }
+
+    // Get the filename for a downloaded event image (for referencing)
+    getEventImageFilename(event) {
+        if (!event.image || !event.title || !event.startDate) {
+            return null;
+        }
+        
+        const eventDate = new Date(event.startDate);
+        const year = eventDate.getFullYear();
+        const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+        const filename = this.generateImageFilename(event);
+        
+        return `images/${year}/${month}/${filename}`;
+    }
+
+    // Check if an event image has been downloaded
+    async hasEventImageDownloaded(event) {
+        try {
+            const filename = this.getEventImageFilename(event);
+            if (!filename) return false;
+            
+            const fm = this.getFileManager();
+            const fullPath = this.getCurrentDir() + filename;
+            return fm.fileExists(fullPath);
+        } catch (error) {
+            console.log(`📱 Scriptable: Error checking if image exists: ${error.message}`);
+            return false;
         }
     }
 
