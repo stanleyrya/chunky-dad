@@ -3,6 +3,8 @@
  * Used by both download-images.js and dynamic-calendar-loader.js
  */
 
+const path = require('path');
+
 /**
  * Generate a clean filename from a URL
  * Handles Eventbrite URLs specially with nested URL decoding
@@ -91,9 +93,10 @@ function cleanImageUrl(imageUrl) {
 /**
  * Generate a filename for favicon URLs with domain-based naming
  * @param {string} faviconUrl - The favicon URL
+ * @param {string} size - Optional size suffix (e.g., '64', '256')
  * @returns {string} - The generated filename
  */
-function generateFaviconFilename(faviconUrl) {
+function generateFaviconFilename(faviconUrl, size = '64') {
     const parsedUrl = new URL(faviconUrl);
     
     // For Google favicon service, extract the target domain from query parameter
@@ -122,8 +125,8 @@ function generateFaviconFilename(faviconUrl) {
         ext = '.svg';
     }
     
-    // Add size suffix for px-sized favicons (prefer 64px for map markers)
-    const sizeSuffix = '-64px';
+    // Add size suffix for px-sized favicons
+    const sizeSuffix = `-${size}px`;
     return `favicon-${cleanDomain}${sizeSuffix}${ext}`;
 }
 
@@ -220,10 +223,11 @@ function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events'
  * Convert a favicon URL to a local path
  * @param {string} faviconUrl - The favicon URL
  * @param {string} basePath - The base path (e.g., 'img/favicons')
+ * @param {string} size - Optional size for favicons (e.g., '64', '256')
  * @returns {string} - The local file path
  */
-function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
-    const filename = generateFaviconFilename(faviconUrl);
+function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons', size = '64') {
+    const filename = generateFaviconFilename(faviconUrl, size);
     return `${basePath}/${filename}`;
 }
 
@@ -255,6 +259,57 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
     }
 }
 
+/**
+ * Generate a filename from URL with type and size support
+ * @param {string} url - The image URL
+ * @param {string} type - The type of image ('event' or 'favicon')
+ * @param {string} size - Optional size for favicons (e.g., '64', '256')
+ * @returns {string} - The generated filename
+ */
+function generateFilename(url, type = 'event', size = null) {
+    if (type === 'favicon') {
+        const baseFilename = generateFaviconFilename(url, size);
+        if (size) {
+            // Check if filename already contains a size suffix to avoid double suffixes
+            const ext = path.extname(baseFilename);
+            const nameWithoutExt = path.basename(baseFilename, ext);
+            
+            // If the filename already contains a size suffix (like -64px), don't add another one
+            if (nameWithoutExt.includes('-64px') || nameWithoutExt.includes('-32px') || nameWithoutExt.includes('-256px')) {
+                return baseFilename;
+            }
+            
+            // Add size suffix for higher quality favicons
+            return `${nameWithoutExt}-${size}px${ext}`;
+        }
+        return baseFilename;
+    }
+    return generateFilenameFromUrl(url);
+}
+
+/**
+ * Generate a unique filename for Linktree profile pictures based on the Linktree URL
+ * @param {string} linktreeUrl - The Linktree URL
+ * @param {string} size - The size suffix (e.g., '32', '64', '256')
+ * @returns {string} - The generated filename
+ */
+function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
+    try {
+        const parsedUrl = new URL(linktreeUrl);
+        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+        const cleanPath = pathname
+            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+            .replace(/-+/g, '-') // Collapse multiple dashes
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+        
+        return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
+    } catch (error) {
+        // Fallback to hash-based filename
+        const hash = simpleHash(linktreeUrl);
+        return `favicon-linktr.ee-${hash}-${size}px.png`;
+    }
+}
+
 
 /**
  * Simple hash function for filename uniqueness
@@ -278,6 +333,8 @@ if (typeof module !== 'undefined' && module.exports) {
         generateFilenameFromUrl,
         generateFaviconFilename,
         generateEventFilename,
+        generateFilename,
+        generateLinktreeFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
@@ -293,6 +350,8 @@ if (typeof window !== 'undefined') {
         generateFilenameFromUrl,
         generateFaviconFilename,
         generateEventFilename,
+        generateFilename,
+        generateLinktreeFaviconFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
