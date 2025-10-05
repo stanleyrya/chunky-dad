@@ -175,6 +175,26 @@ function generateEventFilename(imageUrl, eventInfo, detectedExtension = null) {
 }
 
 /**
+ * Get the directory path for an event based on its type and date
+ * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
+ * @param {string} basePath - The base path (e.g., 'img/events')
+ * @returns {string} - The directory path
+ */
+function getEventDirectoryPath(eventInfo, basePath = 'img/events') {
+    if (eventInfo.recurring) {
+        // Recurring events go in a simple recurring folder
+        return `${basePath}/recurring`;
+    } else {
+        // One-time events go in year/month folders
+        const date = eventInfo.startDate instanceof Date ? 
+            eventInfo.startDate : new Date(eventInfo.startDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // 01-12
+        return `${basePath}/one-time/${year}/${month}`;
+    }
+}
+
+/**
  * Convert an image URL to a local path with event awareness
  * @param {string} imageUrl - The image URL
  * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
@@ -183,18 +203,8 @@ function generateEventFilename(imageUrl, eventInfo, detectedExtension = null) {
  */
 function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
     const filename = generateEventFilename(imageUrl, eventInfo);
-    
-    if (eventInfo.recurring) {
-        // Recurring events go in a simple recurring folder
-        return `${basePath}/recurring/${filename}`;
-    } else {
-        // One-time events go in year/month folders
-        const date = eventInfo.startDate instanceof Date ? 
-            eventInfo.startDate : new Date(eventInfo.startDate);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // 01-12
-        return `${basePath}/one-time/${year}/${month}/${filename}`;
-    }
+    const directoryPath = getEventDirectoryPath(eventInfo, basePath);
+    return `${directoryPath}/${filename}`;
 }
 
 /**
@@ -303,6 +313,7 @@ if (typeof module !== 'undefined' && module.exports) {
         generateFaviconFilename,
         generateEventFilename,
         cleanImageUrl,
+        getEventDirectoryPath,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
@@ -319,6 +330,7 @@ if (typeof window !== 'undefined') {
         generateFaviconFilename,
         generateEventFilename,
         cleanImageUrl,
+        getEventDirectoryPath,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,

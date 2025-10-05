@@ -8,7 +8,7 @@ const { URL } = require('url');
 const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, convertImageUrlToLocalPath, detectFileExtension } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension } = require('../js/filename-utils.js');
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -32,8 +32,6 @@ const ROOT = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
-const EVENTS_ONETIME_DIR = path.join(EVENTS_DIR, 'one-time');
-const EVENTS_RECURRING_DIR = path.join(EVENTS_DIR, 'recurring');
 
 // Cache duration: 14 days (2 weeks) in milliseconds
 const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
@@ -51,18 +49,9 @@ function ensureDir(dir) {
 // Download event image with event information
 async function downloadEventImage(imageUrl, eventInfo) {
   try {
-    // Determine the directory structure based on event type
-    let dir;
-    if (eventInfo.recurring) {
-      dir = path.join(EVENTS_DIR, 'recurring');
-    } else {
-      // One-time events go in year/month folders
-      const date = eventInfo.startDate instanceof Date ? 
-        eventInfo.startDate : new Date(eventInfo.startDate);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // 01-12
-      dir = path.join(EVENTS_DIR, 'one-time', year.toString(), month);
-    }
+    // Get the directory structure based on event type using shared utility
+    const dirPath = getEventDirectoryPath(eventInfo, 'img/events');
+    const dir = path.join(ROOT, dirPath);
     
     // Ensure directory exists
     ensureDir(dir);
@@ -747,8 +736,17 @@ async function main() {
   ensureDir(IMAGES_DIR);
   ensureDir(FAVICONS_DIR);
   ensureDir(EVENTS_DIR);
-  ensureDir(EVENTS_ONETIME_DIR);
-  ensureDir(EVENTS_RECURRING_DIR);
+  
+  // Ensure event subdirectories exist using shared utility
+  // We'll create a few common directories to ensure the structure exists
+  const sampleRecurringDir = getEventDirectoryPath({ recurring: true }, 'img/events');
+  const sampleOneTimeDir = getEventDirectoryPath({ 
+    recurring: false, 
+    startDate: new Date() 
+  }, 'img/events');
+  
+  ensureDir(path.join(ROOT, sampleRecurringDir));
+  ensureDir(path.join(ROOT, sampleOneTimeDir));
   
   // Extract image URLs from calendar data
   const imageUrls = extractImageUrls();
