@@ -1,14 +1,9 @@
 {
-<<<<<<< HEAD
-  "originalUrl": "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
-  "downloadedAt": "2025-10-05T22:40:51.011Z",
-=======
-  "originalUrl": "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=256",
-  "downloadedAt": "2025-10-05T22:03:37.134Z",
->>>>>>> origin/main
+  "originalUrl": "https://www.google.com/s2/favicons?domain=eventbrite.com&sz=64",
+  "downloadedAt": "2025-10-05T22:40:51.144Z",
   "type": "favicon",
   "filename": "favicon-eventbrite.com-64px.ico",
   "size": "64",
   "contentType": "image/png",
-  "contentLength": "548"
+  "contentLength": "613"
 }

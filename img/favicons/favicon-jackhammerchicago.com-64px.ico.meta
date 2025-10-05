@@ -1,14 +1,9 @@
 {
-<<<<<<< HEAD
   "originalUrl": "https://www.google.com/s2/favicons?domain=jackhammerchicago.com&sz=64",
-  "downloadedAt": "2025-10-05T22:40:51.570Z",
-=======
-  "originalUrl": "https://www.google.com/s2/favicons?domain=jackhammerchicago.com&sz=256",
-  "downloadedAt": "2025-10-05T22:03:38.050Z",
->>>>>>> origin/main
+  "downloadedAt": "2025-10-05T22:40:51.144Z",
   "type": "favicon",
   "filename": "favicon-jackhammerchicago.com-64px.ico",
   "size": "64",
   "contentType": "image/png",
-  "contentLength": "679"
+  "contentLength": "613"
 }
