@@ -120,16 +120,14 @@ function generateFaviconFilename(faviconUrl) {
         .replace(/-+/g, '-') // Collapse multiple dashes
         .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
     
-    // Determine file extension based on URL path or default to .png for better compatibility
-    let ext = '.png'; // Default to PNG for better compatibility
+    // Determine file extension based on URL path or default to .ico
+    let ext = '.ico';
     if (faviconUrl.includes('.png')) {
         ext = '.png';
     } else if (faviconUrl.includes('.jpg') || faviconUrl.includes('.jpeg')) {
         ext = '.jpg';
     } else if (faviconUrl.includes('.svg')) {
         ext = '.svg';
-    } else if (faviconUrl.includes('.ico')) {
-        ext = '.ico';
     }
     
     // Add size suffix for px-sized favicons (prefer 64px for map markers)
