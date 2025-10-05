@@ -52,7 +52,7 @@
     --event-name-line-height: 1.2;
     
     /* Section Background Gradients - Progressive Transitions */
-    --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    --gradient-hero: var(--primary-color);
     --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     --gradient-events: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-color) 100%);
     --gradient-directory: linear-gradient(135deg, var(--secondary-color) 0%, var(--secondary-color) 100%);
