@@ -203,16 +203,11 @@ function getEventDirectoryPath(eventInfo, basePath = 'img/events') {
         return `${basePath}/recurring`;
     } else {
         // One-time events go in year/month folders (YYYY/MM format)
-        if (eventInfo.startDate) {
-            const date = eventInfo.startDate instanceof Date ? 
-                eventInfo.startDate : new Date(eventInfo.startDate);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
-            return `${basePath}/one-time/${year}/${month}`;
-        } else {
-            // Fallback to one-time folder if no date
-            return `${basePath}/one-time`;
-        }
+        const date = eventInfo.startDate instanceof Date ? 
+            eventInfo.startDate : new Date(eventInfo.startDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
+        return `${basePath}/one-time/${year}/${month}`;
     }
 }
 
