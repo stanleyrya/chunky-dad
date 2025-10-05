@@ -95,7 +95,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
     // Download the image
     await downloadFile(imageUrl, localPath);
     
-    // Save metadata with event information
+    // Save metadata with event information (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
@@ -415,7 +415,7 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
       }
     }
     
-    // Save metadata
+    // Save metadata (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
@@ -501,7 +501,7 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     // Download the image
     await downloadFile(imageUrl, localPath);
     
-    // Save metadata
+    // Save metadata (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
@@ -580,7 +580,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
       }
     }
     
-    // Save metadata
+    // Save metadata (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
