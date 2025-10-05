@@ -147,9 +147,10 @@ function slugify(text) {
  * Generate an event-aware filename for better identification
  * @param {string} imageUrl - The image URL
  * @param {Object} eventInfo - Event information (name, date, recurring)
+ * @param {string} detectedExtension - The detected file extension (optional)
  * @returns {string} - The generated filename
  */
-function generateEventFilename(imageUrl, eventInfo) {
+function generateEventFilename(imageUrl, eventInfo, detectedExtension = null) {
     // Build filename parts
     const parts = [];
     
@@ -168,8 +169,9 @@ function generateEventFilename(imageUrl, eventInfo) {
     const urlHash = simpleHash(imageUrl).substring(0, 8);
     parts.push(urlHash);
     
-    // Always use .jpg extension for consistency and visibility
-    return parts.join('_') + '.jpg';
+    // Use detected extension or fall back to .jpg
+    const extension = detectedExtension || '.jpg';
+    return parts.join('_') + extension;
 }
 
 /**
@@ -236,6 +238,49 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
 
 
 /**
+ * Detect file extension from URL and content type
+ * @param {string} url - The image URL
+ * @param {string} contentType - The content type from response headers (optional)
+ * @returns {string} - The detected file extension (with dot)
+ */
+function detectFileExtension(url, contentType = null) {
+    // First try to get extension from URL
+    try {
+        const parsedUrl = new URL(url);
+        const pathname = parsedUrl.pathname;
+        const urlExt = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : null;
+        
+        if (urlExt && /^\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(urlExt)) {
+            return urlExt.toLowerCase();
+        }
+    } catch (error) {
+        // URL parsing failed, continue to content type detection
+    }
+    
+    // Try to get extension from content type
+    if (contentType) {
+        const mimeToExt = {
+            'image/jpeg': '.jpg',
+            'image/jpg': '.jpg',
+            'image/png': '.png',
+            'image/gif': '.gif',
+            'image/webp': '.webp',
+            'image/svg+xml': '.svg',
+            'image/bmp': '.bmp',
+            'image/tiff': '.tiff'
+        };
+        
+        const detectedExt = mimeToExt[contentType.toLowerCase()];
+        if (detectedExt) {
+            return detectedExt;
+        }
+    }
+    
+    // Fall back to .jpg if nothing else works
+    return '.jpg';
+}
+
+/**
  * Simple hash function for filename uniqueness
  * @param {string} str - The string to hash
  * @returns {string} - The hash as a hex string
@@ -261,6 +306,7 @@ if (typeof module !== 'undefined' && module.exports) {
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        detectFileExtension,
         slugify,
         simpleHash
     };
@@ -276,6 +322,7 @@ if (typeof window !== 'undefined') {
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        detectFileExtension,
         slugify,
         simpleHash
     };
