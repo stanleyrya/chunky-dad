@@ -51,34 +51,22 @@
     --event-name-font-weight: 600;
     --event-name-line-height: 1.2;
     
-    /* Additional Color Variables for Gradients */
-    --color-danger: #ff6b6b;
-    --color-danger-dark: #ee5a24;
-    --color-success-light: #10b981;
-    --color-success-dark: #059669;
-    
-    /* Solid Color Alternatives for Gradients */
-    --solid-primary: var(--primary-color);
-    --solid-secondary: var(--secondary-color);
-    --solid-success: var(--success-color);
-    --solid-warning: var(--background-light);
-    --solid-light: var(--background-light);
-    --solid-error: var(--background-light);
-    
     /* Section Background Gradients - Progressive Transitions */
     --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
     --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 25%);
     --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%);
     --gradient-directory: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 75%);
     
-    /* Legacy gradients for backward compatibility */
+    /* Alias for backward compatibility */
     --gradient-primary: var(--gradient-hero);
-    --gradient-secondary: linear-gradient(45deg, var(--color-danger), var(--color-danger-dark));
-    --gradient-success: linear-gradient(45deg, var(--success-color), var(--primary-color) 100%);
-    --gradient-warning: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
-    --gradient-light: linear-gradient(135deg, var(--background-primary) 0%, var(--background-light) 100%);
-    --gradient-success-alt: linear-gradient(45deg, var(--color-success-light), var(--color-success-dark));
-    --gradient-error: linear-gradient(135deg, var(--background-light) 0%, var(--background-light) 100%);
+    
+    /* Solid Color Alternatives */
+    --solid-primary: var(--primary-color);
+    --solid-secondary: var(--secondary-color);
+    --solid-success: var(--success-color);
+    --solid-warning: var(--background-light);
+    --solid-light: var(--background-light);
+    --solid-error: var(--error-color);
     
     /* Shadows */
     --shadow-light: none;
@@ -2897,9 +2885,9 @@ body.index-page main {
 }
 
 #location-btn.location-success {
-    color: var(--color-success-light);
+    color: var(--success-color);
     background: var(--background-primary);
-    border-color: var(--color-success-light);
+    border-color: var(--success-color);
     backdrop-filter: blur(10px);
 }
 
