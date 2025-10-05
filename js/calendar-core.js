@@ -725,9 +725,9 @@ class CalendarCore {
                     const occurrence = this.getOccurrenceFromDayCode(dayCode);
                     if (occurrence > 0) {
                         const ordinal = this.getOrdinal(occurrence);
-                        return `${ordinal} ${this.dayAbbrevs[dayIndex]}s`;
+                        return `${ordinal} ${this.dayAbbrevs[dayIndex]}`;
                     } else if (occurrence < 0) {
-                        return `Last ${this.dayAbbrevs[dayIndex]}s`;
+                        return `Last ${this.dayAbbrevs[dayIndex]}`;
                     }
                 }
             }
