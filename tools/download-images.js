@@ -8,7 +8,7 @@ const { URL } = require('url');
 const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, generateFilename, generateLinktreeFaviconFilename, cleanImageUrl, convertImageUrlToLocalPath } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, generateFilename, generateLinktreeFaviconFilename, getEventDirectoryPath, cleanImageUrl, convertImageUrlToLocalPath } = require('../js/filename-utils.js');
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -54,24 +54,8 @@ async function downloadEventImage(imageUrl, eventInfo) {
     // Generate filename using event information
     const filename = generateEventFilename(imageUrl, eventInfo);
     
-    // Determine directory structure based on event type
-    let dir;
-    if (eventInfo.recurring) {
-      // Recurring events go in the recurring folder
-      dir = path.join(EVENTS_DIR, 'recurring');
-    } else {
-      // One-time events go in year/month folders (YYYY/MM format)
-      if (eventInfo.startDate) {
-        const date = eventInfo.startDate instanceof Date ? 
-          eventInfo.startDate : new Date(eventInfo.startDate);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
-        dir = path.join(EVENTS_DIR, 'one-time', year.toString(), month);
-      } else {
-        // Fallback to one-time folder if no date
-        dir = path.join(EVENTS_DIR, 'one-time');
-      }
-    }
+    // Get directory structure using shared utility
+    const dir = getEventDirectoryPath(eventInfo, EVENTS_DIR);
     
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';

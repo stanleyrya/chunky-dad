@@ -192,6 +192,31 @@ function generateEventFilename(imageUrl, eventInfo) {
 }
 
 /**
+ * Get the directory path for an event based on its type and date
+ * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
+ * @param {string} basePath - The base path (e.g., 'img/events')
+ * @returns {string} - The directory path
+ */
+function getEventDirectoryPath(eventInfo, basePath = 'img/events') {
+    if (eventInfo.recurring) {
+        // Recurring events go in the recurring folder
+        return `${basePath}/recurring`;
+    } else {
+        // One-time events go in year/month folders (YYYY/MM format)
+        if (eventInfo.startDate) {
+            const date = eventInfo.startDate instanceof Date ? 
+                eventInfo.startDate : new Date(eventInfo.startDate);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
+            return `${basePath}/one-time/${year}/${month}`;
+        } else {
+            // Fallback to one-time folder if no date
+            return `${basePath}/one-time`;
+        }
+    }
+}
+
+/**
  * Convert an image URL to a local path with event awareness
  * @param {string} imageUrl - The image URL
  * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
@@ -200,23 +225,8 @@ function generateEventFilename(imageUrl, eventInfo) {
  */
 function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
     const filename = generateEventFilename(imageUrl, eventInfo);
-    
-    if (eventInfo.recurring) {
-        // Recurring events go in the recurring folder
-        return `${basePath}/recurring/${filename}`;
-    } else {
-        // One-time events go in year/month folders (YYYY/MM format)
-        if (eventInfo.startDate) {
-            const date = eventInfo.startDate instanceof Date ? 
-                eventInfo.startDate : new Date(eventInfo.startDate);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
-            return `${basePath}/one-time/${year}/${month}/${filename}`;
-        } else {
-            // Fallback to one-time folder if no date
-            return `${basePath}/one-time/${filename}`;
-        }
-    }
+    const dir = getEventDirectoryPath(eventInfo, basePath);
+    return `${dir}/${filename}`;
 }
 
 /**
@@ -335,6 +345,7 @@ if (typeof module !== 'undefined' && module.exports) {
         generateEventFilename,
         generateFilename,
         generateLinktreeFaviconFilename,
+        getEventDirectoryPath,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
@@ -352,6 +363,7 @@ if (typeof window !== 'undefined') {
         generateEventFilename,
         generateFilename,
         generateLinktreeFaviconFilename,
+        getEventDirectoryPath,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
