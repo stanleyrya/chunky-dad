@@ -100,6 +100,9 @@ body {
     line-height: 1.6;
     color: var(--text-primary);
     background-color: var(--background-primary);
+    background: var(--gradient-primary); /* Default gradient background */
+    background-attachment: fixed; /* Keep background fixed during scroll */
+    transition: background 0.1s ease; /* Smooth color transitions */
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
