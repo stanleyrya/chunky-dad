@@ -10,50 +10,44 @@
  * @returns {string} - The generated filename
  */
 function generateFilenameFromUrl(url) {
-    try {
-        // Handle Eventbrite URLs specially - they have nested URL encoding
-        if (url.includes('evbuc.com') && (url.includes('images/') || url.includes('images%2F'))) {
-            // Extract the nested URL from the pathname
-            const parsedUrl = new URL(url);
-            const nestedUrl = decodeURIComponent(parsedUrl.pathname.substring(1)); // Remove leading slash
-            
-            // Parse the nested URL to get the actual image path
-            const nestedParsedUrl = new URL(nestedUrl);
-            const imageMatch = nestedParsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
-            
-            if (imageMatch) {
-                const [, id1, id2, id3, filename] = imageMatch;
-                const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
-                const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
-                
-                // Sanitize filename
-                const sanitized = basename
-                    .replace(/[^a-zA-Z0-9._-]/g, '-')
-                    .replace(/-+/g, '-')
-                    .replace(/^-|-$/g, '');
-                
-                return sanitized + ext;
-            }
-        }
-        
-        // Handle regular URLs
+    // Handle Eventbrite URLs specially - they have nested URL encoding
+    if (url.includes('evbuc.com') && (url.includes('images/') || url.includes('images%2F'))) {
+        // Extract the nested URL from the pathname
         const parsedUrl = new URL(url);
-        const pathname = parsedUrl.pathname;
-        const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
-        let basename = pathname.substring(pathname.lastIndexOf('/') + 1).replace(ext, '') || 'image';
+        const nestedUrl = decodeURIComponent(parsedUrl.pathname.substring(1)); // Remove leading slash
         
-        // Sanitize filename - be more conservative with special characters
-        const sanitized = basename
-            .replace(/[^a-zA-Z0-9._-]/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '');
+        // Parse the nested URL to get the actual image path
+        const nestedParsedUrl = new URL(nestedUrl);
+        const imageMatch = nestedParsedUrl.pathname.match(/images\/(\d+)\/(\d+)\/(\d+)\/([^?]+)/);
         
-        return sanitized + ext;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(url);
-        return `image-${hash}.jpg`;
+        if (imageMatch) {
+            const [, id1, id2, id3, filename] = imageMatch;
+            const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : '.jpg';
+            const basename = `evb-${id1}-${id2}-${id3}-${filename.replace(ext, '')}`;
+            
+            // Sanitize filename
+            const sanitized = basename
+                .replace(/[^a-zA-Z0-9._-]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            
+            return sanitized + ext;
+        }
     }
+    
+    // Handle regular URLs
+    const parsedUrl = new URL(url);
+    const pathname = parsedUrl.pathname;
+    const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+    let basename = pathname.substring(pathname.lastIndexOf('/') + 1).replace(ext, '') || 'image';
+    
+    // Sanitize filename - be more conservative with special characters
+    const sanitized = basename
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    
+    return sanitized + ext;
 }
 
 /**
@@ -94,49 +88,37 @@ function cleanImageUrl(imageUrl) {
  * @returns {string} - The generated filename
  */
 function generateFaviconFilename(faviconUrl) {
-    try {
-        const parsedUrl = new URL(faviconUrl);
-        
-        // For Google favicon service, extract the target domain from query parameter
-        let domain;
-        if (parsedUrl.hostname === 'www.google.com' && parsedUrl.pathname === '/s2/favicons') {
-            const domainParam = parsedUrl.searchParams.get('domain');
-            if (domainParam) {
-                domain = domainParam;
-            } else {
-                // Fallback to hostname if no domain param
-                domain = parsedUrl.hostname;
-            }
-        } else {
-            // For other favicon services, use hostname
-            domain = parsedUrl.hostname;
-        }
-        
-        // Clean domain name for filename
-        const cleanDomain = domain
-            .replace(/^www\./, '') // Remove www prefix
-            .replace(/[^a-zA-Z0-9.-]/g, '-') // Replace invalid chars with dashes
-            .replace(/-+/g, '-') // Collapse multiple dashes
-            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-        
-        // Determine file extension based on URL path or default to .ico
-        let ext = '.ico';
-        if (faviconUrl.includes('.png')) {
-            ext = '.png';
-        } else if (faviconUrl.includes('.jpg') || faviconUrl.includes('.jpeg')) {
-            ext = '.jpg';
-        } else if (faviconUrl.includes('.svg')) {
-            ext = '.svg';
-        }
-        
-        // Add size suffix for px-sized favicons (prefer 64px for map markers)
-        const sizeSuffix = '-64px';
-        return `favicon-${cleanDomain}${sizeSuffix}${ext}`;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(faviconUrl);
-        return `favicon-${hash}-64px.ico`;
+    const parsedUrl = new URL(faviconUrl);
+    
+    // For Google favicon service, extract the target domain from query parameter
+    let domain;
+    if (parsedUrl.hostname === 'www.google.com' && parsedUrl.pathname === '/s2/favicons') {
+        domain = parsedUrl.searchParams.get('domain') || parsedUrl.hostname;
+    } else {
+        // For other favicon services, use hostname
+        domain = parsedUrl.hostname;
     }
+    
+    // Clean domain name for filename
+    const cleanDomain = domain
+        .replace(/^www\./, '') // Remove www prefix
+        .replace(/[^a-zA-Z0-9.-]/g, '-') // Replace invalid chars with dashes
+        .replace(/-+/g, '-') // Collapse multiple dashes
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    
+    // Determine file extension based on URL path or default to .ico
+    let ext = '.ico';
+    if (faviconUrl.includes('.png')) {
+        ext = '.png';
+    } else if (faviconUrl.includes('.jpg') || faviconUrl.includes('.jpeg')) {
+        ext = '.jpg';
+    } else if (faviconUrl.includes('.svg')) {
+        ext = '.svg';
+    }
+    
+    // Add size suffix for px-sized favicons (prefer 64px for map markers)
+    const sizeSuffix = '-64px';
+    return `favicon-${cleanDomain}${sizeSuffix}${ext}`;
 }
 
 /**
@@ -167,38 +149,30 @@ function slugify(text) {
  * @param {Object} eventInfo - Event information (name, date, recurring)
  * @returns {string} - The generated filename
  */
-function generateEventFilename(imageUrl, eventInfo = {}) {
-    try {
-        const cleanUrl = cleanImageUrl(imageUrl);
-        const baseFilename = generateFilenameFromUrl(cleanUrl);
-        const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
-        
-        // Build filename parts
-        const parts = [];
-        
-        // Add date for one-time events (YYYY-MM-DD format)
-        if (eventInfo.startDate && !eventInfo.recurring) {
-            const date = eventInfo.startDate instanceof Date ? 
-                eventInfo.startDate : new Date(eventInfo.startDate);
-            const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            parts.push(dateStr);
-        }
-        
-        // Add event name slug
-        if (eventInfo.name) {
-            parts.push(slugify(eventInfo.name));
-        }
-        
-        // Add original filename hash for uniqueness
-        const urlHash = simpleHash(cleanUrl).substring(0, 8);
-        parts.push(urlHash);
-        
-        return parts.join('_') + ext;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(imageUrl);
-        return `event-${hash}.jpg`;
+function generateEventFilename(imageUrl, eventInfo) {
+    const cleanUrl = cleanImageUrl(imageUrl);
+    const baseFilename = generateFilenameFromUrl(cleanUrl);
+    const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
+    
+    // Build filename parts
+    const parts = [];
+    
+    // Add date for one-time events (YYYY-MM-DD format)
+    if (eventInfo.startDate && !eventInfo.recurring) {
+        const date = eventInfo.startDate instanceof Date ? 
+            eventInfo.startDate : new Date(eventInfo.startDate);
+        const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        parts.push(dateStr);
     }
+    
+    // Add event name slug
+    parts.push(slugify(eventInfo.name));
+    
+    // Add original filename hash for uniqueness
+    const urlHash = simpleHash(cleanUrl).substring(0, 8);
+    parts.push(urlHash);
+    
+    return parts.join('_') + ext;
 }
 
 /**
@@ -221,16 +195,8 @@ function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events'
  * @returns {string} - The local file path
  */
 function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
-    if (!faviconUrl || !faviconUrl.startsWith('http')) {
-        return faviconUrl;
-    }
-    
-    try {
-        const filename = generateFaviconFilename(faviconUrl);
-        return `${basePath}/${filename}`;
-    } catch (error) {
-        return faviconUrl; // Return original URL as fallback
-    }
+    const filename = generateFaviconFilename(faviconUrl);
+    return `${basePath}/${filename}`;
 }
 
 /**
@@ -240,38 +206,30 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
  * @returns {string} - The local file path
  */
 function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
-    if (!websiteUrl || !websiteUrl.startsWith('http')) {
-        return websiteUrl;
-    }
+    const parsedUrl = new URL(websiteUrl);
     
-    try {
-        const parsedUrl = new URL(websiteUrl);
+    // Check if it's a Linktree URL
+    if (parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee') {
+        // Generate Linktree-specific filename
+        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+        const cleanPath = pathname
+            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+            .replace(/-+/g, '-') // Collapse multiple dashes
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
         
-        // Check if it's a Linktree URL
-        if (parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee') {
-            // Generate Linktree-specific filename
-            const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
-            const cleanPath = pathname
-                .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
-                .replace(/-+/g, '-') // Collapse multiple dashes
-                .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-            
-            const filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
-            return `${basePath}/${filename}`;
-        } else {
-            // Use regular favicon logic for other domains (prefer 64px for higher quality)
-            const hostname = parsedUrl.hostname;
-            const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
-            return convertFaviconUrlToLocalPath(googleFaviconUrl, basePath);
-        }
-    } catch (error) {
-        return websiteUrl; // Return original URL as fallback
+        const filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
+        return `${basePath}/${filename}`;
+    } else {
+        // Use regular favicon logic for other domains (prefer 64px for higher quality)
+        const hostname = parsedUrl.hostname;
+        const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+        return convertFaviconUrlToLocalPath(googleFaviconUrl, basePath);
     }
 }
 
 
 /**
- * Simple hash function for fallback filenames
+ * Simple hash function for filename uniqueness
  * @param {string} str - The string to hash
  * @returns {string} - The hash as a hex string
  */
