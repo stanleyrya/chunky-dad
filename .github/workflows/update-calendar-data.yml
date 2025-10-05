@@ -2,8 +2,8 @@ name: Update Calendar Data
 
 on:
   schedule:
-    # Run every 2 hours to keep calendar data fresh
-    - cron: '0 */2 * * *'
+    # Run every 6 hours to keep calendar data fresh (reduced from 2 hours)
+    - cron: '0 */6 * * *'
   workflow_dispatch: # Allow manual triggering
   push:
     paths:
@@ -251,28 +251,58 @@ jobs:
           npm install --no-audit --no-fund --prefer-offline
 
       - name: Download event images and high-quality favicons
+        if: env.CALENDAR_CHANGED == 'true'
         run: |
+          echo "🖼️ Starting image download process (calendar data changed)..."
           node tools/download-images.js
+          
+          # Check for actual changes in image files
           git add -A img/favicons/ img/events/ 2>/dev/null || true
+          
+          # Count actual changes (excluding metadata files)
+          CHANGED_IMAGES=$(git diff --staged --name-only | grep -E '\.(jpg|jpeg|png|gif|webp)$' | wc -l)
+          CHANGED_METADATA=$(git diff --staged --name-only | grep '\.meta$' | wc -l)
+          
           if git diff --staged --quiet; then
             echo "No image changes to commit"
             echo "IMAGES_CHANGED=false" >> $GITHUB_ENV
           else
-            git commit -m "🖼️ Download/update event images and high-quality favicons (32px, 64px, 256px)"
-            git push
-            echo "✓ Event images and high-quality favicons updated and committed"
-            echo "IMAGES_CHANGED=true" >> $GITHUB_ENV
+            if [ "$CHANGED_IMAGES" -gt 0 ]; then
+              echo "✓ Found $CHANGED_IMAGES new/updated image files"
+              git commit -m "🖼️ Download/update event images and high-quality favicons (32px, 64px, 256px) - $CHANGED_IMAGES images"
+              git push
+              echo "✓ Event images and high-quality favicons updated and committed"
+              echo "IMAGES_CHANGED=true" >> $GITHUB_ENV
+            else
+              echo "Only metadata changes detected, skipping commit"
+              git reset HEAD
+              echo "IMAGES_CHANGED=false" >> $GITHUB_ENV
+            fi
           fi
 
       - name: Generate OG images for events
+        if: env.CALENDAR_CHANGED == 'true'
         run: |
+          echo "🖼️ Starting OG image generation (calendar data changed)..."
           node tools/generate-og-images.js
+          
+          # Check for actual changes in OG images
           git add -A img/og/ 2>/dev/null || true
+          
+          # Count actual changes
+          CHANGED_OG_IMAGES=$(git diff --staged --name-only | grep -E '\.(jpg|jpeg|png|gif|webp)$' | wc -l)
+          
           if git diff --staged --quiet; then
             echo "No OG image changes to commit"
           else
-            git commit -m "🖼️ Generate/update OG images for events"
-            git push
+            if [ "$CHANGED_OG_IMAGES" -gt 0 ]; then
+              echo "✓ Found $CHANGED_OG_IMAGES new/updated OG image files"
+              git commit -m "🖼️ Generate/update OG images for events - $CHANGED_OG_IMAGES images"
+              git push
+            else
+              echo "Only metadata changes detected, skipping OG image commit"
+              git reset HEAD
+            fi
           fi
       
       - name: Update test manifest only if calendar data changed
