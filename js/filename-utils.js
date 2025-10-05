@@ -150,10 +150,6 @@ function slugify(text) {
  * @returns {string} - The generated filename
  */
 function generateEventFilename(imageUrl, eventInfo) {
-    const cleanUrl = cleanImageUrl(imageUrl);
-    const baseFilename = generateFilenameFromUrl(cleanUrl);
-    const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
-    
     // Build filename parts
     const parts = [];
     
@@ -168,11 +164,12 @@ function generateEventFilename(imageUrl, eventInfo) {
     // Add event name slug
     parts.push(slugify(eventInfo.name));
     
-    // Add original filename hash for uniqueness
-    const urlHash = simpleHash(cleanUrl).substring(0, 8);
+    // Add URL hash for uniqueness (based on original URL, not cleaned)
+    const urlHash = simpleHash(imageUrl).substring(0, 8);
     parts.push(urlHash);
     
-    return parts.join('_') + ext;
+    // Always use .jpg extension for consistency and visibility
+    return parts.join('_') + '.jpg';
 }
 
 /**
@@ -183,9 +180,19 @@ function generateEventFilename(imageUrl, eventInfo) {
  * @returns {string} - The local file path
  */
 function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
-    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
     const filename = generateEventFilename(imageUrl, eventInfo);
-    return `${basePath}/${subdirectory}/${filename}`;
+    
+    if (eventInfo.recurring) {
+        // Recurring events go in a simple recurring folder
+        return `${basePath}/recurring/${filename}`;
+    } else {
+        // One-time events go in year/month folders
+        const date = eventInfo.startDate instanceof Date ? 
+            eventInfo.startDate : new Date(eventInfo.startDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // 01-12
+        return `${basePath}/one-time/${year}/${month}/${filename}`;
+    }
 }
 
 /**
