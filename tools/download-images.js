@@ -8,7 +8,7 @@ const { URL } = require('url');
 const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, cleanImageUrl } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, convertImageUrlToLocalPath } = require('../js/filename-utils.js');
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -32,6 +32,8 @@ const ROOT = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
+const EVENTS_ONETIME_DIR = path.join(EVENTS_DIR, 'one-time');
+const EVENTS_RECURRING_DIR = path.join(EVENTS_DIR, 'recurring');
 
 // Cache duration: 14 days (2 weeks) in milliseconds
 const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
@@ -43,6 +45,59 @@ const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+// Download event image with event information
+async function downloadEventImage(imageUrl, eventInfo) {
+  try {
+    // Generate filename using event information
+    const filename = generateEventFilename(imageUrl, eventInfo);
+    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
+    const dir = path.join(EVENTS_DIR, subdirectory);
+    const localPath = path.join(dir, filename);
+    const metadataPath = localPath + '.meta';
+    
+    // Ensure subdirectory exists
+    ensureDir(dir);
+    
+    // Check if we should download
+    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
+    
+    if (!shouldDownload) {
+      console.log(`⏭️  Skipping event image: ${filename} (${reason})`);
+      return { success: true, skipped: true, filename, reason };
+    }
+    
+    console.log(`📥 Downloading event image: ${filename} (${reason})`);
+    console.log(`   Event: ${eventInfo.name}`);
+    console.log(`   Type: ${eventInfo.recurring ? 'recurring' : 'one-time'}`);
+    console.log(`   URL: ${imageUrl}`);
+    
+    // Download the image
+    await downloadFile(imageUrl, localPath);
+    
+    // Save metadata with event information
+    const metadata = {
+      originalUrl: imageUrl,
+      downloadedAt: new Date().toISOString(),
+      type: 'event',
+      filename: filename,
+      eventInfo: {
+        name: eventInfo.name,
+        startDate: eventInfo.startDate,
+        recurring: eventInfo.recurring
+      }
+    };
+    
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    
+    console.log(`✅ Downloaded event image: ${filename}`);
+    return { success: true, skipped: false, filename, localPath };
+    
+  } catch (error) {
+    console.error(`❌ Failed to download event image from ${imageUrl}:`, error.message);
+    return { success: false, error: error.message, url: imageUrl };
   }
 }
 
@@ -530,8 +585,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
 // Extract image URLs from calendar data using calendar loader
 function extractImageUrls() {
   const imageUrls = {
-    events: new Set(),
-    favicons: new Set(),
+    eventsWithInfo: [],  // Changed to array of event objects with image info
     favicons64: new Set(),  // Higher quality for map markers
     favicons256: new Set()   // High quality for cards/OG
   };
@@ -560,16 +614,18 @@ function extractImageUrls() {
     console.log(`   Found ${events.length} events`);
     
     for (const event of events) {
-      // Extract event images from parsed data
+      // Extract event images from parsed data with event information
       if (event.image) {
         const cleanUrl = cleanImageUrl(event.image);
         if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
-          // Debug: Print Wix URLs for investigation
-          if (cleanUrl.includes('wixstatic.com')) {
-            console.log(`🔍 WIX URL: ${cleanUrl}`);
-          }
-          imageUrls.events.add(cleanUrl);
-          console.log(`📸 Found event image: ${cleanUrl}`);
+          // Store event with its image URL
+          imageUrls.eventsWithInfo.push({
+            imageUrl: cleanUrl,
+            name: event.name,
+            startDate: event.startDate,
+            recurring: event.recurring || false
+          });
+          console.log(`📸 Found event image: ${event.name} (${event.recurring ? 'recurring' : 'one-time'})`);
         }
       }
       
@@ -604,7 +660,7 @@ function extractImageUrls() {
   }
   
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.events.size} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
+  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
   return imageUrls;
 }
 
@@ -616,6 +672,8 @@ async function main() {
   ensureDir(IMAGES_DIR);
   ensureDir(FAVICONS_DIR);
   ensureDir(EVENTS_DIR);
+  ensureDir(EVENTS_ONETIME_DIR);
+  ensureDir(EVENTS_RECURRING_DIR);
   
   // Extract image URLs from calendar data
   const imageUrls = extractImageUrls();
@@ -624,10 +682,14 @@ async function main() {
   let totalSkipped = 0;
   let totalFailed = 0;
   
-  // Download event images
+  // Download event images with event information
   console.log('\n📸 Downloading event images...');
-  for (const url of imageUrls.events) {
-    const result = await downloadImage(url, 'event');
+  for (const eventWithImage of imageUrls.eventsWithInfo) {
+    const result = await downloadEventImage(eventWithImage.imageUrl, {
+      name: eventWithImage.name,
+      startDate: eventWithImage.startDate,
+      recurring: eventWithImage.recurring
+    });
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -736,4 +798,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };

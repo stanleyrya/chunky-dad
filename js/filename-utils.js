@@ -140,20 +140,92 @@ function generateFaviconFilename(faviconUrl) {
 }
 
 /**
- * Convert an image URL to a local path
+ * Generate a slug from a string (event name, etc.)
+ * @param {string} text - The text to slugify
+ * @returns {string} - The slugified text
+ */
+function slugify(text) {
+    if (!text) return 'untitled';
+    
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        // Replace spaces and special chars with hyphens
+        .replace(/[\s_]+/g, '-')
+        .replace(/[^\w-]+/g, '')
+        // Collapse multiple hyphens
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        // Limit length
+        .substring(0, 50);
+}
+
+/**
+ * Generate an event-aware filename for better identification
  * @param {string} imageUrl - The image URL
+ * @param {Object} eventInfo - Event information (name, date, recurring)
+ * @returns {string} - The generated filename
+ */
+function generateEventFilename(imageUrl, eventInfo = {}) {
+    try {
+        const cleanUrl = cleanImageUrl(imageUrl);
+        const baseFilename = generateFilenameFromUrl(cleanUrl);
+        const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
+        
+        // Build filename parts
+        const parts = [];
+        
+        // Add date for one-time events (YYYY-MM-DD format)
+        if (eventInfo.startDate && !eventInfo.recurring) {
+            const date = eventInfo.startDate instanceof Date ? 
+                eventInfo.startDate : new Date(eventInfo.startDate);
+            const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            parts.push(dateStr);
+        }
+        
+        // Add event name slug
+        if (eventInfo.name) {
+            parts.push(slugify(eventInfo.name));
+        }
+        
+        // Add original filename hash for uniqueness
+        const urlHash = simpleHash(cleanUrl).substring(0, 8);
+        parts.push(urlHash);
+        
+        return parts.join('_') + ext;
+    } catch (error) {
+        // Fallback to hash-based filename
+        const hash = simpleHash(imageUrl);
+        return `event-${hash}.jpg`;
+    }
+}
+
+/**
+ * Convert an image URL to a local path with event awareness
+ * @param {string} imageUrl - The image URL
+ * @param {Object} eventInfo - Event information (name, date, recurring)
  * @param {string} basePath - The base path (e.g., 'img/events')
  * @returns {string} - The local file path
  */
-function convertImageUrlToLocalPath(imageUrl, basePath = 'img/events') {
+function convertImageUrlToLocalPath(imageUrl, eventInfo = null, basePath = 'img/events') {
     if (!imageUrl || !imageUrl.startsWith('http')) {
         return imageUrl;
     }
     
     try {
-        const cleanUrl = cleanImageUrl(imageUrl);
-        const filename = generateFilenameFromUrl(cleanUrl);
-        return `${basePath}/${filename}`;
+        // Determine subdirectory based on event type
+        let subdirectory = '';
+        if (eventInfo) {
+            subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
+            const filename = generateEventFilename(imageUrl, eventInfo);
+            return `${basePath}/${subdirectory}/${filename}`;
+        } else {
+            // Legacy path for backward compatibility during migration
+            const cleanUrl = cleanImageUrl(imageUrl);
+            const filename = generateFilenameFromUrl(cleanUrl);
+            return `${basePath}/${filename}`;
+        }
     } catch (error) {
         return imageUrl; // Return original URL as fallback
     }
@@ -236,10 +308,12 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         generateFilenameFromUrl,
         generateFaviconFilename,
+        generateEventFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        slugify,
         simpleHash
     };
 }
@@ -249,10 +323,12 @@ if (typeof window !== 'undefined') {
     window.FilenameUtils = {
         generateFilenameFromUrl,
         generateFaviconFilename,
+        generateEventFilename,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        slugify,
         simpleHash
     };
 }
