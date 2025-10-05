@@ -160,10 +160,13 @@ function slugify(text) {
  */
 function generateEventFilename(imageUrl, eventInfo) {
     const cleanUrl = cleanImageUrl(imageUrl);
-    const baseFilename = generateFilenameFromUrl(cleanUrl);
     
-    // Ensure we have a proper extension - default to .jpg if none found
-    let ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
+    // Extract extension from URL - default to .jpg if none found
+    let ext = '.jpg';
+    const urlExtMatch = cleanUrl.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)(\?|$)/i);
+    if (urlExtMatch) {
+        ext = '.' + urlExtMatch[1].toLowerCase();
+    }
     
     // Validate extension - if it looks like a timestamp or is invalid, use .jpg
     if (!ext.match(/^\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
@@ -289,7 +292,33 @@ function generateFilename(url, type = 'event', size = null) {
         }
         return baseFilename;
     }
-    return generateFilenameFromUrl(url);
+    
+    // For non-favicon images, generate a simple filename from URL
+    const cleanUrl = cleanImageUrl(url);
+    const urlObj = new URL(cleanUrl);
+    const pathname = urlObj.pathname;
+    
+    // Extract filename from path
+    let filename = pathname.split('/').pop() || 'image';
+    
+    // Ensure we have a proper extension
+    let ext = '.jpg';
+    const urlExtMatch = filename.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)(\?|$)/i);
+    if (urlExtMatch) {
+        ext = '.' + urlExtMatch[1].toLowerCase();
+        filename = filename.replace(/\.[^.]*$/, ''); // Remove existing extension
+    }
+    
+    // Generate a hash for uniqueness
+    const hash = require('crypto').createHash('md5').update(cleanUrl).digest('hex').substring(0, 8);
+    
+    // Sanitize filename
+    const sanitized = filename
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    
+    return `${sanitized}_${hash}${ext}`;
 }
 
 /**
