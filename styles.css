@@ -1419,8 +1419,6 @@ body.index-page main {
 /* Today Events Section - Updated for detailed cards */
 #today-events {
     background: var(--gradient-today-events);
-    padding: 3rem 0;
-    margin: 0;
 }
 
 #today-events .event-scroll-container {
